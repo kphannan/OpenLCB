@@ -1,0 +1,17 @@
+FILES-txt
+Makefile
+README-j.txt
+i2c.c
+serjtag.c
+tests/test1.c
+avrdude-serjtag/README.txt
+avrdude-serjtag/src/avrdude-5.3.1-avr910d.patch
+avrdude-serjtag/src/avrdude-5.3.1-baud.patch
+avrdude-serjtag/src/avrdude-5.3.1-serjtag.patch
+avrdude-serjtag/src/avrdude-5.3.1-usb910.patch
+avrdude-serjtag/src/avrdude-5.3.1-ft245r.patch
+avrdude-serjtag/src/avrdude.spec
+avrdude-serjtag/binary/COPYING.txt
+avrdude-serjtag/binary/avrdude.conf
+tn2313/Makefile
+tn2313/serjtag.h
