@@ -3,8 +3,8 @@
  * 
  * CAN2EtherNetuino provides an Ethernet adapter for CAN frames.
  * 
- * This is not a full NMRAnet node, but rather a Ethernet-based
- * CAN adapter; it has no NMRAnet-specific processing.
+ * This is not a full OpenLCB node, but rather a Ethernet-based
+ * CAN adapter; it has no OpenLCB-specific processing.
  */
 
 // Addressing information for this node.

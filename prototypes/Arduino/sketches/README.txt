@@ -27,6 +27,13 @@ CAN2USBuinoRamp: (David Harris)
 CanMrrlcbTest: (Bob Jacobsen)
     Develop a library for doing the MRRLCB link setup.
 
+CAN2EtherNetuino: (Bob Jacobsen)
+    A CAN-Ethernet bridge for the LEDuino.  Just forwards
+    frames, not a full OpenLCB router.
+
+MrrlcbCanEtherNet: (Bob Jacobsen)
+    Develop an OpenLCB Ethernet router - not yet done
+    
 -------------------------
 
 *.pde files are the primary source for a Arduino sketch.  As such, they
