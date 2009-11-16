@@ -1,6 +1,6 @@
 //===========================================================
 // MrrlcbCanEtherNet
-//   Developing (eventual) classes for NmraNet S9.6
+//   Developing (eventual) classes for OpenLCB
 // 
 //   Bob Jacobsen 2009
 //      based on examples by Alex Shepherd and David Harris
@@ -27,20 +27,20 @@ class foo{};  // force Arduino environment to treat the rest of this file as C++
 #define ADDR_BYTE_3  1
 #define ADDR_BYTE_4 97
 
-// NMRAnet definitions
-#include <NmraNetCanInterface.h>
-#include <NmraNetCanBuffer.h>
+// openLCB definitions
+#include <OpenLcbCanInterface.h>
+#include <OpenLcbCanBuffer.h>
 #include <NodeID.h>
 #include <EventID.h>
 
 // specific NMRAnet implementations
 #include "LinkControl.h"
 
-NmraNetCanBuffer     rxBuffer;	// CAN receive buffer
-NmraNetCanBuffer     txBuffer;	// CAN send buffer
-NmraNetCanBuffer*    ptxCAN;
+OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
+OpenLcbCanBuffer     txBuffer;	// CAN send buffer
+OpenLcbCanBuffer*    ptxCAN;
 
-// NMRAnet nodeID for this node
+// openLCB nodeID for this node
 NodeID nodeid(4,  // self-assigned NodeID based on IP address
     ADDR_BYTE_1, ADDR_BYTE_2, ADDR_BYTE_3, ADDR_BYTE_4,
     1);
@@ -60,8 +60,8 @@ byte subnet[] = { 255, 255, 255, 0 };
 Server server(23);
 
 
-#include <NodeIDList.h>
-NodeIDList nodes(10);
+//#include <NodeIDList.h>
+//NodeIDList nodes(10);
 
 /**
  * This setup is just for testing
@@ -76,7 +76,7 @@ void setup()
   Serial.println();Serial.println("Starting CanMrrlcbTest");
   
   // Initialize NmraNet CAN connection
-  NMRAnet_can_init();
+  OpenLcb_can_init();
   
   // Initialize NmraNet CAN link controller
   link.reset();
@@ -92,7 +92,7 @@ void setup()
 void loop() {
     
   // check for input CAN frames, acquire if present
-  boolean rcvFramePresent = NMRAnet_can_get_frame(&rxBuffer);
+  boolean rcvFramePresent = OpenLcb_can_get_frame(&rxBuffer);
   
   // process link control first
   link.check();
@@ -100,7 +100,7 @@ void loop() {
     // received a frame, ask if changes link state
     link.receivedFrame(&rxBuffer);
     // store any node aliases that are confirmed
-    nodes.receivedFrame(&rxBuffer);
+    //nodes.receivedFrame(&rxBuffer);
     
     // forward via server
     server.write(toArray(rxBuffer), toArrayLen(rxBuffer));

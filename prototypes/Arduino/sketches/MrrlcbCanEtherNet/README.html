@@ -24,11 +24,11 @@
 <H1>MrrlcbCanEtherNet Arduino Sketch</H1>
 <P>This page describes the contents of the MrrlcbCanEtherNet Arduino
 sketch. This sketch is being used to develop prototype,
-proof-of-concept software implementing the NMRAnet S9.6 protocols on
+proof-of-concept software implementing the OpenLCB protocols on
 the <A HREF="http://arduino.cc/">Arduino</A> platform.</P>
-<P>More information on the NMRAnet S9.6 protocols is available in the
-<A HREF="../../../../docs/index.html">documentation package</A>. See
-also the documents for the <A HREF="../../../../docs/can/index.html">CAN
+<P>More information on the OpenLCB protocols is available in the
+<A HREF="../../../../documents/index.html">documentation package</A>. See
+also the documents for the <A HREF="../../../../documents/can/index.html">CAN
 wire protocol</A>.</P>
 <H2>Introduction</H2>
 <P>This sketch tests some basic implementation classes.</P>
@@ -60,7 +60,7 @@ library (CAN.h from Fabian Greif, Roboterclub Aachen e.V., adapted
 and extended by Alex Shepherd)</P>
 <P>To this end, we provide an abstraction layer for the hardware that
 localizes all CAN access to a small number of C calls and data
-structures. This is implemented via the NmraNetCanInterface.h and
+structures. This is implemented via the OpenLcbCanInterface.h and
 .cpp files. (It's in C++, but it's not implemented as a class now,
 just a bunch of methods; the data structures are provided as
 arguments to calls)</P>
@@ -85,12 +85,12 @@ the message then.</P>
 <P><FONT COLOR="#000000"><IMG SRC="stack2.gif" NAME="graphics1" ALIGN=RIGHT WIDTH=155 HEIGHT=185 BORDER=1></FONT>There
 are a couple ways to structure code like this. Often, high level
 classes encapsulate and use references to lower level objects,
-resulting in a classic &ldquo;stack&rdquo; form. For NMRAnet, this
+resulting in a classic &ldquo;stack&rdquo; form. For OpenLCB, this
 would result in (insert diagram here) e.g. a PCE object that's passed
 a LinkControl object through its constructor, and does all I/O
 through that. In turn the LinkControl object is passed a
-NmraNetCanInterface object via it's constructor, and uses that for
-all I/O. Finally, the NmraNetInterface provides all the state and
+OpenLcbCanInterface object via it's constructor, and uses that for
+all I/O. Finally, the OpenLcbInterface provides all the state and
 code to handle all the interactions, and is initialized via a
 constructor. Frames received via CAN are passed up through the stack
 as appropriate. Once a standard is in place, this is a very powerful
@@ -130,7 +130,7 @@ assigning an alias, sending the Initialization Complete, watching for
 an interfering node, etc.</P>
 <P>The using code needs to feed this (see <A HREF="#Runtime|outline">runtime</A>
 section above), and should check for link initialized before doing
-anything else with the NMRAnet.</P>
+anything else with the OpenLCB.</P>
 <H3>Event</H3>
 <P>Used for local information about a specific event.</P>
 <P>Initially, this is just an EventID, plus some local state
@@ -146,15 +146,15 @@ handler, but has some convenient service methods.</P>
 <P>NodeID is a &quot;struct with methods&quot; to handle the bytes of
 an NodeID. It's more of a data object than a state machine handler,
 but has some convenient service methods.</P>
-<H3>NmraNet</H3>
+<H3>OpenLCB</H3>
 <P>Basic definitions of constants.</P>
-<H3>NmraNetCanBuffer</H3>
-<P>NmraNetCanBuffer wraps a transmit or receive CAN buffer to add
+<H3>OpenLcbCanBuffer</H3>
+<P>OpenLcbCanBuffer wraps a transmit or receive CAN buffer to add
 creation and identification methods. This approach uses a bit more
 code space than writing ands/ors for each decode, but makes much more
 readable application code.</P>
-<H3>NmraNetCanInterface</H3>
-<P>NmraNetCanInterface wraps the external hardware for the CAN
+<H3>OpenLcbCanInterface</H3>
+<P>OpenLcbCanInterface wraps the external hardware for the CAN
 interface. See the <A HREF="#CAN Interface|outline">interface section</A>
 above.</P>
 <H2>To Do List</H2>
@@ -164,7 +164,7 @@ above.</P>
 	<LI><P>Define the proper MTI values, instead of stand-ins.</P>
 	<LI><P>Need to refactor addressed message support (duplicated code
 	smell).</P>
-	<LI><P>Move many files to an NMRAnet CAN library for Arduino.</P>
+	<LI><P>Move many files to an OpenLCB CAN library for Arduino.</P>
 	<LI><P>Move to a &ldquo;stack&rdquo; dependency structure.</P>
 	<LI><P>Comments, comments, always with the comments.</P>
 </UL>
