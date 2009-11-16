@@ -1,6 +1,6 @@
 //===========================================================
 // CanMrrlcbTest
-//   Developing (eventual) classes for NmraNet S9.6
+//   Developing (eventual) classes for OpenLCB
 // 
 //   Bob Jacobsen 2009
 //      based on examples by Alex Shepherd and David Harris
@@ -25,13 +25,13 @@ class foo{};  // force Arduino environment to treat the rest of this file as C++
 #define PRODUCER_PIN 14
 int producer_pin_record;
 
-// NMRAnet definitions
+// OpenLCB definitions
 #include "OpenLcbCanInterface.h"
 #include "openLcbCanBuffer.h"
 #include "NodeID.h"
 #include "EventID.h"
 
-// specific NMRAnet implementations
+// specific OpenLCB implementations
 #include "LinkControl.h"
 #include "PCE.h"
 
@@ -90,7 +90,7 @@ void setup()
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
   
-  // Initialize NmraNet CAN link controller
+  // Initialize OpenLCB CAN link controller
   link.reset();
 }
 
