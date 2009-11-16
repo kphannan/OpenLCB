@@ -26,8 +26,8 @@ class foo{};  // force Arduino environment to treat the rest of this file as C++
 int producer_pin_record;
 
 // NMRAnet definitions
-#include "NmraNetCanInterface.h"
-#include "NmraNetCanBuffer.h"
+#include "OpenLcbCanInterface.h"
+#include "openLcbCanBuffer.h"
 #include "NodeID.h"
 #include "EventID.h"
 
@@ -35,9 +35,9 @@ int producer_pin_record;
 #include "LinkControl.h"
 #include "PCE.h"
 
-NmraNetCanBuffer     rxBuffer;	// CAN receive buffer
-NmraNetCanBuffer     txBuffer;	// CAN send buffer
-NmraNetCanBuffer*    ptxCAN;
+OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
+OpenLcbCanBuffer     txBuffer;	// CAN send buffer
+OpenLcbCanBuffer*    ptxCAN;
 
 NodeID nodeid(2,3,4,5,6,7);    // This node's ID
 
@@ -87,8 +87,8 @@ void setup()
   pinMode(PRODUCER_PIN,INPUT);
   digitalWrite(PRODUCER_PIN,HIGH);
   
-  // Initialize NmraNet CAN connection
-  NMRAnet_can_init();
+  // Initialize OpenLCB CAN connection
+  OpenLcb_can_init();
   
   // Initialize NmraNet CAN link controller
   link.reset();
@@ -96,7 +96,7 @@ void setup()
 
 void loop() {
   // check for input frames, acquire if present
-  boolean rcvFramePresent = NMRAnet_can_get_frame(&rxBuffer);
+  boolean rcvFramePresent = OpenLcb_can_get_frame(&rxBuffer);
   
   // process link control first
   link.check();
