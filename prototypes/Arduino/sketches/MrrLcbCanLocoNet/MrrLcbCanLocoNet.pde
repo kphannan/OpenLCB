@@ -4,17 +4,17 @@
 #include <Event.h>
 #include <EventID.h>
 #include <LinkControl.h>
-#include <NmraNetCan.h>
-#include <NmraNetCanBuffer.h>
-#include <NmraNetCanInterface.h>
+#include <OpenLcbCan.h>
+#include <OpenLcbCanBuffer.h>
+#include <OpenLcbCanInterface.h>
 #include <NodeID.h>
 #include <PCE.h>
 
 #define         BAUD_RATE       115200
 
-NmraNetCanBuffer     rxBuffer;	// CAN receive buffer
-NmraNetCanBuffer     txBuffer;	// CAN send buffer
-NmraNetCanBuffer*    ptxCAN;
+OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
+OpenLcbCanBuffer     txBuffer;	// CAN send buffer
+OpenLcbCanBuffer*    ptxCAN;
 
 class foo{};  // force Arduino environment to treat the rest of this file as C++
 
@@ -33,16 +33,16 @@ void setup()
   // Init the LocoNet interface
   LocoNet.init();
 
-  // Initialize NmraNet CAN connection
-  NMRAnet_can_init();
+  // Initialize OpenLCB CAN connection
+  OpenLcb_can_init();
   
-  // Initialize NmraNet CAN link controller
+  // Initialize OpenLCB CAN link controller
   link.reset();
 }
 
 void loop() {
   // check for input frames, acquire if present
-  boolean rcvFramePresent = NMRAnet_can_get_frame(&rxBuffer);
+  boolean rcvFramePresent = OpenLcb_can_get_frame(&rxBuffer);
   
   // process link control first
   link.check();
@@ -80,7 +80,7 @@ void loop() {
       eid.val[6] = 0;
       eid.val[7] = 0;
       txBuffer.setProducerIdentifyRange(&eid,0);
-      NMRAnet_can_queue_xmt_wait(&txBuffer);
+      OpenLcb_can_queue_xmt_wait(&txBuffer);
     }
     
     if(LnPacket)
@@ -94,7 +94,7 @@ void loop() {
         eid.val[7] = 0;
         
         txBuffer.setPCEventReport(&eid);
-        NMRAnet_can_queue_xmt_wait(&txBuffer);
+        OpenLcb_can_queue_xmt_wait(&txBuffer);
         break;
         
       case OPC_SW_REQ:
@@ -106,7 +106,7 @@ void loop() {
         eid.val[7] = LnPacket->data[2];
 
         txBuffer.setPCEventReport(&eid);
-        NMRAnet_can_queue_xmt_wait(&txBuffer);
+        OpenLcb_can_queue_xmt_wait(&txBuffer);
         break;
       }
     }

@@ -33,7 +33,7 @@ class foo{};  // force Arduino environment to treat the rest of this file as C++
 #include <NodeID.h>
 #include <EventID.h>
 
-// specific NMRAnet implementations
+// specific OpenLCB implementations
 #include "LinkControl.h"
 
 OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
@@ -75,10 +75,10 @@ void setup()
   delay(100);
   Serial.println();Serial.println("Starting CanMrrlcbTest");
   
-  // Initialize NmraNet CAN connection
+  // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
   
-  // Initialize NmraNet CAN link controller
+  // Initialize OpenLCB CAN link controller
   link.reset();
   
   // Ethernet, from WebClient demo
