@@ -15,12 +15,12 @@
 #include "Event.h"
 
 class NodeID;
-class NmraNetCanBuffer;
+class OpenLcbCanBuffer;
 
 class PCE {
   public:
 
-  PCE(Event* c, int nC, Event* p, int nP, NmraNetCanBuffer* b, NodeID* nid, void (*callback)(int i));
+  PCE(Event* c, int nC, Event* p, int nP, OpenLcbCanBuffer* b, NodeID* nid, void (*callback)(int i));
   
   /**
    * Produce the ith event
@@ -40,11 +40,11 @@ class PCE {
    * be transferred to the PCER object via this method
    * so that it can handle the verification protocol.
    */
-  void receivedFrame(NmraNetCanBuffer* rcv);
+  void receivedFrame(OpenLcbCanBuffer* rcv);
   
   /**
    * A new event has been defined, and we should
-   * do the necessary notifications, etc on the NMRAnet link
+   * do the necessary notifications, etc on the OpenLCB link
    *
    * index is the 0-based index of the newly defined
    * event in the array provided to the ctor earlier.
@@ -53,7 +53,7 @@ class PCE {
   
   /**
    * A new event has been defined, and we should
-   * do the necessary notifications, etc on the NMRAnet link
+   * do the necessary notifications, etc on the OpenLCB link
    *
    * index is the 0-based index of the newly defined
    * event in the array provided to the ctor earlier.
@@ -65,7 +65,7 @@ class PCE {
   Event* produced;  // array
   int nConsumed;
   int nProduced;
-  NmraNetCanBuffer* buffer;
+  OpenLcbCanBuffer* buffer;
   NodeID* nid;
   void (*callback)(int i);   // void callback(int index) pointer
 

@@ -6,53 +6,53 @@
 // from the top level file (this file)
 #include "CAN.h"
 
-#include "NmraNetCan.h"
-#include "NmraNetCanInterface.h"
-#include "NmraNetCanBuffer.h"
+#include "OpenLcbCan.h"
+#include "OpenLcbCanInterface.h"
+#include "OpenLcbCanBuffer.h"
 #include "NodeID.h"
 #include "EventID.h"
 
-  void NmraNetCanBuffer::init() {
+  void OpenLcbCanBuffer::init() {
     // set default header: extended frame w low priority
     flags.extended = 1;
     id = 0x1FFFFFFF;  // all bits in header default to 1
   }
 
-  void NmraNetCanBuffer::setSourceAlias(unsigned int a) {
+  void OpenLcbCanBuffer::setSourceAlias(unsigned int a) {
     id &= ~0x0000FFFFL;
     id = id | (a & 0xFFFFL);
   }
   
-  unsigned int NmraNetCanBuffer::getSourceAlias() {
+  unsigned int OpenLcbCanBuffer::getSourceAlias() {
       return id&0xFFFF;
   }
 
-  void NmraNetCanBuffer::setFrameTypeCAN() {
+  void OpenLcbCanBuffer::setFrameTypeCAN() {
     id &= ~0x08000000L;     
   }
   
-  boolean NmraNetCanBuffer::isFrameTypeCAN() {
+  boolean OpenLcbCanBuffer::isFrameTypeCAN() {
     return (id&0x08000000L) == 0x00000000L;
   }
 
-  void NmraNetCanBuffer::setFrameTypeNmraNet() {
+  void OpenLcbCanBuffer::setFrameTypeOpenLcb() {
     id |= 0x08000000L;     
   }
   
-  boolean NmraNetCanBuffer::isFrameTypeNmraNet() {
+  boolean OpenLcbCanBuffer::isFrameTypeOpenLcb() {
     return (id&0x08000000L) == 0x08000000L;
   }
 
-  void NmraNetCanBuffer::setVariableField(unsigned int f) {
+  void OpenLcbCanBuffer::setVariableField(unsigned int f) {
     id &= ~0x07FF0000L;
     id |= (f & 0x7FFL)<<16;
   }
 
-  unsigned int NmraNetCanBuffer::getVariableField() {
+  unsigned int OpenLcbCanBuffer::getVariableField() {
     return (id&0x07FF0000L) >> 16;
   }
   
-  void NmraNetCanBuffer::setCIM(int i, unsigned int testval, unsigned int alias) {
+  void OpenLcbCanBuffer::setCIM(int i, unsigned int testval, unsigned int alias) {
     init();
     setFrameTypeCAN();
     setVariableField( ((i<<8)&0x700) | testval);
@@ -60,11 +60,11 @@
     length=0;
   }
 
-  boolean NmraNetCanBuffer::isCIM() {
+  boolean OpenLcbCanBuffer::isCIM() {
     return isFrameTypeCAN() && (getVariableField()&0x700) <= 0x5FF;
   }
 
-  void NmraNetCanBuffer::setRIM(unsigned int alias) {
+  void OpenLcbCanBuffer::setRIM(unsigned int alias) {
     init();
     setFrameTypeCAN();
     setVariableField(0x7FF);
@@ -72,31 +72,31 @@
     length=0;
   }
 
-  boolean NmraNetCanBuffer::isRIM() {
+  boolean OpenLcbCanBuffer::isRIM() {
       return isFrameTypeCAN() && getVariableField() == 0x7FF;
   }
 
-  boolean NmraNetCanBuffer::isNmraNetMTI(unsigned int mti) {
-      return isFrameTypeNmraNet() && getVariableField() == mti;
+  boolean OpenLcbCanBuffer::isOpenLcbMTI(unsigned int mti) {
+      return isFrameTypeOpenLcb() && getVariableField() == mti;
   }
 
-  void NmraNetCanBuffer::setPCEventReport(EventID* eid) {
+  void OpenLcbCanBuffer::setPCEventReport(EventID* eid) {
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_PCER);
     setSourceAlias(nodeAlias);
     length=8;
     loadFromEid(eid);
   }
   
-  boolean NmraNetCanBuffer::isPCEventReport() {
-      return isNmraNetMTI(MTI_PCER);
+  boolean OpenLcbCanBuffer::isPCEventReport() {
+      return isOpenLcbMTI(MTI_PCER);
   }
 
-  void NmraNetCanBuffer::setInitializationComplete(unsigned int alias, NodeID* nid) {
+  void OpenLcbCanBuffer::setInitializationComplete(unsigned int alias, NodeID* nid) {
     nodeAlias = alias;
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_INITIALIZATION_COMPLETE);
     setSourceAlias(nodeAlias);
     length=6;
@@ -108,11 +108,11 @@
     data[5] = nid->val[5];
   }
   
-  boolean NmraNetCanBuffer::isInitializationComplete() {
-      return isNmraNetMTI(MTI_INITIALIZATION_COMPLETE);
+  boolean OpenLcbCanBuffer::isInitializationComplete() {
+      return isOpenLcbMTI(MTI_INITIALIZATION_COMPLETE);
   }
   
-  void NmraNetCanBuffer::getEventID(EventID* evt) {
+  void OpenLcbCanBuffer::getEventID(EventID* evt) {
     evt->val[0] = data[0];
     evt->val[1] = data[1];
     evt->val[2] = data[2];
@@ -123,7 +123,7 @@
     evt->val[7] = data[7];
   }
   
-  void NmraNetCanBuffer::getNodeID(NodeID* nid) {
+  void OpenLcbCanBuffer::getNodeID(NodeID* nid) {
     nid->val[0] = data[0];
     nid->val[1] = data[1];
     nid->val[2] = data[2];
@@ -132,13 +132,13 @@
     nid->val[5] = data[5];
   }
   
-  boolean NmraNetCanBuffer::isVerifyNID() {
-      return isNmraNetMTI(MTI_VERIFY_NID);
+  boolean OpenLcbCanBuffer::isVerifyNID() {
+      return isOpenLcbMTI(MTI_VERIFY_NID);
   }
 
-  void NmraNetCanBuffer::setVerifiedNID(NodeID* nid) {
+  void OpenLcbCanBuffer::setVerifiedNID(NodeID* nid) {
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_VERIFIED_NID);
     setSourceAlias(nodeAlias);
     length=6;
@@ -150,57 +150,57 @@
     data[5] = nid->val[5];
   }
 
-  boolean NmraNetCanBuffer::isIdentifyConsumers() {
-      return isNmraNetMTI(MTI_IDENTIFY_CONSUMERS);
+  boolean OpenLcbCanBuffer::isIdentifyConsumers() {
+      return isOpenLcbMTI(MTI_IDENTIFY_CONSUMERS);
   }
 
-  void NmraNetCanBuffer::setConsumerIdentified(EventID* eid) {
+  void OpenLcbCanBuffer::setConsumerIdentified(EventID* eid) {
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_CONSUMER_IDENTIFIED);
     setSourceAlias(nodeAlias);
     length=8;
     loadFromEid(eid);
   }
 
-  void NmraNetCanBuffer::setConsumerIdentifyRange(EventID* eid, EventID* mask) {
+  void OpenLcbCanBuffer::setConsumerIdentifyRange(EventID* eid, EventID* mask) {
     // does send a message, but not complete yet - RGJ 2009-06-14
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_CONSUMER_IDENTIFY_RANGE);
     setSourceAlias(nodeAlias);
     length=8;
     loadFromEid(eid);
   }
 
-  boolean NmraNetCanBuffer::isIdentifyProducers() {
-      return isNmraNetMTI(MTI_IDENTIFY_PRODUCERS);
+  boolean OpenLcbCanBuffer::isIdentifyProducers() {
+      return isOpenLcbMTI(MTI_IDENTIFY_PRODUCERS);
   }
 
-  void NmraNetCanBuffer::setProducerIdentified(EventID* eid) {
+  void OpenLcbCanBuffer::setProducerIdentified(EventID* eid) {
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_PRODUCER_IDENTIFIED);
     setSourceAlias(nodeAlias);
     length=8;
     loadFromEid(eid);
   }
 
-  void NmraNetCanBuffer::setProducerIdentifyRange(EventID* eid, EventID* mask) {
+  void OpenLcbCanBuffer::setProducerIdentifyRange(EventID* eid, EventID* mask) {
     // does send a message, but not complete yet - RGJ 2009-06-14
     init();
-    setFrameTypeNmraNet();
+    setFrameTypeOpenLcb();
     setVariableField(MTI_PRODUCER_IDENTIFY_RANGE);
     setSourceAlias(nodeAlias);
     length=8;
     loadFromEid(eid);
   }
 
-  boolean NmraNetCanBuffer::isIdentifyEvents() {
-      return isNmraNetMTI(MTI_IDENTIFY_EVENTS);
+  boolean OpenLcbCanBuffer::isIdentifyEvents() {
+      return isOpenLcbMTI(MTI_IDENTIFY_EVENTS);
   }
 
-  void NmraNetCanBuffer::loadFromEid(EventID* eid) {
+  void OpenLcbCanBuffer::loadFromEid(EventID* eid) {
     data[0] = eid->val[0];
     data[1] = eid->val[1];
     data[2] = eid->val[2];

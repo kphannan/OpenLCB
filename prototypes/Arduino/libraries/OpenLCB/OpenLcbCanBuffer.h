@@ -1,17 +1,17 @@
-#ifndef NmraNetCanBuffer_h
-#define NmraNetCanBuffer_h
+#ifndef OpenLcbCanBuffer_h
+#define OpenLcbCanBuffer_h
 
 class NodeID;
 class EventID;
-#include "NmraNetCanInterface.h"
+#include "OpenLcbCanInterface.h"
 
 /**
- * Class to handle transforming NMRAnet (S9.6) frames to/from std CAN frames.
+ * Class to handle transforming OpenLCB (S9.6) frames to/from std CAN frames.
  * <p>
  * We're trying to localize the formating of frames to/from the node here,
  * so that only this class needs to change when/if the wire protocol changes.
  */
- class NmraNetCanBuffer : public CanInterfaceBuffer {
+ class OpenLcbCanBuffer : public CanInterfaceBuffer {
   public: 
   
   // Initialize a buffer for transmission
@@ -20,8 +20,8 @@ class EventID;
   void setFrameTypeCAN();
   boolean isFrameTypeCAN();
   
-  void setFrameTypeNmraNet();
-  boolean isFrameTypeNmraNet();
+  void setFrameTypeOpenLcb();
+  boolean isFrameTypeOpenLcb();
   
   void setVariableField(unsigned int f);
   unsigned int getVariableField();
@@ -38,7 +38,7 @@ class EventID;
   void setInitializationComplete(unsigned int alias, NodeID* nid);
   boolean isInitializationComplete();
 
-  boolean isNmraNetMTI(unsigned int mti);
+  boolean isOpenLcbMTI(unsigned int mti);
   
   void setPCEventReport(EventID* eid);
   boolean isPCEventReport();

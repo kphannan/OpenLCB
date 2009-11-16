@@ -3,8 +3,8 @@
 
 #include "LinkControl.h"
 
-#include "NmraNetCanBuffer.h"
-#include "NmraNetCanInterface.h"
+#include "OpenLcbCanBuffer.h"
+#include "OpenLcbCanInterface.h"
 #include "NodeID.h"
 
 // state machine definitions
@@ -21,7 +21,7 @@
 #define logln(...) Serial.println(__VA_ARGS__)
 #include "HardwareSerial.h"
 
-LinkControl::LinkControl(NmraNetCanBuffer* b, NodeID* n) {
+LinkControl::LinkControl(OpenLcbCanBuffer* b, NodeID* n) {
   txBuffer = b;
   nid = n;
   // initialize sequence from node ID
@@ -53,23 +53,23 @@ void LinkControl::reset() {
 }
 
 boolean LinkControl::sendCIM(int i) {
-  if (!NMRAnet_can_xmt_ready(txBuffer)) return false;  // couldn't send just now  if (!isTxBufferFree()) return false;  // couldn't send just now
+  if (!OpenLcb_can_xmt_ready(txBuffer)) return false;  // couldn't send just now  if (!isTxBufferFree()) return false;  // couldn't send just now
   txBuffer->setCIM(i,nid->val[i],getAlias());
-  NMRAnet_can_queue_xmt_wait(txBuffer);  // wait for queue, but earlier check says will succeed
+  OpenLcb_can_queue_xmt_wait(txBuffer);  // wait for queue, but earlier check says will succeed
   return true;
 }
 
 boolean LinkControl::sendRIM() {
-  if (!NMRAnet_can_xmt_ready(txBuffer)) return false;  // couldn't send just now  if (!isTxBufferFree()) return false;  // couldn't send just now
+  if (!OpenLcb_can_xmt_ready(txBuffer)) return false;  // couldn't send just now  if (!isTxBufferFree()) return false;  // couldn't send just now
   txBuffer->setRIM(getAlias());
-  NMRAnet_can_queue_xmt_wait(txBuffer);  // wait for queue, but earlier check says will succeed
+  OpenLcb_can_queue_xmt_wait(txBuffer);  // wait for queue, but earlier check says will succeed
   return true;
 }
 
 boolean LinkControl::sendInitializationComplete() {
-  if (!NMRAnet_can_xmt_ready(txBuffer)) return false;  // couldn't send just now  if (!isTxBufferFree()) return false;  // couldn't send just now
+  if (!OpenLcb_can_xmt_ready(txBuffer)) return false;  // couldn't send just now  if (!isTxBufferFree()) return false;  // couldn't send just now
   txBuffer->setInitializationComplete(getAlias(), nid);
-  NMRAnet_can_queue_xmt_wait(txBuffer);  // wait for queue, but earlier check says will succeed
+  OpenLcb_can_queue_xmt_wait(txBuffer);  // wait for queue, but earlier check says will succeed
   return true;
 }
 
@@ -117,7 +117,7 @@ unsigned int LinkControl::getAlias() {
   return (lfsr>>16)&0xFFFF;
 }
 
-void LinkControl::receivedFrame(NmraNetCanBuffer* rcv) {
+void LinkControl::receivedFrame(OpenLcbCanBuffer* rcv) {
    // check received message
    // see if this is a frame with our alias
    if (getAlias() == rcv->getSourceAlias()) {
@@ -141,7 +141,7 @@ void LinkControl::receivedFrame(NmraNetCanBuffer* rcv) {
      if (n.equals(nid)) {
        // reply; should be threaded, but isn't
        txBuffer->setVerifiedNID(nid);
-       NMRAnet_can_queue_xmt_wait(txBuffer);
+       OpenLcb_can_queue_xmt_wait(txBuffer);
      }
    }
 }

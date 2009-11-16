@@ -1,8 +1,8 @@
-#ifndef NmraNetCan_h
-#define NmraNetCan_h
+#ifndef OpenLcbCan_h
+#define OpenLcbCan_h
 
 /**
- * Basic definitions for NMRAnet S9.6 on CAN
+ * Basic definitions for OpenLCB on CAN
  */
  
 #define MTI_INITIALIZATION_COMPLETE 0x33F

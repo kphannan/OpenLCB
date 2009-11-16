@@ -1,13 +1,13 @@
 #ifndef LinkControl_h
 #define LinkControl_h
 
-class NmraNetCanBuffer;
+class OpenLcbCanBuffer;
 class NodeID;
 
 #include <stdint.h>
 
 /**
- * Controls a NmraNet S9.6 CAN link.
+ * Controls a OpenLcb S9.6 CAN link.
  * <p>
  * Once configured and started, this will handle all exchanges
  * on the CAN link until the link is operational.
@@ -38,7 +38,7 @@ class LinkControl {
   * buffer to be used to send frames, and the NodeID of this
   * node.
   */
-  LinkControl(NmraNetCanBuffer* b, NodeID* n);
+  LinkControl(OpenLcbCanBuffer* b, NodeID* n);
 
   /**
    * Invoke once to configure an object of this type.
@@ -62,7 +62,7 @@ class LinkControl {
    * be transferred to the LinkControl object via this method
    * so that it can check for errors and handle Verify requests.
    */
-  void receivedFrame(NmraNetCanBuffer* rcv);
+  void receivedFrame(OpenLcbCanBuffer* rcv);
 
   /**
    * Check if the link startup procedure has completed OK.
@@ -99,7 +99,7 @@ class LinkControl {
    */
   void nextAlias();
   
-  NmraNetCanBuffer* txBuffer;
+  OpenLcbCanBuffer* txBuffer;
   NodeID* nid;
   unsigned long timer; // used to wait for specific times
   uint32_t lfsr;  // PRNG sequence value; high 16 bits is current key; not zero

@@ -5,7 +5,7 @@
 
 #include "EventID.h"
 #include "NodeID.h"
-#include "NmraNetCanBuffer.h"
+#include "OpenLcbCanBuffer.h"
 
 // define some rudimentary logging
 #define log(...) Serial.print(__VA_ARGS__)
@@ -19,7 +19,7 @@
 // Mark entry as really empty, ignore
 #define EMPTY_FLAG 0x04
 
-PCE::PCE(Event* c, int nC, Event* p, int nP, NmraNetCanBuffer* b, NodeID* n, void (*cb)(int i)) {
+PCE::PCE(Event* c, int nC, Event* p, int nP, OpenLcbCanBuffer* b, NodeID* n, void (*cb)(int i)) {
       consumed = c;
       nConsumed = nC;
       produced = p;
@@ -54,12 +54,12 @@ PCE::PCE(Event* c, int nC, Event* p, int nP, NmraNetCanBuffer* b, NodeID* n, voi
          if (produced[sendProducer].flags & IDENT_FLAG) {
            produced[sendProducer].flags &= ~IDENT_FLAG;    // reset flag
            buffer->setProducerIdentified(&produced[sendProducer++]);
-           NMRAnet_can_queue_xmt_wait(buffer);  // wait until buffer queued, but OK due to earlier check
+           OpenLcb_can_queue_xmt_wait(buffer);  // wait until buffer queued, but OK due to earlier check
            break; // only send one from this loop
          } else if (produced[sendProducer].flags & PRODUCE_FLAG) {
            produced[sendProducer].flags &= ~PRODUCE_FLAG;    // reset flag
            buffer->setPCEventReport(&produced[sendProducer++]);
-           NMRAnet_can_queue_xmt_wait(buffer);  // wait until buffer queued, but OK due to earlier check
+           OpenLcb_can_queue_xmt_wait(buffer);  // wait until buffer queued, but OK due to earlier check
            break; // only send one from this loop
          } else {
            // just skip
@@ -68,12 +68,12 @@ PCE::PCE(Event* c, int nC, Event* p, int nP, NmraNetCanBuffer* b, NodeID* n, voi
      }
      
      while (sendConsumer < nConsumed) {
-       if (NMRAnet_can_xmt_ready(buffer)) {
+       if (OpenLcb_can_xmt_ready(buffer)) {
          // OK to send, see if marked for some cause
          if (consumed[sendConsumer].flags & IDENT_FLAG) {
            consumed[sendConsumer].flags &= ~IDENT_FLAG;    // reset flag
            buffer->setConsumerIdentified(&consumed[sendConsumer++]);
-           NMRAnet_can_queue_xmt_wait(buffer);  // wait until buffer queued, but OK due to earlier check
+           OpenLcb_can_queue_xmt_wait(buffer);  // wait until buffer queued, but OK due to earlier check
            break; // only send one from this loop
          } else {
            // just skip
@@ -91,7 +91,7 @@ PCE::PCE(Event* c, int nC, Event* p, int nP, NmraNetCanBuffer* b, NodeID* n, voi
     consumed[index].flags |= IDENT_FLAG;
   }
   
-  void PCE::receivedFrame(NmraNetCanBuffer* rcv) {
+  void PCE::receivedFrame(OpenLcbCanBuffer* rcv) {
     if (rcv->isIdentifyConsumers()) {
         // see if we consume the listed event
         Event event;

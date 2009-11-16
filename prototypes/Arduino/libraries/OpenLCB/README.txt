@@ -1,7 +1,7 @@
-NMRAnet library
+OpenLCB library
 
 This is an Arduino library that contains 
-a prototype implementation of the NMRAnet S9.6
+a prototype implementation of the OpenLCB
 protocol.
 
 Right now, it's a mix of CAN-specific and general items.
