@@ -1,0 +1,155 @@
+Outline of Software loader
+--------------------------
+
+The main point of this is to be able to upgrade module software without having to send it back to the maker to be re-programmed.
+
+If there is a valid program loaded then it enters the program.
+
+If there is no valid program loaded, then it executes its own main loop, performing anything that may be relavent to a node which can't do anything. This includes read block, write block, setting the nodenumberalias as well as the loader function. 
+
+This means it can cope with an error or power failure during re-programming, but not with loading a faulty program.
+
+Due to the way the compiler and linker work now, and may work in the future, it's not possible to control which parts of ram will be used. Therefore, its not possible to reliably use any code in two separate programs without corruting the others ram.
+
+The PIC ECAN transmits the highest buffer number first, so packets will not be sent in order. The receiver needs to allow for data bytes to be out of order or even arrive after the crc packet. So far the interface seems too slow to make this a problem.
+
+The MPLAB IDE always erases the device before programming it. So its not easy to get the loader and application in the same device.
+
+
+Versions
+--------
+
+There are 3 versions, ECAN, USB and RS232, depending on which interface the bootloader uses.
+
+Normally the ECAN version will be used, but the RS232 module should use the RS232 version, and the USB module should use the USB version. However it should also be possible to use the ECAN version instead but then an upgrade would have to be done over the CAN interface.
+
+Currently the loader is just under 4k bytes, so actual programs start at 0x1000 instead of 0x0000.
+
+
+Boot memory layout
+------------------
+0x0000, reset
+0x0008, hp interrupt
+0x0018, lp interrupt
+0x0020, 7 byte version info for boot loader
+0x0030, jump to loader
+0x0040, 6 byte unique node id, 6 byte random seed, 2 bytes alias, 50 bytes empty
+0x0080, 64 byte block loader text string
+0x00C0, 64 byte block identification string assigned by the user
+
+
+Program memory layout
+---------------------
+program baseaddress = 0x1000
+
+baseaddress+0x0000, redirected reset
+baseaddress+0x0008, redirected hp interrupt
+baseaddress+0x0018, redirected lp interrupt
+baseaddress+0x0020, 7 byte version info for program
+baseaddress+0x0027, valid program loaded flag, 0xFF=no program, 0x00=valid program
+baseaddress+0x0028, 4 bytes start address of XML data description file
+baseaddress+0x002C, 2 bytes length of XML file.
+baseaddress+0x002E, 18 spare bytes
+baseaddress+0x0040, 64 byte block with program identification string
+
+Note. In C18, 16 and 32 bit (2 and 4 byte) data are stored low byte first.
+
+
+Programloader
+-------------
+This is a special case because we can't overwrite the program while it's being executed.
+
+get the hex code file name and nn for the download.
+Read the info block from the hex code file, (must be at a fixed address to do this).
+Read info blocks from the module, readable module type string and user defined string.
+Warn the user by displaying all 3 strings, with an option to cancel.
+
+Send software download start packet.
+The running program should stop in a graceful way, and send an ack back.
+The program download in 64 byte blocks. The first block downloaded will be the virtual vector block with the valid program loaded flag set to 0xFF.
+	send block address packet
+	send 10 data packets
+	wait for ack reply
+If all the blocks have been sent OK, send a restart cmd.
+The restart cmd should zero the valid program loaded flag (0xFF -> 0x00 does not actually need an erase) and restart the program
+
+Failure at any point will leave the valid program loaded flag at 0xFF, so it will not be run.
+
+Program read ?
+--------------
+In theory we don't need this, in practice it's useful to be able to save a known working version before doing an upgrade. It can be done by reading 64 byte blocks without stopping the program. Finding the size of the program or end address in C seems to be a problem.
+
+
+XML file read
+-------------
+If the file is there then information in the first 64 bytes gives the start address and length. This can then be read by reading 64 byte blocks without stopping the program.
+
+
+#define OPC_UPGSTART 0x5C	// enter loader
+#define OPC_UPGRESET 0x5D	// start program
+#define OPC_UPGREAD  0xBC	// read 64 bytes
+#define OPC_UPGADDR  0xBD	// write 64 bytes
+#define OPC_UPGACK   0x7C	// block write ack
+#define OPC_UPGDATA  0xFC	// 4 bytes of data
+
+
+Software download start
+-----------------------
+The running program should stop running by turning off any pulsed outputs, disable interrupts and enter the boot loader. The loader will send an ack back to the PC. The loader should then load a complete program and send the restart cmd. 
+1	opc=5C
+2	dnn		nodenumber of module to be updated
+-
+3
+
+Restart cmd
+-----------
+Set the valid program loaded flag to 0x00, and jump to the program start address.
+Used after loading a compete program without error. 
+1	opc=5D
+2	dnn		nodenumber of module to be restarted
+-
+3
+
+Ack cmd
+-------
+Reply after write block cmd, to signal the next block can be sent.
+After download start to indicate the first block can be sent.
+Or after some event teaching commands.
+1	opc=7C:
+2	snn		nodenumber of module sending this ack
+1	status		ok = 0, crcerror=1, timeout=2, 3=no data, 4=no space
+-
+4
+
+Read block cmd
+--------------
+Read a 64 byte block of data from a module. The reply is 17 data packets.
+1	opc=BC
+2	dnn		nodenumber of module to read from
+1	address upper	not needed yet
+1	address high	3 byte address
+1	address low
+-
+6
+
+Write block cmd
+---------------
+Write a 64 byte block of data to a module. This is followed by 17 data packets and the module will then send an ack back after the block is written.
+1	opc=BD
+2	dnn		nodenumber of module to write this block
+1	address upper	not needed yet
+1	address high	3 byte address
+1	address low
+-
+6
+
+Data packet		
+-----------
+A 4 byte data packet, for software most data is transfered in 68 byte blocks including a CRC8 byte so there will always be 17 data packets for a complete block. For event data there will usually be less data.
+1	opc=FC		read or write data
+2	nn		nodenumber of module, same as read or write block cmd
+1	offset		crc8 is offset=64
+4	data bytes	4 bytes of data or crc8
+-
+8
+
