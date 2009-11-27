@@ -97,32 +97,8 @@ void ECANInitialize(void)
 //                  CB_FrameType - 16 bits header
 //                  CB_data      - Data bytes of up to 8 bytes in length
 //                  CB_dataLen   - Data length from 0 thru 8.
-//                  CB_msgFlags  - not used
 // Result:          TRUE, if an empty buffer was found and loaded
 //*********************************************************************************
-
-// check all 3 transmit buffers to find one empty
-
-BYTE far * ECANBufferEmpty(void)
-{
-    far overlay BYTE * far ptr;
-    // Check to see if a buffer is empty by looking at BnCON.TXREQ bit (bit3).
-    ptr = (BYTE far *)&TXB0CON;
-    if ( !(*ptr & 0x08) ) {
-        return ptr;
-    }
-    ptr = (BYTE far *)&TXB1CON;
-    if ( !(*ptr & 0x08) ) {
-        return ptr;
-    }
-    ptr = (BYTE far *)&TXB2CON;
-    if ( !(*ptr & 0x08) ) {
-        return ptr;
-    }
-
-    // There were no empty buffers.
-    return (BYTE * far)0;
-}
 
 // Only extended frames
 
@@ -131,19 +107,27 @@ BOOL ECANSendMessage(void)
     far overlay BYTE * far ptr;       // ECAN buffer pointers
     far overlay BYTE i;
 
-    ptr = ECANBufferEmpty();
-    if (ptr == (BYTE far *)0)
-        return FALSE;    
+    // check all 3 transmit buffers to find one empty
+    ptr = (BYTE far *)&TXB0CON;
+    if (*ptr & 0x08) {
+        ptr = (BYTE far *)&TXB1CON;
+        if (*ptr & 0x08) {
+            ptr = (BYTE far *)&TXB2CON;
+            if (*ptr & 0x08) {
+                return FALSE;
+            }
+        }
+    }
 
     *ptr &= 0xFC;                     // clear send priority bits
     *(ptr+5) = CB_datalen;
 
     // Rearrange header
-    *(ptr+1) = 0x80 | (HI(CB_FrameType) >> 1);                  // SIDH
+    *(ptr+1) = 0x80 | (HI(CB_FrameType) >> 1);                         // SIDH
     *(ptr+2) = ((HI(CB_FrameType)&0x01) << 7 ) | ((LO(CB_FrameType)&0xC0)>>1) 
-               | 0x08 | ((LO(CB_FrameType)&0x30)>>4);           // SIDL
-    *(ptr+3) = HI(CB_SourceNID) | ((LO(CB_FrameType)&0x0F)<<4); // EIDH
-    *(ptr+4) = LO(CB_SourceNID);                                // EIDL
+               | 0x08 | ((LO(CB_FrameType)&0x30)>>4);                  // SIDL
+    *(ptr+3) = (HI(CB_SourceNID)&0x0F) | ((LO(CB_FrameType)&0x0F)<<4); // EIDH
+    *(ptr+4) = LO(CB_SourceNID);                                       // EIDL
 
     // Copy given number of data bytes.
     for ( i = 0 ; i < CB_datalen; i++ )
@@ -159,7 +143,7 @@ BOOL ECANSendMessage(void)
 //                CB_FrameType - 16 bits header
 //                CB_data        - 8 byte data buffer
 //                CB_dataLen     - buffer for count of bytes copied
-//                CB_msgFlags    - buffer for or'ed flags
+//                CB_msgFlags    - buffer for or'ed error flags
 // Result:        TRUE, if a full receive buffer was found 
 //*********************************************************************************
 
@@ -208,7 +192,7 @@ BOOL ECANReceiveMessage(void)
     HI(CB_FrameType) = *(ptr+1) << 1;
     HI(CB_FrameType) |= (*(ptr+2) & 0x80) >> 7;
     LO(CB_FrameType) = (*(ptr+2) & 0x60) << 1;
-    LO(CB_FrameType) |= (*(ptr+2) & 0x02) << 4;
+    LO(CB_FrameType) |= (*(ptr+2) & 0x03) << 4;
     LO(CB_FrameType) |= *(ptr+3) >> 4;
     HI(CB_SourceNID) = *(ptr+3) & 0x0F;
     LO(CB_SourceNID) = *(ptr+4);

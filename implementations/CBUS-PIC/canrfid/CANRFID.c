@@ -1,14 +1,13 @@
 /*
-    OpenLCB RS232 or USB interface for CBUS modules
+    RFID RS232 interface for CBUS
 
-    Must define USB or RS232 get the right version.
+    Serial BAUD is 9.6KB
+    Format is <STX 02> <10 bytes of hex data> <2 bytes xor of data> <cr> <lf> <ETX 03>
 
-    Uses 4 MHz resonator and PLL for 16 MHz clock
+    To use the CANRS hardware the RFID output needs to be on pin 3 instead of pin 2
+    and the gender of the D-type needs changing.
 
-    Serial BAUD is 115.2KB, 87 usec per byte
-    USB version uses parallel USB adapter and virtual com port at any speed.
-
-    Copyright (C) 2008    Mike Johnson
+    Copyright (C) 2009    Mike Johnson
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,7 +28,6 @@
 #include "../canlib/general.c"
 #include "../canlib/entry.c"
 #include "../canlib/ecan.c"
-#include "../canlib/serial.c"
 
 //*********************************************************************************
 //    define RAM storage
@@ -37,36 +35,29 @@
 
 #pragma udata
 
-BYTE i, j, k, t;
-BYTE txerrcnt;
-BYTE rxerrcnt;
-BYTE timer;
 unsigned int blocks;
 unsigned int DNID;
+BYTE timer;
+BYTE i, t;
+BOOL errorflag;
 
-#ifdef RS232
+// Serial Input Buffer for 1 packet
+static BYTE RXindex;           // index into buffer
+static BYTE RXbuf[30];         // receive packet buffer
+
 // Serial buffer data
-BYTE sertxin, sertxout;    // transmit buffer pointers
-BYTE serrcin, serrcout;    // receive buffer pointers
-BYTE byte;                 // character returned by GetSerial
-#pragma udata grp1
-#define SERIALTXMASK 0xFF
-far BYTE sertxbuf[256];
+static BYTE serrcin, serrcout;    // receive buffer pointers
+static BYTE byte;                 // character returned by GetSerial
 #pragma udata grp2
 #define SERIALRXMASK 0x7F
-far BYTE serrcbuf[128];
+static far BYTE serrcbuf[128];
 #pragma udata
-#endif
 
 //*********************************************************************************
 //        ROM module info
 //*********************************************************************************
 
-#ifdef USB
-#define modulestring "OpenLCB PIC USB "  __DATE__ " " __TIME__
-#else
-#define modulestring "OpenLCB PIC RS232 "  __DATE__ " " __TIME__
-#endif
+#define modulestring "MERGCBUS CANRFID "  __DATE__ " " __TIME__
 
 #pragma romdata
 const rom BYTE xml[] = 
@@ -111,43 +102,16 @@ void hpinterrupt(void)
 #pragma interruptlow lpinterrupt
 void lpinterrupt(void)
 {
-#ifdef RS232
     if (PIR1bits.RCIF) {             // Receive buffer loaded
         serrcbuf[serrcin++] = RCREG; // also clears RCIF
         serrcin &= SERIALRXMASK;
         if (RCSTAbits.OERR)          // overflow error
             RCSTAbits.CREN = 0;
-        if (((serrcout-serrcin)&SERIALRXMASK) < 10) // buffer getting full
-            SERIALCTS = 1;           // block CTS
     }
-    if (PIR1bits.TXIF) {             // Transmit buffer empty
-        if (sertxin==sertxout)       // nothing to send
-            PIE1bits.TXIE = 0;       // disable TX interrupt
-        else { // send a character
-            TXREG = sertxbuf[sertxout++]; // also clears TXIF
-            sertxout &= SERIALTXMASK;
-        }
-    }
-#endif
 }
-
-//*********************************************************************************
-//        Basic I/O stuff.
-//*********************************************************************************
 
 BOOL GetSerial(void)
 {
-#ifdef USB
-    if (USBRXF == 0) {
-        TRISC = 0xFF;
-        USBRD = 1;
-        USBRD = 0;        // RD strobe, reads on low
-        byte = PORTC;
-        USBRD = 1;
-        return TRUE;
-    }
-    return FALSE;
-#else
     far overlay BOOL c;
     PIE1bits.RCIE = 0; // disable interrupts while we mess with the buffer
     if (serrcin==serrcout) { // nothing to get
@@ -158,54 +122,40 @@ BOOL GetSerial(void)
         byte = serrcbuf[serrcout++];
         serrcout &= SERIALRXMASK;
         c = TRUE;
-        if (((serrcout-serrcin)&SERIALRXMASK) > 20) // un-block cts
-            SERIALCTS = 0;
+        // if (((serrcout-serrcin)&SERIALRXMASK) > 20) // un-block cts
+        //     SERIALCTS = 0;
     }
 ret:
     PIE1bits.RCIE = 1; // enable interrupt
     return c;
-#endif
 }
 
-void PutSerial(BYTE c)
+BYTE GetHex(BYTE a)
 {
-#ifdef USB
-    while (USBTXE == 1) ;
-    TRISC = 0x00;
-    PORTC = c;
-    USBWR = 1;
-    USBWR = 0;
-    TRISC = 0xFF;
-#else
-    PIE1bits.TXIE = 0;        // disable interrupts while we mess with the buffer
-    sertxbuf[sertxin++] = c;
-    sertxin &= SERIALTXMASK;
-    if (sertxin == sertxout)  // buffer full - throw away the character
-        sertxin = (sertxin - 1) & SERIALTXMASK; // move pointer back
-    //if (SERIALRTS==0)
-        PIE1bits.TXIE = 1;    // enable TX interrupt
-#endif
+    far overlay BYTE c = a;
+    if (c>='0' && c<='9')
+        return c-'0';
+    if (c>='A' && c<='F')
+        return c-'A'+10;
+    if (c>='a' && c<='f')
+        return c-'a'+10;
+    errorflag = TRUE;
+    return 0;
+}
+
+BYTE Get2Hex(BYTE a, BYTE b)
+{
+    return (GetHex(a)<<4) | GetHex(b);
 }
 
 BOOL SendMessage(void)
 {
-    if (ECANSendMessage()==FALSE)
-        return FALSE;
-    PrintPacket();
-    return TRUE;
+    return ECANSendMessage();
 }
 
-BOOL ReceiveMessage()
+BOOL ReceiveMessage(void)
 {
-    if (ECANReceiveMessage()) {
-        PrintPacket();
-        return TRUE;
-    }
-    if (ReadPacket()) {
-        while (ECANSendMessage()==0) ;
-        return TRUE;
-    }
-    return FALSE;;
+    return ECANReceiveMessage();
 }
 
 //*********************************************************************************
@@ -292,41 +242,48 @@ void packet(void)
 void main(void)
 {
     ADCON1 = 0x0F;        // turn off A/D, all digital I/O
+        
     TRISA = 0x20;        // Port A outputs except reset pin
+    TRISB = 0x0A;        // RB0 is CTS, RB1 is RTS,  RB2 = CANTX, RB3 = CANRX, RB4,5 are logic 
+                         // RB6,7 for debug and ICSP and diagnostic LEDs
+    PORTB = 0x04;        // CAN recessive
+    TRISC = 0x80;        // Port C 6,7 are serial.
 
-    InitSerial();
+//  Serial interface
+    SPBRG = 0x9F;        // 16000000/9600/4-1 = 19F
+    SPBRGH = 1;          // for Baud = 9600 use 1, for 115KB use 0
+    BAUDCON = 0x08;      // set BAUDCON to 16 bit
+    TXSTA = 0x24;        // set transmit 8 bit, enable, async, high speed(brgh=1)    
+    RCSTA = 0x90;        // set serial enable, continuous receive enable, 8 bit
+    serrcin = serrcout = 0;
+
+    timer = 0;
     Timer3Init();
-
     ECANInitialize();
 
 //  Interrupts
     RCONbits.IPEN = 1;    // enable interrupt priority levels
+    
     IPR1 = 0;             // all interrupts are low priority
     IPR2 = 0;
     IPR3 = 0;
-#ifdef RS232
+
     PIE1bits.RCIE = 1;    // enable interrupt on RS232 input    
     INTCONbits.GIEL = 1;  // enable low priority interrupts
     INTCONbits.GIEH = 1;  // enable high priority interrupts, even if not used ?
-#endif
 
     GreenLEDOn();
     YellowLEDOff();
 
+    i = 0x80;              // short delay needed before serial output, don't know why
+    while (--i) ;
+
     CheckAlias(0);
 
-    PutRomString((BYTE rom far *)"\r\nStart "  modulestring "\r\n");
-
     RXindex = 0;
-
-    // send INIT packet
-    CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_INIT;
-    CB_datalen = 0;
-    while (SendMessage()==0) ;
-
     while (1) {
-        if (Timer3Test()) {  // 100 msec timer
+        // 1 msec timer
+        if (Timer3Test()) { 
             timer++;
             if (blocks!=0 && timer>20) { // send timeout ack
                 sendack(2, DNID); // timeout
@@ -335,27 +292,37 @@ void main(void)
         }
 
         if (ReceiveMessage()) {
-            if (CB_msgFlags&ECAN_OVERFLOW)
-                PutRomString((BYTE rom far *)"-ECAN Buffer overflow-\r\n");
-            if (CB_msgFlags&ECAN_INVALID_MSG)
-                PutRomString((BYTE rom far *)"-ECAN Invalid message-\r\n");
             packet();
         }
 
-        if (TXERRCNT != txerrcnt) {
-            txerrcnt = TXERRCNT;
-            PutRomString((BYTE rom far *)"-ECAN TXERRCNT ");
-            Put2Hex(TXERRCNT);
-            PutRomString((BYTE rom far *)"-\r\n");
-        }
-        if (RXERRCNT != rxerrcnt) {
-            rxerrcnt = RXERRCNT;
-            PutRomString((BYTE rom far *)"-ECAN RXERRCNT ");
-            Put2Hex(RXERRCNT);
-            PutRomString((BYTE rom far *)"-\r\n");
+        if (GetSerial()) {
+            if (byte==0x02) { // start of message
+                RXbuf[0] = 0x02;
+                RXindex = 1;
+           }
+           else if (byte==0x03) { // end of message
+                if (RXbuf[0]!=0x02)
+                    goto error;
+                errorflag = FALSE;
+                CB_SourceNID = ND.nodeIdAlias;
+                CB_FrameType = FT_RFID;
+                CB_datalen = 5;
+                CB_data[0] = Get2Hex(RXbuf[1], RXbuf[2]);
+                CB_data[1] = Get2Hex(RXbuf[3], RXbuf[4]);
+                CB_data[2] = Get2Hex(RXbuf[5], RXbuf[6]);
+                CB_data[3] = Get2Hex(RXbuf[7], RXbuf[8]);
+                CB_data[4] = Get2Hex(RXbuf[9], RXbuf[10]);
+                if (!errorflag)
+                    while (SendMessage()==0) ;
+error:          RXindex = 0;
+            }
+            else { // put a character in the buffer
+                if (RXindex >= 29) {
+                    RXindex = 0;
+                }
+                RXbuf[RXindex++] = byte;
+            }
         }
     }
 }
-
-
 

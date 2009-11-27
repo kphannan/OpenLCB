@@ -88,94 +88,6 @@ far unsigned short long GP_address;      // block read or write address
 #pragma romdata
 
 //*********************************************************************************
-//        Frame Types
-//*********************************************************************************
-
-#define FT_CIM0      0x0000    // Top 12 bits of NID
-#define FT_CIM1      0x1000    // 2nd top 12 bits of NID
-#define FT_CIM2      0x2000    // 3rd top 12 bits of NID
-#define FT_CIM3      0x3000    // lowest 12 bits of NID
-//                   0x4000    // spare 
-//                   0x5000    // spare 
-//                   0x6000    // spare 
-#define FT_MR        0x7FFE    // Reset mapping, not sure this is actually useful ?
-#define FT_RIM       0x7FFF    // RIM
-//                   0x8000    // Broadcast message types
-//                   0x9000    // spare 
-//                   0xA000    // spare 
-//                   0xB000    // spare 
-//                   0xC000    // spare 
-//                   0xD000    // spare 
-#define FT_DAA       0xE000    // Destination Alias Addressed, message type is in the data
-#define FT_STREAM    0xF000    // Stream data
-
-// Destination Addressed, 1st byte of data is MTI
-
-// Misc
-#define DAA_DATA     0x00      // up to 0F, 7 bytes of data sequence number in low 4 bits
-#define DAA_ACK      0x10      // ack with status
-#define DAA_NSN      0x1B      // Node serial number
-
-// Loader
-#define DAA_UPGSTART 0x11      // enter loader
-#define DAA_UPGRESET 0x12      // start program
-#define DAA_UPGREAD  0x13      // read 64 bytes
-#define DAA_UPGADDR  0x14      // write 64 bytes
-
-// Event teaching
-#define DAA_EVERASE  0x15      // erase events
-#define DAA_EVREAD   0x16      // read events
-#define DAA_EVWRITE  0x17      // write event
-
-// Node variables
-#define DAA_NVRD     0x18      // read
-#define DAA_NVSET    0x19      // set
-#define DAA_NVANS    0x1A      // reply to read
-
-// Broadcast type
-
-// Misc
-#define FT_RESET     0x8000    // System reset
-#define FT_VNSN      0x8001    // Verify Node Serial Number 
-#define FT_INIT      0x8002    // Normal Initialization Complete
-#define FT_BOOT      0x8003    // Boot Loader Initialization Complete
-
-// Accessory
-#define FT_ACOF      0x8010    // Off
-#define FT_ACON      0x8011    // On
-#define FT_ASOF      0x8012    // Short Off
-#define FT_ASON      0x8013    // Short On
-#define FT_RFID      0x8014    // RFID tag
-
-// Track commands
-#define FT_TOF       0x8020    // Track Off, broadcast from CS
-#define FT_TON       0x8021    // Track On or Normal operation, broadcast from CS
-#define FT_ESTOP     0x8022    // Track Stopped (em. stop)
-#define FT_CSRESET   0x8023    // Command station Reset
-#define FT_RTOF      0x8024    // Request Track Off, from CAB
-#define FT_RTON      0x8025    // Request Track On or Normal operation, from CAB
-#define FT_RESTP     0x8026    // Request Emergency Stop ALL
-
-// CAB commands
-#define FT_RLOC      0x8030    // Request loco info
-#define FT_STMOD     0x8031    // Request speed step change
-#define FT_DSPD      0x8032    // Set Engine Speed/Dir
-#define FT_DFUN      0x8033    // Set engine functions
-#define FT_PLOC      0x8034    // Engine report from CS
-#define FT_PLOCF     0x8035    // Engine function report from CS
-#define FT_KLOC      0x8036    // Release loco
-
-// Consist commands
-#define FT_PCON      0x8037    // Consist Engine
-#define FT_KCON      0x8038    // Remove engine from consist
-
-// DCC programming
-#define FT_RDCC3     0x8040    // Request 3 byte DCC packet
-#define FT_RDCC4     0x8041    // Request 4 byte DCC packet
-#define FT_RDCC5     0x8042    // Request 5 byte DCC packet
-#define FT_RDCC6     0x8043    // Request 6 byte DCC packet
-
-//*********************************************************************************
 //        Forward References
 //*********************************************************************************
 
@@ -199,16 +111,17 @@ BOOL ReceiveMessage(void);
 
 void Timer3Init(void)
 {
-    T3CON = 0b00110001;   // Timer 3 16bit R/W, 16MHz/32
-    TMR3H = 0x3C;         // 0x10000-50000 for (16,000,000/32/10)
-    TMR3L = 0xB0;
+    T3CON = 0b00110001;             // Timer 3 16bit R/W, 16MHz/32
+    TMR3H = (0x10000-50000)>>8;     // 50000 for (16,000,000/32/10)
+    TMR3L = (0x10000-50000) & 0xFF;
 }
 
 BOOL Timer3Test(void)
 {
     if (PIR2bits.TMR3IF) {
-        TMR3H = 0x3C;
-        TMR3L = 0xB0;
+        TMR3H = (0x10000-50000)>>8;     // 50000 for (16,000,000/32/10)
+        TMR3L = (0x10000-50000) & 0xFF;
+        PIR2bits.TMR3IF = 0;
         return TRUE;
     }
     return FALSE;

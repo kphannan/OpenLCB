@@ -23,6 +23,7 @@
 */
 //*********************************************************************************
 
+#include "../canlib/frametypes.c"
 #include "../canlib/general.c"
 #include "../canlib/eeprom.c"
 #ifdef CAN
@@ -157,7 +158,11 @@ void jumptoloader(void)
 #pragma code
 
 #pragma romdata romnodedata = NODEDATA
-rom BYTE ND_nodeid[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+#ifdef SERIAL
+rom BYTE ND_nodeid[6] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 };
+#else
+rom BYTE ND_nodeid[6] = { 0x02, 0x00, 0x00, 0x00, 0x00, 0x00 };
+#endif
 rom BYTE ND_seedid[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 rom BYTE ND_alias[2] = { 0xFF, 0xFF };
 rom BYTE ND_spare[64-14] = {
@@ -169,7 +174,15 @@ rom BYTE ND_spare[64-14] = {
 };
 
 // 0x000080
-// rom BYTE idstring[64] = "OpenLCB PIC18F2480 Boot Loader "  __DATE__ " " __TIME__;
+#ifdef USB
+rom BYTE idstring[64] = "OpenLCB PIC USB Boot Loader "  __DATE__ " " __TIME__;
+#else
+#ifdef RS232
+rom BYTE idstring[64] = "OpenLCB PIC RS232 Boot Loader "  __DATE__ " " __TIME__;
+#else
+rom BYTE idstring[64] = "OpenLCB PIC CAN Boot Loader "  __DATE__ " " __TIME__;
+#endif
+#endif
 
 // 0x0000C0
 const rom BYTE ustr[64] = "User identification not yet defined";
@@ -258,6 +271,8 @@ rom unsigned int bits[10] = {
 
 void Packet(void)
 {
+    far overlay BYTE i;
+
     if (CB_SourceNID == ND.nodeIdAlias) { // conflict
         if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
             CB_SourceNID = ND.nodeIdAlias;
@@ -293,20 +308,14 @@ void Packet(void)
         else if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data GP_block
             if (DNID!=CB_SourceNID) {
                sendack(5,CB_SourceNID);
+               return;
             }
             else {
                 t = CB_data[0];
                 blocks &= bits[t];
                 t = t * 7;
-                GP_block[t++] = CB_data[1];
-                if (t >= 64) {
-                    GP_block[t++] = CB_data[2];
-                    GP_block[t++] = CB_data[3];
-                    GP_block[t++] = CB_data[4];
-                    GP_block[t++] = CB_data[5];
-                    GP_block[t++] = CB_data[6];
-                    GP_block[t++] = CB_data[7];
-                }    
+                for (i = 1; i<8 && t<64; i++)
+                    GP_block[t++] = CB_data[i];
                 if (blocks == 0) {
                     if (UP(GP_address) <= 1) // Up to 128k Program memory
                         ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
@@ -337,11 +346,11 @@ void Packet(void)
                 goto 0x000000
             _endasm
         }
-        else if (CB_data[0] == DAA_EVERASE)
+        else if (CB_data[0] == DAA_EVERASEH)
             sendack(0,CB_SourceNID);
-        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_EVREAD)
+        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_EVREADH)
             sendack(3,CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_EVWRITE)
+        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_EVWRITEH)
             sendack(4,CB_SourceNID);
     }
 }

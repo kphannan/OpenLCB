@@ -1,4 +1,4 @@
-dirs = canldr canrsusb 
+dirs = canldr canrsusb canace3 canled canrfid
 
 .PHONY: ver.h all
 all:
