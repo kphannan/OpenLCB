@@ -1,8 +1,10 @@
-/*
-    CBUS Module Hardware, OpenLCB Boot loader
+/*  CBUS Module Hardware, OpenLCB Boot loader
 
-    The module start address should be 0x001000.
-    The interrupts routines should be at 0x001008 and 0x001018.
+    2 Dec 2009
+
+    This boot loader will occupy the bottom 4k of memory    
+    The real code for the module will start at 0x001000.
+    The interrupts routines will be mapped to 0x001008 and 0x001018.
 
     Uses 4 MHz resonator and PLL for 16 MHz clock
 
@@ -307,7 +309,7 @@ void Packet(void)
         }
         else if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data GP_block
             if (DNID!=CB_SourceNID) {
-               sendack(5,CB_SourceNID);
+               sendack(ACK_ALIASERROR, CB_SourceNID);
                return;
             }
             else {
@@ -323,7 +325,7 @@ void Packet(void)
                         for (t=0; t<64; t++)
                             EEPROMWrite(LOWD(GP_address)+t, GP_block[t]);
                     }
-                    sendack(0,DNID);    // OK
+                    sendack(ACK_OK, DNID);    // OK
                 }
             }
         }
@@ -331,7 +333,14 @@ void Packet(void)
             sendblock(CB_SourceNID);
         }
         else if (CB_data[0] == DAA_UPGSTART) { // program upgrade
-            sendack(0,CB_SourceNID);    // Entered loader ack
+            sendack(ACK_OK, CB_SourceNID);    // Entered loader ack
+        }
+        else if (CB_data[0] == DAA_REBOOT) {
+            // re-start the program
+            _asm
+                reset
+                goto 0x000000
+            _endasm
         }
         else if (CB_data[0] == DAA_UPGRESET) {
             // change the valid program flag
@@ -346,12 +355,14 @@ void Packet(void)
                 goto 0x000000
             _endasm
         }
-        else if (CB_data[0] == DAA_EVERASEH)
-            sendack(0,CB_SourceNID);
-        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_EVREADH)
-            sendack(3,CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_EVWRITEH)
-            sendack(4,CB_SourceNID);
+        else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
+            sendack(ACK_OK, CB_SourceNID);
+        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH 
+          || CB_data[0] == DAA_PEREAD)
+            sendack(ACK_NODATA, CB_SourceNID);
+        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH 
+          || CB_data[0] == DAA_PEWRITEH)
+            sendack(ACK_NOSPACE, CB_SourceNID);
     }
 }
 
@@ -365,7 +376,7 @@ void Loader2(void)
         if (Timer3Test()) {                // 100 msec timer
             timer++;
             if (blocks!=0 && timer>20) {   // send timeout ack
-                sendack(2, DNID);          // timeout
+                sendack(ACK_TIMEOUT, DNID);          // timeout
                 blocks = 0;
             }
         }

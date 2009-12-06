@@ -1,5 +1,6 @@
-/*
-    OpenLCB
+/*  OpenLCB frametypes.c
+
+    3 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -39,11 +40,8 @@ enum FT
     FT_BOOT    = 0x8003,   // Boot Loader Initialization Complete
 
 // Accessory
-    FT_ACOF    = 0x8010,   // Off
-    FT_ACON    = 0x8011,   // On
-    FT_ASOF    = 0x8012,   // Short Off
-    FT_ASON    = 0x8013,   // Short On
-    FT_RFID    = 0x8014,   // RFID tag
+    FT_EVENT   = 0x8010,   // EVENT
+    FT_RFID    = 0x8011,   // RFID tag
 
 // Track commands
     FT_TOF     = 0x8020,   // Track Off, broadcast from CS
@@ -83,25 +81,56 @@ enum FT
 
 enum DAA {
     DAA_DATA     = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
+    DAA_DATA0    = 0x00,
+    DAA_DATA1    = 0x01,
+    DAA_DATA2    = 0x02,
+    DAA_DATA3    = 0x03,
+    DAA_DATA4    = 0x04,
+    DAA_DATA5    = 0x05,
+    DAA_DATA6    = 0x06,
+    DAA_DATA7    = 0x07,
+    DAA_DATA8    = 0x08,
+    DAA_DATA9    = 0x09,
+    DAA_DATAA    = 0x0A,
+    DAA_DATAB    = 0x0B,
+    DAA_DATAC    = 0x0C,
+    DAA_DATAD    = 0x0D,
+    DAA_DATAE    = 0x0E,
+    DAA_DATAF    = 0x0F,
     DAA_ACK      = 0x10,      // ack with status
 // Loader
-    DAA_UPGSTART = 0x11,      // enter loader
-    DAA_UPGRESET = 0x12,      // start program
-    DAA_UPGREAD  = 0x13,      // read 64 bytes
-    DAA_UPGADDR  = 0x14,      // write 64 bytes
+    DAA_UPGSTART = 0x20,      // enter loader
+    DAA_UPGRESET = 0x21,      // start program
+    DAA_UPGREAD  = 0x22,      // read 64 bytes
+    DAA_UPGADDR  = 0x23,      // write 64 bytes
 // Events
-    DAA_EVERASEH = 0x15,      // erase events, High 4 bytes
-    DAA_EVERASEL = 0x16,      // erase events, Low 4 bytes
-    DAA_EVREADH  = 0x17,      // read events, High 4 bytes
-    DAA_EVREADL  = 0x18,      // read events, Low 4 bytes
-    DAA_EVWRITEH = 0x19,      // write event, High 4 bytes
-    DAA_EVWRITEL = 0x1A,      // write event, Low 4 bytes
+    DAA_CEERASEH = 0x30,      // consumer erase events, High 7 bytes
+    DAA_CEERASEL = 0x31,      // consumer erase events, Low byte
+    DAA_CEREADH  = 0x32,      // consumer read events, High 7 bytes
+    DAA_CEREADL  = 0x33,      // consumer read events, Low byte, index, data length byte
+    DAA_CEWRITEH = 0x34,      // consumer write event, High 7 bytes
+    DAA_CEWRITEL = 0x35,      // consumer write event, Low byte, data length, up to 5 data bytes
+    DAA_PEERASE  = 0x36,	// producer erase event, index
+    DAA_PEREAD   = 0x37,      // producer read event, index
+    DAA_PEWRITEH = 0x38,      // producer write event, High 7 bytes
+    DAA_PEWRITEL = 0x39,      // producer write event, Low byte, index  
 // Node variables
-    DAA_NVRD     = 0x1B,      // read
-    DAA_NVSET    = 0x1C,      // set
-    DAA_NVANS    = 0x1D,      // reply to read
+    DAA_NVRD     = 0x40,      // read, 1 byte index
+    DAA_NVSET    = 0x41,      // set, 1 byte index + 1 byte data
+    DAA_NVANS    = 0x42,      // reply to read
 // Misc
-    DAA_NSN      = 0x1E       // Node serial number
+    DAA_NSN      = 0x50,      // Node serial number
+    DAA_DEFAULT  = 0x51,      // Reset (almost) everything to default values
+    DAA_REBOOT   = 0x52       // Re-boot the module, after node ID write
+};
+
+enum ACK {
+    ACK_OK       = 0,         // OK
+    ACK_CRC      = 1,         // CRC error, no longer used
+    ACK_TIMEOUT  = 2,         // timeout on data transfer, 2 seconds
+    ACK_NODATA   = 3,         // The requested data does not exist 
+    ACK_NOSPACE  = 4,         // No space to store this data 
+    ACK_ALIASERROR= 5          // Wrong SourceAlias, probably 2 writes at the same time
 };
 
 //*********************************************************************************

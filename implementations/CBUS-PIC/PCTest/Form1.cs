@@ -43,11 +43,8 @@ namespace PCTest
             FT_BOOT = 0x8003,   // Boot Loader Initialization Complete
 
             // Accessory
-            FT_ACOF = 0x8010,   // Off
-            FT_ACON = 0x8011,   // On
-            FT_ASOF = 0x8012,   // Short Off
-            FT_ASON = 0x8013,   // Short On
-            FT_RFID = 0x8014,   // RFID tag
+            FT_EVENT = 0x8010,   // EVENT
+            FT_RFID = 0x8011,   // RFID tag
 
             // Track commands
             FT_TOF = 0x8020,   // Track Off, broadcast from CS
@@ -82,34 +79,51 @@ namespace PCTest
         };
 
         // Destination Addressed, 1st byte of data has message type
+        // 0123456789012
+        // :X1EdddsssN
 
         enum DAA
         {
             DAA_DATA = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
             DAA_ACK = 0x10,      // ack with status
             // Loader
-            DAA_UPGSTART = 0x11,      // enter loader
-            DAA_UPGRESET = 0x12,      // start program
-            DAA_UPGREAD = 0x13,      // read 64 bytes
-            DAA_UPGADDR = 0x14,      // write 64 bytes
+            DAA_UPGSTART = 0x20,      // enter loader
+            DAA_UPGRESET = 0x21,      // start program
+            DAA_UPGREAD = 0x22,      // read 64 bytes
+            DAA_UPGADDR = 0x23,      // write 64 bytes
             // Events
-            DAA_EVERASEH = 0x15,      // erase events, High 4 bytes
-            DAA_EVERASEL = 0x16,      // erase events, Low 4 bytes
-            DAA_EVREADH = 0x17,      // read events, High 4 bytes
-            DAA_EVREADL = 0x18,      // read events, Low 4 bytes
-            DAA_EVWRITEH = 0x19,      // write event, High 4 bytes
-            DAA_EVWRITEL = 0x1A,      // write event, Low 4 bytes
+            DAA_CEERASEH = 0x30,      // consumer erase events, High 7 bytes
+            DAA_CEERASEL = 0x31,      // consumer erase events, Low byte
+            DAA_CEREADH = 0x32,      // consumer read events, High 7 bytes
+            DAA_CEREADL = 0x33,      // consumer read events, Low byte, index, data length byte
+            DAA_CEWRITEH = 0x34,      // consumer write event, High 7 bytes
+            DAA_CEWRITEL = 0x35,      // consumer write event, Low byte, data length, up to 5 data bytes
+            DAA_PEERASE = 0x36,	// producer erase event, index
+            DAA_PEREAD = 0x37,      // producer read event, index
+            DAA_PEWRITEH = 0x38,      // producer write event, High 7 bytes
+            DAA_PEWRITEL = 0x39,      // producer write event, Low byte, index  
             // Node variables
-            DAA_NVRD = 0x1B,      // read
-            DAA_NVSET = 0x1C,      // set
-            DAA_NVANS = 0x1D,      // reply to read
+            DAA_NVRD = 0x40,      // read, 1 byte index
+            DAA_NVSET = 0x41,      // set, 1 byte index + 1 byte data
+            DAA_NVANS = 0x42,      // reply to read
             // Misc
-            DAA_NSN = 0x1E       // Node serial number
+            DAA_NSN = 0x50,      // Node serial number
+            DAA_DEFAULT = 0x51,       // Reset (almost) everything to default values
+            DAA_REBOOT = 0x52       // Re-boot the module, after node ID write
         };
 
+        enum ACK
+        {
+            ACK_OK = 0,         // OK
+            ACK_CRC = 1,         // CRC error, no longer used
+            ACK_TIMEOUT = 2,         // timeout on data transfer, 2 seconds
+            ACK_NODATA = 3,         // The requested data does not exist 
+            ACK_NOSPACE = 4,         // No space to store this data 
+            ACK_ALIASERROR = 5          // Wrong SourceAlias, probably 2 writes at the same time
+        };
 
         // Data for NodeID's and Alias
-        static SortedList<String, String> nodenumbers = new SortedList<String, String>();
+        static SortedList<string, string> nodenumbers = new SortedList<string, string>();
 
         // Sparse array for the Intel hex file
         // Sorted list of 64 byte data blocks with address, in address order
@@ -120,27 +134,26 @@ namespace PCTest
         static string log = "";         // message log
         static string dNN = "001";     // default node number
         static string canmsg;
-        enum OPSTATE { IDLE, SENDING, MODULEID, USERID, NVCFGREAD, EVCFGREAD, CFGWRITE, NVREAD, EVREAD };
+        enum OPSTATE { IDLE, SENDING, MODULEID, USERID, NVCFGREAD, EVCFGREAD, CFGWRITE, NVREAD, EVREAD, PEREAD };
         static OPSTATE opstate = OPSTATE.IDLE;
         static int readingmodulestring = 0;
         static int readinguserstring = 0;
+        static int readingbootstring = 0;
         static byte[] modulestr = new byte[70];
         static StreamWriter savefile;   // config save file
         static StreamReader readfile;   // config restore file
         static int nv;
-        static int nb = 2;
+        static int eventmsgcnt;
+        static int datasize;
+        static int evindex;
         static int complete = 0;
         static string eventstr = "00000000000000000000";
-
-        static String NID = "000000000001";
-        static String NIDa = "001";
+        static string NID = "000000000001";
+        static string NIDa = "001";
 
         // ack signal between background and foreground tasks
         static Semaphore ack = new Semaphore(0, 1);
         static int ackstatus = 0;
-
-        // display options
-        static bool optionFlashTaskBar = false;
 
         // first time serial port, so we can try to use the PCTestSettings.xml
         // after that, use the last used
@@ -163,14 +176,14 @@ namespace PCTest
         {
             switch (n)
             {
-                case 1: return String.Format("{0:X1}", a & 0x0000000F);
-                case 2: return String.Format("{0:X2}", a & 0x000000FF);
-                case 3: return String.Format("{0:X3}", a & 0x00000FFF);
-                case 4: return String.Format("{0:X4}", a & 0x0000FFFF);
-                case 5: return String.Format("{0:X5}", a & 0x000FFFFF);
-                case 6: return String.Format("{0:X6}", a & 0x00FFFFFF);
-                case 7: return String.Format("{0:X7}", a & 0x0FFFFFFF);
-                case 8: return String.Format("{0:X8}", a & 0xFFFFFFFF);
+                case 1: return string.Format("{0:X1}", a & 0x0000000F);
+                case 2: return string.Format("{0:X2}", a & 0x000000FF);
+                case 3: return string.Format("{0:X3}", a & 0x00000FFF);
+                case 4: return string.Format("{0:X4}", a & 0x0000FFFF);
+                case 5: return string.Format("{0:X5}", a & 0x000FFFFF);
+                case 6: return string.Format("{0:X6}", a & 0x00FFFFFF);
+                case 7: return string.Format("{0:X7}", a & 0x0FFFFFFF);
+                case 8: return string.Format("{0:X8}", a & 0xFFFFFFFF);
             }
             return "";
         }
@@ -262,16 +275,6 @@ namespace PCTest
                         try
                         {
                             string Flashing = mnode["FlashTaskBar"].InnerText;
-                            if (Flashing.ToUpper().ToString().Contains("TRUE"))
-                            {
-                                optionFlashTaskBar = true;
-                                this.FlashTaskBaropt.Checked = true;
-                            }
-                            else
-                            {
-                                optionFlashTaskBar = false;
-                                this.FlashTaskBaropt.Checked = false;
-                            }
                         }
                         catch (System.NullReferenceException)
                         {
@@ -321,6 +324,7 @@ namespace PCTest
                     opstate = OPSTATE.IDLE;
                     readingmodulestring = 0;
                     readinguserstring = 0;
+                    readingbootstring = 0;
 
                     checkalias(NID, NIDa);
 
@@ -359,7 +363,7 @@ namespace PCTest
             }
         }
 
-        private void checkalias(String NID, String NIDa)
+        private void checkalias(string NID, string NIDa)
         {
             sendmsg(":X1" + hex((int)FT.FT_INIT, 4) + NIDa + "N;");
             nodenumbers[NIDa] = NID;
@@ -368,8 +372,17 @@ namespace PCTest
         private void enableCommButtons(bool enabled)
         {
             /// show or don't show the buttons that require com to be open
+            this.GetNidsBtn.Enabled = enabled;
+            if (!enabled)
+                enableNIDButtons(enabled);
+        }
+
+        private void enableNIDButtons(bool enabled)
+        {
+            /// show or don't show the buttons that require com to be open
             this.EVreadBTN.Enabled = enabled;
             this.EVwriteBTN.Enabled = enabled;
+            this.EraseAllBtn.Enabled = enabled;
             this.NVReadBtn.Enabled = enabled;
             this.NVwriteBTN.Enabled = enabled;
             this.RestoreConfigBtn.Enabled = enabled;
@@ -378,18 +391,19 @@ namespace PCTest
             this.SendBtn.Enabled = enabled;
             this.SoftwareBtn.Enabled = enabled;
             this.WriteBtn.Enabled = enabled;
+            this.DefaultBtn.Enabled = enabled;
+            this.EraseEVBtn.Enabled = enabled;
+            this.WriteNidBtn.Enabled = enabled;
+            this.PE_readbtn.Enabled = enabled;
+            this.PE_writebtn.Enabled = enabled;
+            this.PE_erasebtn.Enabled = enabled;
+            this.rebootbtn.Enabled = enabled;
         }
 
         // update log string, only keep last 60000
 
         private void updatelog(string str)
         {
-            // flash the taskbar once if option is selected
-            if (optionFlashTaskBar == true)
-            {
-                FlashWindow.Flash(this, 1);
-            }
-
             if (log.Length > 60000)
                 log = log.Substring(log.Length - 60000) + str;
             else
@@ -400,9 +414,9 @@ namespace PCTest
 
         private void displaylog()
         {
-            if (log.Length > 20000)
+            if (log.Length > 6000)
             {
-                LogSpace.Text = log.Substring(log.Length - 20000);
+                LogSpace.Text = log.Substring(log.Length - 6000);
                 // remove the first line if not starting with ":", i.e. don't allow a partial string on line 1
                 // yes we should check for ">", but what if that was character 3001 which you just canned?
                 LogSpace.Text = LogSpace.Text.Substring(LogSpace.Text.IndexOf(":"));
@@ -419,8 +433,7 @@ namespace PCTest
 
         // assemble input from com port into lines
 
-        private void serialPort1_DataReceived(object sender
-          , SerialDataReceivedEventArgs e)
+        private void serialPort1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             char c = ' ';
             while (serialPort1.BytesToRead > 0)
@@ -432,31 +445,52 @@ namespace PCTest
                     serialLine = serialLine.ToUpper();
                     updatelog(serialLine);
                     if (opstate == OPSTATE.SENDING)
+                    {
                         handleinput();
+                    }
                     else if (opstate == OPSTATE.NVCFGREAD)
+                    {
                         NVCFGREAD();
+                    }
                     else if (opstate == OPSTATE.EVCFGREAD)
+                    {
                         EVCFGREAD();
+                    }
                     else if (opstate == OPSTATE.CFGWRITE)
+                    {
                         CfgWrite();
+                    }
                     else if (opstate == OPSTATE.NVREAD)
+                    {
                         NVRead();
+                        displaylog();
+                    }
                     else if (opstate == OPSTATE.EVREAD)
+                    {
                         EVRead();
-                    else if (readingmodulestring != 0 || readinguserstring != 0)
+                        displaylog();
+                    }
+                    else if (opstate == OPSTATE.PEREAD)
+                    {
+                        PERead();
+                        displaylog();
+                    }
+                    else if (readingmodulestring != 0 || readinguserstring != 0 || readingbootstring != 0)
+                    {
                         ReadModuleString();
-                    else if (serialLine.Length >= 20 && serialLine.Contains(":X1E") && serialLine.Contains("N"+hex((int)DAA.DAA_NSN, 2)))
+                        displaylog();
+                    }
+                    else if (serialLine.Length >= 20 && serialLine.Contains(":X1E") && serialLine.Contains("N" + hex((int)DAA.DAA_NSN, 2)))
                     {   // node serial number
                         if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
                             NNtb.Items.Add(serialLine.Substring(7, 3));
                         nodenumbers[serialLine.Substring(7, 3)] = serialLine.Substring(13, 12);
+                        displaylog();
                     }
+                    else
+                        displaylog();
                     serialLine = "";
                 }
-            }
-            if (opstate != OPSTATE.SENDING)
-            {
-                displaylog();
             }
         }
 
@@ -497,6 +531,7 @@ namespace PCTest
             {
                 readingmodulestring = 0;
                 readinguserstring = 0;
+                readingbootstring = 0;
                 displaylog();
             }
             else if (serialLine.Length > 22 && serialLine.StartsWith(":X1E"))
@@ -519,10 +554,29 @@ namespace PCTest
                             NodeText.Text = "";
                             for (int i = 0; i < 64; i++)
                             {
-                                if (modulestr[i] == 0)
+                                if (modulestr[i] == 0 || modulestr[i] == 0xFF)
                                     break;
                                 else
                                     NodeText.Text += (char)modulestr[i];
+                            }
+                            readingbootstring = 10;
+                            SendReadCmd(0x0080); // start reading user id string
+                            for (int i = 0; i < 70; i++)
+                                modulestr[i] = 0;
+                        }
+                    }
+                    else if (readingbootstring != 0)
+                    {
+                        readingbootstring--;
+                        if (readingbootstring == 0) // module string complete
+                        {
+                            BootText.Text = "";
+                            for (int i = 0; i < 64; i++)
+                            {
+                                if (modulestr[i] == 0 || modulestr[i] == 0xFF)
+                                    break;
+                                else
+                                    BootText.Text += (char)modulestr[i];
                             }
                             readinguserstring = 10;
                             SendReadCmd(0x00C0); // start reading user id string
@@ -575,7 +629,6 @@ namespace PCTest
         public bool sendmsg(string cmd)
         {
             updatelog(">" + cmd + "\r\n");
-            // displaylog();
             try
             {
                 serialPort1.Write(cmd);
@@ -637,6 +690,10 @@ namespace PCTest
                 return 0xFF;
         }
 
+        //**************************************************************************
+        // Software download
+        //**************************************************************************
+
         // prepare software download, read the Intel hex file
         /* http://en.wikipedia.org/wiki/.hex
              : is the colon that starts every Intel HEX record.
@@ -662,7 +719,8 @@ namespace PCTest
         {
             dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
             progressBar1.Value = 0;
-
+            openFileDialog1.AddExtension = true;
+            openFileDialog1.Filter = "Intel hex files|*.hex|All files|*.*";
             DialogResult res = openFileDialog1.ShowDialog();
 
             if (res.Equals(DialogResult.OK))
@@ -869,7 +927,7 @@ namespace PCTest
         }
 
         //**************************************************************************
-        // Read and Write Module and User ID strings
+        // Read and Write Module, Boot and User ID strings
         //**************************************************************************
 
         // Read Button click. Read module id string and user id string from a module
@@ -879,65 +937,7 @@ namespace PCTest
             dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
             UserText.Text = "";
             NodeText.Text = "";
-            readingmodulestring = 10;
-            SendReadCmd(0x1040);
-            for (int i = 0; i < 70; i++)
-                modulestr[i] = 0;
-        }
-
-        // Write button clicked. Write user id string  to a module
-
-        private void WriteBtn_Click(object sender, EventArgs e)
-        {
-            dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
-            for (int i = 0; i < 70; i++)
-                modulestr[i] = 0;
-
-            for (int i = 0; i < 64 && i < UserText.Text.Length; i++)
-                modulestr[i] = (byte)UserText.Text[i];
-            SendWriteCmd(0x0000C0);
-            this.WriteUserId.RunWorkerAsync();
-        }
-
-        // Background task to write user id string to a module
-
-        private void WriteUser_DoWork(object sender, DoWorkEventArgs e)
-        {
-            BackgroundWorker bw = sender as BackgroundWorker;
-            e.Result = WriteUserIdWork(bw);
-        }
-
-        private int WriteUserIdWork(BackgroundWorker bw)
-        {
-            string canmsg;
-
-            for (int j = 0, offset = 0; j < 10; j++, offset+=7)
-            {
-                canmsg = ":X1E" + dNN + NIDa + "N";
-                canmsg += hex((int)DAA.DAA_DATA | j, 2);
-                canmsg += hex(modulestr[offset], 2); // 7 bytes data
-                if (j != 9)
-                {
-                    canmsg += hex(modulestr[offset + 1], 2);
-                    canmsg += hex(modulestr[offset + 2], 2);
-                    canmsg += hex(modulestr[offset + 3], 2);
-                    canmsg += hex(modulestr[offset + 4], 2);
-                    canmsg += hex(modulestr[offset + 5], 2);
-                    canmsg += hex(modulestr[offset + 6], 2);
-                }
-                canmsg += ";";
-                sendmsg(canmsg);
-                Thread.Sleep(1);
-            }
-            return 0;
-        }
-
-        private void NNtb_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
-            NIDtext.Text = nodenumbers[dNN];
-            UserText.Text = "";
-            NodeText.Text = "";
+            BootText.Text = "";
             readingmodulestring = 10;
             SendReadCmd(0x1040);
             for (int i = 0; i < 70; i++)
@@ -957,7 +957,7 @@ namespace PCTest
             if (res.Equals(DialogResult.OK))
             {
                 savefile = new StreamWriter(saveLogFileDialog.FileName);
-                savefile.WriteLine("NodeNumber=" + String.Format("{0:X4}", dNN));
+                savefile.WriteLine("NodeNumber=" + string.Format("{0:X4}", nodenumbers[dNN]));
                 nv = 0;
                 opstate = OPSTATE.NVCFGREAD;
                 SendNvReadCmd(hex(nv,2)); // send the first read command
@@ -1017,26 +1017,31 @@ namespace PCTest
                     savefile.WriteLine("End");
                     savefile.Close();
                 }
-                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_EVWRITEH,2))) // EVCFGWRITE
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_CEWRITEH,2))) // EVCFGWRITE
                 {
                     eventstr = serialLine.Substring(13, 8) + eventstr.Substring(8);
                     complete |= 0x4;
                 }
-                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_EVWRITEL,2))) // EVCFGWRITE
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_CEWRITEL,2))) // EVCFGWRITE
                 {
                     eventstr = eventstr.Substring(0, 8) + serialLine.Substring(13, 8) + eventstr.Substring(16);
+                    datasize = Convert.ToInt16(serialLine.Substring(21, 2), 16);
+                    if (datasize == 0)
+                    {
+                        complete |= 0x1;
+                        eventstr = eventstr.Substring(0, 16);
+                    }
                     complete |= 0x2;
-                    nb = hv(serialLine[21], serialLine[22]);
                 }
                 else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_DATA,2))) // evdata
                 {
-                    eventstr = eventstr.Substring(0, 16) + serialLine.Substring(13, nb * 2);
+                    eventstr = eventstr.Substring(0, 16) + serialLine.Substring(13, datasize * 2);
                     complete |= 0x1;
                 }
                 if (complete==7) {
-                    savefile.WriteLine("EV" + eventstr);
+                    savefile.WriteLine("EV" + hex(nv,4) + eventstr);
                     nv++;
-                    SendEvReadCmd("00000000", nv);
+                    SendEvReadCmd("0000000000000000", nv);
                     complete = 0;
                 }
             }
@@ -1108,46 +1113,56 @@ namespace PCTest
             sendmsg(canmsg);
         }
 
-        private void SendEvReadCmd(String en, int ev)
+        private void SendEvReadCmd(string en, int ev)
         {
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_EVREADH, 2);      // opc
-            canmsg += en.Substring(0,8);                       // EV number
+            canmsg += hex((int)DAA.DAA_CEREADH, 2);   // opc
+            canmsg += en.Substring(0,14);             // 7 bytes of EV number
             canmsg += ";";
             sendmsg(canmsg);
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_EVREADL, 2);      // opc
-            canmsg += en.Substring(8, 8);                       // EV number
-            canmsg += hex(ev, 2);                 // EV index
+            canmsg += hex((int)DAA.DAA_CEREADL, 2);   // opc
+            canmsg += en.Substring(14, 2);            // last byte of EV number
+            canmsg += hex(ev, 4);                     // EV index
             canmsg += ";";
             sendmsg(canmsg);
         }
 
-        private void SendEvEraseCmd(String en)
+        private void SendEvEraseCmd(string en, int index)
         {
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_EVERASEH, 2);      // opc
-            canmsg += en.Substring(0, 8);                       // EV number
+            canmsg += hex((int)DAA.DAA_CEERASEH, 2);  // opc
+            canmsg += en.Substring(0, 14);            // 7 bytes of EV number
             canmsg += ";";
             sendmsg(canmsg);
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_EVERASEL, 2);      // opc
-            canmsg += en.Substring(8, 8);                       // EV number
+            canmsg += hex((int)DAA.DAA_CEERASEL, 2);  // opc
+            canmsg += en.Substring(14, 2);            // last byte of EV number
+            canmsg += hex(index, 4);
             canmsg += ";";
             sendmsg(canmsg);
         }
 
-        private void SendEvWriteCmd(string s)
+        private void SendEvWriteCmd(string s, int index)
         {
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_EVWRITEH, 2);      // opc
-            canmsg += s.Substring(0, 8);                    // EV number
+            canmsg += hex((int)DAA.DAA_CEWRITEH, 2);  // opc
+            canmsg += s.Substring(0, 14);             // 7 bytes of EV number
             canmsg += ";";
             sendmsg(canmsg);
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_EVWRITEL, 2);      // opc
-            canmsg += s.Substring(8, 8);                    // EV number
-            canmsg += hex((s.Length - 16)/2, 2);              // number of bytes
+            canmsg += hex((int)DAA.DAA_CEWRITEL, 2);  // opc
+            canmsg += s.Substring(14, 2);              // last byte of EV number
+            canmsg += hex(index, 4);
+            int b = (s.Length - 16) / 2;
+            canmsg += hex(b, 2);                      // number of bytes
+            if (b <= 3)
+            {
+                canmsg += s.Substring(16);
+                canmsg += ";";
+                sendmsg(canmsg);
+                return;
+            }
             canmsg += ";";
             sendmsg(canmsg);
             s = s.Substring(16);
@@ -1155,8 +1170,8 @@ namespace PCTest
             while (s.Length > 0)
             {
                 canmsg = ":X1E" + dNN + NIDa + "N";
-                canmsg += hex((int)DAA.DAA_DATA, 2);           // opc
-                canmsg += hex(offset, 2);                 // offset
+                canmsg += hex((int)DAA.DAA_DATA, 2);  // opc
+                canmsg += hex(offset, 2);             // offset
                 offset += 7;
                 canmsg += (s + "000000000000").Substring(0, 14); // 7 bytes of data
                 canmsg += ";";
@@ -1183,7 +1198,8 @@ namespace PCTest
                 readfile = new StreamReader(openFileDialog1.FileName);
                 string line = readfile.ReadLine(); // skip node number line
                 opstate = OPSTATE.CFGWRITE;
-                SendEvEraseCmd("0000000000000000");
+                SendEvEraseCmd("0000000000000000",0);
+                evindex = 0;
             }
         }
 
@@ -1196,6 +1212,7 @@ namespace PCTest
             {
                 opstate = OPSTATE.IDLE;
                 updatelog("Aborted due to error.");
+                readfile.Close();
                 displaylog();
             }
             else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
@@ -1206,12 +1223,16 @@ namespace PCTest
                     string line = readfile.ReadLine();
                     if (line.StartsWith("NV"))
                         SendNvWriteCmd(line.Substring(2));
-                    else if (line.StartsWith("EV"))
-                        SendEvWriteCmd(line.Substring(2));
+                    else if (line.StartsWith("EV")) {
+                        evindex = Convert.ToInt16(line.Substring(2, 4),16);
+                        SendEvWriteCmd(line.Substring(6), evindex);
+                        evindex++;
+                    }
                     else if (line.StartsWith("End"))
                     {
                         opstate = OPSTATE.IDLE;
                         updatelog("Restored.");
+                        readfile.Close();
                         displaylog();
                         return;
                     }
@@ -1219,6 +1240,7 @@ namespace PCTest
                     {
                         opstate = OPSTATE.IDLE;
                         updatelog("Error in file.");
+                        readfile.Close();
                         displaylog();
                         return;
                     }
@@ -1227,130 +1249,15 @@ namespace PCTest
                 {
                     opstate = OPSTATE.IDLE;
                     updatelog("Aborted due to no space left.");
+                    readfile.Close();
                     displaylog();
                 }
             }
         }
 
         //**************************************************************************
-        // Read node variable
+        // 
         //**************************************************************************
-
-        private void NVReadBtn_Click(object sender, EventArgs e)
-        {
-            int index = Convert.ToInt16(NVindextb.Text);
-            if (index < 0 || index > 255)
-            {
-                NVindextb.Text = "0";
-                return;
-            }
-            opstate = OPSTATE.NVREAD;
-            SendNvReadCmd(hex(index, 2));
-        }
-
-        private void NVRead()
-        {
-            if (serialLine.StartsWith("ERROR")
-              || serialLine.StartsWith("TOO LONG")
-                // || serialLine.StartsWith("-ECAN")
-              || serialLine.StartsWith("-SERIAL"))
-            {
-                opstate = OPSTATE.IDLE;
-                updatelog("Aborted due to error.");
-                displaylog();
-            }
-            else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
-                && serialLine.Substring(7, 3).Equals(dNN))
-            {
-                if (serialLine.Substring(10, 3).Equals("N97" + hex((int)DAA.DAA_DATA,2))) // data
-                {
-                    NVvaluetb.Text = serialLine.Substring(15, 2);
-                    opstate = OPSTATE.IDLE;
-                    displaylog();
-                    return;
-                }
-                else if (serialLine.Substring(10, 3).Equals("N97" + hex((int)DAA.DAA_ACK, 2))) // ack
-                {
-                    NVvaluetb.Text = "";
-                    opstate = OPSTATE.IDLE;
-                    displaylog();
-                }
-            }
-        }
-
-        //**************************************************************************
-        // Write node variable
-        //**************************************************************************
-
-        private void NVwriteBTN_Click(object sender, EventArgs e)
-        {
-            int index = Convert.ToInt16(NVindextb.Text);
-            if (index < 0 || index > 255)
-            {
-                NVindextb.Text = "0";
-                return;
-            }
-            SendNvWriteCmd(hex(index, 2) + NVvaluetb.Text.PadLeft(2, '0'));
-        }
-
-        //**************************************************************************
-        // Write event
-        //**************************************************************************
-
-        private void EVwriteBTN_Click(object sender, EventArgs e)
-        {
-            SendEvWriteCmd(EventNumbertb.Text + EventActiontb.Text);
-        }
-
-        //**************************************************************************
-        // Read event
-        //**************************************************************************
-
-        private void EVreadBTN_Click(object sender, EventArgs e)
-        {
-            int index = Convert.ToInt16(EventIndextb.Text);
-            if (index < 0 || index > 255)
-            {
-                EventIndextb.Text = "0";
-                return;
-            }
-            opstate = OPSTATE.EVREAD;
-            SendEvReadCmd(EventNumbertb.Text.PadLeft(16, '0'), index);
-        }
-
-        private void EVRead()
-        {
-            if (serialLine.StartsWith("ERROR")
-              || serialLine.StartsWith("TOO LONG")
-                // || serialLine.StartsWith("-ECAN")
-              || serialLine.StartsWith("-SERIAL"))
-            {
-                opstate = OPSTATE.IDLE;
-                updatelog("Aborted due to error.");
-                displaylog();
-            }
-            else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
-                && serialLine.Substring(7, 4).Equals(dNN+"N"))
-            {
-                if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_EVWRITEH, 2))) // EVWRITE
-                    EventNumbertb.Text = serialLine.Substring(13, 8) + EventNumbertb.Text.Substring(8, 8);
-                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_EVWRITEL, 2))) // EVWRITE
-                    EventNumbertb.Text = EventNumbertb.Text.Substring(0, 8) + serialLine.Substring(13, 8);
-                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_DATA, 2))) // EVDATA
-                {
-                    EventActiontb.Text = serialLine.Substring(13, 14);
-                    opstate = OPSTATE.IDLE;
-                    displaylog();
-                }
-                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_ACK, 2))) // ack
-                {
-                    EventNumbertb.Text = "";
-                    EventActiontb.Text = "";
-                    opstate = OPSTATE.IDLE;
-                    displaylog();
-                }
-            }
-        }
 
         /// <summary>
         ///  Allows you to close the port without closing the application.
@@ -1380,24 +1287,163 @@ namespace PCTest
                 }
         }
 
-        //**************************************************************************
-        // Display option checkboxes
-        //**************************************************************************
-
-        private void FlashTaskBaropt_CheckedChanged(object sender, EventArgs e)
-        {
-            optionFlashTaskBar = (FlashTaskBaropt.CheckState == CheckState.Checked);
-        }
-
         private void GetNidsBtn_Click(object sender, EventArgs e)
         {
+            NNtb.Items.Clear();
+            nodenumbers.Clear();
             sendmsg(":X1"+hex((int)FT.FT_VNSN, 4)+NIDa+"N;");
+        }
+
+        //**************************************************************************
+        // Node tab
+        //**************************************************************************
+
+        private void NNtb_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            enableNIDButtons(true);
+            dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
+            NIDtext.Text = nodenumbers[dNN];
+            NIDTxt2.Text = NIDtext.Text;
+            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
+            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
+            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
+            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
+            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
+            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+            UserText.Text = "";
+            NodeText.Text = "";
+            BootText.Text = "";
+            readingmodulestring = 10;
+            SendReadCmd(0x1040);
+            for (int i = 0; i < 70; i++)
+                modulestr[i] = 0;
+        }
+
+        // Write button clicked. Write user id string  to a module
+
+        private void WriteBtn_Click(object sender, EventArgs e)
+        {
+            dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
+            for (int i = 0; i < 70; i++)
+                modulestr[i] = 0;
+
+            for (int i = 0; i < 64 && i < UserText.Text.Length; i++)
+                modulestr[i] = (byte)UserText.Text[i];
+            SendWriteCmd(0x0000C0);
+            this.WriteUserId.RunWorkerAsync();
+        }
+
+        // Background task to write user id string to a module
+
+        private void WriteUser_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker bw = sender as BackgroundWorker;
+            e.Result = WriteUserIdWork(bw);
+        }
+
+        private int WriteUserIdWork(BackgroundWorker bw)
+        {
+            string canmsg;
+
+            for (int j = 0, offset = 0; j < 10; j++, offset += 7)
+            {
+                canmsg = ":X1E" + dNN + NIDa + "N";
+                canmsg += hex((int)DAA.DAA_DATA | j, 2);
+                canmsg += hex(modulestr[offset], 2); // 7 bytes data
+                if (j != 9)
+                {
+                    canmsg += hex(modulestr[offset + 1], 2);
+                    canmsg += hex(modulestr[offset + 2], 2);
+                    canmsg += hex(modulestr[offset + 3], 2);
+                    canmsg += hex(modulestr[offset + 4], 2);
+                    canmsg += hex(modulestr[offset + 5], 2);
+                    canmsg += hex(modulestr[offset + 6], 2);
+                }
+                canmsg += ";";
+                sendmsg(canmsg);
+                Thread.Sleep(1);
+            }
+            return 0;
+        }
+
+        //**************************************************************************
+        // Node ID tab
+        //**************************************************************************
+
+        private void NIDTxt2_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDTxt2.Text.PadLeft(12, '0');
+            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
+            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
+            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
+            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
+            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
+            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+        }
+
+        private void byte1txt_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = hex(Convert.ToInt16(byte1txt.Text), 2) + NIDtext.Text.Substring(2, 10);
+            NIDTxt2.Text = NIDtext.Text;
+            Update();
+        }
+
+        private void byte2txt_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDtext.Text.Substring(0, 2) + hex(Convert.ToInt16(byte2txt.Text), 2)
+                + NIDtext.Text.Substring(4, 8);
+            NIDTxt2.Text = NIDtext.Text;
+        }
+
+        private void byte3txt_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDtext.Text.Substring(0, 4) + hex(Convert.ToInt16(byte3txt.Text), 2)
+                + NIDtext.Text.Substring(6, 6);
+            NIDTxt2.Text = NIDtext.Text;
+            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+        }
+
+        private void byte4txt_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDtext.Text.Substring(0, 6) + hex(Convert.ToInt16(byte4txt.Text), 2)
+                + NIDtext.Text.Substring(8, 4);
+            NIDTxt2.Text = NIDtext.Text;
+            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+        }
+
+        private void byte5txt_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDtext.Text.Substring(0, 8) + hex(Convert.ToInt16(byte5txt.Text), 2)
+                + NIDtext.Text.Substring(10, 2);
+            NIDTxt2.Text = NIDtext.Text;
+            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+        }
+
+        private void byte6txt_Validating(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDtext.Text.Substring(0, 10) + hex(Convert.ToInt16(byte6txt.Text), 2);
+            NIDTxt2.Text = NIDtext.Text;
+        }
+
+        private void membertxt_TextChanged(object sender, CancelEventArgs e)
+        {
+            NIDtext.Text = NIDtext.Text.Substring(0, 4) + hex(Convert.ToInt16(membertxt.Text), 6)
+                + NIDtext.Text.Substring(10, 2);
+            NIDTxt2.Text = NIDtext.Text;
+            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
+            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
+            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
+            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
+            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
+            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
         }
 
         private void WriteNidBtn_Click(object sender, EventArgs e)
         {
             int i, j;
-            NIDtext.Text = NIDtext.Text.PadLeft(12,'0').Substring(0,12);
+            NIDtext.Text = NIDtext.Text.PadLeft(12, '0').Substring(0, 12);
             for (i = 0, j = 11; i < 6; i++, j -= 2)
                 modulestr[i] = hv((byte)NIDtext.Text[j - 1], (byte)NIDtext.Text[j]);
             for (i = 6; i < 64; i++)
@@ -1405,5 +1451,239 @@ namespace PCTest
             SendWriteCmd(0x000040);
             this.WriteUserId.RunWorkerAsync();
         }
+
+        private void rebootbtn_Click(object sender, EventArgs e)
+        {
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_REBOOT, 2) + ";";      // opc
+            sendmsg(canmsg);
+        }
+
+        //**************************************************************************
+        // Consumer event tab
+        //**************************************************************************
+
+        private void EVreadBTN_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(EventIndextb.Text);
+            opstate = OPSTATE.EVREAD;
+            EventNumbertb.Text = EventNumbertb.Text.PadLeft(16, '0');
+            eventmsgcnt = 3;
+            datasize = 2;
+            SendEvReadCmd(EventNumbertb.Text, index);
+        }
+
+        private void EVRead()
+        {
+            if (serialLine.StartsWith("ERROR")
+              || serialLine.StartsWith("TOO LONG")
+                // || serialLine.StartsWith("-ECAN")
+              || serialLine.StartsWith("-SERIAL"))
+            {
+                opstate = OPSTATE.IDLE;
+                updatelog("Aborted due to error.");
+                displaylog();
+            }
+            else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
+                && serialLine.Substring(7, 4).Equals(dNN + "N"))
+            {
+                if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_CEWRITEH, 2)))
+                { // EVWRITEH
+                    EventNumbertb.Text = serialLine.Substring(13, 8) + EventNumbertb.Text.Substring(8, 8);
+                    eventmsgcnt--;
+                }
+                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_CEWRITEL, 2)))
+                { // EVWRITEL
+                    EventNumbertb.Text = EventNumbertb.Text.Substring(0, 8) + serialLine.Substring(13, 8);
+                    datasize = Convert.ToInt16(serialLine.Substring(21, 2), 16);
+                    if (datasize == 0)
+                        eventmsgcnt--;
+                    eventmsgcnt--;
+                }
+                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_DATA, 2))) // EVDATA
+                {
+                    eventmsgcnt--;
+                    EventActiontb.Text = serialLine.Substring(13, 4);
+                }
+                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_ACK, 2))) // ack
+                {
+                    EventNumbertb.Text = "";
+                    EventActiontb.Text = "";
+                    eventmsgcnt = 0;
+                }
+                if (eventmsgcnt == 0)
+                {
+                    opstate = OPSTATE.IDLE;
+                    displaylog();
+                }
+            }
+        }
+
+        private void EVwriteBTN_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(EventIndextb.Text);
+            SendEvWriteCmd(EventNumbertb.Text.PadLeft(16, '0') + EventActiontb.Text, index);
+        }
+
+        private void EraseEVBtn_Click(object sender, EventArgs e)
+        {
+            SendEvEraseCmd("0000000000000000", Convert.ToInt16(EventIndextb.Text));
+        }
+
+        private void EraseAllBtn_Click(object sender, EventArgs e)
+        {
+            SendEvEraseCmd("0000000000000000", 0);
+        }
+
+        //**************************************************************************
+        // Producer event tab
+        //**************************************************************************
+
+        private void PE_readbtn_Click(object sender, EventArgs e)
+        {
+            PE_index.Text = PE_index.Text.PadLeft(1, '0');
+            int index = Convert.ToInt16(PE_index.Text);
+            opstate = OPSTATE.PEREAD;
+            eventmsgcnt = 2;
+
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEREAD, 2);   // opc
+            canmsg += hex(index,4) + ";";
+            sendmsg(canmsg);
+        }
+
+        private void PERead()
+        {
+            if (serialLine.StartsWith("ERROR")
+              || serialLine.StartsWith("TOO LONG")
+                // || serialLine.StartsWith("-ECAN")
+              || serialLine.StartsWith("-SERIAL"))
+            {
+                opstate = OPSTATE.IDLE;
+                updatelog("Aborted due to error.");
+                displaylog();
+            }
+            else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
+                && serialLine.Substring(7, 4).Equals(dNN + "N"))
+            {
+                if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_PEWRITEH, 2)))
+                {
+                    PE_nodeidtxt.Text = serialLine.Substring(13, 12);
+                    PE_eventtxt.Text = serialLine.Substring(25, 2) + PE_eventtxt.Text.PadLeft(4,'0').Substring(2, 2);
+                    eventmsgcnt--;
+                }
+                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_PEWRITEL, 2)))
+                {
+                    PE_eventtxt.Text = PE_eventtxt.Text.Substring(0, 2) + serialLine.Substring(13, 2);
+                    eventmsgcnt--;
+                }
+                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_ACK, 2))) // ack
+                {
+                    EventNumbertb.Text = "";
+                    EventActiontb.Text = "";
+                    eventmsgcnt = 0;
+                }
+                if (eventmsgcnt == 0)
+                {
+                    opstate = OPSTATE.IDLE;
+                    displaylog();
+                }
+            }
+        }
+
+        private void PE_writebtn_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(PE_index.Text);
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEWRITEH, 2);  // opc
+            canmsg += PE_nodeidtxt.Text.PadLeft(12, '0'); // 6 bytes of nodeid
+            canmsg += PE_eventtxt.Text.PadLeft(4, '0').Substring(0,2); // high byte of event
+            canmsg += ";";
+            sendmsg(canmsg);
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEWRITEL, 2);  // opc
+            canmsg += PE_eventtxt.Text.PadLeft(4, '0').Substring(2, 2); // low byte of event
+            canmsg += hex(index, 4);                  // 2 bytes of index
+            canmsg += ";";
+            sendmsg(canmsg);
+        }
+
+        private void PE_erasebtn_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(PE_index.Text);
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEERASE, 2);  // opc
+            canmsg += hex(index,4);                  // 2 bytes of index
+            canmsg += ";";
+            sendmsg(canmsg);
+        }
+
+        private void DefaultBtn_Click(object sender, EventArgs e)
+        {
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_DEFAULT, 2) + ";";
+            sendmsg(canmsg);
+        }
+
+        //**************************************************************************
+        // Node variable tab
+        //**************************************************************************
+
+        private void NVReadBtn_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(NVindextb.Text);
+            if (index < 0 || index > 255)
+            {
+                NVindextb.Text = "0";
+                return;
+            }
+            opstate = OPSTATE.NVREAD;
+            SendNvReadCmd(hex(index, 2));
+        }
+
+        private void NVRead()
+        {
+            if (serialLine.StartsWith("ERROR")
+              || serialLine.StartsWith("TOO LONG")
+                // || serialLine.StartsWith("-ECAN")
+              || serialLine.StartsWith("-SERIAL"))
+            {
+                opstate = OPSTATE.IDLE;
+                updatelog("Aborted due to error.");
+                displaylog();
+            }
+            else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
+                && serialLine.Substring(7, 3).Equals(dNN))
+            {
+                if (serialLine.Substring(10, 3).Equals("N97" + hex((int)DAA.DAA_DATA, 2))) // data
+                {
+                    NVvaluetb.Text = serialLine.Substring(15, 2);
+                    opstate = OPSTATE.IDLE;
+                    displaylog();
+                    return;
+                }
+                else if (serialLine.Substring(10, 3).Equals("N97" + hex((int)DAA.DAA_ACK, 2))) // ack
+                {
+                    NVvaluetb.Text = "";
+                    opstate = OPSTATE.IDLE;
+                    displaylog();
+                }
+            }
+        }
+
+        private void NVwriteBTN_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(NVindextb.Text);
+            if (index < 0 || index > 255)
+            {
+                NVindextb.Text = "0";
+                return;
+            }
+            SendNvWriteCmd(hex(index, 2) + NVvaluetb.Text.PadLeft(2, '0'));
+        }
+
+        //**************************************************************************
+
+
     }
 }

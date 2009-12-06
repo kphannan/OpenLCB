@@ -1,8 +1,10 @@
 /*
-    RFID RS232 interface for CBUS
+    OpenLCB RFID Using MERG RS232 and MERG RFID reader kit
+
+    2 Dec 2009
 
     Serial BAUD is 9.6KB
-    Format is <STX 02> <10 bytes of hex data> <2 bytes xor of data> <cr> <lf> <ETX 03>
+    RFID Format is <STX 02> <10 bytes of hex data> <2 bytes xor of data> <cr> <lf> <ETX 03>
 
     To use the CANRS hardware the RFID output needs to be on pin 3 instead of pin 2
     and the gender of the D-type needs changing.
@@ -57,7 +59,7 @@ static far BYTE serrcbuf[128];
 //        ROM module info
 //*********************************************************************************
 
-#define modulestring "MERGCBUS CANRFID "  __DATE__ " " __TIME__
+#define modulestring "OpenLCB RFID "  __DATE__ " " __TIME__
 
 #pragma romdata
 const rom BYTE xml[] = 
@@ -179,8 +181,8 @@ void packet(void)
             CheckAlias(1);
     }
     else if (CB_FrameType == FT_VNSN) { // send full NID
+        CB_FrameType = FT_DAA | CB_SourceNID;
         CB_SourceNID = ND.nodeIdAlias;
-        CB_FrameType = FT_DAA;
         CB_datalen = 7;
         CB_data[0] = DAA_NSN;
         CB_data[1] = ND.nodeId[5];
@@ -200,6 +202,13 @@ void packet(void)
         else if (CB_data[0] == DAA_UPGREAD) { // single block read
             sendblock(CB_SourceNID);
         }
+        else if (CB_data[0] == DAA_REBOOT) {
+            // re-start the program
+            _asm
+                reset
+                goto 0x000000
+            _endasm
+        }
         else if (CB_data[0] == DAA_UPGADDR) {   // single block write
             DNID = CB_SourceNID;
             UP(GP_address) = CB_data[1];
@@ -210,7 +219,8 @@ void packet(void)
         }
         else if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data block
             if (DNID!=CB_SourceNID) {
-               sendack(5,CB_SourceNID);
+               sendack(ACK_ALIASERROR, CB_SourceNID);
+               sendack(ACK_ALIASERROR, DNID);
                return;
             }
             else {
@@ -221,17 +231,19 @@ void packet(void)
                     GP_block[t++] = CB_data[i];
                 if (blocks==0) {
                     ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
-                    sendack(0,DNID);    // OK
+                    sendack(ACK_OK, DNID);    // OK
 
                 }
             }
         }
-        else if (CB_data[0] == DAA_EVERASEH)
-            sendack(0, CB_SourceNID);
-        else if (CB_data[0]  == DAA_NVRD || CB_data[0] == DAA_EVREADH)
-            sendack(3, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_EVWRITEH)
-            sendack(4, CB_SourceNID);
+        else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
+            sendack(ACK_OK, CB_SourceNID);
+        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH 
+          || CB_data[0] == DAA_PEREAD)
+            sendack(ACK_NODATA, CB_SourceNID);
+        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH 
+          || CB_data[0] == DAA_PEWRITEH)
+            sendack(ACK_NOSPACE, CB_SourceNID);
     }
 }
 
@@ -280,13 +292,19 @@ void main(void)
 
     CheckAlias(0);
 
+    // send INIT packet
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_FrameType = FT_INIT;
+    CB_datalen = 0;
+    while (SendMessage()==0) ;
+
     RXindex = 0;
     while (1) {
         // 1 msec timer
         if (Timer3Test()) { 
             timer++;
             if (blocks!=0 && timer>20) { // send timeout ack
-                sendack(2, DNID); // timeout
+                sendack(ACK_TIMEOUT, DNID); // timeout
                 blocks = 0;
             }
         }

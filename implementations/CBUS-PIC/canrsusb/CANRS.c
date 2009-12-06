@@ -1,7 +1,8 @@
-/*
-    OpenLCB RS232 or USB interface for CBUS modules
+/*  OpenLCB RS232 or USB interface for CBUS modules
 
-    Must define USB or RS232 get the right version.
+    2 Dec 2009
+
+    Must define USB or RS232 before compiling.
 
     Uses 4 MHz resonator and PLL for 16 MHz clock
 
@@ -229,8 +230,8 @@ void packet(void)
             CheckAlias(1);
     }
     else if (CB_FrameType == FT_VNSN) { // send full NID
+        CB_FrameType = FT_DAA | CB_SourceNID;
         CB_SourceNID = ND.nodeIdAlias;
-        CB_FrameType = FT_DAA;
         CB_datalen = 7;
         CB_data[0] = DAA_NSN;
         CB_data[1] = ND.nodeId[5];
@@ -247,6 +248,13 @@ void packet(void)
             INTCONbits.GIEL = 0;
             Loader();               // call loader, never returns here
         }
+        else if (CB_data[0] == DAA_REBOOT) {
+            // re-start the program
+            _asm
+                reset
+                goto 0x000000
+            _endasm
+        }
         else if (CB_data[0] == DAA_UPGREAD) { // single block read
             sendblock(CB_SourceNID);
         }
@@ -260,7 +268,7 @@ void packet(void)
         }
         else if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data block
             if (DNID!=CB_SourceNID) {
-               sendack(5,CB_SourceNID);
+               sendack(ACK_ALIASERROR,CB_SourceNID);
                return;
             }
             else {
@@ -271,17 +279,19 @@ void packet(void)
                     GP_block[t++] = CB_data[i];
                 if (blocks==0) {
                     ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
-                    sendack(0,DNID);    // OK
+                    sendack(ACK_OK,DNID);    // OK
 
                 }
             }
         }
-        else if (CB_data[0] == DAA_EVERASEH)
-            sendack(0, CB_SourceNID);
-        else if (CB_data[0]  == DAA_NVRD || CB_data[0] == DAA_EVREADH)
-            sendack(3, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_EVWRITEH)
-            sendack(4, CB_SourceNID);
+        else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
+            sendack(ACK_OK, CB_SourceNID);
+        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH 
+          || CB_data[0] == DAA_PEREAD)
+            sendack(ACK_NODATA, CB_SourceNID);
+        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH 
+          || CB_data[0] == DAA_PEWRITEH)
+            sendack(ACK_NOSPACE, CB_SourceNID);
     }
 }
 
@@ -329,7 +339,7 @@ void main(void)
         if (Timer3Test()) {  // 100 msec timer
             timer++;
             if (blocks!=0 && timer>20) { // send timeout ack
-                sendack(2, DNID); // timeout
+                sendack(ACK_TIMEOUT, DNID); // timeout
                 blocks = 0;
             }
         }

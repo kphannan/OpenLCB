@@ -1,5 +1,6 @@
-/*
-    OpenLCB
+/*  OpenLCB general.c
+
+    1 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -356,7 +357,7 @@ void sendblock(unsigned int DNID)
 
 void Loader(void)
 {
-    sendack(0,CB_SourceNID);
+    sendack(ACK_OK,CB_SourceNID);
     _asm
         goto 0x000030
     _endasm

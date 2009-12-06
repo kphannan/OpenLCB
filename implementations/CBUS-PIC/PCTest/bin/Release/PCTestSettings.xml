@@ -1,7 +1,7 @@
 <PCTest>
-    <PortName>COM9</PortName>
+    <PortName>COM11</PortName>
     <BaudRate>115200</BaudRate>
     <Handshake>RequestToSend</Handshake>
     <KeepLog>true</KeepLog>
-    <FlashTaskBar>true</FlashTaskBar>
+    <FlashTaskBar>false</FlashTaskBar>
 </PCTest>

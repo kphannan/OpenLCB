@@ -1,5 +1,6 @@
-/*
-    OpenLCB
+/*  OpenLCB hash.c
+
+    3 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -21,7 +22,7 @@
 #pragma udata ovrly
 #pragma romdata
 
-void DoEvent(BOOL on, unsigned int i);
+void DoEvent(unsigned int i);
 
 /* *******************************************************************************
 
@@ -31,7 +32,7 @@ and 2 bytes for the action required.
 
 Short events have nodenumber 0
 FF,FF,FF,FF,xx,xx,xx,xx is end of chain
-FF,FF,00,00,xx,xx,xx,xx is a deleted entry to be stepped over
+FF,FF,FF,00,xx,xx,xx,xx is a deleted entry to be stepped over
 
 So 6 x 64 or 6 x 32 = 384 or 192 is the maximum number of events
 In practice 80% is a good maximum, so 300 or 150 is a better limit.
@@ -44,7 +45,11 @@ In practice 80% is a good maximum, so 300 or 150 is a better limit.
 
 // These tables need to be aligned on 64 byte boundary
 
+#pragma romdata table = 0x1100
+
+#ifndef EVENTSIZE
 #define EVENTSIZE 10
+#endif
 #ifdef HASH2048
 #define TABLEMASK 0x1F			// 0x1F for 2048
 BYTE rom table[2048]; 	            // initializes to zero, 64 byte aligned
@@ -99,16 +104,15 @@ void Find(static BYTE * far ev)
 {
     far overlay BYTE i, j;
     far overlay BOOL on;
-    on = CB_FrameType == FT_ACON || CB_FrameType == FT_ASON;
 
     i = hash(ev); // calc hash index
     while (1) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, 
-          (BYTE * far)GP_block);
+        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64,
+         (BYTE * far)GP_block);
         for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
             if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
               && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
-                DoEvent(on, LOWD(GP_block[j+8]));
+                DoEvent(LOWD(GP_block[j+8]));
             }
             else if (*(unsigned long*)&GP_block[j]==0xFFFFFFFF) {
                 return;
@@ -124,27 +128,55 @@ void Find(static BYTE * far ev)
 
 void SendEvent(BYTE * far ev)
 {
+    far overlay BYTE i;
     CB_FrameType = FT_DAA | CB_SourceNID;
     CB_SourceNID = ND.nodeIdAlias;
-    CB_data[0] = DAA_EVWRITEH;
-    CB_data[1] = ev[0];
-    CB_data[2] = ev[1];
-    CB_data[3] = ev[2];
-    CB_data[4] = ev[3];
-    CB_datalen = 5;
+    CB_data[0] = DAA_PEWRITEH;
+    for (i=0; i<7; i++)
+        CB_data[i+1] = ev[i];
+    CB_datalen = 8;
     while (ECANSendMessage()==0) ;
-    CB_data[0] = DAA_EVWRITEL;
-    CB_data[1] = ev[4];
-    CB_data[2] = ev[5];
-    CB_data[3] = ev[6];
-    CB_data[4] = ev[7];
-    CB_data[5] = 2;
-    CB_datalen = 6;
-    while (ECANSendMessage()==0) ;
-    CB_data[0] = DAA_DATA;
-    CB_data[1] = ev[8];
-    CB_data[2] = ev[9];
+    CB_data[0] = DAA_PEWRITEL;
+    CB_data[1] = ev[7];
+#if EVENTSIZE == 8
+    CB_data[2] = 0;
     CB_datalen = 3;
+#endif
+#if EVENTSIZE == 9
+    CB_data[2] = 1;
+    CB_data[3] = ev[8];
+    CB_datalen = 4;
+#endif
+#if EVENTSIZE == 10
+    CB_data[2] = 2;
+    CB_data[3] = ev[8];
+    CB_data[4] = ev[9];
+    CB_datalen = 5;
+#endif
+#if EVENTSIZE == 11
+    CB_data[2] = 3;
+    CB_data[3] = ev[8];
+    CB_data[4] = ev[9];
+    CB_data[5] = ev[10];
+    CB_datalen = 6;
+#endif
+#if EVENTSIZE == 12
+    CB_data[2] = 4;
+    CB_data[3] = ev[8];
+    CB_data[4] = ev[9];
+    CB_data[5] = ev[10];
+    CB_data[6] = ev[11];
+    CB_datalen = 7;
+#endif
+#if EVENTSIZE == 13
+    CB_data[2] = 5;
+    CB_data[3] = ev[8];
+    CB_data[4] = ev[9];
+    CB_data[5] = ev[10];
+    CB_data[6] = ev[11];
+    CB_data[7] = ev[12];
+    CB_datalen = 8;
+#endif
     while (ECANSendMessage()==0) ;
 }
 
@@ -152,64 +184,68 @@ void SendEvent(BYTE * far ev)
 //        ReadEvent
 //*********************************************************************************
 
-// find all matching events
-
 void ReadEvent(static BYTE * far ev, BYTE index) 
 {
     far overlay BYTE i, j;
-    i = hash(ev); // calc hash index
-    while (1) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-        for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
-              && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
-                if (index==0) {
-                    SendEvent((BYTE * far)&GP_block[j]);
+    if (*(unsigned long *)&ev[0] == 0 && *(unsigned long *)&ev[4] == 0) {
+        // read all events
+        for (i=0; i<(TABLEMASK+1); i++) {
+            ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+            for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
+                if (*(unsigned short long *)&GP_block[j]!=0xFFFFFF) {
+                    if (index==0) {
+                        SendEvent((BYTE * far)&GP_block[j]);
+                        return;
+                    }
+                    index--;
+                }
+            }
+       }
+       sendack(ACK_NODATA, CB_SourceNID);
+    }
+    else {
+        // read only matching events
+        i = hash(ev); // calc hash index
+        while (1) {
+            ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+            for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
+                if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
+                  && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
+                    if (index==0) {
+                        SendEvent((BYTE * far)&GP_block[j]);
+                        return;
+                    }
+                    index--;
+                }
+                else if (*(unsigned long*)GP_block[j]==0xFFFFFFFF) {
+                    sendack(ACK_NODATA, CB_SourceNID);
                     return;
                 }
-                index--;
             }
-            else if (*(unsigned long*)GP_block[j]==0xFFFFFFFF) {
-                sendack(3, CB_SourceNID);
-                return;
-            }
-        }
-        i = (i+1) & TABLEMASK; // next bucket
-    }
-}
-
-//*********************************************************************************
-//        ReadTable
-//*********************************************************************************
-
-// read all of the event table
-
-void ReadTable(BYTE index) 
-{
-    far overlay BYTE i, j;
-    for (i=0; i<(TABLEMASK+1); i++) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-        for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (LOWD(GP_block[j])!=0xFFFF) {
-                if (index==0) {
-                    SendEvent((BYTE * far)&GP_block[j]);
-                    return;
-                }
-                index--;
-            }
+            i = (i+1) & TABLEMASK; // next bucket
         }
     }
-    sendack(3, CB_SourceNID);
 }
 
 //*********************************************************************************
 //        SaveEvent
 //*********************************************************************************
 
+BOOL equal(static BYTE * far s1, static BYTE * far s2, BYTE l)
+{
+    far overlay BYTE i;
+    for (i=0; i<l; i++) {
+        if (s1[i] != s2[i])
+            return FALSE;
+    }
+    return TRUE;
+}
+
+
 // overwrite a deleted entry or the end of a chain, entries can overflow
 // ino the next bucket(64 byte page) but the search will start to slow down
 
-void SaveEvent(static BYTE * far ev, unsigned int event)
+void SaveEvent(static BYTE * far ev)
 {
     far overlay BYTE i, j;
 
@@ -218,13 +254,11 @@ void SaveEvent(static BYTE * far ev, unsigned int event)
     while (1) {
         ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
         for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
-              && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]
-              && LOWD(GP_block[j+8])==event) {
+            if (equal((BYTE * far )&GP_block[j], (BYTE * far )ev, EVENTSIZE)) {
                 // don't write an exact duplicate event
                 return;
             }
-            else if (LOWD(GP_block[j])==0xFFFF) { // end of chain or deleted entry
+            else if (*(unsigned short long *)GP_block[j]==0xFFFFFF) { // end of chain or deleted entry
                 goto write;
             }
         }
@@ -236,7 +270,7 @@ write:
     while (1) {
         ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
         for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (LOWD(GP_block[j])==0xFFFF) {
+            if (*(unsigned short long *)GP_block[j]==0xFFFFFF) {
                 GP_block[j] = ev[0];
                 GP_block[j+1] = ev[1];
                 GP_block[j+2] = ev[2];
@@ -245,7 +279,7 @@ write:
                 GP_block[j+5] = ev[5];
                 GP_block[j+6] = ev[6];
                 GP_block[j+7] = ev[7];
-                LOWD(GP_block[j+8]) = event;
+                GP_block[j+8] = ev[8];
                 ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
                 return;
             }
@@ -263,41 +297,38 @@ void EraseEvent(static BYTE * far ev)
     far overlay BOOL changed;    // if TRUE the page has been updated and needs writing back    
     far overlay BYTE i, j;
 
-    i = hash(ev); // calc hash index
-    while (1) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-        changed = FALSE;
-        for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
-              && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
-                *(unsigned long *)&GP_block[j] = 0xFFFF0000;
-                changed = TRUE;
-            }
-            else if (*(unsigned long*)&GP_block[j] == 0xFFFFFFFF) { // end of chain
-                if (changed) {
-                    ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<8], 64, (BYTE * far)GP_block);
-                }
-                return;
-            }
+    if (*(unsigned long *)&ev[0] == 0 && *(unsigned long *)&ev[4] == 0) {
+        // erase all events
+        for (i=0; i<64; i++) // clear 64 bytes
+            GP_block[i] = 0xFF;
+        for (i=0; i<(TABLEMASK+1); i++) { // 64 x 64 byte pages
+            ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
         }
-        if (changed) {
-            ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<8], 64, (BYTE * far)GP_block);
-        }
-        i = (i+1) & TABLEMASK; // next bucket
     }
-}
-
-//*********************************************************************************
-//        EraseAllEvents	
-//*********************************************************************************
-
-void EraseAllEvents(void)
-{
-    far overlay BYTE i;
-    for (i=0; i<64; i++) // clear 64 bytes
-        GP_block[i] = 0xFF;
-    for (i=0; i<(TABLEMASK+1); i++) { // 64 x 64 byte pages
-        ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+    else {
+        // only erase matching events
+        i = hash(ev); // calc hash index
+        while (1) {
+            ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+            changed = FALSE;
+            for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
+                if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
+                  && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
+                    *(unsigned long *)&GP_block[j] = 0xFFFFFF00;
+                    changed = TRUE;
+                }
+                else if (*(unsigned long*)&GP_block[j] == 0xFFFFFFFF) { // end of chain
+                    if (changed) {
+                        ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<8], 64, (BYTE * far)GP_block);
+                    }
+                    return;
+                }
+            }
+            if (changed) {
+                ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<8], 64, (BYTE * far)GP_block);
+            }
+            i = (i+1) & TABLEMASK; // next bucket
+        }
     }
 }
 

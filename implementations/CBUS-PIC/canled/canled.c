@@ -1,19 +1,11 @@
-/*    FLiM and SLiM compatible CANLED in C
+/*  OpenLCB for MERG CBUS CANLED
 
-    Short events have nodenumber 0.
+    3 Dec 2009
 
-    In learn mode the led corresponding to the led select switch is on. This
-    is useful for testing  as well.
-
-    Start-up led check on power up all the leds come on for a short time. 
-    This does not use the normal display data area, so the real led state
-    can update during the test.
-
-    For teaching from a PC, subtract 1 from the led number, led numbers are 0
-    to 63. Events are stored as 5 bytes, the 4 byte event number and one byte
-    event. The event byte is the 6 bits led number, 1 bit polarity, and 1 bit
-    toggle. Add 64 for Invert Polarity, and add 128 for Toggle mode to the
-    led number.
+    Led numbers are 0 to 63. Events are stored as 9 bytes, the 8 byte event
+    number and one byte action. The event byte is the 6 bits led number, 2 bits
+    LED state, 00 for off, 01 for on, 10 for flash, 11 spare code. Add 64 for
+    on, and add 128 for flash to the led number.
     
     Copyright (C) 2008 Mike Johnson
 
@@ -36,6 +28,7 @@
 #include "../canlib/general.c"
 #include "../canlib/entry.c"
 #include "../canlib/ecan.c"
+#define EVENTSIZE 9
 #define HASH2048
 #include "../canlib/hash.c"
 
@@ -51,16 +44,19 @@ BOOL LedsOn;
 // hp int data
 BYTE HpIndex;              // shift bit counter
 BYTE HpColData;            // data shifted out
-BYTE HpLedColumn[8];       // bit pattern for leds
+BYTE HpLedColumn[16];      // bit pattern for leds
 BYTE HpLedRow;             // row number being output
+BYTE HpFlash;              // counter for flashing
 
 BYTE BitMask[8];           // bit masks
 unsigned int DNID;         // block transfer address
 BYTE learnlink;            // debounce learn button
-BYTE event[10];            // 10 bytes for an event
+BYTE event[EVENTSIZE];     // bytes for an event
+unsigned int eventindex;
+BYTE eventcnt;
+
 unsigned int timer;        // timeout timer for loader or event data
-BOOL evdataexpected;       // event data expected flag
-unsigned int blocks;     // loader - 1 bit for each packet to be transfered
+unsigned int blocks;       // loader - 1 bit for each packet to be transfered
 
 //*********************************************************************************
 //        ROM module info
@@ -75,8 +71,7 @@ const rom BYTE xml[] =
     "<EventData>\r\n"
     "  <name>Event Number</name><bits>32</bits>\r\n"
     "  <name>Led number</name><bits>6</bits>\r\n"
-    "  <name>Polarity</name><bits>1</bits>\r\n"
-    "  <name>Toggle</name><bits>1</bits>\r\n"
+    "  <name>State</name><bits>2</bits>\r\n"
     "</EventData>\r\n"
     "<NodeVariable>\r\n"
     "</NodeVariable>\r\n"
@@ -108,20 +103,22 @@ const rom BYTE mstr[64] = modulestring ;
 // so it needs to be reloaded with 0x10000-(t usec/2)
 
 // Every 2.5 msec to drive LEDS, 100Hz refresh
+// Flashing 400 msec on and 400 msec off
+
 #pragma interrupt hpinterrupt
 void hpinterrupt(void)
 {
-    TMR0H = (0x10000-(25000/2))>>8;    // load the timer for the next bit
-    TMR0L = (0x10000-(25000/2)) & 0xFF;
-    INTCONbits.TMR0IF = 0;            // clear interrupt flag
+    TMR0H = (0x10000-(2500/2))>>8;     // load the timer for the next bit
+    TMR0L = (0x10000-(2500/2)) & 0xFF;
+    INTCONbits.TMR0IF = 0;              // clear interrupt flag
 
-    HpLedRow = (HpLedRow+1)& 0x03;    // 4 rows(0-3) 
+    HpLedRow = (HpLedRow+1)& 0x03;      // 4 rows(0-3) 
 
     // preload next coloumn data upper byte first
-    if (HpLedRow > 3)
-        HpColData = 0;
-    else if (AllLedOnTest)
+    if (AllLedOnTest)
         HpColData = 0xFF;
+    else if (HpFlash&0x40)
+        HpColData = HpLedColumn[(HpLedRow<<1)+9];
     else
         HpColData = HpLedColumn[(HpLedRow<<1)+1];
     for (HpIndex=0; HpIndex<8; HpIndex++) {
@@ -134,10 +131,10 @@ void hpinterrupt(void)
         HpColData <<= 1;
     }
     // preload lower byte of coloumn
-    if (HpLedRow > 3)
-        HpColData = 0;
-    else if (AllLedOnTest)
+    if (AllLedOnTest)
         HpColData = 0xFF;
+    else if (HpFlash&0x40)
+        HpColData = HpLedColumn[(HpLedRow<<1)+8];
     else
         HpColData = HpLedColumn[HpLedRow<<1];
     for (HpIndex=0; HpIndex<8; HpIndex++) {
@@ -175,13 +172,9 @@ void EnableLeds(void)
 void lpinterrupt(void)
 {
 }
-
-BOOL SetupButtonDown(void)
-{ 
-    return PORTBbits.RB0==0;
-}
-
+ 
 // inputs
+#define SetupButton !PORTBbits.RB0
 #define LEDSelect (PORTA & 0x3F)
 #define Polarity !PORTCbits.RC4
 #define Toggle !PORTCbits.RC3
@@ -198,16 +191,28 @@ BOOL ReceiveMessage(void)
     return ECANReceiveMessage();
 }
 
-void DoEvent(BOOL on, unsigned int action)
+void DoEvent(unsigned int action)
 {
-    far overlay BYTE i, j;
-    i = action & 0x07;
-    j = (action >> 3 ) & 0x07;
-    if (on) {
+    far overlay BYTE i, j, m;
+    m = LO(action);
+    i = m & 0x07;
+    j = (m >> 3 ) & 0x07;
+    m &= 0xC0;
+    if (m == 0x00) {
+        HpLedColumn[j] &= ~BitMask[i];
+        HpLedColumn[j+8] &= ~BitMask[i];
+    }
+    else if (m == 0x40) {
         HpLedColumn[j] |= BitMask[i];
+        HpLedColumn[j+8] |= BitMask[i];
+    }
+    else if (m == 0x80) {
+        HpLedColumn[j] |= BitMask[i];
+        HpLedColumn[j+8] &= ~BitMask[i];
     }
     else {
         HpLedColumn[j] &= ~BitMask[i];
+        HpLedColumn[j+8] |= BitMask[i];
     }
 }
 
@@ -251,49 +256,24 @@ void Packet(void)
         while (SendMessage()==0) ;
         return;
 
-    case FT_ASON: // Short on event
-        for (i=0; i<8; i++)
-            CB_data[i] = 0;
-
-    case FT_ACON: // On event
+    case FT_EVENT: // Event
         if (learnlink) {            // in learn mode
             if (Unlearn) {          // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
             }
             else {                  // learn this event, using the switches and links
+                for (i=0; i<8; i++)
+                    event[i] = CB_data[i];
                 LOWD(event[8]) = LEDSelect;
                 if (Polarity)
                     event[8] |= 0x40;
                 if (Toggle)
                     event[8] |= 0x80;
-                SaveEvent((BYTE * far)&CB_data[0], LOWD(event[8]));
+                SaveEvent((BYTE * far)&event[0]);
             }
         }
         else {
             Find((BYTE * far)&CB_data[0]);
-        }
-        return;
-
-    case FT_ASOF: // Short off event
-        for (i=0; i<8; i++)
-            CB_data[i] = 0;
-
-    case FT_ACOF:    // Off event
-        if (learnlink) {            // in learn mode
-            if (Unlearn) {          // unlean all events with this event number
-                EraseEvent(&CB_data[0]);
-            }
-            else {                  // learn this event, using the switches and links
-                LOWD(event[8]) = LEDSelect;
-                if (Polarity)
-                    event[8] |= 0x40;
-                if (Toggle)
-                    event[8] |= 0x80;
-                SaveEvent((BYTE * far)&CB_data[0], LOWD(event[8]));
-            }
-        }
-        else {
-	        Find((BYTE * far)&CB_data[0]);
         }
         return;
     }
@@ -305,7 +285,8 @@ void DAA_Packet(void)
 
     if ((CB_data[0]&0xF0)==DAA_DATA) { // loader or event data
         if (DNID!=CB_SourceNID) {
-           sendack(5,CB_SourceNID);
+           sendack(ACK_ALIASERROR, CB_SourceNID);
+           sendack(ACK_ALIASERROR, DNID);
            return;
         }
         if (blocks != 0) { // loader data block
@@ -318,13 +299,8 @@ void DAA_Packet(void)
                 DisableLeds();
                 ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
                 EnableLeds();
-                sendack(0,DNID);    // OK
+                sendack(ACK_OK,DNID);    // OK
             }
-        }
-        else if (evdataexpected) { // event data
-            SaveEvent(&event[0],CB_data[1]);
-            evdataexpected = FALSE;
-            sendack(0, CB_SourceNID);
         }
         return;
     }
@@ -340,6 +316,12 @@ void DAA_Packet(void)
         sendblock(CB_SourceNID);
         break;
 
+    case DAA_REBOOT: // re boot
+        _asm
+            reset
+            goto 0x000000
+        _endasm
+
     case DAA_UPGADDR:  // single block write
         DNID = CB_SourceNID;
         UP(GP_address) = CB_data[1];
@@ -349,52 +331,134 @@ void DAA_Packet(void)
         timer = 0;
         break;
 
-    case DAA_EVREADH: // Event read
-        DNID = CB_SourceNID;
-        *(unsigned long *)&event[0] = *(unsigned long *)&CB_data[1];
+    case DAA_CEREADH: // Event read
+        for (i=0; i<7; i++)
+            event[i] = CB_data[i+1];
+        if (eventcnt==0) {
+            DNID = CB_SourceNID;
+            eventcnt = 0x01;
+            timer = 0;
+            return;
+        }
+        if (DNID != CB_SourceNID) {
+            sendack(ACK_ALIASERROR, CB_SourceNID);
+            sendack(ACK_ALIASERROR, DNID);
+            eventcnt = 0;
+            return;
+        }
+        ReadEvent(&event[0], eventindex);
+        eventcnt = 0;
         break;
 
-    case DAA_EVREADL: // Event read
-        DNID = CB_SourceNID;
-        *(unsigned long *)&event[4] = *(unsigned long *)&CB_data[1];
-        if (*(unsigned long *)&event[0] == 0 && *(unsigned long *)&event[4] == 0)
-            ReadTable(CB_data[5]);
-        else
-            ReadEvent(&event[0],CB_data[5]);
+    case DAA_CEREADL: // Event read
+        event[7] = CB_data[1];
+        HI(eventindex) = CB_data[2];
+        LO(eventindex) = CB_data[3];
+        if (eventcnt==0) {
+            DNID = CB_SourceNID;
+            eventcnt = 0x02;
+            timer = 0;
+            return;
+        }
+        if (DNID != CB_SourceNID) {
+            sendack(ACK_ALIASERROR, CB_SourceNID);
+            sendack(ACK_ALIASERROR, DNID);
+            eventcnt = 0;
+            return;
+        }
+        ReadEvent(&event[0], eventindex);
+        eventcnt = 0;
         break;
 
-    case DAA_EVERASEH: // Event erase
-        DNID = CB_SourceNID;
-        *(unsigned long *)&event[0] = *(unsigned long *)&CB_data[1];
+    case DAA_CEERASEH: // Event erase
+        for (i=0; i<7; i++)
+            event[i] = CB_data[i+1];
+        if (eventcnt==0) {
+            DNID = CB_SourceNID;
+            eventcnt = 0x01;
+            timer = 0;
+            return;
+        }
+        if (DNID != CB_SourceNID) {
+            sendack(ACK_ALIASERROR, CB_SourceNID);
+            sendack(ACK_ALIASERROR, DNID);
+            eventcnt = 0;
+            return;
+        }
+        EraseEvent(&event[0]);
+        sendack(ACK_OK, DNID);
         break;
 
-    case DAA_EVERASEL: // Event erase
-        DNID = CB_SourceNID;
-        if (*(unsigned long *)&event[0] == 0 && *(unsigned long *)&event[4] == 0)
-            EraseAllEvents();
-        else
-            EraseEvent(&event[0]);
-        sendack(0, DNID);
+    case DAA_CEERASEL: // Event erase
+        event[7] = CB_data[1];
+        HI(eventindex) = CB_data[2];
+        LO(eventindex) = CB_data[3];
+        if (eventcnt==0) {
+            DNID = CB_SourceNID;
+            eventcnt = 0x02;
+            timer = 0;
+            return;
+        }
+        if (DNID != CB_SourceNID) {
+            sendack(ACK_ALIASERROR, CB_SourceNID);
+            sendack(ACK_ALIASERROR, DNID);
+            eventcnt = 0;
+            return;
+        }
+        EraseEvent(&event[0]);
+        sendack(ACK_OK, DNID);
         break;
 
-    case DAA_EVWRITEH: // Event write
-        DNID = CB_SourceNID;
-        *(unsigned long *)&event[0] = *(unsigned long *)&CB_data[1];
+    case DAA_CEWRITEH: // Event write
+        for (i=0; i<7; i++)
+            event[i] = CB_data[i+1];
+        if (eventcnt==0) {
+            DNID = CB_SourceNID;
+            eventcnt = 0x01;
+            timer = 0;
+            return;
+        }
+        if (DNID != CB_SourceNID) {
+            sendack(ACK_ALIASERROR, CB_SourceNID);
+            sendack(ACK_ALIASERROR, DNID);
+            eventcnt = 0;
+            return;
+        }
+        SaveEvent(event);
+        sendack(ACK_OK, CB_SourceNID);
         break;
 
-    case DAA_EVWRITEL: // Event write
-        DNID = CB_SourceNID;
-        *(unsigned long *)&event[4] = *(unsigned long *)&CB_data[1];
-        blocks = timer = 0;
-        evdataexpected = TRUE;
+    case DAA_CEWRITEL: // Event write
+        event[7] = CB_data[1];
+        event[8] = CB_data[3]; // data
+        if (eventcnt==0) {
+            DNID = CB_SourceNID;
+            eventcnt = 0x02;
+            timer = 0;
+            return;
+        }
+        if (DNID != CB_SourceNID) {
+            sendack(ACK_ALIASERROR, CB_SourceNID);
+            sendack(ACK_ALIASERROR, DNID);
+            eventcnt = 0;
+            return;
+        }
+        SaveEvent(event);
+        sendack(ACK_OK, CB_SourceNID);
         break;
 
     case DAA_NVRD: // Node variable read
-        sendack(3, CB_SourceNID);
+    case DAA_PEREAD: // producer read
+        sendack(ACK_NODATA, CB_SourceNID);
         break;
 
     case DAA_NVSET: // Node variable write byte
-        sendack(4, CB_SourceNID);
+    case DAA_PEWRITEH: // producer write
+        sendack(ACK_NOSPACE, CB_SourceNID);
+        break;
+
+    case DAA_DEFAULT: // Producer and node variables
+        sendack(ACK_OK, CB_SourceNID);
         break;
     }
 }
@@ -466,16 +530,19 @@ void main(void)
     INTCONbits.GIEL = 1;  // enable all low priority interrupts
 
     ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+    for (i=0; i<10; i++)
+        event[i] = 0;
     j = 0;
     for (i=0; i<64; i++)
         j |= GP_block[i];
-    if (j == 0)
-        EraseAllEvents();
+    if (j == 0) {
+        EraseEvent(event);
+    }
 
-    if (Unlearn) {        // power on erase all events
+    if (Unlearn) {            // power on erase all events
         wait(10);
-        if (Unlearn) {    // debounce and erase all events
-            EraseAllEvents();
+        if (Unlearn) {        // debounce and erase all events
+            EraseEvent(event);
             for (i=0; i<8; i++)
                 HpLedColumn[i] = 0;
         }
@@ -483,27 +550,36 @@ void main(void)
 
     Timer3Init();
     CheckAlias(0);
+    GreenLEDOn();
+    YellowLEDOff();
+
+    // send init
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_FrameType = FT_INIT;
+    CB_datalen = 0;
+    while (SendMessage()==0) ;
 
     // Main loop
     while(1) {
-
         // 100 msec timer
         if (Timer3Test()) { 
+            HpFlash++;
             timer++;
-            if ((evdataexpected || blocks!=0) && timer>20) { // send timeout ack
-                sendack(2, CB_SourceNID); // timeout
+            if ((blocks!=0 || eventcnt!=0) && timer>20) { // send timeout ack
+                sendack(ACK_TIMEOUT, CB_SourceNID); // timeout
+                eventcnt = 0;
                 blocks = 0;
-                evdataexpected = FALSE;
             }
             if (Learn) { // debounce entry to learn mode
                 if (learnlink++ > 2) { // in learn mode
                     learnlink = 3;
                     YellowLEDOn();
                     // light the led for the switch position
-                    for (i=0; i<8; i++)
+                    for (i=0; i<16; i++)
                         HpLedColumn[i] = 0;
                     i = LEDSelect;
                     HpLedColumn[(i>>3)&0x07] = BitMask[i&0x07];
+                    HpLedColumn[((i>>3)&0x07) + 8] = BitMask[i&0x07];
                 } 
             }
             else {    // exit learn mode
@@ -516,7 +592,7 @@ void main(void)
             }
         }
 
-        if (ECANReceiveMessage()) {
+        if (ReceiveMessage()) {
             if (CB_SourceNID == ND.nodeIdAlias) { // conflict
                 if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
                     CB_SourceNID = ND.nodeIdAlias;
