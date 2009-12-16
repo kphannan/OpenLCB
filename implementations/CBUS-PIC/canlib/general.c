@@ -1,6 +1,6 @@
 /*  OpenLCB general.c
 
-    1 Dec 2009
+    15 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -211,8 +211,12 @@ void CheckAlias(BYTE cs)
     if (s==0) {
         // read unique nodeId and alias
         ProgramMemoryRead(NODEDATA, sizeof ND, (BYTE * far)&ND);
-        *((unsigned short long *)&ND.seedNodeId[0]) = *((unsigned short long *)&ND.nodeId[0]);
-        *((unsigned short long *)&ND.seedNodeId[3]) = *((unsigned short long *)&ND.nodeId[3]);
+        ND.seedNodeId[0] = ND.nodeId[0];
+        ND.seedNodeId[1] = ND.nodeId[1];
+        ND.seedNodeId[2] = ND.nodeId[2];
+        ND.seedNodeId[3] = ND.nodeId[3];
+        ND.seedNodeId[4] = ND.nodeId[4];
+        ND.seedNodeId[5] = ND.nodeId[5];
     }
     else {
 tryagain: 
@@ -258,14 +262,14 @@ tryagain:
     // send out the Alias in 4 CIM packets
     CB_SourceNID = ND.nodeIdAlias;  // alias
     CB_FrameType = FT_CIM0;
-    CB_FrameType |= (*((unsigned int *)&ND.nodeId[4]) & 0xFFF0) >> 4;
+    CB_FrameType |= *((unsigned int *)&ND.nodeId[4]) >> 4;
     CB_datalen = 0;
     while(SendMessage()==0) ;
     CB_FrameType =  FT_CIM1;
     CB_FrameType |= *((unsigned int *)&ND.nodeId[3]) & 0x0FFF;
     while(SendMessage()==0) ;
     CB_FrameType =  FT_CIM2;
-    CB_FrameType |= (*((unsigned int *)&ND.nodeId[1]) & 0xFFF0) >> 4;
+    CB_FrameType |= *((unsigned int *)&ND.nodeId[1]) >> 4;
     while(SendMessage()==0) ;
     CB_FrameType =  FT_CIM3;
     CB_FrameType |= *((unsigned int *)&ND.nodeId[0]) & 0x0FFF;

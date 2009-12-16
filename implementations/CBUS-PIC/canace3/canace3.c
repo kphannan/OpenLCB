@@ -1,6 +1,6 @@
 /*  OpenLCB for MERG CBUS CANACE3 Control Panel switch scanning
 
-    3 Dec 2009
+    16 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -18,6 +18,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 //*********************************************************************************
+
+#define SendMessage ECANSendMessage
+#define ReceiveMessage ECANReceiveMessage
 
 #include "../canlib/frametypes.c"
 #include "../canlib/general.c"
@@ -53,7 +56,7 @@ BYTE starttimeout;    // 2 sec delay before sending
 //        ROM module info
 //*********************************************************************************
 
-#define modulestring "OpenLCB MERG CANACE3 control panel switch "  __DATE__ " " __TIME__ 
+#define modulestring "OpenLCB for MERG CANACE3 "  __DATE__ " " __TIME__ 
 
 #pragma romdata
 const rom BYTE xml[] = 
@@ -87,21 +90,14 @@ const rom BYTE EventTable[2048];
 //    Program
 //*********************************************************************************
 
-void delay(void)
+#pragma interrupt hpinterrupt
+void hpinterrupt(void)
 {
-    far overlay BYTE i;
-    i = 400/3;     // for 16MHz, 400 instructions per 0.1mS 
-    while(--i) ;   // 3 instruction loop        
 }
 
-BOOL SendMessage(void)
+#pragma interruptlow lpinterrupt
+void lpinterrupt(void)
 {
-    return ECANSendMessage();
-}
-
-BOOL ReceiveMessage(void)
-{
-    return ECANReceiveMessage();
 }
 
 void SetDefault(void)
@@ -129,22 +125,21 @@ void ReadEvent(unsigned int evno)
         return;
     }
     a = evno<<3;
-    i = LO(a) & 0x3F;
-    ProgramMemoryRead((unsigned short long)&EventTable[a&0x07C0],64,(BYTE * far)&GP_block[0]);
+    ProgramMemoryRead((unsigned short long)&EventTable[a], 8, (BYTE * far)&GP_block[0]);
     CB_FrameType = FT_DAA | CB_SourceNID;
     CB_SourceNID = ND.nodeIdAlias;
     CB_data[0] = DAA_PEWRITEH;
-    CB_data[1] = GP_block[i];
-    CB_data[2] = GP_block[i+1];
-    CB_data[3] = GP_block[i+2];
-    CB_data[4] = GP_block[i+3];
-    CB_data[5] = GP_block[i+4];
-    CB_data[6] = GP_block[i+5];
-    CB_data[7] = GP_block[i+6];
+    CB_data[1] = GP_block[0];
+    CB_data[2] = GP_block[1];
+    CB_data[3] = GP_block[2];
+    CB_data[4] = GP_block[3];
+    CB_data[5] = GP_block[4];
+    CB_data[6] = GP_block[5];
+    CB_data[7] = GP_block[6];
     CB_datalen = 8;
     while (SendMessage()==0) ;
     CB_data[0] = DAA_PEWRITEL;
-    CB_data[1] = GP_block[i+7];
+    CB_data[1] = GP_block[7];
     CB_data[2] = HI(evno);
     CB_data[3] = LO(evno);
     CB_datalen = 4;
@@ -174,9 +169,15 @@ void WriteEvent(unsigned int evno)
 
 void EraseEvent(unsigned int evno)
 {
-    for (i=0; i<8; i++)
-        event[i] = 0xFF;
-     WriteEvent(evno);
+    event[0] = 0xFF;
+    event[1] = 0xFF;
+    event[2] = 0xFF;
+    event[3] = 0xFF;
+    event[4] = 0xFF;
+    event[5] = 0xFF;
+    event[6] = 0xFF;
+    event[7] = 0xFF;
+    WriteEvent(evno);
 }
 
 //*********************************************************************************
@@ -197,7 +198,9 @@ void scan(void)
 
     for (Ccount = 0; Ccount<16; Ccount++) {
         PORTA = Ccount;
-        delay();	// 0.1 ms to allow data to settle
+        // 0.1 ms to allow data to settle
+        i = 400/3;     // for 16MHz, 400 instructions per 0.1mS 
+        while(--i) ;   // 3 instruction loop        
         Row = PORTC;
         Bitcng = ~(Row ^ NewBuffer[Ccount]) & (Row ^ OldBuffer[Ccount]);
         NewBuffer[Ccount] = Row;
@@ -232,19 +235,13 @@ void scan(void)
 //        packet handler
 //*********************************************************************************
 
+rom unsigned int bits[10] = {
+    0x03FE, 0x03FD, 0x03FB, 0x03F7, 0x03EF, 0x03DF, 0x03BF, 0x037F, 0x02FF, 0x01FF
+};
+
 void Packet(void)
 {
-    if (CB_SourceNID == ND.nodeIdAlias) { // conflict
-        if ((CB_FrameType&0x8000)==0x0000) { // CIM
-            CB_SourceNID = ND.nodeIdAlias;
-            CB_FrameType = FT_RIM;
-            CB_datalen = 0;
-            while (SendMessage()==0) ;
-        }
-        else
-            CheckAlias(1);
-    }
-    else if (CB_FrameType == FT_VNSN) { // send full NID
+    if (CB_FrameType == FT_VNSN) { // send full NID
         CB_FrameType = FT_DAA | CB_SourceNID;
         CB_SourceNID = ND.nodeIdAlias;
         CB_datalen = 7;
@@ -261,100 +258,92 @@ void Packet(void)
 
 void DAA_Packet(void)
 {
-    if (CB_data[0] == DAA_UPGSTART) { // program upgrade
-        INTCONbits.GIEH = 0;    // disable all interrupts          
-        INTCONbits.GIEL = 0;
-        Loader();               // call loader, never returns here
-    }
-    else if (CB_data[0] == DAA_REBOOT) {
-        // re-start the program
-        _asm
-            reset
-            goto 0x000000
-        _endasm
-    }
-    else if (CB_data[0] == DAA_UPGREAD) { // single block read
-        sendblock(CB_SourceNID);
-    }
-    else if (CB_data[0] == DAA_UPGADDR) {   // single block write
-        DNID = CB_SourceNID;
-        UP(GP_address) = CB_data[1];
-        HI(GP_address) = CB_data[2];
-        LO(GP_address) = CB_data[3];
-        blocks = 0x03FF;
-        timer = 0;
-    }
-    else if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data block
+    if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data block
         if (DNID!=CB_SourceNID) {
            sendack(ACK_ALIASERROR, CB_SourceNID);
            sendack(ACK_ALIASERROR, DNID);
         }
         else {
             t = CB_data[0];
-            switch(t) {
-            case 0: blocks &= 0x03FE; break;
-            case 1: blocks &= 0x03FD; break;
-            case 2: blocks &= 0x03FB; break;
-            case 3: blocks &= 0x03F7; break;
-            case 4: blocks &= 0x03EF; break;
-            case 5: blocks &= 0x03DF; break;
-            case 6: blocks &= 0x03BF; break;
-            case 7: blocks &= 0x037F; break;
-            case 8: blocks &= 0x02FF; break;
-            case 9: blocks &= 0x01FF; break;
-            }
+            blocks &= bits[t];
             t = t * 7;
-            GP_block[t++] = CB_data[1];
-            if (t < 64) {
-                GP_block[t++] = CB_data[2];
-                GP_block[t++] = CB_data[3];
-                GP_block[t++] = CB_data[4];
-                GP_block[t++] = CB_data[5];
-                GP_block[t++] = CB_data[6];
-                GP_block[t++] = CB_data[7];
-            }    
+            for (i = 1; i<8 && t<64; i++)
+                GP_block[t++] = CB_data[i];
             if (blocks==0) {
                 ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
                 sendack(ACK_OK,DNID);    // OK
             }
         }
+        return;
     }
-    else if (CB_data[0] == DAA_DEFAULT) {
+
+    switch(CB_data[0]) {
+    case DAA_UPGSTART: // program upgrade
+        INTCONbits.GIEH = 0;    // disable all interrupts          
+        INTCONbits.GIEL = 0;
+        Loader();               // call loader, never returns here
+        break;
+
+    case DAA_REBOOT:
+        // re-start the program
+        _asm
+            reset
+            goto 0x000000
+        _endasm
+        break;
+
+    case DAA_UPGREAD: // single block read
+        sendblock(CB_SourceNID);
+        break;
+
+    case DAA_UPGADDR: // single block write
+        DNID = CB_SourceNID;
+        UP(GP_address) = CB_data[1];
+        HI(GP_address) = CB_data[2];
+        LO(GP_address) = CB_data[3];
+        blocks = 0x03FF;
+        timer = 0;
+        break;
+
+    case DAA_DEFAULT:
         SetDefault();
         sendack(ACK_OK, CB_SourceNID);
-    }
-    else if (CB_data[0] == DAA_PEERASE) {
-        for (i=0; i<8; i++)
-            event[i] = 0xFF;
+        break;
+
+    case DAA_PEERASE:
+        event[0] = 0xFF;
+        event[1] = 0xFF;
+        event[2] = 0xFF;
+        event[3] = 0xFF;
+        event[4] = 0xFF;
+        event[5] = 0xFF;
+        event[6] = 0xFF;
+        event[7] = 0xFF;
         WriteEvent(((unsigned int)CB_data[1]<<8) | CB_data[2]);
-    }
-    else if (CB_data[0] == DAA_PEREAD)
+        break;
+
+    case DAA_PEREAD:
         ReadEvent(((unsigned int)CB_data[1]<<8) | CB_data[2]);
-    else if (CB_data[0] == DAA_PEWRITEH) {
-        for (i=0; i<7; i++)
-            event[i] = CB_data[i+1];
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt = 0x01;
-            timer = 0;
-            return;
-        }
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
-            return;
-        }
-        WriteEvent(eventindex);
-        eventcnt = 0;
-    }
-    else if (CB_data[0] == DAA_PEWRITEL) {
+        break;
+
+    case DAA_PEWRITEH:
+        event[0] = CB_data[1];
+        event[1] = CB_data[2];
+        event[2] = CB_data[3];
+        event[3] = CB_data[4];
+        event[4] = CB_data[5];
+        event[5] = CB_data[6];
+        event[6] = CB_data[7];
+        goto PEW;
+
+    case DAA_PEWRITEL:
         event[7] = CB_data[1];
         HI(eventindex) = CB_data[2];
         LO(eventindex) = CB_data[3];
+PEW:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
-            eventcnt |= 0x02;
+            eventcnt++;
             timer = 0;
             return;
         }
@@ -366,13 +355,22 @@ void DAA_Packet(void)
         }
         WriteEvent(eventindex);
         eventcnt = 0;
-    }
-    else if (CB_data[0] == DAA_CEERASEH)
+        break;
+
+    case DAA_CEERASEH:
         sendack(ACK_OK, CB_SourceNID);
-    else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH)
+        break;
+
+    case DAA_NVREAD:
+    case DAA_CEREADH:
         sendack(ACK_NODATA, CB_SourceNID);
-    else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH)
+        break;
+
+    case DAA_NVWRITE:
+    case DAA_CEWRITEH:
         sendack(ACK_NOSPACE, CB_SourceNID);
+        break;
+    }
 }
 
 //*********************************************************************************
@@ -448,7 +446,9 @@ void main(void) {
     // scan current switch states to buffer
     for (i = 0; i < 16; i++) {
         PORTA = i;
-        delay();
+        // 0.1 ms to allow data to settle
+        t = 400/3;     // for 16MHz, 400 instructions per 0.1mS 
+        while(--t) ;   // 3 instruction loop        
         OldBuffer[i] = NewBuffer[i] = PORTC;
     }
 
@@ -527,19 +527,4 @@ void main(void) {
 }
 
 //*********************************************************************************
-//        Interrupts
-//*********************************************************************************
-
-#pragma interrupt hpinterrupt
-void hpinterrupt(void)
-{
-}
-
-
-#pragma interruptlow lpinterrupt
-void lpinterrupt(void)
-{
-}
-
-
 

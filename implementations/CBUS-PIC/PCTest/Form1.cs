@@ -103,9 +103,9 @@ namespace PCTest
             DAA_PEWRITEH = 0x38,      // producer write event, High 7 bytes
             DAA_PEWRITEL = 0x39,      // producer write event, Low byte, index  
             // Node variables
-            DAA_NVRD = 0x40,      // read, 1 byte index
-            DAA_NVSET = 0x41,      // set, 1 byte index + 1 byte data
-            DAA_NVANS = 0x42,      // reply to read
+            DAA_NVREAD = 0x40,      // read, 1 byte index
+            DAA_NVWRITE = 0x41,      // set, 1 byte index + 1 byte data
+            DAA_NVREPLY = 0x42,      // reply to read
             // Misc
             DAA_NSN = 0x50,      // Node serial number
             DAA_DEFAULT = 0x51,       // Reset (almost) everything to default values
@@ -134,7 +134,8 @@ namespace PCTest
         static string log = "";         // message log
         static string dNN = "001";     // default node number
         static string canmsg;
-        enum OPSTATE { IDLE, SENDING, MODULEID, USERID, NVCFGREAD, EVCFGREAD, CFGWRITE, NVREAD, EVREAD, PEREAD };
+        enum OPSTATE { IDLE, SENDING, MODULEID, USERID, NVCFGREAD, EVCFGREAD, PECFGREAD, CFGWRITE,
+            NVREAD, EVREAD, PEREAD };
         static OPSTATE opstate = OPSTATE.IDLE;
         static int readingmodulestring = 0;
         static int readinguserstring = 0;
@@ -143,7 +144,6 @@ namespace PCTest
         static StreamWriter savefile;   // config save file
         static StreamReader readfile;   // config restore file
         static int nv;
-        static int eventmsgcnt;
         static int datasize;
         static int evindex;
         static int complete = 0;
@@ -154,6 +154,7 @@ namespace PCTest
         // ack signal between background and foreground tasks
         static Semaphore ack = new Semaphore(0, 1);
         static int ackstatus = 0;
+        static bool readall = true;
 
         // first time serial port, so we can try to use the PCTestSettings.xml
         // after that, use the last used
@@ -386,7 +387,6 @@ namespace PCTest
             this.NVReadBtn.Enabled = enabled;
             this.NVwriteBTN.Enabled = enabled;
             this.RestoreConfigBtn.Enabled = enabled;
-            this.ReadBtn.Enabled = enabled;
             this.SaveConfigBtn.Enabled = enabled;
             this.SendBtn.Enabled = enabled;
             this.SoftwareBtn.Enabled = enabled;
@@ -398,6 +398,8 @@ namespace PCTest
             this.PE_writebtn.Enabled = enabled;
             this.PE_erasebtn.Enabled = enabled;
             this.rebootbtn.Enabled = enabled;
+            this.ReadAllBtn.Enabled = enabled;
+            this.ReadNxtBtn.Enabled = enabled;
         }
 
         // update log string, only keep last 60000
@@ -414,9 +416,10 @@ namespace PCTest
 
         private void displaylog()
         {
-            if (log.Length > 6000)
+            LogSpace.Visible = false;
+            if (log.Length > 3000)
             {
-                LogSpace.Text = log.Substring(log.Length - 6000);
+                LogSpace.Text = log.Substring(log.Length - 3000);
                 // remove the first line if not starting with ":", i.e. don't allow a partial string on line 1
                 // yes we should check for ">", but what if that was character 3001 which you just canned?
                 LogSpace.Text = LogSpace.Text.Substring(LogSpace.Text.IndexOf(":"));
@@ -424,6 +427,7 @@ namespace PCTest
             else
                 LogSpace.Text = log;
             LogSpace.Select(LogSpace.Text.Length, 0);
+            LogSpace.Visible = true;
             LogSpace.ScrollToCaret();
         }
 
@@ -444,21 +448,29 @@ namespace PCTest
                 {
                     serialLine = serialLine.ToUpper();
                     updatelog(serialLine);
-                    if (opstate == OPSTATE.SENDING)
+                    if (opstate == OPSTATE.SENDING) // software upgrade
                     {
                         handleinput();
                     }
-                    else if (opstate == OPSTATE.NVCFGREAD)
+                    else if (opstate == OPSTATE.NVCFGREAD) // config save
                     {
                         NVCFGREAD();
+                        displaylog();
                     }
-                    else if (opstate == OPSTATE.EVCFGREAD)
+                    else if (opstate == OPSTATE.EVCFGREAD) // config save
                     {
                         EVCFGREAD();
+                        displaylog();
                     }
-                    else if (opstate == OPSTATE.CFGWRITE)
+                    else if (opstate == OPSTATE.PECFGREAD) // config save
+                    {
+                        PECFGREAD();
+                        displaylog();
+                    }
+                    else if (opstate == OPSTATE.CFGWRITE) // config restore
                     {
                         CfgWrite();
+                        displaylog();
                     }
                     else if (opstate == OPSTATE.NVREAD)
                     {
@@ -475,12 +487,13 @@ namespace PCTest
                         PERead();
                         displaylog();
                     }
-                    else if (readingmodulestring != 0 || readinguserstring != 0 || readingbootstring != 0)
+                    else if (readingmodulestring != 0 || readinguserstring != 0 
+                      || readingbootstring != 0)
                     {
                         ReadModuleString();
-                        displaylog();
                     }
-                    else if (serialLine.Length >= 20 && serialLine.Contains(":X1E") && serialLine.Contains("N" + hex((int)DAA.DAA_NSN, 2)))
+                    else if (serialLine.Length >= 20 && serialLine.Contains(":X1E") 
+                      && serialLine.Contains("N" + hex((int)DAA.DAA_NSN, 2)))
                     {   // node serial number
                         if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
                             NNtb.Items.Add(serialLine.Substring(7, 3));
@@ -643,8 +656,8 @@ namespace PCTest
             catch (InvalidOperationException)
             {
                 // oops
-                MessageBox.Show("Serial Port sendmsg InvalidOperationException error sending [" + cmd + "]",
-                    "Serial port error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Serial Port sendmsg InvalidOperationException error sending [" 
+                    + cmd + "]", "Serial port error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -950,6 +963,8 @@ namespace PCTest
 
         private void SaveConfigBtn_Click(object sender, EventArgs e)
         {
+            progressBar1.Maximum = 6;
+            progressBar1.Value = 0;
             dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
             saveLogFileDialog.AddExtension = true;
             saveLogFileDialog.Filter = "Config files|*.cfg|All files|*.*";
@@ -964,7 +979,7 @@ namespace PCTest
             }
         }
 
-        // called to handle one serial input line
+        // save node variables
 
         private void NVCFGREAD()
         {
@@ -980,20 +995,25 @@ namespace PCTest
             else if (serialLine.Length > 13 && serialLine.StartsWith(":X1E")
                 && serialLine.Substring(7, 3).Equals(dNN))
             {
-                if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_NVANS,2))) // nvans
+                if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_NVREPLY,2))) // nvans
                 {
                     savefile.WriteLine("NV" + serialLine.Substring(13, 4));
                     nv++;
+                    progressBar1.Value = 1;
                     SendNvReadCmd(hex(nv,2));
                 }
                 else if (serialLine.Substring(10, 5).Equals("N" + hex((int)DAA.DAA_ACK, 2)+"03")) // no more data
                 {
+                    progressBar1.Value = 2;
                     opstate = OPSTATE.EVCFGREAD;
                     nv = 0;
+                    complete = 0;
                     SendEvReadCmd("0000000000000000", nv);
                 }
             }
         }
+
+        // save consumer events
 
         private void EVCFGREAD()
         {
@@ -1009,39 +1029,89 @@ namespace PCTest
             else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
                 && serialLine.Substring(7, 3).Equals(dNN))
             {
-                if (serialLine.Substring(10, 5).Equals("N" + hex((int)DAA.DAA_ACK, 2)+"03")) // no more data
+                if (serialLine.Substring(10, 5).Equals("N" + hex((int)DAA.DAA_ACK, 2) + "03")) // no more data
                 {
+                    progressBar1.Value = 4;
+                    opstate = OPSTATE.PECFGREAD;
+                    nv = 0;
+                    SendPeReadCmd(nv);
+                    complete = 0;
+                    displaylog();
+                }
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_CEWRITEH, 2))) // EVCFGWRITE
+                {
+                    eventstr = serialLine.Substring(13, 14) + eventstr.Substring(14);
+                    complete |= 0x4;
+                }
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_CEWRITEL, 2))) // EVCFGWRITE
+                {
+                    eventstr = eventstr.Substring(0, 14) + serialLine.Substring(13, 2)
+                        + eventstr.Substring(16);
+                    datasize = Convert.ToInt16(serialLine.Substring(15, 2), 16);
+                    if (datasize <= 5)
+                    {
+                        complete |= 0x1;
+                        eventstr = eventstr.Substring(0, 16) + serialLine.Substring(17,datasize*2);
+                    }
+                    complete |= 0x2;
+                }
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_DATA, 2))) // evdata
+                {
+                    eventstr = eventstr.Substring(0, 16) + serialLine.Substring(13, datasize * 2);
+                    complete |= 0x1;
+                }
+                if (complete == 7)
+                {
+                    progressBar1.Value = 3;
+                    savefile.WriteLine("EV" + eventstr);
+                    nv++;
+                    SendEvReadCmd("0000000000000000", nv);
+                    complete = 0;
+                }
+            }
+        }
+
+        // save producer events
+
+        private void PECFGREAD()
+        {
+            if (serialLine.StartsWith("ERROR")
+              || serialLine.StartsWith("TOO LONG")
+                // || serialLine.StartsWith("-ECAN")
+              || serialLine.StartsWith("-SERIAL"))
+            {
+                opstate = OPSTATE.IDLE;
+                updatelog("Aborted due to error.");
+                displaylog();
+            }
+            else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
+                && serialLine.Substring(7, 3).Equals(dNN))
+            {
+                if (serialLine.Substring(10, 5).Equals("N" + hex((int)DAA.DAA_ACK, 2) + "03")) // no more data
+                {
+                    progressBar1.Value = 6;
                     opstate = OPSTATE.IDLE;
                     updatelog("Saved.");
                     displaylog();
                     savefile.WriteLine("End");
                     savefile.Close();
                 }
-                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_CEWRITEH,2))) // EVCFGWRITE
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_PEWRITEH, 2)))
                 {
-                    eventstr = serialLine.Substring(13, 8) + eventstr.Substring(8);
+                    eventstr = serialLine.Substring(13, 14) + eventstr.Substring(14, 2);
                     complete |= 0x4;
                 }
-                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_CEWRITEL,2))) // EVCFGWRITE
+                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_PEWRITEL, 2)))
                 {
-                    eventstr = eventstr.Substring(0, 8) + serialLine.Substring(13, 8) + eventstr.Substring(16);
-                    datasize = Convert.ToInt16(serialLine.Substring(21, 2), 16);
-                    if (datasize == 0)
-                    {
-                        complete |= 0x1;
-                        eventstr = eventstr.Substring(0, 16);
-                    }
-                    complete |= 0x2;
+                    eventstr = eventstr.Substring(0, 14) + serialLine.Substring(13, 2);
+                    complete |= 0x3;
                 }
-                else if (serialLine.Substring(10, 3).Equals("N" + hex((int)DAA.DAA_DATA,2))) // evdata
+                if (complete == 7)
                 {
-                    eventstr = eventstr.Substring(0, 16) + serialLine.Substring(13, datasize * 2);
-                    complete |= 0x1;
-                }
-                if (complete==7) {
-                    savefile.WriteLine("EV" + hex(nv,4) + eventstr);
+                    progressBar1.Value = 5;
+                    savefile.WriteLine("PE" + hex(nv, 4) + eventstr);
                     nv++;
-                    SendEvReadCmd("0000000000000000", nv);
+                    SendPeReadCmd(nv);
                     complete = 0;
                 }
             }
@@ -1098,7 +1168,7 @@ namespace PCTest
         private void SendNvReadCmd(string nv)
         {
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_NVRD, 2);      // opc
+            canmsg += hex((int)DAA.DAA_NVREAD, 2);      // opc
             canmsg += nv;                       // NV index
             canmsg += ";";
             sendmsg(canmsg);
@@ -1107,7 +1177,7 @@ namespace PCTest
         private void SendNvWriteCmd(string s)
         {
             canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_NVSET, 2);      // opc
+            canmsg += hex((int)DAA.DAA_NVWRITE, 2);      // opc
             canmsg += s;                        // NV index and value
             canmsg += ";";
             sendmsg(canmsg);
@@ -1143,7 +1213,7 @@ namespace PCTest
             sendmsg(canmsg);
         }
 
-        private void SendEvWriteCmd(string s, int index)
+        private void SendEvWriteCmd(string s)
         {
             canmsg = ":X1E" + dNN + NIDa + "N";
             canmsg += hex((int)DAA.DAA_CEWRITEH, 2);  // opc
@@ -1153,10 +1223,9 @@ namespace PCTest
             canmsg = ":X1E" + dNN + NIDa + "N";
             canmsg += hex((int)DAA.DAA_CEWRITEL, 2);  // opc
             canmsg += s.Substring(14, 2);              // last byte of EV number
-            canmsg += hex(index, 4);
             int b = (s.Length - 16) / 2;
             canmsg += hex(b, 2);                      // number of bytes
-            if (b <= 3)
+            if (b <= 5)
             {
                 canmsg += s.Substring(16);
                 canmsg += ";";
@@ -1181,6 +1250,25 @@ namespace PCTest
                 else
                     s = s.Substring(14);
             }
+        }
+
+        private void SendPeReadCmd(int index)
+        {
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEREAD, 2) + hex(index,4) + ";";
+            sendmsg(canmsg);
+        }
+
+        private void SendPeWriteCmd(int index, string eventstr)
+        {
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEWRITEH, 2) + eventstr.Substring(0, 14) + ";";
+            sendmsg(canmsg);
+            canmsg = ":X1E" + dNN + NIDa + "N";
+            canmsg += hex((int)DAA.DAA_PEWRITEL, 2) + eventstr.Substring(14, 2); // low byte of event
+            canmsg += hex(index, 4);                  // 2 bytes of index
+            canmsg += ";";
+            sendmsg(canmsg);
         }
 
         //**************************************************************************
@@ -1223,9 +1311,15 @@ namespace PCTest
                     string line = readfile.ReadLine();
                     if (line.StartsWith("NV"))
                         SendNvWriteCmd(line.Substring(2));
-                    else if (line.StartsWith("EV")) {
-                        evindex = Convert.ToInt16(line.Substring(2, 4),16);
-                        SendEvWriteCmd(line.Substring(6), evindex);
+                    else if (line.StartsWith("EV"))
+                    {
+                        SendEvWriteCmd(line.Substring(2));
+                        evindex++;
+                    }
+                    else if (line.StartsWith("PE"))
+                    {
+                        evindex = Convert.ToInt16(line.Substring(2, 4), 16);
+                        SendPeWriteCmd(evindex, line.Substring(6));
                         evindex++;
                     }
                     else if (line.StartsWith("End"))
@@ -1468,8 +1562,32 @@ namespace PCTest
             int index = Convert.ToInt16(EventIndextb.Text);
             opstate = OPSTATE.EVREAD;
             EventNumbertb.Text = EventNumbertb.Text.PadLeft(16, '0');
-            eventmsgcnt = 3;
-            datasize = 2;
+            complete = 0;
+            readall = false;
+            SendEvReadCmd(EventNumbertb.Text, index);
+        }
+
+        private void ReadAllBtn_Click(object sender, EventArgs e)
+        {
+            int index = 0;
+            EventIndextb.Text = "0";
+            opstate = OPSTATE.EVREAD;
+            EventNumbertb.Text = "0000000000000000";
+            complete = 0;
+            readall = true;
+            SendEvReadCmd(EventNumbertb.Text, index);
+        }
+
+        private void ReadNxtBtn_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(EventIndextb.Text)+1;
+            EventIndextb.Text = index.ToString();
+            opstate = OPSTATE.EVREAD;
+            if (readall)
+                EventNumbertb.Text = "0000000000000000";
+            else
+                EventNumbertb.Text = EventNumbertb.Text.PadLeft(16, '0');
+            complete = 0;
             SendEvReadCmd(EventNumbertb.Text, index);
         }
 
@@ -1489,29 +1607,36 @@ namespace PCTest
             {
                 if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_CEWRITEH, 2)))
                 { // EVWRITEH
-                    EventNumbertb.Text = serialLine.Substring(13, 8) + EventNumbertb.Text.Substring(8, 8);
-                    eventmsgcnt--;
+                    EventNumbertb.Text = serialLine.Substring(13, 14) 
+                        + EventNumbertb.Text.Substring(14, 2);
+                    complete |= 0x01;
                 }
                 else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_CEWRITEL, 2)))
                 { // EVWRITEL
-                    EventNumbertb.Text = EventNumbertb.Text.Substring(0, 8) + serialLine.Substring(13, 8);
-                    datasize = Convert.ToInt16(serialLine.Substring(21, 2), 16);
-                    if (datasize == 0)
-                        eventmsgcnt--;
-                    eventmsgcnt--;
+                    EventNumbertb.Text = EventNumbertb.Text.Substring(0, 14) 
+                        + serialLine.Substring(13, 2);
+                    datasize = Convert.ToInt16(serialLine.Substring(15, 2), 16);
+                    if (datasize <= 5)
+                    {
+                        EventActiontb.Text = serialLine.Substring(17, datasize*2);
+                        complete |= 0x04;
+                    }
+                    complete |= 0x02;
                 }
                 else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_DATA, 2))) // EVDATA
                 {
-                    eventmsgcnt--;
-                    EventActiontb.Text = serialLine.Substring(13, 4);
+                    complete |= 0x04;
+                    EventActiontb.Text = serialLine.Substring(13, datasize * 2);
                 }
                 else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_ACK, 2))) // ack
                 {
                     EventNumbertb.Text = "";
                     EventActiontb.Text = "";
-                    eventmsgcnt = 0;
+                    complete = 0;
+                    opstate = OPSTATE.IDLE;
+                    displaylog();
                 }
-                if (eventmsgcnt == 0)
+                if (complete == 0x07)
                 {
                     opstate = OPSTATE.IDLE;
                     displaylog();
@@ -1521,13 +1646,13 @@ namespace PCTest
 
         private void EVwriteBTN_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(EventIndextb.Text);
-            SendEvWriteCmd(EventNumbertb.Text.PadLeft(16, '0') + EventActiontb.Text, index);
+            SendEvWriteCmd(EventNumbertb.Text.PadLeft(16, '0') + EventActiontb.Text);
         }
 
         private void EraseEVBtn_Click(object sender, EventArgs e)
         {
-            SendEvEraseCmd("0000000000000000", Convert.ToInt16(EventIndextb.Text));
+            SendEvEraseCmd(EventNumbertb.Text.PadLeft(16, '0'),
+                Convert.ToInt16(EventIndextb.Text));
         }
 
         private void EraseAllBtn_Click(object sender, EventArgs e)
@@ -1544,12 +1669,8 @@ namespace PCTest
             PE_index.Text = PE_index.Text.PadLeft(1, '0');
             int index = Convert.ToInt16(PE_index.Text);
             opstate = OPSTATE.PEREAD;
-            eventmsgcnt = 2;
-
-            canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_PEREAD, 2);   // opc
-            canmsg += hex(index,4) + ";";
-            sendmsg(canmsg);
+            complete = 0;
+            SendPeReadCmd(index);
         }
 
         private void PERead()
@@ -1569,21 +1690,25 @@ namespace PCTest
                 if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_PEWRITEH, 2)))
                 {
                     PE_nodeidtxt.Text = serialLine.Substring(13, 12);
-                    PE_eventtxt.Text = serialLine.Substring(25, 2) + PE_eventtxt.Text.PadLeft(4,'0').Substring(2, 2);
-                    eventmsgcnt--;
+                    PE_eventtxt.Text = serialLine.Substring(25, 2) 
+                        + PE_eventtxt.Text.PadLeft(4,'0').Substring(2, 2);
+                    complete |= 0x01;
                 }
                 else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_PEWRITEL, 2)))
                 {
-                    PE_eventtxt.Text = PE_eventtxt.Text.Substring(0, 2) + serialLine.Substring(13, 2);
-                    eventmsgcnt--;
+                    PE_eventtxt.Text = PE_eventtxt.Text.Substring(0, 2) 
+                        + serialLine.Substring(13, 2);
+                    complete |= 0x02;
                 }
                 else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_ACK, 2))) // ack
                 {
-                    EventNumbertb.Text = "";
-                    EventActiontb.Text = "";
-                    eventmsgcnt = 0;
+                    PE_nodeidtxt.Text = "";
+                    PE_eventtxt.Text = "";
+                    complete = 0;
+                    opstate = OPSTATE.IDLE;
+                    displaylog();
                 }
-                if (eventmsgcnt == 0)
+                if (complete == 0x03)
                 {
                     opstate = OPSTATE.IDLE;
                     displaylog();
@@ -1594,18 +1719,9 @@ namespace PCTest
         private void PE_writebtn_Click(object sender, EventArgs e)
         {
             int index = Convert.ToInt16(PE_index.Text);
-            canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_PEWRITEH, 2);  // opc
-            canmsg += PE_nodeidtxt.Text.PadLeft(12, '0'); // 6 bytes of nodeid
-            canmsg += PE_eventtxt.Text.PadLeft(4, '0').Substring(0,2); // high byte of event
-            canmsg += ";";
-            sendmsg(canmsg);
-            canmsg = ":X1E" + dNN + NIDa + "N";
-            canmsg += hex((int)DAA.DAA_PEWRITEL, 2);  // opc
-            canmsg += PE_eventtxt.Text.PadLeft(4, '0').Substring(2, 2); // low byte of event
-            canmsg += hex(index, 4);                  // 2 bytes of index
-            canmsg += ";";
-            sendmsg(canmsg);
+            string eventstr = PE_nodeidtxt.Text.PadLeft(12, '0'); // 6 bytes of nodeid
+            eventstr += PE_eventtxt.Text.PadLeft(4, '0').Substring(0, 4); // 2 byte event part
+            SendPeWriteCmd(index, eventstr);
         }
 
         private void PE_erasebtn_Click(object sender, EventArgs e)

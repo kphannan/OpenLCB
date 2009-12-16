@@ -177,10 +177,10 @@ rom BYTE ND_spare[64-14] = {
 
 // 0x000080
 #ifdef USB
-rom BYTE idstring[64] = "OpenLCB PIC USB Boot Loader "  __DATE__ " " __TIME__;
+rom BYTE idstring[64] = "OpenLCB Boot Loader for CANUSB "  __DATE__ " " __TIME__;
 #else
 #ifdef RS232
-rom BYTE idstring[64] = "OpenLCB PIC RS232 Boot Loader "  __DATE__ " " __TIME__;
+rom BYTE idstring[64] = "OpenLCB Boot Loader for CANRS "  __DATE__ " " __TIME__;
 #else
 rom BYTE idstring[64] = "OpenLCB PIC CAN Boot Loader "  __DATE__ " " __TIME__;
 #endif
@@ -357,10 +357,10 @@ void Packet(void)
         }
         else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
             sendack(ACK_OK, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH 
+        else if (CB_data[0] == DAA_NVREAD || CB_data[0] == DAA_CEREADH 
           || CB_data[0] == DAA_PEREAD)
             sendack(ACK_NODATA, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH 
+        else if (CB_data[0] == DAA_NVWRITE || CB_data[0] == DAA_CEWRITEH 
           || CB_data[0] == DAA_PEWRITEH)
             sendack(ACK_NOSPACE, CB_SourceNID);
     }

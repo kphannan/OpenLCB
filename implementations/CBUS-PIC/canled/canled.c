@@ -1,6 +1,6 @@
 /*  OpenLCB for MERG CBUS CANLED
 
-    3 Dec 2009
+    16 Dec 2009
 
     Led numbers are 0 to 63. Events are stored as 9 bytes, the 8 byte event
     number and one byte action. The event byte is the 6 bits led number, 2 bits
@@ -24,13 +24,25 @@
 */
 //*********************************************************************************
 
+#define SendMessage ECANSendMessage
+#define ReceiveMessage ECANReceiveMessage
+
 #include "../canlib/frametypes.c"
 #include "../canlib/general.c"
 #include "../canlib/entry.c"
 #include "../canlib/ecan.c"
 #define EVENTSIZE 9
-#define HASH2048
+#define TABLESIZE 2880    // 45 buckets
+//#define TABLESIZE 3200      // 50 buckets
 #include "../canlib/hash.c"
+
+// inputs
+#define SetupButton !PORTBbits.RB0
+#define LEDSelect (PORTA & 0x3F)
+#define Polarity !PORTCbits.RC4
+#define Toggle !PORTCbits.RC3
+#define Unlearn !PORTCbits.RC1
+#define Learn !PORTCbits.RC0
 
 //*********************************************************************************
 //        RAM data
@@ -62,7 +74,7 @@ unsigned int blocks;       // loader - 1 bit for each packet to be transfered
 //        ROM module info
 //*********************************************************************************
 
-#define modulestring "MERGCBUS CAN LED driver "  __DATE__ " " __TIME__ 
+#define modulestring "OpenLCB for MERG CANLED "  __DATE__ " " __TIME__ 
 
 #pragma romdata
 const rom BYTE xml[] = 
@@ -117,7 +129,7 @@ void hpinterrupt(void)
     // preload next coloumn data upper byte first
     if (AllLedOnTest)
         HpColData = 0xFF;
-    else if (HpFlash&0x40)
+    else if (HpFlash&0x04)
         HpColData = HpLedColumn[(HpLedRow<<1)+9];
     else
         HpColData = HpLedColumn[(HpLedRow<<1)+1];
@@ -133,7 +145,7 @@ void hpinterrupt(void)
     // preload lower byte of coloumn
     if (AllLedOnTest)
         HpColData = 0xFF;
-    else if (HpFlash&0x40)
+    else if (HpFlash&0x04)
         HpColData = HpLedColumn[(HpLedRow<<1)+8];
     else
         HpColData = HpLedColumn[HpLedRow<<1];
@@ -173,28 +185,10 @@ void lpinterrupt(void)
 {
 }
  
-// inputs
-#define SetupButton !PORTBbits.RB0
-#define LEDSelect (PORTA & 0x3F)
-#define Polarity !PORTCbits.RC4
-#define Toggle !PORTCbits.RC3
-#define Unlearn !PORTCbits.RC1
-#define Learn !PORTCbits.RC0
-
-BOOL SendMessage(void)
-{
-    return ECANSendMessage();
-}
-
-BOOL ReceiveMessage(void)
-{
-    return ECANReceiveMessage();
-}
-
-void DoEvent(unsigned int action)
+void DoEvent(static BYTE * far ev)
 {
     far overlay BYTE i, j, m;
-    m = LO(action);
+    m = ev[0];
     i = m & 0x07;
     j = (m >> 3 ) & 0x07;
     m &= 0xC0;
@@ -203,7 +197,7 @@ void DoEvent(unsigned int action)
         HpLedColumn[j+8] &= ~BitMask[i];
     }
     else if (m == 0x40) {
-        HpLedColumn[j] |= BitMask[i];
+        HpLedColumn[j] &= ~BitMask[i];
         HpLedColumn[j+8] |= BitMask[i];
     }
     else if (m == 0x80) {
@@ -211,7 +205,7 @@ void DoEvent(unsigned int action)
         HpLedColumn[j+8] &= ~BitMask[i];
     }
     else {
-        HpLedColumn[j] &= ~BitMask[i];
+        HpLedColumn[j] |= BitMask[i];
         HpLedColumn[j+8] |= BitMask[i];
     }
 }
@@ -262,8 +256,14 @@ void Packet(void)
                 EraseEvent(&CB_data[0]);
             }
             else {                  // learn this event, using the switches and links
-                for (i=0; i<8; i++)
-                    event[i] = CB_data[i];
+                event[0] = CB_data[0];
+                event[1] = CB_data[1];
+                event[2] = CB_data[2];
+                event[3] = CB_data[3];
+                event[4] = CB_data[4];
+                event[5] = CB_data[5];
+                event[6] = CB_data[6];
+                event[7] = CB_data[7];
                 LOWD(event[8]) = LEDSelect;
                 if (Polarity)
                     event[8] |= 0x40;
@@ -332,31 +332,23 @@ void DAA_Packet(void)
         break;
 
     case DAA_CEREADH: // Event read
-        for (i=0; i<7; i++)
-            event[i] = CB_data[i+1];
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt = 0x01;
-            timer = 0;
-            return;
-        }
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
-            return;
-        }
-        ReadEvent(&event[0], eventindex);
-        eventcnt = 0;
-        break;
+        event[0] = CB_data[1];
+        event[1] = CB_data[2];
+        event[2] = CB_data[3];
+        event[3] = CB_data[4];
+        event[4] = CB_data[5];
+        event[5] = CB_data[6];
+        event[6] = CB_data[7];
+        goto CER;
 
     case DAA_CEREADL: // Event read
         event[7] = CB_data[1];
         HI(eventindex) = CB_data[2];
         LO(eventindex) = CB_data[3];
+CER:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
-            eventcnt = 0x02;
+            eventcnt++;
             timer = 0;
             return;
         }
@@ -371,31 +363,23 @@ void DAA_Packet(void)
         break;
 
     case DAA_CEERASEH: // Event erase
-        for (i=0; i<7; i++)
-            event[i] = CB_data[i+1];
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt = 0x01;
-            timer = 0;
-            return;
-        }
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
-            return;
-        }
-        EraseEvent(&event[0]);
-        sendack(ACK_OK, DNID);
-        break;
+        event[0] = CB_data[1];
+        event[1] = CB_data[2];
+        event[2] = CB_data[3];
+        event[3] = CB_data[4];
+        event[4] = CB_data[5];
+        event[5] = CB_data[6];
+        event[6] = CB_data[7];
+        goto CEE;
 
     case DAA_CEERASEL: // Event erase
         event[7] = CB_data[1];
         HI(eventindex) = CB_data[2];
         LO(eventindex) = CB_data[3];
+CEE:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
-            eventcnt = 0x02;
+            eventcnt++;
             timer = 0;
             return;
         }
@@ -410,30 +394,22 @@ void DAA_Packet(void)
         break;
 
     case DAA_CEWRITEH: // Event write
-        for (i=0; i<7; i++)
-            event[i] = CB_data[i+1];
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt = 0x01;
-            timer = 0;
-            return;
-        }
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
-            return;
-        }
-        SaveEvent(event);
-        sendack(ACK_OK, CB_SourceNID);
-        break;
+        event[0] = CB_data[1];
+        event[1] = CB_data[2];
+        event[2] = CB_data[3];
+        event[3] = CB_data[4];
+        event[4] = CB_data[5];
+        event[5] = CB_data[6];
+        event[6] = CB_data[7];
+        goto CEW;
 
     case DAA_CEWRITEL: // Event write
         event[7] = CB_data[1];
         event[8] = CB_data[3]; // data
+CEW:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
-            eventcnt = 0x02;
+            eventcnt++;
             timer = 0;
             return;
         }
@@ -447,12 +423,12 @@ void DAA_Packet(void)
         sendack(ACK_OK, CB_SourceNID);
         break;
 
-    case DAA_NVRD: // Node variable read
+    case DAA_NVREAD: // Node variable read
     case DAA_PEREAD: // producer read
         sendack(ACK_NODATA, CB_SourceNID);
         break;
 
-    case DAA_NVSET: // Node variable write byte
+    case DAA_NVWRITE: // Node variable write byte
     case DAA_PEWRITEH: // producer write
         sendack(ACK_NOSPACE, CB_SourceNID);
         break;
@@ -523,15 +499,26 @@ void main(void)
     learnlink = 0;
     LedsOn = TRUE;
 
-    for (i=0; i<8; i++)
+    for (i=0; i<16; i++)
         HpLedColumn[i] = 0;
 
     INTCONbits.GIEH = 1;  // enable all high priority interrupts          
     INTCONbits.GIEL = 1;  // enable all low priority interrupts
 
-    ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-    for (i=0; i<10; i++)
-        event[i] = 0;
+    // clear event data ready for an erase all
+    event[0] = 0;
+    event[1] = 0;
+    event[2] = 0;
+    event[3] = 0;
+    event[4] = 0;
+    event[5] = 0;
+    event[6] = 0;
+    event[7] = 0;
+    event[8] = 0;
+    event[9] = 0;
+
+    // all zero after 1st programming chip
+    ProgramMemoryRead((unsigned long)&table[0], 64, (BYTE * far)GP_block);
     j = 0;
     for (i=0; i<64; i++)
         j |= GP_block[i];

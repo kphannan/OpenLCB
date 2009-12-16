@@ -64,9 +64,9 @@ far BYTE serrcbuf[128];
 //*********************************************************************************
 
 #ifdef USB
-#define modulestring "OpenLCB PIC USB "  __DATE__ " " __TIME__
+#define modulestring "OpenLCB for MERG CANUSB "  __DATE__ " " __TIME__
 #else
-#define modulestring "OpenLCB PIC RS232 "  __DATE__ " " __TIME__
+#define modulestring "OpenLCB for MERG CANRS "  __DATE__ " " __TIME__
 #endif
 
 #pragma romdata
@@ -286,10 +286,10 @@ void packet(void)
         }
         else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
             sendack(ACK_OK, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH 
+        else if (CB_data[0] == DAA_NVREAD || CB_data[0] == DAA_CEREADH 
           || CB_data[0] == DAA_PEREAD)
             sendack(ACK_NODATA, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH 
+        else if (CB_data[0] == DAA_NVWRITE || CB_data[0] == DAA_CEWRITEH 
           || CB_data[0] == DAA_PEWRITEH)
             sendack(ACK_NOSPACE, CB_SourceNID);
     }

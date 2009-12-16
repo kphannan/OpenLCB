@@ -56,7 +56,6 @@
             this.EventActiontb = new System.Windows.Forms.TextBox();
             this.EventNumbertb = new System.Windows.Forms.TextBox();
             this.WriteBtn = new System.Windows.Forms.Button();
-            this.ReadBtn = new System.Windows.Forms.Button();
             this.EventIndextb = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
             this.RestoreConfigBtn = new System.Windows.Forms.Button();
@@ -90,7 +89,11 @@
             this.membertxt = new System.Windows.Forms.TextBox();
             this.WriteNidBtn = new System.Windows.Forms.Button();
             this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
             this.tabPage6 = new System.Windows.Forms.TabPage();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
             this.PE_erasebtn = new System.Windows.Forms.Button();
             this.PE_writebtn = new System.Windows.Forms.Button();
             this.PE_readbtn = new System.Windows.Forms.Button();
@@ -101,10 +104,8 @@
             this.NVvaluetb = new System.Windows.Forms.TextBox();
             this.NVReadBtn = new System.Windows.Forms.Button();
             this.NVwriteBTN = new System.Windows.Forms.Button();
-            this.label10 = new System.Windows.Forms.Label();
-            this.label11 = new System.Windows.Forms.Label();
-            this.label12 = new System.Windows.Forms.Label();
-            this.label13 = new System.Windows.Forms.Label();
+            this.ReadAllBtn = new System.Windows.Forms.Button();
+            this.ReadNxtBtn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -149,7 +150,7 @@
             this.SaveBtn.Name = "SaveBtn";
             this.SaveBtn.Size = new System.Drawing.Size(93, 23);
             this.SaveBtn.TabIndex = 3;
-            this.SaveBtn.Text = "SaveLog ...";
+            this.SaveBtn.Text = "Save Log ...";
             this.SaveBtn.UseVisualStyleBackColor = true;
             this.SaveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
             // 
@@ -208,21 +209,21 @@
             // 
             // EraseEVBtn
             // 
-            this.EraseEVBtn.Location = new System.Drawing.Point(297, 97);
+            this.EraseEVBtn.Location = new System.Drawing.Point(297, 92);
             this.EraseEVBtn.Name = "EraseEVBtn";
             this.EraseEVBtn.Size = new System.Drawing.Size(93, 23);
             this.EraseEVBtn.TabIndex = 32;
-            this.EraseEVBtn.Text = "EraseEV";
+            this.EraseEVBtn.Text = "Erase Event";
             this.EraseEVBtn.UseVisualStyleBackColor = true;
             this.EraseEVBtn.Click += new System.EventHandler(this.EraseEVBtn_Click);
             // 
             // DefaultBtn
             // 
-            this.DefaultBtn.Location = new System.Drawing.Point(318, 145);
+            this.DefaultBtn.Location = new System.Drawing.Point(311, 145);
             this.DefaultBtn.Name = "DefaultBtn";
-            this.DefaultBtn.Size = new System.Drawing.Size(75, 23);
+            this.DefaultBtn.Size = new System.Drawing.Size(93, 23);
             this.DefaultBtn.TabIndex = 31;
-            this.DefaultBtn.Text = "Set Default";
+            this.DefaultBtn.Text = "Set All Defaults";
             this.DefaultBtn.UseVisualStyleBackColor = true;
             this.DefaultBtn.Click += new System.EventHandler(this.DefaultBtn_Click);
             // 
@@ -233,7 +234,7 @@
             this.EraseAllBtn.Name = "EraseAllBtn";
             this.EraseAllBtn.Size = new System.Drawing.Size(93, 23);
             this.EraseAllBtn.TabIndex = 30;
-            this.EraseAllBtn.Text = "Erase All Ev\'s";
+            this.EraseAllBtn.Text = "Erase All Events";
             this.EraseAllBtn.UseVisualStyleBackColor = true;
             this.EraseAllBtn.Click += new System.EventHandler(this.EraseAllBtn_Click);
             // 
@@ -292,11 +293,11 @@
             // 
             // EVwriteBTN
             // 
-            this.EVwriteBTN.Location = new System.Drawing.Point(297, 63);
+            this.EVwriteBTN.Location = new System.Drawing.Point(297, 54);
             this.EVwriteBTN.Name = "EVwriteBTN";
             this.EVwriteBTN.Size = new System.Drawing.Size(93, 23);
             this.EVwriteBTN.TabIndex = 18;
-            this.EVwriteBTN.Text = "WriteEV";
+            this.EVwriteBTN.Text = "Write Event";
             this.EVwriteBTN.UseVisualStyleBackColor = true;
             this.EVwriteBTN.Click += new System.EventHandler(this.EVwriteBTN_Click);
             // 
@@ -306,27 +307,27 @@
             this.EVreadBTN.Name = "EVreadBTN";
             this.EVreadBTN.Size = new System.Drawing.Size(93, 23);
             this.EVreadBTN.TabIndex = 17;
-            this.EVreadBTN.Text = "ReadEV";
+            this.EVreadBTN.Text = "Read Event";
             this.EVreadBTN.UseVisualStyleBackColor = true;
             this.EVreadBTN.Click += new System.EventHandler(this.EVreadBTN_Click);
             // 
             // EventActiontb
             // 
-            this.EventActiontb.Location = new System.Drawing.Point(107, 97);
+            this.EventActiontb.Location = new System.Drawing.Point(107, 94);
             this.EventActiontb.Name = "EventActiontb";
             this.EventActiontb.Size = new System.Drawing.Size(154, 20);
             this.EventActiontb.TabIndex = 16;
             // 
             // EventNumbertb
             // 
-            this.EventNumbertb.Location = new System.Drawing.Point(107, 52);
+            this.EventNumbertb.Location = new System.Drawing.Point(107, 56);
             this.EventNumbertb.Name = "EventNumbertb";
             this.EventNumbertb.Size = new System.Drawing.Size(154, 20);
             this.EventNumbertb.TabIndex = 15;
             // 
             // WriteBtn
             // 
-            this.WriteBtn.Location = new System.Drawing.Point(311, 133);
+            this.WriteBtn.Location = new System.Drawing.Point(311, 118);
             this.WriteBtn.Name = "WriteBtn";
             this.WriteBtn.Size = new System.Drawing.Size(93, 23);
             this.WriteBtn.TabIndex = 3;
@@ -334,19 +335,9 @@
             this.WriteBtn.UseVisualStyleBackColor = true;
             this.WriteBtn.Click += new System.EventHandler(this.WriteBtn_Click);
             // 
-            // ReadBtn
-            // 
-            this.ReadBtn.Location = new System.Drawing.Point(14, 133);
-            this.ReadBtn.Name = "ReadBtn";
-            this.ReadBtn.Size = new System.Drawing.Size(93, 23);
-            this.ReadBtn.TabIndex = 2;
-            this.ReadBtn.Text = "Read Info";
-            this.ReadBtn.UseVisualStyleBackColor = true;
-            this.ReadBtn.Click += new System.EventHandler(this.ReadBtn_Click);
-            // 
             // EventIndextb
             // 
-            this.EventIndextb.Location = new System.Drawing.Point(107, 17);
+            this.EventIndextb.Location = new System.Drawing.Point(107, 22);
             this.EventIndextb.Name = "EventIndextb";
             this.EventIndextb.Size = new System.Drawing.Size(34, 20);
             this.EventIndextb.TabIndex = 14;
@@ -355,7 +346,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(35, 20);
+            this.label6.Location = new System.Drawing.Point(38, 25);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(33, 13);
             this.label6.TabIndex = 13;
@@ -501,7 +492,6 @@
             // 
             // tabPage1
             // 
-            this.tabPage1.Controls.Add(this.ReadBtn);
             this.tabPage1.Controls.Add(this.RestoreConfigBtn);
             this.tabPage1.Controls.Add(this.SoftwareBtn);
             this.tabPage1.Controls.Add(this.progressBar1);
@@ -550,11 +540,11 @@
             // 
             // rebootbtn
             // 
-            this.rebootbtn.Location = new System.Drawing.Point(156, 135);
+            this.rebootbtn.Location = new System.Drawing.Point(282, 135);
             this.rebootbtn.Name = "rebootbtn";
-            this.rebootbtn.Size = new System.Drawing.Size(75, 23);
+            this.rebootbtn.Size = new System.Drawing.Size(93, 23);
             this.rebootbtn.TabIndex = 68;
-            this.rebootbtn.Text = "Reboot";
+            this.rebootbtn.Text = "Reboot Node";
             this.rebootbtn.UseVisualStyleBackColor = true;
             this.rebootbtn.Click += new System.EventHandler(this.rebootbtn_Click);
             // 
@@ -652,9 +642,9 @@
             // WriteNidBtn
             // 
             this.WriteNidBtn.Enabled = false;
-            this.WriteNidBtn.Location = new System.Drawing.Point(69, 135);
+            this.WriteNidBtn.Location = new System.Drawing.Point(74, 135);
             this.WriteNidBtn.Name = "WriteNidBtn";
-            this.WriteNidBtn.Size = new System.Drawing.Size(72, 23);
+            this.WriteNidBtn.Size = new System.Drawing.Size(93, 23);
             this.WriteNidBtn.TabIndex = 53;
             this.WriteNidBtn.Text = "Write NID";
             this.WriteNidBtn.UseVisualStyleBackColor = true;
@@ -662,6 +652,8 @@
             // 
             // tabPage3
             // 
+            this.tabPage3.Controls.Add(this.ReadNxtBtn);
+            this.tabPage3.Controls.Add(this.ReadAllBtn);
             this.tabPage3.Controls.Add(this.label13);
             this.tabPage3.Controls.Add(this.label12);
             this.tabPage3.Controls.Add(this.label6);
@@ -679,6 +671,24 @@
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Consumer Events";
             this.tabPage3.UseVisualStyleBackColor = true;
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(38, 97);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(37, 13);
+            this.label13.TabIndex = 34;
+            this.label13.Text = "Action";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(36, 59);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(44, 13);
+            this.label12.TabIndex = 33;
+            this.label12.Text = "NodeID";
             // 
             // tabPage6
             // 
@@ -700,33 +710,51 @@
             this.tabPage6.Text = "Producer Events";
             this.tabPage6.UseVisualStyleBackColor = true;
             // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(9, 93);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(54, 13);
+            this.label11.TabIndex = 42;
+            this.label11.Text = "Index part";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(9, 67);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(65, 13);
+            this.label10.TabIndex = 41;
+            this.label10.Text = "NodeID part";
+            // 
             // PE_erasebtn
             // 
-            this.PE_erasebtn.Location = new System.Drawing.Point(237, 145);
+            this.PE_erasebtn.Location = new System.Drawing.Point(214, 145);
             this.PE_erasebtn.Name = "PE_erasebtn";
-            this.PE_erasebtn.Size = new System.Drawing.Size(75, 23);
+            this.PE_erasebtn.Size = new System.Drawing.Size(93, 23);
             this.PE_erasebtn.TabIndex = 40;
-            this.PE_erasebtn.Text = "Erase";
+            this.PE_erasebtn.Text = "Erase Event";
             this.PE_erasebtn.UseVisualStyleBackColor = true;
             this.PE_erasebtn.Click += new System.EventHandler(this.PE_erasebtn_Click);
             // 
             // PE_writebtn
             // 
-            this.PE_writebtn.Location = new System.Drawing.Point(156, 145);
+            this.PE_writebtn.Location = new System.Drawing.Point(117, 145);
             this.PE_writebtn.Name = "PE_writebtn";
-            this.PE_writebtn.Size = new System.Drawing.Size(75, 23);
+            this.PE_writebtn.Size = new System.Drawing.Size(93, 23);
             this.PE_writebtn.TabIndex = 39;
-            this.PE_writebtn.Text = "Write";
+            this.PE_writebtn.Text = "Write Event";
             this.PE_writebtn.UseVisualStyleBackColor = true;
             this.PE_writebtn.Click += new System.EventHandler(this.PE_writebtn_Click);
             // 
             // PE_readbtn
             // 
-            this.PE_readbtn.Location = new System.Drawing.Point(74, 145);
+            this.PE_readbtn.Location = new System.Drawing.Point(19, 145);
             this.PE_readbtn.Name = "PE_readbtn";
-            this.PE_readbtn.Size = new System.Drawing.Size(75, 23);
+            this.PE_readbtn.Size = new System.Drawing.Size(93, 23);
             this.PE_readbtn.TabIndex = 38;
-            this.PE_readbtn.Text = "Read";
+            this.PE_readbtn.Text = "Read Event";
             this.PE_readbtn.UseVisualStyleBackColor = true;
             this.PE_readbtn.Click += new System.EventHandler(this.PE_readbtn_Click);
             // 
@@ -797,41 +825,25 @@
             this.NVwriteBTN.UseVisualStyleBackColor = true;
             this.NVwriteBTN.Click += new System.EventHandler(this.NVwriteBTN_Click);
             // 
-            // label10
+            // ReadAllBtn
             // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(9, 67);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(65, 13);
-            this.label10.TabIndex = 41;
-            this.label10.Text = "NodeID part";
+            this.ReadAllBtn.Location = new System.Drawing.Point(39, 143);
+            this.ReadAllBtn.Name = "ReadAllBtn";
+            this.ReadAllBtn.Size = new System.Drawing.Size(93, 23);
+            this.ReadAllBtn.TabIndex = 35;
+            this.ReadAllBtn.Text = "Read All Events";
+            this.ReadAllBtn.UseVisualStyleBackColor = true;
+            this.ReadAllBtn.Click += new System.EventHandler(this.ReadAllBtn_Click);
             // 
-            // label11
+            // ReadNxtBtn
             // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(9, 93);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(54, 13);
-            this.label11.TabIndex = 42;
-            this.label11.Text = "Index part";
-            // 
-            // label12
-            // 
-            this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(38, 59);
-            this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(44, 13);
-            this.label12.TabIndex = 33;
-            this.label12.Text = "NodeID";
-            // 
-            // label13
-            // 
-            this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(38, 97);
-            this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(37, 13);
-            this.label13.TabIndex = 34;
-            this.label13.Text = "Action";
+            this.ReadNxtBtn.Location = new System.Drawing.Point(168, 143);
+            this.ReadNxtBtn.Name = "ReadNxtBtn";
+            this.ReadNxtBtn.Size = new System.Drawing.Size(93, 23);
+            this.ReadNxtBtn.TabIndex = 36;
+            this.ReadNxtBtn.Text = "Read Next Events";
+            this.ReadNxtBtn.UseVisualStyleBackColor = true;
+            this.ReadNxtBtn.Click += new System.EventHandler(this.ReadNxtBtn_Click);
             // 
             // Form1
             // 
@@ -884,7 +896,6 @@
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.TextBox UserText;
         private System.Windows.Forms.TextBox NodeText;
-        private System.Windows.Forms.Button ReadBtn;
         private System.Windows.Forms.Button SoftwareBtn;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label3;
@@ -945,6 +956,8 @@
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Button ReadAllBtn;
+        private System.Windows.Forms.Button ReadNxtBtn;
 
     }
 }

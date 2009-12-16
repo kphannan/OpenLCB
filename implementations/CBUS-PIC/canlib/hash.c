@@ -1,6 +1,18 @@
 /*  OpenLCB hash.c
 
-    3 Dec 2009
+    15 Dec 2009
+
+    DoEvent has to be defined in the calling code.    
+    Define EVENTSIZE as the number of bytes of the data + 8.
+    Define TABLESIZE, must be a multiple of the 64 byte bucket size.
+
+    30 buckets = 1920
+    35         = 2240
+    40         = 2560
+    45         = 2880
+    50         = 3200
+    55         = 3520
+    60         = 3840
 
     Copyright (C) 2009    Mike Johnson
 
@@ -22,20 +34,18 @@
 #pragma udata ovrly
 #pragma romdata
 
-void DoEvent(unsigned int i);
+void DoEvent(static BYTE * far ev);
 
 /* *******************************************************************************
 
-For 4096 or 2048 bytes of Program memory, divided into 64 or 32 buckets of 
-64 bytes each 64 byte bucket holds 6 x 10 byte events (8 bytes for the event
-and 2 bytes for the action required.
+For 2560 bytes of Program memory, divided into 40 buckets of 
+64 bytes each 64 byte bucket holds 7 x 9 byte events.
+So 7 x 40 = 280 is the maximum number of events
+In practice 80% is a good maximum, so 224 is a better limit.
 
 Short events have nodenumber 0
-FF,FF,FF,FF,xx,xx,xx,xx is end of chain
-FF,FF,FF,00,xx,xx,xx,xx is a deleted entry to be stepped over
-
-So 6 x 64 or 6 x 32 = 384 or 192 is the maximum number of events
-In practice 80% is a good maximum, so 300 or 150 is a better limit.
+FF,FF,FF,FF,FF,FF,FF,FF is end of chain
+FF,FF,FF,FF,FF,FF,FF,00 is a deleted entry to be stepped over
 
 ******************************************************************************** */
 
@@ -47,16 +57,7 @@ In practice 80% is a good maximum, so 300 or 150 is a better limit.
 
 #pragma romdata table = 0x1100
 
-#ifndef EVENTSIZE
-#define EVENTSIZE 10
-#endif
-#ifdef HASH2048
-#define TABLEMASK 0x1F			// 0x1F for 2048
-BYTE rom table[2048]; 	            // initializes to zero, 64 byte aligned
-#else // HASH4096
-#define TABLEMASK 0x3F			// 0x3F for 4096
-BYTE rom table[4096]; 	            // initializes to zero, 64 byte aligned
-#endif
+BYTE rom table[TABLESIZE];          // initializes to zero, 64 byte aligned
 
 rom BYTE hashdatatable[256] = {
       0,  94, 188, 226,  97,  63, 221, 131, 194, 156, 126,  32, 163, 253,  31,  65,
@@ -83,15 +84,47 @@ rom BYTE hashdatatable[256] = {
 //        Event table
 //*********************************************************************************
 
-// convert the event number to 0-63 hash key using random numbers
-// uses the bottom bits of the nodenumber and eventnumber to index the table
-// of random numbers and them xor's them together.
+// convert the event number to a hash key using random numbers
 
-BYTE hash(static BYTE * far ev) {
+unsigned int hash(static BYTE * far ev) {
     far overlay BYTE i, h = 0;
+    far overlay unsigned int r;
     for (i=0; i<8; i++)
         h ^= hashdatatable[ev[i]];
-    return h & TABLEMASK;
+    r = (unsigned int)h << 6;
+    while (r >= TABLESIZE)
+        r -= TABLESIZE;
+    return r;
+}
+
+BOOL equal(static BYTE * far s1, static BYTE * far s2, BYTE l)
+{
+    far overlay BYTE i;
+    for (i=0; i<l; i++) {
+        if (s1[i] != s2[i])
+            return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL equal0x00(static BYTE * far s1, BYTE l)
+{
+    far overlay BYTE i;
+    for (i=0; i<l; i++) {
+        if (s1[i] != 0x00)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL equal0xFF(static BYTE * far s1, BYTE l)
+{
+    far overlay BYTE i;
+    for (i=0; i<l; i++) {
+        if (s1[i] != 0xFF)
+            return FALSE;
+    }
+    return TRUE;
 }
 
 //*********************************************************************************
@@ -102,28 +135,27 @@ BYTE hash(static BYTE * far ev) {
 
 void Find(static BYTE * far ev) 
 {
-    far overlay BYTE i, j;
-    far overlay BOOL on;
+    far overlay unsigned int i;
+    far overlay BYTE j;
 
     i = hash(ev); // calc hash index
     while (1) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64,
-         (BYTE * far)GP_block);
-        for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
-              && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
-                DoEvent(LOWD(GP_block[j+8]));
-            }
-            else if (*(unsigned long*)&GP_block[j]==0xFFFFFFFF) {
+        ProgramMemoryRead((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
+        for (j=0; j<(64-EVENTSIZE); j+=EVENTSIZE) { // scan bucket
+            if (equal((BYTE * far)&GP_block[j], &ev[0], 8))
+                DoEvent((BYTE * far)&GP_block[j+8]);
+            else if (equal0xFF((BYTE * far)&GP_block[j],8)) {
                 return;
             }
         }
-        i = (i+1) & TABLEMASK; // next bucket
+        i += 64;
+        if (i>=TABLESIZE)
+            i -= TABLESIZE; // next bucket
     }
 }
 
 //*********************************************************************************
-//        SendEvent 10 bytes in ev
+//        SendEvent EVENTSIZE bytes in ev
 //*********************************************************************************
 
 void SendEvent(BYTE * far ev)
@@ -131,12 +163,12 @@ void SendEvent(BYTE * far ev)
     far overlay BYTE i;
     CB_FrameType = FT_DAA | CB_SourceNID;
     CB_SourceNID = ND.nodeIdAlias;
-    CB_data[0] = DAA_PEWRITEH;
+    CB_data[0] = DAA_CEWRITEH;
     for (i=0; i<7; i++)
         CB_data[i+1] = ev[i];
     CB_datalen = 8;
     while (ECANSendMessage()==0) ;
-    CB_data[0] = DAA_PEWRITEL;
+    CB_data[0] = DAA_CEWRITEL;
     CB_data[1] = ev[7];
 #if EVENTSIZE == 8
     CB_data[2] = 0;
@@ -186,13 +218,14 @@ void SendEvent(BYTE * far ev)
 
 void ReadEvent(static BYTE * far ev, BYTE index) 
 {
-    far overlay BYTE i, j;
-    if (*(unsigned long *)&ev[0] == 0 && *(unsigned long *)&ev[4] == 0) {
+    far overlay unsigned int i;
+    far overlay BYTE j;
+    if (equal0x00((BYTE * far)&ev[0], 8)) {
         // read all events
-        for (i=0; i<(TABLEMASK+1); i++) {
-            ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-            for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-                if (*(unsigned short long *)&GP_block[j]!=0xFFFFFF) {
+        for (i=0; i<TABLESIZE; i+=64) {
+            ProgramMemoryRead((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
+            for (j=0; j<(64-EVENTSIZE); j+=EVENTSIZE) { // scan bucket
+                if (!equal0xFF((BYTE * far)&GP_block[j], 7)) {
                     if (index==0) {
                         SendEvent((BYTE * far)&GP_block[j]);
                         return;
@@ -207,22 +240,23 @@ void ReadEvent(static BYTE * far ev, BYTE index)
         // read only matching events
         i = hash(ev); // calc hash index
         while (1) {
-            ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-            for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-                if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
-                  && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
+            ProgramMemoryRead((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
+            for (j=0; j<(64-EVENTSIZE); j+=EVENTSIZE) { // scan bucket
+                if (equal((BYTE * far)&GP_block[j], &ev[0], 8)) {
                     if (index==0) {
                         SendEvent((BYTE * far)&GP_block[j]);
                         return;
                     }
                     index--;
                 }
-                else if (*(unsigned long*)GP_block[j]==0xFFFFFFFF) {
+                else if (equal0xFF((BYTE * far)&GP_block[j], 8)) {
                     sendack(ACK_NODATA, CB_SourceNID);
                     return;
                 }
             }
-            i = (i+1) & TABLEMASK; // next bucket
+            i += 64;
+            if (i>=TABLESIZE)
+                i -= TABLESIZE; // next bucket
         }
     }
 }
@@ -231,60 +265,47 @@ void ReadEvent(static BYTE * far ev, BYTE index)
 //        SaveEvent
 //*********************************************************************************
 
-BOOL equal(static BYTE * far s1, static BYTE * far s2, BYTE l)
-{
-    far overlay BYTE i;
-    for (i=0; i<l; i++) {
-        if (s1[i] != s2[i])
-            return FALSE;
-    }
-    return TRUE;
-}
-
-
 // overwrite a deleted entry or the end of a chain, entries can overflow
 // ino the next bucket(64 byte page) but the search will start to slow down
 
 void SaveEvent(static BYTE * far ev)
 {
-    far overlay BYTE i, j;
+    far overlay unsigned int i;
+    far overlay BYTE j, k;
 
     // check for an exact duplicate
     i = hash(ev); // calc hash index
     while (1) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-        for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (equal((BYTE * far )&GP_block[j], (BYTE * far )ev, EVENTSIZE)) {
+        ProgramMemoryRead((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
+        for (j=0; j<(64-EVENTSIZE); j+=EVENTSIZE) { // scan bucket
+            if (equal((BYTE * far)&GP_block[j], ev, EVENTSIZE)) {
                 // don't write an exact duplicate event
                 return;
             }
-            else if (*(unsigned short long *)GP_block[j]==0xFFFFFF) { // end of chain or deleted entry
+            else if (equal0xFF((BYTE * far)&GP_block[j], 8)) { // end of chain
                 goto write;
             }
         }
-        i = (i+1) & TABLEMASK; // next bucket
+        i += 64;
+        if (i>=TABLESIZE)
+            i -= TABLESIZE; // next bucket
     }
 
 write:
     i = hash(ev); // calc hash index
     while (1) {
-        ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
-        for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-            if (*(unsigned short long *)GP_block[j]==0xFFFFFF) {
-                GP_block[j] = ev[0];
-                GP_block[j+1] = ev[1];
-                GP_block[j+2] = ev[2];
-                GP_block[j+3] = ev[3];
-                GP_block[j+4] = ev[4];
-                GP_block[j+5] = ev[5];
-                GP_block[j+6] = ev[6];
-                GP_block[j+7] = ev[7];
-                GP_block[j+8] = ev[8];
-                ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+        ProgramMemoryRead((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
+        for (j=0; j<(64-EVENTSIZE); j+=EVENTSIZE) { // scan bucket
+            if (equal0xFF((BYTE * far)&GP_block[j], 7)) {
+                for (k=0; k<EVENTSIZE; k++)
+                    GP_block[j+k] = ev[k];
+                ProgramMemoryWrite((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
                 return;
             }
         }
-        i = (i+1) & TABLEMASK; // next bucket
+        i += 64;
+        if (i>=TABLESIZE)
+            i -= TABLESIZE; // next bucket
     }
 }
 
@@ -294,40 +315,44 @@ write:
 
 void EraseEvent(static BYTE * far ev)
 {
-    far overlay BOOL changed;    // if TRUE the page has been updated and needs writing back    
-    far overlay BYTE i, j;
+    far overlay BOOL changed; // if TRUE the page has been updated and needs writing back    
+    far overlay unsigned int i;
+    far overlay BYTE j, k;
 
-    if (*(unsigned long *)&ev[0] == 0 && *(unsigned long *)&ev[4] == 0) {
+    if (equal0x00((BYTE * far)&ev[0], 8)) {
         // erase all events
-        for (i=0; i<64; i++) // clear 64 bytes
-            GP_block[i] = 0xFF;
-        for (i=0; i<(TABLEMASK+1); i++) { // 64 x 64 byte pages
-            ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+        for (j=0; j<64; j++) // clear 64 bytes
+            GP_block[j] = 0xFF;
+        for (i=0; i<TABLESIZE; i+=64) { // 64 or 32  x 64 byte pages
+            ProgramMemoryWrite((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
         }
     }
     else {
         // only erase matching events
         i = hash(ev); // calc hash index
         while (1) {
-            ProgramMemoryRead((unsigned long)&table[(unsigned int)i<<6], 64, (BYTE * far)GP_block);
+            ProgramMemoryRead((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
             changed = FALSE;
-            for (j=0; j<64; j+=EVENTSIZE) { // scan bucket
-                if (*(unsigned long*)&GP_block[j] == *(unsigned long*)&ev[0]
-                  && *(unsigned long*)&GP_block[j+4] == *(unsigned long*)&ev[4]) {
-                    *(unsigned long *)&GP_block[j] = 0xFFFFFF00;
+            for (j=0; j<(64-EVENTSIZE); j+=EVENTSIZE) { // scan bucket
+                if (equal((BYTE * far)&GP_block[j], (BYTE * far)&ev[0], 8)) {
+                    for (k=0; k<EVENTSIZE; k++)
+                        GP_block[j+k] = 0xFF;
+                    GP_block[j+EVENTSIZE-1] = 0;
                     changed = TRUE;
                 }
-                else if (*(unsigned long*)&GP_block[j] == 0xFFFFFFFF) { // end of chain
+                else if (equal0xFF((BYTE * far)&GP_block[j], 8)) { // end of chain
                     if (changed) {
-                        ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<8], 64, (BYTE * far)GP_block);
+                        ProgramMemoryWrite((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
                     }
                     return;
                 }
             }
             if (changed) {
-                ProgramMemoryWrite((unsigned long)&table[(unsigned int)i<<8], 64, (BYTE * far)GP_block);
+                ProgramMemoryWrite((unsigned short long)&table[i], 64, (BYTE * far)GP_block);
             }
-            i = (i+1) & TABLEMASK; // next bucket
+            i += 64;
+            if (i>=TABLESIZE)
+                i -= TABLESIZE; // next bucket
         }
     }
 }

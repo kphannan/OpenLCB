@@ -1,6 +1,6 @@
 /*  OpenLCB frametypes.c
 
-    3 Dec 2009
+    9 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -110,14 +110,14 @@ enum DAA {
     DAA_CEREADL  = 0x33,      // consumer read events, Low byte, index, data length byte
     DAA_CEWRITEH = 0x34,      // consumer write event, High 7 bytes
     DAA_CEWRITEL = 0x35,      // consumer write event, Low byte, data length, up to 5 data bytes
-    DAA_PEERASE  = 0x36,	// producer erase event, index
+    DAA_PEERASE  = 0x36,      // producer erase event, index
     DAA_PEREAD   = 0x37,      // producer read event, index
     DAA_PEWRITEH = 0x38,      // producer write event, High 7 bytes
     DAA_PEWRITEL = 0x39,      // producer write event, Low byte, index  
 // Node variables
-    DAA_NVRD     = 0x40,      // read, 1 byte index
-    DAA_NVSET    = 0x41,      // set, 1 byte index + 1 byte data
-    DAA_NVANS    = 0x42,      // reply to read
+    DAA_NVREAD   = 0x40,      // read, 1 byte index
+    DAA_NVWRITE  = 0x41,      // set, 1 byte index + 1 byte data
+    DAA_NVREPLY  = 0x42,      // reply to read
 // Misc
     DAA_NSN      = 0x50,      // Node serial number
     DAA_DEFAULT  = 0x51,      // Reset (almost) everything to default values
@@ -130,7 +130,7 @@ enum ACK {
     ACK_TIMEOUT  = 2,         // timeout on data transfer, 2 seconds
     ACK_NODATA   = 3,         // The requested data does not exist 
     ACK_NOSPACE  = 4,         // No space to store this data 
-    ACK_ALIASERROR= 5          // Wrong SourceAlias, probably 2 writes at the same time
+    ACK_ALIASERROR= 5         // Wrong SourceAlias, probably 2 writes at the same time
 };
 
 //*********************************************************************************
