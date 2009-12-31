@@ -400,6 +400,7 @@ namespace PCTest
             this.rebootbtn.Enabled = enabled;
             this.ReadAllBtn.Enabled = enabled;
             this.ReadNxtBtn.Enabled = enabled;
+            this.PEReadNxtBtn.Enabled = enabled;
         }
 
         // update log string, only keep last 60000
@@ -1414,6 +1415,28 @@ namespace PCTest
                 modulestr[i] = 0;
         }
 
+        private void readinfobtn_Click(object sender, EventArgs e)
+        {
+            enableNIDButtons(true);
+            dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
+            NIDtext.Text = nodenumbers[dNN];
+            NIDTxt2.Text = NIDtext.Text;
+            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
+            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
+            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
+            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
+            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
+            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+            UserText.Text = "";
+            NodeText.Text = "";
+            BootText.Text = "";
+            readingmodulestring = 10;
+            SendReadCmd(0x1040);
+            for (int i = 0; i < 70; i++)
+                modulestr[i] = 0;
+        }
+
         // Write button clicked. Write user id string  to a module
 
         private void WriteBtn_Click(object sender, EventArgs e)
@@ -1565,6 +1588,7 @@ namespace PCTest
             complete = 0;
             readall = false;
             SendEvReadCmd(EventNumbertb.Text, index);
+            displaylog();
         }
 
         private void ReadAllBtn_Click(object sender, EventArgs e)
@@ -1576,6 +1600,7 @@ namespace PCTest
             complete = 0;
             readall = true;
             SendEvReadCmd(EventNumbertb.Text, index);
+            displaylog();
         }
 
         private void ReadNxtBtn_Click(object sender, EventArgs e)
@@ -1589,6 +1614,7 @@ namespace PCTest
                 EventNumbertb.Text = EventNumbertb.Text.PadLeft(16, '0');
             complete = 0;
             SendEvReadCmd(EventNumbertb.Text, index);
+            displaylog();
         }
 
         private void EVRead()
@@ -1647,17 +1673,20 @@ namespace PCTest
         private void EVwriteBTN_Click(object sender, EventArgs e)
         {
             SendEvWriteCmd(EventNumbertb.Text.PadLeft(16, '0') + EventActiontb.Text);
+            displaylog();
         }
 
         private void EraseEVBtn_Click(object sender, EventArgs e)
         {
             SendEvEraseCmd(EventNumbertb.Text.PadLeft(16, '0'),
                 Convert.ToInt16(EventIndextb.Text));
+            displaylog();
         }
 
         private void EraseAllBtn_Click(object sender, EventArgs e)
         {
             SendEvEraseCmd("0000000000000000", 0);
+            displaylog();
         }
 
         //**************************************************************************
@@ -1668,6 +1697,15 @@ namespace PCTest
         {
             PE_index.Text = PE_index.Text.PadLeft(1, '0');
             int index = Convert.ToInt16(PE_index.Text);
+            opstate = OPSTATE.PEREAD;
+            complete = 0;
+            SendPeReadCmd(index);
+        }
+
+        private void PEReadNxtBtn_Click(object sender, EventArgs e)
+        {
+            int index = Convert.ToInt16(PE_index.Text) + 1;
+            PE_index.Text = index.ToString();
             opstate = OPSTATE.PEREAD;
             complete = 0;
             SendPeReadCmd(index);

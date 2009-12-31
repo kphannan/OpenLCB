@@ -1,5 +1,7 @@
 /*
-    OpenLCB
+    OpenLCB Serial routines
+
+    22 Dec 2009
 
     Copyright (C) 2009    Mike Johnson
 
@@ -47,7 +49,7 @@ BOOL errorflag;         // Used by Gethex to signal invalid character
 //    Forward reference
 //*********************************************************************************
 
-void PutSerial(BYTE c);
+BOOL PutSerial(BYTE c);
 BOOL GetSerial(void);
 
 //*********************************************************************************

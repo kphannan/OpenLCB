@@ -89,9 +89,12 @@
             this.membertxt = new System.Windows.Forms.TextBox();
             this.WriteNidBtn = new System.Windows.Forms.Button();
             this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.ReadNxtBtn = new System.Windows.Forms.Button();
+            this.ReadAllBtn = new System.Windows.Forms.Button();
             this.label13 = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
             this.tabPage6 = new System.Windows.Forms.TabPage();
+            this.PEReadNxtBtn = new System.Windows.Forms.Button();
             this.label11 = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
             this.PE_erasebtn = new System.Windows.Forms.Button();
@@ -104,8 +107,7 @@
             this.NVvaluetb = new System.Windows.Forms.TextBox();
             this.NVReadBtn = new System.Windows.Forms.Button();
             this.NVwriteBTN = new System.Windows.Forms.Button();
-            this.ReadAllBtn = new System.Windows.Forms.Button();
-            this.ReadNxtBtn = new System.Windows.Forms.Button();
+            this.readinfobtn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -219,7 +221,7 @@
             // 
             // DefaultBtn
             // 
-            this.DefaultBtn.Location = new System.Drawing.Point(311, 145);
+            this.DefaultBtn.Location = new System.Drawing.Point(311, 25);
             this.DefaultBtn.Name = "DefaultBtn";
             this.DefaultBtn.Size = new System.Drawing.Size(93, 23);
             this.DefaultBtn.TabIndex = 31;
@@ -492,6 +494,7 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.readinfobtn);
             this.tabPage1.Controls.Add(this.RestoreConfigBtn);
             this.tabPage1.Controls.Add(this.SoftwareBtn);
             this.tabPage1.Controls.Add(this.progressBar1);
@@ -672,6 +675,26 @@
             this.tabPage3.Text = "Consumer Events";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
+            // ReadNxtBtn
+            // 
+            this.ReadNxtBtn.Location = new System.Drawing.Point(168, 143);
+            this.ReadNxtBtn.Name = "ReadNxtBtn";
+            this.ReadNxtBtn.Size = new System.Drawing.Size(93, 23);
+            this.ReadNxtBtn.TabIndex = 36;
+            this.ReadNxtBtn.Text = "Read Next Events";
+            this.ReadNxtBtn.UseVisualStyleBackColor = true;
+            this.ReadNxtBtn.Click += new System.EventHandler(this.ReadNxtBtn_Click);
+            // 
+            // ReadAllBtn
+            // 
+            this.ReadAllBtn.Location = new System.Drawing.Point(39, 143);
+            this.ReadAllBtn.Name = "ReadAllBtn";
+            this.ReadAllBtn.Size = new System.Drawing.Size(93, 23);
+            this.ReadAllBtn.TabIndex = 35;
+            this.ReadAllBtn.Text = "Read All Events";
+            this.ReadAllBtn.UseVisualStyleBackColor = true;
+            this.ReadAllBtn.Click += new System.EventHandler(this.ReadAllBtn_Click);
+            // 
             // label13
             // 
             this.label13.AutoSize = true;
@@ -692,6 +715,7 @@
             // 
             // tabPage6
             // 
+            this.tabPage6.Controls.Add(this.PEReadNxtBtn);
             this.tabPage6.Controls.Add(this.label11);
             this.tabPage6.Controls.Add(this.label10);
             this.tabPage6.Controls.Add(this.PE_erasebtn);
@@ -709,6 +733,16 @@
             this.tabPage6.TabIndex = 3;
             this.tabPage6.Text = "Producer Events";
             this.tabPage6.UseVisualStyleBackColor = true;
+            // 
+            // PEReadNxtBtn
+            // 
+            this.PEReadNxtBtn.Location = new System.Drawing.Point(113, 145);
+            this.PEReadNxtBtn.Name = "PEReadNxtBtn";
+            this.PEReadNxtBtn.Size = new System.Drawing.Size(93, 23);
+            this.PEReadNxtBtn.TabIndex = 43;
+            this.PEReadNxtBtn.Text = "Read Next";
+            this.PEReadNxtBtn.UseVisualStyleBackColor = true;
+            this.PEReadNxtBtn.Click += new System.EventHandler(this.PEReadNxtBtn_Click);
             // 
             // label11
             // 
@@ -730,7 +764,7 @@
             // 
             // PE_erasebtn
             // 
-            this.PE_erasebtn.Location = new System.Drawing.Point(214, 145);
+            this.PE_erasebtn.Location = new System.Drawing.Point(311, 145);
             this.PE_erasebtn.Name = "PE_erasebtn";
             this.PE_erasebtn.Size = new System.Drawing.Size(93, 23);
             this.PE_erasebtn.TabIndex = 40;
@@ -740,7 +774,7 @@
             // 
             // PE_writebtn
             // 
-            this.PE_writebtn.Location = new System.Drawing.Point(117, 145);
+            this.PE_writebtn.Location = new System.Drawing.Point(212, 145);
             this.PE_writebtn.Name = "PE_writebtn";
             this.PE_writebtn.Size = new System.Drawing.Size(93, 23);
             this.PE_writebtn.TabIndex = 39;
@@ -750,7 +784,7 @@
             // 
             // PE_readbtn
             // 
-            this.PE_readbtn.Location = new System.Drawing.Point(19, 145);
+            this.PE_readbtn.Location = new System.Drawing.Point(14, 145);
             this.PE_readbtn.Name = "PE_readbtn";
             this.PE_readbtn.Size = new System.Drawing.Size(93, 23);
             this.PE_readbtn.TabIndex = 38;
@@ -825,25 +859,15 @@
             this.NVwriteBTN.UseVisualStyleBackColor = true;
             this.NVwriteBTN.Click += new System.EventHandler(this.NVwriteBTN_Click);
             // 
-            // ReadAllBtn
+            // readinfobtn
             // 
-            this.ReadAllBtn.Location = new System.Drawing.Point(39, 143);
-            this.ReadAllBtn.Name = "ReadAllBtn";
-            this.ReadAllBtn.Size = new System.Drawing.Size(93, 23);
-            this.ReadAllBtn.TabIndex = 35;
-            this.ReadAllBtn.Text = "Read All Events";
-            this.ReadAllBtn.UseVisualStyleBackColor = true;
-            this.ReadAllBtn.Click += new System.EventHandler(this.ReadAllBtn_Click);
-            // 
-            // ReadNxtBtn
-            // 
-            this.ReadNxtBtn.Location = new System.Drawing.Point(168, 143);
-            this.ReadNxtBtn.Name = "ReadNxtBtn";
-            this.ReadNxtBtn.Size = new System.Drawing.Size(93, 23);
-            this.ReadNxtBtn.TabIndex = 36;
-            this.ReadNxtBtn.Text = "Read Next Events";
-            this.ReadNxtBtn.UseVisualStyleBackColor = true;
-            this.ReadNxtBtn.Click += new System.EventHandler(this.ReadNxtBtn_Click);
+            this.readinfobtn.Location = new System.Drawing.Point(81, 118);
+            this.readinfobtn.Name = "readinfobtn";
+            this.readinfobtn.Size = new System.Drawing.Size(93, 23);
+            this.readinfobtn.TabIndex = 30;
+            this.readinfobtn.Text = "Read Info";
+            this.readinfobtn.UseVisualStyleBackColor = true;
+            this.readinfobtn.Click += new System.EventHandler(this.readinfobtn_Click);
             // 
             // Form1
             // 
@@ -958,6 +982,8 @@
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Button ReadAllBtn;
         private System.Windows.Forms.Button ReadNxtBtn;
+        private System.Windows.Forms.Button PEReadNxtBtn;
+        private System.Windows.Forms.Button readinfobtn;
 
     }
 }

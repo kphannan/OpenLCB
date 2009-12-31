@@ -59,7 +59,7 @@ static far BYTE serrcbuf[128];
 //        ROM module info
 //*********************************************************************************
 
-#define modulestring "OpenLCB RFID "  __DATE__ " " __TIME__
+#define modulestring "OpenLCB RFID input for CANRS "  __DATE__ " " __TIME__
 
 #pragma romdata
 const rom BYTE xml[] = 
@@ -238,10 +238,10 @@ void packet(void)
         }
         else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
             sendack(ACK_OK, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVRD || CB_data[0] == DAA_CEREADH 
+        else if (CB_data[0] == DAA_NVREAD || CB_data[0] == DAA_CEREADH 
           || CB_data[0] == DAA_PEREAD)
             sendack(ACK_NODATA, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVSET || CB_data[0] == DAA_CEWRITEH 
+        else if (CB_data[0] == DAA_NVWRITE || CB_data[0] == DAA_CEWRITEH 
           || CB_data[0] == DAA_PEWRITEH)
             sendack(ACK_NOSPACE, CB_SourceNID);
     }

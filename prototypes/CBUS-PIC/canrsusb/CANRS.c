@@ -168,7 +168,7 @@ ret:
 #endif
 }
 
-void PutSerial(BYTE c)
+BOOL PutSerial(BYTE c)
 {
 #ifdef USB
     while (USBTXE == 1) ;
@@ -186,6 +186,7 @@ void PutSerial(BYTE c)
     //if (SERIALRTS==0)
         PIE1bits.TXIE = 1;    // enable TX interrupt
 #endif
+    return TRUE;
 }
 
 BOOL SendMessage(void)

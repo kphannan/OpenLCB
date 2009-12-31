@@ -1,6 +1,6 @@
 /*  CBUS Module Hardware, OpenLCB Boot loader
 
-    2 Dec 2009
+    22 Dec 2009
 
     This boot loader will occupy the bottom 4k of memory    
     The real code for the module will start at 0x001000.
@@ -45,43 +45,23 @@
 //*********************************************************************************
 
 #ifdef __18F2480
-#pragma config OSC=HSPLL, FCMEN=ON, IESO=OFF                    // 1
-#pragma config BORV=1, BOREN=BOHW, PWRT=ON                    // 2
-#pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF    // 3
+#pragma config OSC=HSPLL, FCMEN=ON, IESO=OFF                           // 1
+#pragma config BORV=1, BOREN=BOHW, PWRT=ON                             // 2
+#pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF  // 3
 #pragma config DEBUG=OFF, XINST=OFF, BBSIZ=1024, LVP=OFF, STVREN=ON    // 4
-#pragma config CP0=OFF, CP1=OFF, CPB=OFF, CPD=OFF                // 5
+#pragma config CP0=OFF, CP1=OFF, CPB=OFF, CPD=OFF                      // 5
 #pragma config WRT0=OFF, WRT1=OFF, WRTB=OFF, WRTC=OFF, WRTD=OFF        // 6
-#pragma config EBTR0=OFF, EBTR1=OFF, EBTRB=OFF                    // 7
+#pragma config EBTR0=OFF, EBTR1=OFF, EBTRB=OFF                         // 7
 #endif
 
 #ifdef __18F2580
-#pragma config OSC=HSPLL, FCMEN=ON, IESO=OFF                    // 1
-#pragma config BORV=1, BOREN=BOHW, PWRT=ON                    // 2
-#pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF    // 3
+#pragma config OSC=HSPLL, FCMEN=ON, IESO=OFF                           // 1
+#pragma config BORV=1, BOREN=BOHW, PWRT=ON                             // 2
+#pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF  // 3
 #pragma config DEBUG=OFF, XINST=OFF, BBSIZ=1024, LVP=OFF, STVREN=ON    // 4
 #pragma config CP0=OFF, CP1=OFF, CP2=OFF, CP3=OFF, CPB=OFF, CPD=OFF    // 5
 #pragma config WRT0=OFF, WRT1=OFF, WRT2=OFF, WRT3=OFF, WRTB=OFF, WRTC=OFF, WRTD=OFF // 6
-#pragma config EBTR0=OFF, EBTR1=OFF, EBTR2=OFF, EBTR3=OFF, EBTRB=OFF    // 7
-#endif
-
-#ifdef __18F2585
-#pragma config OSC=HSPLL, FCMEN=ON, IESO=OFF                    // 1
-#pragma config BORV=1, BOREN=BOHW, PWRT=ON                    // 2
-#pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF    // 3
-#pragma config DEBUG=OFF, XINST=OFF, BBSIZ=1024, LVP=OFF, STVREN=ON    // 4
-#pragma config CP0=OFF, CP1=OFF, CP2=OFF, CP3=OFF, CPB=OFF, CPD=OFF    // 5
-#pragma config WRT0=OFF, WRT1=OFF, WRT2=OFF, WRT3=OFF, WRTB=OFF, WRTC=OFF, WRTD=OFF // 6
-#pragma config EBTR0=OFF, EBTR1=OFF, EBTR2=OFF, EBTR3=OFF, EBTRB=OFF    // 7
-#endif
-
-#ifdef __18F4580    // for BC1A
-#pragma config OSC=HS, FCMEN=ON, IESO=OFF                        // 1
-#pragma config BORV=1, BOREN=BOHW, PWRT=ON                    // 2
-#pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF    // 3
-#pragma config DEBUG=OFF, XINST=OFF, BBSIZ=1024, LVP=OFF, STVREN=ON    // 4
-#pragma config CP0=OFF, CP1=OFF, CP2=OFF, CP3=OFF, CPB=OFF, CPD=OFF    // 5
-#pragma config WRT0=OFF, WRT1=OFF, WRT2=OFF, WRT3=OFF, WRTB=OFF, WRTC=OFF, WRTD=OFF // 6
-#pragma config EBTR0=OFF, EBTR1=OFF, EBTR2=OFF, EBTR3=OFF, EBTRB=OFF    // 7
+#pragma config EBTR0=OFF, EBTR1=OFF, EBTR2=OFF, EBTR3=OFF, EBTRB=OFF   // 7
 #endif
 
 //*********************************************************************************
@@ -94,6 +74,12 @@ unsigned int timer;        // 1 msec ticks
 unsigned int blocks;       // parts of a block received OK
 BYTE t;
 unsigned int DNID = 0;
+
+//#define SENDMASK = 0xFF
+BYTE outptr, sendptr;
+#pragma udata outbuf
+far BYTE outbuf[256];
+#pragma udata
 
 //*********************************************************************************
 //        Forward References
@@ -211,7 +197,7 @@ BOOL GetSerial(void)
     return FALSE;
 }
 
-void PutSerial(BYTE c)
+BOOL PutSerial(BYTE c)
 {
     while (USBTXE == 1) ;
     TRISC = 0x00;
@@ -219,6 +205,7 @@ void PutSerial(BYTE c)
     USBWR = 1;
     USBWR = 0;
     TRISC = 0xFF;
+    return TRUE;
 }
 
 #endif
@@ -234,12 +221,23 @@ BOOL GetSerial(void)
     return FALSE;
 }
 
-void PutSerial(BYTE c)
+BOOL PutSerial(BYTE c)
 {
-    while (PIR1bits.TXIF==0) ; // Transmit buffer empty ?
-    TXREG = c;       // also clears TXIF
+    if ((outptr+1) == sendptr)
+        return FALSE;
+    outbuf[outptr++] = c;
+    return TRUE;
 }
 
+void SerialIO(void)
+{
+    if (outptr==sendptr) // anything to send ?
+        return;
+    if (PIR1bits.TXIF==0) // Transmit buffer empty ?
+        return;
+    TXREG = outbuf[sendptr++];
+    // sendptr &= SENDMASK;
+}
 #endif
 
 //*********************************************************************************
@@ -252,8 +250,12 @@ BOOL SendMessage(void)
     return ECANSendMessage();
 #endif
 #ifdef SERIAL
-    PrintPacket();
-    return TRUE;
+#ifdef RS232
+    SerialIO();
+    if (((sendptr-outptr-1)&0xE0)==0) // check space in buffer
+        return FALSE;
+#endif
+    return PrintPacket();
 #endif
 }
 
@@ -307,7 +309,7 @@ void Packet(void)
             blocks = 0x03FF; // 10 bits, 1 per block
             timer = 0;
         }
-        else if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data GP_block
+        else if (((CB_data[0]&0xF0) == DAA_DATA) && blocks != 0) { // data GP_block
             if (DNID!=CB_SourceNID) {
                sendack(ACK_ALIASERROR, CB_SourceNID);
                return;
@@ -361,7 +363,7 @@ void Packet(void)
           || CB_data[0] == DAA_PEREAD)
             sendack(ACK_NODATA, CB_SourceNID);
         else if (CB_data[0] == DAA_NVWRITE || CB_data[0] == DAA_CEWRITEH 
-          || CB_data[0] == DAA_PEWRITEH)
+          || CB_data[0] == DAA_PEWRITEH || CB_data[0] == DAA_PEERASE)
             sendack(ACK_NOSPACE, CB_SourceNID);
     }
 }
@@ -373,6 +375,9 @@ void Loader2(void)
     CB_datalen = 0;
     while (SendMessage()==0) ;
     while(1) {
+#ifdef RS232
+        SerialIO();
+#endif
         if (Timer3Test()) {                // 100 msec timer
             timer++;
             if (blocks!=0 && timer>20) {   // send timeout ack
@@ -395,6 +400,9 @@ void initialize(void)
     PORTB = 0x04;        // CAN recessive
     TRISC = 0xFF;        // Port C all input.
     INTCON2 = 0;         // portb pullup enable
+
+    outptr = 0;          // initialize buffer pointers
+    sendptr = 0;
 
 #ifdef SERIAL
     InitSerial();
