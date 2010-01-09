@@ -163,10 +163,10 @@ rom BYTE ND_spare[64-14] = {
 
 // 0x000080
 #ifdef USB
-rom BYTE idstring[64] = "OpenLCB Boot Loader for CANUSB "  __DATE__ " " __TIME__;
+rom BYTE idstring[64] = "OpenLCB PIC USB Boot Loader "  __DATE__ " " __TIME__;
 #else
 #ifdef RS232
-rom BYTE idstring[64] = "OpenLCB Boot Loader for CANRS "  __DATE__ " " __TIME__;
+rom BYTE idstring[64] = "OpenLCB PIC RS232 Boot Loader  "  __DATE__ " " __TIME__;
 #else
 rom BYTE idstring[64] = "OpenLCB PIC CAN Boot Loader "  __DATE__ " " __TIME__;
 #endif

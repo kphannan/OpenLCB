@@ -352,14 +352,13 @@ CER:
             timer = 0;
             return;
         }
+        eventcnt = 0;
         if (DNID != CB_SourceNID) {
             sendack(ACK_ALIASERROR, CB_SourceNID);
             sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
             return;
         }
         ReadEvent(&event[0], eventindex);
-        eventcnt = 0;
         break;
 
     case DAA_CEERASEH: // Event erase
@@ -383,10 +382,10 @@ CEE:
             timer = 0;
             return;
         }
+        eventcnt = 0;
         if (DNID != CB_SourceNID) {
             sendack(ACK_ALIASERROR, CB_SourceNID);
             sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
             return;
         }
         EraseEvent(&event[0]);
@@ -413,10 +412,10 @@ CEW:
             timer = 0;
             return;
         }
+        eventcnt = 0;
         if (DNID != CB_SourceNID) {
             sendack(ACK_ALIASERROR, CB_SourceNID);
             sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
             return;
         }
         SaveEvent(event);
@@ -553,7 +552,7 @@ void main(void)
             HpFlash++;
             timer++;
             if ((blocks!=0 || eventcnt!=0) && timer>20) { // send timeout ack
-                sendack(ACK_TIMEOUT, CB_SourceNID); // timeout
+                sendack(ACK_TIMEOUT, DNID); // timeout
                 eventcnt = 0;
                 blocks = 0;
             }

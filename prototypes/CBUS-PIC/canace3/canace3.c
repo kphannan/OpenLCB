@@ -347,14 +347,13 @@ PEW:
             timer = 0;
             return;
         }
+        eventcnt = 0;
         if (DNID != CB_SourceNID) {
             sendack(ACK_ALIASERROR, CB_SourceNID);
             sendack(ACK_ALIASERROR, DNID);
-            eventcnt = 0;
             return;
         }
         WriteEvent(eventindex);
-        eventcnt = 0;
         break;
 
     case DAA_CEERASEH:
@@ -463,12 +462,9 @@ void main(void) {
         // 100 msec timer
         if (Timer3Test()) {
             timer++;
-            if (blocks!=0 && timer>20) { // send timeout ack
+            if ((blocks!=0 || eventcnt!=0) && timer>20) { // send timeout ack
                 sendack(ACK_TIMEOUT, DNID); // timeout
                 blocks = 0;
-            }
-            if (eventcnt!=0 && timer>20) { // send timeout ack
-                sendack(ACK_TIMEOUT, DNID); // timeout
                 eventcnt = 0;
             }
             if (starttimeout)

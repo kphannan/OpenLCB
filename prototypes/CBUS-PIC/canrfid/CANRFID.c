@@ -300,7 +300,7 @@ void main(void)
 
     RXindex = 0;
     while (1) {
-        // 1 msec timer
+        // 100 msec timer
         if (Timer3Test()) { 
             timer++;
             if (blocks!=0 && timer>20) { // send timeout ack
