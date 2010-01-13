@@ -43,7 +43,7 @@ BYTE BitMask[8];      // bit masks
 BYTE event[8];        // tmp event string space
 BYTE eventcnt;        // 1 bit for each part of event msg pair
 unsigned int eventindex; 
-
+BYTE canTraffic;      // flash yellow led on can traffic
 unsigned int blocks;  // 1 bit per block for data transfer
 BYTE i, t;
 unsigned int DNID;    // NIDa of device sending data
@@ -254,6 +254,9 @@ void Packet(void)
         CB_data[6] = ND.nodeId[0];
         while (SendMessage()==0) ;
     }
+    else if (CB_FrameType == FT_EVENT) {
+       canTraffic = 1;
+    }
 }
 
 void DAA_Packet(void)
@@ -461,6 +464,14 @@ void main(void) {
     while (1) {
         // 100 msec timer
         if (Timer3Test()) {
+            if (canTraffic) {
+                YellowLEDOn();
+            }
+            else {
+                YellowLEDOff();
+            }
+            canTraffic = 0;
+
             timer++;
             if ((blocks!=0 || eventcnt!=0) && timer>20) { // send timeout ack
                 sendack(ACK_TIMEOUT, DNID); // timeout
@@ -514,8 +525,10 @@ void main(void) {
                 else
                     CheckAlias(1);                  // get new alias
             }
-            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) )
+            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+                canTraffic = 1;
                 DAA_Packet();
+            }
             else
                 Packet();
         }

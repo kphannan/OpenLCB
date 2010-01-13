@@ -44,6 +44,7 @@ BYTE rxerrcnt;
 BYTE timer;
 unsigned int blocks;
 unsigned int DNID;
+BYTE canTraffic;           // yellow led CAN traffic indicator
 
 #ifdef RS232
 // Serial buffer data
@@ -243,7 +244,11 @@ void packet(void)
         CB_data[6] = ND.nodeId[0];
         while (SendMessage()==0) ;
     }
+    else if (CB_FrameType == FT_EVENT) {
+        canTraffic = 1;
+    }
     else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+        canTraffic = 1;
         if (CB_data[0] == DAA_UPGSTART) { // program upgrade
             INTCONbits.GIEH = 0;    // disable all interrupts          
             INTCONbits.GIEL = 0;
@@ -338,6 +343,14 @@ void main(void)
 
     while (1) {
         if (Timer3Test()) {  // 100 msec timer
+            if (canTraffic) {
+                YellowLEDOn();
+            }
+            else {
+                YellowLEDOff();
+            }
+            canTraffic = 0;
+
             timer++;
             if (blocks!=0 && timer>20) { // send timeout ack
                 sendack(ACK_TIMEOUT, DNID); // timeout

@@ -42,14 +42,15 @@ unsigned int DNID;
 BYTE timer;
 BYTE i, t;
 BOOL errorflag;
+BYTE canTraffic;               // yellow led CAN traffic indicator
 
 // Serial Input Buffer for 1 packet
 static BYTE RXindex;           // index into buffer
 static BYTE RXbuf[30];         // receive packet buffer
 
 // Serial buffer data
-static BYTE serrcin, serrcout;    // receive buffer pointers
-static BYTE byte;                 // character returned by GetSerial
+static BYTE serrcin, serrcout; // receive buffer pointers
+static BYTE byte;              // character returned by GetSerial
 #pragma udata grp2
 #define SERIALRXMASK 0x7F
 static far BYTE serrcbuf[128];
@@ -193,7 +194,11 @@ void packet(void)
         CB_data[6] = ND.nodeId[0];
         while (SendMessage()==0) ;
     }
+    else if (CB_FrameType == FT_EVENT) {
+       canTraffic = 1;
+    }
     else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+        canTraffic = 1;
         if (CB_data[0] == DAA_UPGSTART) { // program upgrade
             INTCONbits.GIEH = 0;    // disable all interrupts          
             INTCONbits.GIEL = 0;
@@ -302,6 +307,14 @@ void main(void)
     while (1) {
         // 100 msec timer
         if (Timer3Test()) { 
+            if (canTraffic) {
+                YellowLEDOn();
+            }
+            else {
+                YellowLEDOff();
+            }
+            canTraffic = 0;
+
             timer++;
             if (blocks!=0 && timer>20) { // send timeout ack
                 sendack(ACK_TIMEOUT, DNID); // timeout

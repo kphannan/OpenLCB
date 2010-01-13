@@ -24,19 +24,9 @@
     For input operation there are no pull up resistors, and the 1k resistance
     limits the maximum input voltage to about 25 volts.
 
-    NodeVariable #0 to #7 1 ms servo position, usually the OFF event position.
+    NodeVariable #0 to #7 the ON event servo position.
 
-    NodeVariable #8 to #15 2 ms servo position, usually the ON event position.
-
-    NodeVariable #16 to #23, reserved for servo speed and bounce
-
-    NodeVariable #24 Servo mask, Any bits set in servomask are servo's.
-
-    NodeVariable #25 Output mask, Any bits in outputmask which are not in
-    servomask are simple outputs. Any bits not set in either mask are inputs.
-
-    NodeVariable #26 scan/debounce delay in 10ms steps, 0 = 10-20ms, 1 = 20-40ms,
-        9 = 100-200ms, 99 = 1-2s
+    NodeVariable #8 to #15 the OFF event servo position.
 
     For inputs, 2.5 seconds after power on, all the current input states are 
     sent as events.
@@ -50,8 +40,8 @@
 
     Servo endpoints are "nearer 1ms" and "nearer 2ms" corresponding to OFF & ON events.
     Polarity can be used during event learning to effectively reverse the endpoints.
-    By convention, the values stored in end_1ms should be nearer 1ms and the values
-    in end_2ms should be nearer 2ms but this convention is not enforced so servo
+    By convention, the values stored in SERVO_ON should be nearer 1ms and the values
+    in SERVO_OFF should be nearer 2ms but this convention is not enforced so servo
     movement could be reversed. 
 
     Copyright (C) 2009 Mike Johnson
@@ -114,7 +104,7 @@ void InitRamFromEEPROM(void);
 #define PUSHBTN PORTAbits.RA3  // Pushbutton
 #define POLARITY PORTBbits.RB5 // pol switch
 // Macro to unscramble output address from DIP switches
-#define SelectionSwitches() (PORTB & 0b00000011)
+#define SelectionSwitches() (((PORTB & 0x03) << 1) |((PORTB&0x20)>>5))
 #endif
 
 #ifdef ACE8C
@@ -123,7 +113,7 @@ void InitRamFromEEPROM(void);
 #define PUSHBTN PORTBbits.RB0  // Pushbutton
 #define POLARITY PORTAbits.RA3 // pol switch
 // Macro to unscramble output address from DIP switches
-#define SelectionSwitches() (PORTA & 0b00000111)
+#define SelectionSwitches() (PORTA & 0x07)
 #endif
 
 #ifdef ACC8
@@ -132,7 +122,7 @@ void InitRamFromEEPROM(void);
 #define PUSHBTN PORTAbits.RA2  // Pushbutton
 #define POLARITY PORTBbits.RB5 // pol switch
 // Macro to unscramble output address from DIP switches
-#define SelectionSwitches() (((PORTB & 0b00010000)>>2)|(PORTB & 0b00000011))
+#define SelectionSwitches() (((PORTB & 0x10)>>2)|(PORTB & 0x03))
 #endif
 
 #ifdef SERVO
@@ -141,76 +131,60 @@ void InitRamFromEEPROM(void);
 #define PUSHBTN PORTAbits.RA2  // Pushbutton
 #define POLARITY PORTBbits.RB5 // pol switch
 // Macro to unscramble output address from DIP switches
-#define SelectionSwitches() (((PORTB & 0b00010000)>>2)|(PORTB & 0b00000011))
-
+#define SelectionSwitches() (((PORTB & 0x10)>>2)|(PORTB & 0x03))
 #define NUM_SERVOS       8	     // max number of servos
 #define ENDPOINT_1MS    -4000    // TMR1 delay for 1ms when current_output bit = 0
 #define SERVO_MID       -6000    // TMR1 delay for midpoint
 #define ENDPOINT_2MS    -8000    // TMR1 delay for 2ms when current_output bit = 1
 #define SERVO_MIN       -(int)40
-#define DEFAULT_SPEED    8
 #endif
+
 //*********************************************************************************
 //    Ram
 //*********************************************************************************
 
 #pragma udata
-BYTE inputmask;                 // 0=not used, 1=used as input
-BYTE outputmask;                // 1=used as output
-BYTE servomask;                 // 1=used as servo output
 
+#ifdef ACE8C
 BYTE sendallbits;               // event action type 0
-
 BYTE OldBuffer;                 // debounced scan data buffer
 BYTE NewBuffer;                 // current scan buffer
-BYTE BitMask[8];                // bit masks
-
 BYTE scandelay;                 // debounce time
 BYTE scancount;
+#endif
+
+BYTE BitMask[8];                // bit masks
 
 BYTE event[10];
 BYTE eventcnt;
-BYTE eventindex;
-
-BYTE EVtemp;	                // used by event routines
-BYTE EVtemp2;
-BYTE ENcount;                   // index of current event
+unsigned int eventindex;
+unsigned int DNID;              // block transfer source NID
+BYTE blocks;                    // loader block count
+BYTE canTraffic;                // yellow led CAN traffic indicator
 
 volatile BYTE timer10ms;        // 10 msec timer for input scan
 unsigned volatile int timer_20ms; // 5sec time 250 x 20ms
-unsigned volatile int timer;	// long period timer, inc every 20ms
+unsigned volatile int timer;    // long period timer, inc every 20ms
 
-BYTE next_portc;	            // used by hp interrupt to update portc 
+#ifdef SERVO
+BYTE next_portc;	              // used by hp interrupt to update portc 
 BYTE new_output;                // next value of all the outputs
 BYTE current_output;            // updated by hp int from new_output during idle period
-BYTE servo_state;			    // interrupt state counter
+BYTE servo_state;		        // interrupt state counter
 BYTE servo_index;               // internal data for hp int
 BYTE servo_mask;
+int next_tmr;                   // next time for interrupt timer
+#pragma udata svo1
+far BYTE servo_on[NUM_SERVOS];  // servo endpoint
+far BYTE servo_off[NUM_SERVOS]; // servo opposite endpoint
+#pragma udata
+#endif
 
 #ifdef ACC4
 BYTE pulsetimer;                // delay after a pulse
 BYTE pulseoutput;               // bits of pulse requests
 BYTE pulseon;                   // set during a pulse
 #endif
-
-int next_tmr;                   // next time for interrupt timer
-
-BYTE DNID;                      // block transfer source NID
-
-#ifdef SERVO
-#pragma udata svo1
-far BYTE ram_1ms[NUM_SERVOS];   // servo endpoint
-far BYTE ram_2ms[NUM_SERVOS];	// servo opposite endpoint
-far BYTE speed[NUM_SERVOS];
-#pragma udata
-#endif
-
-unsigned long address;          // block read or write address
-BYTE blocks;                    // loader block count
-
-#pragma udata rt
-BYTE far ramtable[65];          // ram buffer for loader fn's
-#pragma udata
 
 #pragma udata ovrly
 
@@ -237,7 +211,6 @@ BYTE far ramtable[65];          // ram buffer for loader fn's
 #ifdef MULTIFN
 #define modulestring "OpenLCB Multifunction for CANACC5/8 " __DATE__ " " __TIME__
 #endif
-
 
 #pragma romdata
 
@@ -327,20 +300,11 @@ const rom BYTE PETable[128];		// 8 inputs x 2 states x 8 bytes
 #ifdef SERVO
 // Newly programmed part defaults to servo mid positions
 // NV#0 to NV#7
-rom BYTE end_1ms[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
+rom BYTE SERVO_ON[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
 // NV#8 to NV#15
-rom BYTE end_2ms[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
+rom BYTE SERVO_OFF[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
 // NV#16 to NV#23
-rom BYTE SPEED[NUM_SERVOS];
 #endif
-
-#ifdef SERVO
-rom BYTE SERVOMASK  = 0xFF;         // NV#24
-#else // Outputs or MultiFn
-rom BYTE SERVOMASK  = 0x00;         // NV#24
-#endif
-rom BYTE OUTPUTMASK = 0xFF;         // NV#25
-rom BYTE SCANDELAY = 0;             // NV#26
 
 #pragma romdata
 
@@ -383,8 +347,10 @@ rom BYTE SCANDELAY = 0;             // NV#26
  * from buzzing continuously and dissipating power in the regulator.
  * When any servo state changes, all the servos are powered up.
  */
-#ifdef SERVO
 #pragma interrupt hpinterrupt
+
+#ifdef SERVO
+
 void hpinterrupt(void) {
 
     // Clear TMR1 flag then reload with previously calculated value
@@ -396,25 +362,22 @@ void hpinterrupt(void) {
 
     timer10ms++;	              // input scan timer
 
-    // Turn off all servos, but keep other outputs
-    next_portc = next_portc & outputmask;
+    // Turn off all servos
+    next_portc = 0;
 
-    if ((servo_state < 16) && ((servo_mask&servomask)!=0) && (timer_20ms > 0)) {
+    if (servo_state < 16 && timer_20ms > 0) {
         if ((servo_state & 1) == 0) { // even states 0 - 14
             // turn on servo next time round
-            next_portc |= servo_mask;
+            next_portc = servo_mask;
             // Pre-calculate delay for servo position
-            if (current_output & servo_mask) { // Nearer 2ms
-                LO(next_tmr) = ram_2ms[servo_index];
-                HI(next_tmr) = 0;
-                next_tmr = (next_tmr<<4) - 8000;
+            if (current_output & servo_mask) {
+                LO(next_tmr) = servo_on[servo_index];
             } 
-            else { // Nearer 1ms
-                LO(next_tmr) = ram_1ms[servo_index];
-                HI(next_tmr) = 0;
-                next_tmr = (next_tmr<<4) - 8000;
+            else {
+                LO(next_tmr) = servo_off[servo_index];
             }
-
+            HI(next_tmr) = 0;
+            next_tmr = (next_tmr<<4) - 8000;
         } 
         else { // odd states 1 - 15
             // Pre-calculate remaining delay to complete 2ms slot
@@ -439,7 +402,6 @@ void hpinterrupt(void) {
         servo_index = 0;
         servo_mask = 1;
         if (current_output != new_output) { // only update when idle
-            next_portc = new_output & outputmask;
             current_output = new_output; 
             timer_20ms = 100;
         }
@@ -448,11 +410,14 @@ void hpinterrupt(void) {
         }
     } 
 }
+
 #else
-#pragma interrupt hpinterrupt
+
 void hpinterrupt(void) {
 }
+
 #endif
+
 //*********************************************************************************
 //        Low priority interrupt
 //*********************************************************************************
@@ -524,13 +489,23 @@ void DoEvent(static BYTE * far ev)
         }
     }
 #endif
-}
 
-#ifdef ACE8C
+#ifdef SERVO
+    if (e & 0x08) { // on
+        new_output |= output; // set output bit
+    }
+    else { // off
+        new_output  &= ~output; // clear output bit
+    }
+#endif
+
+}
 
 //*********************************************************************************
 //    Scan and Producer Events
 //*********************************************************************************
+
+#ifdef ACE8C
 
 void PESetDefault(void)
 {
@@ -622,7 +597,7 @@ BOOL scan(void)
     far overlay BYTE i, j;
     far overlay BOOL t;
 
-    Row = PORTC & inputmask;
+    Row = PORTC;
     Bitcng = ~(Row ^ NewBuffer) & (Row ^ OldBuffer);
     NewBuffer = Row;
     for (Bitcnt=0; Bitcng!=0; Bitcnt++) {
@@ -689,7 +664,8 @@ void Packet(void)
         while (SendMessage()==0) ;
     }
     else if (CB_FrameType == FT_EVENT) {
-        if (LEARN == SW_ON) {            // in learn mode
+       canTraffic = 1;
+       if (LEARN == SW_ON) {            // in learn mode
             if (UNLEARN==SW_ON) {        // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
             }
@@ -703,15 +679,32 @@ void Packet(void)
                 event[6] = CB_data[6];
                 event[7] = CB_data[7];
                 LOWD(event[8]) = SelectionSwitches();
+#ifdef ACC8
                 if (POLARITY==SW_ON)
-                    event[8] |= 0x40;
+                    event[8] |= 0x08;
+#endif
+#ifdef SERVO
+                if (POLARITY==SW_ON)
+                    event[8] |= 0x08;
+#endif
                 SaveEvent((BYTE * far)&event[0]);
+                DoEvent((BYTE * far)&event[8]);
             }
         }
         else {
             Find((BYTE * far)&CB_data[0]);
         }
-        return;
+/*
+        // send debug packet
+        CB_SourceNID = ND.nodeIdAlias;
+        CB_FrameType = 0xF000;
+        CB_datalen = 4;
+        CB_data[0] = LEARN;
+        CB_data[1] = UNLEARN;
+        CB_data[2] = SelectionSwitches();
+        CB_data[3] = PUSHBTN;
+        while (SendMessage()==0) ;
+*/
     }
 }
 
@@ -913,8 +906,6 @@ CER:
 
     case DAA_CEERASEL: // Event erase
         event[7] = CB_data[1];
-        HI(eventindex) = CB_data[2];
-        LO(eventindex) = CB_data[3];
 CEE:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
@@ -1005,10 +996,11 @@ void EnableInterrupts(void)
 #endif
 }
 
-#ifdef SERVO
 //*******************************************************************************
 //    Servo routines
 //*******************************************************************************
+
+#ifdef SERVO
 
 // Set default servo endpoints
 
@@ -1016,9 +1008,8 @@ void servo_unlearn(void) {
     far overlay BYTE i;
 
     for (i = 0; i<NUM_SERVOS; i++) {
-        EEPROMWrite((int)&end_1ms[i], SERVO_MID);
-        EEPROMWrite((int)&end_2ms[i], SERVO_MID);
-        EEPROMWrite((int)&SPEED[i], DEFAULT_SPEED);
+        EEPROMWrite((int)&SERVO_ON[i], SERVO_MID);
+        EEPROMWrite((int)&SERVO_OFF[i], SERVO_MID);
     }
 }
 
@@ -1044,8 +1035,8 @@ void servo_unlearn(void) {
  *            ON = towards 2ms
  *        S1 ON performs the selected action
  *
- * By convention, the values stored in end_1ms should be nearer 1ms and the values
- * in end_2ms should be nearer 2ms but this convention is not enforced so servo
+ * By convention, the values stored in SERVO_ON should be nearer 1ms and the values
+ * in SERVO_OFF should be nearer 2ms but this convention is not enforced so servo
  * movement could be reversed. Servo movement can also be reversed by using the POL
  * switch when learning an event.
  */
@@ -1061,12 +1052,12 @@ void servo_setup(void) {
         if (UNLEARN==SW_ON) {
             // ISR updates position
             if (LEARN == SW_ON) { // Nearer 2ms endpoint
-                servo_ptr = (BYTE far *)&ram_2ms[servo];
-                new_output |= (servomask & BitMask[servo]);
+                servo_ptr = (BYTE far *)&servo_off[servo];
+                new_output |= BitMask[servo];
             } 
             else { // Nearer 1ms endpoint
-                servo_ptr = (BYTE far *)&ram_1ms[servo];
-                new_output &= ~(servomask & BitMask[servo]);
+                servo_ptr = (BYTE far *)&servo_on[servo];
+                new_output &= ~BitMask[servo];
             }
 	        if (PUSHBTN == SW_ON) { // Adjust servo position
 	            if (POLARITY == SW_ON) { // Towards 2ms is longer (more negative) delay value
@@ -1093,10 +1084,10 @@ void servo_setup(void) {
             if (PUSHBTN == SW_ON) { // Check if we've already saved it
                 if (saved != servo) { // Store current setting in EEPROM
                     if (LEARN == SW_ON) { // Nearer 2ms endpoint
-                        addr = (BYTE)&end_2ms[servo];
+                        addr = (BYTE)&SERVO_OFF[servo];
                     } 
                     else { // Nearer 1ms endpoint
-                        addr = (BYTE)&end_1ms[servo];
+                        addr = (BYTE)&SERVO_ON[servo];
                     }
                     EEPROMWrite(addr, *servo_ptr);
                     saved = servo;
@@ -1118,15 +1109,9 @@ void InitRamFromEEPROM(void)
 {
 #ifdef SERVO
     far overlay BYTE i;
-    servomask = EEPROMRead((unsigned int)&SERVOMASK);
-    outputmask = EEPROMRead((unsigned int)&OUTPUTMASK);
-    outputmask = outputmask & (~servomask);
-    TRISC = sendallbits = inputmask = ~(servomask | outputmask);
-    scancount = scandelay = EEPROMRead((unsigned int)&SCANDELAY);
     for (i=0; i<8; i++) {
-        ram_1ms[i] = EEPROMRead((int)&end_1ms[i]);
-        ram_2ms[i] = EEPROMRead((int)&end_2ms[i]);
-        speed[i] = EEPROMRead((int)SPEED[i]);
+        servo_on[i] = EEPROMRead((int)&SERVO_ON[i]);
+        servo_off[i] = EEPROMRead((int)&SERVO_OFF[i]);
     }
 #endif
 }
@@ -1138,7 +1123,11 @@ void main(void) {
     INTCON = 0;
     ADCON0 = 0;
     ADCON1 = 0b00001111;
+#ifdef ACC4
+    TRISA =  0b00101000;    // Port A 5 is unlearn, 3 = S1
+#else
     TRISA =  0b00000111;    // Port A 0 is unlearn, 1 is polarity, 2 = S1
+#endif
     // RB0,1 logic inputs,  RB2 = CANTX, RB3 = CANRX, RB4,5 are logic input 
     // RB6,7 for debug, ICSP and diagnostics LEDs
     TRISB = 0b00111011;
@@ -1155,31 +1144,11 @@ void main(void) {
 
     ECANInitialize();        
 
-    new_output = current_output = 0; // EEPROMRead((unsigned char)&port_save);
+#ifdef SERVO
+    new_output = current_output = 0;
     servo_state = 19;
     next_portc = 0;
-
-    /* Test for power up mode
-     * Unlearn switch on, learn switch off
-     * Unlearn all events and possibly servo settings    */
-    if ((LEARN == SW_OFF) && (UNLEARN == SW_ON)) {
-        event[0] = 0xFF;
-        event[1] = 0xFF;
-        event[2] = 0xFF;
-        event[3] = 0xFF;
-        event[4] = 0xFF;
-        event[5] = 0xFF;
-        event[6] = 0xFF;
-        event[7] = 0xFF;
-        event[8] = 0xFF;
-        event[9] = 0xFF;
-        EraseEvent(event);
-#ifdef SERVO
-        if (PUSHBTN == SW_ON) { // Unlearn all servo settings
-            servo_unlearn();
-        }
 #endif
-    }
 
     IPR3 = 0;                    // All IRQs low priority
     IPR1 = 0;
@@ -1202,9 +1171,9 @@ void main(void) {
     BitMask[6] = 0x40;
     BitMask[7] = 0x80;
 
-    Timer3Init();
     InitRamFromEEPROM();
 
+#ifdef SERVO
     /* Setup TMR1 for servo pulse timing
        16MHz Fosc -> 4MHz Fcyc
        1:1 prescale -> 4MHz */
@@ -1218,8 +1187,9 @@ void main(void) {
     IPR1bits.TMR1IP = 1;
     PIE1bits.TMR1IE = 1;
     EnableInterrupts();		// enable interrupts
-    GreenLEDOn();
-    YellowLEDOff();
+    timer_20ms = 100;         // Power up servos for 2s
+#endif
+
 
     // all zero after 1st programming chip
     ProgramMemoryRead((unsigned long)&table[0], 64, (BYTE * far)GP_block);
@@ -1231,6 +1201,29 @@ void main(void) {
     }
 
     CheckAlias(0);
+    GreenLEDOn();
+    YellowLEDOff();
+    canTraffic = 0;
+
+    // Test for power up mode, Unlearn switch on, learn switch off
+    if ((LEARN == SW_OFF) && (UNLEARN == SW_ON)) {
+        event[0] = 0;
+        event[1] = 0;
+        event[2] = 0;
+        event[3] = 0;
+        event[4] = 0;
+        event[5] = 0;
+        event[6] = 0;
+        event[7] = 0;
+        event[8] = 0;
+        event[9] = 0;
+        EraseEvent(event);
+#ifdef SERVO
+        if (PUSHBTN == SW_ON) { // Unlearn all servo settings
+            servo_unlearn();
+        }
+#endif
+    }
 
     // Unlearn switch on, learn switch on
     // Enter servo setting mode
@@ -1239,12 +1232,26 @@ void main(void) {
         servo_setup();
     }
 */
-    timer_20ms = 100;    // Power up servos for 2s
     timer = 0;
+    eventcnt = 0;
+
+    // send INIT packet
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_FrameType = FT_INIT;
+    CB_datalen = 0;
+    while (SendMessage()==0) ;
 
     // Simple loop looking for a received CAN frame
     while (1) {
         if (Timer3Test()) {
+            if (canTraffic) {
+                YellowLEDOn();
+            }
+            else {
+                YellowLEDOff();
+            }
+            canTraffic = 0;
+
 #ifdef ACC4
             if (pulseon) { // end sending a pulse 100 msec wide
                 PORTC = 0;
@@ -1324,8 +1331,10 @@ void main(void) {
                 else
                     CheckAlias(1);                  // get new alias
             }
-            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) )
+            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+                canTraffic = 1;
                 DAA_Packet();
+            }
             else
                 Packet();
         }

@@ -66,6 +66,7 @@ BYTE learnlink;            // debounce learn button
 BYTE event[EVENTSIZE];     // bytes for an event
 unsigned int eventindex;
 BYTE eventcnt;
+BYTE canTraffic;           // yellow led CAN traffic indicator
 
 unsigned int timer;        // timeout timer for loader or event data
 unsigned int blocks;       // loader - 1 bit for each packet to be transfered
@@ -251,6 +252,7 @@ void Packet(void)
         return;
 
     case FT_EVENT: // Event
+        canTraffic = 1; 
         if (learnlink) {            // in learn mode
             if (Unlearn) {          // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
@@ -373,8 +375,6 @@ CER:
 
     case DAA_CEERASEL: // Event erase
         event[7] = CB_data[1];
-        HI(eventindex) = CB_data[2];
-        LO(eventindex) = CB_data[3];
 CEE:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
@@ -549,6 +549,14 @@ void main(void)
     while(1) {
         // 100 msec timer
         if (Timer3Test()) { 
+            if (canTraffic) {
+                YellowLEDOn();
+            }
+            else {
+                YellowLEDOff();
+            }
+            canTraffic = 0;
+
             HpFlash++;
             timer++;
             if ((blocks!=0 || eventcnt!=0) && timer>20) { // send timeout ack
@@ -568,10 +576,9 @@ void main(void)
                     HpLedColumn[((i>>3)&0x07) + 8] = BitMask[i&0x07];
                 } 
             }
-            else {    // exit learn mode
+            else if (learnlink) {    // exit learn mode
                 learnlink = 0;
                 YellowLEDOff();
-                // ReadLedState();    // recover led state from eeprom
             }
             if (AllLedOnTest) {         // led startup test timer
                 --AllLedOnTest;         // end of test when zero
@@ -589,8 +596,10 @@ void main(void)
                 else
                     CheckAlias(1);                  // get new alias
             }
-            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) )
+            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+                canTraffic = 1; 
                 DAA_Packet();
+            }
             else
                 Packet();
         }    
