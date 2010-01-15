@@ -74,6 +74,7 @@
             this.PE_nodeidtxt = new System.Windows.Forms.TextBox();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.readinfobtn = new System.Windows.Forms.Button();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.rebootbtn = new System.Windows.Forms.Button();
             this.byte6txt = new System.Windows.Forms.TextBox();
@@ -107,7 +108,6 @@
             this.NVvaluetb = new System.Windows.Forms.TextBox();
             this.NVReadBtn = new System.Windows.Forms.Button();
             this.NVwriteBTN = new System.Windows.Forms.Button();
-            this.readinfobtn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -268,7 +268,7 @@
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(207, 9);
+            this.label7.Location = new System.Drawing.Point(6, 123);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(47, 13);
             this.label7.TabIndex = 25;
@@ -276,10 +276,10 @@
             // 
             // NIDtext
             // 
-            this.NIDtext.Location = new System.Drawing.Point(263, 7);
+            this.NIDtext.Location = new System.Drawing.Point(81, 120);
             this.NIDtext.Name = "NIDtext";
             this.NIDtext.ReadOnly = true;
-            this.NIDtext.Size = new System.Drawing.Size(122, 20);
+            this.NIDtext.Size = new System.Drawing.Size(120, 20);
             this.NIDtext.TabIndex = 24;
             // 
             // GetNidsBtn
@@ -379,7 +379,7 @@
             this.NNtb.FormattingEnabled = true;
             this.NNtb.Location = new System.Drawing.Point(81, 6);
             this.NNtb.Name = "NNtb";
-            this.NNtb.Size = new System.Drawing.Size(58, 21);
+            this.NNtb.Size = new System.Drawing.Size(323, 21);
             this.NNtb.Sorted = true;
             this.NNtb.TabIndex = 1;
             this.NNtb.SelectedIndexChanged += new System.EventHandler(this.NNtb_SelectedIndexChanged);
@@ -517,6 +517,16 @@
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Node";
             this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // readinfobtn
+            // 
+            this.readinfobtn.Location = new System.Drawing.Point(212, 118);
+            this.readinfobtn.Name = "readinfobtn";
+            this.readinfobtn.Size = new System.Drawing.Size(93, 23);
+            this.readinfobtn.TabIndex = 30;
+            this.readinfobtn.Text = "Read Info";
+            this.readinfobtn.UseVisualStyleBackColor = true;
+            this.readinfobtn.Click += new System.EventHandler(this.readinfobtn_Click);
             // 
             // tabPage2
             // 
@@ -709,9 +719,9 @@
             this.label12.AutoSize = true;
             this.label12.Location = new System.Drawing.Point(36, 59);
             this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(44, 13);
+            this.label12.Size = new System.Drawing.Size(35, 13);
             this.label12.TabIndex = 33;
-            this.label12.Text = "NodeID";
+            this.label12.Text = "Event";
             // 
             // tabPage6
             // 
@@ -858,16 +868,6 @@
             this.NVwriteBTN.Text = "WriteNV";
             this.NVwriteBTN.UseVisualStyleBackColor = true;
             this.NVwriteBTN.Click += new System.EventHandler(this.NVwriteBTN_Click);
-            // 
-            // readinfobtn
-            // 
-            this.readinfobtn.Location = new System.Drawing.Point(81, 118);
-            this.readinfobtn.Name = "readinfobtn";
-            this.readinfobtn.Size = new System.Drawing.Size(93, 23);
-            this.readinfobtn.TabIndex = 30;
-            this.readinfobtn.Text = "Read Info";
-            this.readinfobtn.UseVisualStyleBackColor = true;
-            this.readinfobtn.Click += new System.EventHandler(this.readinfobtn_Click);
             // 
             // Form1
             // 

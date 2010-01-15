@@ -124,6 +124,7 @@ namespace PCTest
 
         // Data for NodeID's and Alias
         static SortedList<string, string> nodenumbers = new SortedList<string, string>();
+        static SortedList<string, string> nodeuserstr = new SortedList<string, string>();
 
         // Sparse array for the Intel hex file
         // Sorted list of 64 byte data blocks with address, in address order
@@ -368,6 +369,7 @@ namespace PCTest
         {
             sendmsg(":X1" + hex((int)FT.FT_INIT, 4) + NIDa + "N;");
             nodenumbers[NIDa] = NID;
+            nodeuserstr[NIDa] = "PC";
         }
 
         private void enableCommButtons(bool enabled)
@@ -496,9 +498,13 @@ namespace PCTest
                     else if (serialLine.Length >= 20 && serialLine.Contains(":X1E") 
                       && serialLine.Contains("N" + hex((int)DAA.DAA_NSN, 2)))
                     {   // node serial number
-                        if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
-                            NNtb.Items.Add(serialLine.Substring(7, 3));
                         nodenumbers[serialLine.Substring(7, 3)] = serialLine.Substring(13, 12);
+                        nodeuserstr[serialLine.Substring(7, 3)] = "";
+                        if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
+                        {
+                            NNtb.Items.Add(serialLine.Substring(7, 3) + " " + serialLine.Substring(13, 12)
+                                + " " + nodeuserstr[serialLine.Substring(7, 3)]);
+                        }
                         displaylog();
                     }
                     else
@@ -973,6 +979,7 @@ namespace PCTest
             if (res.Equals(DialogResult.OK))
             {
                 savefile = new StreamWriter(saveLogFileDialog.FileName);
+                savefile.Write("NodeString=" + nodeuserstr[dNN]);
                 savefile.WriteLine("NodeNumber=" + string.Format("{0:X4}", nodenumbers[dNN]));
                 nv = 0;
                 opstate = OPSTATE.NVCFGREAD;
@@ -1386,6 +1393,7 @@ namespace PCTest
         {
             NNtb.Items.Clear();
             nodenumbers.Clear();
+            nodeuserstr.Clear();
             sendmsg(":X1"+hex((int)FT.FT_VNSN, 4)+NIDa+"N;");
         }
 

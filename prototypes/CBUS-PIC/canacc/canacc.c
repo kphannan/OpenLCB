@@ -70,9 +70,11 @@
 #include "../canlib/entry.c"
 #include "../canlib/ecan.c"
 #include "../canlib/eeprom.c"
+#ifndef ACE8C
 #define EVENTSIZE 9
 #define TABLESIZE 640 // 10
 #include "../canlib/hash.c"
+#endif
 
 //*********************************************************************************
 //    Forward refs
@@ -80,7 +82,6 @@
 
 void hpinterrupt(void);
 void lpinterrupt(void);
-BOOL EventPacket(void);
 void Packet(void);
 void DAA_Packet(void);
 void EnableInterrupts(void);
@@ -151,6 +152,7 @@ BYTE OldBuffer;                 // debounced scan data buffer
 BYTE NewBuffer;                 // current scan buffer
 BYTE scandelay;                 // debounce time
 BYTE scancount;
+volatile BYTE timer10ms;        // 10 msec timer for input scan
 #endif
 
 BYTE BitMask[8];                // bit masks
@@ -162,11 +164,10 @@ unsigned int DNID;              // block transfer source NID
 BYTE blocks;                    // loader block count
 BYTE canTraffic;                // yellow led CAN traffic indicator
 
-volatile BYTE timer10ms;        // 10 msec timer for input scan
-unsigned volatile int timer_20ms; // 5sec time 250 x 20ms
 unsigned volatile int timer;    // long period timer, inc every 20ms
 
 #ifdef SERVO
+unsigned volatile int timer_20ms; // 5sec time 250 x 20ms
 BYTE next_portc;	              // used by hp interrupt to update portc 
 BYTE new_output;                // next value of all the outputs
 BYTE current_output;            // updated by hp int from new_output during idle period
@@ -246,27 +247,13 @@ const rom BYTE xml[] =
       "<name>Servo#5 on position</name><default>125</default>\r\n"
       "<name>Servo#6 on position</name><default>125</default>\r\n"
       "<name>Servo#7 on position</name><default>125</default>\r\n"
-      "<name>Servo#0 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#0 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#1 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#1 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#2 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#2 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#3 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#3 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#4 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#4 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#5 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#5 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#6 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#6 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo#7 speed</name><bits>4</bits>\r\n"
-      "<name>Servo#7 bounce</name><bits>4</bits>\r\n"
-      "<name>Servo Mask</name><default>0</default>\r\n"
-      "<name>Output Mask</name><default>255</default>\r\n"
-      "<name>Debounce</name><default>0</default>\r\n"
-#endif
     "</NodeVariable>\r\n"
+#endif
+#ifdef ACE8C
+    "<NodeVariable>\r\n"
+      "<name>Debounce</name><default>0</default>\r\n"
+    "</NodeVariable>\r\n"
+#endif
     "</XML>\r\n";
 
 #pragma romdata module = 0x001020
@@ -304,6 +291,10 @@ rom BYTE SERVO_ON[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
 // NV#8 to NV#15
 rom BYTE SERVO_OFF[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
 // NV#16 to NV#23
+#endif
+
+#ifdef ACE8C
+rom BYTE DEBOUNCE = 0;
 #endif
 
 #pragma romdata
@@ -359,8 +350,6 @@ void hpinterrupt(void) {
     TMR1L = LO(next_tmr);
     // Update outputs so it always happens a fixed delay after the IRQ
     PORTC = next_portc;
-
-    timer10ms++;	              // input scan timer
 
     // Turn off all servos
     next_portc = 0;
@@ -605,7 +594,7 @@ BOOL scan(void)
             Bitcng &= ~BitMask[Bitcnt];
             j = Bitcnt<<4;
             if ((Row & BitMask[Bitcnt]) == 0) 
-                j |= 0x08;
+                j += 8;
             CB_SourceNID = ND.nodeIdAlias;
             CB_FrameType = FT_EVENT;
             CB_datalen = 8;
@@ -665,6 +654,7 @@ void Packet(void)
     }
     else if (CB_FrameType == FT_EVENT) {
        canTraffic = 1;
+#ifndef ACE8C
        if (LEARN == SW_ON) {            // in learn mode
             if (UNLEARN==SW_ON) {        // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
@@ -694,6 +684,7 @@ void Packet(void)
         else {
             Find((BYTE * far)&CB_data[0]);
         }
+#endif
 /*
         // send debug packet
         CB_SourceNID = ND.nodeIdAlias;
@@ -1144,12 +1135,6 @@ void main(void) {
 
     ECANInitialize();        
 
-#ifdef SERVO
-    new_output = current_output = 0;
-    servo_state = 19;
-    next_portc = 0;
-#endif
-
     IPR3 = 0;                    // All IRQs low priority
     IPR1 = 0;
     IPR2 = 0;
@@ -1174,15 +1159,15 @@ void main(void) {
     InitRamFromEEPROM();
 
 #ifdef SERVO
-    /* Setup TMR1 for servo pulse timing
-       16MHz Fosc -> 4MHz Fcyc
-       1:1 prescale -> 4MHz */
-    // Initial delay
+    new_output = current_output = 0;
+    servo_state = 19;
+    next_portc = 0;
+    // Setup TMR1 for servo pulse timing, 16MHz Fosc = 4MHz Fcyc, 1:1 prescale
     TMR1H = ((int)-4000) >> 8;
     TMR1L = (int)-4000;
     T1CON = 0b10000000;
 
-    /* Enable TMR1 interrupts at high priority */
+    // Enable TMR1 interrupts at high priority
     T1CONbits.TMR1ON = 1;
     IPR1bits.TMR1IP = 1;
     PIE1bits.TMR1IE = 1;
@@ -1190,7 +1175,25 @@ void main(void) {
     timer_20ms = 100;         // Power up servos for 2s
 #endif
 
+#ifdef ACE8C
+//  timer 1 for 10 msec overflow
+    T1CON = 0x81;         // enable timer1, 16 bit mode, no prescaler
+    TMR1H = (0x10000 - 40000) >> 8;    // 4 * 40000 / 16,000,000 = 10 msec
+    TMR1L = (0x10000 - 40000) & 0xFF;
+    IPR1bits.TMR1IP = 1;
+    PIE1bits.TMR1IE = 1;
+    timer10ms = 0;
+    scancount = scandelay = EEPROMRead((unsigned int)&DEBOUNCE);
+    sendallbits = 0xFF;
+    OldBuffer = PORTC;
+#endif
 
+    CheckAlias(0);
+    GreenLEDOn();
+    YellowLEDOff();
+    canTraffic = 0;
+
+#ifndef ACE8C
     // all zero after 1st programming chip
     ProgramMemoryRead((unsigned long)&table[0], 64, (BYTE * far)GP_block);
     j = 0;
@@ -1199,11 +1202,6 @@ void main(void) {
     if (j == 0) {
         EraseEvent(event);
     }
-
-    CheckAlias(0);
-    GreenLEDOn();
-    YellowLEDOff();
-    canTraffic = 0;
 
     // Test for power up mode, Unlearn switch on, learn switch off
     if ((LEARN == SW_OFF) && (UNLEARN == SW_ON)) {
@@ -1224,6 +1222,7 @@ void main(void) {
         }
 #endif
     }
+#endif
 
     // Unlearn switch on, learn switch on
     // Enter servo setting mode
@@ -1274,46 +1273,49 @@ void main(void) {
 #endif
         }
 
-        if (timer10ms > 10) { 
-            timer10ms = 0;
+#ifdef ACE8C 
+        // 10 msec timer
+        if (PIR1bits.TMR1IF) { 
+            PIR1bits.TMR1IF = 0;            // reload the timer for 10 msec
+            TMR1H = (0x10000 - 40000) >> 8; // 4 * 40000 / 16,000,000 = 10 msec
+            TMR1L = (0x10000 - 40000) & 0xFF;
+            timer10ms++;
 
-#ifdef ACE8C
             // call scan every (scandelay+1) x 10msec 
             if (scancount==0) {       
-                if (scan())
-                    // EventPacket();
+                scan();
                 scancount = scandelay;
             }
             else
                 scancount--;
 
             // send every switch state event after 2.5 sec start up delay 
-            if (timer>0x7F && sendallbits!=0) { // (start of day)
-                for (i=0; i<7; i++) {
+            if (timer10ms>0x7F && sendallbits!=0) { // (start of day)
+                for (i=0; i<8; i++) {
                     if ((BitMask[i]&sendallbits)!=0) {
-			            CB_SourceNID = ND.nodeIdAlias;
+                        CB_SourceNID = ND.nodeIdAlias;
                         CB_FrameType = FT_EVENT;
-			            CB_datalen = 8;
+                        CB_datalen = 8;
                         j = i << 4;
-                        if (OldBuffer & BitMask[i])
-                            j |= 0x08;
-			            t = FALSE;
-			            for (k=0; k<8; k++) {
-			                CB_data[k] = PETable[j+k];
-			                if (CB_data[k]!=0xFF)
-			                    t = TRUE;
-			            }
-			            if (t) {
-			                if (ECANSendMessage()==0)   
-			                    break;
-			            }
-                        sendallbits ^= BitMask[i];
+                        if ((OldBuffer & BitMask[i])==0)
+                            j += 8;
+                        t = FALSE;
+                        for (k=0; k<8; k++) {
+                            CB_data[k] = PETable[j+k];
+                            if (CB_data[k]!=0xFF)
+                                t = TRUE;
+                        }
+                        if (t) {
+                            if (ECANSendMessage()==0)   
+                                break;
+                        }
+                        sendallbits &= ~BitMask[i];
                         break;
                     }
                 }
             }
-#endif
         }
+#endif
 
         if (blocks != 0 && timer>100) { // send timeout ack
             sendack(ACK_TIMEOUT, DNID); // timeout
