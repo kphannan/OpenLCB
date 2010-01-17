@@ -1817,14 +1817,14 @@ namespace PCTest
             else if (serialLine.Length > 17 && serialLine.StartsWith(":X1E")
                 && serialLine.Substring(7, 3).Equals(dNN))
             {
-                if (serialLine.Substring(10, 3).Equals("N97" + hex((int)DAA.DAA_DATA, 2))) // data
+                if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_NVREPLY, 2))) // ack
                 {
                     NVvaluetb.Text = serialLine.Substring(15, 2);
                     opstate = OPSTATE.IDLE;
                     displaylog();
                     return;
                 }
-                else if (serialLine.Substring(10, 3).Equals("N97" + hex((int)DAA.DAA_ACK, 2))) // ack
+                else if (serialLine.Substring(11, 2).Equals(hex((int)DAA.DAA_ACK, 2))) // ack
                 {
                     NVvaluetb.Text = "";
                     opstate = OPSTATE.IDLE;

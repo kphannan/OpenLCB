@@ -827,12 +827,24 @@ PEW:
             // CB_data[1] = CB_data[1];
             CB_data[2] = tmp;
             while (ECANSendMessage()==0) ;
+            return;
         }
-        else 
-            sendack(ACK_NODATA, CB_SourceNID); 
-#else
-        sendack(ACK_NODATA, CB_SourceNID); 
 #endif
+
+#ifdef ACE8C
+        if (CB_data[1] == 0) {
+            tmp = EEPROMRead(CB_data[1]); 
+            CB_FrameType = FT_DAA | CB_SourceNID;
+            CB_SourceNID = ND.nodeIdAlias;
+            CB_datalen = 3;
+            CB_data[0] = DAA_NVREPLY;
+            // CB_data[1] = CB_data[1];
+            CB_data[2] = tmp;
+            while (ECANSendMessage()==0) ;
+            return;
+        }
+#endif
+        sendack(ACK_NODATA, CB_SourceNID); 
         break;
 
     case DAA_NVWRITE: // Node variable write byte
@@ -841,12 +853,18 @@ PEW:
             EEPROMWrite(CB_data[1], CB_data[2]);
             InitRamFromEEPROM();
             sendack(ACK_OK, CB_SourceNID);
+            return;
         }
-        else 
-            sendack(ACK_NOSPACE, CB_SourceNID);
-#else
-        sendack(ACK_NOSPACE, CB_SourceNID);
 #endif
+#ifdef ACE8C
+        if (CB_data[1] == 0) {
+            EEPROMWrite(CB_data[1], CB_data[2]);
+            InitRamFromEEPROM();
+            sendack(ACK_OK, CB_SourceNID);
+            return;
+        }
+#endif
+        sendack(ACK_NOSPACE, CB_SourceNID);
         break;
 
 
