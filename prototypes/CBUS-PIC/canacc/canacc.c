@@ -9,26 +9,20 @@
 
     Must define conditional compilation for hardware/module type on the command line.
 
-    Mainly 1 code body, the initial EEPROM data for NV#24 defines all servos
-    for the servo version or all outputs for the standard CANACC8.
-    Servo code is compiled by defining SERVO on the compiler command line
-    Bits set in NV#24 define which bits are servos, bits set in NV#25 define which bits
-    are output, and any bits which are 0 in both NV#24 and in NV#25 are inputs.
-
     For the servo or multifunction operation the ULN2803 driver chip is replaced by
     a DIL 1k resitor pack. The maximum output from 5v is 5ma, enough to drive an LED
     or servo but a transistor is needed to drive a relay or uncoupling magnet. Since
     the driver chip is not used the variable voltage regulator circuit is also not
-    needed and can be omitted.
+    needed and can be omitted. For input operation there are no pull up resistors,
+    and the 1k resistance limits the maximum input voltage to about 25 volts.
 
-    For input operation there are no pull up resistors, and the 1k resistance
-    limits the maximum input voltage to about 25 volts.
-
+    For the SERVO code
     NodeVariable #0 to #7 the ON event servo position.
-
     NodeVariable #8 to #15 the OFF event servo position.
 
-    For inputs, 2.5 seconds after power on, all the current input states are 
+    For ACE8C
+    NodeVariable #0 is the extra debounce time in 10 msec
+    For all inputs, 2.5 seconds after power on, all the current input states are 
     sent as events.
 
     Event data is 8 bytes for the EventNumber, (6 bytes node id and 2 bytes event)
@@ -37,12 +31,6 @@
     has 1 bit per output, and gives the polarity of the change. For normal
     polarity the on event sets the output on, and the off event sets the output
     off. For inverted polarity the opposite happens.
-
-    Servo endpoints are "nearer 1ms" and "nearer 2ms" corresponding to OFF & ON events.
-    Polarity can be used during event learning to effectively reverse the endpoints.
-    By convention, the values stored in SERVO_ON should be nearer 1ms and the values
-    in SERVO_OFF should be nearer 2ms but this convention is not enforced so servo
-    movement could be reversed. 
 
     Copyright (C) 2009 Mike Johnson
 
@@ -164,7 +152,7 @@ unsigned int DNID;              // block transfer source NID
 BYTE blocks;                    // loader block count
 BYTE canTraffic;                // yellow led CAN traffic indicator
 
-unsigned volatile int timer;    // long period timer, inc every 20ms
+unsigned volatile int timer100;    // long period timer, inc every 100ms
 
 #ifdef SERVO
 unsigned volatile int timer_20ms; // 5sec time 250 x 20ms
@@ -174,7 +162,7 @@ BYTE current_output;            // updated by hp int from new_output during idle
 BYTE servo_state;		        // interrupt state counter
 BYTE servo_index;               // internal data for hp int
 BYTE servo_mask;
-int next_tmr;                   // next time for interrupt timer
+int next_tmr;                   // next time for interrupt timer100
 #pragma udata svo1
 far BYTE servo_on[NUM_SERVOS];  // servo endpoint
 far BYTE servo_off[NUM_SERVOS]; // servo opposite endpoint
@@ -303,62 +291,32 @@ rom BYTE DEBOUNCE = 0;
 //        High priority interrupt
 //*******************************************************************************
 
-/*
- * High priority ISR for canservo8
- *
- * Runs on TMR1 rollover and runs a software state machine to determine the
- * value to be used for reloading TMR1.
- * 
- * At the start of the sequence, servo 0 output is set high and TMR1 loaded for
- * a timeout between 1ms and 2ms acording to the desired servo position. 
- *
- * On the next interrupt, the servo output is cleared and TMR1 is loaded to
- * complete the 2ms period.
- *
- * This sequence is repeated for all 8 servos (16ms) followed by 4ms idle time.
- *
- * Thus, all servos are refreshed within a 20ms period with the activation of
- * the servos being staggered throughout that period.
- *
- * The servo output bit vector is saved at the end of each IRQ run and applied
- * to the output at the start of each IRQ, before any conditional code. This
- * ensures that servo outputs are always updated with a known delay after the
- * interrupt occurs and there is no jitter in the outputs.
- *
- * Similarly, the next timeout value for TMR1 is determined at the end of each
- * IRQ to allow it to be set as soon as possible after the IRQ occurs.
- *
- * current_output is a variable whos bits are set/reset in response to received CBUS
- * events. A low bit drives the corresponding servo towards the 1ms limit, a
- * high bit towards the 2ms limit.
- *
- * TMR1 counts at a rate of 4MHz
- *
- * If timer_20ms has expired then power off servos to prevent cheap servos
- * from buzzing continuously and dissipating power in the regulator.
- * When any servo state changes, all the servos are powered up.
- */
+// At the start of the sequence, servo 0 output is set high and TMR1 loaded for
+// a timeout between 1ms and 2ms acording to the desired servo position. 
+// On the next interrupt, the servo output is cleared and TMR1 is loaded to
+// complete the 2ms period.
+// This sequence is repeated for all 8 servos (16ms) followed by 4ms idle time.
+// If timer_20ms has expired then power off servos to prevent cheap servos
+// from buzzing continuously and dissipating power in the regulator.
+// When any servo state changes, all the servos are powered up.
+
 #pragma interrupt hpinterrupt
 
 #ifdef SERVO
 
 void hpinterrupt(void) {
 
-    // Clear TMR1 flag then reload with previously calculated value
     PIR1bits.TMR1IF = 0;
     TMR1H = HI(next_tmr);
     TMR1L = LO(next_tmr);
-    // Update outputs so it always happens a fixed delay after the IRQ
     PORTC = next_portc;
 
-    // Turn off all servos
-    next_portc = 0;
+    next_portc = 0;    // Turn off all servos next time
 
     if (servo_state < 16 && timer_20ms > 0) {
         if ((servo_state & 1) == 0) { // even states 0 - 14
-            // turn on servo next time round
-            next_portc = servo_mask;
-            // Pre-calculate delay for servo position
+            next_portc = servo_mask;  // turn on servo next time round
+            // Pre-calculate next delay for servo position
             if (current_output & servo_mask) {
                 LO(next_tmr) = servo_on[servo_index];
             } 
@@ -369,30 +327,25 @@ void hpinterrupt(void) {
             next_tmr = (next_tmr<<4) - 8000;
         } 
         else { // odd states 1 - 15
-            // Pre-calculate remaining delay to complete 2ms slot
-            next_tmr = ENDPOINT_2MS - next_tmr;
+            next_tmr = ENDPOINT_2MS - next_tmr; // Pre-calculate remaining delay
+            if (next_tmr > SERVO_MIN) 
+                next_tmr = SERVO_MIN;
             servo_mask = servo_mask<<1;
             servo_index++;
-            // Constrain minimum delay to allow ISR to complete
-            if (next_tmr > SERVO_MIN) {
-                next_tmr = SERVO_MIN;
-            }
         }
     } 
     else { // not a servo, or timeslot 16 to 19
-        next_tmr = ENDPOINT_1MS;
+        next_tmr = ENDPOINT_1MS; // 1 msec
     }
 
     servo_state++;
     if (servo_state == 20) { // 20 ms timer
-        timer++; // refresh and loader timer
-        // Reset index for servo_array and output bit mask
         servo_state = 0;
         servo_index = 0;
         servo_mask = 1;
         if (current_output != new_output) { // only update when idle
             current_output = new_output; 
-            timer_20ms = 100;
+            timer_20ms = 100; // 2 seconds
         }
         else if (timer_20ms > 0) { // 2 sec = 100 x 20 ms
             timer_20ms--;
@@ -748,7 +701,7 @@ void DAA_Packet(void)
         HI(GP_address) = CB_data[2];
         LO(GP_address) = CB_data[3];
         blocks = 0x03FF;
-        timer = 0;
+        timer100 = 0;
         break;
 
     case DAA_DEFAULT:
@@ -801,7 +754,7 @@ PEW:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
             eventcnt++;
-            timer = 0;
+            timer100 = 0;
             return;
         }
         eventcnt = 0;
@@ -858,8 +811,8 @@ PEW:
 #endif
 #ifdef ACE8C
         if (CB_data[1] == 0) {
-            EEPROMWrite(CB_data[1], CB_data[2]);
-            InitRamFromEEPROM();
+            scandelay = CB_data[2];
+            EEPROMWrite(CB_data[1], scandelay);
             sendack(ACK_OK, CB_SourceNID);
             return;
         }
@@ -889,7 +842,7 @@ CER:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
             eventcnt++;
-            timer = 0;
+            timer100 = 0;
             return;
         }
         eventcnt = 0;
@@ -919,7 +872,7 @@ CEE:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
             eventcnt++;
-            timer = 0;
+            timer100 = 0;
             return;
         }
         eventcnt = 0;
@@ -953,7 +906,7 @@ CEW:
         if (eventcnt==0) {
             DNID = CB_SourceNID;
             eventcnt++;
-            timer = 0;
+            timer100 = 0;
             return;
         }
         eventcnt = 0;
@@ -1249,7 +1202,7 @@ void main(void) {
         servo_setup();
     }
 */
-    timer = 0;
+    timer100 = 0;
     eventcnt = 0;
 
     // send INIT packet
@@ -1268,6 +1221,11 @@ void main(void) {
                 YellowLEDOff();
             }
             canTraffic = 0;
+
+            if (blocks != 0 && timer100>20) { // send timeout ack
+                sendack(ACK_TIMEOUT, DNID); // timeout
+                blocks = 0;
+            }
 
 #ifdef ACC4
             if (pulseon) { // end sending a pulse 100 msec wide
@@ -1334,11 +1292,6 @@ void main(void) {
             }
         }
 #endif
-
-        if (blocks != 0 && timer>100) { // send timeout ack
-            sendack(ACK_TIMEOUT, DNID); // timeout
-            blocks = 0;
-        }
 
         if (ECANReceiveMessage()) {
             if (CB_SourceNID == ND.nodeIdAlias) {    // conflict
