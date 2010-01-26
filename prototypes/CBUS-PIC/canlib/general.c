@@ -31,6 +31,10 @@
 #include "p18F2585.h"
 #endif
 
+#ifdef __18F2680
+#include "p18F2680.h"
+#endif
+
 #ifdef __18F4580
 #include "p18F4580.h"
 #endif

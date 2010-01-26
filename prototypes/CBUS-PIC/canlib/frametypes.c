@@ -47,7 +47,7 @@ enum FT
     FT_TOF     = 0x8020,   // Track Off, broadcast from CS
     FT_TON     = 0x8021,   // Track On or Normal operation, broadcast from CS
     FT_ESTOP   = 0x8022,   // Track Stopped (em. stop)
-    FT_CSRESET = 0x8023,   // Command station Reset
+    // FT_CSRESET = 0x8023,   // Command station Reset
     FT_RTOF    = 0x8024,   // Request Track Off, from CAB
     FT_RTON    = 0x8025,   // Request Track On or Normal operation, from CAB
     FT_RESTP   = 0x8026,   // Request Emergency Stop ALL
@@ -126,7 +126,7 @@ enum DAA {
 
 enum ACK {
     ACK_OK       = 0,         // OK
-    ACK_CRC      = 1,         // CRC error, no longer used
+    // ACK_CRC      = 1,         // CRC error, no longer used
     ACK_TIMEOUT  = 2,         // timeout on data transfer, 2 seconds
     ACK_NODATA   = 3,         // The requested data does not exist 
     ACK_NOSPACE  = 4,         // No space to store this data 

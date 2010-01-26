@@ -124,7 +124,6 @@ namespace PCTest
 
         // Data for NodeID's and Alias
         static SortedList<string, string> nodenumbers = new SortedList<string, string>();
-        static SortedList<string, string> nodeuserstr = new SortedList<string, string>();
 
         // Sparse array for the Intel hex file
         // Sorted list of 64 byte data blocks with address, in address order
@@ -369,7 +368,6 @@ namespace PCTest
         {
             sendmsg(":X1" + hex((int)FT.FT_INIT, 4) + NIDa + "N;");
             nodenumbers[NIDa] = NID;
-            nodeuserstr[NIDa] = "PC";
         }
 
         private void enableCommButtons(bool enabled)
@@ -499,11 +497,9 @@ namespace PCTest
                       && serialLine.Contains("N" + hex((int)DAA.DAA_NSN, 2)))
                     {   // node serial number
                         nodenumbers[serialLine.Substring(7, 3)] = serialLine.Substring(13, 12);
-                        nodeuserstr[serialLine.Substring(7, 3)] = "";
                         if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
                         {
-                            NNtb.Items.Add(serialLine.Substring(7, 3) + " " + serialLine.Substring(13, 12)
-                                + " " + nodeuserstr[serialLine.Substring(7, 3)]);
+                            NNtb.Items.Add(serialLine.Substring(7, 3) + ", " + serialLine.Substring(13, 12));
                         }
                         displaylog();
                     }
@@ -979,7 +975,7 @@ namespace PCTest
             if (res.Equals(DialogResult.OK))
             {
                 savefile = new StreamWriter(saveLogFileDialog.FileName);
-                savefile.Write("NodeString=" + nodeuserstr[dNN]);
+                savefile.Write("NodeString=" + UserText.Text + ", ");
                 savefile.WriteLine("NodeNumber=" + string.Format("{0:X4}", nodenumbers[dNN]));
                 nv = 0;
                 opstate = OPSTATE.NVCFGREAD;
@@ -1393,7 +1389,6 @@ namespace PCTest
         {
             NNtb.Items.Clear();
             nodenumbers.Clear();
-            nodeuserstr.Clear();
             sendmsg(":X1"+hex((int)FT.FT_VNSN, 4)+NIDa+"N;");
         }
 
@@ -1404,7 +1399,21 @@ namespace PCTest
         private void NNtb_SelectedIndexChanged(object sender, EventArgs e)
         {
             enableNIDButtons(true);
-            dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
+            string newdNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
+
+            try
+            {
+                string s = dNN + ", " + nodenumbers[dNN];
+                for (int i = 0; i < NNtb.Items.Count; i++)
+                {
+                    if (NNtb.Items[i].ToString().Substring(0, 17) == s)
+                        NNtb.Items.RemoveAt(i);
+                }
+                NNtb.Items.Add(dNN + ", " + nodenumbers[dNN] + ", " + UserText.Text);
+            }
+            catch { };
+
+            dNN = newdNN;
             NIDtext.Text = nodenumbers[dNN];
             NIDTxt2.Text = NIDtext.Text;
             byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();

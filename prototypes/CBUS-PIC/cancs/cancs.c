@@ -73,11 +73,17 @@ BYTE dccsave[6];         // save buffer for insert idle
 BYTE dccsavelen;         // length of packet saved
 
 // DCC slot data
-// I tried using a structure for this but the generated code was very large
-// using bitfields also increased the data size
-#ifndef DCCSLOTMAX
+#ifdef __18F2480
 #define DCCSLOTMAX 16
 #endif
+
+#ifdef __18F2680
+#define DCCSLOTMAX 128
+#endif
+
+// I tried using a structure for this but the generated code was very large
+// using bitfields also increased the data size
+
 #define INUSE      0x80  // loco or consist is inuse by a cab
 #define CONSISTED  0x10  // in a consist
 #define MASTER     0x20  // master of consist group 
@@ -96,13 +102,15 @@ far BYTE DCC_speed[DCCSLOTMAX]; // in DCC format
 far unsigned int DCC_address[DCCSLOTMAX]; // 14 bit address
 #pragma udata sess3
 far BYTE DCC_fn0[DCCSLOTMAX];   // fn0-4
+#pragma udata sess4
 far BYTE DCC_fn5[DCCSLOTMAX];   // fn5-12
-#pragma udata sess6
+#pragma udata sess5
 far BYTE DCC_fn13[DCCSLOTMAX];  // fn13-20
+#pragma udata sess6
 far BYTE DCC_fn21[DCCSLOTMAX];  // fn21-28
-#pragma udata sess8
+#pragma udata sess7
 far BYTE DCC_lru[DCCSLOTMAX];   // least recently used chain
-#pragma udata sess9
+#pragma udata sess8
 #define CSPEED 0x80             // 1 bit change flags
 #define CFN0   0x40
 #define CFN5   0x20
@@ -110,7 +118,7 @@ far BYTE DCC_lru[DCCSLOTMAX];   // least recently used chain
 #define CFN13  0x0C             // 2 bit send counts
 #define CFN21  0x03
 far BYTE DCC_changes[DCCSLOTMAX]; // change flags and counts
-#pragma udata sess10
+#pragma udata sess9
 far BYTE DCC_consist[DCCSLOTMAX]; // consist address
 
 #pragma udata
@@ -885,19 +893,19 @@ void Packet(void)
         }
 
     case FT_RDCC3: // 3 byte DCC packet
-        j = 2;
-        goto rdcc;
-
-    case FT_RDCC4: // 4 byte DCC packet
         j = 3;
         goto rdcc;
 
-    case FT_RDCC5: // 5 byte DCC packet
+    case FT_RDCC4: // 4 byte DCC packet
         j = 4;
         goto rdcc;
 
-    case FT_RDCC6: // 6 byte DCC packet
+    case FT_RDCC5: // 5 byte DCC packet
         j = 5;
+        goto rdcc;
+
+    case FT_RDCC6: // 6 byte DCC packet
+        j = 6;
 rdcc:   i=AllocDccHp();
         if (i>DCCHPMAX)
             return;
