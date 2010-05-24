@@ -17,6 +17,8 @@ class EventID;
   // Initialize a buffer for transmission
   void init();
   
+  // start of basic message structure
+
   void setFrameTypeCAN();
   boolean isFrameTypeCAN();
   
@@ -29,17 +31,36 @@ class EventID;
   void setSourceAlias(unsigned int a);
   unsigned int getSourceAlias();
   
+  // end of basic message structure
+  
+  // start of CAN-level messages
+  
   void setCIM(int i, unsigned int testval, unsigned int alias);
   boolean isCIM();
   
   void setRIM(unsigned int alias);
   boolean isRIM();
 
-  void setInitializationComplete(unsigned int alias, NodeID* nid);
-  boolean isInitializationComplete();
+  // end of CAN-level messages
+  
+  // start of OpenLCB format support
+
+  int getOpenLcbFormat();
+  void setOpenLcbFormat(int i);
+  
+  boolean isOpenLcbMtiFormat();
+  boolean isOpenLcDestIdFormat();
+  boolean isOpenLcbStreamIdFormat();
 
   boolean isOpenLcbMTI(unsigned int mti);
   
+  // end of OpenLCB format support
+  
+  // start of OpenLCB messages
+  
+  void setInitializationComplete(unsigned int alias, NodeID* nid);
+  boolean isInitializationComplete();
+
   void setPCEventReport(EventID* eid);
   boolean isPCEventReport();
   

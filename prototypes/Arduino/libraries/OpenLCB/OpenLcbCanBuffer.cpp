@@ -12,74 +12,123 @@
 #include "NodeID.h"
 #include "EventID.h"
 
+#define MASK_FRAME_TYPE 0x08000000L
+
+#define MASK_SRC_ALIAS 0x00000FFFL
+
+#define MASK_VARIABLE_FIELD 0x07FFF000L
+#define SHIFT_VARIABLE_FIELD 12
+
+#define MASK_OPENLCB_FORMAT 0x7000
+#define SHIFT_OPENLCB_FORMAT 12
+
   void OpenLcbCanBuffer::init() {
     // set default header: extended frame w low priority
     flags.extended = 1;
     id = 0x1FFFFFFF;  // all bits in header default to 1
   }
 
+  // start of basic message structure
+
   void OpenLcbCanBuffer::setSourceAlias(unsigned int a) {
-    id &= ~0x0000FFFFL;
-    id = id | (a & 0xFFFFL);
+    id &= ~MASK_SRC_ALIAS;
+    id = id | (a & MASK_SRC_ALIAS);
   }
   
   unsigned int OpenLcbCanBuffer::getSourceAlias() {
-      return id&0xFFFF;
+      return id & MASK_SRC_ALIAS;
   }
 
   void OpenLcbCanBuffer::setFrameTypeCAN() {
-    id &= ~0x08000000L;     
+    id &= ~MASK_FRAME_TYPE;     
   }
   
   boolean OpenLcbCanBuffer::isFrameTypeCAN() {
-    return (id&0x08000000L) == 0x00000000L;
+    return (id & MASK_FRAME_TYPE) == 0x00000000L;
   }
 
   void OpenLcbCanBuffer::setFrameTypeOpenLcb() {
-    id |= 0x08000000L;     
+    id |= MASK_FRAME_TYPE;     
   }
   
   boolean OpenLcbCanBuffer::isFrameTypeOpenLcb() {
-    return (id&0x08000000L) == 0x08000000L;
+    return (id & MASK_FRAME_TYPE) == MASK_FRAME_TYPE;
   }
 
   void OpenLcbCanBuffer::setVariableField(unsigned int f) {
-    id &= ~0x07FF0000L;
-    id |= (f & 0x7FFL)<<16;
+    id &= ~MASK_VARIABLE_FIELD;
+    id |= ((f << SHIFT_VARIABLE_FIELD) & MASK_VARIABLE_FIELD) ;
   }
 
   unsigned int OpenLcbCanBuffer::getVariableField() {
-    return (id&0x07FF0000L) >> 16;
+    return (id & MASK_VARIABLE_FIELD) >> SHIFT_VARIABLE_FIELD;
   }
   
+  // end of basic message structure
+  
+  // start of CAN-level messages
+ 
+#define RIM_VAR_FIELD 0x7FFF
+
   void OpenLcbCanBuffer::setCIM(int i, unsigned int testval, unsigned int alias) {
     init();
     setFrameTypeCAN();
-    setVariableField( ((i<<8)&0x700) | testval);
+    setVariableField( ((i & 7) << 12) | (testval & 0xFFF) );
     setSourceAlias(alias);
     length=0;
   }
 
   boolean OpenLcbCanBuffer::isCIM() {
-    return isFrameTypeCAN() && (getVariableField()&0x700) <= 0x5FF;
+    return isFrameTypeCAN() && (getVariableField()&0x7000) <= 0x5FFF;
   }
 
   void OpenLcbCanBuffer::setRIM(unsigned int alias) {
     init();
     setFrameTypeCAN();
-    setVariableField(0x7FF);
+    setVariableField(RIM_VAR_FIELD);
     setSourceAlias(alias);
     length=0;
   }
 
   boolean OpenLcbCanBuffer::isRIM() {
-      return isFrameTypeCAN() && getVariableField() == 0x7FF;
+      return isFrameTypeCAN() && getVariableField() == RIM_VAR_FIELD;
   }
 
+
+  // end of CAN-level messages
+  
+  // start of OpenLCB format support
+  
+  int OpenLcbCanBuffer::getOpenLcbFormat() {
+      return (getVariableField() & MASK_OPENLCB_FORMAT) >> SHIFT_OPENLCB_FORMAT;
+  }
+
+  void OpenLcbCanBuffer::setOpenLcbFormat(int i) {
+      setVariableField( (i << SHIFT_OPENLCB_FORMAT) & MASK_OPENLCB_FORMAT);
+  }
+
+  boolean OpenLcbCanBuffer::isOpenLcbMtiFormat() {
+      return ( ( getOpenLcbFormat() & 0x4 ) == 0x0);
+  }
+  
+  boolean OpenLcbCanBuffer::isOpenLcDestIdFormat() {
+      return ( getOpenLcbFormat() == 0x6);
+  }
+  
+  boolean OpenLcbCanBuffer::isOpenLcbStreamIdFormat() {
+      return ( getOpenLcbFormat() == 0x7);
+  }
+  
   boolean OpenLcbCanBuffer::isOpenLcbMTI(unsigned int mti) {
-      return isFrameTypeOpenLcb() && getVariableField() == mti;
+      return isFrameTypeOpenLcb() 
+                && isOpenLcbMtiFormat()
+                && ( getVariableField() == mti );
   }
 
+  // end of OpenLCB format support
+  
+  // start of OpenLCB messages
+  
   void OpenLcbCanBuffer::setPCEventReport(EventID* eid) {
     init();
     setFrameTypeOpenLcb();

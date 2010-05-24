@@ -102,7 +102,7 @@ class LinkControl {
   OpenLcbCanBuffer* txBuffer;
   NodeID* nid;
   unsigned long timer; // used to wait for specific times
-  uint32_t lfsr;  // PRNG sequence value; high 16 bits is current key; not zero
+  uint32_t lfsr1, lfsr2;  // PRNG sequence value: lfsr1 is upper 24 bits, lfsr2 lower
   byte state; // internal state counter, starts at zero
 };
 

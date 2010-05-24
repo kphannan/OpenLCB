@@ -25,31 +25,33 @@ LinkControl::LinkControl(OpenLcbCanBuffer* b, NodeID* n) {
   txBuffer = b;
   nid = n;
   // initialize sequence from node ID
-  uint32_t t0 = nid->val[0];
-  uint32_t t1 = nid->val[1];
-  uint32_t t2 = nid->val[2];
-  uint32_t t3 = nid->val[3];
-  uint32_t t4 = nid->val[4];
-  uint32_t t5 = nid->val[5];
-  lfsr = t0 ^ t1 <<5 ^ t2 <<10 ^ t3 <<15 ^ t4 << 20 ^ t5 << 24;
-  if (lfsr == 0)
-     lfsr = (t0 << 23)+(t1 << 19)+(t2 << 15)+(t3 << 11)+(t4 << 7)+t5;
-  if (lfsr == 0)
-     lfsr = 0xAC01;
+  lfsr1 = (nid->val[0] << 16) | (nid->val[1] << 8) | (nid->val[2]);
+  lfsr2 = (nid->val[3] << 16) | (nid->val[4] << 8) | (nid->val[5]);
   // set up for next (first) alias
   reset();
 }
 
 void LinkControl::nextAlias() {
-   // step the PRNG; see <http://en.wikipedia.org/wiki/Linear_feedback_shift_register> example 2
-   lfsr = (lfsr >> 1) ^ (-(lfsr & 1u) & 0xd0000001u); 
+   // step the PRNG
+   // First, form 2^9*val
+   uint32_t temp1 = ((lfsr1<<9) | ((lfsr2>>15)&0x1FF)) & 0xFFFFFF;
+   uint32_t temp2 = (lfsr2<<9) & 0xFFFFFF;
+   
+   // add
+   lfsr2 = lfsr2 + temp2 + 0x7A4BA9l;
+   lfsr1 = lfsr1 + temp1 + 0x1B0CA3l;
+   
+   // carry
+   lfsr1 = (lfsr1 & 0xFFFFFF) | ((lfsr2&0xFF000000) >> 24);
+   lfsr2 = lfsr2 & 0xFFFFFF;
+
 }
 
 void LinkControl::reset() {
   state = STATE_INITIAL;
   // take the 1st from the sequence
   nextAlias();
-  log("new key ");log(lfsr, HEX);log(" alias ");logln(getAlias(), HEX);
+  log("new key ");log(lfsr1, HEX);log(lfsr2, HEX);log(" alias ");logln(getAlias(), HEX);
 }
 
 boolean LinkControl::sendCIM(int i) {
@@ -114,7 +116,7 @@ boolean LinkControl::linkInitialized() {
 }
 
 unsigned int LinkControl::getAlias() {
-  return (lfsr>>16)&0xFFFF;
+  return (lfsr1 ^ lfsr2 ^ (lfsr1>>12) ^ (lfsr2>>12) )&0xFFFFFF;
 }
 
 void LinkControl::receivedFrame(OpenLcbCanBuffer* rcv) {
