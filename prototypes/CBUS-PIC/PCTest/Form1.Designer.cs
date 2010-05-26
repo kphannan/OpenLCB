@@ -48,8 +48,6 @@
             this.label8 = new System.Windows.Forms.Label();
             this.BootText = new System.Windows.Forms.TextBox();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
-            this.label7 = new System.Windows.Forms.Label();
-            this.NIDtext = new System.Windows.Forms.TextBox();
             this.GetNidsBtn = new System.Windows.Forms.Button();
             this.EVwriteBTN = new System.Windows.Forms.Button();
             this.EVreadBTN = new System.Windows.Forms.Button();
@@ -74,16 +72,15 @@
             this.PE_nodeidtxt = new System.Windows.Forms.TextBox();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
-            this.readinfobtn = new System.Windows.Forms.Button();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.GroupBox = new System.Windows.Forms.ComboBox();
+            this.label17 = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.SaveDictBtn = new System.Windows.Forms.Button();
+            this.DictionaryTb = new System.Windows.Forms.TextBox();
+            this.label14 = new System.Windows.Forms.Label();
             this.rebootbtn = new System.Windows.Forms.Button();
             this.byte6txt = new System.Windows.Forms.TextBox();
-            this.byte5txt = new System.Windows.Forms.TextBox();
-            this.byte4txt = new System.Windows.Forms.TextBox();
-            this.byte3txt = new System.Windows.Forms.TextBox();
-            this.byte2txt = new System.Windows.Forms.TextBox();
-            this.byte1txt = new System.Windows.Forms.TextBox();
-            this.label15 = new System.Windows.Forms.Label();
             this.NIDTxt2 = new System.Windows.Forms.TextBox();
             this.label16 = new System.Windows.Forms.Label();
             this.label18 = new System.Windows.Forms.Label();
@@ -128,7 +125,7 @@
             this.LogSpace.Name = "LogSpace";
             this.LogSpace.ReadOnly = true;
             this.LogSpace.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.LogSpace.Size = new System.Drawing.Size(216, 358);
+            this.LogSpace.Size = new System.Drawing.Size(440, 382);
             this.LogSpace.TabIndex = 0;
             this.LogSpace.TabStop = false;
             // 
@@ -138,7 +135,7 @@
             // 
             // ComPortBtn
             // 
-            this.ComPortBtn.Location = new System.Drawing.Point(12, 12);
+            this.ComPortBtn.Location = new System.Drawing.Point(29, 12);
             this.ComPortBtn.Name = "ComPortBtn";
             this.ComPortBtn.Size = new System.Drawing.Size(93, 23);
             this.ComPortBtn.TabIndex = 1;
@@ -148,7 +145,7 @@
             // 
             // SaveBtn
             // 
-            this.SaveBtn.Location = new System.Drawing.Point(327, 351);
+            this.SaveBtn.Location = new System.Drawing.Point(327, 375);
             this.SaveBtn.Name = "SaveBtn";
             this.SaveBtn.Size = new System.Drawing.Size(93, 23);
             this.SaveBtn.TabIndex = 3;
@@ -186,11 +183,11 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 9);
+            this.label2.Location = new System.Drawing.Point(30, 53);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(55, 13);
+            this.label2.Size = new System.Drawing.Size(33, 13);
             this.label2.TabIndex = 0;
-            this.label2.Text = "NodeAlias";
+            this.label2.Text = "Node";
             // 
             // SendUpgrade
             // 
@@ -202,7 +199,7 @@
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Controls.Add(this.SendText);
             this.groupBox1.Controls.Add(this.SendBtn);
-            this.groupBox1.Location = new System.Drawing.Point(12, 287);
+            this.groupBox1.Location = new System.Drawing.Point(12, 311);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(426, 45);
             this.groupBox1.TabIndex = 5;
@@ -243,7 +240,7 @@
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(9, 42);
+            this.label8.Location = new System.Drawing.Point(9, 20);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(45, 13);
             this.label8.TabIndex = 28;
@@ -251,7 +248,7 @@
             // 
             // BootText
             // 
-            this.BootText.Location = new System.Drawing.Point(81, 39);
+            this.BootText.Location = new System.Drawing.Point(81, 17);
             this.BootText.Name = "BootText";
             this.BootText.ReadOnly = true;
             this.BootText.Size = new System.Drawing.Size(323, 20);
@@ -260,32 +257,15 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(212, 162);
+            this.progressBar1.Location = new System.Drawing.Point(212, 140);
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(93, 23);
             this.progressBar1.TabIndex = 27;
             // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(6, 123);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(47, 13);
-            this.label7.TabIndex = 25;
-            this.label7.Text = "Node ID";
-            // 
-            // NIDtext
-            // 
-            this.NIDtext.Location = new System.Drawing.Point(81, 120);
-            this.NIDtext.Name = "NIDtext";
-            this.NIDtext.ReadOnly = true;
-            this.NIDtext.Size = new System.Drawing.Size(120, 20);
-            this.NIDtext.TabIndex = 24;
-            // 
             // GetNidsBtn
             // 
             this.GetNidsBtn.Enabled = false;
-            this.GetNidsBtn.Location = new System.Drawing.Point(163, 12);
+            this.GetNidsBtn.Location = new System.Drawing.Point(180, 12);
             this.GetNidsBtn.Name = "GetNidsBtn";
             this.GetNidsBtn.Size = new System.Drawing.Size(84, 23);
             this.GetNidsBtn.TabIndex = 23;
@@ -329,7 +309,7 @@
             // 
             // WriteBtn
             // 
-            this.WriteBtn.Location = new System.Drawing.Point(311, 118);
+            this.WriteBtn.Location = new System.Drawing.Point(311, 96);
             this.WriteBtn.Name = "WriteBtn";
             this.WriteBtn.Size = new System.Drawing.Size(93, 23);
             this.WriteBtn.TabIndex = 3;
@@ -356,7 +336,7 @@
             // 
             // RestoreConfigBtn
             // 
-            this.RestoreConfigBtn.Location = new System.Drawing.Point(311, 162);
+            this.RestoreConfigBtn.Location = new System.Drawing.Point(311, 140);
             this.RestoreConfigBtn.Name = "RestoreConfigBtn";
             this.RestoreConfigBtn.Size = new System.Drawing.Size(93, 23);
             this.RestoreConfigBtn.TabIndex = 22;
@@ -366,7 +346,7 @@
             // 
             // SaveConfigBtn
             // 
-            this.SaveConfigBtn.Location = new System.Drawing.Point(14, 162);
+            this.SaveConfigBtn.Location = new System.Drawing.Point(14, 140);
             this.SaveConfigBtn.Name = "SaveConfigBtn";
             this.SaveConfigBtn.Size = new System.Drawing.Size(93, 23);
             this.SaveConfigBtn.TabIndex = 21;
@@ -377,9 +357,9 @@
             // NNtb
             // 
             this.NNtb.FormattingEnabled = true;
-            this.NNtb.Location = new System.Drawing.Point(81, 6);
+            this.NNtb.Location = new System.Drawing.Point(94, 50);
             this.NNtb.Name = "NNtb";
-            this.NNtb.Size = new System.Drawing.Size(323, 21);
+            this.NNtb.Size = new System.Drawing.Size(301, 21);
             this.NNtb.Sorted = true;
             this.NNtb.TabIndex = 1;
             this.NNtb.SelectedIndexChanged += new System.EventHandler(this.NNtb_SelectedIndexChanged);
@@ -387,7 +367,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(9, 95);
+            this.label4.Location = new System.Drawing.Point(9, 73);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(45, 13);
             this.label4.TabIndex = 6;
@@ -396,7 +376,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(9, 68);
+            this.label3.Location = new System.Drawing.Point(9, 46);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(58, 13);
             this.label3.TabIndex = 4;
@@ -404,7 +384,7 @@
             // 
             // SoftwareBtn
             // 
-            this.SoftwareBtn.Location = new System.Drawing.Point(113, 162);
+            this.SoftwareBtn.Location = new System.Drawing.Point(113, 140);
             this.SoftwareBtn.Name = "SoftwareBtn";
             this.SoftwareBtn.Size = new System.Drawing.Size(93, 23);
             this.SoftwareBtn.TabIndex = 19;
@@ -414,14 +394,14 @@
             // 
             // UserText
             // 
-            this.UserText.Location = new System.Drawing.Point(81, 92);
+            this.UserText.Location = new System.Drawing.Point(81, 70);
             this.UserText.Name = "UserText";
             this.UserText.Size = new System.Drawing.Size(323, 20);
             this.UserText.TabIndex = 7;
             // 
             // NodeText
             // 
-            this.NodeText.Location = new System.Drawing.Point(81, 65);
+            this.NodeText.Location = new System.Drawing.Point(81, 43);
             this.NodeText.Name = "NodeText";
             this.NodeText.ReadOnly = true;
             this.NodeText.Size = new System.Drawing.Size(323, 20);
@@ -435,7 +415,7 @@
             // 
             // closeComPortBtn
             // 
-            this.closeComPortBtn.Location = new System.Drawing.Point(111, 12);
+            this.closeComPortBtn.Location = new System.Drawing.Point(128, 12);
             this.closeComPortBtn.Name = "closeComPortBtn";
             this.closeComPortBtn.Size = new System.Drawing.Size(46, 23);
             this.closeComPortBtn.TabIndex = 2;
@@ -447,7 +427,7 @@
             // KeepLogopt
             // 
             this.KeepLogopt.AutoSize = true;
-            this.KeepLogopt.Location = new System.Drawing.Point(28, 355);
+            this.KeepLogopt.Location = new System.Drawing.Point(28, 379);
             this.KeepLogopt.Name = "KeepLogopt";
             this.KeepLogopt.Size = new System.Drawing.Size(68, 17);
             this.KeepLogopt.TabIndex = 7;
@@ -457,7 +437,7 @@
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(8, 30);
+            this.label9.Location = new System.Drawing.Point(24, 30);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(33, 13);
             this.label9.TabIndex = 33;
@@ -465,17 +445,17 @@
             // 
             // PE_index
             // 
-            this.PE_index.Location = new System.Drawing.Point(74, 27);
+            this.PE_index.Location = new System.Drawing.Point(85, 27);
             this.PE_index.Name = "PE_index";
-            this.PE_index.Size = new System.Drawing.Size(67, 20);
+            this.PE_index.Size = new System.Drawing.Size(46, 20);
             this.PE_index.TabIndex = 34;
             this.PE_index.Text = "0";
             // 
             // PE_nodeidtxt
             // 
-            this.PE_nodeidtxt.Location = new System.Drawing.Point(74, 64);
+            this.PE_nodeidtxt.Location = new System.Drawing.Point(85, 65);
             this.PE_nodeidtxt.Name = "PE_nodeidtxt";
-            this.PE_nodeidtxt.Size = new System.Drawing.Size(132, 20);
+            this.PE_nodeidtxt.Size = new System.Drawing.Size(100, 20);
             this.PE_nodeidtxt.TabIndex = 35;
             this.PE_nodeidtxt.Text = "000000000000";
             // 
@@ -486,23 +466,18 @@
             this.tabControl1.Controls.Add(this.tabPage3);
             this.tabControl1.Controls.Add(this.tabPage6);
             this.tabControl1.Controls.Add(this.tabPage5);
-            this.tabControl1.Location = new System.Drawing.Point(12, 50);
+            this.tabControl1.Location = new System.Drawing.Point(12, 91);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(430, 231);
+            this.tabControl1.Size = new System.Drawing.Size(430, 204);
             this.tabControl1.TabIndex = 36;
             // 
             // tabPage1
             // 
-            this.tabPage1.Controls.Add(this.readinfobtn);
             this.tabPage1.Controls.Add(this.RestoreConfigBtn);
             this.tabPage1.Controls.Add(this.SoftwareBtn);
             this.tabPage1.Controls.Add(this.progressBar1);
-            this.tabPage1.Controls.Add(this.NNtb);
             this.tabPage1.Controls.Add(this.SaveConfigBtn);
-            this.tabPage1.Controls.Add(this.label2);
-            this.tabPage1.Controls.Add(this.NIDtext);
-            this.tabPage1.Controls.Add(this.label7);
             this.tabPage1.Controls.Add(this.NodeText);
             this.tabPage1.Controls.Add(this.label8);
             this.tabPage1.Controls.Add(this.UserText);
@@ -513,31 +488,21 @@
             this.tabPage1.Location = new System.Drawing.Point(4, 22);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(422, 205);
+            this.tabPage1.Size = new System.Drawing.Size(422, 178);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Node";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
-            // readinfobtn
-            // 
-            this.readinfobtn.Location = new System.Drawing.Point(212, 118);
-            this.readinfobtn.Name = "readinfobtn";
-            this.readinfobtn.Size = new System.Drawing.Size(93, 23);
-            this.readinfobtn.TabIndex = 30;
-            this.readinfobtn.Text = "Read Info";
-            this.readinfobtn.UseVisualStyleBackColor = true;
-            this.readinfobtn.Click += new System.EventHandler(this.readinfobtn_Click);
-            // 
             // tabPage2
             // 
+            this.tabPage2.Controls.Add(this.GroupBox);
+            this.tabPage2.Controls.Add(this.label17);
+            this.tabPage2.Controls.Add(this.label7);
+            this.tabPage2.Controls.Add(this.SaveDictBtn);
+            this.tabPage2.Controls.Add(this.DictionaryTb);
+            this.tabPage2.Controls.Add(this.label14);
             this.tabPage2.Controls.Add(this.rebootbtn);
             this.tabPage2.Controls.Add(this.byte6txt);
-            this.tabPage2.Controls.Add(this.byte5txt);
-            this.tabPage2.Controls.Add(this.byte4txt);
-            this.tabPage2.Controls.Add(this.byte3txt);
-            this.tabPage2.Controls.Add(this.byte2txt);
-            this.tabPage2.Controls.Add(this.byte1txt);
-            this.tabPage2.Controls.Add(this.label15);
             this.tabPage2.Controls.Add(this.NIDTxt2);
             this.tabPage2.Controls.Add(this.label16);
             this.tabPage2.Controls.Add(this.label18);
@@ -546,14 +511,67 @@
             this.tabPage2.Location = new System.Drawing.Point(4, 22);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(422, 205);
+            this.tabPage2.Size = new System.Drawing.Size(422, 178);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Node ID";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
+            // GroupBox
+            // 
+            this.GroupBox.FormattingEnabled = true;
+            this.GroupBox.Location = new System.Drawing.Point(78, 43);
+            this.GroupBox.Name = "GroupBox";
+            this.GroupBox.Size = new System.Drawing.Size(69, 21);
+            this.GroupBox.TabIndex = 74;
+            this.GroupBox.SelectedIndexChanged += new System.EventHandler(this.GroupBox_SelectedIndexChanged);
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(287, 46);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(41, 13);
+            this.label17.TabIndex = 73;
+            this.label17.Text = "/ Serial";
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(161, 46);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(45, 13);
+            this.label7.TabIndex = 72;
+            this.label7.Text = "Member";
+            // 
+            // SaveDictBtn
+            // 
+            this.SaveDictBtn.Location = new System.Drawing.Point(277, 140);
+            this.SaveDictBtn.Name = "SaveDictBtn";
+            this.SaveDictBtn.Size = new System.Drawing.Size(101, 23);
+            this.SaveDictBtn.TabIndex = 71;
+            this.SaveDictBtn.Text = "Save Dictionary";
+            this.SaveDictBtn.UseVisualStyleBackColor = true;
+            this.SaveDictBtn.Click += new System.EventHandler(this.SaveDictBtn_Click);
+            // 
+            // DictionaryTb
+            // 
+            this.DictionaryTb.Location = new System.Drawing.Point(78, 70);
+            this.DictionaryTb.Name = "DictionaryTb";
+            this.DictionaryTb.Size = new System.Drawing.Size(300, 20);
+            this.DictionaryTb.TabIndex = 70;
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(12, 73);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(54, 13);
+            this.label14.TabIndex = 69;
+            this.label14.Text = "Dictionary";
+            // 
             // rebootbtn
             // 
-            this.rebootbtn.Location = new System.Drawing.Point(282, 135);
+            this.rebootbtn.Location = new System.Drawing.Point(176, 140);
             this.rebootbtn.Name = "rebootbtn";
             this.rebootbtn.Size = new System.Drawing.Size(93, 23);
             this.rebootbtn.TabIndex = 68;
@@ -563,64 +581,15 @@
             // 
             // byte6txt
             // 
-            this.byte6txt.Location = new System.Drawing.Point(329, 50);
+            this.byte6txt.Location = new System.Drawing.Point(334, 43);
             this.byte6txt.Name = "byte6txt";
             this.byte6txt.Size = new System.Drawing.Size(45, 20);
             this.byte6txt.TabIndex = 67;
             this.byte6txt.Validating += new System.ComponentModel.CancelEventHandler(this.byte6txt_Validating);
             // 
-            // byte5txt
-            // 
-            this.byte5txt.Location = new System.Drawing.Point(278, 50);
-            this.byte5txt.Name = "byte5txt";
-            this.byte5txt.Size = new System.Drawing.Size(45, 20);
-            this.byte5txt.TabIndex = 66;
-            this.byte5txt.Validating += new System.ComponentModel.CancelEventHandler(this.byte5txt_Validating);
-            // 
-            // byte4txt
-            // 
-            this.byte4txt.Location = new System.Drawing.Point(227, 50);
-            this.byte4txt.Name = "byte4txt";
-            this.byte4txt.Size = new System.Drawing.Size(45, 20);
-            this.byte4txt.TabIndex = 65;
-            this.byte4txt.Validating += new System.ComponentModel.CancelEventHandler(this.byte4txt_Validating);
-            // 
-            // byte3txt
-            // 
-            this.byte3txt.Location = new System.Drawing.Point(176, 50);
-            this.byte3txt.Name = "byte3txt";
-            this.byte3txt.Size = new System.Drawing.Size(45, 20);
-            this.byte3txt.TabIndex = 64;
-            this.byte3txt.Validating += new System.ComponentModel.CancelEventHandler(this.byte3txt_Validating);
-            // 
-            // byte2txt
-            // 
-            this.byte2txt.Location = new System.Drawing.Point(125, 50);
-            this.byte2txt.Name = "byte2txt";
-            this.byte2txt.Size = new System.Drawing.Size(45, 20);
-            this.byte2txt.TabIndex = 63;
-            this.byte2txt.Validating += new System.ComponentModel.CancelEventHandler(this.byte2txt_Validating);
-            // 
-            // byte1txt
-            // 
-            this.byte1txt.Location = new System.Drawing.Point(74, 50);
-            this.byte1txt.Name = "byte1txt";
-            this.byte1txt.Size = new System.Drawing.Size(45, 20);
-            this.byte1txt.TabIndex = 62;
-            this.byte1txt.Validating += new System.ComponentModel.CancelEventHandler(this.byte1txt_Validating);
-            // 
-            // label15
-            // 
-            this.label15.AutoSize = true;
-            this.label15.Location = new System.Drawing.Point(21, 50);
-            this.label15.Name = "label15";
-            this.label15.Size = new System.Drawing.Size(27, 13);
-            this.label15.TabIndex = 61;
-            this.label15.Text = "Dec";
-            // 
             // NIDTxt2
             // 
-            this.NIDTxt2.Location = new System.Drawing.Point(74, 17);
+            this.NIDTxt2.Location = new System.Drawing.Point(78, 17);
             this.NIDTxt2.Name = "NIDTxt2";
             this.NIDTxt2.Size = new System.Drawing.Size(301, 20);
             this.NIDTxt2.TabIndex = 59;
@@ -629,7 +598,7 @@
             // label16
             // 
             this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(21, 20);
+            this.label16.Location = new System.Drawing.Point(14, 20);
             this.label16.Name = "label16";
             this.label16.Size = new System.Drawing.Size(26, 13);
             this.label16.TabIndex = 60;
@@ -638,24 +607,24 @@
             // label18
             // 
             this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(71, 85);
+            this.label18.Location = new System.Drawing.Point(14, 46);
             this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(84, 13);
+            this.label18.Size = new System.Drawing.Size(36, 13);
             this.label18.TabIndex = 57;
-            this.label18.Text = "Membership No.";
+            this.label18.Text = "Group";
             // 
             // membertxt
             // 
-            this.membertxt.Location = new System.Drawing.Point(176, 82);
+            this.membertxt.Location = new System.Drawing.Point(212, 43);
             this.membertxt.Name = "membertxt";
-            this.membertxt.Size = new System.Drawing.Size(147, 20);
+            this.membertxt.Size = new System.Drawing.Size(73, 20);
             this.membertxt.TabIndex = 54;
             this.membertxt.Validating += new System.ComponentModel.CancelEventHandler(this.membertxt_TextChanged);
             // 
             // WriteNidBtn
             // 
             this.WriteNidBtn.Enabled = false;
-            this.WriteNidBtn.Location = new System.Drawing.Point(74, 135);
+            this.WriteNidBtn.Location = new System.Drawing.Point(77, 140);
             this.WriteNidBtn.Name = "WriteNidBtn";
             this.WriteNidBtn.Size = new System.Drawing.Size(93, 23);
             this.WriteNidBtn.TabIndex = 53;
@@ -680,7 +649,7 @@
             this.tabPage3.Location = new System.Drawing.Point(4, 22);
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage3.Size = new System.Drawing.Size(422, 205);
+            this.tabPage3.Size = new System.Drawing.Size(422, 178);
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Consumer Events";
             this.tabPage3.UseVisualStyleBackColor = true;
@@ -739,7 +708,7 @@
             this.tabPage6.Location = new System.Drawing.Point(4, 22);
             this.tabPage6.Name = "tabPage6";
             this.tabPage6.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage6.Size = new System.Drawing.Size(422, 205);
+            this.tabPage6.Size = new System.Drawing.Size(422, 178);
             this.tabPage6.TabIndex = 3;
             this.tabPage6.Text = "Producer Events";
             this.tabPage6.UseVisualStyleBackColor = true;
@@ -757,20 +726,20 @@
             // label11
             // 
             this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(9, 93);
+            this.label11.Location = new System.Drawing.Point(204, 68);
             this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(54, 13);
+            this.label11.Size = new System.Drawing.Size(33, 13);
             this.label11.TabIndex = 42;
-            this.label11.Text = "Index part";
+            this.label11.Text = "Index";
             // 
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(9, 67);
+            this.label10.Location = new System.Drawing.Point(24, 68);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(65, 13);
+            this.label10.Size = new System.Drawing.Size(44, 13);
             this.label10.TabIndex = 41;
-            this.label10.Text = "NodeID part";
+            this.label10.Text = "NodeID";
             // 
             // PE_erasebtn
             // 
@@ -804,9 +773,9 @@
             // 
             // PE_eventtxt
             // 
-            this.PE_eventtxt.Location = new System.Drawing.Point(74, 90);
+            this.PE_eventtxt.Location = new System.Drawing.Point(243, 65);
             this.PE_eventtxt.Name = "PE_eventtxt";
-            this.PE_eventtxt.Size = new System.Drawing.Size(67, 20);
+            this.PE_eventtxt.Size = new System.Drawing.Size(50, 20);
             this.PE_eventtxt.TabIndex = 36;
             this.PE_eventtxt.Text = "0000";
             // 
@@ -820,7 +789,7 @@
             this.tabPage5.Location = new System.Drawing.Point(4, 22);
             this.tabPage5.Name = "tabPage5";
             this.tabPage5.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage5.Size = new System.Drawing.Size(422, 205);
+            this.tabPage5.Size = new System.Drawing.Size(422, 178);
             this.tabPage5.TabIndex = 5;
             this.tabPage5.Text = "Node Variables";
             this.tabPage5.UseVisualStyleBackColor = true;
@@ -873,12 +842,14 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(676, 385);
+            this.ClientSize = new System.Drawing.Size(900, 409);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.KeepLogopt);
             this.Controls.Add(this.closeComPortBtn);
             this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.NNtb);
             this.Controls.Add(this.SaveBtn);
+            this.Controls.Add(this.label2);
             this.Controls.Add(this.ComPortBtn);
             this.Controls.Add(this.LogSpace);
             this.Controls.Add(this.GetNidsBtn);
@@ -937,8 +908,6 @@
         private System.Windows.Forms.Button closeComPortBtn;
         private System.Windows.Forms.CheckBox KeepLogopt;
         private System.Windows.Forms.Button GetNidsBtn;
-        private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.TextBox NIDtext;
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.TextBox BootText;
@@ -958,12 +927,6 @@
         private System.Windows.Forms.Button PE_erasebtn;
         private System.Windows.Forms.Button PE_writebtn;
         private System.Windows.Forms.TextBox byte6txt;
-        private System.Windows.Forms.TextBox byte5txt;
-        private System.Windows.Forms.TextBox byte4txt;
-        private System.Windows.Forms.TextBox byte3txt;
-        private System.Windows.Forms.TextBox byte2txt;
-        private System.Windows.Forms.TextBox byte1txt;
-        private System.Windows.Forms.Label label15;
         private System.Windows.Forms.TextBox NIDTxt2;
         private System.Windows.Forms.Label label16;
         private System.Windows.Forms.Label label18;
@@ -983,7 +946,12 @@
         private System.Windows.Forms.Button ReadAllBtn;
         private System.Windows.Forms.Button ReadNxtBtn;
         private System.Windows.Forms.Button PEReadNxtBtn;
-        private System.Windows.Forms.Button readinfobtn;
+        private System.Windows.Forms.Button SaveDictBtn;
+        private System.Windows.Forms.TextBox DictionaryTb;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.Label label17;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.ComboBox GroupBox;
 
     }
 }

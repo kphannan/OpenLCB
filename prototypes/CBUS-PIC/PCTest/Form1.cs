@@ -50,7 +50,6 @@ namespace PCTest
             FT_TOF = 0x8020,   // Track Off, broadcast from CS
             FT_TON = 0x8021,   // Track On or Normal operation, broadcast from CS
             FT_ESTOP = 0x8022,   // Track Stopped (em. stop)
-            FT_CSRESET = 0x8023,   // Command station Reset
             FT_RTOF = 0x8024,   // Request Track Off, from CAB
             FT_RTON = 0x8025,   // Request Track On or Normal operation, from CAB
             FT_RESTP = 0x8026,   // Request Emergency Stop ALL
@@ -85,6 +84,21 @@ namespace PCTest
         enum DAA
         {
             DAA_DATA = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
+            DAA_DATA1 = 0x01,
+            DAA_DATA2 = 0x02,
+            DAA_DATA3 = 0x03,
+            DAA_DATA4 = 0x04,
+            DAA_DATA5 = 0x05,
+            DAA_DATA6 = 0x06,
+            DAA_DATA7 = 0x07,
+            DAA_DATA8 = 0x08,
+            DAA_DATA9 = 0x09,
+            DAA_DATA10 = 0x0A,
+            DAA_DATA11 = 0x0B,
+            DAA_DATA12 = 0x0C,
+            DAA_DATA13 = 0x0D,
+            DAA_DATA14 = 0x0E,
+            DAA_DATA15 = 0x0F,
             DAA_ACK = 0x10,      // ack with status
             // Loader
             DAA_UPGSTART = 0x20,      // enter loader
@@ -98,7 +112,7 @@ namespace PCTest
             DAA_CEREADL = 0x33,      // consumer read events, Low byte, index, data length byte
             DAA_CEWRITEH = 0x34,      // consumer write event, High 7 bytes
             DAA_CEWRITEL = 0x35,      // consumer write event, Low byte, data length, up to 5 data bytes
-            DAA_PEERASE = 0x36,	// producer erase event, index
+            DAA_PEERASE = 0x36,      // producer erase event, index
             DAA_PEREAD = 0x37,      // producer read event, index
             DAA_PEWRITEH = 0x38,      // producer write event, High 7 bytes
             DAA_PEWRITEL = 0x39,      // producer write event, Low byte, index  
@@ -108,22 +122,22 @@ namespace PCTest
             DAA_NVREPLY = 0x42,      // reply to read
             // Misc
             DAA_NSN = 0x50,      // Node serial number
-            DAA_DEFAULT = 0x51,       // Reset (almost) everything to default values
+            DAA_DEFAULT = 0x51,      // Reset (almost) everything to default values
             DAA_REBOOT = 0x52       // Re-boot the module, after node ID write
         };
 
         enum ACK
         {
             ACK_OK = 0,         // OK
-            ACK_CRC = 1,         // CRC error, no longer used
             ACK_TIMEOUT = 2,         // timeout on data transfer, 2 seconds
             ACK_NODATA = 3,         // The requested data does not exist 
             ACK_NOSPACE = 4,         // No space to store this data 
-            ACK_ALIASERROR = 5          // Wrong SourceAlias, probably 2 writes at the same time
+            ACK_ALIASERROR = 5         // Wrong SourceAlias, probably 2 writes at the same time
         };
 
         // Data for NodeID's and Alias
         static SortedList<string, string> nodenumbers = new SortedList<string, string>();
+        static SortedList<string, string> namedict = new SortedList<string, string>();
 
         // Sparse array for the Intel hex file
         // Sorted list of 64 byte data blocks with address, in address order
@@ -166,9 +180,13 @@ namespace PCTest
             CheckForIllegalCrossThreadCalls = false;
             serialPort1.BaudRate = 115200; // 230400;
             serialPort1.Handshake = Handshake.None;
-
+            readdictionary();
             // and since the port is not yet open
             enableCommButtons(false);
+            GroupBox.Items.Add("NMRA");
+            GroupBox.Items.Add("MERG");
+            GroupBox.Items.Add("Fremo");
+            GroupBox.Items.Add("Ntrak");
         }
 
         // convert a number to hex string
@@ -364,6 +382,163 @@ namespace PCTest
             }
         }
 
+        //**************************************************************************
+        // Dictionary
+        //**************************************************************************
+        
+        private void readdictionary()
+        {
+            try
+            {
+                XmlDocument doc = new XmlDocument();
+                string dictname = "local";
+                doc.Load(dictname + ".xmldict");
+                XmlNodeList names = doc.GetElementsByTagName("Name");
+                XmlNodeList values = doc.GetElementsByTagName("Value");
+                for (int i = 0; i < names.Count; ++i)
+                {
+                    namedict.Add(dictname + "." + names[i].InnerText, values[i].InnerText);
+                }
+            }
+            catch { };
+        }
+
+        private void SaveDictBtn_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                namedict.Add(DictionaryTb.Text, NIDTxt2.Text);
+                writedictionary("local");
+            }
+            catch
+            {
+                MessageBox.Show("Name already in use");
+            }
+        }
+
+        private void writedictionary(string dictname)
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.AppendChild(doc.CreateElement("Dictionary"));
+
+            for (int i = 0; i < namedict.Count; i++)
+            {
+                string s = namedict.Keys[i];
+                if (s.StartsWith(dictname))
+                {
+                    XmlElement entry = doc.CreateElement("Name");
+                    entry.InnerText = namedict.Keys[i].Substring(dictname.Length+1);
+                    doc.DocumentElement.AppendChild(entry);
+                    entry = doc.CreateElement("Value");
+                    entry.InnerText = namedict.Values[i];
+                    doc.DocumentElement.AppendChild(entry);
+                }
+            }
+            doc.Save(dictname + ".xmldict");
+        }
+
+        private string lookupv(string v)
+        {
+            // v can be 12 or 16 hex digits
+            // full name of module or event in dictionary ?
+            int i = namedict.IndexOfValue(v);
+            if (i>=0)
+                return namedict.Keys[i];
+
+            string modulename = v.Substring(0,12);
+            string eventname = "";
+            // if event convert event index to decimal
+            if (v.Length == 16)
+            {
+                int index = Convert.ToInt32(v.Substring(12, 4), 16);
+                string t = "Off";
+                if ((index & 1) == 1)
+                    t = "On";
+                eventname = "." + t + (index / 2).ToString();
+            }
+            // only module name in dictionary ?
+            i = namedict.IndexOfValue(v.Substring(0,12));
+            if (i>=0)
+                return namedict.Keys[i] + eventname;
+
+            // Merg module
+            if (v.Substring(0,4)=="0302")
+                return "global.MERG" + Convert.ToInt32(v.Substring(4, 6),16).ToString()
+                    + "/"+Convert.ToInt32(v.Substring(10, 2),16).ToString() + eventname;
+
+            return v.Substring(0, 12) + eventname;
+        }
+
+        private string packettostring(string s)
+        {
+            if (s.StartsWith(">"))
+                s = s.Substring(1);
+            try
+            {
+                if (s.Substring(0, 3) == ":X1")
+                {
+                    switch (s.Substring(3, 1))
+                    {
+                        case "0": // CIM 0
+                            return "CIM0 " + s.Substring(4, 3) + ", alias=" + s.Substring(7, 3);
+                        case "1":
+                            return "CIM1 " + s.Substring(4, 3) + ", alias=" + s.Substring(7, 3);
+                        case "2":
+                            return "CIM2 " + s.Substring(4, 3) + ", alias=" + s.Substring(7, 3);
+                        case "3":
+                            return "CIM3 " + s.Substring(4, 3) + ", alias=" + s.Substring(7, 3);
+                        case "7": // RIM
+                            return "RIM " + s.Substring(4, 3) + " " + s.Substring(7, 3);
+                        case "8":
+                            FT op = (FT)Convert.ToInt32(s.Substring(3, 4), 16);
+                            switch (op)
+                            {
+                                case FT.FT_EVENT:
+                                    return op.ToString() + " " + lookupv(s.Substring(11, 16));
+                                case FT.FT_RFID:
+                                    return op.ToString() + " " + s.Substring(11, 10);
+                            }
+                            return op.ToString();
+                        case "E":
+                            DAA dop = (DAA)Convert.ToInt32(s.Substring(11, 2), 16);
+                            switch (dop) 
+                            {
+                                case DAA.DAA_NSN:
+                                    return dop.ToString() + " alias=" + s.Substring(7, 3)
+                                        + ", " + lookupv(s.Substring(13));
+                            }
+                            return dop.ToString() + " " + s.Substring(4, 3) + " " + " " + s.Substring(7, 3)
+                                + " " + s.Substring(13);
+                    }
+                }
+            }
+            catch { };
+            return "";
+        }
+
+        private string lookupn(string n)
+        {
+            if (n.Substring(0, 4).ToUpper() == "MERG")
+            {
+                int i = n.IndexOf('/');
+                if (i >= 0)
+                {
+                    return "0302" + hex(Convert.ToInt32(n.Substring(4, i - 5)), 6)
+                        + hex(Convert.ToInt32(n.Substring(i + 1)), 2);
+                }
+            }
+            try
+            {
+                return namedict[n];
+            }
+            catch
+            {
+                return "unkown name";
+            }
+        }
+
+        //**************************************************************************
+
         private void checkalias(string NID, string NIDa)
         {
             sendmsg(":X1" + hex((int)FT.FT_INIT, 4) + NIDa + "N;");
@@ -407,6 +582,16 @@ namespace PCTest
 
         private void updatelog(string str)
         {
+            string e = "";
+            if (str.EndsWith("\r\n"))
+            {
+                e = "\r\n";
+                str = str.Substring(0, str.Length - 2);
+            }
+            if (str.Length != 0)
+                str = str + " = " + packettostring(str) + e;
+            else
+                str = e;
             if (log.Length > 60000)
                 log = log.Substring(log.Length - 60000) + str;
             else
@@ -499,7 +684,8 @@ namespace PCTest
                         nodenumbers[serialLine.Substring(7, 3)] = serialLine.Substring(13, 12);
                         if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
                         {
-                            NNtb.Items.Add(serialLine.Substring(7, 3) + ", " + serialLine.Substring(13, 12));
+                            NNtb.Items.Add(serialLine.Substring(7, 3) + ", " + serialLine.Substring(13, 12) 
+                                + ", " + lookupv(serialLine.Substring(13, 12)));
                         }
                         displaylog();
                     }
@@ -1051,7 +1237,7 @@ namespace PCTest
                 {
                     eventstr = eventstr.Substring(0, 14) + serialLine.Substring(13, 2)
                         + eventstr.Substring(16);
-                    datasize = Convert.ToInt16(serialLine.Substring(15, 2), 16);
+                    datasize = Convert.ToInt32(serialLine.Substring(15, 2), 16);
                     if (datasize <= 5)
                     {
                         complete |= 0x1;
@@ -1322,7 +1508,7 @@ namespace PCTest
                     }
                     else if (line.StartsWith("PE"))
                     {
-                        evindex = Convert.ToInt16(line.Substring(2, 4), 16);
+                        evindex = Convert.ToInt32(line.Substring(2, 4), 16);
                         SendPeWriteCmd(evindex, line.Substring(6));
                         evindex++;
                     }
@@ -1396,6 +1582,21 @@ namespace PCTest
         // Node tab
         //**************************************************************************
 
+        private void SetGroup(string s)
+        {
+            s = s.Substring(0,4);
+            if (s == "0000")
+                GroupBox.Text = "Not set";
+            if (s == "0301")
+                GroupBox.Text = "NMRA";
+            else if (s == "0302")
+                GroupBox.Text = "MERG";
+            else if (s == "0303")
+                GroupBox.Text = "Fremo";
+            else if (s == "0304")
+                GroupBox.Text = "Ntrak";
+        }
+
         private void NNtb_SelectedIndexChanged(object sender, EventArgs e)
         {
             enableNIDButtons(true);
@@ -1409,20 +1610,16 @@ namespace PCTest
                     if (NNtb.Items[i].ToString().Substring(0, 17) == s)
                         NNtb.Items.RemoveAt(i);
                 }
-                NNtb.Items.Add(dNN + ", " + nodenumbers[dNN] + ", " + UserText.Text);
+                NNtb.Items.Add(dNN + ", " + nodenumbers[dNN] + ", " + lookupv(nodenumbers[dNN]));
             }
             catch { };
 
             dNN = newdNN;
-            NIDtext.Text = nodenumbers[dNN];
-            NIDTxt2.Text = NIDtext.Text;
-            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
-            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
-            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
-            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
-            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
-            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
-            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+            NIDTxt2.Text = nodenumbers[dNN];
+            SetGroup(NIDTxt2.Text);
+            DictionaryTb.Text = lookupv(NIDTxt2.Text);
+            byte6txt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(4, 6), 16).ToString();
             UserText.Text = "";
             NodeText.Text = "";
             BootText.Text = "";
@@ -1436,15 +1633,10 @@ namespace PCTest
         {
             enableNIDButtons(true);
             dNN = NNtb.Text.PadLeft(3, '0').Substring(0, 3);
-            NIDtext.Text = nodenumbers[dNN];
-            NIDTxt2.Text = NIDtext.Text;
-            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
-            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
-            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
-            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
-            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
-            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
-            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+            NIDTxt2.Text = nodenumbers[dNN];
+            SetGroup(NIDTxt2.Text);
+            byte6txt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(4, 6), 16).ToString();
             UserText.Text = "";
             NodeText.Text = "";
             BootText.Text = "";
@@ -1507,79 +1699,47 @@ namespace PCTest
 
         private void NIDTxt2_Validating(object sender, CancelEventArgs e)
         {
-            NIDtext.Text = NIDTxt2.Text.PadLeft(12, '0');
-            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
-            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
-            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
-            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
-            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
-            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
-            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+            NIDTxt2.Text = NIDTxt2.Text.PadLeft(12, '0');
+            SetGroup(NIDTxt2.Text);
+            byte6txt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(4, 6), 16).ToString();
         }
 
-        private void byte1txt_Validating(object sender, CancelEventArgs e)
+        private void GroupBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            NIDtext.Text = hex(Convert.ToInt16(byte1txt.Text), 2) + NIDtext.Text.Substring(2, 10);
-            NIDTxt2.Text = NIDtext.Text;
-            Update();
-        }
-
-        private void byte2txt_Validating(object sender, CancelEventArgs e)
-        {
-            NIDtext.Text = NIDtext.Text.Substring(0, 2) + hex(Convert.ToInt16(byte2txt.Text), 2)
-                + NIDtext.Text.Substring(4, 8);
-            NIDTxt2.Text = NIDtext.Text;
-        }
-
-        private void byte3txt_Validating(object sender, CancelEventArgs e)
-        {
-            NIDtext.Text = NIDtext.Text.Substring(0, 4) + hex(Convert.ToInt16(byte3txt.Text), 2)
-                + NIDtext.Text.Substring(6, 6);
-            NIDTxt2.Text = NIDtext.Text;
-            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
-        }
-
-        private void byte4txt_Validating(object sender, CancelEventArgs e)
-        {
-            NIDtext.Text = NIDtext.Text.Substring(0, 6) + hex(Convert.ToInt16(byte4txt.Text), 2)
-                + NIDtext.Text.Substring(8, 4);
-            NIDTxt2.Text = NIDtext.Text;
-            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
-        }
-
-        private void byte5txt_Validating(object sender, CancelEventArgs e)
-        {
-            NIDtext.Text = NIDtext.Text.Substring(0, 8) + hex(Convert.ToInt16(byte5txt.Text), 2)
-                + NIDtext.Text.Substring(10, 2);
-            NIDTxt2.Text = NIDtext.Text;
-            membertxt.Text = Convert.ToInt32(NIDtext.Text.Substring(4, 6), 16).ToString();
+            string s = GroupBox.Text;
+            string n = "0000";
+            if (s == "NMRA")
+                n = "0301";
+            else if (s == "MERG")
+                n = "0302";
+            else if (s == "Fremo")
+                n = "0303";
+            else if (s == "Ntrak")
+                n = "0304";
+            NIDTxt2.Text = n + NIDTxt2.Text.PadLeft(12, '0').Substring(4,8);
+            byte6txt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(10, 2), 16).ToString();
+            membertxt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(4, 6), 16).ToString();
         }
 
         private void byte6txt_Validating(object sender, CancelEventArgs e)
         {
-            NIDtext.Text = NIDtext.Text.Substring(0, 10) + hex(Convert.ToInt16(byte6txt.Text), 2);
-            NIDTxt2.Text = NIDtext.Text;
+            NIDTxt2.Text = NIDTxt2.Text.Substring(0, 10) + hex(Convert.ToInt32(byte6txt.Text), 2);
         }
 
         private void membertxt_TextChanged(object sender, CancelEventArgs e)
         {
-            NIDtext.Text = NIDtext.Text.Substring(0, 4) + hex(Convert.ToInt16(membertxt.Text), 6)
-                + NIDtext.Text.Substring(10, 2);
-            NIDTxt2.Text = NIDtext.Text;
-            byte1txt.Text = Convert.ToInt16(NIDtext.Text.Substring(0, 2), 16).ToString();
-            byte2txt.Text = Convert.ToInt16(NIDtext.Text.Substring(2, 2), 16).ToString();
-            byte3txt.Text = Convert.ToInt16(NIDtext.Text.Substring(4, 2), 16).ToString();
-            byte4txt.Text = Convert.ToInt16(NIDtext.Text.Substring(6, 2), 16).ToString();
-            byte5txt.Text = Convert.ToInt16(NIDtext.Text.Substring(8, 2), 16).ToString();
-            byte6txt.Text = Convert.ToInt16(NIDtext.Text.Substring(10, 2), 16).ToString();
+            NIDTxt2.Text = NIDTxt2.Text.Substring(0, 4) + hex(Convert.ToInt32(membertxt.Text), 6)
+                + NIDTxt2.Text.Substring(10, 2);
+            byte6txt.Text = Convert.ToInt32(NIDTxt2.Text.Substring(10, 2), 16).ToString();
         }
 
         private void WriteNidBtn_Click(object sender, EventArgs e)
         {
             int i, j;
-            NIDtext.Text = NIDtext.Text.PadLeft(12, '0').Substring(0, 12);
+            NIDTxt2.Text = NIDTxt2.Text.PadLeft(12, '0').Substring(0, 12);
             for (i = 0, j = 11; i < 6; i++, j -= 2)
-                modulestr[i] = hv((byte)NIDtext.Text[j - 1], (byte)NIDtext.Text[j]);
+                modulestr[i] = hv((byte)NIDTxt2.Text[j - 1], (byte)NIDTxt2.Text[j]);
             for (i = 6; i < 64; i++)
                 modulestr[i] = 0xFF;
             SendWriteCmd(0x000040);
@@ -1599,7 +1759,7 @@ namespace PCTest
 
         private void EVreadBTN_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(EventIndextb.Text);
+            int index = Convert.ToInt32(EventIndextb.Text);
             opstate = OPSTATE.EVREAD;
             EventNumbertb.Text = EventNumbertb.Text.PadLeft(16, '0');
             complete = 0;
@@ -1622,7 +1782,7 @@ namespace PCTest
 
         private void ReadNxtBtn_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(EventIndextb.Text)+1;
+            int index = Convert.ToInt32(EventIndextb.Text)+1;
             EventIndextb.Text = index.ToString();
             opstate = OPSTATE.EVREAD;
             if (readall)
@@ -1658,7 +1818,7 @@ namespace PCTest
                 { // EVWRITEL
                     EventNumbertb.Text = EventNumbertb.Text.Substring(0, 14) 
                         + serialLine.Substring(13, 2);
-                    datasize = Convert.ToInt16(serialLine.Substring(15, 2), 16);
+                    datasize = Convert.ToInt32(serialLine.Substring(15, 2), 16);
                     if (datasize <= 5)
                     {
                         EventActiontb.Text = serialLine.Substring(17, datasize*2);
@@ -1696,7 +1856,7 @@ namespace PCTest
         private void EraseEVBtn_Click(object sender, EventArgs e)
         {
             SendEvEraseCmd(EventNumbertb.Text.PadLeft(16, '0'),
-                Convert.ToInt16(EventIndextb.Text));
+                Convert.ToInt32(EventIndextb.Text));
             displaylog();
         }
 
@@ -1713,7 +1873,7 @@ namespace PCTest
         private void PE_readbtn_Click(object sender, EventArgs e)
         {
             PE_index.Text = PE_index.Text.PadLeft(1, '0');
-            int index = Convert.ToInt16(PE_index.Text);
+            int index = Convert.ToInt32(PE_index.Text);
             opstate = OPSTATE.PEREAD;
             complete = 0;
             SendPeReadCmd(index);
@@ -1721,7 +1881,7 @@ namespace PCTest
 
         private void PEReadNxtBtn_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(PE_index.Text) + 1;
+            int index = Convert.ToInt32(PE_index.Text) + 1;
             PE_index.Text = index.ToString();
             opstate = OPSTATE.PEREAD;
             complete = 0;
@@ -1773,7 +1933,7 @@ namespace PCTest
 
         private void PE_writebtn_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(PE_index.Text);
+            int index = Convert.ToInt32(PE_index.Text);
             string eventstr = PE_nodeidtxt.Text.PadLeft(12, '0'); // 6 bytes of nodeid
             eventstr += PE_eventtxt.Text.PadLeft(4, '0').Substring(0, 4); // 2 byte event part
             SendPeWriteCmd(index, eventstr);
@@ -1781,7 +1941,7 @@ namespace PCTest
 
         private void PE_erasebtn_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(PE_index.Text);
+            int index = Convert.ToInt32(PE_index.Text);
             canmsg = ":X1E" + dNN + NIDa + "N";
             canmsg += hex((int)DAA.DAA_PEERASE, 2);  // opc
             canmsg += hex(index,4);                  // 2 bytes of index
@@ -1802,7 +1962,7 @@ namespace PCTest
 
         private void NVReadBtn_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(NVindextb.Text);
+            int index = Convert.ToInt32(NVindextb.Text);
             if (index < 0 || index > 255)
             {
                 NVindextb.Text = "0";
@@ -1844,7 +2004,7 @@ namespace PCTest
 
         private void NVwriteBTN_Click(object sender, EventArgs e)
         {
-            int index = Convert.ToInt16(NVindextb.Text);
+            int index = Convert.ToInt32(NVindextb.Text);
             if (index < 0 || index > 255)
             {
                 NVindextb.Text = "0";
@@ -1853,7 +2013,7 @@ namespace PCTest
             SendNvWriteCmd(hex(index, 2) + NVvaluetb.Text.PadLeft(2, '0'));
         }
 
-        //**************************************************************************
+       //**************************************************************************
 
 
     }

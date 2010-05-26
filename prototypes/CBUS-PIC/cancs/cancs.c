@@ -348,7 +348,7 @@ void DCCUpdate(void)
                     specialdccfull[dccslot] = (specialdccfull[dccslot]&0x0F)-1;
                     if (specialdccfull[dccslot]!=0)
                         specialdccfull[dccslot] |= OPMODEWRITE;
-                    if ((specialdccfull[dccslot]&0x01)==0)
+                    if ((specialdccfull[dccslot]&0x01)==1)
                         dccslot--;    // to force 2 consecutive write packets
                 }
                 else if (specialdccfull[dccslot]&DEACTIVATE) { 

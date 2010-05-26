@@ -41,10 +41,13 @@ BYTE EEPROMRead(unsigned int adr)
     return EEDATA;           // Return the data
 }
 
+#define EEPROMWriting EECON1bits.WR
+
 void EEPROMWrite(unsigned int adr, BYTE data)
 {
     far overlay BYTE intsave;
 
+    // while (EEPROMWriting) ;  // wait for write complete
     EECON1bits.EEPGD = 0;    // Configure access to EEPROM
     EECON1bits.CFGS = 0;     // Configure access to EEPROM
 #ifndef __18F2480
@@ -65,7 +68,7 @@ void EEPROMWrite(unsigned int adr, BYTE data)
     EECON1bits.WR = 1;       // Required to start write cycle
     INTCON = intsave;        // restore interrupts          
     EECON1bits.WREN = 0;     // Disable writes
-    while (EECON1bits.WR) ;  // wait
+    while (EEPROMWriting) ;  // wait for write complete
 }
 
 //*********************************************************************************

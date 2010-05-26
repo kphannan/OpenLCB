@@ -1,6 +1,6 @@
 /*  OpenLCB for MERG CBUS CANACC4/CANACC5/CANACC8/CANACE8C
 
-    15 Dec 2009
+    30 March 2010
 
     ACC4 - CDU point outputs
     ACC8 (also ACC5) 8 outputs
@@ -95,7 +95,7 @@ void InitRamFromEEPROM(void);
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (((PORTB & 0x03) << 1) |((PORTB&0x20)>>5))
 #endif
-
+/*
 #ifdef ACE8C
 #define LEARN PORTAbits.RA4    // learn switch
 #define UNLEARN PORTAbits.RA5  // unlearn / setup jumper
@@ -104,7 +104,7 @@ void InitRamFromEEPROM(void);
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (PORTA & 0x07)
 #endif
-
+*/
 #ifdef ACC8
 #define LEARN PORTAbits.RA1    // learn switch
 #define UNLEARN PORTAbits.RA0  // unlearn / setup jumper
@@ -162,6 +162,8 @@ BYTE current_output;            // updated by hp int from new_output during idle
 BYTE servo_state;		        // interrupt state counter
 BYTE servo_index;               // internal data for hp int
 BYTE servo_mask;
+BYTE servo_changetimeout;       // only one servo change at a time
+BYTE hp_i;                      // interrupt loop counter
 int next_tmr;                   // next time for interrupt timer100
 #pragma udata svo1
 far BYTE servo_on[NUM_SERVOS];  // servo endpoint
@@ -209,14 +211,25 @@ const rom BYTE xml[] =
 #ifdef ACC4
     "<EventData>\r\n"
       "<name>Event Number</name><bits>48</bits>\r\n"
+      "<name></name><bits>5</bits>\r\n"
+      "<name>Output</name><bits>3</bits>\r\n"
+    "</EventData>\r\n"
+#endif
+#ifdef ACC8
+    "<EventData>\r\n"
+      "<name>Event Number</name><bits>48</bits>\r\n"
+      "<name></name><bits>3</bits>\r\n"
+      "<name>Toggle</name><bits>1</bits>\r\n"
+      "<name>Polarity</name><bits>1</bits>\r\n"
       "<name>Output</name><bits>3</bits>\r\n"
     "</EventData>\r\n"
 #endif
 #ifdef SERV0
     "<EventData>\r\n"
       "<name>Event Number</name><bits>48</bits>\r\n"
-      "<name>Output</name><bits>3</bits>\r\n"
+      "<name></name><bits>4</bits>\r\n"
       "<name>Polarity</name><bits>1</bits>\r\n"
+      "<name>Output</name><bits>3</bits>\r\n"
     "</EventData>\r\n"
     "<NodeVariable>\r\n"
       "<name>Servo#0 off position</name><default>125</default>\r\n"
@@ -343,9 +356,17 @@ void hpinterrupt(void) {
         servo_state = 0;
         servo_index = 0;
         servo_mask = 1;
-        if (current_output != new_output) { // only update when idle
-            current_output = new_output; 
-            timer_20ms = 100; // 2 seconds
+        if (servo_changetimeout)
+            servo_changetimeout--;
+        else if (current_output != new_output) { // only update when idle
+            for (hp_i=0; hp_i<8; hp_i++) {
+                if ((current_output & BitMask[hp_i]) != (new_output & BitMask[hp_i])) {
+                    current_output ^= BitMask[hp_i]; 
+                    timer_20ms = 100; // 2 seconds
+                    servo_changetimeout = 30; // 600 msec between changes
+                    break;
+                }
+            }
         }
         else if (timer_20ms > 0) { // 2 sec = 100 x 20 ms
             timer_20ms--;
@@ -1144,6 +1165,7 @@ void main(void) {
     PIE1bits.TMR1IE = 1;
     EnableInterrupts();		// enable interrupts
     timer_20ms = 100;         // Power up servos for 2s
+    servo_changetimeout = 50; // 1 sec delay before a servo changes
 #endif
 
 #ifdef ACE8C

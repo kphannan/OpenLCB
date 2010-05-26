@@ -47,7 +47,6 @@ enum FT
     FT_TOF     = 0x8020,   // Track Off, broadcast from CS
     FT_TON     = 0x8021,   // Track On or Normal operation, broadcast from CS
     FT_ESTOP   = 0x8022,   // Track Stopped (em. stop)
-    // FT_CSRESET = 0x8023,   // Command station Reset
     FT_RTOF    = 0x8024,   // Request Track Off, from CAB
     FT_RTON    = 0x8025,   // Request Track On or Normal operation, from CAB
     FT_RESTP   = 0x8026,   // Request Emergency Stop ALL
@@ -81,22 +80,21 @@ enum FT
 
 enum DAA {
     DAA_DATA     = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
-    DAA_DATA0    = 0x00,
-    DAA_DATA1    = 0x01,
-    DAA_DATA2    = 0x02,
-    DAA_DATA3    = 0x03,
-    DAA_DATA4    = 0x04,
-    DAA_DATA5    = 0x05,
-    DAA_DATA6    = 0x06,
-    DAA_DATA7    = 0x07,
-    DAA_DATA8    = 0x08,
-    DAA_DATA9    = 0x09,
-    DAA_DATAA    = 0x0A,
-    DAA_DATAB    = 0x0B,
-    DAA_DATAC    = 0x0C,
-    DAA_DATAD    = 0x0D,
-    DAA_DATAE    = 0x0E,
-    DAA_DATAF    = 0x0F,
+    DAA_DATA1 = 0x01,
+    DAA_DATA2 = 0x02,
+    DAA_DATA3 = 0x03,
+    DAA_DATA4 = 0x04,
+    DAA_DATA5 = 0x05,
+    DAA_DATA6 = 0x06,
+    DAA_DATA7 = 0x07,
+    DAA_DATA8 = 0x08,
+    DAA_DATA9 = 0x09,
+    DAA_DATA10 = 0x0A,
+    DAA_DATA11 = 0x0B,
+    DAA_DATA12 = 0x0C,
+    DAA_DATA13 = 0x0D,
+    DAA_DATA14 = 0x0E,
+    DAA_DATA15 = 0x0F,
     DAA_ACK      = 0x10,      // ack with status
 // Loader
     DAA_UPGSTART = 0x20,      // enter loader
@@ -126,7 +124,6 @@ enum DAA {
 
 enum ACK {
     ACK_OK       = 0,         // OK
-    // ACK_CRC      = 1,         // CRC error, no longer used
     ACK_TIMEOUT  = 2,         // timeout on data transfer, 2 seconds
     ACK_NODATA   = 3,         // The requested data does not exist 
     ACK_NOSPACE  = 4,         // No space to store this data 
