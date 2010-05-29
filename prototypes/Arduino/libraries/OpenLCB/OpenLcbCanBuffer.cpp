@@ -12,13 +12,24 @@
 #include "NodeID.h"
 #include "EventID.h"
 
+
+// for definiton, see
+// http://openlcb.sf.net/trunk/documents/can/index.html
+// 
+// In the following masks, bit 0 of the frame is 0x10000000L
+//
+
+// bit 1
 #define MASK_FRAME_TYPE 0x08000000L
 
+// bit 17-28
 #define MASK_SRC_ALIAS 0x00000FFFL
 
+// bit 2-16
 #define MASK_VARIABLE_FIELD 0x07FFF000L
 #define SHIFT_VARIABLE_FIELD 12
 
+// bit 2-4
 #define MASK_OPENLCB_FORMAT 0x7000
 #define SHIFT_OPENLCB_FORMAT 12
 
