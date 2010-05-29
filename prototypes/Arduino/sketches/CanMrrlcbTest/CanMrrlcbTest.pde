@@ -131,7 +131,7 @@ void loop() {
 }
 
 
-// to test (messages in JMRI format)
+// to test (messages in JMRI format; check that these are in new 12bit-NIDa format)
 //    send a CIM frame which should get a RIM: [1002d000]
 //    then a RIM which should restart sequence: [17ffd000]
 
