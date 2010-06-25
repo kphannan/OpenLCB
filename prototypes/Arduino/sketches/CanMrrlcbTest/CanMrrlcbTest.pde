@@ -27,7 +27,7 @@ int producer_pin_record;
 
 // OpenLCB definitions
 #include "OpenLcbCanInterface.h"
-#include "openLcbCanBuffer.h"
+#include "OpenLcbCanBuffer.h"
 #include "NodeID.h"
 #include "EventID.h"
 
@@ -96,7 +96,7 @@ void setup()
 
 void loop() {
   // check for input frames, acquire if present
-  boolean rcvFramePresent = OpenLcb_can_get_frame(&rxBuffer);
+  bool rcvFramePresent = OpenLcb_can_get_frame(&rxBuffer);
   
   // process link control first
   link.check();
@@ -127,17 +127,19 @@ void loop() {
      }
   }
 
-
 }
 
 
-// to test (messages in JMRI format; check that these are in new 12bit-NIDa format)
-//    send a CIM frame which should get a RIM: [1002d000]
-//    then a RIM which should restart sequence: [17ffd000]
+// to test (messages in JMRI format)
+//    send a CIM frame which should get a RIM:  [110036ba]
+//    then a RIM which should restart sequence: [17fff6ba]
 
-//    send a Verify Node frame of [1b5fd00F] 2 3 4 5 6 7
-//    send a Request Consumers frame of [1b7fd00F] 1 2 3 4 5 6 7 8
-//    send a Request Producers frame of [1b9fd00F] 8 7 6 5 4 3 2 1
-//    send a Request Events frame of [1bbfd00F] 2 3 4 5 6 7
+// (these need to be redone)
+//    send a Verify Node frame of [180Af00f] 2 3 4 5 6 7
+//    send a Request Consumers frame of [1824F00F] 1 2 3 4 5 6 7 8
+//    send a Request Producers frame of [1828F00F] 8 7 6 5 4 3 2 1
+//    send a Request Events frame of [182BF00F] 2 3 4 5 6 7
 
-//    produce an event with [1b4fd00F] 8 7 6 5 4 3 2 1
+//    produce an event matching 1  [182DF00F] 8 7 6 5 4 3 2 1
+
+

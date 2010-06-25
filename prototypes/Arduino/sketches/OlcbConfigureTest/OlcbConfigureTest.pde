@@ -18,8 +18,8 @@
 class foo{};  // force Arduino environment to treat the rest of this file as C++
 
 // init for serial communications
-//#define         BAUD_RATE       115200
-#define         BAUD_RATE       57600
+#define         BAUD_RATE       115200
+//#define         BAUD_RATE       57600
 
 // demo I/O pins
 #define CONSUMER_PIN 9
@@ -110,7 +110,7 @@ void setup()
   Serial.begin(BAUD_RATE);
   
   // show we've started to run
-  logstr("Starting OlcbConfigureTest\n");
+  logstr("\nStarting OlcbConfigureTest\n");
   
   // Initialize test I/O pins
   pinMode(CONSUMER_PIN,OUTPUT);
