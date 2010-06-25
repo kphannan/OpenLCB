@@ -45,11 +45,11 @@ void OpenLcb_can_init();
 // Can a (the) CAN buffer be used?  
 // Generally, indicates the buffer can be immediately
 // queued for transmit, so it make sense to prepare it now
-boolean OpenLcb_can_xmt_ready(OpenLcbCanBuffer* b);
+bool OpenLcb_can_xmt_ready(OpenLcbCanBuffer* b);
 
 // Queue a CAN frame for sending, if possible
 // Returns true if queued, false if not currently possible
-boolean OpenLcb_can_queue_xmt_immediate(OpenLcbCanBuffer* b);
+bool OpenLcb_can_queue_xmt_immediate(OpenLcbCanBuffer* b);
 
 // Queue a CAN frame for sending; waits until it can queue
 void OpenLcb_can_queue_xmt_wait(OpenLcbCanBuffer* b);
@@ -59,12 +59,12 @@ void OpenLcb_can_send_xmt(OpenLcbCanBuffer* b);
 
 // Check whether all frames have been sent,
 // a proxy for the link having gone idle
-boolean OpenLcb_can_xmt_idle();
+bool OpenLcb_can_xmt_idle();
 
 // Make the oldest received CAN frame available,
 // in the process removing it from the CAN subsystem.
 // Return false (zero) if no frame available.
-boolean OpenLcb_can_get_frame(OpenLcbCanBuffer* b);
+bool OpenLcb_can_get_frame(OpenLcbCanBuffer* b);
 
 
 #endif
