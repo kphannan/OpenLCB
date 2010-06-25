@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include "logging.h"
 
 // The following line is needed because the Arduino environment 
 // won't search a library directory unless the library is included 
@@ -17,8 +18,8 @@
 class foo{};  // force Arduino environment to treat the rest of this file as C++
 
 // init for serial communications
-#define         BAUD_RATE       115200
-//#define         BAUD_RATE       333333
+//#define         BAUD_RATE       115200
+#define         BAUD_RATE       57600
 
 // demo I/O pins
 #define CONSUMER_PIN 9
@@ -55,7 +56,7 @@ Configuration cfg(&dg, &str);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
-  //printf("consume datagram of length %d: ",length);
+  //logstr("consume datagram of length ");loghex(length); lognl();
   for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   //printf("\n");
   // pass to consumers
@@ -109,7 +110,7 @@ void setup()
   Serial.begin(BAUD_RATE);
   
   // show we've started to run
-  Serial.println();Serial.println("Starting CanMrrlcbTest");
+  logstr("Starting OlcbConfigureTest\n");
   
   // Initialize test I/O pins
   pinMode(CONSUMER_PIN,OUTPUT);
