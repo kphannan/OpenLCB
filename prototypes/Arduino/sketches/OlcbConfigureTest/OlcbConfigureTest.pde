@@ -24,6 +24,7 @@ class foo{};  // force Arduino environment to treat the rest of this file as C++
 // demo I/O pins
 #define CONSUMER_PIN 9
 #define PRODUCER_PIN 14
+int startmem;
 int producer_pin_record;
 
 // OpenLCB definitions
@@ -52,7 +53,7 @@ unsigned int rcvCallback(uint8_t *rbuf, unsigned int length);
 
 Datagram dg(&txBuffer, datagramCallback, &link);
 Stream str(&txBuffer, rcvCallback, &link);
-Configuration cfg(&dg, &str);
+Configuration cfg(&dg, &str,0,0,0);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
@@ -101,6 +102,8 @@ void pceCallback(int index){
 }
 PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
 
+int endmem;
+
 /**
  * This setup is just for testing
  */
@@ -111,7 +114,7 @@ void setup()
   
   // show we've started to run
   logstr("\nStarting OlcbConfigureTest\n");
-  
+
   // Initialize test I/O pins
   pinMode(CONSUMER_PIN,OUTPUT);
   digitalWrite(CONSUMER_PIN,HIGH);
