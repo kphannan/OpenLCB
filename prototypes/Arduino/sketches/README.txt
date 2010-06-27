@@ -2,6 +2,11 @@ This directory contains various Arduino sketches for MRRLCB R&D.
 
 When you add one, please leave a brief note below.
 
+CAN2USBuino: (Alex Shepherd)
+    Use a LEDuino as a CAN-USB adapter. 
+    Uses GridConnect format (e.g. ":S65N01;")
+    Good starting example of CAN receive
+
 CanMrrlcbTest: (Bob Jacobsen)
     Demo library for doing the MRRLCB link setup.
     CONSUMER_PIN (9) is driven by consuming an event,
@@ -11,11 +16,10 @@ CAN2EtherNetuino: (Bob Jacobsen)
     A CAN-Ethernet bridge for the LEDuino.  Just forwards
     frames, not a full OpenLCB router.
 
-CAN2USBuino: (Alex Shepherd)
-    Use a LEDuino as a CAN-USB adapter. 
-    Uses GridConnect format (e.g. ":S65N01;")
 
-
+OlcbConfigureTest (Bob Jacobsen)
+    Development of an OpenLCB node with
+    full configuration support
 
 CAN2USBuinoDPH2090329: (David Harris)
     Private experiment by dph
@@ -37,6 +41,9 @@ CAN2USBuinoRamp: (David Harris)
     
 MrrlcbCanEtherNet: (Bob Jacobsen)
     Develop an OpenLCB Ethernet router - not yet done
+    
+MrrLcbCanLocoNet
+    LocoNet adapter work by Alex Shepherd
     
 -------------------------
 
