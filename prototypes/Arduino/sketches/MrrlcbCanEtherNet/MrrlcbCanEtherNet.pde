@@ -9,10 +9,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// The following line is needed because the Arduino environment 
+// The following lines are needed because the Arduino environment 
 // won't search a library directory unless the library is included 
 // from the top level file (this file)
 #include <CAN.h>
+#include <EEPROM.h>
 
 class foo{};  // force Arduino environment to treat the rest of this file as C++
 
@@ -102,8 +103,8 @@ void loop() {
     // store any node aliases that are confirmed
     //nodes.receivedFrame(&rxBuffer);
     
-    // forward via server
-    server.write(toArray(rxBuffer), toArrayLen(rxBuffer));
+    // ToDo: forward via server
+    //server.write(toArray(rxBuffer), toArrayLen(rxBuffer));
   }
 
   // if link is initialized, higher-level operations possible
@@ -115,16 +116,16 @@ void loop() {
   // if client data available, process
   Client client = server.available();
   if (client) {
-    // client data into buffer until message frame complete
-    fillInputBuffer(client.read());
+    // ToDo: client data into buffer until message frame complete
+    // fillInputBuffer(client.read());
   }
   // see if have accumulated any messages to send
-  if (inputBufferReady() && isTxBufferFree()) {
+  if ( false /* Todo: inputBufferReady()*/ && false /* ToDo: isTxBufferFree() */) {
     // send CAN frame from buffered input
-    if(can_send_message(inputBufferFrame())) {
+    //if(can_send_message(inputBufferFrame())) {
       // when successfully sent, drop from buffer
-      inputBufferFrameSent(); 
-    }
+      // ToDo: inputBufferFrameSent(); 
+    //}
     
   }
   

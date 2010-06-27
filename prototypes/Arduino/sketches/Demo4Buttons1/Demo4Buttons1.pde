@@ -18,10 +18,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// The following line is needed because the Arduino environment 
+// The following lines are needed because the Arduino environment 
 // won't search a library directory unless the library is included 
 // from the top level file (this file)
 #include <CAN.h>
+#include <EEPROM.h>
 class foo{};  // force Arduino environment to treat the rest of this file as C++
 
 #define CEVENTS 0
