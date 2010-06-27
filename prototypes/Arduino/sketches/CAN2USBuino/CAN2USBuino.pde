@@ -17,8 +17,8 @@ char    	strBuf[10] ;	// String Buffer
 #define         RX_CTS_PIN      9
 #define         RX_BUF_LOW      32 
 #define         RX_BUF_HIGH     96
-//#define         BAUD_RATE       115200
-#define         BAUD_RATE       333333
+#define         BAUD_RATE       115200
+//#define         BAUD_RATE       333333
 
 
 char    	rxBuff[RX_BUF_SIZE];    // :lddddddddldddddddddddddddd:0
@@ -61,9 +61,9 @@ void setup()
   can_init(BITRATE_125_KBPS);
 	
   // Dump out the CAN Controller Registers
-  Serial.println(":I Before regdump ;");
-  can_regdump();
-  Serial.println(":I After regdump ;");
+  //Serial.println(":I Before regdump ;");
+  //can_regdump();
+  //Serial.println(":I After regdump ;");
   
   ptxCAN = NULL;
 }
