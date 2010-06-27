@@ -10,9 +10,10 @@
 #include <stdio.h>
 #include "logging.h"
 
-// The following line is needed because the Arduino environment 
+// The following lines are needed because the Arduino environment 
 // won't search a library directory unless the library is included 
 // from the top level file (this file)
+#include <EEPROM.h>
 #include <CAN.h>
 
 class foo{};  // force Arduino environment to treat the rest of this file as C++
@@ -24,7 +25,6 @@ class foo{};  // force Arduino environment to treat the rest of this file as C++
 // demo I/O pins
 #define CONSUMER_PIN 9
 #define PRODUCER_PIN 14
-int startmem;
 int producer_pin_record;
 
 // OpenLCB definitions
@@ -38,21 +38,22 @@ int producer_pin_record;
 #include "Datagram.h"
 #include "Stream.h"
 #include "Configuration.h"
+#include "NodeMemory.h"
 #include "PCE.h"
 
 OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
 OpenLcbCanBuffer*    ptxCAN;
 
-NodeID nodeid(2,3,4,5,6,7);    // This node's ID
+NodeID nodeid(2,3,4,5,6,7);    // This node's default ID
 
 LinkControl link(&txBuffer, &nodeid);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from);
-unsigned int rcvCallback(uint8_t *rbuf, unsigned int length);
+unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length);
 
 Datagram dg(&txBuffer, datagramCallback, &link);
-Stream str(&txBuffer, rcvCallback, &link);
+Stream str(&txBuffer, streamRcvCallback, &link);
 Configuration cfg(&dg, &str,0,0,0);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
@@ -67,7 +68,7 @@ unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int f
 }
 
 unsigned int resultcode;
-unsigned int rcvCallback(uint8_t *rbuf, unsigned int length){
+unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
   // invoked when a stream frame arrives
   //printf("consume frame of length %d: ",length);
   for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
@@ -77,32 +78,31 @@ unsigned int rcvCallback(uint8_t *rbuf, unsigned int length){
 
 // Events this node can produce, used by PCE
 Event pEvents[] = {
-    Event(1,2,3,4,5,6,7,8), 
-    Event(8,7,6,5,4,3,2,1)
+    Event(), 
+    Event()
 };
 int pEventNum = 2;
 
 // Events this node can consume, used by PCE
 Event cEvents[] = {
-    Event(1,2,3,4,5,6,7,8), 
-    Event(8,7,6,5,4,3,2,1)
+    Event(), 
+    Event()
 };
 int cEventNum = 2;
 
 void pceCallback(int index){
   // invoked when an event is consumed
-  Serial.print("consume ");Serial.println(index);
+  //Serial.print("consume ");Serial.println(index);
   if (index == 0) {
     digitalWrite(CONSUMER_PIN, LOW);
   } else if (index == 1) {
     digitalWrite(CONSUMER_PIN, HIGH);
-  } else {
-      Serial.print("error index ");Serial.println(index);
   }
 }
-PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
 
-int endmem;
+NodeMemory nm(0);  // allocate from start of EEPROM
+
+PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
 
 /**
  * This setup is just for testing
@@ -113,7 +113,7 @@ void setup()
   Serial.begin(BAUD_RATE);
   
   // show we've started to run
-  logstr("\nStarting OlcbConfigureTest\n");
+  logstr("\nOlcbConfigureTest\n");
 
   // Initialize test I/O pins
   pinMode(CONSUMER_PIN,OUTPUT);
@@ -121,6 +121,10 @@ void setup()
   pinMode(PRODUCER_PIN,INPUT);
   digitalWrite(PRODUCER_PIN,HIGH);
   
+  // read OpenLCB from EEPROM
+  //nm.forceInit(); // if need to go back to start
+  nm.setup(&nodeid, cEvents, cEventNum, pEvents, pEventNum);  
+ 
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
   
@@ -157,10 +161,8 @@ void loop() {
      if (producer_pin_record != digitalRead(PRODUCER_PIN)) {
          producer_pin_record = digitalRead(PRODUCER_PIN);
          if (producer_pin_record == LOW) {
-             Serial.println("p0");
              p.produce(0);
          } else {
-             Serial.println("p1");
              p.produce(1);
          }
      }
