@@ -54,7 +54,20 @@ unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length);
 
 Datagram dg(&txBuffer, datagramCallback, &link);
 Stream str(&txBuffer, streamRcvCallback, &link);
-Configuration cfg(&dg, &str,0,0,0);
+
+/**
+ * Get and put routines that 
+ * use a test memory space.
+ */
+uint8_t test_mem[200];
+const uint8_t getRead(int address, int space) {
+    return *(test_mem+address);
+}
+void getWrite(int address, int space, uint8_t val) {
+    *(test_mem+address) = val;
+}
+
+Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
