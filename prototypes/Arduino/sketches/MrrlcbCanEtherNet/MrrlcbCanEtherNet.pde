@@ -74,7 +74,7 @@ void setup()
   
   // show we're starting to run
   delay(100);
-  Serial.println();Serial.println("Starting CanMrrlcbTest");
+  Serial.println();Serial.println("\nStarting MrrlcbCanEtherNet\n");
   
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
