@@ -21,6 +21,10 @@ OlcbConfigureTest (Bob Jacobsen)
     Development of an OpenLCB node with
     full configuration support
 
+OlcbServoNode (Bob Jacobsen)
+    Development of an OpenLCB node 
+    for driving a servo
+
 CAN2USBuinoDPH2090329: (David Harris)
     Private experiment by dph
 CAN2USBuinoDPH2090329_2: (David Harris)
