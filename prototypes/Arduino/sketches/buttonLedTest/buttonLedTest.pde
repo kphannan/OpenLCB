@@ -8,6 +8,12 @@
 // b0.on(period) will turn on the LED, and flash at period in ms,
 //     period=0 is off, period=1 is on
 
+// Hardware is:
+//  +5V---R1---LED>|----pin----R2----button---gnd
+// where R1 is 0.5-1k, R2 is >0.5k.
+// Values of 500 and 1k work well for cheap LEDs. 
+// For high intensity LEDs, R1 should perhaps be 1k.  
+
 
 class buttonLed {
   private:
@@ -86,7 +92,7 @@ class buttonLed {
     }
 };
 
-buttonLed b0(14,LOW);
+buttonLed b0(15,LOW);
 static boolean ob = false;
 static boolean rst = false;
 void setup() {
@@ -117,7 +123,7 @@ void loop() {
     Serial.println("Reset"); // reset if button held down more than 3 seconds. 
     rst = true;
   }
-  delay(5);
+//  delay(5);
 }
         
         
