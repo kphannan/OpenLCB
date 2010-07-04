@@ -5,8 +5,16 @@
 // b0.duration will return how long the button has been in its current state in ms
 // b0.lastDuration will return how long it was in the last state, in msec
 //
-// b0.on(period) will turn on the LED, and flash at period in ms,
-//     period=0 is off, period=1 is on
+// b0.on(pattern) will drive the LED from the given pattern, LSB first
+//     0 bits in pattern are off, 1 bits are on
+//     each bit shows for 64 msec, aligned across all ButtonLed instances
+//  full off:             0x0L
+//  full on:             ~0x0L
+//  slowest flash: 0x0000FFFFL
+//  fastest flash: 0x55555555L
+//  blink:         0x00000003L
+//  double blink:  0x00000033L
+//  wink:          0xFFFFFFFEL
 
 // Hardware is:
 //  +5V---R1---LED>|----pin----R2----button---gnd
@@ -18,33 +26,35 @@
 class ButtonLed {
   private:
     long lastTime;
-    long flashTime;
     boolean down;
     int sample;
+    bool next;
   public:
     byte pin;
-    boolean ledState;
+    bool ledState;
     long debounce;
     int sense; // LOW=DOWN, HIGH=UP
     long duration;
     long lastDuration;
-    long lperiod;
+    long pattern;
 
     ButtonLed(byte p) {
       pin=p;
       debounce=50;
       sense=HIGH;
+      next = true;
     }
     ButtonLed(byte p,int s) {
       pin=p;
       sense=s;
       debounce=50;
+      next = true;
     }
-    void on(long per) {
-      lperiod=per;
-      ledState=LOW;  // turns LED on
-      if(per==0) ledState=HIGH;  // turns LED off
-      flashTime=millis();
+    void on(long mask) {
+      pattern = mask;
+      ledState=HIGH;  // turns LED off
+      if( (pattern&0x1) != 0) ledState=LOW;  // turns LED on
+      next = true;
       pinMode(pin,OUTPUT);
       digitalWrite(pin,ledState); // initialize
     }
@@ -83,12 +93,18 @@ class ButtonLed {
         pinMode(pin,OUTPUT);
         digitalWrite(pin,ledState); 
       }
-      if(lperiod>1) {
-        if((millis()-flashTime)>lperiod) {
-          ledState = !ledState;
-          flashTime=millis();
-          digitalWrite(pin,ledState); 
+      if ( next && (millis()&0x3F) == 0) {
+        if ((pattern & 0x1) !=0) {
+           ledState = LOW;
+           pattern = 0x80000000 | (pattern>>1);
+        } else {
+           ledState = HIGH;
+           pattern = 0x7FFFFFFF & (pattern>>1);
         }
+        digitalWrite(pin,ledState);
+        next = false;
+      } else {
+        if ( (millis()&0x3F) != 0) next = true;
       }
       return down;
     }
