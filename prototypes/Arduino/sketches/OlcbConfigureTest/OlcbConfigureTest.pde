@@ -40,6 +40,7 @@ int producer_pin_record;
 #include "Configuration.h"
 #include "NodeMemory.h"
 #include "PCE.h"
+#include "BG.h"
 
 OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
@@ -72,10 +73,10 @@ Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
   //logstr("consume datagram of length ");loghex(length); lognl();
-  for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
+  //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   //printf("\n");
   // pass to consumers
-  cfg.receivedDatagram(rbuf, length, from);
+  //cfg.receivedDatagram(rbuf, length, from);
   
   return 0;  // return pre-ordained result
 }
@@ -84,7 +85,7 @@ unsigned int resultcode;
 unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
   // invoked when a stream frame arrives
   //printf("consume frame of length %d: ",length);
-  for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
+  //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   //printf("\n");
   return resultcode;  // return pre-ordained result
 }
@@ -92,41 +93,50 @@ unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
 // Events this node can produce, used by PCE
 Event pEvents[] = {
     Event(), 
+    Event(),
+    Event(), 
     Event()
 };
-int pEventNum = 2;
+int pEventNum = 4;
 
 // Events this node can consume, used by PCE
 Event cEvents[] = {
     Event(), 
+    Event(),
+    Event(), 
     Event()
 };
-int cEventNum = 2;
+int cEventNum = 4;
 
 void pceCallback(int index){
   // invoked when an event is consumed
   //Serial.print("consume ");Serial.println(index);
-  if (index == 0) {
-    digitalWrite(CONSUMER_PIN, LOW);
-  } else if (index == 1) {
-    digitalWrite(CONSUMER_PIN, HIGH);
-  }
+  //if (index == 0) {
+  //  digitalWrite(CONSUMER_PIN, LOW);
+  //} else if (index == 1) {
+  //  digitalWrite(CONSUMER_PIN, HIGH);
+  //}
 }
 
 NodeMemory nm(0);  // allocate from start of EEPROM
 
-PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
+PCE pce(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
+ButtonLed p14(14);
+ButtonLed p15(15);
+ButtonLed p16(16);
+ButtonLed p17(17);
+ButtonLed bC[] = {p14,p15,p16,p17};
+ButtonLed blue(18);
+ButtonLed gold(19);
+BG bg(&pce, bC, 4, bC, 4, &blue, &gold);
 
 /**
  * This setup is just for testing
  */
 void setup()
 {
-  // set up serial comm
-  Serial.begin(BAUD_RATE);
-  
-  // show we've started to run
-  logstr("\nOlcbConfigureTest\n");
+  // set up serial comm; may not be space for this!
+  //Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
 
   // Initialize test I/O pins
   pinMode(CONSUMER_PIN,OUTPUT);
@@ -155,45 +165,39 @@ void loop() {
     // received a frame, ask if changes link state
     link.receivedFrame(&rxBuffer);
   }
-
+  
   // if link is initialized, higher-level operations possible
   if (link.linkInitialized()) {
      // if frame present, pass to PC handler
      if (rcvFramePresent) {
-        p.receivedFrame(&rxBuffer);
+        pce.receivedFrame(&rxBuffer);
         dg.receivedFrame(&rxBuffer);
         str.receivedFrame(&rxBuffer);
      }
-     // periodic processing of any PCE state changes
-     p.check();
+     // periodic processing of any state changes
+     pce.check();
      dg.check();
      str.check();
      cfg.check();
-
+     bg.check();
+     
      // Demo: handle possible production of events from pin
-     if (producer_pin_record != digitalRead(PRODUCER_PIN)) {
-         producer_pin_record = digitalRead(PRODUCER_PIN);
-         if (producer_pin_record == LOW) {
-             p.produce(0);
-         } else {
-             p.produce(1);
-         }
-     }
+     //if (producer_pin_record != digitalRead(PRODUCER_PIN)) {
+     //    producer_pin_record = digitalRead(PRODUCER_PIN);
+     //    if (producer_pin_record == LOW) {
+     //        p.produce(0);
+     //    } else {
+     //        p.produce(1);
+     //    }
+     //}
+  } else {
+    // link not up, but continue to show indications on blue and gold
+    blue.process();
+    gold.process();
   }
 
 }
 
 
-// to test (messages in JMRI format)
-//    send a CIM frame which should get a RIM:  [110036ba]
-//    then a RIM which should restart sequence: [17fff6ba]
-
-// (these need to be redone)
-//    send a Verify Node frame of [180Af00f] 2 3 4 5 6 7
-//    send a Request Consumers frame of [1824F00F] 1 2 3 4 5 6 7 8
-//    send a Request Producers frame of [1828F00F] 8 7 6 5 4 3 2 1
-//    send a Request Events frame of [182BF00F] 2 3 4 5 6 7
-
-//    produce an event matching 1  [182DF00F] 8 7 6 5 4 3 2 1
 
 
