@@ -78,15 +78,13 @@ class buttonLed {
           }
         }
       }
- //     else {
-        if(lperiod>1) {
-          if((millis()-flashTime)>lperiod) {
-            ledState = !ledState;
-            flashTime=millis();
-          }
-          pinMode(pin,OUTPUT);
-          digitalWrite(pin,ledState); 
-//        }
+      if(lperiod>1) {
+        if((millis()-flashTime)>lperiod) {
+          ledState = !ledState;
+          flashTime=millis();
+        }
+        pinMode(pin,OUTPUT);
+        digitalWrite(pin,ledState); 
       }
       return down;
     }
@@ -104,7 +102,10 @@ void setup() {
 void loop() {
   boolean b=b0.process();
   if(b){                                              // if button down
-    if(b0.duration>3000) Serial.println("Three");     // do something if its down for more than 3 sec
+    if(b0.duration>3000) {
+      Serial.println("Three");     // do something if its down for more than 3 sec
+//      b0.on(50L);     // <--- doesn't work !?
+    }
     else if(b0.duration>2000) Serial.println("Two");  // ..if 2 sec
     else if(b0.duration>1000) Serial.println("One");  // ..if 1 sec
   }
@@ -121,9 +122,10 @@ void loop() {
   }
   if(!rst && !b && b0.lastDuration>3000) {
     Serial.println("Reset"); // reset if button held down more than 3 seconds. 
+    b0.on(25);               // very rapid flash
     rst = true;
   }
-//  delay(5);
+//  delay(5);   // include to mimic other processing.
 }
         
         
