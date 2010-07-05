@@ -22,15 +22,16 @@
 // Values of 500 and 1k work well for cheap LEDs. 
 // For high intensity LEDs, R1 should perhaps be 1k.  
 
+#include <stdint.h>
 
 class ButtonLed {
   private:
     long lastTime;
-    boolean down;
+    bool down;
     int sample;
     bool next;
   public:
-    byte pin;
+    uint8_t pin;
     bool ledState;
     long debounce;
     int sense; // LOW=DOWN, HIGH=UP
@@ -38,13 +39,13 @@ class ButtonLed {
     long lastDuration;
     long pattern;
 
-    ButtonLed(byte p) {
+    ButtonLed(uint8_t p) {
       pin=p;
       debounce=50;
       sense=HIGH;
       next = true;
     }
-    ButtonLed(byte p,int s) {
+    ButtonLed(uint8_t p,int s) {
       pin=p;
       sense=s;
       debounce=50;
@@ -58,7 +59,7 @@ class ButtonLed {
       pinMode(pin,OUTPUT);
       digitalWrite(pin,ledState); // initialize
     }
-    boolean process() {
+    bool process() {
       int s;
       sample+=1; 
       if(sample>10) {          // sample button every 100 processes
