@@ -1,10 +1,11 @@
-//===========================================================
+//==============================================================
 // OlcbConfigureTest
-//   Developing (eventual) classes for OpenLCB
+//   A prototype of a 4-channel OpenLCB board with all features!
 // 
 //   Bob Jacobsen 2010
 //      based on examples by Alex Shepherd and David Harris
-//===========================================================
+//==============================================================
+#include "WProgram.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -16,16 +17,9 @@
 #include <EEPROM.h>
 #include <CAN.h>
 
-class foo{};  // force Arduino environment to treat the rest of this file as C++
-
 // init for serial communications
 #define         BAUD_RATE       115200
 //#define         BAUD_RATE       57600
-
-// demo I/O pins
-#define CONSUMER_PIN 9
-#define PRODUCER_PIN 14
-int producer_pin_record;
 
 // OpenLCB definitions
 #include "OpenLcbCanInterface.h"
@@ -106,27 +100,50 @@ int eventNum = 8;
 
 
 void pceCallback(int index){
-  // invoked when an event is consumed
-  //Serial.print("consume ");Serial.println(index);
-  //if (index == 0) {
-  //  digitalWrite(CONSUMER_PIN, LOW);
-  //} else if (index == 1) {
-  //  digitalWrite(CONSUMER_PIN, HIGH);
-  //}
+  // invoked when an event is consumed; drive pins as needed
+  // from index
+  //
+  // sample code uses low bit of pattern to drive pin
+  //
+  // buttons[index].on(patterns[index]&0x1);
 }
 
 NodeMemory nm(0);  // allocate from start of EEPROM
 
 PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback);
+
+// Set up Blue/Gold configuration
+
 ButtonLed p14(14);
 ButtonLed p15(15);
 ButtonLed p16(16);
 ButtonLed p17(17);
+
 ButtonLed buttons[] = {p14,p14,p15,p15,p16,p16,p17,p17};
 long patterns[] = {3L,~3L,3L,~3L,3L,~3L,3L,~3L};
+
 ButtonLed blue(18);
 ButtonLed gold(19);
+
 BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
+
+bool states[] = {false, false, false, false};
+void produceFromPins() {
+  // called from loop(), this looks at pins and 
+  // and decides which events to fire.
+  // with pce.produce(i);
+  bool temp;
+  for (int i = 0; i<4; i++) {
+    temp = buttons[i*2].process();
+    if (states[i] != temp) {
+      states[i] = temp;
+      if (temp) 
+        pce.produce(i*2);
+      else
+        pce.produce(i*2+1);
+    }
+  }
+}
 
 /**
  * This setup is just for testing
@@ -135,15 +152,9 @@ void setup()
 {
   // set up serial comm; may not be space for this!
   //Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
-
-  // Initialize test I/O pins
-  pinMode(CONSUMER_PIN,OUTPUT);
-  digitalWrite(CONSUMER_PIN,HIGH);
-  pinMode(PRODUCER_PIN,INPUT);
-  digitalWrite(PRODUCER_PIN,HIGH);
   
   // read OpenLCB from EEPROM
-  //nm.forceInit(); // if need to go back to start
+  //nm.forceInit(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
  
   // Initialize OpenLCB CAN connection
@@ -178,16 +189,7 @@ void loop() {
      str.check();
      cfg.check();
      bg.check();
-     
-     // Demo: handle possible production of events from pin
-     //if (producer_pin_record != digitalRead(PRODUCER_PIN)) {
-     //    producer_pin_record = digitalRead(PRODUCER_PIN);
-     //    if (producer_pin_record == LOW) {
-     //        p.produce(0);
-     //    } else {
-     //        p.produce(1);
-     //    }
-     //}
+     produceFromPins();
   } else {
     // link not up, but continue to show indications on blue and gold
     blue.process();
