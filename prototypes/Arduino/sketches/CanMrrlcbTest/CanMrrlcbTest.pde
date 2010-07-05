@@ -44,19 +44,14 @@ NodeID nodeid(2,3,4,5,6,7);    // This node's ID
 
 LinkControl link(&txBuffer, &nodeid);
 
-// Events this node can produce, used by PCE
-Event pEvents[] = {
+// Events this node can produce and consume, used by PCE
+Event events[] = {
     Event(1,2,3,4,5,6,7,8), 
-    Event(8,7,6,5,4,3,2,1)
+    Event(17,18,19,20,21,22,23,24),
+    Event(33,34,35,36,37,38,39,40), 
+    Event(49,50,51,52,53,54,55,56)
 };
-int pEventNum = 2;
-
-// Events this node can consume, used by PCE
-Event cEvents[] = {
-    Event(1,2,3,4,5,6,7,8), 
-    Event(8,7,6,5,4,3,2,1)
-};
-int cEventNum = 2;
+int eventNum = 4;
 
 void pceCallback(int index){
   // invoked when an event is consumed
@@ -69,7 +64,7 @@ void pceCallback(int index){
       Serial.print("error index ");Serial.println(index);
   }
 }
-PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
+PCE p(events, eventNum, &txBuffer, &nodeid, pceCallback);
 
 /**
  * This setup is just for testing
@@ -130,17 +125,5 @@ void loop() {
 
 }
 
-
-// to test (messages in JMRI format)
-//    send a CIM frame which should get a RIM:  [110036ba]
-//    then a RIM which should restart sequence: [17fff6ba]
-
-// (these need to be redone)
-//    send a Verify Node frame of [180Af00f] 2 3 4 5 6 7
-//    send a Request Consumers frame of [1824F00F] 1 2 3 4 5 6 7 8
-//    send a Request Producers frame of [1828F00F] 8 7 6 5 4 3 2 1
-//    send a Request Events frame of [182BF00F] 2 3 4 5 6 7
-
-//    produce an event matching 1  [182DF00F] 8 7 6 5 4 3 2 1
 
 

@@ -90,9 +90,6 @@ unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
   return resultcode;  // return pre-ordained result
 }
 
-// This node produces no events
-Event pEvents[] = {};
-int pEventNum = 0;
 
 // Events this node can consume, used by PCE
 Event cEvents[] = {
@@ -101,6 +98,8 @@ Event cEvents[] = {
     Event()  // up
 };
 int cEventNum = 3;
+
+Servo servo;
 
 void pceCallback(int index){
   // invoked when an event is consumed
@@ -115,9 +114,7 @@ void pceCallback(int index){
 
 NodeMemory nm(0);  // allocate from start of EEPROM
 
-PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
-
-Servo servo;
+PCE p(cEvents, cEventNum, &txBuffer, &nodeid, pceCallback);
 
 /**
  * This setup is just for testing
@@ -134,7 +131,7 @@ void setup()
   
   // read OpenLCB from EEPROM
   //nm.forceInit(); // if need to go back to start
-  nm.setup(&nodeid, cEvents, cEventNum, pEvents, pEventNum);  
+  nm.setup(&nodeid, cEvents, cEventNum);  
  
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();

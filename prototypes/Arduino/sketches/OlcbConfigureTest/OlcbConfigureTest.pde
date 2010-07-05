@@ -32,6 +32,7 @@ int producer_pin_record;
 #include "OpenLcbCanBuffer.h"
 #include "NodeID.h"
 #include "EventID.h"
+#include "Event.h"
 
 // specific OpenLCB implementations
 #include "LinkControl.h"
@@ -90,23 +91,19 @@ unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
   return resultcode;  // return pre-ordained result
 }
 
-// Events this node can produce, used by PCE
-Event pEvents[] = {
-    Event(), 
-    Event(),
-    Event(), 
-    Event()
+// Events this node can produce or consume, used by PCE and loaded from EEPROM by NM
+Event events[] = {
+    Event(true, false), // produce? consume?
+    Event(true, false),
+    Event(true, false), 
+    Event(true, false), 
+    Event(true, false), 
+    Event(true, false), 
+    Event(true, false), 
+    Event(true, false)
 };
-int pEventNum = 4;
+int eventNum = 8;
 
-// Events this node can consume, used by PCE
-Event cEvents[] = {
-    Event(), 
-    Event(),
-    Event(), 
-    Event()
-};
-int cEventNum = 4;
 
 void pceCallback(int index){
   // invoked when an event is consumed
@@ -120,15 +117,16 @@ void pceCallback(int index){
 
 NodeMemory nm(0);  // allocate from start of EEPROM
 
-PCE pce(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
+PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback);
 ButtonLed p14(14);
 ButtonLed p15(15);
 ButtonLed p16(16);
 ButtonLed p17(17);
-ButtonLed bC[] = {p14,p15,p16,p17};
+ButtonLed buttons[] = {p14,p14,p15,p15,p16,p16,p17,p17};
+long patterns[] = {3L,~3L,3L,~3L,3L,~3L,3L,~3L};
 ButtonLed blue(18);
 ButtonLed gold(19);
-BG bg(&pce, bC, 4, bC, 4, &blue, &gold);
+BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
 
 /**
  * This setup is just for testing
@@ -146,7 +144,7 @@ void setup()
   
   // read OpenLCB from EEPROM
   //nm.forceInit(); // if need to go back to start
-  nm.setup(&nodeid, cEvents, cEventNum, pEvents, pEventNum);  
+  nm.setup(&nodeid, events, eventNum);  
  
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
