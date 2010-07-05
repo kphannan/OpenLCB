@@ -5,6 +5,7 @@
 //   Bob Jacobsen 2009
 //      based on examples by Alex Shepherd and David Harris
 //===========================================================
+#include "WProgram.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -14,8 +15,6 @@
 // from the top level file (this file)
 #include <CAN.h>
 #include <EEPROM.h>
-
-class foo{};  // force Arduino environment to treat the rest of this file as C++
 
 // init for serial communications
 #define         BAUD_RATE       115200
