@@ -104,8 +104,8 @@ ButtonLed p15(15);
 ButtonLed p16(16);
 ButtonLed p17(17);
 
-#define ShortBlinkOn   0x01010101L
-#define ShortBlinkOff  0xFEFEFEFEL
+#define ShortBlinkOn   0x00010001L
+#define ShortBlinkOff  0xFFFEFFFEL
 
 long patterns[] = {
   ShortBlinkOn,ShortBlinkOff,
@@ -124,19 +124,21 @@ void pceCallback(int index){
   // from index
   //
   // sample code uses inverse of low bit of pattern to drive pin all on or all off
+  // (pattern is mostly one way, blinking the other, hence inverse)
   //
   buttons[index]->on(patterns[index]&0x1 ? 0x0L : ~0x0L );
 }
 
 NodeMemory nm(0);  // allocate from start of EEPROM
+void store() { nm.store(&nodeid, events, eventNum); }
 
-PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback);
+PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback, store);
 
 // Set up Blue/Gold configuration
 
 BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
 
-bool states[] = {false, false, false, false};  // true gives initial report due to implied change
+bool states[] = {false, false, false, false};
 void produceFromPins() {
   // called from loop(), this looks at pins and 
   // and decides which events to fire.

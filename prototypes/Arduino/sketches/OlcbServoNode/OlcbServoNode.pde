@@ -112,8 +112,9 @@ void pceCallback(int index){
 }
 
 NodeMemory nm(0);  // allocate from start of EEPROM
+void store() { nm.store(&nodeid, cEvents, cEventNum); }
 
-PCE p(cEvents, cEventNum, &txBuffer, &nodeid, pceCallback);
+PCE p(cEvents, cEventNum, &txBuffer, &nodeid, pceCallback, store);
 
 /**
  * This setup is just for testing

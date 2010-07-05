@@ -63,7 +63,9 @@ void pceCallback(int index){
       Serial.print("error index ");Serial.println(index);
   }
 }
-PCE p(events, eventNum, &txBuffer, &nodeid, pceCallback);
+void store(){}
+
+PCE p(events, eventNum, &txBuffer, &nodeid, pceCallback, store);
 
 /**
  * This setup is just for testing
