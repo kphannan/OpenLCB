@@ -27,9 +27,11 @@ BG::BG(PCE* pc, ButtonLed* bC, long* pt, int n, ButtonLed* bptr, ButtonLed* gptr
 
       // initial blue/gold setting
       blue->on(0); // turn off 
-      lastBlue = blue->process();
+      blue->process();
+      lastBlue = blue->state;
       gold->on(UNREADY_BLINK); // unready blink until intialized
-      lastGold = gold->process();
+      gold->process();
+      lastGold = gold->state;
 }
   
 void BG::check() {
@@ -37,11 +39,12 @@ void BG::check() {
         started = true;
         gold->on(READY_BLINK); // turn off waiting to init flash, start heartbeat ready blink
     }
-    bool temp;
+
     // check if blue pressed
-    if (lastBlue != (temp = blue->process())) {
-        lastBlue = temp;
-        if (!temp) { // act on button down
+    blue->process();
+    if (lastBlue != blue->state) {
+        lastBlue = blue->state;
+        if (!lastBlue) { // act on button down
             // turn off current channel
             if (index>=0 && index<nEvents) 
                 buttons[index].on(0L);
@@ -56,17 +59,19 @@ void BG::check() {
             }
         }
     }
+
     // check if gold pressed
-    if (lastGold != (temp = gold->process())) {
-        lastGold = temp;
-        if (!temp) { // act on down
+    gold->process();
+    if (lastGold != gold->state) {
+        lastGold = gold->state;
+        if (!lastGold) { // act on down
             // if gold lit, send message
             if (gold->pattern == ~0L) {
                 if (index>=0 && index<nEvents) {
                     buttons[index].on(0x0); // off if lit
                     pce->sendTeach(index);
                 } // otherwise, nothing to do?
-                gold->on(0);  // turn off
+                gold->on(READY_BLINK);  // turn off (back to ready blink)
                 blue->on(0);  // turn off
                 index = -1;
             // if blue lit without gold, mark channel
@@ -84,8 +89,8 @@ void BG::check() {
         }
     }
     // process buttons to flash LEDs
-    for (int i = 0; i<nEvents; i++)
+    for (int i = 0; i<nEvents; i++) {
         buttons[i].process();
-    gold->process();
+    }
 }
   
