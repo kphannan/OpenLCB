@@ -5,7 +5,7 @@
 //   Bob Jacobsen 2010
 //      based on examples by Alex Shepherd and David Harris
 //==============================================================
-#include "WProgram.h"
+//#include "WProgram.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -17,9 +17,12 @@
 #include <EEPROM.h>
 #include <CAN.h>
 
+class foo{};
+
 // init for serial communications
-#define         BAUD_RATE       115200
-//#define         BAUD_RATE       57600
+//#define         BAUD_RATE       115200
+#define         BAUD_RATE       57600
+//#define         BAUD_RATE       19200
 
 // OpenLCB definitions
 #include "OpenLcbCanInterface.h"
@@ -36,6 +39,7 @@
 #include "NodeMemory.h"
 #include "PCE.h"
 #include "BG.h"
+#include "ButtonLed.h"
 
 OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
@@ -55,15 +59,16 @@ Stream str(&txBuffer, streamRcvCallback, &link);
  * Get and put routines that 
  * use a test memory space.
  */
-uint8_t test_mem[200];
+//uint8_t test_mem[100];
 const uint8_t getRead(int address, int space) {
-    return *(test_mem+address);
+    return 0; //*(test_mem+address);
 }
 void getWrite(int address, int space, uint8_t val) {
-    *(test_mem+address) = val;
+    //*(test_mem+address) = val;
 }
+void reset1() {}
 
-Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
+Configuration cfg(&dg, &str, &getRead, &getWrite, &reset1);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
@@ -87,25 +92,39 @@ unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
 
 // Events this node can produce or consume, used by PCE and loaded from EEPROM by NM
 Event events[] = {
-    Event(true, false), // produce? consume?
-    Event(true, false),
-    Event(true, false), 
-    Event(true, false), 
-    Event(true, false), 
-    Event(true, false), 
-    Event(true, false), 
-    Event(true, false)
+    Event(), Event(), Event(), Event(), 
+    Event(), Event(), Event(), Event() 
 };
 int eventNum = 8;
 
 
+ButtonLed p14(14);
+ButtonLed p15(15);
+ButtonLed p16(16);
+ButtonLed p17(17);
+
+#define ShortBlinkOn   0x000F000FL
+#define ShortBlinkOff  0xFFFEFFFEL
+
+ButtonLed buttons[] = {p14,p14,p15,p15,p16,p16,p17,p17};
+long patterns[] = {
+  ShortBlinkOn,ShortBlinkOff,
+  ShortBlinkOn,ShortBlinkOff,
+  ShortBlinkOn,ShortBlinkOff,
+  ShortBlinkOn,ShortBlinkOff
+};
+
+ButtonLed blue(18);
+ButtonLed gold(19);
+
 void pceCallback(int index){
+  logstr("pce callback\n");
   // invoked when an event is consumed; drive pins as needed
   // from index
   //
   // sample code uses low bit of pattern to drive pin
   //
-  // buttons[index].on(patterns[index]&0x1);
+  buttons[index].on(patterns[index]&0x1);
 }
 
 NodeMemory nm(0);  // allocate from start of EEPROM
@@ -114,17 +133,6 @@ PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback);
 
 // Set up Blue/Gold configuration
 
-ButtonLed p14(14);
-ButtonLed p15(15);
-ButtonLed p16(16);
-ButtonLed p17(17);
-
-ButtonLed buttons[] = {p14,p14,p15,p15,p16,p16,p17,p17};
-long patterns[] = {3L,~3L,3L,~3L,3L,~3L,3L,~3L};
-
-ButtonLed blue(18);
-ButtonLed gold(19);
-
 BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
 
 bool states[] = {false, false, false, false};
@@ -132,15 +140,14 @@ void produceFromPins() {
   // called from loop(), this looks at pins and 
   // and decides which events to fire.
   // with pce.produce(i);
-  bool temp;
   for (int i = 0; i<4; i++) {
-    temp = buttons[i*2].process();
-    if (states[i] != temp) {
-      states[i] = temp;
-      if (temp) 
+    if (states[i] != buttons[i*2].state) {
+      states[i] = buttons[i*2].state;
+      if (states[i]) {
         pce.produce(i*2);
-      else
+      } else {
         pce.produce(i*2+1);
+      }
     }
   }
 }
@@ -151,12 +158,16 @@ void produceFromPins() {
 void setup()
 {
   // set up serial comm; may not be space for this!
-  //Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
+  delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
   
   // read OpenLCB from EEPROM
   //nm.forceInit(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
- 
+  // set event types, now that number is known
+  for (int i=0; i<eventNum; i++) {
+      pce.newEvent(i,true,false); // produce, consume
+  }
+  
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
   
@@ -165,6 +176,7 @@ void setup()
 }
 
 void loop() {
+
   // check for input frames, acquire if present
   bool rcvFramePresent = OpenLcb_can_get_frame(&rxBuffer);
   
