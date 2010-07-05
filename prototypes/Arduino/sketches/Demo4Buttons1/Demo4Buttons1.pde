@@ -12,6 +12,7 @@
 //   Blue wired to pin 19.
 //   Four buttons wired to pins 14-17.
 //   Optional indicator-LED wired to pin 13.  
+#include "WProgram.h"
 
 #define OpenLcb
 #include <ctype.h>
@@ -23,7 +24,6 @@
 // from the top level file (this file)
 #include <CAN.h>
 #include <EEPROM.h>
-class foo{};  // force Arduino environment to treat the rest of this file as C++
 
 #define CEVENTS 0
 #define PEVENTS 4
@@ -56,24 +56,20 @@ NodeID nodeid(MAN0,MAN1,MAN2,MAN3,MAN4,BOARD);    // This node's ID
 LinkControl link(&txBuffer, &nodeid);
 
 // Events this node can produce, used by PCE
-Event pEvents[] = {
+Event events[] = {
     Event(MAN0,MAN1,MAN2,MAN3,MAN4,BOARD,0,11), // head 1, dark
     Event(MAN0,MAN1,MAN2,MAN3,MAN4,BOARD,0,11), // head 1, dark
     Event(MAN0,MAN1,MAN2,MAN3,MAN4,BOARD,0,11), // head 1, dark
     Event(MAN0,MAN1,MAN2,MAN3,MAN4,BOARD,0,11), // head 1, dark
 };
-#define pEventNum PEVENTS
-
-// Events this node can consume, used by PCE
-Event cEvents[] = {};
-#define cEventNum CEVENTS
+#define eventNum PEVENTS
 
 //static boolean nom[pEventNum+cEventNum];
 
 void pceCallback(int index){
   // invoked when an event is consumed
 }
-PCE p(cEvents, cEventNum, pEvents, pEventNum, &txBuffer, &nodeid, pceCallback);
+PCE p(events, eventNum, &txBuffer, &nodeid, pceCallback);
 #else
 #endif
 
