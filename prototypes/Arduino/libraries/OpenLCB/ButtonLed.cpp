@@ -20,24 +20,30 @@ void ButtonLed::process() {
   int s;
   sample+=1; 
   if(sample>10) {           // sample button every 10 calls
-    sample=0;               // reset cycle counter
 
-    // do input cycle
+    // do input setup
     pinMode(pin, INPUT);
     digitalWrite(pin,HIGH); // activate pull up
+    duration = millis()-lastTime; // do a little work to wait
+    sample=0;               // reset cycle counter
+
+    // take input
     s=digitalRead(pin);
     
     // set pin back to output
     pinMode(pin,OUTPUT);
     digitalWrite(pin,ledState); 
-    
+
     // do state change and debounce logic
-    if (waiting && ((millis()-lastTime)>debounce)) {
-        // waiting for debounce && debounce complete
-        waiting = false;
-        state = s;
+    if (waiting) {
+        // waiting for debounce to complete
+        if (duration>debounce) {
+            // debounce complete
+            waiting = false;
+            state = s;
+        }
     } else if (s!=state) {
-        // start of change
+        // not waiting for debounce and start of change
         lastDuration = duration;
         lastTime = millis();
         waiting = true;

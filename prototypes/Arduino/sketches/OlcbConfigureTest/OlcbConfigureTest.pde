@@ -76,6 +76,7 @@ unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int f
   //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   //printf("\n");
   // pass to consumers
+  // ToDo: turn on with configuration code
   //cfg.receivedDatagram(rbuf, length, from);
   
   return 0;  // return pre-ordained result
@@ -97,34 +98,34 @@ Event events[] = {
 };
 int eventNum = 8;
 
-
+// output drivers
 ButtonLed p14(14);
 ButtonLed p15(15);
 ButtonLed p16(16);
 ButtonLed p17(17);
 
-#define ShortBlinkOn   0x000F000FL
-#define ShortBlinkOff  0xFFFEFFFEL
+#define ShortBlinkOn   0x01010101L
+#define ShortBlinkOff  0xFEFEFEFEL
 
-ButtonLed buttons[] = {p14,p14,p15,p15,p16,p16,p17,p17};
 long patterns[] = {
   ShortBlinkOn,ShortBlinkOff,
   ShortBlinkOn,ShortBlinkOff,
   ShortBlinkOn,ShortBlinkOff,
   ShortBlinkOn,ShortBlinkOff
 };
+ButtonLed* buttons[] = {&p14,&p14,&p15,&p15,&p16,&p16,&p17,&p17};
 
 ButtonLed blue(18);
 ButtonLed gold(19);
 
 void pceCallback(int index){
-  logstr("pce callback\n");
+  //logstr("pce callback\n");
   // invoked when an event is consumed; drive pins as needed
   // from index
   //
-  // sample code uses low bit of pattern to drive pin
+  // sample code uses inverse of low bit of pattern to drive pin all on or all off
   //
-  buttons[index].on(patterns[index]&0x1);
+  buttons[index]->on(patterns[index]&0x1 ? 0x0L : ~0x0L );
 }
 
 NodeMemory nm(0);  // allocate from start of EEPROM
@@ -135,14 +136,14 @@ PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback);
 
 BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
 
-bool states[] = {false, false, false, false};
+bool states[] = {false, false, false, false};  // true gives initial report due to implied change
 void produceFromPins() {
   // called from loop(), this looks at pins and 
   // and decides which events to fire.
   // with pce.produce(i);
   for (int i = 0; i<4; i++) {
-    if (states[i] != buttons[i*2].state) {
-      states[i] = buttons[i*2].state;
+    if (states[i] != buttons[i*2]->state) {
+      states[i] = buttons[i*2]->state;
       if (states[i]) {
         pce.produce(i*2);
       } else {
@@ -153,17 +154,18 @@ void produceFromPins() {
 }
 
 /**
- * This setup is just for testing
+ * Setup does initial configuration
  */
 void setup()
 {
   // set up serial comm; may not be space for this!
-  delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
+  //delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
   
   // read OpenLCB from EEPROM
   //nm.forceInit(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
-  // set event types, now that number is known
+  
+  // set event types, now that IDs have been loaded from configuration
   for (int i=0; i<eventNum; i++) {
       pce.newEvent(i,true,false); // produce, consume
   }
@@ -186,10 +188,10 @@ void loop() {
     // received a frame, ask if changes link state
     link.receivedFrame(&rxBuffer);
   }
-  
+
   // if link is initialized, higher-level operations possible
   if (link.linkInitialized()) {
-     // if frame present, pass to PC handler
+     // if frame present, pass to handlers
      if (rcvFramePresent) {
         pce.receivedFrame(&rxBuffer);
         dg.receivedFrame(&rxBuffer);
@@ -199,7 +201,8 @@ void loop() {
      pce.check();
      dg.check();
      str.check();
-     cfg.check();
+     // ToDo: Turn on config, but be cautious about memory overwrite
+     //cfg.check();
      bg.check();
      produceFromPins();
   } else {

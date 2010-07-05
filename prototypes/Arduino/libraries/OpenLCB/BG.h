@@ -16,14 +16,14 @@ class ButtonLed;
 class BG {
   public:
 
-  BG(PCE* pce, ButtonLed* buttons, long* patterns, int nEvents, ButtonLed* blue, ButtonLed* gold);
+  BG(PCE* pce, ButtonLed** buttons, long* patterns, int nEvents, ButtonLed* blue, ButtonLed* gold);
   
   void check();
   
   private:
 
   PCE* pce;
-  ButtonLed* buttons;
+  ButtonLed** buttons;
   long* patterns;
   int nEvents;
   ButtonLed* blue;
