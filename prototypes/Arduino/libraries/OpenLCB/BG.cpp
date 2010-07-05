@@ -5,55 +5,53 @@
 #include "BG.h"
 
 #include "PCE.h"
-#include "logging.h"
 
-BG::BG(PCE* p, ButtonLed* bC, int nC, ButtonLed* bP, int nP, ButtonLed* bptr, ButtonLed* gptr) {
-      pce = p;
-      nConsumers = nC;
-      nProducers = nP;
-      lastBlue = true;
-      cButtons = bC;
-      pButtons = bP;
+#define UNREADY_BLINK 0x707L
+#define READY_BLINK   0x1L
+
+BG::BG(PCE* pc, ButtonLed* bC, long* pt, int n, ButtonLed* bptr, ButtonLed* gptr) {
+      pce = pc;
+      buttons = bC;
+      patterns = pt;
+      nEvents = n;
       blue = bptr;
       gold = gptr;
+
+      lastBlue = true;
       started = false;
       index = -1;
 
-      for (int i = 0; i<nConsumers; i++)
-          cButtons[i].on(0);
-      for (int i = 0; i<nProducers; i++)
-          pButtons[i].on(0);
+      // all buttons off (might be redundant, as buttons can appear twice)
+      for (int i = 0; i<nEvents; i++)
+          buttons[i].on(0);
+
+      // initial blue/gold setting
       blue->on(0); // turn off 
       lastBlue = blue->process();
-      gold->on(0x63); // double blink until intialized
+      gold->on(UNREADY_BLINK); // unready blink until intialized
       lastGold = gold->process();
 }
   
 void BG::check() {
     if (!started) {
         started = true;
-        gold->on(1); // turn off waiting to init flash, add heartbeat
+        gold->on(READY_BLINK); // turn off waiting to init flash, start heartbeat ready blink
     }
     bool temp;
     // check if blue pressed
     if (lastBlue != (temp = blue->process())) {
         lastBlue = temp;
-        if (!temp) { // act on down
+        if (!temp) { // act on button down
             // turn off current channel
-            if (index>=0 && index<nConsumers) 
-                cButtons[index].on(0L);
-            if (index>=nConsumers && index<nConsumers+nProducers) 
-                pButtons[index-nConsumers].on(0);
+            if (index>=0 && index<nEvents) 
+                buttons[index].on(0L);
             // turn on next
             index++;
-            if (index >= nConsumers+nProducers) {
+            if (index >= nEvents) {  // off end, turn off blue
                 blue->on(0L);
                 index = -1;
-            } else if (index>=0 && index<nConsumers) {
-                cButtons[index].on(0x01010101L);
-                blue->on(~0L);
-            } if (index>=nConsumers && index<nConsumers+nProducers) {
-                pButtons[index-nConsumers].on(0xEFEFEFEFL);
+            } else if (index>=0 && index<nEvents) {  // blink next light and turn on blue
+                buttons[index].on(patterns[index]);
                 blue->on(~0L);
             }
         }
@@ -64,24 +62,18 @@ void BG::check() {
         if (!temp) { // act on down
             // if gold lit, send message
             if (gold->pattern == ~0L) {
-                if (index>=0 && index<nConsumers) {
-                    cButtons[index].on(0x0); // off if lit
-                    pce->sendTeachC(index);
-                } if (index>=nConsumers && index<nConsumers+nProducers) {
-                    pButtons[index-nConsumers].on(0x0); // off if lit
-                    pce->sendTeachP(index-nConsumers);
+                if (index>=0 && index<nEvents) {
+                    buttons[index].on(0x0); // off if lit
+                    pce->sendTeach(index);
                 } // otherwise, nothing to do?
                 gold->on(0);  // turn off
                 blue->on(0);  // turn off
                 index = -1;
             // if blue lit without gold, mark channel
             } else if (blue->pattern == ~0L) {
-                if (index>=0 && index<nConsumers) {
-                    cButtons[index].on(0x0); // off if lit
-                    pce->markToLearnC(index, true);
-                } if (index>=nConsumers && index<nConsumers+nProducers) {
-                    pButtons[index-nConsumers].on(0x0); // off if lit
-                    pce->markToLearnP(index-nConsumers, true);
+                if (index>=0 && index<nEvents) {
+                    buttons[index].on(0x0); // off if lit
+                    pce->markToLearn(index, true);
                 } // otherwise, nothing to do?
                 blue->on(0);  // turn off
                 index = -1;
@@ -92,10 +84,8 @@ void BG::check() {
         }
     }
     // process buttons to flash LEDs
-    for (int i = 0; i<nConsumers; i++)
-        cButtons[i].process();
-    for (int i = 0; i<nProducers; i++)
-        pButtons[i].process();
+    for (int i = 0; i<nEvents; i++)
+        buttons[i].process();
     gold->process();
 }
   
