@@ -1,5 +1,8 @@
+#include "WProgram.h"
+
 #include <LocoNet.h>
 #include <CAN.h>
+#include <EEPROM.h>
 
 #include <Event.h>
 #include <EventID.h>
@@ -15,8 +18,6 @@
 OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
 OpenLcbCanBuffer*    ptxCAN;
-
-class foo{};  // force Arduino environment to treat the rest of this file as C++
 
 NodeID nodeid(3,4,5,6,7,8);    // This node's ID
 LinkControl link(&txBuffer, &nodeid);
