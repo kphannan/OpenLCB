@@ -1,6 +1,6 @@
 //==============================================================
 // OlcbConfigureTest
-//   A prototype of a 4-channel OpenLCB board with all features
+//   Prototype of basic 4-channel OpenLCB board
 // 
 //   Bob Jacobsen 2010
 //      based on examples by Alex Shepherd and David Harris
@@ -160,7 +160,7 @@ void produceFromPins() {
 void setup()
 {
   // set up serial comm; may not be space for this!
-  //delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
+  //delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbBasicNode\n");
   
   // read OpenLCB from EEPROM
   //nm.forceInit(); // uncomment if need to go back to initial EEPROM state
