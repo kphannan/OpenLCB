@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <avr/pgmspace.h>
 #include "logging.h"
 
 // The following lines are needed because the Arduino environment 
@@ -59,16 +60,35 @@ Stream str(&txBuffer, streamRcvCallback, &link);
  * Get and put routines that 
  * use a test memory space.
  */
-//uint8_t test_mem[100];
-const uint8_t getRead(int address, int space) {
-    return 0; //*(test_mem+address);
-}
-void getWrite(int address, int space, uint8_t val) {
-    //*(test_mem+address) = val;
-}
-void reset1() {}
+prog_char configDefInfo[] PROGMEM = "OlcbBasicNode CDI"; // null terminated string
 
-Configuration cfg(&dg, &str, &getRead, &getWrite, &reset1);
+const uint8_t getRead(uint32_t address, int space) {
+  if (space == 0xFF) {
+    // Configuration definition information
+    return pgm_read_byte(configDefInfo+address);
+  } else if (space == 0xFE) {
+    // All memory
+    return *(((uint8_t*)&rxBuffer)+address);
+  } else if (space == 0xFD) {
+    // Configuration space
+    return EEPROM.read(address);
+  } else {
+    // unknown space
+    return 0; 
+  }
+}
+void getWrite(uint32_t address, int space, uint8_t val) {
+  if (space == 0xFE) {
+    // All memory
+    *(((uint8_t*)&rxBuffer)+address) = val;
+  } else if (space == 0xFD) {
+    // Configuration space
+    EEPROM.write(address, val);
+  } 
+  // all other spaces not written
+}
+
+Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
@@ -76,8 +96,7 @@ unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int f
   //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   //printf("\n");
   // pass to consumers
-  // ToDo: turn on with configuration code
-  //cfg.receivedDatagram(rbuf, length, from);
+  cfg.receivedDatagram(rbuf, length, from);
   
   return 0;  // return pre-ordained result
 }
@@ -202,8 +221,7 @@ void loop() {
      pce.check();
      dg.check();
      str.check();
-     // ToDo: Turn on config, but be cautious about memory overwrite
-     //cfg.check();
+     cfg.check();
      bg.check();
      produceFromPins();
   } else {
