@@ -1,11 +1,11 @@
 //==============================================================
 // OlcbConfigureTest
-//   A prototype of a 4-channel OpenLCB board with all features!
+//   A prototype of a 4-channel OpenLCB board with all features
 // 
 //   Bob Jacobsen 2010
 //      based on examples by Alex Shepherd and David Harris
 //==============================================================
-//#include "WProgram.h"
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -119,7 +119,6 @@ ButtonLed blue(18);
 ButtonLed gold(19);
 
 void pceCallback(int index){
-  //logstr("pce callback\n");
   // invoked when an event is consumed; drive pins as needed
   // from index
   //
