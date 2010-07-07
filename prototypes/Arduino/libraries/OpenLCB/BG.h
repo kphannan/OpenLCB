@@ -21,6 +21,8 @@
  * The gold LED is used to indicate board health.  Before init complete, it's
  * slow blinking 50% on and 50% off.  After init complete, it winks on periodically.
  *
+ * A long (>3 seconds) press of just the blue button erases any learn nominations made.
+ *
  * A long (>5 seconds) press of blue _and_ gold is a factory reset.
  * Pressing both at the same time for less than 5 seconds sends an ident message.
  *

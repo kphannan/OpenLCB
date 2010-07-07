@@ -68,6 +68,15 @@ void BG::check() {
         }
     }
 
+    // clear all learn settings if blue down more than 3 seconds, 
+    // gold not down.
+    if ( (!blue->state) && (gold->state) && (blue->duration > 3000) ) {
+        // turn blue off
+        blue->on(0L);
+        for (int i = 0; i < nEvents; i++)
+            pce->markToLearn(i, false);
+    }
+
     // check if gold button pressed
     gold->process();
     if (lastGold != gold->state) {
