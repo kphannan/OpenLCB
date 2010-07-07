@@ -5,6 +5,7 @@
 #include "BG.h"
 
 #include "PCE.h"
+#include "NodeMemory.h"
 
 #define UNREADY_BLINK 0xFF00FFL
 #define READY_BLINK   0x1L
@@ -40,57 +41,95 @@ void BG::check() {
         gold->on(READY_BLINK); // turn off waiting to init flash, start heartbeat ready blink
     }
 
-    // check if blue pressed
+    // check if blue button pressed
     blue->process();
     if (lastBlue != blue->state) {
         lastBlue = blue->state;
         if (!lastBlue) { // act on button down
-            // turn off current channel
-            if (index>=0 && index<nEvents) 
-                buttons[index]->on(0L);
-            // turn on next
-            index++;
-            if (index >= nEvents) {  // off end, turn off blue
-                blue->on(0L);
-                index = -1;
-            } else if (index>=0 && index<nEvents) {  // blink next light and turn on blue
-                buttons[index]->on(patterns[index]);
-                blue->on(~0L);
+            // check gold button state
+            if (!gold->state) {
+                // if gold button down, send ident
+                sendIdent();
+            } else {
+                // gold button not down, increment channel
+                // turn off current channel
+                if (index>=0 && index<nEvents) 
+                    buttons[index]->on(0L);
+                // turn on next
+                index++;
+                if (index >= nEvents) {  // off end, turn off blue
+                    blue->on(0L);
+                    index = -1;
+                } else if (index>=0 && index<nEvents) {  // blink next light and turn on blue
+                    buttons[index]->on(patterns[index]);
+                    blue->on(~0L);
+                }
             }
         }
     }
 
-    // check if gold pressed
+    // check if gold button pressed
     gold->process();
     if (lastGold != gold->state) {
         lastGold = gold->state;
         if (!lastGold) { // act on down
-            // if gold lit, send message
-            if (gold->pattern == ~0L) {
-                if (index>=0 && index<nEvents) {
-                    buttons[index]->on(0x0); // off if lit
-                    pce->sendTeach(index);
-                } // otherwise, nothing to do?
-                gold->on(READY_BLINK);  // turn off (back to ready blink)
-                blue->on(0);  // turn off
-                index = -1;
-            // if blue lit without gold, mark channel
-            } else if (blue->pattern == ~0L) {
-                if (index>=0 && index<nEvents) {
-                    buttons[index]->on(0x0); // off if lit
-                    pce->markToLearn(index, true);
-                } // otherwise, nothing to do?
-                blue->on(0);  // turn off
-                index = -1;
+            // check blue button state
+            if (!blue->state) {
+                // if blue down, send ident
+                sendIdent();
             } else {
-                // neither, light gold to start sequence
-                gold->on(~0L);
+                // blue button not down
+                // if gold LED lit, send message
+                if (gold->pattern == ~0L) { // check for full lit
+                    if (index>=0 && index<nEvents) {
+                        buttons[index]->on(0x0); // off if lit
+                        pce->sendTeach(index);
+                    } // otherwise, nothing to do?
+                    gold->on(READY_BLINK);  // turn off (back to ready blink)
+                    blue->on(0);  // turn off
+                    index = -1;
+                // if blue lit without gold, mark channel
+                } else if (blue->pattern == ~0L) {
+                    if (index>=0 && index<nEvents) {
+                        buttons[index]->on(0x0); // off if lit
+                        pce->markToLearn(index, true);
+                    } // otherwise, nothing to do?
+                    blue->on(0);  // turn off
+                    index = -1;
+                } else {
+                    // neither, light gold to start sequence
+                    gold->on(~0L);
+                }
             }
         }
     }
+    
+    // check for factory reset, defined as both down for
+    // more than 5 seconds.
+    if ( (!blue->state) && (!gold->state) && (blue->duration > 5000) && (gold->duration > 5000) ) {
+        factoryReset();
+    }
+    
     // process buttons to flash LEDs
     for (int i = 0; i<nEvents; i++) {
         buttons[i]->process();
     }
 }
-  
+
+/**
+ * Send an event in response to the "ident" button pushes
+ */
+// ToDo: make this smarter so don't have to do wait send
+void BG::sendIdent() {
+}
+
+/**
+ * Fire factory reset
+ * ToDo: better name!  Not really a true "factory reset"
+ */
+void BG::factoryReset() {
+    // write to keep teh node ID, but reload everything else
+    NodeMemory::forceInitEvents();
+    // cast a 0 to a function pointer, then dereference it. Ugly!
+    (*  ((void (*)())0)  )();
+}
