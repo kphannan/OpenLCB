@@ -186,8 +186,11 @@ void setup()
   nm.setup(&nodeid, events, eventNum);  
   
   // set event types, now that IDs have been loaded from configuration
-  for (int i=0; i<eventNum; i++) {
+  for (int i=0; i<4; i++) {
       pce.newEvent(i,true,false); // produce, consume
+  }
+  for (int i=4; i<8; i++) {
+      pce.newEvent(i,false,true); // produce, consume
   }
   
   // Initialize OpenLCB CAN connection
@@ -205,7 +208,9 @@ void loop() {
   // process link control first
   link.check();
   if (rcvFramePresent) {
-    // received a frame, ask if changes link state
+    // blink blue to show that the frame was received
+    blue.blink(0x1);
+    // see if recieved frame changes link state
     link.receivedFrame(&rxBuffer);
   }
 
