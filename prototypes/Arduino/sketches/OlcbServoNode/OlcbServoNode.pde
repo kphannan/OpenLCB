@@ -6,10 +6,11 @@
 //   Bob Jacobsen 2010
 //      based on examples by Alex Shepherd and David Harris
 //===========================================================
-#include "WProgram.h"
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <avr/pgmspace.h>
 #include "logging.h"
 
 // The following lines are needed because the Arduino environment 
@@ -17,6 +18,8 @@
 // from the top level file (this file)
 #include <EEPROM.h>
 #include <CAN.h>
+
+class foo{};
 
 // init for serial communications
 #define         BAUD_RATE       115200
@@ -38,6 +41,7 @@
 #include "Configuration.h"
 #include "NodeMemory.h"
 #include "PCE.h"
+#include "ButtonLed.h"
 
 #include "Servo.h"
 
@@ -59,12 +63,32 @@ Stream str(&txBuffer, streamRcvCallback, &link);
  * Get and put routines that 
  * use a test memory space.
  */
-uint8_t test_mem[200];
-const uint8_t getRead(int address, int space) {
-    return *(test_mem+address);
+prog_char configDefInfo[] PROGMEM = "OlcbConfigureTest CDI"; // null terminated string
+
+const uint8_t getRead(uint32_t address, int space) {
+  if (space == 0xFF) {
+    // Configuration definition information
+    return pgm_read_byte(configDefInfo+address);
+  } else if (space == 0xFE) {
+    // All memory
+    return *(((uint8_t*)&rxBuffer)+address);
+  } else if (space == 0xFD) {
+    // Configuration space
+    return EEPROM.read(address);
+  } else {
+    // unknown space
+    return 0; 
+  }
 }
-void getWrite(int address, int space, uint8_t val) {
-    *(test_mem+address) = val;
+void getWrite(uint32_t address, int space, uint8_t val) {
+  if (space == 0xFE) {
+    // All memory
+    *(((uint8_t*)&rxBuffer)+address) = val;
+  } else if (space == 0xFD) {
+    // Configuration space
+    EEPROM.write(address, val);
+  } 
+  // all other spaces not written
 }
 
 Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
@@ -111,6 +135,9 @@ void pceCallback(int index){
   }
 }
 
+ButtonLed blue(18);
+ButtonLed gold(19);
+
 NodeMemory nm(0);  // allocate from start of EEPROM
 void store() { nm.store(&nodeid, cEvents, cEventNum); }
 
@@ -122,10 +149,7 @@ PCE p(cEvents, cEventNum, &txBuffer, &nodeid, pceCallback, store);
 void setup()
 {
   // set up serial comm
-  Serial.begin(BAUD_RATE);
-  
-  // show we've started to run
-  logstr("\nOlcbServoNode\n");
+  //Serial.begin(BAUD_RATE);logstr("\nOlcbServoNode\n");
 
   servo.attach(SERVO_PIN);
   
@@ -138,7 +162,11 @@ void setup()
   
   // Initialize OpenLCB CAN link controller
   link.reset();
+  blue.on(0x0L);
+  gold.on(0xFF0FFL);
 }
+
+bool first = true;
 
 void loop() {
   // check for input frames, acquire if present
@@ -153,6 +181,11 @@ void loop() {
 
   // if link is initialized, higher-level operations possible
   if (link.linkInitialized()) {
+     // first time, clear indicator
+     if (first) {
+         first = false;
+         gold.on(0x1L);
+     }
      // if frame present, pass to PC handler
      if (rcvFramePresent) {
         p.receivedFrame(&rxBuffer);
@@ -165,7 +198,8 @@ void loop() {
      str.check();
      cfg.check();
   }
-
+  blue.process();
+  gold.process();
 }
 
 
