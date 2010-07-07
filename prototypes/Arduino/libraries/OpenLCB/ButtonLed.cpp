@@ -16,6 +16,11 @@ void ButtonLed::on(long mask) {
   digitalWrite(pin,ledState); // initialize
 }
 
+void ButtonLed::blink(uint8_t mask) {
+  once |= mask;
+  // wait for next time step to display
+}
+
 void ButtonLed::process() {
   int s;
   sample+=1; 
@@ -59,6 +64,8 @@ void ButtonLed::process() {
        ledState = HIGH;
        pattern = 0x7FFFFFFF & (pattern>>1);
     }
+    if ((once & 0x1) != 0) ledState = LOW;
+    once = once>>1;
     digitalWrite(pin,ledState);
     next = false;
   } else {
