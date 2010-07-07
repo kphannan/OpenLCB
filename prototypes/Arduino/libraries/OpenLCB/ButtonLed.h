@@ -42,11 +42,13 @@ class ButtonLed {
     long duration;            // how long the button has been in its current state in msec
     long lastDuration;        // how long it was in the previous state, in msec
     const uint8_t pin;        // connected pin number
+    uint8_t once;            // mask for single blink
     bool ledState;            // current output drive state
     bool state;               // current button state
     
     ButtonLed(uint8_t pin);
-    void on(long mask);       // set the output mask
+    void on(long pattern);    // set the output repeating pattern
+    void blink(uint8_t pattern); // set the output one-time blink pattern
     void process();           // call periodically
 };
 
