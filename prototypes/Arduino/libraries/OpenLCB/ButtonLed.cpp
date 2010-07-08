@@ -36,10 +36,11 @@ void ButtonLed::process() {
 	pinMode(pin, INPUT);                        // need to change the pin to input..
 	digitalWrite(pin,HIGH);                     // .. and activate pull up
 	newState=(sense==digitalRead(pin));         // is the button up or down
+	pinMode(pin,OUTPUT);                        // return pin to output mode
+	digitalWrite(pin,ledState);                 // and make sure its showing its state
 	if(newState != lastState) {                 // if button changed then..
 	  lastState = newState;                     // ..remember button state
-	  return; 
-	// now debounced
+	  // now debounced
 	} else {                                    // else button position is unchanged..
 	  if(state!=newState) {                     // Debounced, but is it a new state?..
 	    state = newState;                       // ..yes, so update
@@ -49,8 +50,6 @@ void ButtonLed::process() {
 	  } else {                                  // else same state continuing, so
 	    duration = millis() - lastTime;         // .. calculate its duration
 	  } 
-	  pinMode(pin,OUTPUT);                      // return pin to output mode
-	  digitalWrite(pin,ledState);               // and make sure its showing its state
 	}
   } else {
 	if((millis()&0x1f) != 0) bnext = true;      // partial through this 32ms period, so can trigger next period
