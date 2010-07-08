@@ -46,7 +46,7 @@ OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
 OpenLcbCanBuffer*    ptxCAN;
 
-NodeID nodeid(2,3,4,5,6,7);    // This node's default ID
+NodeID nodeid(2,3,4,5,6,19);    // This node's default ID
 
 LinkControl link(&txBuffer, &nodeid);
 
@@ -118,10 +118,10 @@ Event events[] = {
 int eventNum = 8;
 
 // output drivers
-ButtonLed p14(14);
-ButtonLed p15(15);
-ButtonLed p16(16);
-ButtonLed p17(17);
+ButtonLed p14(14, LOW);
+ButtonLed p15(15, LOW);
+ButtonLed p16(16, LOW);
+ButtonLed p17(17, LOW);
 
 #define ShortBlinkOn   0x00010001L
 #define ShortBlinkOff  0xFFFEFFFEL
@@ -134,8 +134,8 @@ long patterns[] = {
 };
 ButtonLed* buttons[] = {&p14,&p14,&p15,&p15,&p16,&p16,&p17,&p17};
 
-ButtonLed blue(18);
-ButtonLed gold(19);
+ButtonLed blue(18, LOW);
+ButtonLed gold(19, LOW);
 
 void pceCallback(int index){
   // invoked when an event is consumed; drive pins as needed
@@ -165,9 +165,9 @@ void produceFromPins() {
     if (states[i] != buttons[i*2]->state) {
       states[i] = buttons[i*2]->state;
       if (states[i]) {
-        pce.produce(i*2);
-      } else {
         pce.produce(i*2+1);
+      } else {
+        pce.produce(i*2);
       }
     }
   }
@@ -182,7 +182,7 @@ void setup()
   //delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbConfigureTest\n");
   
   // read OpenLCB from EEPROM
-  //nm.forceInit(); // uncomment if need to go back to initial EEPROM state
+  //nm.forceInitAll(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
   
   // set event types, now that IDs have been loaded from configuration

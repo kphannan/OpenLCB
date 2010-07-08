@@ -121,10 +121,10 @@ Event events[] = {
 int eventNum = 8;
 
 // output drivers
-ButtonLed p14(14);
-ButtonLed p15(15);
-ButtonLed p16(16);
-ButtonLed p17(17);
+ButtonLed p14(14, LOW);
+ButtonLed p15(15, LOW);
+ButtonLed p16(16, LOW);
+ButtonLed p17(17, LOW);
 
 #define ShortBlinkOn   0x00010001L
 #define ShortBlinkOff  0xFFFEFFFEL
@@ -137,8 +137,8 @@ long patterns[] = {
 };
 ButtonLed* buttons[] = {&p14,&p14,&p15,&p15,&p16,&p16,&p17,&p17};
 
-ButtonLed blue(18);
-ButtonLed gold(19);
+ButtonLed blue(18, LOW);
+ButtonLed gold(19, LOW);
 
 void pceCallback(int index){
   // invoked when an event is consumed; drive pins as needed
