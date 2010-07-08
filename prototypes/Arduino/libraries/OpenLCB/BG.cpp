@@ -20,8 +20,6 @@ BG::BG(PCE* pc, ButtonLed** bC, long* pt, int n, ButtonLed* bptr, ButtonLed* gpt
       blue = bptr;
       gold = gptr;
 
-//      lastBlue = true;
-  	  lastBlue = false;
       started = false;
       index = -1;
 
@@ -48,10 +46,8 @@ void BG::check() {
     blue->process();
     if (lastBlue != blue->state) {
         lastBlue = blue->state;
-//        if (!lastBlue) { // act on button down
         if (lastBlue) { // act on button down
             // check gold button state
-//            if (!gold->state) {
 				if (gold->state) {
                 // if gold button down, send ident
                 sendIdent();
@@ -75,7 +71,6 @@ void BG::check() {
 
     // clear all learn settings if blue down more than 3 seconds, 
     // gold not down.
-//    if ( (!blue->state) && (gold->state) && (blue->duration > 3000) ) {
 		if ( (blue->state) && (!gold->state) && (blue->duration > 3000) ) {
         // turn blue off
         blue->on(0L);
@@ -87,11 +82,9 @@ void BG::check() {
     gold->process();
     if (lastGold != gold->state) {
         lastGold = gold->state;
-//        if (!lastGold) { // act on down
 			if (lastGold) { // act on down
             // check blue button state
-//            if (!blue->state) {
-		  if (blue->state) {
+		    if (blue->state) {
                 // if blue down, send ident
                 sendIdent();
             } else {
@@ -123,7 +116,6 @@ void BG::check() {
     
     // check for factory reset, defined as both down for
     // more than 5 seconds.
-//    if ( (!blue->state) && (!gold->state) && (blue->duration > 5000) && (gold->duration > 5000) ) {
 	  if ( (blue->state) && (gold->state) && (blue->duration > 5000) && (gold->duration > 5000) ) {
         factoryReset();
     }
