@@ -63,6 +63,8 @@ void ButtonLed::process() {
 	  ledState = !sense;                        // .. update LED and
 	  pattern = 0x7FFFFFFF & (pattern>>1);      // .. mimic a roll with a 0 in
 	}
+	if ((once & 0x1) != 0) ledState = LOW;      // handle once-through pattern
+	once = once>>1;
 	digitalWrite(pin,ledState);                 // set the pin
 	next = false;                               // we are complete for this 64ms period
   } else {
