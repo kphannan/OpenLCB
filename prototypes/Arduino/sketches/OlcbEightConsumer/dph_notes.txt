@@ -1,0 +1,19 @@
+DPH Notes.  20090501
+
+
+Bob has defined a PCE as having: 
+  An array of nconsumer consumer events and
+              nproducer producer events.  
+
+He has defined the logic for receiving: 
+  requests to report all consumed or produced events.
+  requests for whether this node consumes an event.
+  requests for whether this node produces an event.
+
+If a received event matches a consumer event, then 
+a callback is called with the index of the event. 
+
+
+We still need messages to set consumed, produced, and callbacks.  
+
+
