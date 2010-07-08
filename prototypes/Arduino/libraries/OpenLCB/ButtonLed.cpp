@@ -5,9 +5,9 @@ void ButtonLed::init(uint8_t s) {
   sense = s;
   pinMode(pin,OUTPUT);                    // default to driving LED..
   digitalWrite(pin,sense);                // ..and turn it on
-  lastState=false;                        // init vars
-  duration=lastDuration=0;
-  ledState=false;                         // start with button off
+  lastState=false;                        // start with led off
+  duration=lastDuration=0;                // init durations
+  state=false;                            // start with button off
 }
 
 
