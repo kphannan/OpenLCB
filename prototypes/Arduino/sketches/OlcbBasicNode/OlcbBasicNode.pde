@@ -130,10 +130,10 @@ ButtonLed p17(17, LOW);
 #define ShortBlinkOff  0xFFFEFFFEL
 
 long patterns[] = {
-  ShortBlinkOn,ShortBlinkOff,
-  ShortBlinkOn,ShortBlinkOff,
-  ShortBlinkOn,ShortBlinkOff,
-  ShortBlinkOn,ShortBlinkOff
+  ShortBlinkOff,ShortBlinkOn,
+  ShortBlinkOff,ShortBlinkOn,
+  ShortBlinkOff,ShortBlinkOn,
+  ShortBlinkOff,ShortBlinkOn
 };
 ButtonLed* buttons[] = {&p14,&p14,&p15,&p15,&p16,&p16,&p17,&p17};
 
@@ -185,7 +185,7 @@ void setup()
   //delay(250);Serial.begin(BAUD_RATE);logstr("\nOlcbBasicNode\n");
   
   // read OpenLCB from EEPROM
-  //nm.forceInit(); // uncomment if need to go back to initial EEPROM state
+  //nm.forceInitAll(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
   
   // set event types, now that IDs have been loaded from configuration

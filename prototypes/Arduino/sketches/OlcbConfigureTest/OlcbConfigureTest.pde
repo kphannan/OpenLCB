@@ -46,7 +46,7 @@ OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
 OpenLcbCanBuffer*    ptxCAN;
 
-NodeID nodeid(2,3,4,5,6,19);    // This node's default ID
+NodeID nodeid(2,3,4,5,6,0);    // This node's default ID
 
 LinkControl link(&txBuffer, &nodeid);
 
@@ -127,10 +127,10 @@ ButtonLed p17(17, LOW);
 #define ShortBlinkOff  0xFFFEFFFEL
 
 long patterns[] = {
-  ShortBlinkOn,ShortBlinkOff,
-  ShortBlinkOn,ShortBlinkOff,
-  ShortBlinkOn,ShortBlinkOff,
-  ShortBlinkOn,ShortBlinkOff
+  ShortBlinkOff,ShortBlinkOn,
+  ShortBlinkOff,ShortBlinkOn,
+  ShortBlinkOff,ShortBlinkOn,
+  ShortBlinkOff,ShortBlinkOn
 };
 ButtonLed* buttons[] = {&p14,&p14,&p15,&p15,&p16,&p16,&p17,&p17};
 
@@ -165,9 +165,9 @@ void produceFromPins() {
     if (states[i] != buttons[i*2]->state) {
       states[i] = buttons[i*2]->state;
       if (states[i]) {
-        pce.produce(i*2+1);
-      } else {
         pce.produce(i*2);
+      } else {
+        pce.produce(i*2+1);
       }
     }
   }
