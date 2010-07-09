@@ -2,28 +2,35 @@ This directory contains various Arduino sketches for MRRLCB R&D.
 
 When you add one, please leave a brief note below.
 
+OlcbBasicNode: (Bob Jacobsen)
+    Basic 4-pin node with configuration, etc.
+    Analog 0, 1 are input pins that drive producers
+    Analog 2, 3 are output pins on consumers
+
+OlcbEightConsumer: (Bob Jacobsen)
+    Basic 8-pin output node with configuration, etc.
+    Analog 0-4 and digital 6-9 are output pins on consumers
+
+OlcbServoNode (Bob Jacobsen)
+    OpenLCB node with three event slots
+    for driving a servo on pin 9.
+
 CAN2USBuino: (Alex Shepherd)
     Use a LEDuino as a CAN-USB adapter. 
     Uses GridConnect format (e.g. ":S65N01;")
     Good starting example of CAN receive
 
-CanMrrlcbTest: (Bob Jacobsen)
-    Demo library for doing the MRRLCB link setup.
-    CONSUMER_PIN (9) is driven by consuming an event,
-    PRODUCER_PIN (14) produces events.
-
 CAN2EtherNetuino: (Bob Jacobsen)
     A CAN-Ethernet bridge for the LEDuino.  Just forwards
     frames, not a full OpenLCB router.
 
+Status of projects below here is not certain:
 
-OlcbConfigureTest (Bob Jacobsen)
-    Development of an OpenLCB node with
-    full configuration support
-
-OlcbServoNode (Bob Jacobsen)
-    Development of an OpenLCB node 
-    for driving a servo
+OlcbBasicNode: (Bob Jacobsen)
+    Development sketch for configuration code, 
+    often in flux. Not recommended for general use.
+    Analog 0, 1 are input pins that drive producers
+    Analog 2, 3 are output pins on consumers
 
 CAN2USBuinoDPH2090329: (David Harris)
     Private experiment by dph
@@ -42,10 +49,7 @@ CAN2USBuinoRamp: (David Harris)
     Continually send CAN packets with id=0x65 in the header 
     and 0 to 100 in the data, waiting 100msec in between.
     Works with CAN2USBuinoLEDPWM.
-    
-MrrlcbCanEtherNet: (Bob Jacobsen)
-    Develop an OpenLCB Ethernet router - not yet done
-    
+        
 MrrLcbCanLocoNet
     LocoNet adapter work by Alex Shepherd
     
