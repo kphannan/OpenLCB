@@ -3,10 +3,10 @@
 <HEAD>
 	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
 	<TITLE>CanMrrlcbTest Arduino Sketch</TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.0  (Unix)">
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
 	<META NAME="CREATED" CONTENT="0;0">
 	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
-	<META NAME="CHANGED" CONTENT="20090502;10584300">
+	<META NAME="CHANGED" CONTENT="20100709;9064000">
 	<META NAME="Info 1" CONTENT="">
 	<META NAME="Info 2" CONTENT="">
 	<META NAME="Info 3" CONTENT="">
@@ -19,17 +19,18 @@
 	</STYLE>
 </HEAD>
 <BODY LANG="en-US" DIR="LTR">
-<H1>CanMrrlcbTest Arduino Sketch</H1>
-<P>This page describes the contents of the CanMrrlchTest Arduino
-sketch. This sketch is being used to develop prototype,
-proof-of-concept software implementing the OpenLCB protocols on
-the <A HREF="http://arduino.cc/">Arduino</A> platform.</P>
+<H1>OlcbBasicNode Arduino Sketch</H1>
+<P>This page describes the contents of the OlcbBasicNode Arduino
+sketch. This sketch is provides the software for a basic digital I/O
+board implementing the OpenLCB protocols on the <A HREF="http://arduino.cc/">Arduino</A>
+platform.</P>
 <P>More information on the OpenLCB protocols is available in the
 <A HREF="../../../../documents/index.html">documentation package</A>.
 See also the documents for the <A HREF="../../../../documents/can/index.html">CAN
 wire protocol</A>.</P>
 <H2>Introduction</H2>
-<P>This sketch tests some basic implementation classes.</P>
+<P>This sketch uses the common implementation classes from the
+OpenLCB library.</P>
 <P>The basic pattern is &quot;Objects that handle one particular
 state machine or group of interactions&quot;.</P>
 <P>Key objects with links to more information (others in a <A HREF="#Classes/Files/Libraries|outline">section
@@ -38,16 +39,16 @@ below</A>):</P>
 	<LI><P><A HREF="#LinkControl|outline">LinkControl</A> handles the
 	state machine for starting up the link, assigning an alias, sending
 	the Initialization Complete, watching for an interfering node, etc. 
-		</P>
+	</P>
 </UL>
 <UL>
 	<LI><P><A HREF="#PCE (Producer/Consumer Events)|outline">PCE</A>
 	handles the Producer/Consumer registration, replying to requests for
 	Producer and Consumer identification, etc, and makes it easy to
 	produce and consume events. The using code provides arrays of Events
-	that are consumed or can be produced.  Once the link is up, the
-	using code can then tell the PCE to produce an event, and gets a
-	callback when it can consume an event from the link.</P>
+	that are consumed or can be produced. Once the link is up, the using
+	code can then tell the PCE to produce an event, and gets a callback
+	when it can consume an event from the link.</P>
 </UL>
 <H2>Structure</H2>
 <P>This section describes the basic structure of these
@@ -85,20 +86,20 @@ the message then.</P>
 <H3>Dependency Design</H3>
 <P>There are a couple ways to structure code like this. Often, high
 level classes encapsulate and use references to lower level objects,
-resulting in a classic “stack” form.  For OpenLCB, this would
+resulting in a classic “stack” form. For OpenLCB, this would
 result in (insert diagram here) e.g. a PCE object that's passed a
 LinkControl object through its constructor, and does all I/O through
 that. In turn the LinkControl object is passed a OpenLcbCanInterface
-object via it's constructor, and uses that for all I/O.  Finally, the
+object via it's constructor, and uses that for all I/O. Finally, the
 OpenLcbInterface provides all the state and code to handle all the
 interactions, and is initialized via a constructor. Frames received
 via CAN are passed up throught eh stack as appropriate. Once a
 standard is in place, this is a very powerful structure which results
-in well-encapsulated software.  However, during development, it
+in well-encapsulated software. However, during development, it
 produces a structure that requires work at many levels at once.</P>
-<P>During the development phase, we're using a different structure. 
+<P>During the development phase, we're using a different structure.
 The objects exist, but control of upward message flow and overall
-state is done outside the “stack”.  The sketch's loop() routine
+state is done outside the “stack”. The sketch's loop() routine
 has to check for an incoming frame, then pass it to objects depending
 on state.</P>
 <H4>Setup</H4>
@@ -135,7 +136,7 @@ anything else with the OpenLCB.</P>
 <P>PCE handles the Producer/Consumer registration, replying to
 requests for Producer and Consumer identification, etc, and makes it
 easy to produce and consume events. The using code provides arrays of
-Events that are consumed or can be produced to the PCE constructor. 
+Events that are consumed or can be produced to the PCE constructor.
 Once the link is up, the using code can then tell the PCE to produce
 an event, and gets a callback when it can consume an event from the
 link.</P>
@@ -168,20 +169,15 @@ above.</P>
 <H2>To Do List</H2>
 <P>Some items still to do in this sketch:</P>
 <UL>
-	<LI><P>Allow events to be added to P, C lists after startup using
-	VALID flag.</P>
-	<LI><P>Fix the CIM/RIM timing.</P>
-	<LI><P>Define the proper MTI values, instead of stand-ins.</P>
 	<LI><P>Need to refactor addressed message support (duplicated code
 	smell).</P>
-	<LI><P>Move many files to an OpenLCB CAN library for Arduino.</P>
 	<LI><P>Move to a “stack” dependency structure.</P>
 	<LI><P>Comments, comments, always with the comments.</P>
-	<LI><P>PCE doesn't consume the events that it has produced
-	internally. It probably should.</P>
 </UL>
-<P>Then we eventually want to move on to another sketch for EtherNet
-connectivity...</P>
+<P><BR><BR>
+</P>
+<P><BR><BR>
+</P>
 <P><BR><BR>
 </P>
 <P><BR><BR>
