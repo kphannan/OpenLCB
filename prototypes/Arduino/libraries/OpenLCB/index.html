@@ -3,14 +3,10 @@
 <HEAD>
 	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
 	<TITLE>OpenLCB Arduino Library</TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.0  (Unix)">
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
 	<META NAME="CREATED" CONTENT="0;0">
 	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
-	<META NAME="CHANGED" CONTENT="20090503;18344700">
-	<META NAME="Info 1" CONTENT="">
-	<META NAME="Info 2" CONTENT="">
-	<META NAME="Info 3" CONTENT="">
-	<META NAME="Info 4" CONTENT="">
+	<META NAME="CHANGED" CONTENT="20100710;11310200">
 	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
 	<STYLE TYPE="text/css">
 	<!--
@@ -26,8 +22,8 @@ This library is being used to develop prototype, proof-of-concept
 software implementing the OpenLCB protocols on the <A HREF="http://arduino.cc/">Arduino</A>
 platform.</P>
 <P>More information on the OpenLCB protocols is available in the
-<A HREF="../../../../documents/index.html">documentation package</A>. See
-also the documents for the <A HREF="../../../../documents/can/index.html">CAN
+<A HREF="../../../../documents/index.html">documentation package</A>.
+See also the documents for the <A HREF="../../../../documents/can/index.html">CAN
 wire protocol</A>.</P>
 <H2>Introduction</H2>
 <P>This library provides some basic implementation classes.</P>
@@ -40,8 +36,6 @@ below</A>):</P>
 	state machine for starting up the link, assigning an alias, sending
 	the Initialization Complete, watching for an interfering node, etc. 
 	</P>
-</UL>
-<UL>
 	<LI><P><A HREF="#PCE (Producer/Consumer Events)|outline">PCE</A>
 	handles the Producer/Consumer registration, replying to requests for
 	Producer and Consumer identification, etc, and makes it easy to
@@ -49,6 +43,13 @@ below</A>):</P>
 	that are consumed or can be produced. Once the link is up, the using
 	code can then tell the PCE to produce an event, and gets a callback
 	when it can consume an event from the link.</P>
+	<LI><P>Datagram handles receipt and sending of Datagrams.</P>
+	<LI><P>Stream handles the receipt and sending of Stream information.</P>
+	<LI><P>NodeMemory handles saving and restoring node state (NodeID,
+	EventIDs) to persistent memory.</P>
+	<LI><P>Configuration handles the remote configuration protocol.</P>
+	<LI><P>BG handles the Blue/Gold configuration management through
+	buttons and LEDs.</P>
 </UL>
 <H2>Structure</H2>
 <P>This section describes the basic structure of these
@@ -166,25 +167,11 @@ readable application code.</P>
 <P>OpenLcbCanInterface wraps the external hardware for the CAN
 interface. See the <A HREF="#CAN Interface|outline">interface section</A>
 above.</P>
-<H2>To Do List</H2>
-<P>Some items still to do in this sketch:</P>
-<UL>
-	<LI><P>Allow events to be added to P, C lists after startup using
-	VALID flag.</P>
-	<LI><P>Fix the CIM/RIM timing.</P>
-	<LI><P>Define the proper MTI values, instead of stand-ins.</P>
-	<LI><P>Need to refactor addressed message support (duplicated code
-	smell).</P>
-	<LI><P>Move to a “stack” dependency structure.</P>
-	<LI><P>Comments, comments, always with the comments.</P>
-	<LI><P>PCE doesn't consume the events that it has produced
-	internally. It probably should.</P>
-</UL>
-<P><BR><BR>
-</P>
-<P><BR><BR>
-</P>
-<P><BR><BR>
-</P>
+
+<HR>
+<P STYLE="margin-bottom: 0cm">This web sites contains trademarks and
+copyrighted information. Please see the <A HREF="/Licensing.html">Licensing</A>
+page.</P>
+<P STYLE="margin-bottom: 0cm">This is SVN $Revision$ of <SDFIELD TYPE=DATETIME SDVAL="40041.4309143519" SDNUM="1033;1033;MM/DD/YY">08/16/09</SDFIELD>.</P>
 </BODY>
 </HTML>
