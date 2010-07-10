@@ -26,6 +26,10 @@ CAN2EtherNetuino: (Bob Jacobsen)
 
 Status of projects below here is not certain:
 
+OlcbDisplay (Bob Jacobsen)
+    OpenLCB node for development of OpenLCB display protocol.
+    Drives attached LCD display (20x4 on the development board)
+
 OlcbBasicNode: (Bob Jacobsen)
     Development sketch for configuration code, 
     often in flux. Not recommended for general use.
