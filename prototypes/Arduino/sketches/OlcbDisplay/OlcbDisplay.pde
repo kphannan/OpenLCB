@@ -187,17 +187,19 @@ void setup()
       pce.newEvent(i,true,false); // produce, consume
   }
   
+  // set up the LCD's number of rows and columns: 
+  lcd.begin(16, 2);
+  // Print a message to the LCD.
+  delay(100);
+  //lcd.clear();
+  lcd.print("OpenLCB Display");
+
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
   
   // Initialize OpenLCB CAN link controller
   link.reset();
 
-  // set up the LCD's number of rows and columns: 
-  lcd.begin(16, 2);
-  // Print a message to the LCD.
-  //lcd.clear();
-  lcd.print("Up");
 }
 
 void loop() {
