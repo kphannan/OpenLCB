@@ -73,7 +73,7 @@ NodeID nodeid(2,3,4,5,6,0x41);    // This node's default ID
 LinkControl link(&txBuffer, &nodeid);
 
 //unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from);
-//unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length);
+//unsigned int streamRcvCallbaevck(uint8_t *rbuf, unsigned int length);
 
 //Datagram dg(&txBuffer, datagramCallback, &link);
 //Stream str(&txBuffer, streamRcvCallback, &link);
@@ -263,5 +263,14 @@ void loop() {
   }
   // process DCC input
   Dcc.process();
+  
+  // do this to send event
+  {
+    // insert proper values in bottom four bytes
+    Event dccEvent(0x11,0x12,0x13,0x14,0x15, 0x16, 0x17, 0x18);
+    txBuffer.setProducerIdentified(&dccEvent);
+    OpenLcb_can_queue_xmt_wait(&txBuffer);  // wait until buffer queued, but OK due to earlier check
+  }
+  
 }
 
