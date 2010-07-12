@@ -174,6 +174,8 @@ BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
   // called from loop(), this looks at pins and 
   // and decides which events to fire.
   // with pce.produce(i);
+  // The first event of each pair is sent on button down,
+  // and second on button up.
   //for (int i = 0; i<eventNum/2; i++) {
   //  if (states[i] != buttons[i*2]->state) {
   //    states[i] = buttons[i*2]->state;
