@@ -110,7 +110,7 @@ void getWrite(uint32_t address, int space, uint8_t val) {
   // all other spaces not written
 }
 
-Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
+//Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
   // invoked when a datagram arrives
@@ -118,7 +118,7 @@ unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int f
   //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   //printf("\n");
   // pass to consumers
-  cfg.receivedDatagram(rbuf, length, from);
+  //cfg.receivedDatagram(rbuf, length, from);
   
   return 0;  // return pre-ordained result
 }
@@ -176,7 +176,7 @@ PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback, store);
 
 // Set up Blue/Gold configuration
 
-BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
+//BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
 
 bool states[] = {false, false, false, false};
 void produceFromPins() {
@@ -247,13 +247,13 @@ void loop() {
      if (rcvFramePresent) {
         pce.receivedFrame(&rxBuffer);
         dg.receivedFrame(&rxBuffer);
-        str.receivedFrame(&rxBuffer);
+        //str.receivedFrame(&rxBuffer);
      }
      // periodic processing of any state changes
      pce.check();
      dg.check();
-     str.check();
-     cfg.check();
+     //str.check();
+     //cfg.check();
      //bg.check();
      produceFromPins();
   } else {
