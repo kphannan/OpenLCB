@@ -132,7 +132,7 @@ void setup() {
   lcd.createChar(6,custom_6);
   lcd.createChar(7,custom_7);
   lcd.begin(16, 2);  
-  time = 09*60+55;
+  time = 9*60+55;
   rate = 10;
   period = 60000/rate;
   lcd.clear();
