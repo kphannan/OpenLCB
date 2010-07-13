@@ -21,6 +21,12 @@
 //
 //------------------------------------------------------------------------
 
+// Uncomment the following Line to Enable Service Mode CV Programming
+//#define NMRA_DCC_PROCESS_SERVICEMODE
+
+// Uncomment the following line to Enable MutliFunction Decoder Operations
+//#define NMRA_DCC_PROCESS_MULTIFUNCTION
+
 #ifndef Wiring_h
 #include <WProgram.h>
 #endif
@@ -80,8 +86,6 @@ typedef struct
 #define CV_29_CONFIG                          29
 #define CV_OPS_MODE_ADDRESS_LSB               33
 #define MAXCV                                 E2END     // the upper limit of the CV value currently defined to max memory.
-
-#define USE_DCC_CV_CACHE 
 
 class NmraDcc
 {

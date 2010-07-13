@@ -381,6 +381,7 @@ void processDirectOpsOperation( uint8_t Cmd, uint16_t CVAddr, uint8_t Value )
   }
 }
 
+#ifdef NMRA_DCC_PROCESS_MULTIFUNCTION
 void processMultiFunctionMessage( uint16_t Addr, uint8_t Cmd, uint8_t Data1, uint8_t Data2 )
 {
   uint8_t  speed ;
@@ -506,7 +507,9 @@ void processMultiFunctionMessage( uint16_t Addr, uint8_t Cmd, uint8_t Data1, uin
     break;
   }
 }
+#endif
 
+#ifdef NMRA_DCC_PROCESS_SERVICEMODE
 void processServiceModeOperation( DCC_MSG * pDccMsg )
 {
   uint16_t CVAddr ;
@@ -564,7 +567,7 @@ void processServiceModeOperation( DCC_MSG * pDccMsg )
     processDirectOpsOperation( pDccMsg->Data[0] & 0b00001100, CVAddr, Value ) ;
   }
 }
-
+#endif
 void resetServiceModeTimer(uint8_t inServiceMode)
 {
   // Set the Service Mode
@@ -592,15 +595,18 @@ void execDccProcessor( DCC_MSG * pDccMsg )
     if( notifyDccReset )
       notifyDccReset( 0 ) ;
 
+#ifdef NMRA_DCC_PROCESS_SERVICEMODE
     // If this is the first Reset then perform some one-shot actions as we maybe about to enter service mode
     if( DccProcState.inServiceMode )
       resetServiceModeTimer( 1 ) ;
     else
       clearDccProcState( 1 );
+#endif
   }
 
   else
   {
+#ifdef NMRA_DCC_PROCESS_SERVICEMODE
     if( DccProcState.inServiceMode && ( pDccMsg->Data[0] >= 112 ) && ( pDccMsg->Data[0] < 128 ) )
     {
       resetServiceModeTimer( 1 ) ;
@@ -622,6 +628,7 @@ void execDccProcessor( DCC_MSG * pDccMsg )
     {
       if( DccProcState.inServiceMode )
         clearDccProcState( 0 );	
+#endif
 
       // Idle Packet
       if( ( pDccMsg->Data[0] == 0b11111111 ) && ( pDccMsg->Data[1] == 0 ) )
@@ -630,12 +637,16 @@ void execDccProcessor( DCC_MSG * pDccMsg )
           notifyDccIdle() ;
       }
 
+#ifdef NMRA_DCC_PROCESS_MULTIFUNCTION
       // Multi Function Decoders (7-bit address)
       else if( pDccMsg->Data[0] < 128 )
         processMultiFunctionMessage( pDccMsg->Data[0], pDccMsg->Data[1], pDccMsg->Data[2], pDccMsg->Data[3] ) ;  
 
       // Basic Accessory Decoders (9-bit) & Extended Accessory Decoders (11-bit)
       else if( pDccMsg->Data[0] < 192 )
+#else
+      else if( ( pDccMsg->Data[0] >= 128 ) && ( pDccMsg->Data[0] < 192 ) )
+#endif
       {
         if( DccProcState.Flags & FLAGS_DCC_ACCESSORY_DECODER )
         {
@@ -670,6 +681,7 @@ void execDccProcessor( DCC_MSG * pDccMsg )
         }
       }
 
+#ifdef NMRA_DCC_PROCESS_MULTIFUNCTION
       // Multi Function Decoders (14-bit address)
       else if( pDccMsg->Data[0] < 232 )
       {
@@ -677,7 +689,10 @@ void execDccProcessor( DCC_MSG * pDccMsg )
         Address = ( pDccMsg->Data[0] << 8 ) | pDccMsg->Data[1];
         processMultiFunctionMessage( Address, pDccMsg->Data[2], pDccMsg->Data[3], pDccMsg->Data[4] ) ;  
       }
+#endif
+#ifdef NMRA_DCC_PROCESS_SERVICEMODE
     }
+#endif
   }
 }
 
