@@ -22,18 +22,6 @@ void notifyCVAck(void)
  // we don't handle programming, so don't do anything here
 }
 
-// Colled when something happens on DCC side
-void notifyDccSigState( uint16_t Addr, uint8_t OutputIndex, uint8_t State)
-{
-  //Serial.print("notifyDccSigState: ") ;
-  //Serial.print(Addr) ;
-  //Serial.print(',');
-  //Serial.print(OutputIndex) ;
-  //Serial.print(',');
-  //Serial.println(State, HEX) ;
-}
-
-
 // The following lines are needed because the Arduino environment 
 // won't search a library directory unless the library is included 
 // from the top level file (this file)
@@ -72,12 +60,6 @@ NodeID nodeid(2,3,4,5,6,0x41);    // This node's default ID
 
 LinkControl link(&txBuffer, &nodeid);
 
-//unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from);
-//unsigned int streamRcvCallbaevck(uint8_t *rbuf, unsigned int length);
-
-//Datagram dg(&txBuffer, datagramCallback, &link);
-//Stream str(&txBuffer, streamRcvCallback, &link);
-
 /**
  * Get and put routines that 
  * use a test memory space.
@@ -110,92 +92,8 @@ void getWrite(uint32_t address, int space, uint8_t val) {
   // all other spaces not written
 }
 
-//Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
-
-//unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
-  // invoked when a datagram arrives
-  //logstr("consume datagram of length ");loghex(length); lognl();
-  //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
-  //printf("\n");
-  // pass to consumers
-  //cfg.receivedDatagram(rbuf, length, from);
-  
-  //return 0;  // return pre-ordained result
-//}
-
-//unsigned int resultcode;
-//unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
-  // invoked when a stream frame arrives
-  //printf("consume frame of length %d: ",length);
-  //for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
-  //printf("\n");
-  //return resultcode;  // return pre-ordained result
-//}
-
-// Events this node can produce or consume, used by PCE and loaded from EEPROM by NM
-//Event events[] = {
-    //Event(), Event(), Event(), Event(), 
-    //Event(), Event(), Event(), Event() 
-//};
-//int eventNum = 8;
-
-// output drivers
-//ButtonLed p14(14, LOW);
-//ButtonLed p15(15, LOW);
-//ButtonLed p16(16, LOW);
-//ButtonLed p17(17, LOW);
-
-//#define ShortBlinkOn   0x00010001L
-//#define ShortBlinkOff  0xFFFEFFFEL
-
-//long patterns[] = {
-//  ShortBlinkOff,ShortBlinkOn,
-//  ShortBlinkOff,ShortBlinkOn,
-//  ShortBlinkOff,ShortBlinkOn,
-//  ShortBlinkOff,ShortBlinkOn
-//};
-//ButtonLed* buttons[] = {&p14,&p14,&p15,&p15,&p16,&p16,&p17,&p17};
-
 ButtonLed blue(18, LOW);
 ButtonLed gold(19, LOW);
-
-//void pceCallback(int index){
-  // invoked when an event is consumed; drive pins as needed
-  // from index
-  //
-  // sample code uses inverse of low bit of pattern to drive pin all on or all off
-  // (pattern is mostly one way, blinking the other, hence inverse)
-  //
-  //buttons[index]->on(patterns[index]&0x1 ? 0x0L : ~0x0L );
-//}
-
-//NodeMemory nm(0);  // allocate from start of EEPROM
-//void store() { nm.store(&nodeid, events, eventNum); }
-
-//PCE pce(events, eventNum, &txBuffer, &nodeid, pceCallback, store);
-
-// Set up Blue/Gold configuration
-
-//BG bg(&pce, buttons, patterns, eventNum, &blue, &gold);
-
-//bool states[] = {false, false, false, false};
-//void produceFromPins() {
-  // called from loop(), this looks at pins and 
-  // and decides which events to fire.
-  // with pce.produce(i);
-  // The first event of each pair is sent on button down,
-  // and second on button up.
-  //for (int i = 0; i<4; i++) {
-  //  if (states[i] != buttons[i*2]->state) {
-  //    states[i] = buttons[i*2]->state;
-  //    if (states[i]) {
-  //      pce.produce(i*2);
-  //    } else {
-  //      pce.produce(i*2+1);
-  //    }
-  //  }
-  //}
-//}
 
 /**
  * Setup does initial configuration
@@ -263,14 +161,21 @@ void loop() {
   }
   // process DCC input
   Dcc.process();
-  
-  // do this to send event
-  {
+}
+
+void notifyDccAccState( uint16_t Addr, uint16_t BoardAddr, uint8_t OutputAddr, uint8_t State )
+{
     // insert proper values in bottom four bytes
-    Event dccEvent(0x11,0x12,0x13,0x14,0x15, 0x16, 0x17, 0x18);
-    txBuffer.setProducerIdentified(&dccEvent);
-    OpenLcb_can_queue_xmt_wait(&txBuffer);  // wait until buffer queued, but OK due to earlier check
-  }
-  
+  Event dccEvent(0x11,0x12,0x13,0x14, (byte)(Addr >> 8), (byte)(Addr & 0x00FF), OutputAddr, State);
+  txBuffer.setProducerIdentified(&dccEvent);
+  OpenLcb_can_queue_xmt_wait(&txBuffer);  // wait until buffer queued, but OK due to earlier check
+}
+
+void notifyDccSigState( uint16_t Addr, uint8_t OutputIndex, uint8_t State)
+{
+    // insert proper values in bottom four bytes
+  Event dccEvent(0x11,0x12,0x13,0x14, (byte)(Addr >> 8), (byte)(Addr & 0x00FF), OutputIndex, State);
+  txBuffer.setProducerIdentified(&dccEvent);
+  OpenLcb_can_queue_xmt_wait(&txBuffer);  // wait until buffer queued, but OK due to earlier check
 }
 
