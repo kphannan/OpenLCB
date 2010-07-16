@@ -235,7 +235,7 @@ void loop() {
         lcd.setCursor(0,1);
         for (int i = 0; i<rxBuffer.length; i++) {
           if ((i&0x3) == 0) lcd.print(" ");
-          if (rxBuffer.data[i]<10) lcd.print("0");
+          if (rxBuffer.data[i]<16) lcd.print("0");
           lcd.print(rxBuffer.data[i], HEX);
         }
         
