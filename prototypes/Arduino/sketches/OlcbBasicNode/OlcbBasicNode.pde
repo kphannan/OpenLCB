@@ -9,6 +9,9 @@
 //      based on examples by Alex Shepherd and David Harris
 //==============================================================
 
+// next line for stand-alone compile
+#include <WProgram.h>
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
