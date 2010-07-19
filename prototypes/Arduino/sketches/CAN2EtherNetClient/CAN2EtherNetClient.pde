@@ -1,7 +1,8 @@
 /*
  * $Id$ 
  * 
- * CAN2EtherClient provides an Ethernet adapter for CAN frames in client form.
+ * CAN2EtherClient provides an Ethernet adapter for CAN frames.
+ * It forms the client end of the client-server connection.
  * 
  * This is not a full OpenLCB node, but rather a Ethernet-based
  * CAN adapter; it has no OpenLCB-specific processing.

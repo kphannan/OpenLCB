@@ -1,7 +1,8 @@
 /*
  * $Id$ 
  * 
- * CAN2EtherNetuino provides an Ethernet adapter for CAN frames.
+ * CAN2EtherNetServer provides an Ethernet adapter for CAN frames
+ * forming the "server" end of a client-server connection.
  * 
  * This is not a full OpenLCB node, but rather a Ethernet-based
  * CAN adapter; it has no OpenLCB-specific processing.
@@ -20,7 +21,7 @@
 #define ADDR_BYTE_1 10
 #define ADDR_BYTE_2  0
 #define ADDR_BYTE_3  1
-#define ADDR_BYTE_4 97
+#define ADDR_BYTE_4 98
 
 #include <ctype.h>
 #include <CAN.h>

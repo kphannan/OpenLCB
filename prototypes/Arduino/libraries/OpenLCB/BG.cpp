@@ -91,7 +91,11 @@ void BG::check() {
                 // blue button not down
                 // if gold LED lit, send message
                 if (gold->pattern == ~0L) { // check for full lit
-                    if (index>=0 && index<nEvents) {
+                    if (index == -1) {
+                        // no selection, send new ID
+                        // needs to be better
+                        
+                    } else if (index>=0 && index<nEvents) {
                         buttons[index]->on(0x0); // off if lit
                         pce->sendTeach(index);
                     } // otherwise, nothing to do?
