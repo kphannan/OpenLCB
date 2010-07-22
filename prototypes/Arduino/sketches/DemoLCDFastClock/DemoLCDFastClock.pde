@@ -35,10 +35,10 @@
  */
 
 // include the library code:
-#include <LiquidCrystal.h>
+#include <LCmini.h>
 
 // initialize the library with the numbers of the interface pins
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+LCmini lcd(7, 6, 5, 4, 3, 2);
 
 int time;
 
@@ -133,7 +133,7 @@ void setup() {
   lcd.createChar(7,custom_7);
   lcd.begin(16, 2);  
   time = 9*60+55;
-  rate = 10;
+  rate = 100;
   period = 60000/rate;
   lcd.clear();
   lcd.setCursor(0,0); delay(DELAY); lcd.print("   OpenLCB");
@@ -141,8 +141,8 @@ void setup() {
   delay(3000);
   lcd.setCursor(0,0); lcd.print("Rate:    ");
   lcd.setCursor(0,1); lcd.print("         ");
-  lcd.setCursor(0,1); lcd.print("1:");
-  lcd.print(rate);
+  lcd.setCursor(0,1); lcd.print(rate); lcd.print(":1    ");
+  
   showTime(time, 6);
 }
 
