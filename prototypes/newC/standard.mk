@@ -14,13 +14,13 @@ INCLUDE_ARDUINO := ${INCLUDE_ARDUINO} -I${ARDUINO_ROOT}libraries/Servo
 # note that this in meant to be included one level down, where PWD refers to a specific examples/sketch
 
 # local libraries
-INCLUDE_OPTIONS := -I${PWD}/../../OlcbArduinoCAN 
-INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/../../OlcbCommonCAN 
-INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/../../CAN 
-INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/../../EtherNet2 
-INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/../../LCmini
-INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/../../LocoNet
-INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/../../NmraDcc
+INCLUDE_OPTIONS := -I${PWD}/libraries/OlcbArduinoCAN 
+INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/libraries/OlcbCommonCAN 
+INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/libraries/CAN 
+INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/libraries/EtherNet2 
+INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/libraries/LCmini
+INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/libraries/LocoNet
+INCLUDE_OPTIONS := ${INCLUDE_OPTIONS} -I${PWD}/libraries/NmraDcc
 
 TMPDIR := $(shell mktemp -d /tmp/Arduino.XXXXXXXX)
 
