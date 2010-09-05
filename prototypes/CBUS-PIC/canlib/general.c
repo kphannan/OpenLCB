@@ -300,6 +300,24 @@ tryagain:
 }
 
 //*********************************************************************************
+//    SendNSN	Send node serial number
+//*********************************************************************************
+
+void SendNSN(unsigned int ft)
+{
+    CB_FrameType = ft;
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_datalen = 6;
+    CB_data[0] = ND.nodeId[5];
+    CB_data[1] = ND.nodeId[4];
+    CB_data[2] = ND.nodeId[3];
+    CB_data[3] = ND.nodeId[2];
+    CB_data[4] = ND.nodeId[1];
+    CB_data[5] = ND.nodeId[0];
+    while (SendMessage()==0) ;
+}
+
+//*********************************************************************************
 //    SendAck	Send ACk or Error back to Caller
 //*********************************************************************************
 

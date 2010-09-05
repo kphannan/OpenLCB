@@ -1,4 +1,4 @@
-all: mcanacc8.hex mcanservo.hex mcanace8c.hex mcanacc4.hex
+all: mcanacc8.hex mcanservo.hex mcanace8c.hex mcanacc4.hex mcantsop.hex
 
 mcanacc8.hex: canacc.c ../canlib/frametypes.c ../canlib/general.c ../canlib/ecan.c ../canlib/eeprom.c ../canlib/hash.c ../canldr/bootldr.hex
 	MCC18 -fo=canacc8.o -Oa -Opa- -p18f2480 -DACC8=1 canacc.c 
@@ -14,6 +14,11 @@ mcanace8c.hex: canacc.c ../canlib/frametypes.c ../canlib/general.c ../canlib/eca
 	MCC18 -fo=canace8c.o -Oa -Opa- -p18f2480 -DACE8C=1 canacc.c 
 	mplink ../canlib/18f2480.lkr canace8c.o /i /a INHX32 /o canace8c.cof
 	hexmerge canace8c.hex ../canldr/bootldr.hex mcanace8c.hex
+
+mcantsop.hex: canacc.c ../canlib/frametypes.c ../canlib/general.c ../canlib/ecan.c ../canlib/eeprom.c ../canlib/hash.c ../canldr/bootldr.hex
+	MCC18 -fo=cantsop.o -Oa -Opa- -p18f2480 -DTSOP=1 canacc.c 
+	mplink ../canlib/18f2480.lkr cantsop.o /i /a INHX32 /o cantsop.cof
+	hexmerge cantsop.hex ../canldr/bootldr.hex mcantsop.hex
 
 mcanacc4.hex: canacc.c ../canlib/frametypes.c ../canlib/general.c ../canlib/ecan.c ../canlib/eeprom.c ../canlib/hash.c ../canldr/bootldr.hex
 	MCC18 -fo=canacc4.o -Oa -Opa- -p18f2480 -DACC4=1 canacc.c 

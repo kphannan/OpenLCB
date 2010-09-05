@@ -41,6 +41,7 @@ namespace PCTest
             FT_VNSN = 0x8001,   // Verify Node Serial Number 
             FT_INIT = 0x8002,   // Normal Initialization Complete
             FT_BOOT = 0x8003,   // Boot Loader Initialization Complete
+            FT_NSN = 0x8004,   // Node Serial Number 
 
             // Accessory
             FT_EVENT = 0x8010,   // EVENT
@@ -493,6 +494,9 @@ namespace PCTest
                             FT op = (FT)Convert.ToInt32(s.Substring(3, 4), 16);
                             switch (op)
                             {
+                                case FT.FT_NSN:
+                                    return op.ToString() + " alias=" + s.Substring(7, 3)
+                                        + ", " + lookupv(s.Substring(11));
                                 case FT.FT_EVENT:
                                     return op.ToString() + " " + lookupv(s.Substring(11, 16));
                                 case FT.FT_RFID:
@@ -678,13 +682,23 @@ namespace PCTest
                     {
                         ReadModuleString();
                     }
-                    else if (serialLine.Length >= 20 && serialLine.Contains(":X1E") 
+                    else if (serialLine.Length >= 18 && serialLine.Contains(":X1" + hex((int)FT.FT_NSN, 4)))
+                    {   // FT node serial number
+                        nodenumbers[serialLine.Substring(7, 3)] = serialLine.Substring(11, 12);
+                        if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
+                        {
+                            NNtb.Items.Add(serialLine.Substring(7, 3) + ", " + serialLine.Substring(11, 12)
+                                + ", " + lookupv(serialLine.Substring(11, 12)));
+                        }
+                        displaylog();
+                    }
+                    else if (serialLine.Length >= 20 && serialLine.Contains(":X1E")
                       && serialLine.Contains("N" + hex((int)DAA.DAA_NSN, 2)))
-                    {   // node serial number
+                    {   // DAA node serial number
                         nodenumbers[serialLine.Substring(7, 3)] = serialLine.Substring(13, 12);
                         if (!NNtb.Items.Contains(serialLine.Substring(7, 3)))
                         {
-                            NNtb.Items.Add(serialLine.Substring(7, 3) + ", " + serialLine.Substring(13, 12) 
+                            NNtb.Items.Add(serialLine.Substring(7, 3) + ", " + serialLine.Substring(13, 12)
                                 + ", " + lookupv(serialLine.Substring(13, 12)));
                         }
                         displaylog();

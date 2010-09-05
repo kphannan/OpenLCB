@@ -38,6 +38,7 @@ enum FT
     FT_VNSN    = 0x8001,   // Verify Node Serial Number 
     FT_INIT    = 0x8002,   // Normal Initialization Complete
     FT_BOOT    = 0x8003,   // Boot Loader Initialization Complete
+    FT_NSN     = 0x8004,   // Node Serial Number 
 
 // Accessory
     FT_EVENT   = 0x8010,   // EVENT
@@ -79,16 +80,16 @@ enum FT
 // :X1EdddsssN
 
 enum DAA {
-    DAA_DATA     = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
-    DAA_DATA1 = 0x01,
-    DAA_DATA2 = 0x02,
-    DAA_DATA3 = 0x03,
-    DAA_DATA4 = 0x04,
-    DAA_DATA5 = 0x05,
-    DAA_DATA6 = 0x06,
-    DAA_DATA7 = 0x07,
-    DAA_DATA8 = 0x08,
-    DAA_DATA9 = 0x09,
+    DAA_DATA   = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
+    DAA_DATA1  = 0x01,
+    DAA_DATA2  = 0x02,
+    DAA_DATA3  = 0x03,
+    DAA_DATA4  = 0x04,
+    DAA_DATA5  = 0x05,
+    DAA_DATA6  = 0x06,
+    DAA_DATA7  = 0x07,
+    DAA_DATA8  = 0x08,
+    DAA_DATA9  = 0x09,
     DAA_DATA10 = 0x0A,
     DAA_DATA11 = 0x0B,
     DAA_DATA12 = 0x0C,

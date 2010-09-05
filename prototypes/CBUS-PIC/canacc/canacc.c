@@ -6,6 +6,7 @@
     ACC8 (also ACC5) 8 outputs
     ACE8C - 8 inputs
     SERVO - 8 Servo's
+    TSOP - 7 TSOP4838's IR detectors
 
     Must define conditional compilation for hardware/module type on the command line.
 
@@ -50,6 +51,13 @@
 */
 //*********************************************************************************
 
+#ifdef TSOP
+#define INPUT 1
+#endif
+#ifdef ACE8C
+#define INPUT 1
+#endif
+
 #define SendMessage ECANSendMessage
 #define ReceiveMessage ECANReceiveMessage
 
@@ -58,7 +66,7 @@
 #include "../canlib/entry.c"
 #include "../canlib/ecan.c"
 #include "../canlib/eeprom.c"
-#ifndef ACE8C
+#ifndef INPUT
 #define EVENTSIZE 9
 #define TABLESIZE 640 // 10
 #include "../canlib/hash.c"
@@ -134,13 +142,17 @@ void InitRamFromEEPROM(void);
 
 #pragma udata
 
-#ifdef ACE8C
+#ifdef INPUT
 BYTE sendallbits;               // event action type 0
-BYTE OldBuffer;                 // debounced scan data buffer
-BYTE NewBuffer;                 // current scan buffer
+BYTE OutputState;               // debounced scan data buffer
+BYTE PrevInput1;                // previous scan buffer
+BYTE PrevInput2;                // previous previous scan buffer
+BYTE PrevInput3;                // previous previous previous scan buffer
 BYTE scandelay;                 // debounce time
 BYTE scancount;
-volatile BYTE timer10ms;        // 10 msec timer for input scan
+volatile BYTE timer15ms;        // 15 msec timer for input scan
+volatile int timer13us;         // 13 usec timer count for input scan
+volatile BYTE timerflag;		// scan flag
 #endif
 
 BYTE BitMask[8];                // bit masks
@@ -197,6 +209,10 @@ BYTE pulseon;                   // set during a pulse
 
 #ifdef ACE8C
 #define modulestring "OpenLCB Input Driver for CANACE8C " __DATE__ " " __TIME__
+#endif
+
+#ifdef TSOP
+#define modulestring "OpenLCB TSOP Input Driver for CANACE8C " __DATE__ " " __TIME__
 #endif
 
 #ifdef MULTIFN
@@ -273,7 +289,7 @@ const rom BYTE spare[18] = {
 // 0x0040
 const rom BYTE mstr[64] = modulestring ;
 
-#ifdef ACE8C
+#ifdef INPUT
 const rom BYTE PETable[128];		// 8 inputs x 2 states x 8 bytes
 #endif
 
@@ -294,7 +310,7 @@ rom BYTE SERVO_OFF[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
 // NV#16 to NV#23
 #endif
 
-#ifdef ACE8C
+#ifdef INPUT
 rom BYTE DEBOUNCE = 0;
 #endif
 
@@ -375,10 +391,33 @@ void hpinterrupt(void) {
 }
 
 #else
+#ifdef INPUT
+
+void hpinterrupt(void) {
+    TMR1H = (0x10000 - 32) >> 8; // 4 * 52 / 16,000,000 = 13 usec for 38kHz
+    TMR1L = (0x10000 - 32) & 0xFF;
+    PIR1bits.TMR1IF = 0;
+    timer13us--;
+#ifdef TSOP
+    if (timer13us<=27) {
+        if (timer13us&1)
+            PORTCbits.RC7 = 1;
+        else
+            PORTCbits.RC7 = 0;
+    }
+#endif
+    if (timer13us==0) {
+        timer13us = 15000/13;
+        timerflag++;
+    }
+}
+
+#else
 
 void hpinterrupt(void) {
 }
 
+#endif
 #endif
 
 //*********************************************************************************
@@ -468,7 +507,7 @@ void DoEvent(static BYTE * far ev)
 //    Scan and Producer Events
 //*********************************************************************************
 
-#ifdef ACE8C
+#ifdef INPUT
 
 void PESetDefault(void)
 {
@@ -561,8 +600,13 @@ BOOL scan(void)
     far overlay BOOL t;
 
     Row = PORTC;
-    Bitcng = ~(Row ^ NewBuffer) & (Row ^ OldBuffer);
-    NewBuffer = Row;
+#ifdef TSOP
+    Row &= 0x7F;
+#endif
+    Bitcng = ~(Row ^ PrevInput1) & ~(Row ^ PrevInput2) & ~(Row ^ PrevInput3) & (Row ^ OutputState);
+    PrevInput3 = PrevInput2;
+    PrevInput2 = PrevInput1;
+    PrevInput1 = Row;
     for (Bitcnt=0; Bitcng!=0; Bitcnt++) {
         if ((BitMask[Bitcnt] & Bitcng) != 0) {
             Bitcng &= ~BitMask[Bitcnt];
@@ -582,7 +626,7 @@ BOOL scan(void)
                 if (ECANSendMessage()==0)   
                     return FALSE;
             }
-            OldBuffer ^= BitMask[Bitcnt];
+            OutputState ^= BitMask[Bitcnt];
             return TRUE;
         }
     }
@@ -614,21 +658,11 @@ void Packet(void)
             CheckAlias(1);
     }
     else if (CB_FrameType == FT_VNSN) { // send full NID
-        CB_FrameType = FT_DAA | CB_SourceNID;
-        CB_SourceNID = ND.nodeIdAlias;
-        CB_datalen = 7;
-        CB_data[0] = DAA_NSN;
-        CB_data[1] = ND.nodeId[5];
-        CB_data[2] = ND.nodeId[4];
-        CB_data[3] = ND.nodeId[3];
-        CB_data[4] = ND.nodeId[2];
-        CB_data[5] = ND.nodeId[1];
-        CB_data[6] = ND.nodeId[0];
-        while (SendMessage()==0) ;
+        SendNSN(FT_NSN);
     }
     else if (CB_FrameType == FT_EVENT) {
        canTraffic = 1;
-#ifndef ACE8C
+#ifndef INPUT
        if (LEARN == SW_ON) {            // in learn mode
             if (UNLEARN==SW_ON) {        // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
@@ -726,14 +760,14 @@ void DAA_Packet(void)
         break;
 
     case DAA_DEFAULT:
-#ifdef ACE8C
+#ifdef INPUT
         PESetDefault();
 #endif
         sendack(ACK_OK, CB_SourceNID);
         break;
 
     case DAA_PEERASE:
-#ifdef ACE8C
+#ifdef INPUT
         event[0] = 0xFF;
         event[1] = 0xFF;
         event[2] = 0xFF;
@@ -749,7 +783,7 @@ void DAA_Packet(void)
         break;
 
     case DAA_PEREAD:
-#ifdef ACE8C
+#ifdef INPUT
         PEReadEvent(((unsigned int)CB_data[1]<<8) | CB_data[2]);
 #else
         sendack(ACK_NODATA, CB_SourceNID);
@@ -757,7 +791,7 @@ void DAA_Packet(void)
         break;
 
     case DAA_PEWRITEH:
-#ifdef ACE8C
+#ifdef INPUT
         event[0] = CB_data[1];
         event[1] = CB_data[2];
         event[2] = CB_data[3];
@@ -805,7 +839,7 @@ PEW:
         }
 #endif
 
-#ifdef ACE8C
+#ifdef INPUT
         if (CB_data[1] == 0) {
             tmp = EEPROMRead(CB_data[1]); 
             CB_FrameType = FT_DAA | CB_SourceNID;
@@ -830,7 +864,7 @@ PEW:
             return;
         }
 #endif
-#ifdef ACE8C
+#ifdef INPUT
         if (CB_data[1] == 0) {
             scandelay = CB_data[2];
             EEPROMWrite(CB_data[1], scandelay);
@@ -843,7 +877,7 @@ PEW:
 
 
     case DAA_CEREADH: // Event read
-#ifdef ACE8C
+#ifdef INPUT
         sendack(ACK_NODATA, CB_SourceNID); 
 #else
         event[0] = CB_data[1];
@@ -877,7 +911,7 @@ CER:
         break;
 
     case DAA_CEERASEH: // Event erase
-#if !defined(ACE8C)
+#if !defined(INPUT)
         event[0] = CB_data[1];
         event[1] = CB_data[2];
         event[2] = CB_data[3];
@@ -910,7 +944,7 @@ CEE:
         break;
 
     case DAA_CEWRITEH: // Event write
-#if !defined(ACE8C)
+#if !defined(INPUT)
         event[0] = CB_data[1];
         event[1] = CB_data[2];
         event[2] = CB_data[3];
@@ -962,9 +996,9 @@ void DisableInterrupts(void)
 {
 #ifdef SERVO
     while (servo_state & 1) ; // wait until not pulsing a servo
+#endif 
     INTCONbits.GIEH = 0;     // disable all high priority interrupts          
     INTCONbits.GIEL = 0;     // disable all low priority interrupts
-#endif
 }
 
 // EnableInterrupts - This should restart the interrupts in a safe way.
@@ -974,6 +1008,10 @@ void DisableInterrupts(void)
 void EnableInterrupts(void)
 {
 #ifdef SERVO
+    INTCONbits.GIEH = 1;    // enable all high priority interrupts          
+    INTCONbits.GIEL = 1;    // enable all low priority interrupts
+#endif
+#ifdef INPUT
     INTCONbits.GIEH = 1;    // enable all high priority interrupts          
     INTCONbits.GIEL = 1;    // enable all low priority interrupts
 #endif
@@ -1116,8 +1154,12 @@ void main(void) {
     TRISB = 0b00111011;
     PORTB = 0;
     PORTBbits.RB2 = 1;            // CAN recessive
-#ifdef ACE8C
+#ifdef INPUT
+#ifdef TSOP
+    TRISC = 0x7F;                 // 7 inputs, 1 output
+#else
     TRISC = 0xFF;                 // initially all inputs
+#endif
 #else
     TRISC = 0x00;                 // initially all outputs
 #endif
@@ -1167,18 +1209,27 @@ void main(void) {
     timer_20ms = 100;         // Power up servos for 2s
     servo_changetimeout = 50; // 1 sec delay before a servo changes
 #endif
-
-#ifdef ACE8C
-//  timer 1 for 10 msec overflow
+#ifdef INPUT
+    timer13us = 10000/13;
+    timerflag = 0;
     T1CON = 0x81;         // enable timer1, 16 bit mode, no prescaler
-    TMR1H = (0x10000 - 40000) >> 8;    // 4 * 40000 / 16,000,000 = 10 msec
-    TMR1L = (0x10000 - 40000) & 0xFF;
+    TMR1H = (0x10000 - 52) >> 8; // 4 * 52 / 16,000,000 = 13 usec for 38kHz
+    TMR1L = (0x10000 - 52) & 0xFF;
+
+    // Enable TMR1 interrupts at high priority
+    T1CONbits.TMR1ON = 1;
     IPR1bits.TMR1IP = 1;
     PIE1bits.TMR1IE = 1;
-    timer10ms = 0;
+    EnableInterrupts();		// enable interrupts
+    timer15ms = 0;
     scancount = scandelay = EEPROMRead((unsigned int)&DEBOUNCE);
+#ifdef TSOP
+    sendallbits = 0x7F;
+#else
     sendallbits = 0xFF;
-    OldBuffer = PORTC;
+#endif
+    OutputState = PORTC & 0x7F;
+    PrevInput1 = PrevInput2 = PrevInput3 = OutputState;
 #endif
 
     CheckAlias(0);
@@ -1186,7 +1237,7 @@ void main(void) {
     YellowLEDOff();
     canTraffic = 0;
 
-#ifndef ACE8C
+#ifndef INPUT
     // all zero after 1st programming chip
     ProgramMemoryRead((unsigned long)&table[0], 64, (BYTE * far)GP_block);
     j = 0;
@@ -1226,12 +1277,7 @@ void main(void) {
 */
     timer100 = 0;
     eventcnt = 0;
-
-    // send INIT packet
-    CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_INIT;
-    CB_datalen = 0;
-    while (SendMessage()==0) ;
+    SendNSN(FT_INIT);
 
     // Simple loop looking for a received CAN frame
     while (1) {
@@ -1271,13 +1317,11 @@ void main(void) {
 #endif
         }
 
-#ifdef ACE8C 
+#ifdef INPUT 
         // 10 msec timer
-        if (PIR1bits.TMR1IF) { 
-            PIR1bits.TMR1IF = 0;            // reload the timer for 10 msec
-            TMR1H = (0x10000 - 40000) >> 8; // 4 * 40000 / 16,000,000 = 10 msec
-            TMR1L = (0x10000 - 40000) & 0xFF;
-            timer10ms++;
+        if (timerflag) { 
+            timerflag--;
+            timer15ms++;
 
             // call scan every (scandelay+1) x 10msec 
             if (scancount==0) {       
@@ -1287,15 +1331,15 @@ void main(void) {
             else
                 scancount--;
 
-            // send every switch state event after 2.5 sec start up delay 
-            if (timer10ms>0x7F && sendallbits!=0) { // (start of day)
+            // send every switch state event after 2 sec start up delay 
+            if (timer15ms>0x7F && sendallbits!=0) { // (start of day)
                 for (i=0; i<8; i++) {
                     if ((BitMask[i]&sendallbits)!=0) {
                         CB_SourceNID = ND.nodeIdAlias;
                         CB_FrameType = FT_EVENT;
                         CB_datalen = 8;
                         j = i << 4;
-                        if ((OldBuffer & BitMask[i])==0)
+                        if ((OutputState & BitMask[i])==0)
                             j += 8;
                         t = FALSE;
                         for (k=0; k<8; k++) {

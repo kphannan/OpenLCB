@@ -255,17 +255,7 @@ rom unsigned int bits[10] = {
 void Packet(void)
 {
     if (CB_FrameType == FT_VNSN) { // send full NID
-        CB_FrameType = FT_DAA | CB_SourceNID;
-        CB_SourceNID = ND.nodeIdAlias;
-        CB_datalen = 7;
-        CB_data[0] = DAA_NSN;
-        CB_data[1] = ND.nodeId[5];
-        CB_data[2] = ND.nodeId[4];
-        CB_data[3] = ND.nodeId[3];
-        CB_data[4] = ND.nodeId[2];
-        CB_data[5] = ND.nodeId[1];
-        CB_data[6] = ND.nodeId[0];
-        while (SendMessage()==0) ;
+        SendNSN(FT_NSN);
     }
     else if (CB_FrameType == FT_EVENT) {
         canTraffic = 1; 
@@ -384,12 +374,7 @@ void main(void) {
     Timer3Init();
     lcdinit();
     CheckAlias(0);
-
-    // send INIT packet
-    CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_INIT;
-    CB_datalen = 0;
-    while (SendMessage()==0) ;
+    SendNSN(FT_INIT);
 
     // Simple loop looking for a received CAN frame
     while (1) {

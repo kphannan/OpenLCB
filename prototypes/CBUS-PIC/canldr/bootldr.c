@@ -288,17 +288,7 @@ void Packet(void)
             CheckAlias(1);                  // get new alias
     }
     else if (CB_FrameType == FT_VNSN) { // send full NID
-        CB_FrameType = FT_DAA | CB_SourceNID;
-        CB_SourceNID = ND.nodeIdAlias;
-        CB_datalen = 7;
-        CB_data[0] = DAA_NSN;
-        CB_data[1] = ND.nodeId[5];
-        CB_data[2] = ND.nodeId[4];
-        CB_data[3] = ND.nodeId[3];
-        CB_data[4] = ND.nodeId[2];
-        CB_data[5] = ND.nodeId[1];
-        CB_data[6] = ND.nodeId[0];
-        while (SendMessage()==0) ;
+        SendNSN(FT_NSN);
     }
     else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
         if (CB_data[0] == DAA_UPGADDR) { // single GP_block write
@@ -370,10 +360,7 @@ void Packet(void)
 
 void Loader2(void)
 {
-    CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_BOOT;
-    CB_datalen = 0;
-    while (SendMessage()==0) ;
+    SendNSN(FT_BOOT);
     while(1) {
 #ifdef RS232
         SerialIO();

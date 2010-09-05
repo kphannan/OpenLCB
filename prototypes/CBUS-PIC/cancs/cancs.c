@@ -746,17 +746,7 @@ void Packet(void)
 
     switch (CB_FrameType) {
     case FT_VNSN: // send full NID
-        CB_FrameType = FT_DAA | CB_SourceNID;
-        CB_SourceNID = ND.nodeIdAlias;
-        CB_datalen = 7;
-        CB_data[0] = DAA_NSN;
-        CB_data[1] = ND.nodeId[5];
-        CB_data[2] = ND.nodeId[4];
-        CB_data[3] = ND.nodeId[3];
-        CB_data[4] = ND.nodeId[2];
-        CB_data[5] = ND.nodeId[1];
-        CB_data[6] = ND.nodeId[0];
-        while (SendMessage()==0) ;
+        SendNSN(FT_NSN);
         return;
 
     case FT_EVENT:
@@ -1042,9 +1032,7 @@ void main(void)
     CheckAlias(0);
 
     // send init
-    CB_FrameType = FT_INIT;
-    CB_datalen = 0;
-    CsSend();
+    SendNSN(FT_INIT);
 
     CB_data[0] = FT_RESET; // send reset to cabs and adapters
     CB_datalen = 0;
