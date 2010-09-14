@@ -39,7 +39,7 @@ class foo{};
 // specific OpenLCB implementations
 #include "LinkControl.h"
 #include "Datagram.h"
-#include "Stream.h"
+#include "OlcbStream.h"
 #include "Configuration.h"
 #include "NodeMemory.h"
 #include "PCE.h"
@@ -64,7 +64,7 @@ unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int f
 unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length);
 
 Datagram dg(&txBuffer, datagramCallback, &link);
-Stream str(&txBuffer, streamRcvCallback, &link);
+OlcbStream str(&txBuffer, streamRcvCallback, &link);
 
 /**
  * Get and put routines that 

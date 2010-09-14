@@ -46,7 +46,7 @@ class foo{};
 // specific OpenLCB implementations
 #include "LinkControl.h"
 #include "Datagram.h"
-#include "Stream.h"
+#include "OlcbStream.h"
 #include "Configuration.h"
 #include "NodeMemory.h"
 #include "PCE.h"

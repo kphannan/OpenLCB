@@ -4,20 +4,20 @@
 #include "OpenLcbCan.h"
 #include "OpenLcbCanBuffer.h"
 #include "LinkControl.h"
-#include "Stream.h"
+#include "OlcbStream.h"
 
 #include "logging.h"
 
 // ToDo: Implementation incomplete
 
-Stream::Stream(OpenLcbCanBuffer* b, unsigned int (*cb)(uint8_t *tbuf, unsigned int length), LinkControl* ln) {
+OlcbStream::OlcbStream(OpenLcbCanBuffer* b, unsigned int (*cb)(uint8_t *tbuf, unsigned int length), LinkControl* ln) {
 }
 
-void Stream::check() {
+void OlcbStream::check() {
     // see if can send.
 }
 
-void Stream::receivedFrame(OpenLcbCanBuffer* rcv) {
+void OlcbStream::receivedFrame(OpenLcbCanBuffer* rcv) {
     // check for init stream
     // check for stream data transfer headed here
     

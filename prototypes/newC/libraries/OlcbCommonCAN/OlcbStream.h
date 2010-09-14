@@ -1,8 +1,8 @@
-#ifndef Stream_h
-#define Stream_h
+#ifndef OlcbStream_h
+#define OlcbStream_h
 
 /**
- * Class for handling Streams
+ * Class for handling OpenLCB Streams
  *
  * This combines Receiver and Transmitter for now;
  * perhaps they need to be refactored separately later.
@@ -17,10 +17,10 @@
 class OpenLcbCanBuffer;
 class LinkControl;
 
-class Stream {
+class OlcbStream {
   public:
   
-  Stream(OpenLcbCanBuffer* b, unsigned int (*rcvData)(uint8_t *tbuf, unsigned int length), LinkControl* link);
+  OlcbStream(OpenLcbCanBuffer* b, unsigned int (*rcvData)(uint8_t *tbuf, unsigned int length), LinkControl* link);
   
   void check(); 
   void receivedFrame(OpenLcbCanBuffer* rcv);

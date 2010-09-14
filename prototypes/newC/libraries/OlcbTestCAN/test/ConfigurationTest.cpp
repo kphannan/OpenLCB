@@ -28,7 +28,7 @@ int producer_pin_record;
 // specific OpenLCB implementations
 #include "LinkControl.h"
 #include "Datagram.h"
-#include "Stream.h"
+#include "OlcbStream.h"
 #include "Configuration.h"
 #include "NodeMemory.h"
 
@@ -58,7 +58,7 @@ void getWrite(uint32_t address, int space, uint8_t val) {
 void restart() {printf("restart called\n");}
 
 Datagram dg(&txBuffer, datagramCallback, &link);
-Stream str(&txBuffer, rcvCallback, &link);
+OlcbStream str(&txBuffer, rcvCallback, &link);
 Configuration cfg(&dg, &str, &getRead, &getWrite, &restart);
 
 unsigned int datagramCallback(uint8_t rbuf[DATAGRAM_LENGTH], unsigned int length, unsigned int from){

@@ -2,7 +2,7 @@
 
 #include "Configuration.h"
 #include "Datagram.h"
-#include "Stream.h"
+#include "OlcbStream.h"
 
 #include "logging.h"
 
@@ -40,7 +40,7 @@
  *       Datagram use & structure
  */
  
-  Configuration::Configuration( Datagram *d, Stream *s,
+  Configuration::Configuration( Datagram *d, OlcbStream *s,
                         const uint8_t (*gr)(uint32_t address, int space),
                         void (*gw)(uint32_t address, int space, uint8_t value),
                         void (*res)()

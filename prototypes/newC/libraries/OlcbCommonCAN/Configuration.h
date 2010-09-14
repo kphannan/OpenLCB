@@ -10,7 +10,7 @@
 
 #include "Datagram.h"
 
-class Stream;
+class OlcbStream;
 
 class Configuration {
   public:
@@ -23,7 +23,7 @@ class Configuration {
   // (We're trying for now to avoid virtual methods)
   // ****
   
-  Configuration(Datagram* datagramHandler, Stream *streamHandler,
+  Configuration(Datagram* datagramHandler, OlcbStream *streamHandler,
                         const uint8_t (*getRead)(uint32_t address, int space),
                         void (*getWrite)(uint32_t address, int space, uint8_t val),
                         void (*restart)()
@@ -38,7 +38,7 @@ class Configuration {
   void processCmd(uint8_t* data, int length);
   
   Datagram* dg;
-  Stream* str;
+  OlcbStream* str;
   uint8_t buffer[DATAGRAM_LENGTH];
   int length;
   unsigned int from;

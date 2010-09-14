@@ -27,7 +27,7 @@ int producer_pin_record;
 
 // specific OpenLCB implementations
 #include "LinkControl.h"
-#include "Stream.h"
+#include "OlcbStream.h"
 
 OpenLcbCanBuffer     rxBuffer;	// CAN receive buffer
 OpenLcbCanBuffer     txBuffer;	// CAN send buffer
@@ -45,7 +45,7 @@ unsigned int rcvCallback(uint8_t *rbuf, unsigned int length){
   printf("\n");
   return resultcode;  // return pre-ordained result
 }
-Stream str(&txBuffer, rcvCallback, &link);
+OlcbStream str(&txBuffer, rcvCallback, &link);
 
 /**
  * This setup is just for testing
