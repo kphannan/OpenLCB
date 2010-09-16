@@ -2,90 +2,320 @@
 <HTML>
 <HEAD>
 	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
-	<TITLE></TITLE>
-	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.1  (Unix)">
-	<META NAME="AUTHOR" CONTENT="Bob Jacobsen">
-	<META NAME="CREATED" CONTENT="20090816;10132800">
-	<META NAME="CHANGEDBY" CONTENT="David Harris">
-	<META NAME="CHANGED" CONTENT="20091108;21045500">
+	<TITLE>S/RP 9.6 (NMRAnet) Proposal Documentation Index</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGED" CONTENT="20100908;22380600">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<STYLE TYPE="text/css">
+	<!--
+		H2.ctl { font-family: "Lucida Sans" }
+		H3.ctl { font-family: "Lucida Sans" }
+	-->
+	</STYLE>
 </HEAD>
 <BODY LANG="en-US" DIR="LTR">
-<H1>
-<img src="web/logo-ajs-1.png"/>
-</H1>
-<P STYLE="margin-bottom: 0cm"><I>(Content not yet final)</I></P>
-<P STYLE="margin-bottom: 0cm">The purpose of the OpenLCB project is
-to develop a new Layout Control Bus for use on Model Railroads.</P>
-<H2 STYLE="margin-top: 0cm; margin-bottom: 0cm"><BR>
-</H2>
-<H2>Development Area</H2>
-<P STYLE="margin-bottom: 0cm">This section describes the organization
-of the OpenLCB development areas. See also the SourceForge.net
-<A HREF="http://sourceforge.net/projects/openlcb/">http://sourceforge.net/projects/openlcb/</A>.</P>
-<H3>File Tree Organization</H3>
-<P STYLE="margin-bottom: 0cm">This area contains a number of
-subdirectories:</P>
-<DL>
-    <DT>
-	<A HREF="documents">documents</A></DT><DD>
-	Working and development documents 
-	</DD>
-    <DT><A HREF="prototypes">prototypes</A></DT><DD>
-	Prototype code, organized by language and sometimes by project 
-	</DD>
-	<DT>
-	<A HREF="srpdrafts">srpdrafts</A></DT><DD STYLE="margin-bottom: 0.5cm">
-	Standards and Recommended Practices documents for discussion and
-	eventual submission to the NMRA. 
-	</DD><DT>
-	<A HREF="web">web</A></DT><DD STYLE="margin-bottom: 0.5cm">
-	Web pages and similar to be make available via the web site,
-	currently 
-	</DD></DL>
-<P STYLE="margin-bottom: 0cm">
-<BR>
+<H1>OpenLCB NMRA Proposal Documentation Index</H1>
+<P>The NMRA is interested in defining a “NMRAnet” as a standard,
+and OpenLCB wants to take part in that. This page contains documents
+for our effort in that direction. The separate “<A HREF="../documents">documents</A>”
+directory contains our development documentation.</P>
+<H2 CLASS="western">Physical Layer Standard: S 9.x.1</H2>
+<P>After the summer 2010 NMRA meeting in Milwaukee, the NMRA wanted
+to start with a “Physical Layer” standard for NMRAnet
+implementations that use CAN. Various discussion ensued. One proposal
+for this was developed here:</P>
+<UL>
+	<LI><P>S-9-x-1 NMRANet® Physical Layer draft standard (<A HREF="NMRA%20S-9-x-1.odt">ODT
+	working copy</A>) (<A HREF="NMRA%20S-9-x-1.pdf">PDF of latest draft</A>)
+		</P>
+	<LI><P>TN-9-x-1 NMRANet® Physical Layer draft technical note (<A HREF="NMRA%20TN-9-x-1.odt">ODT
+	working copy</A>) (<A HREF="NMRA%20TN-9-x-1.pdf">PDF of latest
+	draft</A>) 
+	</P>
+	<LI><P>Sample schematic (will eventually be a figure in tech note
+	above) (<A HREF="NMRAnet2.sch">SCH working copy</A>) (<A HREF="NMRAnet2.pdf">PDF
+	of latest draft</A>) (<A HREF="NMRAnet2.png">PNG of latest draft</A>)
+		</P>
+</UL>
+<H2 CLASS="western">NMRAnet Goals, Measures and Mandates</H2>
+<P>The NMRA effort defined some “Goals and Measures” and “Goals
+and Mandates” for the NMRAnet effort in 2008 and requested
+information from people working on NMRAnet proposals.  In 2008, 2009
+and 2010 the OpenLCB group wrote replies to those, along with
+introductory information, which are linked from this section. We've
+also provided some use case information.</P>
+<UL>
+	<LI><P>TN-9-6-NMRANET Overview (Draft) – a draft overview of
+	OpenLCB/S9.6 for NMRAnet (<A HREF="TN-9-6-NMRANET-Overview-Draft.odt">ODT
+	working copy</A>) (<A HREF="TN-9-6-NMRANET-Overview-Draft.pdf">PDF
+	of latest draft</A>)</P>
+	<LI><P>TN-9-6-NMRANET-Goals and Mandates (Draft) – a draft reply
+	to the NMRA “<A HREF="http://nmranet.sourceforge.net/NMRAGoalsAndMandate.pdf">Goals
+	and Mandates</A>” document (<A HREF="TN-9-6-NMRANET-Goals-and-Mandates-Draft.odt">ODT
+	working copy</A>) (<A HREF="TN-9-6-NMRANET-Goals-and-Mandates-Draft.pdf">PDF
+	of latest draft</A>)</P>
+	<LI><P>TN-9-6-NMRANET Goals and Measures (Draft) – a draft reply
+	to the NMRA “<A HREF="http://nmranet.sourceforge.net/NMRANetGoalsAndMeasures-2007-10-22.pdf">Goals
+	and Measures</A>” document (<A HREF="TN-9-6-NMRANET-Goals-and-Measures-Draft.odt">ODT
+	working copy</A>) (<A HREF="TN-9-6-NMRANET-Goals-and-Measures-Draft.pdf">PDF
+	of latest draft</A>)</P>
+	<LI><P>TN-9-6-NMRANET Use Cases (Draft) – a description of how
+	OpenLCB meets various use case requirements (<A HREF="TN-9-6-NMRANET-Use-Cases.odt">ODT
+	working copy</A>) (<A HREF="TN-9-6-NMRANET-Use-Cases.pdf">PDF of
+	latest draft</A>)</P>
+</UL>
+<H2 CLASS="western" STYLE="page-break-before: always">NMRA
+definitions</H2>
+<H3 CLASS="western">Standards</H3>
+<P>Standards are required of all implementations. They therefore are
+the baseline, mandatory functionality. 
 </P>
-<P STYLE="margin-bottom: 0cm">Only commonly-held formats are to be
-used for files. E.g. documentation should be in HTML 4.0, preferably
-edited with a tool like Open Office that preserves minimal
-formatting. Drafts should be in DocBook so that we can easily convert
-them to multiple formats; there are several free DocBook <A HREF="http://www.xmlmind.com/xmleditor/">editing
-tools</A> available.</P>
-<H3>Access</H3>
-<P>The content of this development area, including code, documents
-and web pages, is kept in the <A HREF="http://sourceforge.net/projects/openlcb/develop">OpenLCB</A>
-<A HREF="http://sourceforge.net/">SourceForge.net</A> <A HREF="http://openlcb.svn.sourceforge.net/viewvc/openlcb/trunk">SVN
-repository</A> in the “trunk” directory. To check it out, please
-do:</P>
-<PRE STYLE="margin-bottom: 0.5cm">svn co https://openlcb.svn.sourceforge.net/svnroot/openlcb openlcb</PRE><P STYLE="margin-bottom: 0cm">
-For more information on the SVN source code management tool, please
-see the <A HREF="http://subversion.tigris.org/">SVN website</A> and
-the <A HREF="http://svnbook.red-bean.com/">online SVN book</A>.</P>
+<P>From the DCC Working Group: 
+</P>
+<BLOCKQUOTE>&quot;An NMRA Standard is a public document that
+specifies the minimum requirements for interchange of equipment. To
+be granted a conformance seal, a manufacturer must meet all relevant
+requirements specified in all standards. &quot; 
+</BLOCKQUOTE>
+<H3 CLASS="western">Recommended Practices</H3>
+<P>Recommended Practices describe optional features and capabilities.
+Those need not be present, but if they are present they must function
+as described in the RP. 
+</P>
+<P>From the NMRA DCC Working Group: 
+</P>
+<BLOCKQUOTE>&quot;An NMRA Recommended Practice is a public document
+that specifies the maximum requirements for interchange of equipment.
+For any DCC product to be granted a conformance seal, the product
+must not violate any recommended practice. &quot; 
+</BLOCKQUOTE>
+<P>Although the terms of both Standards and Recommended Practices use
+the “must” construction, note the difference between “must
+meet” and “must not violate”. In practice, it's not at all
+clear what “the maximum requirements for interchange” means.
+Perhaps that was intended to be “the requirements for maximum
+interchange”?</P>
+<H3 CLASS="western">Technical Notes</H3>
+<P>Technical Notes are non-normative documents which convey
+information useful to the model railroading community. 
+</P>
+<P>From the DCC Working Group: 
+</P>
+<BLOCKQUOTE>&quot;An NMRA Technical Note is Technical Department
+document used to convey information useful to the model railroading
+community. Technical Notes are only available to NMRA members.&quot; 
+</BLOCKQUOTE>
+<BLOCKQUOTE><I>DPH: This last sentence seems ominous – we will want
+these to be available to <U>all</U><SPAN STYLE="text-decoration: none">
+NMRAnet users.<BR>BobJ: I agree. Maybe the NMRA has some other type
+of doc we can use. Or we can write a “For Dummies” book outside
+the auspices of the NMRA... </SPAN></I>
+</BLOCKQUOTE>
+<P>There doesn't seem to be a single system of numbering for
+Technical Notes. Some are based on dates (TN-2004-1), some are linked
+to standards (TN-9.2.1), and some have multipart numbers TN-3-05. 
+</P>
+<H2 CLASS="western"><META NAME="CHANGEDBY" CONTENT="Bob Jacobsen"><!-- $Id$ -->Proposed
+Organization for OpenLCB S, RP, TN Documents</H2>
+<P STYLE="margin-bottom: 0cm">The NMRA has assigned the 9.6.* numbers
+to the OpenLCB proposal for NMRAnet.</P>
+<P STYLE="margin-bottom: 0cm">We want to keep the various components
+of OpenLCB in separate standards documents, including the wire
+protocols and higher level protocols, so we propose using a
+several-part number where the 3<SUP>rd</SUP> group (1<SUP>st</SUP>
+after S 9.6) is the type, and if need be a 4<SUP>th</SUP> group adds
+a wire-protocol identifier:</P>
 <P STYLE="margin-bottom: 0cm"><BR>
 </P>
-<H2>Other Efforts</H2>
-<P STYLE="margin-bottom: 0cm"><A HREF="http://www.merg.org.uk/resources/lcb.html">CBUS</A>
-is a CAN-based layout control bus being developed by <A HREF="http://www.merg.org.uk/">MERG</A>.</P>
+<TABLE WIDTH=100% BORDER=1 CELLPADDING=4 CELLSPACING=4>
+	<COL WIDTH=64*>
+	<COL WIDTH=64*>
+	<COL WIDTH=64*>
+	<COL WIDTH=64*>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P><BR>
+			</P>
+		</TD>
+		<TH WIDTH=25%>
+			<P>General Document</P>
+		</TH>
+		<TH WIDTH=25%>
+			<P>CAN Document</P>
+		</TH>
+		<TH WIDTH=25%>
+			<P>TCP/IP Document</P>
+		</TH>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P>Physical Layer</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.1 (basically empty)</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.1.1</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.1.2 (basically empty)</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P>Data Link</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.2 (basically empty)</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.2.1</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.2.2 (basically empty)</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P>Network</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.3</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.3.1</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.3.2</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P>Transport – Event Exchange</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.4</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.4.1</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.4.2</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P>Transport – Datagrams</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.5</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.5.1</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.5.2</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=25%>
+			<P>Transport – Streams</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.6</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.6.1</P>
+		</TD>
+		<TD WIDTH=25%>
+			<P>S 9.6.6.2</P>
+		</TD>
+	</TR>
+</TABLE>
 <P STYLE="margin-bottom: 0cm"><BR>
 </P>
-<P STYLE="margin-bottom: 0cm"><A HREF="http://www.nmra.org/standards/standards.html">NMRA
-standards and conformance page</A></P>
-<P STYLE="margin-bottom: 0cm"><A HREF="http://sourceforge.net/projects/nmranet/">NMRAnet
-SourceForge.net project site</A></P>
-<P STYLE="margin-bottom: 0cm"><A HREF="http://nmra.org/">NMRA.org
-main page</A></P>
+<P STYLE="margin-bottom: 0cm">Higher level protocols are then
+described in a transport-independent document:</P>
 <P STYLE="margin-bottom: 0cm"><BR>
 </P>
-<P STYLE="margin-bottom: 0cm">Past discussions have taken place on
-the <A HREF="http://groups.yahoo.com/group/NMRANETWG/">NMRANETWG</A>
-and <A HREF="http://groups.yahoo.com/group/MRRLCB/">MRRLCB</A> Yahoo
-groups.</P>
-<H2 STYLE="margin-top: 0cm; margin-bottom: 0cm"><BR>
-</H2>
+<TABLE WIDTH=496 BORDER=1 CELLPADDING=4 CELLSPACING=4>
+	<COL WIDTH=234>
+	<COL WIDTH=232>
+	<TR VALIGN=TOP>
+		<TH WIDTH=234>
+			<P>Protocol</P>
+		</TH>
+		<TH WIDTH=232>
+			<P>Document Number</P>
+		</TH>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=234>
+			<P>Producer/Consumer Layout Control</P>
+		</TD>
+		<TD WIDTH=232>
+			<P>S 9.6.7</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=234>
+			<P>Memory Configuration</P>
+		</TD>
+		<TD WIDTH=232>
+			<P>S 9.6.8</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=234>
+			<P>Configuration Description Information</P>
+		</TD>
+		<TD WIDTH=232>
+			<P>S 9.6.9</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=234>
+			<P>Display</P>
+		</TD>
+		<TD WIDTH=232>
+			<P>S 9.6.10</P>
+		</TD>
+	</TR>
+	<TR VALIGN=TOP>
+		<TD WIDTH=234>
+			<P><BR>
+			</P>
+		</TD>
+		<TD WIDTH=232>
+			<P><BR>
+			</P>
+		</TD>
+	</TR>
+</TABLE>
+<P STYLE="margin-bottom: 0cm"><BR>
+</P>
+<P STYLE="margin-bottom: 0cm">This results in a lot of small
+documents, but because we're working with an evolving specification,
+it lets us advance and adopt each part independently.</P>
+<P STYLE="margin-bottom: 0cm"><!-- The following used to be in the document, and perhaps can
+     go back, but it's not true now. Commented out until that
+     is sorted.
+<H2>Structure</H2>
+<P STYLE="margin-bottom: 0cm">The primary documents in this directory
+are in XML DocBook format under SVN control. Each time these are
+updated, the HTML and PDF versions linked above are automatically
+created from the primary documents. The HTML and PDF files are not
+kept in SVN.</P>
+--><BR>
+</P>
 <HR>
-<P STYLE="margin-bottom: 0cm">This web sites contains trademarks and
-copyrighted information. Please see the <A HREF="/Licensing.html">Licensing</A>
-page.</P>
-<P STYLE="margin-bottom: 0cm">This is SVN $Revision$ of <SDFIELD TYPE=DATETIME SDVAL="40041.4309143519" SDNUM="4105;1033;MM/DD/YY">08/16/09</SDFIELD>.</P>
+<P>Site hosted by <FONT COLOR="#000080">
+<A HREF="http://sourceforge.net/projects/openlcb"><FONT COLOR="#000080"><IMG SRC="http://sflogo.sourceforge.net/sflogo.php?group_id=286373&amp;type=13" NAME="graphics1" ALIGN=ABSMIDDLE WIDTH=120 HEIGHT=30 BORDER=2></FONT></A></FONT>
+</P>
+<P>This is SVN $Revision$ 
+</P>
 </BODY>
 </HTML>
