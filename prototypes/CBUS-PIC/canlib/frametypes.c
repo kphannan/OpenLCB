@@ -71,8 +71,12 @@ enum FT
     FT_RDCC5   = 0x8042,   // Request 5 byte DCC packet
     FT_RDCC6   = 0x8043,   // Request 6 byte DCC packet
 
+// XpressNet
+    FT_XPRESSNET = 0x8050, // XpressNet raw message from a command station 
+
+// Other frame types
     FT_DAA     = 0xE000,   // Destination Alias Addressed, message type in the data
-    FT_STREAM  = 0xF000,   // Stream data
+    FT_STREAM  = 0xF000    // Stream data
 };
 
 // Destination Addressed, 1st byte of data has message type
@@ -120,7 +124,9 @@ enum DAA {
 // Misc
     DAA_NSN      = 0x50,      // Node serial number
     DAA_DEFAULT  = 0x51,      // Reset (almost) everything to default values
-    DAA_REBOOT   = 0x52       // Re-boot the module, after node ID write
+    DAA_REBOOT   = 0x52,      // Re-boot the module, after node ID write
+// DCC
+    DAA_XPRESSNET = 0x60      // Raw XpressNet command to a command station
 };
 
 enum ACK {
