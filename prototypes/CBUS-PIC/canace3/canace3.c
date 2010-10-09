@@ -26,10 +26,17 @@
 #include "../canlib/general.c"
 #include "../canlib/entry.c"
 #include "../canlib/ecan.c"
+#ifdef INTERLOCK
+#include "interlock.c"
+#endif
 
 //*********************************************************************************
 //    Ram
 //*********************************************************************************
+
+#ifdef INTERLOCK
+#define ALARM PORTAbits.RA5
+#endif
 
 #pragma udata
 
@@ -56,7 +63,11 @@ BYTE starttimeout;    // 2 sec delay before sending
 //        ROM module info
 //*********************************************************************************
 
+#ifdef INTERLOCK
+#define modulestring "OpenLCB for CANACE3 Interlock "  __DATE__ " " __TIME__ 
+#else
 #define modulestring "OpenLCB for MERG CANACE3 "  __DATE__ " " __TIME__ 
+#endif
 
 #pragma romdata
 const rom BYTE xml[] = 
@@ -184,6 +195,39 @@ void EraseEvent(unsigned int evno)
 //    Scan
 //*********************************************************************************
 
+#ifdef INTERLOCK
+BOOL locked(BYTE n)
+{
+    far overlay BOOL stack[10];
+    far overlay BYTE sp;
+    far overlay BYTE c;
+    overlay rom BYTE * far p;
+    sp = 0;
+    p = locking[n+1];
+    stack[0] = FALSE; // for null strings the lever is not locked
+    while ((c = *p++) != 0)
+    {
+        if (c == 0xFF) {
+            sp--;
+            stack[sp-1] &= stack[sp];
+        }
+        else if (c == 0x7F) {
+            sp--;
+            stack[sp-1] |= stack[sp];
+        }
+        else if ((c&0x80)==0x80) {
+            c--;
+            stack[sp++] = (OldBuffer[(c&0x7F)>>3] & BitMask[c&0x07]) == 0;
+        }
+        else {
+            c--;
+            stack[sp++] = ((OldBuffer[c>>3] & BitMask[c&0x07])) != 0;
+        }
+    }
+    return stack[0];
+}
+#endif
+
 // scan and debounce switches or push buttons
 
 void scan(void)
@@ -197,7 +241,7 @@ void scan(void)
     far overlay unsigned int j;
 
     for (Ccount = 0; Ccount<16; Ccount++) {
-        PORTA = Ccount;
+        PORTA = (PORTA & 0xF0) | Ccount;
         // 0.1 ms to allow data to settle
         i = 400/3;     // for 16MHz, 400 instructions per 0.1mS 
         while(--i) ;   // 3 instruction loop        
@@ -206,6 +250,12 @@ void scan(void)
         NewBuffer[Ccount] = Row;
         for (Bitcnt=0; Bitcng!=0; Bitcnt++) {
             if ((BitMask[Bitcnt] & Bitcng) != 0) {
+#ifdef INTERLOCK
+                if (locked(Ccount<<3 | Bitcnt)) {
+                    ALARM = 1;
+                    return;
+                }
+#endif
                 Bitcng &= ~BitMask[Bitcnt];
                 i = (Ccount<<4) | (Bitcnt<<1);
                 if ((Row & BitMask[Bitcnt]) == 0)
@@ -377,7 +427,7 @@ void main(void) {
     INTCON = 0;
     ADCON0 = 0;
     ADCON1 = 0b00001111;
-    TRISA =  0x30;             // Port A 0-3 Col ouput, 4 = S1, 5 = J5
+    TRISA =  0x10;             // Port A 0-3 Col ouput, 4 = S1, 5 = J5 ALARM
     TRISB = 0b00111000;        // RB2 = CANTX, RB3 = CANRX, 
                                // RB4,5 are sel input, RB6,7 for leds
     PORTBbits.RB2 = 1;         // CAN recessive
@@ -451,6 +501,9 @@ void main(void) {
     while (1) {
         // 100 msec timer
         if (Timer3Test()) {
+#ifdef INTERLOCK
+            ALARM = 0;
+#endif
             if (canTraffic) {
                 YellowLEDOn();
             }
@@ -478,8 +531,8 @@ void main(void) {
             // call scan every 20msec        
             scan(); // takes at least 16 x 0.1 ms
 
-            // start of day only in switch mode, 1 every 20msec, about 2.5 secs
-            if (starttimeout==0 && PORTAbits.RA5==0 && startofday!=0) {
+            // start of day, 1 every 20msec, about 2.5 secs
+            if (starttimeout==0 && startofday!=0) {
                 startofday--;
                 CB_SourceNID = ND.nodeIdAlias;
                 CB_FrameType = FT_EVENT;

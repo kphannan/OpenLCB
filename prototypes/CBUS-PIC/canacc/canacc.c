@@ -130,9 +130,9 @@ void InitRamFromEEPROM(void);
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (((PORTB & 0x10)>>2)|(PORTB & 0x03))
 #define NUM_SERVOS       8	     // max number of servos
-#define ENDPOINT_1MS    -4000    // TMR1 delay for 1ms when current_output bit = 0
+#define ENDPOINT_1MS    -4000    // TMR1 delay for 1ms when new_output bit = 0
 #define SERVO_MID       -6000    // TMR1 delay for midpoint
-#define ENDPOINT_2MS    -8000    // TMR1 delay for 2ms when current_output bit = 1
+#define ENDPOINT_2MS    -8000    // TMR1 delay for 2ms when new_output bit = 1
 #define SERVO_MIN       -(int)40
 #endif
 
@@ -167,16 +167,14 @@ BYTE canTraffic;                // yellow led CAN traffic indicator
 unsigned volatile int timer100;    // long period timer, inc every 100ms
 
 #ifdef SERVO
-unsigned volatile int timer_20ms; // 5sec time 250 x 20ms
 BYTE next_portc;	              // used by hp interrupt to update portc 
 BYTE new_output;                // next value of all the outputs
-BYTE current_output;            // updated by hp int from new_output during idle period
 BYTE servo_state;		        // interrupt state counter
-BYTE servo_index;               // internal data for hp int
-BYTE servo_mask;
-BYTE servo_changetimeout;       // only one servo change at a time
-BYTE hp_i;                      // interrupt loop counter
+BYTE servo_index;               // index of servo to pulse
 int next_tmr;                   // next time for interrupt timer100
+BYTE pulsetimer;                // timer for pulsing
+BYTE pulseoutput;               // bits of pulse requests
+BYTE pulseon;                   // set while pulsing
 #pragma udata svo1
 far BYTE servo_on[NUM_SERVOS];  // servo endpoint
 far BYTE servo_off[NUM_SERVOS]; // servo opposite endpoint
@@ -320,14 +318,7 @@ rom BYTE DEBOUNCE = 0;
 //        High priority interrupt
 //*******************************************************************************
 
-// At the start of the sequence, servo 0 output is set high and TMR1 loaded for
-// a timeout between 1ms and 2ms acording to the desired servo position. 
-// On the next interrupt, the servo output is cleared and TMR1 is loaded to
-// complete the 2ms period.
-// This sequence is repeated for all 8 servos (16ms) followed by 4ms idle time.
-// If timer_20ms has expired then power off servos to prevent cheap servos
-// from buzzing continuously and dissipating power in the regulator.
-// When any servo state changes, all the servos are powered up.
+// Send a pulse to one servo every 50ms
 
 #pragma interrupt hpinterrupt
 
@@ -342,11 +333,11 @@ void hpinterrupt(void) {
 
     next_portc = 0;    // Turn off all servos next time
 
-    if (servo_state < 16 && timer_20ms > 0) {
-        if ((servo_state & 1) == 0) { // even states 0 - 14
-            next_portc = servo_mask;  // turn on servo next time round
+    if (servo_state < 2 && pulseon) {
+        if (servo_state == 0) {
+            next_portc = pulseon;     // turn on servo next time round
             // Pre-calculate next delay for servo position
-            if (current_output & servo_mask) {
+            if (new_output & pulseon) {
                 LO(next_tmr) = servo_on[servo_index];
             } 
             else {
@@ -355,12 +346,10 @@ void hpinterrupt(void) {
             HI(next_tmr) = 0;
             next_tmr = (next_tmr<<4) - 8000;
         } 
-        else { // odd states 1 - 15
+        else { // odd state 1
             next_tmr = ENDPOINT_2MS - next_tmr; // Pre-calculate remaining delay
             if (next_tmr > SERVO_MIN) 
                 next_tmr = SERVO_MIN;
-            servo_mask = servo_mask<<1;
-            servo_index++;
         }
     } 
     else { // not a servo, or timeslot 16 to 19
@@ -370,23 +359,6 @@ void hpinterrupt(void) {
     servo_state++;
     if (servo_state == 20) { // 20 ms timer
         servo_state = 0;
-        servo_index = 0;
-        servo_mask = 1;
-        if (servo_changetimeout)
-            servo_changetimeout--;
-        else if (current_output != new_output) { // only update when idle
-            for (hp_i=0; hp_i<8; hp_i++) {
-                if ((current_output & BitMask[hp_i]) != (new_output & BitMask[hp_i])) {
-                    current_output ^= BitMask[hp_i]; 
-                    timer_20ms = 100; // 2 seconds
-                    servo_changetimeout = 30; // 600 msec between changes
-                    break;
-                }
-            }
-        }
-        else if (timer_20ms > 0) { // 2 sec = 100 x 20 ms
-            timer_20ms--;
-        }
     } 
 }
 
@@ -493,6 +465,7 @@ void DoEvent(static BYTE * far ev)
 #endif
 
 #ifdef SERVO
+    pulseoutput |= output;
     if (e & 0x08) { // on
         new_output |= output; // set output bit
     }
@@ -995,10 +968,10 @@ CEW:
 void DisableInterrupts(void)
 {
 #ifdef SERVO
-    while (servo_state & 1) ; // wait until not pulsing a servo
+    while (pulseon) ;       // wait until not pulsing a servo
 #endif 
-    INTCONbits.GIEH = 0;     // disable all high priority interrupts          
-    INTCONbits.GIEL = 0;     // disable all low priority interrupts
+    INTCONbits.GIEH = 0;    // disable all high priority interrupts          
+    INTCONbits.GIEL = 0;    // disable all low priority interrupts
 }
 
 // EnableInterrupts - This should restart the interrupts in a safe way.
@@ -1096,7 +1069,6 @@ void servo_setup(void) {
 	            // flag not saved
 	            saved = 8;
 	            // Keep servo powered for 1s
-	            timer_20ms = 50;
 	            // delay if switch kept down so servo doesn't move too fast
 	            for (count=250; (count>0) && (PUSHBTN == SW_ON); count--)  ; 
 	        }
@@ -1193,9 +1165,11 @@ void main(void) {
     InitRamFromEEPROM();
 
 #ifdef SERVO
-    new_output = current_output = 0;
+    new_output = 0;
     servo_state = 19;
     next_portc = 0;
+    pulseon = 0;
+    pulseoutput = 0;
     // Setup TMR1 for servo pulse timing, 16MHz Fosc = 4MHz Fcyc, 1:1 prescale
     TMR1H = ((int)-4000) >> 8;
     TMR1L = (int)-4000;
@@ -1206,8 +1180,6 @@ void main(void) {
     IPR1bits.TMR1IP = 1;
     PIE1bits.TMR1IE = 1;
     EnableInterrupts();		// enable interrupts
-    timer_20ms = 100;         // Power up servos for 2s
-    servo_changetimeout = 50; // 1 sec delay before a servo changes
 #endif
 #ifdef INPUT
     timer13us = 10000/13;
@@ -1310,6 +1282,24 @@ void main(void) {
                         pulseoutput &= ~BitMask[i]; // clear request bit 
                         PORTC |= BitMask[i];        // set output
                         pulseon = BitMask[i];
+                        break;                        
+                    }
+                }
+            }
+#endif
+#ifdef SERVO
+            if (pulsetimer) { // sending pulses for 500 msec
+                pulsetimer--;
+                if (pulsetimer == 0)
+                    pulseon = 0;  // end of pulses, 100 msec before next
+            }
+            else if (pulseoutput) { // select another to pulse
+                for (i=0; i<8; i++) {
+                    if (pulseoutput&BitMask[i]) {
+                        pulseoutput &= ~BitMask[i]; // clear request bit 
+                        pulseon = BitMask[i];
+                        servo_index = i;
+                        pulsetimer = 6;             // 500 msec of pulses
                         break;                        
                     }
                 }

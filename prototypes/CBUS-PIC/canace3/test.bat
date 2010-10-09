@@ -1,0 +1,1 @@
+bin\release\interlock.exe test.txt test.c
