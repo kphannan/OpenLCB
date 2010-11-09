@@ -8,7 +8,6 @@ namespace interlock
     class Program
     {
         static string[] rpn = new string[121];
-        static string[] eqn = new string[121];
         static bool[] states = new bool[121];
         static string inputfile;
         static int inputptr;
@@ -17,7 +16,7 @@ namespace interlock
         static char pexp_nlock;
         static char pexp_ilock;
         static int highestlever;
-        
+
         static SortedList<UInt32, String> memdata = new SortedList<UInt32, String>();
 
         static int token()
@@ -41,12 +40,12 @@ namespace interlock
                 }
                 nexttoken = n + 1000;
             }
-            else if (inputfile[inputptr] == 'O' && inputfile[inputptr + 1] == 'R')
+            else if (inputfile[inputptr] == 'o' && inputfile[inputptr + 1] == 'r')
             {
                 nexttoken = '|';
                 inputptr += 2;
             }
-            else if (inputfile[inputptr] == 'M' && inputfile[inputptr + 1] == 'S' && inputfile[inputptr + 2] == 'L')
+            else if (inputfile[inputptr] == 'm' && inputfile[inputptr + 1] == 's' && inputfile[inputptr + 2] == 'l')
             {
                 nexttoken = '@';
                 inputptr += 3;
@@ -71,7 +70,7 @@ namespace interlock
         static void ReadFile(string fileName)
         {
             System.IO.StreamReader sr = System.IO.File.OpenText(fileName);
-            inputfile = sr.ReadToEnd().ToUpper();
+            inputfile = sr.ReadToEnd().ToLower();
             inputptr = 0;
             sr.Close();
         }
@@ -96,28 +95,6 @@ namespace interlock
             Console.WriteLine("Error " + n + " in line near " + s3 + " at \'" + s1 + "\', " + s2 + " expected.");
         }
 
-        static string LeverString(int l, char nr)
-        {
-            if (l <= 0 && l >= 121)
-                Error(20, "Lever number out of range");
-            return l.ToString() + nr.ToString();
-        }
-
-        static void AddTerm(int lever, string r, string e)
-        {
-            int l = rpn[lever].Length;
-            rpn[lever] += r;
-            if (l != 0)
-            {
-                rpn[lever] += "|";
-                eqn[lever] += " or";
-            }
-            if (e.Length <= 4)
-                eqn[lever] += " " + e;
-            else
-                eqn[lever] += " (" + e +")";
-        }
-
         static void primary()
         {
             if (nexttoken < 1000)
@@ -135,56 +112,91 @@ namespace interlock
 
             pexp_lever = nexttoken - 1000;
             token();
-            pexp_ilock = 'N';
-            pexp_nlock = 'R';
-            if (nexttoken == 'R')
+            pexp_ilock = 'r';
+            pexp_nlock = 'n';
+            if (nexttoken == 'r')
             {
                 token();
-                pexp_ilock = 'N';
-                pexp_nlock = 'R';
+                pexp_ilock = pexp_nlock = 'r';
             }
-            else if (nexttoken == 'N')
+            else if (nexttoken == 'n')
             {
                 token();
-                pexp_ilock = 'R';
-                pexp_nlock = 'N';
+                pexp_ilock = pexp_nlock = 'n';
             }
+        }
+
+        // *****************************************************************************************************
+        // Code Output
+        // *****************************************************************************************************
+
+        static void emitop(int lever, char op)
+        {
+            int endc = 0;
+            if (rpn[lever].Length!=0)
+                endc = rpn[lever][rpn[lever].Length-1];
+            bool oper = (endc==0) || (endc==0xFF) || (endc==0x7F) || (endc==0xFE);
+
+            if (op == '!') // optimize a NOT operation on a lever
+            {
+                if (!oper)
+                {
+                    rpn[lever] = rpn[lever].Substring(0,rpn[lever].Length-1) + (char)(endc ^ 0x80);
+                    return;
+                }
+            }
+            if (op == '&')
+                endc = 0xFF;
+            else if (op == '|')
+                endc = 0x7F;
+            else if (op == '!')
+                endc = 0xFE;
+            rpn[lever] += (char)endc;
+         }
+
+        static void emitlever(int lever, int l, char nr)
+        {
+            if (l <= 0 && l >= 121)
+            {
+                Error(20, "Lever number out of range");
+                l = 120;
+            }
+            if (nr == 'r')
+                l |= 0x80;
+            rpn[lever] += (char)l;
         }
 
         // *****************************************************************************************************
         // Release by
         // *****************************************************************************************************
 
-        static void releasewith(int lever, bool afterprimary)
+        static void releasewith(int lever)
         {
-            string r = "", e = "";
-            if (!afterprimary)
-                primary();
             int alever = pexp_lever;
             char anlock = pexp_nlock;
             char ailock = pexp_ilock;
-            AddTerm(alever, LeverString(lever, 'R')+LeverString(alever,anlock)+"&",
-                LeverString(lever, 'R') + " and " + LeverString(alever,anlock));
-
-            if (nexttoken != 'W')
+            if (nexttoken != 'w')
                 Error(2, "W");
-            r += LeverString(alever, ailock);
-            e += LeverString(alever, ailock);
             token();
+            emitlever(alever, lever, 'r');
+            emitlever(lever, alever, ailock);
+
             do
             {
                 primary();
-                r += LeverString(pexp_lever, pexp_ilock) + "|";
-                e += " or " + LeverString(pexp_lever, pexp_ilock);
-                AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(alever, anlock) + "&" + LeverString(pexp_lever, pexp_nlock) + "&",
-                    LeverString(lever, 'R') + " and " + LeverString(alever, anlock) + " and " + LeverString(pexp_lever, pexp_nlock));
+                emitlever(lever, pexp_lever, pexp_ilock);
+                emitop(lever, '&');
+                emitlever(alever, pexp_lever, pexp_nlock);
+                emitop(alever, '&');
+                emitlever(pexp_lever, lever, 'r');
+                emitop(pexp_lever, '|');
                 if (nexttoken == '.')
                     token();
             } while (nexttoken >= 1000);
-            AddTerm(lever, r, e);
+            emitop(alever, '|');
         }
         
-        static void releaseorend(int lever, string r, string e)
+        static void releaseorend(int lever)
         {
             bool repeat = false;
             do
@@ -194,7 +206,7 @@ namespace interlock
                 {
                     token();
                     primary();
-                    releasewith(lever,true);
+                    releasewith(lever);
                     if (nexttoken != ')')
                         Error(4, ")");
                     token();
@@ -207,10 +219,11 @@ namespace interlock
                 else
                 {
                     primary();
-                    r += LeverString(pexp_lever, pexp_ilock) + "&";
-                    e += " and " + LeverString(pexp_lever, pexp_ilock);
-                    AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(pexp_lever, pexp_nlock) + "&",
-                        LeverString(lever, 'R') + " and " + LeverString(pexp_lever, pexp_nlock));
+                    emitlever(lever, pexp_lever, pexp_ilock);
+                    emitop(lever, '!');
+                    emitop(lever, '&');
+                    emitlever(pexp_lever, lever, 'r');
+                    emitop(pexp_lever, '|');
                     if (nexttoken == '|')
                     {
                         repeat = true;
@@ -218,7 +231,6 @@ namespace interlock
                     }
                 }
             } while (repeat);
-            AddTerm(lever, r, e);
         }
 
         static void releaseandexp(int lever)
@@ -234,39 +246,49 @@ namespace interlock
                     {
                         token();
                         primary();
-                        releasewith(lever, true);
+                        releasewith(lever);
                         if (nexttoken != ')')
                             Error(33, ") to end with");
                         token();
                         if (nexttoken != '|')
                             Error(34, "or");
                         token();
-                        releaseorend(lever, LeverString(pexp_lever, pexp_ilock), LeverString(pexp_lever, pexp_ilock));
+                        emitlever(lever, pexp_lever, pexp_ilock);
+                        releaseorend(lever);
+                        emitop(lever, '|');
                     }
                     else // ( p ?
                     {
                         primary();
                         if (nexttoken == ')') // ( p )
                         {
-                            AddTerm(lever, LeverString(pexp_lever, pexp_ilock), LeverString(pexp_lever, pexp_ilock));
-                            AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(pexp_lever, pexp_nlock) + "&",
-                                 LeverString(lever, 'R') + " and " + LeverString(pexp_lever, pexp_nlock));
+                            emitlever(lever, pexp_lever, pexp_ilock);
+                            emitop(lever, '!');
+                            emitop(lever, '|');
+                            emitlever(pexp_lever, lever, 'r');
+                            emitop(pexp_lever, '|');
                         }
                         else if (nexttoken == '@') // (p MSL)
                         {
-                            AddTerm(lever, LeverString(pexp_lever, pexp_ilock), LeverString(pexp_lever, pexp_ilock));
+                            emitlever(lever, pexp_lever, pexp_ilock);
+                            emitop(lever, '!');
+                            emitop(lever, '|');
                             token();
                         }
                         else if (nexttoken == '|') // ( p | ... )
                         {
-                            AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(pexp_lever, pexp_nlock) + "&",
-                                 LeverString(lever, 'R') + " and " + LeverString(pexp_lever, pexp_nlock));
+                            emitlever(pexp_lever, lever, 'r');
+                            emitop(pexp_lever, '|');
+                            emitlever(lever, pexp_lever, pexp_ilock);
+                            emitop(lever, '!');
                             token();
-                            releaseorend(lever, LeverString(pexp_lever, pexp_ilock), LeverString(pexp_lever, pexp_ilock));
+                            releaseorend(lever);
+                            emitop(lever, '|');
                         }
-                        else if (nexttoken == 'W') // ( p W p ... )
+                        else if (nexttoken == 'w') // ( p W p ... )
                         {
-                            releasewith(lever, true);
+                            releasewith(lever);
+                            emitop(lever, '|');
                         }
                         else
                         {
@@ -281,9 +303,11 @@ namespace interlock
                 else if (nexttoken >= 1000)
                 {
                     primary();
-                    AddTerm(lever, LeverString(pexp_lever, pexp_ilock), LeverString(pexp_lever, pexp_ilock));
-                    AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(pexp_lever, pexp_nlock) + "&",
-                         LeverString(lever, 'R') + " and " + LeverString(pexp_lever, pexp_nlock));
+                    emitlever(lever, pexp_lever, pexp_ilock);
+                    emitop(lever, '!');
+                    emitop(lever, '|');
+                    emitlever(pexp_lever, lever, 'r');
+                    emitop(pexp_lever, '|');
                 }
                 if (nexttoken == '.')
                 {
@@ -295,7 +319,7 @@ namespace interlock
 
         static void release(int lever)
         {
-            if (nexttoken == 'X')
+            if (nexttoken == 'x')
                 token();
             if (nexttoken != ',' && nexttoken != '/' && nexttoken != '\n' && nexttoken != 0)
                 releaseandexp(lever);
@@ -319,33 +343,25 @@ namespace interlock
                     primary();
                     if (nexttoken == ')')
                     {
-                        AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(pexp_lever, 'N') + "&",
-                            LeverString(lever, 'R') + " and " + LeverString(pexp_lever, 'N'));
-                        // AddTerm(lever, LeverString(pexp_lever, 'R') + LeverString(lever, 'N') + "&",
-                        //    LeverString(pexp_lever, 'R') + " and " + LeverString(lever, 'N'));
+                        emitlever(lever, pexp_lever, pexp_nlock);
+                        emitop(lever, '!');
+                        emitop(lever, '|');
                         token();
                     }
-                    else if (nexttoken == 'W')
+                    else if (nexttoken == 'w')
                     {
-                        int alever = pexp_lever;
-                        string r = LeverString(lever, 'R') + LeverString(alever, 'N') + "&";
-                        string e = LeverString(lever, 'R') + " and " + LeverString(alever, 'N');
-                        string rc = LeverString(alever, 'R') + LeverString(lever, 'N') + "&";
-                        string ec = LeverString(alever, 'R') + " and " + LeverString(lever, 'N');
+                        emitlever(lever, pexp_lever, pexp_nlock);
+                        emitop(lever, '!');
                         token();
                         do
                         {
                             if (nexttoken == '.')
                                 token();
                             primary();
-                            r += LeverString(pexp_lever, pexp_nlock) + "&";
-                            e += " and " + LeverString(pexp_lever, pexp_nlock);
-                            rc += LeverString(pexp_lever, pexp_nlock) + "&";
-                            ec += " and " + LeverString(pexp_lever, pexp_nlock);
-
+                            emitlever(lever, pexp_lever, pexp_nlock);
+                            emitop(lever, '&');
                         } while (nexttoken == '.' || nexttoken >= 1000);
-                        AddTerm(alever, r, e);
-                        // AddTerm(lever, rc, ec);
+                        emitop(lever, '|');
                         if (nexttoken == ')')
                             token();
                         else
@@ -354,11 +370,10 @@ namespace interlock
                 }
                 else if (nexttoken >= 1000)
                 {
-                    primary(); // get 1st locks normal lever
-                    AddTerm(pexp_lever, LeverString(lever, 'R') + LeverString(pexp_lever, 'N') + "&",
-                        LeverString(lever, 'R') + " and " + LeverString(pexp_lever, 'N'));
-                    // AddTerm(lever, LeverString(pexp_lever, 'R') + LeverString(lever, 'N') + "&",
-                    //    LeverString(pexp_lever, 'R') + " and " + LeverString(lever, 'N'));
+                    primary(); // get locks normal lever
+                    emitlever(lever, pexp_lever, pexp_nlock);
+                    emitop(lever, '!');
+                    emitop(lever, '|');
                 }
                 else
                 {
@@ -394,25 +409,20 @@ namespace interlock
                     if (nexttoken == ')')
                     {
                         token();
-                        AddTerm(pexp_lever, LeverString(lever, 'R'), LeverString(lever, 'R'));
+                        emitlever(pexp_lever, lever, 'r');
+                        emitop(pexp_lever, '|');
                     }
-                    else if (nexttoken == 'W')
+                    else if (nexttoken == 'w')
                     {
                         int alever = pexp_lever;
-                        string r = "";
-                        string e = "";
-                        r += LeverString(lever, 'R');
-                        e += LeverString(lever, 'R');
+                        emitlever(alever, lever, 'r');
                         token();
-                        do
-                        {
-                            if (nexttoken == '.')
-                                token();
-                            primary();
-                            r += LeverString(pexp_lever, pexp_nlock) + "&";
-                            e += " and " + LeverString(pexp_lever, pexp_nlock);
-                        } while (nexttoken == '.' || nexttoken >= 1000);
-                        AddTerm(alever, r, e);
+                        primary();
+                        emitlever(alever, pexp_lever, pexp_nlock);
+                        emitop(alever, '&');
+                        emitop(alever, '|');
+                        emitlever(pexp_lever, lever, 'r');
+                        emitop(pexp_lever, '|');
                         if (nexttoken == ')')
                             token();
                         else
@@ -421,8 +431,9 @@ namespace interlock
                 }
                 else if (nexttoken >= 1000)
                 {
-                    primary(); // get 1st locks normal lever
-                    AddTerm(pexp_lever, LeverString(lever, 'R'), LeverString(lever, 'R'));
+                    primary(); // get a locks both ways lever
+                    emitlever(pexp_lever, lever, 'r');
+                    emitop(pexp_lever, '|');
                 }
                 else
                 {
@@ -502,98 +513,37 @@ namespace interlock
         }
 
         // *****************************************************************************************************
-        // convert rpn strings
-        // *****************************************************************************************************
-
-        static string RpnToHex(string s)
-        {
-            string o = "";
-            for (int i = 0; i < s.Length; i++)
-            {
-                if (s[i] >= '0' && s[i] <= '9')
-                {
-                    int n = 0;
-                    while (s[i] >= '0' && s[i] <= '9')
-                    {
-                        n = n * 10 + s[i] - '0';
-                        i++;
-                    }
-                    if (s[i] == 'N')
-                        n += 0;
-                    else if (s[i] == 'R')
-                        n += 128;
-                    else
-                        Error(98, "Illegal character in rpn string");
-                    o += (char)n;
-                }
-                else if (s[i] == '&')
-                    o += (char)0xFF;
-                else if (s[i] == '|')
-                    o += (char)0x7F;
-                else
-                    Error(99, "Illegal character in rpn string");
-            }
-            return o + '\0';
-        }
-
-        static string RpnToHex2(string s)
-        {
-            string o = "";
-            for (int i = 0; i < s.Length; i++)
-            {
-                if (s[i] >= '0' && s[i] <= '9')
-                {
-                    int n = 0;
-                    while (s[i] >= '0' && s[i] <= '9')
-                    {
-                        n = n * 10 + s[i] - '0';
-                        i++;
-                    }
-                    if (s[i] == 'N')
-                        n += 0;
-                    else if (s[i] == 'R')
-                        n += 128;
-                    else
-                        Error(98, "Illegal character in rpn string");
-                    o += @"\x"+String.Format("{0:X2}", n);
-                }
-                else if (s[i] == '&')
-                    o += @"\xFF";
-                else if (s[i] == '|')
-                    o += @"\x7F";
-                else
-                    Error(99, "Illegal character in rpn string");
-            }
-            return o;
-        }
-
-        // *****************************************************************************************************
         // emulation
         // *****************************************************************************************************
 
         static bool Locked(int lever)
         {
             bool[] stack = new bool[10];
-            int sp = 0;
+            int sp = 1;
             int c = 0;
             stack[0] = false;
-            string s = RpnToHex(rpn[lever]);
+            string s = rpn[lever];
             int i = 0;
-            while ((c = s[i++]) != 0)
+            while (i < s.Length)
             {
-                if (c == 0xFF)
+                c = s[i++];
+                if (c == 0xFF) // AND op
                 {
                     sp--;
                     stack[sp-1] &= stack[sp];
                 }
-                else if (c == 0x7F)
+                else if (c == 0x7F) // OR op
                 {
                     sp--;
-                    stack[sp-1] |= stack[sp];
+                    stack[sp - 1] |= stack[sp];
                 }
-                else if ((c&0x80)==0x80) 
+                else if (c == 0xFE) // NOT op
+                {
+                    stack[sp - 1] = !stack[sp-1];
+                }
+                else if ((c & 0x80) == 0x80) // Reversed
                     stack[sp++] = states[c&0x7F];
-                else
+                else // normal
                     stack[sp++] = !states[c];
             }
             return stack[0];
@@ -662,7 +612,6 @@ namespace interlock
             for (i = 0; i <= 120; i++)
             {
                 rpn[i] = "";
-                eqn[i] = "";
             }
             
             ReadFile(args[0]);
@@ -673,24 +622,43 @@ namespace interlock
             sw.WriteLine("// Locking");
             for (i = 1; i <= highestlever; i++)
             {
-                if (eqn[i].Length > 0)
-                    sw.WriteLine("// Locked " + i.ToString() + ":\t" + eqn[i]);
+                if (rpn[i].Length > 0)
+                {
+                    string s = "False ";
+                    foreach (char c in rpn[i])
+                    {
+                        if (c == 0xFF)
+                            s += "& ";
+                        else if (c == 0x7F)
+                            s += "| ";
+                        else if (c == 0xFE)
+                            s += "! ";
+                        else if (((int)c&0x80) == 0x80)
+                            s += ((int)c&0x7F).ToString() + "r ";
+                        else
+                            s += ((int)c).ToString() + "n ";
+                    }
+                    sw.WriteLine("// Locked " + i.ToString() + ":\t" + s);
+                }
                 else
-                    sw.WriteLine("// Locked " + i.ToString() + ":\tNever");
-                //if (rpn[i].Length > 0)
-                //    sw.WriteLine("// " + i.ToString() + ":\t" + rpn[i]);
+                    sw.WriteLine("// Locked " + i.ToString() + ":\tFalse");
             }
             sw.WriteLine("");
             sw.WriteLine("// Reverse polish logic for locking");
-            sw.WriteLine("// 0xFF = and, 0x7F = or, 0x00 marks the end of the equation");
+            sw.WriteLine("// 0xFF = and, 0x7F = or, 0xFE = not, 0x00 marks the end of the equation");
             sw.WriteLine("// 1-120 = lever normal, add 128 for Reversed.");
             sw.WriteLine("BYTE * rom locking[" + (highestlever + 1).ToString() + "] = {");
             for (i = 0; i <= highestlever; i++)
             {
-                if (rpn[i].Length > 0)
-                    sw.WriteLine("    \"" + RpnToHex2(rpn[i])+"\", // " + i.ToString());
-                else
-                    sw.WriteLine("    \"\", // " + i.ToString());
+               string s = "";
+               if (rpn[i].Length > 0)
+               {
+                   foreach (char c in rpn[i])
+                       s += @"\x" + String.Format("{0:X2}", (int)c);
+                   sw.WriteLine("    \"" + s + "\", // " + i.ToString());
+               }
+               else
+                   sw.WriteLine("    \"\", // " + i.ToString());
             }
             sw.WriteLine("};");
             sw.Close();

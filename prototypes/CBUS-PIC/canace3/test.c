@@ -1,92 +1,104 @@
 // Locking
-// Locked 1:	 2N or 3R
-// Locked 2:	 (1R and 2R)
-// Locked 3:	 (1R and 3N)
-// Locked 4:	 (5N or 6N or 7R) or 33N
-// Locked 5:	 (4R and 5R)
-// Locked 6:	 (4R and 5R and 6R)
-// Locked 7:	 (4R and 5R and 7N)
-// Locked 8:	 (9N and 10N)
-// Locked 9:	 (8R and 9R)
-// Locked 10:	 (8R and 10R)
-// Locked 11:	 (12N or 13N or 14R) or (14R and 34N)
-// Locked 12:	 (11R and 12R)
-// Locked 13:	 (11R and 12R and 13R)
-// Locked 14:	 (11R and 12R and 14N)
-// Locked 15:	 16N or 17N
-// Locked 16:	Never
-// Locked 17:	 (15R and 17R)
-// Locked 18:	 (19R and 18N) or (20R and 18N)
-// Locked 19:	 (18R and 19N)
-// Locked 20:	 (18R and 20N)
-// Locked 21:	 (22R and 21N and 23R and 24N) or (42R and 21N and 23R and 24N)
-// Locked 22:	 (21R and 22N and 23R and 24N)
-// Locked 23:	Never
-// Locked 24:	Never
-// Locked 25:	Never
-// Locked 26:	 25R
-// Locked 27:	 25R
-// Locked 28:	Never
-// Locked 29:	 28R
-// Locked 30:	 (28R and 31R and 32N)
-// Locked 31:	Never
-// Locked 32:	Never
-// Locked 33:	 (4R and 33R)
-// Locked 34:	 (11R and 34R)
-// Locked 35:	Never
-// Locked 36:	 37N
-// Locked 37:	 (36R and 37R)
-// Locked 38:	 (39N or 40N)
-// Locked 39:	 (38R and 39R)
-// Locked 40:	 (38R and 39R and 40R)
-// Locked 41:	 (28R and 31R and 32N)
-// Locked 42:	 (21R and 42N and 23R and 24N)
+// Locked 1:	False 2n | 3r | 
+// Locked 2:	False 1r | 
+// Locked 3:	False 1r | 
+// Locked 4:	False 5r 6r & | 
+// Locked 5:	False 4r 6r & | 
+// Locked 6:	False 4r | 
+// Locked 7:	False
+// Locked 8:	False 9n 10n & | 
+// Locked 9:	False 8r | 
+// Locked 10:	False 8r | 
+// Locked 11:	False 12r 13r & 14n & 14n 34n & | 
+// Locked 12:	False 11r 13r & 14n & | 
+// Locked 13:	False 11r | 
+// Locked 14:	False 11r | 
+// Locked 15:	False 16n | 17n | 
+// Locked 16:	False
+// Locked 17:	False 15r | 
+// Locked 18:	False 19r | 20r | 43n | 
+// Locked 19:	False 18r | 
+// Locked 20:	False 18r | 
+// Locked 21:	False 22r 23r & 24n & | 42r 23r & 24n & | 
+// Locked 22:	False 21r 23r & 24n & | 
+// Locked 23:	False
+// Locked 24:	False
+// Locked 25:	False
+// Locked 26:	False 25r | 
+// Locked 27:	False 25r | 
+// Locked 28:	False
+// Locked 29:	False 28r | 
+// Locked 30:	False 28r 31r & | 
+// Locked 31:	False 28r | 
+// Locked 32:	False 28r | 
+// Locked 33:	False
+// Locked 34:	False 11r | 
+// Locked 35:	False
+// Locked 36:	False 37n | 
+// Locked 37:	False 36r | 
+// Locked 38:	False 39r 40r & | 
+// Locked 39:	False 38r 40n & | 
+// Locked 40:	False 38r | 
+// Locked 41:	False 28r 32n & | 
+// Locked 42:	False 21r 23r & 24n & | 
+// Locked 43:	False
+// Locked 44:	False 45r 46r & 47r & | 
+// Locked 45:	False 44r 46r & 47r & | 
+// Locked 46:	False 44r | 44r | 45r 47r & | 
+// Locked 47:	False 44r 46r & | 45r | 45r | 
+// Locked 48:	False
 
 // Reverse polish logic for locking
-// 0xFF = and, 0x7F = or, 0x00 marks the end of the equation
+// 0xFF = and, 0x7F = or, 0xFE = not, 0x00 marks the end of the equation
 // 1-120 = lever normal, add 128 for Reversed.
-BYTE * rom locking[43] = {
+BYTE * rom locking[49] = {
     "", // 0
-    "\x02\x83\x7F", // 1
-    "\x81\x82\xFF", // 2
-    "\x81\x03\xFF", // 3
-    "\x05\x06\x7F\x87\x7F\x21\x7F", // 4
-    "\x84\x85\xFF", // 5
-    "\x84\x85\xFF\x86\xFF", // 6
-    "\x84\x85\xFF\x07\xFF", // 7
-    "\x09\x0A\xFF", // 8
-    "\x88\x89\xFF", // 9
-    "\x88\x8A\xFF", // 10
-    "\x0C\x0D\x7F\x8E\x7F\x8E\x22\xFF\x7F", // 11
-    "\x8B\x8C\xFF", // 12
-    "\x8B\x8C\xFF\x8D\xFF", // 13
-    "\x8B\x8C\xFF\x0E\xFF", // 14
-    "\x10\x11\x7F", // 15
+    "\x02\x7F\x83\x7F", // 1
+    "\x81\x7F", // 2
+    "\x81\x7F", // 3
+    "\x85\x86\xFF\x7F", // 4
+    "\x84\x86\xFF\x7F", // 5
+    "\x84\x7F", // 6
+    "", // 7
+    "\x09\x0A\xFF\x7F", // 8
+    "\x88\x7F", // 9
+    "\x88\x7F", // 10
+    "\x8C\x8D\xFF\x0E\xFF\x0E\x22\xFF\x7F", // 11
+    "\x8B\x8D\xFF\x0E\xFF\x7F", // 12
+    "\x8B\x7F", // 13
+    "\x8B\x7F", // 14
+    "\x10\x7F\x11\x7F", // 15
     "", // 16
-    "\x8F\x91\xFF", // 17
-    "\x93\x12\xFF\x94\x12\xFF\x7F", // 18
-    "\x92\x13\xFF", // 19
-    "\x92\x14\xFF", // 20
-    "\x96\x15\xFF\x97\xFF\x18\xFF\xAA\x15\xFF\x97\xFF\x18\xFF\x7F", // 21
-    "\x95\x16\xFF\x97\xFF\x18\xFF", // 22
+    "\x8F\x7F", // 17
+    "\x93\x7F\x94\x7F\x2B\x7F", // 18
+    "\x92\x7F", // 19
+    "\x92\x7F", // 20
+    "\x96\x97\xFF\x18\xFF\x7F\xAA\x97\xFF\x18\xFF\x7F", // 21
+    "\x95\x97\xFF\x18\xFF\x7F", // 22
     "", // 23
     "", // 24
     "", // 25
-    "\x99", // 26
-    "\x99", // 27
+    "\x99\x7F", // 26
+    "\x99\x7F", // 27
     "", // 28
-    "\x9C", // 29
-    "\x9C\x9F\xFF\x20\xFF", // 30
-    "", // 31
-    "", // 32
-    "\x84\xA1\xFF", // 33
-    "\x8B\xA2\xFF", // 34
+    "\x9C\x7F", // 29
+    "\x9C\x9F\xFF\x7F", // 30
+    "\x9C\x7F", // 31
+    "\x9C\x7F", // 32
+    "", // 33
+    "\x8B\x7F", // 34
     "", // 35
-    "\x25", // 36
-    "\xA4\xA5\xFF", // 37
-    "\x27\x28\x7F", // 38
-    "\xA6\xA7\xFF", // 39
-    "\xA6\xA7\xFF\xA8\xFF", // 40
-    "\x9C\x9F\xFF\x20\xFF", // 41
-    "\x95\x2A\xFF\x97\xFF\x18\xFF", // 42
+    "\x25\x7F", // 36
+    "\xA4\x7F", // 37
+    "\xA7\xA8\xFF\x7F", // 38
+    "\xA6\x28\xFF\x7F", // 39
+    "\xA6\x7F", // 40
+    "\x9C\x20\xFF\x7F", // 41
+    "\x95\x97\xFF\x18\xFF\x7F", // 42
+    "", // 43
+    "\xAD\xAE\xFF\xAF\xFF\x7F", // 44
+    "\xAC\xAE\xFF\xAF\xFF\x7F", // 45
+    "\xAC\x7F\xAC\x7F\xAD\xAF\xFF\x7F", // 46
+    "\xAC\xAE\xFF\x7F\xAD\x7F\xAD\x7F", // 47
+    "", // 48
 };

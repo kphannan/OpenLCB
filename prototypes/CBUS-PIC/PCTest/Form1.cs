@@ -1048,7 +1048,7 @@ namespace PCTest
                 while (n-- > 0)
                     ack.WaitOne();
                 EnterLoader();   // send download start
-                enableCommButtons(false);
+                enableNIDButtons(false);
                 try
                 {
                     this.SendUpgrade.RunWorkerAsync(); // start background task
@@ -1086,7 +1086,7 @@ namespace PCTest
             ack.WaitOne(); // wait for act to enter loader cmd
             if (ackstatus != 0)
             {
-                enableCommButtons(true);
+                enableNIDButtons(true);
                 return 0;
             }
 
@@ -1128,7 +1128,7 @@ namespace PCTest
                 ack.WaitOne();
                 if (ackstatus != 0)
                 {
-                    enableCommButtons(true);
+                    enableNIDButtons(true);
                     return 0;
                 }
             }
@@ -1142,7 +1142,7 @@ namespace PCTest
             {
                 updatelog("Upgrade Error\r\n");
             }
-            enableCommButtons(true);
+            enableNIDButtons(true);
             displaylog();
             opstate = OPSTATE.IDLE;
             return 0;

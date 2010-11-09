@@ -3,11 +3,11 @@ No, Released by			, Locks normal		, Locks Each way
  1, 2.3N			,			,
  2,				,			,
  3,				,			,
- 4, (5W6R7N).33R		,			,
+ 4, (5W6R)		,			,
  5,				,			,
  6,				,			,
  7,				,			,
- 8, (9 or 10)			,			,
+ 8, (9 or 10)		,			,
  9,				,			,
 10,				,			,
 11, ((12W13R.14N) or 34)	,			,
@@ -17,7 +17,7 @@ No, Released by			, Locks normal		, Locks Each way
 15, (16 MSL).17			,			,
 16,				,			,
 17,				,			,
-18,				, 19.20			,
+18,				, 19.20N.43R		,
 19,				, 18			,
 20,				, 18			,
 21,				,(22w23r24n).(42w23r24n),
@@ -27,7 +27,7 @@ No, Released by			, Locks normal		, Locks Each way
 25,				,			, 26.27
 26,				,			,
 27,				,			,
-28,				,			, 29.(30w31r32n).(41w31r32n)
+28,				,			, 29.(30w31r).(41w32n)
 29,				,			,
 30,				,			,
 31,				,			,
@@ -42,3 +42,9 @@ No, Released by			, Locks normal		, Locks Each way
 40,				,			,
 41,				,			,
 42,				,(21w23r24n)		,
+43,				,			,
+44,				, (45w46R.47R)		, 46.(47w46R)
+45,				, (44w46R.47R)		, 47.(46w47R)
+46,				,			,
+47,				,			,
+48,				,			,

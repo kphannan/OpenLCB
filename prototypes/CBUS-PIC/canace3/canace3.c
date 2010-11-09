@@ -202,9 +202,9 @@ BOOL locked(BYTE n)
     far overlay BYTE sp;
     far overlay BYTE c;
     overlay rom BYTE * far p;
-    sp = 0;
     p = locking[n+1];
     stack[0] = FALSE; // for null strings the lever is not locked
+    sp = 1;
     while ((c = *p++) != 0)
     {
         if (c == 0xFF) {
