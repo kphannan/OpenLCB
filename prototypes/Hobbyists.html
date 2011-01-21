@@ -5,8 +5,9 @@
 	<TITLE>OpenLCB for Hobbyists</TITLE>
 	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
 	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGEDBY" CONTENT="David Harris">
+	<META NAME="CHANGED" CONTENT="20110120;20573500">
 	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
-	<META NAME="CHANGED" CONTENT="20100706;20030300">
 	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
 </HEAD>
 <BODY LANG="en-US" DIR="LTR">
@@ -20,6 +21,14 @@ family of open-source hardware based on the <A HREF="http://www.atmel.com/dyn/pr
 processor. There's a basic <A HREF="http://arduino.cc/en/Guide/Environment">software
 development tool kit</A> (IDE) that lets you easily and quickly
 download your code into an Arduino board, and then debug it there.</SPAN></P>
+<P><SPAN STYLE="text-decoration: none">After you download the IDE,
+start it and open  'Arduino--&gt;Preferences'.  Change the sketch
+directory to be</SPAN><SPAN STYLE="text-decoration: none"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>
+'</FONT></FONT></SPAN><FONT COLOR="#000000"><SPAN STYLE="text-decoration: none"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>OpenLCB/trunk/prototypes/C'
+or wherever you have placed it.  Close the IDE and reopen it.  You
+should now be able to see the libraries in 'Files--&gt;Sketchbook'
+and the examples in 'Files--&gt;Examples'.  </FONT></FONT></SPAN></FONT>
+</P>
 <P><IMG SRC="http://siliconrailway.com/images/si2193_003.jpg" NAME="OpenLCB" ALIGN=RIGHT WIDTH=182 HEIGHT=182 BORDER=0><SPAN STYLE="text-decoration: none">You
 can download software for a basic OpenLCB node from our <A HREF="http://sourceforge.net/scm/?type=svn&amp;group_id=286373">code
 repository</A> and build it within the <A HREF="http://arduino.cc/en/Guide/Environment">Arduino
@@ -35,36 +44,32 @@ controller on a prototype board from the <A HREF="http://siliconrailway.com/imag
 </P>
 <P><SPAN STYLE="text-decoration: none">Once you've got the basic
 communications working, you can connect your OpenLCB board via
-<a href="http://arduino.cc/en/Tutorial/HomePage">digital and analog input and output leads</a>, 
-<a href="http://principialabs.com/arduino-serial-servo-control/">servo</a> or 
-<a href="http://www.ladyada.net/make/mshield/index.html">motor drivers</a>,
-<a href="http://arduino.cc/en/Main/ArduinoXbeeShield">XBee radio links<a/>,
-<a href="http://www.ladyada.net/learn/lcd/charlcd.html">LCD display drivers</a>, 
-or lots of other methods.  
-There's a large community of Arduino hobbyists who are 
-<a href="http://www.dave-auld.net/index.php?view=category&id=53%3Aarduino-input-output-basics&option=com_content&Itemid=107">connecting all sorts of devices</a>.</SPAN></P>
-<P><SPAN STYLE="text-decoration: none">
-The easiest way to connect OpenLCB to hardware is through consuming and producing events.
-For example, here's the code that takes events detected by the basic software and 
-uses them to drive a servo output to one of three positions:
-<CODE><PRE>
-  // Invoked when an event is consumed.
-  // "index" is the index of the consumed event, 0 to 2
-  if (index == 0) {
-    servo9.write(0);
-  } else if (index == 1) {
-    servo9.write(90);
-  } else if (index == 2) {
-    servo9.write(180);
-  }
-</PRE></CODE>
-<BR>
-This, along with some glue code, is compiled with the basic OpenLCB libraries 
-in the Arduino IDE, and then downloaded into your board.
-See the 
-<a href="C/OlcbServoNode/">OlcbServoNode</a> 
-sketch for the complete example.
-</SPAN>
+<A HREF="http://arduino.cc/en/Tutorial/HomePage">digital and analog
+input and output leads</A>, <A HREF="http://principialabs.com/arduino-serial-servo-control/">servo</A>
+or <A HREF="http://www.ladyada.net/make/mshield/index.html">motor
+drivers</A>, <A HREF="http://arduino.cc/en/Main/ArduinoXbeeShield">XBee
+radio links, </A><A HREF="http://www.ladyada.net/learn/lcd/charlcd.html">LCD
+display drivers</A>, or lots of other methods. There's a large
+community of Arduino hobbyists who are <A HREF="http://www.dave-auld.net/index.php?view=category&amp;id=53%3Aarduino-input-output-basics&amp;option=com_content&amp;Itemid=107">connecting
+all sorts of devices</A>.</SPAN></P>
+<P STYLE="text-decoration: none">The easiest way to connect OpenLCB
+to hardware is through consuming and producing events. For example,
+here's the code that takes events detected by the basic software and
+uses them to drive a servo output to one of three positions: 
+</P>
+<PRE><CODE><SPAN STYLE="text-decoration: none">  // Invoked when an event is consumed.</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">  // &quot;index&quot; is the index of the consumed event, 0 to 2</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">  if (index == 0) {</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">    servo9.write(0);</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">  } else if (index == 1) {</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">    servo9.write(90);</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">  } else if (index == 2) {</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">    servo9.write(180);</SPAN></CODE>
+<CODE><SPAN STYLE="text-decoration: none">  }</SPAN></CODE></PRE><P>
+<SPAN STYLE="text-decoration: none"><BR>This, along with some glue
+code, is compiled with the basic OpenLCB libraries in the Arduino
+IDE, and then downloaded into your board. See the <A HREF="C/OlcbServoNode">OlcbServoNode</A>
+sketch for the complete example. </SPAN>
 </P>
 <HR>
 <P>Site hosted by <FONT COLOR="#000080">
