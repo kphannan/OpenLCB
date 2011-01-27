@@ -74,6 +74,8 @@ BYTE far ramtable[65];	  // for program memory reads and writes
 #pragma udata
 unsigned long address;    // block read or write address
 
+BYTE BitMask[8];                // bit masks
+
 // XpressNet input
 #pragma udata
 BYTE xnetid;
@@ -93,6 +95,10 @@ BYTE xoutptr;
 BYTE xoutlen;
 #pragma udata xoutb
 far BYTE xoutbuf[20];      // output buffer
+
+// RS bus to events
+#pragma udata rs_state
+far BYTE rs_state[128];
 
 #pragma udata
 
@@ -184,7 +190,8 @@ void lpinterrupt(void)
                     YellowLEDOn();
                 }
             }
-            else if ((xin&0x7F) == (0x60|xnetid) || (xin&0x7F) == 0x60) { // message
+            else if ((xin&0x7F) == (0x60|xnetid) || (xin&0x7F) == 0x60 // message
+              || (xin&0x7F) == 0x20) { // RS bus feedback 
                 xnok = FALSE;
                 xnptr = 1;
                 xinbuf[0] = xin;
@@ -252,22 +259,53 @@ void lpinterrupt(void)
 
 BYTE XpressNetIn(void)
 {
+    far overlay BYTE i, j, addr, data;
     if (!xnok)
         return 0;
-
-    CB_FrameType = FT_XPRESSNET;
-    CB_SourceNID = ND.nodeIdAlias;
-    CB_datalen = (xinbuf[1]&0x0F)+2;
-    CB_data[0] = xinbuf[1];
-    CB_data[1] = xinbuf[2];
-    CB_data[2] = xinbuf[3];
-    CB_data[3] = xinbuf[4];
-    CB_data[4] = xinbuf[5];
-    CB_data[5] = xinbuf[6];
-    CB_data[6] = xinbuf[7];
-    CB_data[7] = xinbuf[8];
-    while (SendMessage()==0) ;
-
+    if ((xinbuf[1]&0xF0) == 0x40) { // feedback broadcast
+        i = 2;
+        while (i <= (xinbuf[1]&0x0F)) {
+            addr = xinbuf[i]&0x7F;
+            data = rs_state[addr];
+            if ((xinbuf[i+1]&0x10) == 0x10) // upper nibble
+                data = (data & 0x0F) | (xinbuf[i+1]<<4);
+            else // lower nibble
+                data = (data & 0xF0) | (xinbuf[i+1]&0x0F);
+            for (j=0; j<8; j++) {
+                if ((BitMask[j]&data) != (BitMask[j]&rs_state[addr])) {
+                    CB_FrameType = FT_EVENT;
+                    CB_SourceNID = ND.nodeIdAlias;
+                    CB_datalen = 8;
+                    CB_data[0] = ND.nodeId[5];
+                    CB_data[1] = ND.nodeId[4];
+                    CB_data[2] = ND.nodeId[3];
+                    CB_data[3] = ND.nodeId[2];
+                    CB_data[4] = ND.nodeId[1];
+                    CB_data[5] = ND.nodeId[0];
+                    CB_data[6] = addr>>4;
+                    CB_data[7] = (addr<<4) | (j<<1);
+                    if ((BitMask[j]&data) != 0)
+                        CB_data[7]++;
+                    while (SendMessage()==0) ;
+                }
+            }
+            rs_state[addr] = data;
+        }
+    }
+    else {
+        CB_FrameType = FT_XPRESSNET;
+        CB_SourceNID = ND.nodeIdAlias;
+        CB_datalen = (xinbuf[1]&0x0F)+2;
+        CB_data[0] = xinbuf[1];
+        CB_data[1] = xinbuf[2];
+        CB_data[2] = xinbuf[3];
+        CB_data[3] = xinbuf[4];
+        CB_data[4] = xinbuf[5];
+        CB_data[5] = xinbuf[6];
+        CB_data[6] = xinbuf[7];
+        CB_data[7] = xinbuf[8];
+        while (SendMessage()==0) ;
+    }
     xnok = FALSE;
     return 0;
 }
@@ -462,6 +500,15 @@ void main(void)
     BAUDCON = 0x08;      // set BAUDCON to 16 bit
     TXSTA = 0x60;        // set transmit 9 bit, enable, async, 9th bit = 0  
     RCSTA = 0xD0;        // set serial enable, continuous receive enable, 9 bit
+
+    BitMask[0] = 0x01;
+    BitMask[1] = 0x02;
+    BitMask[2] = 0x04;
+    BitMask[3] = 0x08;
+    BitMask[4] = 0x10;
+    BitMask[5] = 0x20;
+    BitMask[6] = 0x40;
+    BitMask[7] = 0x80;
 
     // ECAN         
     ECANInitialize();
