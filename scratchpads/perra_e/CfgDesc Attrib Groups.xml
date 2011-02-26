@@ -1,0 +1,45 @@
+﻿<NodeConfig>
+  <Version SchemaName="OlcbConfigDesc.xsd" SchemaVersion="1.0" ContentVersion="1.0" ExternalNodeConfig="http:/www.manufact.com/schema/devicex.xsd"/>
+  <NodeInfo Manufact="Manufacturer Inc" Model="Device Name" HardwareVersion="1.33" SoftwareVersion="2.44" Description="http://www.manufact.com/docs/devicex.pdf" UpdateModel="MemOffset"/>
+  <NodeParams>
+    <Param Name="Note" Offset="300" Type="S20"/>
+    <Param Name="Block Release Delay" Default="50" Min="1" Max="65000" unit="ms" Offset="320" Type="U2"/>
+    <Param Name="Use Delay on block release" Default="T" Offset="321" Type="B1"/>
+    <Param Name="Servo power always on" Default="F" Offset="321" Type="B2"/>
+  </NodeParams>
+  <Devices>
+    <DeviceGroup Id="1" Desc="Block Detect" Repl="8" GroupOffset="10">
+      <Events>
+        <PEvent Name="Block occupied" Offset="0"/>
+        <PEvent Name="Block free" Offset="12"/>
+      </Events>
+    </DeviceGroup>
+    <DeviceGroup Id="2" Desc="Servo" Repl="8" GroupOffset="106">
+      <Events>
+        <CEvent Name="Close Servo" Offset="0"/>
+        <CEvent Name="Throw Servo" Offset="12"/>
+      </Events>
+      <DeviceParams GroupOffset="322">
+        <Param Name="ClosedPosition" Default="50" Min="1" Max="200" Type="U1" Offset="0"/>
+        <Param Name="ThrowPosition" Default="150" min="1" Max="200" Type="U1" Offset="1"/>
+        <Param Name="Delay" Default="100" unit="ms" Type="U2" Offset="2"/>
+      </DeviceParams>
+    </DeviceGroup>
+    <DeviceGroup Id="3" Desc="Servo with report position" Repl="2" GroupOffset="202" >
+      <Events>
+        <CEvent Name="Close Servo" Offset="0"/>
+        <CEvent Name="Throw Servo" Offset="12"/>
+        <PEvent Name="Servo Closed" Offset="24"/>
+        <PEvent Name="Servo Thrown" Offset="36"/>
+      </Events>
+      <DeviceParams Groupoffset="354">
+        <Param Name="ClosedPosition" Default="50" Type="U1" Offset="0"/>
+        <Param Name="ThrowPosition" Default="150" Type="U1" Offset="1"/>
+        <Param Name="Delay" Default="100" unit="ms" Type="U2" Offset="2"/>
+      </DeviceParams>
+    </DeviceGroup>
+  </Devices>
+</NodeConfig>
+
+
+
