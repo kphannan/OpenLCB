@@ -1,0 +1,155 @@
+﻿<NodeConfig>
+  <Version>
+    <SchemaName>OlcbConfigDesc.xsd</SchemaName>
+    <SchemaVersion>1.0</SchemaVersion>
+    <ContentVersion>1.0</ContentVersion>
+  </Version>
+  <NodeInfo>
+    <Manufact>Manufacturer Inc</Manufact>
+    <Model>Device Name</Model>
+    <HardwareVersion>1.33</HardwareVersion>
+    <SoftwareVersion>2.44</SoftwareVersion>
+    <Description>http://www.manufact.com/docs/devicex.pdf</Description>
+    <UpdateModel>MemOffset</UpdateModel>
+  </NodeInfo>
+  <NodeParams>
+    <Param id="1">
+      <Name>Note</Name>
+      <Offset>200</Offset>
+      <Type>S20</Type>
+    </Param>
+    <Param id="2">
+      <Name>Block Release Delay</Name>
+      <Offset>1</Offset>
+      <Type>U2</Type>
+      <Default>50</Default>
+      <Min>1</Min>
+      <Max>65000</Max>
+      <Unit>ms</Unit>
+    </Param>
+    <Param id="3">
+      <Name>Use Delay on block release</Name>
+      <Offset>2</Offset>
+      <Type>B1</Type>
+      <Default>T</Default>
+    </Param>
+    <Param id="4">
+      <Name>Servo power always on</Name>
+      <Offset>2</Offset>
+      <Type>B2</Type>
+      <Default>F</Default>
+    </Param>
+  </NodeParams>
+  <Devices>
+    <DeviceGroup id="1">
+      <Desc>Block Detect</Desc>
+      <Repl>8</Repl>
+      <GroupOffset>10</GroupOffset>
+      <Events>
+        <PEvent>
+          <Name>Block Occupied</Name>
+          <Offset>0</Offset>
+        </PEvent>
+        <PEvent>
+          <Name>Block Free</Name>
+          <Offset>8</Offset>
+        </PEvent>
+      </Events>
+    </DeviceGroup>
+    <DeviceGroup id="2">
+      <Desc>Servo</Desc>
+      <Repl>8</Repl>
+      <GroupOffset>80</GroupOffset>
+      <Events>
+        <CEvent>
+          <Name>Close Servo</Name>
+          <Offset>0</Offset>
+        </CEvent>
+        <CEvent>
+          <Name>Throw Servo</Name>
+          <Offset>8</Offset>
+        </CEvent>
+      </Events>
+      <DeviceParams>
+        <DeviceParam id="1">
+          <Name>Closed Position</Name>
+          <Offset>10</Offset>
+          <Type>U1</Type>
+          <Default>50</Default>
+          <Min>1</Min>
+          <Max>200</Max>
+        </DeviceParam>
+        <DeviceParam id="2">
+          <Name>Thrown Position</Name>
+          <Offset>11</Offset>
+          <Type>U1</Type>
+          <Default>50</Default>
+          <Min>1</Min>
+          <Max>200</Max>
+        </DeviceParam>
+        <DeviceParam id="3">
+          <Name>Delay</Name>
+          <Offset>12</Offset>
+          <Type>U2</Type>
+          <Default>100</Default>
+          <Min>1</Min>
+          <Max>10000</Max>
+          <Unit>ms</Unit>
+        </DeviceParam>
+      </DeviceParams>
+    </DeviceGroup>
+    <DeviceGroup id="3">
+      <Desc>Servo with report position</Desc>
+      <Repl>2</Repl>
+      <GroupOffset>160</GroupOffset>
+      <Events>
+        <CEvent>
+          <Name>Close Servo</Name>
+          <Offset>0</Offset>
+        </CEvent>
+        <CEvent>
+          <Name>Throw Servo</Name>
+          <Offset>8</Offset>
+        </CEvent>
+        <PEvent>
+          <Name>Servo Closed</Name>
+          <Offset>10</Offset>
+        </PEvent>
+        <PEvent>
+          <Name>Servo Thrown</Name>
+          <Offset>18</Offset>
+        </PEvent>
+      </Events>
+      <DeviceParams>
+        <DeviceParam id="1">
+          <Name>Closed Position</Name>
+          <Offset>10</Offset>
+          <Type>U1</Type>
+          <Default>50</Default>
+          <Min>1</Min>
+          <Max>200</Max>
+        </DeviceParam>
+        <DeviceParam id="2">
+          <Name>Thrown Position</Name>
+          <Offset>11</Offset>
+          <Type>U1</Type>
+          <Default>50</Default>
+          <Min>1</Min>
+          <Max>200</Max>
+        </DeviceParam>
+        <DeviceParam id="3">
+          <Name>Delay</Name>
+          <Offset>12</Offset>
+          <Type>U2</Type>
+          <Default>100</Default>
+          <Min>1</Min>
+          <Max>10000</Max>
+          <Unit>ms</Unit>
+        </DeviceParam>
+      </DeviceParams>
+    </DeviceGroup>
+  </Devices>
+</NodeConfig>
+
+
+
