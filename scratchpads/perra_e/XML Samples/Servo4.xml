@@ -1,0 +1,84 @@
+﻿<XmlData>
+  <!-- Fixed data -->
+  <SchemaName>OpenLCBConfig_Per.xsd</SchemaName>
+  <SchemaVersion>1.0</SchemaVersion>
+  <Manufact>Manufacturer Inc</Manufact>
+  <Model>4 Servo with buttons and relays</Model>
+  <HardwareVersion>1.1</HardwareVersion>
+  <SoftwareVersion>2.3</SoftwareVersion>
+  <Description>http://www.manufact.com/docs/devicex.pdf</Description>
+
+  <!-- Global Node information -->
+  <Group Name="Node Information" Address="0x000010">
+    <GroupDescription>Here you can add a note about the configuration.</GroupDescription>
+    <Field Name="ConfigVersion">
+      <Bits>512</Bits>
+      <Type>String</Type>
+    </Field>
+  </Group>
+  <!-- Global Servo configuration -->
+  <Group Name="Servo behavior" Address="0x000050">
+    <Field Name="Power always on">
+      <Bits>1</Bits>
+      <Type>Bool</Type>
+      <Default>0</Default>
+    </Field>
+    <Field Name="Report position">
+      <Bits>1</Bits>
+      <Type>Bool</Type>
+      <Default>1</Default>
+    </Field>
+    <Field Name="">
+      <Bits>6</Bits>
+      <Type>Bool</Type>
+    </Field>
+  </Group>
+
+  <!-- Group with events for servos -->
+  <Group Name="Servos" Repl="4" Address="0x000060">
+    <GroupDescription>Each servo has four events. Two consumers for activateing the servo and two producers for reporting end of movement.</GroupDescription>
+    <Field Name="Throw Servo">
+      <Bits>64</Bits>
+      <Type>Event</Type>
+    </Field>
+    <Field Name="Close Servo">
+      <Bits>64</Bits>
+      <Type>Event</Type>
+    </Field>
+    <Field Name="Report Thrown">
+      <Bits>64</Bits>
+      <Type>Event</Type>
+    </Field>
+    <Field Name="Report Closed">
+      <Bits>64</Bits>
+      <Type>Event</Type>
+    </Field>
+  </Group>
+
+  <!-- Group with buttons-->
+  <Group Name="Buttons" Repl="4" Address="0x0000E0">
+    <GroupDescription>Each servo has four events. Two consumers for activateing the servo and two producers for reporting end of movement.</GroupDescription>
+    <Field Name="On">
+      <Bits>64</Bits>
+      <Type>Event</Type>
+    </Field>
+    <Field Name="Off">
+      <Bits>64</Bits>
+      <Type>Event</Type>
+    </Field>
+    <Field Name="Button type">
+      <Bits>8</Bits>
+      <Type>Unsigned</Type>
+      <Enum>Toggle=1, Switch=2, Dual buttons=4</Enum>
+    </Field>
+  </Group>
+  
+  <!-- Group with sound file with maximum lengt off 2Kb -->
+  <Group Name="Sounds" Repl="4" Address="0x000100">
+    <GroupDescription>Sound that is played when servi os moving.</GroupDescription>
+    <Field Name="Servo moving sound">
+      <Bits>16384</Bits>
+      <Type>Blob</Type>
+    </Field>
+  </Group>
+  </XmlData>
