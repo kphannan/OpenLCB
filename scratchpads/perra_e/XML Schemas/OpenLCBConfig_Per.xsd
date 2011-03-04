@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="XmlData">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SchemaName" type="xs:string" />
+        <xs:element name="SchemaVersion" type="xs:decimal" />
+        <xs:element name="Manufact" type="xs:string" />
+        <xs:element name="Model" type="xs:string" />
+        <xs:element name="HardwareVersion" type="xs:decimal" />
+        <xs:element name="SoftwareVersion" type="xs:decimal" />
+        <xs:element name="Description" type="xs:string" />
+        <xs:element maxOccurs="unbounded" name="Group">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element minOccurs="0" name="GroupDescription" type="xs:string" />
+              <xs:element maxOccurs="unbounded" name="Field">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Bits" type="xs:unsignedShort" />
+                    <xs:element name="Type" type="datatypes" />
+                    <xs:element minOccurs="0" name="Default" type="xs:long" />
+                    <xs:element minOccurs="0" name="Min" type="xs:long" />
+                    <xs:element minOccurs="0" name="Max" type="xs:long" />
+                    <xs:element minOccurs="0" name="Unit" type="xs:string" />
+                    <xs:element minOccurs="0" name="Enum" type="xs:string" />
+                  </xs:sequence>
+                  <xs:attribute name="Name" type="xs:string" use="required" />
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="Name" type="xs:string" use="required" />
+            <xs:attribute name="Address" type="addresstype" use="required" />
+            <xs:attribute name="Repl" type="xs:unsignedByte" use="optional" />
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:simpleType name="addresstype">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="0x[0-9,A-F]{6}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="datatypes">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="String"></xs:enumeration>
+      <xs:enumeration value="Unsigned"></xs:enumeration>
+      <xs:enumeration value="Event"></xs:enumeration>
+      <xs:enumeration value="Blob"></xs:enumeration>
+      <xs:enumeration value="Bool"></xs:enumeration>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>
