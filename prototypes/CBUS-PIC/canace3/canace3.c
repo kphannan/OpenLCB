@@ -71,14 +71,24 @@ BYTE starttimeout;    // 2 sec delay before sending
 
 #pragma romdata
 const rom BYTE xml[] = 
-    "<XML>\r\n"
-    "<NodeString>" modulestring "</NodeString>\r\n"
-    "<EventData>\r\n"
-    "</EventData>\r\n"
-    "<NodeVariable>\r\n"
-    "  <Name>Refresh</Name>\r\n"
-    "</NodeVariable>\r\n"
-    "</XML>\r\n";
+  "<XmlData>"
+    "<SchemaName>OpenLCBConfig_Per.xsd</SchemaName>"
+    "<SchemaVersion>1.0</SchemaVersion>"
+    "<Manufact>MERG CBUS CANACE3</Manufact>"
+    "<Model>" modulestring "</Model>"
+    "<HardwareVersion>1.0</HardwareVersion>"
+    "<SoftwareVersion>" __DATE__ " " __TIME__ "</SoftwareVersion>"
+    "<Group Name=\"Node Information\" Address=\"0x0000C0\">"
+      "<Field Name=\"Node description\"><Bits>512</Bits><Type>string</Type></Field>"
+    "</Group>"
+    "<Group Name=\"Event Data\" Address=\"0x010000\" Repl=128>"
+      "<Field Name=\"Event Off\"><Bits>64</Bits><Type>event</Type></Field>"
+      "<Field Name=\"Event On\"><Bits>64</Bits><Type>event</Type></Field>"
+    "</Group>"
+    "<Group Name=\"Interlocks\" Address=\"0x020000\">"
+      "<Field Name=\"Data\"><Bits>8192</Bits><Type>file</Type></Field>"
+    "</Group>"
+  "</XmlData>";
 
 #pragma romdata module = 0x001020
 const rom BYTE version[7] = { 0,1,0,1,0,1,0 };

@@ -831,6 +831,7 @@ namespace PCTest
         private void SendBtn_Click(object sender, EventArgs e)
         {
             sendmsg(SendText.Text);
+            displaylog();
         }
 
         // convert 2 hex characters to a number

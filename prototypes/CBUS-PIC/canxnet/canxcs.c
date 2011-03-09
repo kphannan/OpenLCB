@@ -182,7 +182,8 @@ void lpinterrupt(void)
         xin9 = RCSTA;
         xin = RCREG;            // also clears RCIF
         if (xin9&0x01) {        // polling or msg
-            if ((xin&0x7F) == (0x40|xnetid)) { // poll
+            xin &= 0x7F;        // ignore parity
+            if (xin == (0x40|xnetid)) { // poll
                 if (xoutrdy) {
                     PORTCbits.RC5 = 1;      // Enable transmit on RS-485 chip
                     TXREG = xoutbuf[0];     // also clears TXIF
@@ -190,14 +191,14 @@ void lpinterrupt(void)
                     YellowLEDOn();
                 }
             }
-            else if ((xin&0x7F) == (0x60|xnetid) || (xin&0x7F) == 0x60 // message
-              || (xin&0x7F) == 0x20) { // RS bus feedback 
+            else if (xin == 0x60 || xin == (0x60|xnetid) // message
+              || xin == 0x20 || xin == (0x20|xnetid)) {  // RS bus feedback 
                 xnok = FALSE;
                 xnptr = 1;
                 xinbuf[0] = xin;
                 xnmsg = TRUE;
             }
-            else if ((xin&0x7F) == xnetid) { // error
+            else if (xin == xnetid) { // error
                 xoutbuf[0] = 0x20;     // send ack
                 xoutbuf[1] = 0x20;
                 xoutlen = 2;
@@ -206,15 +207,12 @@ void lpinterrupt(void)
                 PORTCbits.RC5 = 1;     // Enable transmit on RS-485 chip
                 TXREG = xoutbuf[0];    // also clears TXIF
                 PIE1bits.TXIE = 1;     // enable TX interrupt
+                YellowLEDOn();
                 xnmsg = FALSE;
                 xinbuf[0] = xin;
-                xinbuf[1] = 0xFF;
-                xnok = TRUE;
-            }
-            else if ((xin&0x1F) == xnetid) { // something else
-                xnmsg = FALSE;
-                xinbuf[0] = xin;
-                xinbuf[1] = 0xFF;
+                xinbuf[1] = 0x01;      // unknown error
+                xinbuf[2] = 0x03;
+                xinbuf[3] = 0x02;
                 xnok = TRUE;
             }
         }
@@ -227,8 +225,6 @@ void lpinterrupt(void)
                 xnok = TRUE;
                 xnmsg = FALSE;
             }
-            if (xnptr>19)
-                xnptr = 19;
         }
         if (RCSTAbits.OERR || RCSTAbits.FERR) {
             RCSTAbits.CREN = 0;
@@ -238,8 +234,6 @@ void lpinterrupt(void)
 
     if (PIR1bits.TXIF && PIE1bits.TXIE) { // Transmit buffer empty
         TXREG = xoutbuf[xoutptr++];       // also clears TXIF
-        TMR0H = 0xFF;                     // load the timer for 2 character time
-        TMR0L = 0x100-36;
         YellowLEDOn();
         if (xoutptr >= xoutlen) {         // nothing to send
             PIE1bits.TXIE = 0;            // disable TX interrupt
@@ -332,7 +326,7 @@ rom unsigned int bits[10] = {
 
 void Packet(void)
 {
-    far overlay BYTE i;
+    far overlay BYTE i, t, tmp;
 
     if (CB_SourceNID == ND.nodeIdAlias) { // conflict
         if ((CB_FrameType&0x8000)==0x0000) { // CIM
@@ -349,6 +343,22 @@ void Packet(void)
     }
     else if (CB_FrameType == FT_EVENT) {
        canTraffic = 1;
+    }
+    else if (CB_FrameType == FT_XPRESSNET) {
+        if (xoutrdy) {
+            sendack(ACK_NOSPACE, CB_SourceNID);
+            return;
+        }
+        t = CB_data[0]&0x0F;
+        tmp = 0;
+        for (i=0; i<=t; i++) {
+            xoutbuf[i] = CB_data[i];
+            tmp ^= CB_data[i];
+        }
+        xoutbuf[i] = tmp;
+        xoutlen = t+2;
+        xoutptr = 1;
+        xoutrdy = TRUE;
     }
 }
 
