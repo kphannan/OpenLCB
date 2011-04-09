@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE>OpenLCB Arduino Prototype Sketches</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
+	<META NAME="AUTHOR" CONTENT="Bob Jacobsen">
+	<META NAME="CREATED" CONTENT="20090816;10132800">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGED" CONTENT="20100705;19344100">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<H1><IMG SRC="../../../web/logo-ajs-dph.png" NAME="OpenLCB" ALIGN=RIGHT WIDTH=344 HEIGHT=142 BORDER=0>OpenLCB
+Arduino Prototype Sketches</H1>
+<P>This directory contains various Arduino sketches for MRRLCB R&D. 
+</P>
+
+
+When you add one, please leave a brief note below.
+<DL>
+<DT>OlcbBasicNode: (Bob Jacobsen)<DD>
+    Basic 4-pin node with configuration, etc.<BR>
+    Analog 0, 1 are input pins that drive producers<BR>
+    Analog 2, 3 are output pins on consumers<BR>
+
+<DT>OlcbEightConsumer: (Bob Jacobsen)<DD>
+    Basic 8-pin output node with configuration, etc.<BR>
+    Analog 0-4 and digital 6-9 are output pins on consumers<BR>
+
+<DT>OlcbServoNode (Bob Jacobsen)<DD>
+    OpenLCB node with three event slots
+    for driving a servo on pin 9.<BR>
+
+<DT>CAN2USBuino: (Alex Shepherd)<DD>
+    Use a LEDuino as a CAN-USB adapter. <BR>
+    Uses GridConnect format (e.g. ":S65N01;")<BR>
+    Good starting example of CAN receive<BR>
+
+<DT>CAN2EtherNetuino: (Bob Jacobsen)<DD>
+    A CAN-Ethernet bridge for the LEDuino.  Just forwards
+    frames, not a full OpenLCB router.
+</DL>
+
+Status of projects below here is not certain:
+
+<DL>
+<DT>OlcbDisplay (Bob Jacobsen)<DD>
+    OpenLCB node for development of OpenLCB display protocol.
+    Drives attached LCD display (20x4 on the development board)
+
+<DT>OlcbBasicNode: (Bob Jacobsen)<DD>
+    Development sketch for configuration code, 
+    often in flux. Not recommended for general use.<BR>
+    Analog 0, 1 are input pins that drive producers<BR>
+    Analog 2, 3 are output pins on consumers
+
+<DT>CAN2USBuinoDPH2090329: (David Harris)<DD>
+    Private experiment by dph
+    
+<DT>CAN2USBuinoDPH2090329_2: (David Harris)<DD>
+    Private experiment by dph
+    
+<DT>CAN2USBuinoFilters: (David Harris)<DD>
+    Private experiment by dph
+
+<DT>CAN2USBuinoLEDPWM: (David Harris)<DD>
+    Receives CAN messages with id=0x65.<BR>
+    Drives a LED on pin LED_PIN with PWM (brightness) dependant 
+    on the first data byte.  <BR>
+    Works with CAN2USBuinoRamp.
+
+<DT>CAN2USBuinoRamp: (David Harris) <DD>
+    Continually send CAN packets with id=0x65 in the header 
+    and 0 to 100 in the data, waiting 100msec in between.<BR>
+    Works with CAN2USBuinoLEDPWM.
+        
+<DT>MrrLcbCanLocoNet<DD>
+    LocoNet adapter work by Alex Shepherd
+</DL>
+
+<HR>
+
+*.pde files are the primary source for a Arduino sketch.  As such, they
+should have some SVN properties set.  You can either include these in
+your .subversion configuration to get them set by default, or explicitly
+set them when you create a new sketch:
+
+<code><pre>
+svn propset svn:eol-style native *.pde
+svn propset svn:keywords "Id Revision" *.pde
+</pre></code>
+
+The "applet" subdirectory is a work directory created by the Arduino IDE
+when preparing to download a new build.  SVN should be told to ignore it.
+
+<code><pre>
+rm -rf <sketch>/applet
+svn rm <sketch>/applet  (only if needed)
+svn propset svn:ignore applet <sketch>
+</pre></code>
+
+<HR>
+<P STYLE="margin-bottom: 0cm">This web sites contains trademarks and
+copyrighted information. Please see the <A HREF="/Licensing.html">Licensing</A>
+page.</P>
+<P STYLE="margin-bottom: 0cm">This is SVN $Revision$ of <SDFIELD TYPE=DATETIME SDVAL="40041.4309143519" SDNUM="1033;1033;MM/DD/YY">08/16/09</SDFIELD>.</P>
+</BODY>
+</HTML>

@@ -1,0 +1,57 @@
+--- avrdude-5.3.1-org/avr910.c	2007-03-28 14:56:25.000000000 +0900
++++ avrdude-5.3.1/avr910.c	2007-03-28 15:53:27.000000000 +0900
+@@ -128,6 +128,7 @@
+ }
+ 
+ 
++static int can_cmd = 0;
+ /*
+  * initialize the AVR device and prepare it to accept commands
+  */
+@@ -154,6 +155,9 @@
+ 
+   avr910_send(pgm, "V", 1);
+   avr910_recv(pgm, sw, sizeof(sw));
++  if (sw[0] == '2') {
++	  can_cmd = 1;
++  }
+ 
+   avr910_send(pgm, "v", 1);
+   avr910_recv(pgm, hw, sizeof(hw));
+@@ -245,7 +249,7 @@
+ {
+   char buf[5];
+ 
+-  /* FIXME: Insert version check here */
++  if (!can_cmd) return -1;
+ 
+   buf[0] = '.';                 /* New Universal Command */
+   buf[1] = cmd[0];
+@@ -261,7 +265,7 @@
+   res[2] = cmd[1];
+   res[3] = buf[0];
+ 
+-  return 0;
++  return (buf[1] == 'Y')?0:-1;
+ }
+ 
+ 
+@@ -332,7 +336,7 @@
+     cmd[0] = 'D';
+   }
+   else {
+-    return -1;
++    return avr_write_byte_default(pgm,p,m,addr,value);
+   }
+ 
+   cmd[1] = value;
+@@ -403,8 +407,7 @@
+   if (strcmp(m->desc, "eeprom") == 0) {
+     return avr910_read_byte_eeprom(pgm, p, m, addr, value);
+   }
+-
+-  return -1;
++  return avr_read_byte_default(pgm,p,m,addr,value);
+ }
+ 
+ 

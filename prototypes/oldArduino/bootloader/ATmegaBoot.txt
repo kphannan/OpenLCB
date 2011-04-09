@@ -1,0 +1,1 @@
+This bootloader has been handed down and worked over for some years now, but it is in very good health. The configuration used here is targetted at the Arduino and related products, but it can, and has, been used in many other processors.
