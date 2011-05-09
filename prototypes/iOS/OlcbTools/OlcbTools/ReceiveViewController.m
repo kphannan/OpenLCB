@@ -85,10 +85,8 @@
 
 - (void)_updateStatus:(NSString *)statusString
 {
-    NSLog(@"updateStatus s");
     assert(statusString != nil);
     self.statusLabel.text = statusString;
-    NSLog(@"updateStatus e");
 }
 
 - (void)_receiveDidStopWithStatus:(NSString *)statusString
@@ -167,7 +165,7 @@
     // Open a stream to the server, finding the server via Bonjour.  Then configure 
     // the stream for async operation.
 
-    self.netService = [[[NSNetService alloc] initWithDomain:@"local." type:@"_openlcb-hub._tcp.local." name:@"Test"] autorelease];
+    self.netService = [[[NSNetService alloc] initWithDomain:@"local." type:@"_openlcb-hub._tcp." name:@"Test"] autorelease];
     assert(self.netService != nil);
 
     success = [self.netService getInputStream:&input outputStream:NULL];
@@ -217,24 +215,23 @@
     // network stream.
 {
     #pragma unused(aStream)
-    NSLog(@"stream s");
     assert(aStream == self.networkStream);
 
     switch (eventCode) {
         case NSStreamEventOpenCompleted: {
             NSLog(@"stream open connection");
             [self _updateStatus:@"Opened connection"];
+            rcvPtr = rcvBuffer;
         } break;
         case NSStreamEventHasBytesAvailable: {
             NSInteger       bytesRead;
-            uint8_t         buffer[32768];
 
-            NSLog(@"stream hsa bytes");
             [self _updateStatus:@"Receiving"];
             
             // Pull some data off the network.
+            // This a brute force, one byte at a time approach for now.
             
-            bytesRead = [self.networkStream read:buffer maxLength:sizeof(buffer)];
+            bytesRead = [self.networkStream read:rcvPtr maxLength:1];
             if (bytesRead == -1) {
                 NSLog(@"stream read error");
                 [self _stopReceiveWithStatus:@"Network read error"];
@@ -242,22 +239,15 @@
                 NSLog(@"stream bytes read == 0");
                 [self _stopReceiveWithStatus:nil];
             } else {
-                NSInteger   bytesWritten;
-                NSInteger   bytesWrittenSoFar;
-                
-                // Write to the file.
-                
-                bytesWrittenSoFar = 0;
-                do {
-                    bytesWritten = [self.fileStream write:&buffer[bytesWrittenSoFar] maxLength:bytesRead - bytesWrittenSoFar];
-                    assert(bytesWritten != 0);
-                    if (bytesWritten == -1) {
-                        [self _stopReceiveWithStatus:@"File write error"];
-                        break;
-                    } else {
-                        bytesWrittenSoFar += bytesWritten;
-                    }
-                } while (bytesWrittenSoFar != bytesRead);
+                if (*rcvPtr == 0x0d || *rcvPtr == 0x0A) {
+                    // process input line from zero-terminated string
+                    *rcvPtr = 0x00;
+                    NSString* line = [NSString stringWithCString:(const char *)rcvBuffer encoding:NSASCIIStringEncoding];
+                    self.lastLabel.text = line;
+                    rcvPtr = rcvBuffer;
+                } else {
+                    rcvPtr++;
+                }
             }
         } break;
         case NSStreamEventHasSpaceAvailable: {
@@ -274,7 +264,6 @@
             assert(NO);
         } break;
     }
-    NSLog(@"stream e");
 }
 
 #pragma mark * Actions
@@ -295,6 +284,7 @@
 
 @synthesize imageView             = _imageView;
 @synthesize statusLabel           = _statusLabel;
+@synthesize lastLabel             = _lastLabel;
 @synthesize activityIndicator     = _activityIndicator;
 @synthesize receiveOrCancelButton = _receiveOrCancelButton;
 
@@ -306,6 +296,7 @@
     
     assert(self.imageView != nil);
     assert(self.statusLabel != nil);
+    assert(self.lastLabel != nil);
     assert(self.activityIndicator != nil);
     assert(self.receiveOrCancelButton != nil);
         
@@ -320,6 +311,7 @@
     NSLog(@"viewDidUnload s");
     self.imageView = nil;
     self.statusLabel = nil;
+    self.lastLabel = nil;
     self.activityIndicator = nil;
     self.receiveOrCancelButton = nil;
     NSLog(@"viewDidUnload e");
@@ -331,6 +323,7 @@
 
     [self->_imageView release];
     [self->_statusLabel release];
+    [self->_lastLabel release];
     [self->_activityIndicator release];
     [self->_receiveOrCancelButton release];
 

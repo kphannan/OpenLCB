@@ -57,6 +57,7 @@
 {
     UIImageView *               _imageView;
     UILabel *                   _statusLabel;
+    UILabel *                   _lastLabel;
     UIActivityIndicatorView *   _activityIndicator;
     UIButton *                  _receiveOrCancelButton;
     
@@ -64,10 +65,14 @@
     NSInputStream *             _networkStream;
     NSString *                  _filePath;
     NSOutputStream *            _fileStream;
+    
+    uint8_t                     rcvBuffer[100];
+    uint8_t*                    rcvPtr;
 }
 
 @property (nonatomic, retain) IBOutlet UIImageView *               imageView;
 @property (nonatomic, retain) IBOutlet UILabel *                   statusLabel;
+@property (nonatomic, retain) IBOutlet UILabel *                   lastLabel;
 @property (nonatomic, retain) IBOutlet UIActivityIndicatorView *   activityIndicator;
 @property (nonatomic, retain) IBOutlet UIButton *                  receiveOrCancelButton;
 
