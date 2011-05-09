@@ -11,13 +11,15 @@
 
 @implementation MonitorViewController
 
-/*
+
 // Implement viewDidLoad to do additional setup after loading the view, typically from a nib.
 - (void)viewDidLoad
 {
+    NSLog(@"MVC viewDidLoad s");
     [super viewDidLoad];
+    NSLog(@"MVC viewDidLoad e");
 }
-*/
+
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {

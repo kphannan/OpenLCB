@@ -26,6 +26,8 @@
 		238CE353137753F1005F220A /* OlcbToolsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 238CE352137753F1005F220A /* OlcbToolsTests.m */; };
 		238CE35D13775480005F220A /* 09-chat-2.png in Resources */ = {isa = PBXBuildFile; fileRef = 238CE35C13775480005F220A /* 09-chat-2.png */; };
 		238CE35F1377548C005F220A /* 12-eye.png in Resources */ = {isa = PBXBuildFile; fileRef = 238CE35E1377548C005F220A /* 12-eye.png */; };
+		23C4BD7F13775CF900608B7F /* ReceiveViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 23C4BD7E13775CF900608B7F /* ReceiveViewController.m */; };
+		23C4BD8A13775FA900608B7F /* NoImage.png in Resources */ = {isa = PBXBuildFile; fileRef = 23C4BD8913775FA900608B7F /* NoImage.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +66,9 @@
 		238CE352137753F1005F220A /* OlcbToolsTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OlcbToolsTests.m; sourceTree = "<group>"; };
 		238CE35C13775480005F220A /* 09-chat-2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "09-chat-2.png"; sourceTree = "<group>"; };
 		238CE35E1377548C005F220A /* 12-eye.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "12-eye.png"; sourceTree = "<group>"; };
+		23C4BD7D13775CF900608B7F /* ReceiveViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReceiveViewController.h; sourceTree = "<group>"; };
+		23C4BD7E13775CF900608B7F /* ReceiveViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ReceiveViewController.m; sourceTree = "<group>"; };
+		23C4BD8913775FA900608B7F /* NoImage.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = NoImage.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,6 +134,8 @@
 				238CE333137753F0005F220A /* MonitorViewController.m */,
 				238CE335137753F1005F220A /* EventViewController.h */,
 				238CE336137753F1005F220A /* EventViewController.m */,
+				23C4BD7D13775CF900608B7F /* ReceiveViewController.h */,
+				23C4BD7E13775CF900608B7F /* ReceiveViewController.m */,
 				238CE338137753F1005F220A /* MonitorView.xib */,
 				238CE33B137753F1005F220A /* EventView.xib */,
 				238CE324137753F0005F220A /* Supporting Files */,
@@ -141,6 +148,7 @@
 			children = (
 				238CE35C13775480005F220A /* 09-chat-2.png */,
 				238CE35E1377548C005F220A /* 12-eye.png */,
+				23C4BD8913775FA900608B7F /* NoImage.png */,
 				238CE325137753F0005F220A /* OlcbTools-Info.plist */,
 				238CE326137753F0005F220A /* InfoPlist.strings */,
 				238CE329137753F0005F220A /* OlcbTools-Prefix.pch */,
@@ -242,6 +250,7 @@
 				238CE33D137753F1005F220A /* EventView.xib in Resources */,
 				238CE35D13775480005F220A /* 09-chat-2.png in Resources */,
 				238CE35F1377548C005F220A /* 12-eye.png in Resources */,
+				23C4BD8A13775FA900608B7F /* NoImage.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,6 +290,7 @@
 				238CE32E137753F0005F220A /* OlcbToolsAppDelegate.m in Sources */,
 				238CE334137753F0005F220A /* MonitorViewController.m in Sources */,
 				238CE337137753F1005F220A /* EventViewController.m in Sources */,
+				23C4BD7F13775CF900608B7F /* ReceiveViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,6 +479,7 @@
 				238CE358137753F1005F220A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		238CE359137753F1005F220A /* Build configuration list for PBXNativeTarget "OlcbToolsTests" */ = {
 			isa = XCConfigurationList;
@@ -477,6 +488,7 @@
 				238CE35B137753F1005F220A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
