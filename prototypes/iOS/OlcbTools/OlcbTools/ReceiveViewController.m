@@ -167,7 +167,7 @@
     // Open a stream to the server, finding the server via Bonjour.  Then configure 
     // the stream for async operation.
 
-    self.netService = [[[NSNetService alloc] initWithDomain:@"local." type:@"_x-SNSDownload._tcp." name:@"Test"] autorelease];
+    self.netService = [[[NSNetService alloc] initWithDomain:@"local." type:@"_openlcb-hub._tcp.local." name:@"Test"] autorelease];
     assert(self.netService != nil);
 
     success = [self.netService getInputStream:&input outputStream:NULL];
@@ -222,20 +222,24 @@
 
     switch (eventCode) {
         case NSStreamEventOpenCompleted: {
+            NSLog(@"stream open connection");
             [self _updateStatus:@"Opened connection"];
         } break;
         case NSStreamEventHasBytesAvailable: {
             NSInteger       bytesRead;
             uint8_t         buffer[32768];
 
+            NSLog(@"stream hsa bytes");
             [self _updateStatus:@"Receiving"];
             
             // Pull some data off the network.
             
             bytesRead = [self.networkStream read:buffer maxLength:sizeof(buffer)];
             if (bytesRead == -1) {
+                NSLog(@"stream read error");
                 [self _stopReceiveWithStatus:@"Network read error"];
             } else if (bytesRead == 0) {
+                NSLog(@"stream bytes read == 0");
                 [self _stopReceiveWithStatus:nil];
             } else {
                 NSInteger   bytesWritten;
@@ -260,6 +264,7 @@
             assert(NO);     // should never happen for the output stream
         } break;
         case NSStreamEventErrorOccurred: {
+            NSLog(@"stream open error");
             [self _stopReceiveWithStatus:@"Stream open error"];
         } break;
         case NSStreamEventEndEncountered: {
