@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE>OpenLCB Prototype Versioning</TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGEDBY" CONTENT="Bob Jacobsen">
+	<META NAME="CHANGED" CONTENT="20110521;17562400">
+	<STYLE TYPE="text/css">
+	<!--
+		H2.ctl { font-family: "Lucida Sans" }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-US" DIR="LTR">
+<H1><IMG SRC="../web/logo-ajs-dph.png" NAME="OpenLCB" ALIGN=RIGHT WIDTH=172 HEIGHT=71 BORDER=0>OpenLCB
+Prototype Versioning</H1>
+<P>(This document is still under discussion)</P>
+<P>The OpenLCB group provides prototype implementations to make it
+easier for hobbyists to experiment with OpenLCB, to demonstrate the
+OpenLCB protocols in action, and as concrete documentation. The
+prototypes are made available in the OpenLCB SVN repository. These
+prototypes are under continuous development, and the code will change
+from time-to-time. The group therefore has procedures and conventions
+for “versioning” the code so that people can use a preferred
+version for as long as they want, moving forward to a more recent one
+only when they wish to.</P>
+<P>The versioning is done in the standard way using SVN to create
+copies of specific versions of a prototype.</P>
+<H2 CLASS="western">Version Numbers</H2>
+<P STYLE="text-decoration: none">OpenLCB uses a four-part version
+number (I.J.K.L) where each part has a conventional meaning:</P>
+<P STYLE="margin-left: 2cm"><SPAN STYLE="text-decoration: none"><B>I:
+</B></SPAN><SPAN STYLE="text-decoration: none">OpenLCB specification
+version, increments when the specification for OpenLCB itself is
+updated in an incompatible way. These changes are quite rare. This
+number is coordinated across the entire project.</SPAN></P>
+<P STYLE="margin-left: 2cm"><SPAN STYLE="text-decoration: none"><B>J:</B></SPAN><SPAN STYLE="text-decoration: none">
+OpenLCB implementation version, increments when there are changes to
+the uses of OpenLCB that effect compatibility. A particular prototype
+can stay at e.g. “1.1.j.k” as long as needed, but once it is
+updated to use additional OpenLCB protocol features that are
+incompatible with the existing code, it should be updated to
+“1.2.j.k”</SPAN></P>
+<P STYLE="margin-left: 2cm"><SPAN STYLE="text-decoration: none"><B>K:</B></SPAN><SPAN STYLE="text-decoration: none">
+</SPAN><SPAN STYLE="text-decoration: none"><SPAN STYLE="font-weight: normal">Software
+structure version, increments when the software structure has changed
+enough that existing users may have to update. A reorganization of
+code or class structure would be an example of this. Version 1.1.2.*
+and 1.1.3.* should operate with other devices in a compatible way,
+with only internal changes to the software.</SPAN></SPAN></P>
+<P STYLE="margin-left: 2cm"><SPAN STYLE="text-decoration: none"><B>L:
+</B></SPAN><SPAN STYLE="text-decoration: none">Internal version,
+increments on minor implementation changes that don't effect software
+structure or OpenLCB protocol. This kind of change is quite common.</SPAN></P>
+<P STYLE="text-decoration: none">Version numbers are applied at
+several levels within OpenLCB and the prototypes. For example, the
+Java prototype might have version numbers 1.0.0.1, 1.0.0.2, 1.0.1.0,
+etc, while the C prototype(s) might have numbers 1.0.0.1, 1.0.0.2,
+1.0.0.3, 1.0.0.4, 1.0.1.0, etc. There is no connection assumed among
+K and L version number parts between different prototypes; it is not
+necessary to increment the K part on one prototype just because
+another did. More effort is generally put into maintaining consistent
+I and J numbers across the set of prototypes so that all current
+development can interoperate.</P>
+<H2 CLASS="western" STYLE="text-decoration: none">Documenting and
+Accessing Versions</H2>
+<P STYLE="margin-bottom: 0cm"><SPAN STYLE="text-decoration: none">At
+each level of the /prototypes file tree in SVN and on the web,
+there's an index.html file (<A HREF="C/index.html" TARGET="_blank">example</A>).
+This is where we document the versions that are available for that
+section of prototypes. A typical entry would be:</SPAN></P>
+<P STYLE="margin-bottom: 0cm"><BR>
+</P>
+<UL>
+	<LI><P STYLE="margin-bottom: 0cm"><SPAN STYLE="text-decoration: none">Version:
+	1.0.1.0</SPAN></P>
+</UL>
+<P STYLE="margin-left: 2cm; margin-bottom: 0cm; text-decoration: none">
+Now echoes back the messages received over TCP/IP to allow multiple
+connections.</P>
+<PRE STYLE="margin-left: 2cm; margin-bottom: 0.5cm; text-decoration: none">svn co https://openlcb.svn.sourceforge.net/svnroot/openlcb/tags/1.0.1.0/prototypes/C/CAN2EtherNetServer</PRE><P STYLE="margin-bottom: 0cm; text-decoration: none">
+As more versions are defined, their descriptions will accumulate in
+the file. By including the SVN command or commands necessary to pull
+that particular version from the repository, there's no ambiguity as
+to how to get a specific version.</P>
+<H2 CLASS="western" STYLE="text-decoration: none">For Developers</H2>
+<P STYLE="text-decoration: none">This section discusses how OpenLCB
+developers (people who can directly commit to OpenLCB SVN) can create
+tags when needed.</P>
+<P STYLE="text-decoration: none">SVN doesn't provide a label or alias
+facility similar to a CVS tag. Instead, it provides an efficient copy
+mechanism to make a copy of a specific set of files. The procedure to
+label a new version (in this case, labeled 1.0.4.0) from your
+existing code (CAN2EtherNetServer directory, all checked into SVN)
+is;:</P>
+<PRE STYLE="text-decoration: none">svn mkdir -–parents -m”comment” https://openlcb.svn.sourceforge.net/svnroot/openlcb/tags/1.0.1.0/prototypes/C/
+svn copy -m”comment” CAN2EtherNetServer https://openlcb.svn.sourceforge.net/svnroot/openlcb/tags/1.0.1.0/prototypes/C/</PRE><P STYLE="text-decoration: none">
+The mkdir operation ensures that the directories exist, but may not
+be necessary depending on what versions have already been created.</P>
+<HR>
+<P>Site hosted by <FONT COLOR="#000080">
+<A HREF="http://sourceforge.net/projects/openlcb"><FONT COLOR="#000080"><IMG SRC="http://sflogo.sourceforge.net/sflogo.php?group_id=286373&amp;type=13" NAME="graphics1" ALIGN=ABSMIDDLE WIDTH=120 HEIGHT=30 BORDER=2></FONT></A></FONT>
+</P>
+<P>This is SVN $Revision$ 
+</P>
+</BODY>
+</HTML>
