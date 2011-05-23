@@ -182,7 +182,6 @@
 - (void)_startReceive
 {
     NSInputStream *     input;
-    BOOL                success;
     
     NSLog(@"startReceive s");
     
@@ -209,7 +208,7 @@
     
     assert(self.netService != nil);
     
-    success = [self.netService getInputStream:&input outputStream:NULL];
+    [self.netService getInputStream:&input outputStream:NULL];
     
     // -[NSNetService getInputStream:outputStream:] currently returns the stream 
     // with a reference that we have to release (something that's counter to the 
