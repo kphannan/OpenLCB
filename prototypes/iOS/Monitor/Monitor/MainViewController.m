@@ -303,34 +303,41 @@
                         //NSInteger n = header;
                         //NSLog(@"d value %d", n);
                         //NSLog(@"x value %x", n);
-                    }
                     
-                    if ( header & 0x08000000 ) {
-                        // OpenLCB form
-                        self.typeValue.text = @"OpenLCB";
- 
-                        self.srcALabel.text = @"Source:";
-                        if (line.length >= 10) {
+                        if ( header & 0x08000000 ) {
+                            // OpenLCB form
+                            self.typeValue.text = @"OpenLCB";
+     
+                            self.srcALabel.text = @"Source:";
+                            if (line.length >= 10) {
+                                self.srcAValue.text = [[line substringToIndex: 10] substringFromIndex: 7];
+                            } else {
+                                self.srcAValue.text = @"";
+                            }
+                            self.dstALabel.hidden = NO;
+                            if (line.length >= 7) {
+                                self.dstAValue.text = [[line substringToIndex: 7] substringFromIndex: 4];
+                            } else {
+                                self.dstAValue.text = @"";
+                            }
+                            
+                        } else {
+                            // CAN form
+                            self.typeValue.text = @"CAN";
+                            self.srcALabel.text = @"Number:";
                             self.srcAValue.text = [[line substringToIndex: 10] substringFromIndex: 7];
-                        } else {
-                            self.srcAValue.text = @"";
-                        }
-                        self.dstALabel.hidden = NO;
-                        if (line.length >= 7) {
-                            self.dstAValue.text = [[line substringToIndex: 7] substringFromIndex: 4];
-                        } else {
+                            self.dstALabel.hidden = YES;
                             self.dstAValue.text = @"";
                         }
-                        
                     } else {
-                        // CAN form
-                        self.typeValue.text = @"CAN";
-                        self.srcALabel.text = @"Number:";
-                        self.srcAValue.text = [[line substringToIndex: 10] substringFromIndex: 7];
+                        // not in a packet format
+                        self.typeValue.text = @"";
+                        self.srcALabel.text = @"";
+                        self.srcAValue.text = @"";
                         self.dstALabel.hidden = YES;
                         self.dstAValue.text = @"";
                     }
-                    
+                   
                     // and move on to next
                     rcvPtr = rcvBuffer;
                 } else {
