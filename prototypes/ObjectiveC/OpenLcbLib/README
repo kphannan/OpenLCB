@@ -1,0 +1,22 @@
+For more information on OpenLCB, including licensing requirements for this code, please see
+http://openlcb.org
+
+This project contains directories:
+
+OpenLcbLib:         Common library code
+OpenLcbLibTests:    Common tests for the common library code
+
+iOSBuild:           Files to build and construct the library for iOS, including iOS-specific code
+iOSBuildTests:      Files to test the iOS-specific library
+
+MacOSXBuild:        Files to build and construct the library for Mac OS X, including Mac OS X-specific code
+MacOSXBuildTests:   Files to test the Mac OS X-specific library
+
+
+The included build targets are:
+
+iOSBuild:           Build the iOS-specific library
+iOSBuildTests:      Run the unit tests for the iOS-specific library, including the common tests
+
+MacOSXBuild:        Build the Mac OS X-specific library
+MacOSXBuildTests:   Run the unit tests for the Mac OS X-specific library, including the common tests

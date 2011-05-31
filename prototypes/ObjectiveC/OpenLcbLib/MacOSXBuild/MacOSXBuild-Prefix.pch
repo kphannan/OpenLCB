@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'MacOSXBuild' target in the 'MacOSXBuild' project
+//
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif

@@ -1,0 +1,736 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2304E82E13950BC400B6867C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23A409551394E07C00993644 /* Cocoa.framework */; };
+		2304E83813950BC500B6867C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23A409551394E07C00993644 /* Cocoa.framework */; };
+		2304E83B13950BC500B6867C /* MacOSXBuild.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2304E82D13950BC400B6867C /* MacOSXBuild.dylib */; };
+		2304E84113950BC500B6867C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2304E83F13950BC500B6867C /* InfoPlist.strings */; };
+		2304E84413950BC500B6867C /* MacOSXBuildTests.h in Resources */ = {isa = PBXBuildFile; fileRef = 2304E84313950BC500B6867C /* MacOSXBuildTests.h */; };
+		2304E84613950BC500B6867C /* MacOSXBuildTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2304E84513950BC500B6867C /* MacOSXBuildTests.m */; };
+		2304E84F13950CFD00B6867C /* OlcbCanFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = 23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */; };
+		2304E85113950EEC00B6867C /* OlcbCanFrameTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 23A4094D1394DF8700993644 /* OlcbCanFrameTests.m */; };
+		2304E860139512BB00B6867C /* IOSBuildTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2304E85F139512BB00B6867C /* IOSBuildTests.m */; };
+		23250505138A3B49003D8EE4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250504138A3B49003D8EE4 /* Foundation.framework */; };
+		23250510138A3B49003D8EE4 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2325050F138A3B49003D8EE4 /* UIKit.framework */; };
+		23250511138A3B49003D8EE4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250504138A3B49003D8EE4 /* Foundation.framework */; };
+		23250513138A3B49003D8EE4 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250512138A3B49003D8EE4 /* CoreGraphics.framework */; };
+		23250516138A3B49003D8EE4 /* libiOSBuild.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250501138A3B49003D8EE4 /* libiOSBuild.a */; settings = {ATTRIBUTES = (Weak, ); }; };
+		23250533138A3CCA003D8EE4 /* OlcbCanFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = 23250531138A3CCA003D8EE4 /* OlcbCanFrame.h */; };
+		23250534138A3CCA003D8EE4 /* OlcbCanFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = 23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */; };
+		23A4094E1394DF8700993644 /* OlcbCanFrameTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 23A4094D1394DF8700993644 /* OlcbCanFrameTests.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2304E83913950BC500B6867C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 232504F8138A3B48003D8EE4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2304E82C13950BC400B6867C;
+			remoteInfo = MacOSXBuild;
+		};
+		23250514138A3B49003D8EE4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 232504F8138A3B48003D8EE4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 23250500138A3B49003D8EE4;
+			remoteInfo = OpenLcbLib;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		2304E82D13950BC400B6867C /* MacOSXBuild.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = MacOSXBuild.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		2304E83113950BC500B6867C /* MacOSXBuild-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MacOSXBuild-Prefix.pch"; sourceTree = "<group>"; };
+		2304E83713950BC500B6867C /* MacOSXBuildTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacOSXBuildTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2304E83E13950BC500B6867C /* MacOSXBuildTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MacOSXBuildTests-Info.plist"; sourceTree = "<group>"; };
+		2304E84013950BC500B6867C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		2304E84213950BC500B6867C /* MacOSXBuildTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MacOSXBuildTests-Prefix.pch"; sourceTree = "<group>"; };
+		2304E84313950BC500B6867C /* MacOSXBuildTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MacOSXBuildTests.h; sourceTree = "<group>"; };
+		2304E84513950BC500B6867C /* MacOSXBuildTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MacOSXBuildTests.m; sourceTree = "<group>"; };
+		2304E85013950D4B00B6867C /* README */ = {isa = PBXFileReference; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
+		2304E85E139512BB00B6867C /* IOSBuildTests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IOSBuildTests.h; path = iOSBuildTests/IOSBuildTests.h; sourceTree = "<group>"; };
+		2304E85F139512BB00B6867C /* IOSBuildTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = IOSBuildTests.m; path = iOSBuildTests/IOSBuildTests.m; sourceTree = "<group>"; };
+		2324692213952FF000A86B68 /* OpenLcbLibTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "OpenLcbLibTests-Prefix.pch"; path = "OpenLcbLibTests/OpenLcbLibTests-Prefix.pch"; sourceTree = "<group>"; };
+		23250501138A3B49003D8EE4 /* libiOSBuild.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libiOSBuild.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		23250504138A3B49003D8EE4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		23250508138A3B49003D8EE4 /* OpenLcbLib-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "OpenLcbLib-Prefix.pch"; path = "OpenLcbLib/OpenLcbLib-Prefix.pch"; sourceTree = "<group>"; };
+		2325050E138A3B49003D8EE4 /* iOSBuildTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSBuildTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2325050F138A3B49003D8EE4 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		23250512138A3B49003D8EE4 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		23250531138A3CCA003D8EE4 /* OlcbCanFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OlcbCanFrame.h; path = OpenLcbLib/OlcbCanFrame.h; sourceTree = "<group>"; };
+		23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = OlcbCanFrame.m; path = OpenLcbLib/OlcbCanFrame.m; sourceTree = "<group>"; };
+		23A4094C1394DF8700993644 /* OlcbCanFrameTests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OlcbCanFrameTests.h; path = OpenLcbLibTests/OlcbCanFrameTests.h; sourceTree = "<group>"; };
+		23A4094D1394DF8700993644 /* OlcbCanFrameTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = OlcbCanFrameTests.m; path = OpenLcbLibTests/OlcbCanFrameTests.m; sourceTree = "<group>"; };
+		23A409551394E07C00993644 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		23A409581394E07C00993644 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		23A409591394E07C00993644 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		23A4095A1394E07C00993644 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		23B09CD513952DB600A7A328 /* IOSBuildTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "IOSBuildTests-Prefix.pch"; path = "iOSBuildTests/IOSBuildTests-Prefix.pch"; sourceTree = "<group>"; };
+		23B09CD613952DC800A7A328 /* IOSBuild-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "IOSBuild-Prefix.pch"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2304E82A13950BC400B6867C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2304E82E13950BC400B6867C /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2304E83313950BC500B6867C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2304E83813950BC500B6867C /* Cocoa.framework in Frameworks */,
+				2304E83B13950BC500B6867C /* MacOSXBuild.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		232504FE138A3B49003D8EE4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23250505138A3B49003D8EE4 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2325050A138A3B49003D8EE4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23250510138A3B49003D8EE4 /* UIKit.framework in Frameworks */,
+				23250511138A3B49003D8EE4 /* Foundation.framework in Frameworks */,
+				23250513138A3B49003D8EE4 /* CoreGraphics.framework in Frameworks */,
+				23250516138A3B49003D8EE4 /* libiOSBuild.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2304E82F13950BC500B6867C /* MacOSXBuild */ = {
+			isa = PBXGroup;
+			children = (
+				2304E83013950BC500B6867C /* Supporting Files */,
+			);
+			path = MacOSXBuild;
+			sourceTree = "<group>";
+		};
+		2304E83013950BC500B6867C /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				2304E83113950BC500B6867C /* MacOSXBuild-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		2304E83C13950BC500B6867C /* MacOSXBuildTests */ = {
+			isa = PBXGroup;
+			children = (
+				2304E84313950BC500B6867C /* MacOSXBuildTests.h */,
+				2304E84513950BC500B6867C /* MacOSXBuildTests.m */,
+				2304E83D13950BC500B6867C /* Supporting Files */,
+			);
+			path = MacOSXBuildTests;
+			sourceTree = "<group>";
+		};
+		2304E83D13950BC500B6867C /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				2304E83E13950BC500B6867C /* MacOSXBuildTests-Info.plist */,
+				2304E83F13950BC500B6867C /* InfoPlist.strings */,
+				2304E84213950BC500B6867C /* MacOSXBuildTests-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		2304E84D13950C1300B6867C /* OpenLcbLibTests */ = {
+			isa = PBXGroup;
+			children = (
+				23A4094C1394DF8700993644 /* OlcbCanFrameTests.h */,
+				23A4094D1394DF8700993644 /* OlcbCanFrameTests.m */,
+				23B09CD313952D6800A7A328 /* Supporting Files */,
+			);
+			name = OpenLcbLibTests;
+			sourceTree = "<group>";
+		};
+		2304E84E13950C5700B6867C /* OpenLcbLib */ = {
+			isa = PBXGroup;
+			children = (
+				23250531138A3CCA003D8EE4 /* OlcbCanFrame.h */,
+				23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */,
+				23B09CD113952CF600A7A328 /* Supporting Files */,
+			);
+			name = OpenLcbLib;
+			sourceTree = "<group>";
+		};
+		2304E861139512D500B6867C /* IOSBuildTests */ = {
+			isa = PBXGroup;
+			children = (
+				2304E85E139512BB00B6867C /* IOSBuildTests.h */,
+				2304E85F139512BB00B6867C /* IOSBuildTests.m */,
+				23B09CD413952D7F00A7A328 /* Supporting Files */,
+			);
+			name = IOSBuildTests;
+			sourceTree = "<group>";
+		};
+		232504F6138A3B48003D8EE4 = {
+			isa = PBXGroup;
+			children = (
+				2304E85013950D4B00B6867C /* README */,
+				2304E84E13950C5700B6867C /* OpenLcbLib */,
+				2304E84D13950C1300B6867C /* OpenLcbLibTests */,
+				23250506138A3B49003D8EE4 /* IOSBuild */,
+				2304E861139512D500B6867C /* IOSBuildTests */,
+				2304E82F13950BC500B6867C /* MacOSXBuild */,
+				2304E83C13950BC500B6867C /* MacOSXBuildTests */,
+				23250503138A3B49003D8EE4 /* Frameworks */,
+				23250502138A3B49003D8EE4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		23250502138A3B49003D8EE4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				23250501138A3B49003D8EE4 /* libiOSBuild.a */,
+				2325050E138A3B49003D8EE4 /* iOSBuildTests.octest */,
+				2304E82D13950BC400B6867C /* MacOSXBuild.dylib */,
+				2304E83713950BC500B6867C /* MacOSXBuildTests.octest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		23250503138A3B49003D8EE4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				23250504138A3B49003D8EE4 /* Foundation.framework */,
+				2325050F138A3B49003D8EE4 /* UIKit.framework */,
+				23250512138A3B49003D8EE4 /* CoreGraphics.framework */,
+				23A409551394E07C00993644 /* Cocoa.framework */,
+				23A409571394E07C00993644 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		23250506138A3B49003D8EE4 /* IOSBuild */ = {
+			isa = PBXGroup;
+			children = (
+				23250507138A3B49003D8EE4 /* Supporting Files */,
+			);
+			name = IOSBuild;
+			path = OpenLcbLib;
+			sourceTree = "<group>";
+		};
+		23250507138A3B49003D8EE4 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				23B09CD613952DC800A7A328 /* IOSBuild-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		23A409571394E07C00993644 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				23A409581394E07C00993644 /* AppKit.framework */,
+				23A409591394E07C00993644 /* CoreData.framework */,
+				23A4095A1394E07C00993644 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		23B09CD113952CF600A7A328 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				23250508138A3B49003D8EE4 /* OpenLcbLib-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		23B09CD313952D6800A7A328 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				2324692213952FF000A86B68 /* OpenLcbLibTests-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		23B09CD413952D7F00A7A328 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				23B09CD513952DB600A7A328 /* IOSBuildTests-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		2304E82B13950BC400B6867C /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		232504FF138A3B49003D8EE4 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23250533138A3CCA003D8EE4 /* OlcbCanFrame.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		2304E82C13950BC400B6867C /* MacOSXBuild */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2304E84713950BC500B6867C /* Build configuration list for PBXNativeTarget "MacOSXBuild" */;
+			buildPhases = (
+				2304E82913950BC400B6867C /* Sources */,
+				2304E82A13950BC400B6867C /* Frameworks */,
+				2304E82B13950BC400B6867C /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MacOSXBuild;
+			productName = MacOSXBuild;
+			productReference = 2304E82D13950BC400B6867C /* MacOSXBuild.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		2304E83613950BC500B6867C /* MacOSXBuildTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2304E84A13950BC500B6867C /* Build configuration list for PBXNativeTarget "MacOSXBuildTests" */;
+			buildPhases = (
+				2304E83213950BC500B6867C /* Sources */,
+				2304E83313950BC500B6867C /* Frameworks */,
+				2304E83413950BC500B6867C /* Resources */,
+				2304E83513950BC500B6867C /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2304E83A13950BC500B6867C /* PBXTargetDependency */,
+			);
+			name = MacOSXBuildTests;
+			productName = MacOSXBuildTests;
+			productReference = 2304E83713950BC500B6867C /* MacOSXBuildTests.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
+		23250500138A3B49003D8EE4 /* iOSBuild */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23250524138A3B49003D8EE4 /* Build configuration list for PBXNativeTarget "iOSBuild" */;
+			buildPhases = (
+				232504FD138A3B49003D8EE4 /* Sources */,
+				232504FE138A3B49003D8EE4 /* Frameworks */,
+				232504FF138A3B49003D8EE4 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = iOSBuild;
+			productName = OpenLcbLib;
+			productReference = 23250501138A3B49003D8EE4 /* libiOSBuild.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		2325050D138A3B49003D8EE4 /* iOSBuildTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23250527138A3B49003D8EE4 /* Build configuration list for PBXNativeTarget "iOSBuildTests" */;
+			buildPhases = (
+				23250509138A3B49003D8EE4 /* Sources */,
+				2325050A138A3B49003D8EE4 /* Frameworks */,
+				2325050B138A3B49003D8EE4 /* Resources */,
+				2325050C138A3B49003D8EE4 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				23250515138A3B49003D8EE4 /* PBXTargetDependency */,
+			);
+			name = iOSBuildTests;
+			productName = OpenLcbLibTests;
+			productReference = 2325050E138A3B49003D8EE4 /* iOSBuildTests.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		232504F8138A3B48003D8EE4 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 232504FB138A3B48003D8EE4 /* Build configuration list for PBXProject "OpenLcbLib" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 232504F6138A3B48003D8EE4;
+			productRefGroup = 23250502138A3B49003D8EE4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				23250500138A3B49003D8EE4 /* iOSBuild */,
+				2325050D138A3B49003D8EE4 /* iOSBuildTests */,
+				2304E82C13950BC400B6867C /* MacOSXBuild */,
+				2304E83613950BC500B6867C /* MacOSXBuildTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2304E83413950BC500B6867C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2304E84113950BC500B6867C /* InfoPlist.strings in Resources */,
+				2304E84413950BC500B6867C /* MacOSXBuildTests.h in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2325050B138A3B49003D8EE4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2304E83513950BC500B6867C /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+		2325050C138A3B49003D8EE4 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2304E82913950BC400B6867C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2304E84F13950CFD00B6867C /* OlcbCanFrame.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2304E83213950BC500B6867C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2304E84613950BC500B6867C /* MacOSXBuildTests.m in Sources */,
+				2304E85113950EEC00B6867C /* OlcbCanFrameTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		232504FD138A3B49003D8EE4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23250534138A3CCA003D8EE4 /* OlcbCanFrame.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		23250509138A3B49003D8EE4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23A4094E1394DF8700993644 /* OlcbCanFrameTests.m in Sources */,
+				2304E860139512BB00B6867C /* IOSBuildTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2304E83A13950BC500B6867C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2304E82C13950BC400B6867C /* MacOSXBuild */;
+			targetProxy = 2304E83913950BC500B6867C /* PBXContainerItemProxy */;
+		};
+		23250515138A3B49003D8EE4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 23250500138A3B49003D8EE4 /* iOSBuild */;
+			targetProxy = 23250514138A3B49003D8EE4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		2304E83F13950BC500B6867C /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2304E84013950BC500B6867C /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		2304E84813950BC500B6867C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MacOSXBuild/MacOSXBuild-Prefix.pch";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		2304E84913950BC500B6867C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MacOSXBuild/MacOSXBuild-Prefix.pch";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		2304E84B13950BC500B6867C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(DEVELOPER_LIBRARY_DIR)/Frameworks";
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MacOSXBuildTests/MacOSXBuildTests-Prefix.pch";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				INFOPLIST_FILE = "MacOSXBuildTests/MacOSXBuildTests-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SenTestingKit,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		2304E84C13950BC500B6867C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = "$(DEVELOPER_LIBRARY_DIR)/Frameworks";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MacOSXBuildTests/MacOSXBuildTests-Prefix.pch";
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				INFOPLIST_FILE = "MacOSXBuildTests/MacOSXBuildTests-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SenTestingKit,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
+		23250522138A3B49003D8EE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		23250523138A3B49003D8EE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
+		23250525138A3B49003D8EE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DSTROOT = /tmp/OpenLcbLib.dst;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "iOSBuild/IOSBuild-Prefix.pch";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		23250526138A3B49003D8EE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				DSTROOT = /tmp/OpenLcbLib.dst;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "iOSBuild/IOSBuild-Prefix.pch";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		23250528138A3B49003D8EE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(DEVELOPER_LIBRARY_DIR)/Frameworks",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "iOSBuildTests/IOSBuildTests-Prefix.pch";
+				INFOPLIST_FILE = "OpenLcbLibTests/OpenLcbLibTests-Info.plist";
+				OTHER_LDFLAGS = (
+					"-framework",
+					SenTestingKit,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		23250529138A3B49003D8EE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(DEVELOPER_LIBRARY_DIR)/Frameworks",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "iOSBuildTests/IOSBuildTests-Prefix.pch";
+				INFOPLIST_FILE = "OpenLcbLibTests/OpenLcbLibTests-Info.plist";
+				OTHER_LDFLAGS = (
+					"-framework",
+					SenTestingKit,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2304E84713950BC500B6867C /* Build configuration list for PBXNativeTarget "MacOSXBuild" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2304E84813950BC500B6867C /* Debug */,
+				2304E84913950BC500B6867C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2304E84A13950BC500B6867C /* Build configuration list for PBXNativeTarget "MacOSXBuildTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2304E84B13950BC500B6867C /* Debug */,
+				2304E84C13950BC500B6867C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		232504FB138A3B48003D8EE4 /* Build configuration list for PBXProject "OpenLcbLib" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23250522138A3B49003D8EE4 /* Debug */,
+				23250523138A3B49003D8EE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		23250524138A3B49003D8EE4 /* Build configuration list for PBXNativeTarget "iOSBuild" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23250525138A3B49003D8EE4 /* Debug */,
+				23250526138A3B49003D8EE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		23250527138A3B49003D8EE4 /* Build configuration list for PBXNativeTarget "iOSBuildTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23250528138A3B49003D8EE4 /* Debug */,
+				23250529138A3B49003D8EE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 232504F8138A3B48003D8EE4 /* Project object */;
+}
