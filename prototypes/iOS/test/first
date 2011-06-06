@@ -1,0 +1,5 @@
+i=`mktemp`
+cat >$i
+head -1 $i
+sleep 2
+tail +2 $i| ./first
