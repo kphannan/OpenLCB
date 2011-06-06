@@ -7,13 +7,14 @@
 //
 
 #import <Foundation/Foundation.h>
-
+@class OlcbMessage;
 
 @interface OlcbCanFrame : NSObject {
     u_int32_t   header;
 }
 
 - (OlcbCanFrame*)initFromString: (NSString*) line;
+- (OlcbCanFrame*)initFromMessage: (OlcbMessage*) msg;
 
 - (u_int32_t)header;
 

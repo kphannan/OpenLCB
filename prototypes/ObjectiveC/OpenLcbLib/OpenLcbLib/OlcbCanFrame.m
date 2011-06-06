@@ -7,7 +7,7 @@
 //
 
 #import "OlcbCanFrame.h"
-
+#import "OlcbMessage.h"
 
 @implementation OlcbCanFrame
 
@@ -22,6 +22,12 @@
         // not in a packet format
         header = 0;
     }
+    return self;
+}
+
+- (OlcbCanFrame*)initFromMessage: (OlcbMessage*) msg {
+    // convert MTI to header
+    
     return self;
 }
 
