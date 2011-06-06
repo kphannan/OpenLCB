@@ -3,7 +3,7 @@
 //  Monitor
 //
 //  Created by Bob Jacobsen on 5/16/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 Bob Jacobsen. All rights reserved.
 //
 
 #import "MonitorAppDelegate.h"
