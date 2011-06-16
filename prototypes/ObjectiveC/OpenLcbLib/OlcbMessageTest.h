@@ -15,5 +15,6 @@
 }
 
 - (void)testAlloc;
+- (void)testInitFromFields;
 
 @end

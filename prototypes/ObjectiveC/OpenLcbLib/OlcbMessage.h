@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <sys/types.h>
+@protocol OlcbMessageProcessor;
 
 @interface OlcbMessage : NSObject {
 @private
@@ -16,8 +17,10 @@
     u_int length;
 }
 
-- (void)initFromFields: (u_int16_t) mti data: (u_int8_t[]) content length: (u_int) length;
+- (OlcbMessage*)initFromFields: (u_int32_t) mti data: (u_int8_t[]) content length: (u_int) length;
 
 - (u_int16_t) mti;
+
+- (void) dispatch: (id <OlcbMessageProcessor>) processor;
 
 @end

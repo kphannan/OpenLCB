@@ -9,6 +9,7 @@
 #import "OlcbMessageTest.h"
 #import "OlcbMessage.h"
 
+#import "OlcbTestDefinitions.h"
 
 @implementation OlcbMessageTest
 
@@ -28,5 +29,9 @@
 
 - (void)testAlloc {
     [OlcbMessage alloc];
+}
+
+- (void)testInitFromFields {
+    [[OlcbMessage alloc] initFromFields: MTI_CAN_INIT_FROM_FIELDS data: nil length: 0];
 }
 @end

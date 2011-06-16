@@ -7,6 +7,7 @@
 //
 
 #import "OlcbMessage.h"
+#import "OlcbMessageProcessor.h"
 
 
 @implementation OlcbMessage
@@ -26,14 +27,19 @@
     [super dealloc];
 }
 
-- (void)initFromFields: (u_int16_t) mti_a data: (u_int8_t[]) content_a length: (u_int) length_a {
+- (OlcbMessage*)initFromFields: (u_int32_t) mti_a data: (u_int8_t[]) content_a length: (u_int) length_a {
     // build from specific values
     mti = mti_a;
     content = content_a;
     length = length_a;
+    return self;
 }
 
 - (u_int16_t) mti { return mti; }
+
+- (void) dispatch: (id <OlcbMessageProcessor>) processor {
+    [processor processDefaultMessage: self];
+}
 
 @end
 
