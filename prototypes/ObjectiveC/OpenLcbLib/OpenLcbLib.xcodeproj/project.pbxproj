@@ -13,7 +13,6 @@
 		2304E84113950BC500B6867C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2304E83F13950BC500B6867C /* InfoPlist.strings */; };
 		2304E84413950BC500B6867C /* MacOSXBuildTests.h in Resources */ = {isa = PBXBuildFile; fileRef = 2304E84313950BC500B6867C /* MacOSXBuildTests.h */; };
 		2304E84613950BC500B6867C /* MacOSXBuildTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2304E84513950BC500B6867C /* MacOSXBuildTests.m */; };
-		2304E84F13950CFD00B6867C /* OlcbCanFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = 23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */; };
 		2304E85113950EEC00B6867C /* OlcbCanFrameTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 23A4094D1394DF8700993644 /* OlcbCanFrameTests.m */; };
 		2304E860139512BB00B6867C /* IOSBuildTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2304E85F139512BB00B6867C /* IOSBuildTests.m */; };
 		230F761613A5CE5C0068BF67 /* OlcbMessageProcessor.h in Headers */ = {isa = PBXBuildFile; fileRef = 230F761413A5CE5C0068BF67 /* OlcbMessageProcessor.h */; };
@@ -24,9 +23,6 @@
 		23250510138A3B49003D8EE4 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2325050F138A3B49003D8EE4 /* UIKit.framework */; };
 		23250511138A3B49003D8EE4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250504138A3B49003D8EE4 /* Foundation.framework */; };
 		23250513138A3B49003D8EE4 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250512138A3B49003D8EE4 /* CoreGraphics.framework */; };
-		23250516138A3B49003D8EE4 /* libiOSBuild.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250501138A3B49003D8EE4 /* libiOSBuild.a */; settings = {ATTRIBUTES = (Weak, ); }; };
-		23250533138A3CCA003D8EE4 /* OlcbCanFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = 23250531138A3CCA003D8EE4 /* OlcbCanFrame.h */; };
-		23250534138A3CCA003D8EE4 /* OlcbCanFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = 23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */; };
 		2336681D1395F937007A0410 /* MtiReformat.c in Sources */ = {isa = PBXBuildFile; fileRef = 2336681B1395F937007A0410 /* MtiReformat.c */; };
 		2336681E1395F937007A0410 /* MtiReformat.c in Sources */ = {isa = PBXBuildFile; fileRef = 2336681B1395F937007A0410 /* MtiReformat.c */; };
 		2336681F1395F937007A0410 /* MtiReformat.h in Headers */ = {isa = PBXBuildFile; fileRef = 2336681C1395F937007A0410 /* MtiReformat.h */; };
@@ -46,6 +42,11 @@
 		23B3123713A929900063375B /* OlcbPrettyPrintTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B3123613A929900063375B /* OlcbPrettyPrintTest.m */; };
 		23B3123813A929900063375B /* OlcbPrettyPrintTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B3123613A929900063375B /* OlcbPrettyPrintTest.m */; };
 		23B3124113A967380063375B /* OlcbPrettyPrint.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B3122C13A91F1A0063375B /* OlcbPrettyPrint.m */; };
+		23D7F98713AC0398009F773D /* OlcbCanFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D7F98613AC0398009F773D /* OlcbCanFrame.m */; };
+		23D7F98813AC0398009F773D /* OlcbCanFrame.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D7F98613AC0398009F773D /* OlcbCanFrame.m */; };
+		23D7F98C13AC03B7009F773D /* OlcbCanFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = 23D7F98A13AC03AD009F773D /* OlcbCanFrame.h */; };
+		23D7F98D13AC03B8009F773D /* OlcbCanFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = 23D7F98A13AC03AD009F773D /* OlcbCanFrame.h */; };
+		23D7F9E213AC4895009F773D /* libOpenLcb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250501138A3B49003D8EE4 /* libOpenLcb.a */; };
 		23D8777F1396725400B9E610 /* OlcbMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = 23D8777D1396725400B9E610 /* OlcbMessage.h */; };
 		23D877801396725400B9E610 /* OlcbMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = 23D8777D1396725400B9E610 /* OlcbMessage.h */; };
 		23D877811396725400B9E610 /* OlcbMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 23D8777E1396725400B9E610 /* OlcbMessage.m */; };
@@ -93,24 +94,16 @@
 		230F761D13A5CFF20068BF67 /* OlcbMessageProcessorTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbMessageProcessorTest.h; sourceTree = "<group>"; };
 		230F761E13A5CFF20068BF67 /* OlcbMessageProcessorTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbMessageProcessorTest.m; sourceTree = "<group>"; };
 		2324692213952FF000A86B68 /* OpenLcbLibTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "OpenLcbLibTests-Prefix.pch"; path = "OpenLcbLibTests/OpenLcbLibTests-Prefix.pch"; sourceTree = "<group>"; };
-		23250501138A3B49003D8EE4 /* libiOSBuild.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libiOSBuild.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		23250501138A3B49003D8EE4 /* libOpenLcb.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libOpenLcb.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		23250504138A3B49003D8EE4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		23250508138A3B49003D8EE4 /* OpenLcbLib-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "OpenLcbLib-Prefix.pch"; path = "OpenLcbLib/OpenLcbLib-Prefix.pch"; sourceTree = "<group>"; };
 		2325050E138A3B49003D8EE4 /* iOSBuildTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iOSBuildTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2325050F138A3B49003D8EE4 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		23250512138A3B49003D8EE4 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		23250531138A3CCA003D8EE4 /* OlcbCanFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OlcbCanFrame.h; path = OpenLcbLib/OlcbCanFrame.h; sourceTree = "<group>"; };
-		23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = OlcbCanFrame.m; path = OpenLcbLib/OlcbCanFrame.m; sourceTree = "<group>"; };
 		2336681B1395F937007A0410 /* MtiReformat.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = MtiReformat.c; sourceTree = "<group>"; };
 		2336681C1395F937007A0410 /* MtiReformat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MtiReformat.h; sourceTree = "<group>"; };
 		233668211395FB74007A0410 /* MtiReformatTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MtiReformatTest.h; sourceTree = "<group>"; };
 		233668221395FB74007A0410 /* MtiReformatTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MtiReformatTest.m; sourceTree = "<group>"; };
-		2340D80B13A9E0F300C54B74 /* libOpenLcbLib-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "libOpenLcbLib-Prefix.pch"; sourceTree = "<group>"; };
-		2340D81A13A9E0F400C54B74 /* libOpenLcbLibTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "libOpenLcbLibTests-Info.plist"; sourceTree = "<group>"; };
-		2340D81C13A9E0F400C54B74 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		2340D81E13A9E0F400C54B74 /* libOpenLcbLibTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "libOpenLcbLibTests-Prefix.pch"; sourceTree = "<group>"; };
-		2340D81F13A9E0F400C54B74 /* libOpenLcbLibTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libOpenLcbLibTests.h; sourceTree = "<group>"; };
-		2340D82113A9E0F400C54B74 /* libOpenLcbLibTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = libOpenLcbLibTests.m; sourceTree = "<group>"; };
 		2382DBEA13A905EB003DE18B /* OlcbTestDefinitions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OlcbTestDefinitions.h; sourceTree = "<group>"; };
 		2382DBF213A90BEA003DE18B /* OlcbInitializationCompleteMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbInitializationCompleteMessage.h; sourceTree = "<group>"; };
 		2382DBF313A90BEA003DE18B /* OlcbInitializationCompleteMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbInitializationCompleteMessage.m; sourceTree = "<group>"; };
@@ -128,6 +121,8 @@
 		23B3123013A9275E0063375B /* OlcbPCEventReportMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbPCEventReportMessage.m; sourceTree = "<group>"; };
 		23B3123513A929900063375B /* OlcbPrettyPrintTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbPrettyPrintTest.h; sourceTree = "<group>"; };
 		23B3123613A929900063375B /* OlcbPrettyPrintTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbPrettyPrintTest.m; sourceTree = "<group>"; };
+		23D7F98613AC0398009F773D /* OlcbCanFrame.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbCanFrame.m; sourceTree = "<group>"; };
+		23D7F98A13AC03AD009F773D /* OlcbCanFrame.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OlcbCanFrame.h; sourceTree = "<group>"; };
 		23D8777D1396725400B9E610 /* OlcbMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbMessage.h; sourceTree = "<group>"; };
 		23D8777E1396725400B9E610 /* OlcbMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbMessage.m; sourceTree = "<group>"; };
 		23D877841396740200B9E610 /* OlcbMessageTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbMessageTest.h; sourceTree = "<group>"; };
@@ -171,7 +166,7 @@
 				23250510138A3B49003D8EE4 /* UIKit.framework in Frameworks */,
 				23250511138A3B49003D8EE4 /* Foundation.framework in Frameworks */,
 				23250513138A3B49003D8EE4 /* CoreGraphics.framework in Frameworks */,
-				23250516138A3B49003D8EE4 /* libiOSBuild.a in Frameworks */,
+				23D7F9E213AC4895009F773D /* libOpenLcb.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,12 +233,12 @@
 		2304E84E13950C5700B6867C /* OpenLcbLib */ = {
 			isa = PBXGroup;
 			children = (
-				23250531138A3CCA003D8EE4 /* OlcbCanFrame.h */,
-				23250532138A3CCA003D8EE4 /* OlcbCanFrame.m */,
 				23D877901396773800B9E610 /* OlcbNodeID.h */,
 				23D877911396773800B9E610 /* OlcbNodeID.m */,
 				23D8777D1396725400B9E610 /* OlcbMessage.h */,
 				23D8777E1396725400B9E610 /* OlcbMessage.m */,
+				23D7F98A13AC03AD009F773D /* OlcbCanFrame.h */,
+				23D7F98613AC0398009F773D /* OlcbCanFrame.m */,
 				2340D80113A986B400C54B74 /* MessageTypes */,
 				230F761413A5CE5C0068BF67 /* OlcbMessageProcessor.h */,
 				2336681C1395F937007A0410 /* MtiReformat.h */,
@@ -275,8 +270,6 @@
 				2304E861139512D500B6867C /* IOSBuildTests */,
 				2304E82F13950BC500B6867C /* MacOSXBuild */,
 				2304E83C13950BC500B6867C /* MacOSXBuildTests */,
-				2340D80913A9E0F300C54B74 /* libOpenLcbLib */,
-				2340D81813A9E0F300C54B74 /* libOpenLcbLibTests */,
 				23250503138A3B49003D8EE4 /* Frameworks */,
 				23250502138A3B49003D8EE4 /* Products */,
 			);
@@ -285,7 +278,7 @@
 		23250502138A3B49003D8EE4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				23250501138A3B49003D8EE4 /* libiOSBuild.a */,
+				23250501138A3B49003D8EE4 /* libOpenLcb.a */,
 				2325050E138A3B49003D8EE4 /* iOSBuildTests.octest */,
 				2304E82D13950BC400B6867C /* MacOSXBuild.dylib */,
 				2304E83713950BC500B6867C /* MacOSXBuildTests.octest */,
@@ -331,42 +324,6 @@
 				2382DBF313A90BEA003DE18B /* OlcbInitializationCompleteMessage.m */,
 			);
 			name = MessageTypes;
-			sourceTree = "<group>";
-		};
-		2340D80913A9E0F300C54B74 /* libOpenLcbLib */ = {
-			isa = PBXGroup;
-			children = (
-				2340D80A13A9E0F300C54B74 /* Supporting Files */,
-			);
-			path = libOpenLcbLib;
-			sourceTree = "<group>";
-		};
-		2340D80A13A9E0F300C54B74 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				2340D80B13A9E0F300C54B74 /* libOpenLcbLib-Prefix.pch */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		2340D81813A9E0F300C54B74 /* libOpenLcbLibTests */ = {
-			isa = PBXGroup;
-			children = (
-				2340D81F13A9E0F400C54B74 /* libOpenLcbLibTests.h */,
-				2340D82113A9E0F400C54B74 /* libOpenLcbLibTests.m */,
-				2340D81913A9E0F400C54B74 /* Supporting Files */,
-			);
-			path = libOpenLcbLibTests;
-			sourceTree = "<group>";
-		};
-		2340D81913A9E0F400C54B74 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				2340D81A13A9E0F400C54B74 /* libOpenLcbLibTests-Info.plist */,
-				2340D81B13A9E0F400C54B74 /* InfoPlist.strings */,
-				2340D81E13A9E0F400C54B74 /* libOpenLcbLibTests-Prefix.pch */,
-			);
-			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
 		23A409571394E07C00993644 /* Other Frameworks */ = {
@@ -415,6 +372,7 @@
 				23D877931396773800B9E610 /* OlcbNodeID.h in Headers */,
 				230F761713A5CE5C0068BF67 /* OlcbMessageProcessor.h in Headers */,
 				23B3123213A9275E0063375B /* OlcbPCEventReportMessage.h in Headers */,
+				23D7F98D13AC03B8009F773D /* OlcbCanFrame.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,7 +380,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				23250533138A3CCA003D8EE4 /* OlcbCanFrame.h in Headers */,
 				2336681F1395F937007A0410 /* MtiReformat.h in Headers */,
 				23D8777F1396725400B9E610 /* OlcbMessage.h in Headers */,
 				23D877921396773800B9E610 /* OlcbNodeID.h in Headers */,
@@ -430,6 +387,7 @@
 				2382DBF413A90BEA003DE18B /* OlcbInitializationCompleteMessage.h in Headers */,
 				23B3122D13A91F1A0063375B /* OlcbPrettyPrint.h in Headers */,
 				23B3123113A9275E0063375B /* OlcbPCEventReportMessage.h in Headers */,
+				23D7F98C13AC03B7009F773D /* OlcbCanFrame.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -486,7 +444,7 @@
 			);
 			name = iOSBuild;
 			productName = OpenLcbLib;
-			productReference = 23250501138A3B49003D8EE4 /* libiOSBuild.a */;
+			productReference = 23250501138A3B49003D8EE4 /* libOpenLcb.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		2325050D138A3B49003D8EE4 /* iOSBuildTests */ = {
@@ -586,13 +544,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2304E84F13950CFD00B6867C /* OlcbCanFrame.m in Sources */,
 				2336681E1395F937007A0410 /* MtiReformat.c in Sources */,
 				23D877821396725400B9E610 /* OlcbMessage.m in Sources */,
 				23D877951396773800B9E610 /* OlcbNodeID.m in Sources */,
 				23B3122913A91EC10063375B /* OlcbInitializationCompleteMessage.m in Sources */,
 				23B3123413A9275E0063375B /* OlcbPCEventReportMessage.m in Sources */,
 				23B3124113A967380063375B /* OlcbPrettyPrint.m in Sources */,
+				23D7F98813AC0398009F773D /* OlcbCanFrame.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -614,13 +572,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				23250534138A3CCA003D8EE4 /* OlcbCanFrame.m in Sources */,
 				2336681D1395F937007A0410 /* MtiReformat.c in Sources */,
 				23D877811396725400B9E610 /* OlcbMessage.m in Sources */,
 				23D877941396773800B9E610 /* OlcbNodeID.m in Sources */,
 				2382DBF513A90BEA003DE18B /* OlcbInitializationCompleteMessage.m in Sources */,
 				23B3122E13A91F1A0063375B /* OlcbPrettyPrint.m in Sources */,
 				23B3123313A9275E0063375B /* OlcbPCEventReportMessage.m in Sources */,
+				23D7F98713AC0398009F773D /* OlcbCanFrame.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -658,14 +616,6 @@
 			isa = PBXVariantGroup;
 			children = (
 				2304E84013950BC500B6867C /* en */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-		2340D81B13A9E0F400C54B74 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				2340D81C13A9E0F400C54B74 /* en */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -802,7 +752,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "iOSBuild/IOSBuild-Prefix.pch";
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = OpenLcb;
 			};
 			name = Debug;
 		};
@@ -814,7 +764,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "iOSBuild/IOSBuild-Prefix.pch";
 				OTHER_LDFLAGS = "-ObjC";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = OpenLcb;
 			};
 			name = Release;
 		};
