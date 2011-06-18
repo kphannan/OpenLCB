@@ -10,7 +10,7 @@
 #import "OlcbMessageProcessor.h"
 
 @interface OlcbPrettyPrint : NSObject < OlcbMessageProcessor > {
-    
+    NSString* result;
 }
 
 @property (nonatomic, retain) NSString *result;

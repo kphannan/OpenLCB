@@ -20,7 +20,7 @@
     self.result = @"Unknown message type";
 }
 
-- (void)processInitializationComplete: (OlcbMessage*) msg {
+- (void)processInitializationComplete: (OlcbInitializationCompleteMessage*) msg {
     self.result = nil;
 }
 
