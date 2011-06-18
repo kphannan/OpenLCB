@@ -72,7 +72,9 @@ u_int16_t MtiFromCanHeader(u_int32_t header, u_int8_t byte0 ) {
             // simple or complex MTI
             result = 0x3000 | ((header & 0x00FF0000) >> 12); // no flags
             // special cases for flags
-            // ..
+            switch (result) {
+                case 0x32D0: result = 0x32D2; break; // PC Event Report
+            }
             return result;
         case 2:
         case 3:
