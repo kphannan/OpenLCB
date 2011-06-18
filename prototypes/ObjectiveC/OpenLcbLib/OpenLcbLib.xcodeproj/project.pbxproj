@@ -19,6 +19,8 @@
 		230F761713A5CE5C0068BF67 /* OlcbMessageProcessor.h in Headers */ = {isa = PBXBuildFile; fileRef = 230F761413A5CE5C0068BF67 /* OlcbMessageProcessor.h */; };
 		230F761F13A5CFF20068BF67 /* OlcbMessageProcessorTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 230F761E13A5CFF20068BF67 /* OlcbMessageProcessorTest.m */; };
 		230F762013A5CFF20068BF67 /* OlcbMessageProcessorTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 230F761E13A5CFF20068BF67 /* OlcbMessageProcessorTest.m */; };
+		2316DFE713AC8542006704FE /* FlipsideViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 2316DFE513AC8542006704FE /* FlipsideViewController.h */; };
+		2316DFE813AC8542006704FE /* FlipsideViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2316DFE613AC8542006704FE /* FlipsideViewController.m */; };
 		23250505138A3B49003D8EE4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250504138A3B49003D8EE4 /* Foundation.framework */; };
 		23250510138A3B49003D8EE4 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2325050F138A3B49003D8EE4 /* UIKit.framework */; };
 		23250511138A3B49003D8EE4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23250504138A3B49003D8EE4 /* Foundation.framework */; };
@@ -93,6 +95,9 @@
 		230F761413A5CE5C0068BF67 /* OlcbMessageProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbMessageProcessor.h; sourceTree = "<group>"; };
 		230F761D13A5CFF20068BF67 /* OlcbMessageProcessorTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbMessageProcessorTest.h; sourceTree = "<group>"; };
 		230F761E13A5CFF20068BF67 /* OlcbMessageProcessorTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbMessageProcessorTest.m; sourceTree = "<group>"; };
+		2316DFE513AC8542006704FE /* FlipsideViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FlipsideViewController.h; sourceTree = SOURCE_ROOT; };
+		2316DFE613AC8542006704FE /* FlipsideViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FlipsideViewController.m; sourceTree = SOURCE_ROOT; };
+		231F9BA413AC81CA00FA3EDE /* iOSLibrary-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "iOSLibrary-Prefix.pch"; sourceTree = "<group>"; };
 		2324692213952FF000A86B68 /* OpenLcbLibTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "OpenLcbLibTests-Prefix.pch"; path = "OpenLcbLibTests/OpenLcbLibTests-Prefix.pch"; sourceTree = "<group>"; };
 		23250501138A3B49003D8EE4 /* libOpenLcb.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libOpenLcb.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		23250504138A3B49003D8EE4 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -260,6 +265,22 @@
 			name = IOSBuildTests;
 			sourceTree = "<group>";
 		};
+		231F9BA213AC81CA00FA3EDE /* iOSLibrary */ = {
+			isa = PBXGroup;
+			children = (
+				231F9BA313AC81CA00FA3EDE /* Supporting Files */,
+			);
+			path = iOSLibrary;
+			sourceTree = "<group>";
+		};
+		231F9BA313AC81CA00FA3EDE /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				231F9BA413AC81CA00FA3EDE /* iOSLibrary-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 		232504F6138A3B48003D8EE4 = {
 			isa = PBXGroup;
 			children = (
@@ -270,6 +291,7 @@
 				2304E861139512D500B6867C /* IOSBuildTests */,
 				2304E82F13950BC500B6867C /* MacOSXBuild */,
 				2304E83C13950BC500B6867C /* MacOSXBuildTests */,
+				231F9BA213AC81CA00FA3EDE /* iOSLibrary */,
 				23250503138A3B49003D8EE4 /* Frameworks */,
 				23250502138A3B49003D8EE4 /* Products */,
 			);
@@ -301,6 +323,8 @@
 		23250506138A3B49003D8EE4 /* IOSBuild */ = {
 			isa = PBXGroup;
 			children = (
+				2316DFE513AC8542006704FE /* FlipsideViewController.h */,
+				2316DFE613AC8542006704FE /* FlipsideViewController.m */,
 				23250507138A3B49003D8EE4 /* Supporting Files */,
 			);
 			name = IOSBuild;
@@ -388,6 +412,7 @@
 				23B3122D13A91F1A0063375B /* OlcbPrettyPrint.h in Headers */,
 				23B3123113A9275E0063375B /* OlcbPCEventReportMessage.h in Headers */,
 				23D7F98C13AC03B7009F773D /* OlcbCanFrame.h in Headers */,
+				2316DFE713AC8542006704FE /* FlipsideViewController.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -579,6 +604,7 @@
 				23B3122E13A91F1A0063375B /* OlcbPrettyPrint.m in Sources */,
 				23B3123313A9275E0063375B /* OlcbPCEventReportMessage.m in Sources */,
 				23D7F98713AC0398009F773D /* OlcbCanFrame.m in Sources */,
+				2316DFE813AC8542006704FE /* FlipsideViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
