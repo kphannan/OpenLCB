@@ -11,6 +11,8 @@
 //  main code are actually tested.
 
 
+// For CAN, assume source address alias is 0x123, dest address (if present) is 0x456
+
 #define MTI_CAN_INIT_FROM_FIELDS 0x1800000
 
 #define HEADER_CAN_INITIALIZATION_COMPLETE  0x1908F123
