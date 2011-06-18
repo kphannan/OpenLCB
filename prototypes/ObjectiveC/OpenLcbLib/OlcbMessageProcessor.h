@@ -10,13 +10,15 @@
 
 #import <Foundation/Foundation.h>
 @class OlcbMessage;
+@class OlcbInitializationCompleteMessage;
+@class OlcbPCEventReportMessage;
 
 @protocol OlcbMessageProcessor <NSObject>
 @required
 - (void)processDefaultMessage: (OlcbMessage*) msg;
 
 @optional
-- (void)processInitializationComplete: (OlcbMessage*) msg;
-- (void)processPCEventReceived: (OlcbMessage*) msg;
+- (void)processInitializationComplete: (OlcbInitializationCompleteMessage*) msg;
+- (void)processPCEventReport: (OlcbPCEventReportMessage*) msg;
 
 @end

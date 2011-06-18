@@ -38,7 +38,7 @@ static int result;
 - (void)processInitializationComplete: (OlcbMessage*) msg {
     result = 2;
 }
-- (void)processPCEventReport: (OlcbMessage*) msg {
+- (void)processPCEventReport: (OlcbPCEventReportMessage*) msg {
     result = 3;
 }
 @end

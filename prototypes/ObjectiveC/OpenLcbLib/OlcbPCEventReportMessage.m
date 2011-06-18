@@ -14,7 +14,7 @@
 
 - (void) dispatch: (id <OlcbMessageProcessor>) processor {
     if ([processor respondsToSelector:@selector(processPCEventReceived:)]) {
-        [processor processPCEventReceived: self];
+        [processor processPCEventReport: self];
     } else {
         [processor processDefaultMessage: self];        
     }
