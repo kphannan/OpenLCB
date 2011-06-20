@@ -61,7 +61,7 @@
 						<string key="IBUIText"/>
 						<object class="NSFont" key="IBUIFont">
 							<string key="NSName">Helvetica</string>
-							<double key="NSSize">120</double>
+							<double key="NSSize">108</double>
 							<int key="NSfFlags">16</int>
 						</object>
 						<object class="NSColor" key="IBUITextColor" id="664065755">
@@ -71,7 +71,7 @@
 						<nil key="IBUIHighlightedColor"/>
 						<int key="IBUIBaselineAdjustment">1</int>
 						<bool key="IBUIAdjustsFontSizeToFit">NO</bool>
-						<float key="IBUIMinimumFontSize">120</float>
+						<float key="IBUIMinimumFontSize">108</float>
 						<int key="IBUITextAlignment">1</int>
 						<int key="IBUILineBreakMode">3</int>
 					</object>
