@@ -13,11 +13,21 @@
 @implementation OlcbPCEventReportMessage
 
 - (void) dispatch: (id <OlcbMessageProcessor>) processor {
-    if ([processor respondsToSelector:@selector(processPCEventReceived:)]) {
+    if ([processor respondsToSelector:@selector(processPCEventReport:)]) {
         [processor processPCEventReport: self];
     } else {
         [processor processDefaultMessage: self];        
     }
+}
+
+- (OlcbMessage*)initFromFields: (u_int16_t) mti_a data: (u_int8_t[]) content_a length: (u_int) length_a {
+    
+    // build from specific values
+    mti = mti_a;
+    content = content_a;
+    length = length_a;
+    
+    return self;
 }
 
 @end

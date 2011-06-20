@@ -16,4 +16,6 @@
 
 - (void) dispatch: (id <OlcbMessageProcessor>) processor;
 
+- (OlcbMessage*)initFromFields: (u_int16_t) mti data: (u_int8_t[]) content length: (u_int) length;
+
 @end
