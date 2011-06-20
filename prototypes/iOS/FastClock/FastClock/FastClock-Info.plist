@@ -18,7 +18,7 @@
 		<string>openlcb_iphone_114.png</string>
 	</array>
 	<key>CFBundleIdentifier</key>
-	<string>org.openlcb.${PRODUCT_NAME:rfc1034identifier}</string>
+	<string>org.openlcb.fastclock</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
