@@ -17,7 +17,6 @@
 		233463ED13ABEBE000166C69 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233463EB13ABEBE000166C69 /* MainWindow.xib */; };
 		233463F013ABEBE000166C69 /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 233463EF13ABEBE000166C69 /* MainViewController.m */; };
 		233463F213ABEBE000166C69 /* MainView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233463F113ABEBE000166C69 /* MainView.xib */; };
-		233463F513ABEBE000166C69 /* FlipsideViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 233463F413ABEBE000166C69 /* FlipsideViewController.m */; };
 		233463F713ABEBE000166C69 /* FlipsideView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 233463F613ABEBE000166C69 /* FlipsideView.xib */; };
 		233463FE13ABEBE000166C69 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 233463D913ABEBDF00166C69 /* UIKit.framework */; };
 		233463FF13ABEBE000166C69 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 233463DB13ABEBE000166C69 /* Foundation.framework */; };
@@ -83,8 +82,6 @@
 		233463EE13ABEBE000166C69 /* MainViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainViewController.h; sourceTree = "<group>"; };
 		233463EF13ABEBE000166C69 /* MainViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MainViewController.m; sourceTree = "<group>"; };
 		233463F113ABEBE000166C69 /* MainView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainView.xib; sourceTree = "<group>"; };
-		233463F313ABEBE000166C69 /* FlipsideViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FlipsideViewController.h; sourceTree = "<group>"; };
-		233463F413ABEBE000166C69 /* FlipsideViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FlipsideViewController.m; sourceTree = "<group>"; };
 		233463F613ABEBE000166C69 /* FlipsideView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = FlipsideView.xib; sourceTree = "<group>"; };
 		233463FD13ABEBE000166C69 /* FastClockTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FastClockTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2334640513ABEBE000166C69 /* FastClockTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "FastClockTests-Info.plist"; sourceTree = "<group>"; };
@@ -164,8 +161,6 @@
 				233463EE13ABEBE000166C69 /* MainViewController.h */,
 				233463EF13ABEBE000166C69 /* MainViewController.m */,
 				233463F113ABEBE000166C69 /* MainView.xib */,
-				233463F313ABEBE000166C69 /* FlipsideViewController.h */,
-				233463F413ABEBE000166C69 /* FlipsideViewController.m */,
 				233463F613ABEBE000166C69 /* FlipsideView.xib */,
 				233463E013ABEBE000166C69 /* Supporting Files */,
 			);
@@ -362,7 +357,6 @@
 				233463E713ABEBE000166C69 /* main.m in Sources */,
 				233463EA13ABEBE000166C69 /* FastClockAppDelegate.m in Sources */,
 				233463F013ABEBE000166C69 /* MainViewController.m in Sources */,
-				233463F513ABEBE000166C69 /* FlipsideViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -454,6 +448,7 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "FastClock/FastClock-Prefix.pch";
+				"HEADER_SEARCH_PATHS[arch=*]" = "${PROJECT_DIR}/../../ObjectiveC/OpenLcbLib/";
 				INFOPLIST_FILE = "FastClock/FastClock-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -471,6 +466,7 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "FastClock/FastClock-Prefix.pch";
+				"HEADER_SEARCH_PATHS[arch=*]" = "${PROJECT_DIR}/../../ObjectiveC/OpenLcbLib/";
 				INFOPLIST_FILE = "FastClock/FastClock-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",

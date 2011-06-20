@@ -1,16 +1,16 @@
 //
-//  FastClockAppDelegate.m
-//  FastClock
+//  MonitorAppDelegate.m
+//  Monitor
 //
-//  Created by Bob Jacobsen on 6/17/11.
+//  Created by Bob Jacobsen on 5/16/11.
 //  Copyright 2011 Bob Jacobsen. All rights reserved.
 //
 
-#import "FastClockAppDelegate.h"
+#import "MonitorAppDelegate.h"
 
 #import "MainViewController.h"
 
-@implementation FastClockAppDelegate
+@implementation MonitorAppDelegate
 
 
 @synthesize window=_window;

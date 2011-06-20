@@ -1,8 +1,8 @@
 //
 //  main.m
-//  FastClock
+//  Monitor
 //
-//  Created by Bob Jacobsen on 6/17/11.
+//  Created by Bob Jacobsen on 5/16/11.
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
