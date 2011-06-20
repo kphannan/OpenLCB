@@ -348,7 +348,7 @@ static TimeEventDisplay* formatter;
 {
 #pragma unused(sender)
     if (self.isReceiving) {
-        [self _stopReceiveWithStatus:@"Press Start to Proceed"];  // No message in normal end state
+        [self _stopReceiveWithStatus:@"Tap Start to Proceed"];  // No message in normal end state
     } else {
         self.lastLabel.text = @""; // clear last message
         [self _startReceive];
@@ -377,7 +377,7 @@ static TimeEventDisplay* formatter;
     assert(self.receiveOrCancelButton != nil);
     
     self.activityIndicator.hidden = YES;
-    self.statusLabel.text = @"Press Start to Proceed"; // initial content
+    self.statusLabel.text = @"Tap Start to Proceed"; // initial content
 }
 
 - (void)viewDidUnload
