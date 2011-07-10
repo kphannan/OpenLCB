@@ -43,6 +43,7 @@ namespace ComGateway
         static string line = "";
         static object loglock = new object();
         static bool CANdatagramstart = false;
+        static string newcmd = "";
         static string aliascheck = "";
         string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
             + "<Version>Mike Johnson 4 July 2011</Version></id>"
@@ -328,7 +329,6 @@ namespace ComGateway
                     AliasTable.Add(a, n);
                     NodeIdTable.Add(n, a);
                 }
-                string newcmd = "";
                 string data = cmd.Substring(11, cmd.Length-12);
                 switch (cmd[3])
                 {

@@ -362,7 +362,7 @@ namespace Config
                         if ("space".StartsWith(xmln.Attributes[i].Name))
                             space = Convert.ToInt32(xmln.Attributes[i].InnerText);
                         else if ("origin".StartsWith(xmln.Attributes[i].Name))
-                            org = Convert.ToInt32(xmln.Attributes[i].InnerText);
+                            org = Convert.ToInt32(xmln.Attributes[i].InnerText,16);
                         else if ("size".StartsWith(xmln.Attributes[i].Name))
                             size = Convert.ToInt32(xmln.Attributes[i].InnerText);
                         else if ("buttons".StartsWith(xmln.Attributes[i].Name))
@@ -375,7 +375,7 @@ namespace Config
                                 break;
                         }
                         else
-                            log("Unknown attribute in " + xmln.InnerText);
+                            log("Segment, unknown attribute " + xmln.Attributes[i].Name);
                     }
                     if (!wrongname)
                     {
@@ -413,7 +413,7 @@ namespace Config
                 else if ("name".StartsWith(n.Attributes[i].Name))
                     name = n.Attributes[i].InnerText;
                 else
-                    log("Unknown attribute in " + n.InnerText);
+                    log("Group, unknown attribute " + n.Attributes[i].Name);
             }
             labels[index].Text = name + " (Index 0 - " + (rep-1).ToString() + ") :";
             labels[index].Location = new System.Drawing.Point(indent * 10 + 10, index * 25 + 15);
@@ -449,7 +449,7 @@ namespace Config
                 else if ("name".StartsWith(n.Attributes[i].Name))
                     name = n.Attributes[i].InnerText;
                 else
-                    log("Unknown attribute in " + n.InnerText);
+                    log("Var, unknown attribute " + n.Attributes[i].Name);
             }
             labels[index].Text = name + " (" + n.Name + isize.ToString() + ") :";
             labels[index].Location = new System.Drawing.Point(indent * 10 + 10, index * 25 + 15);
