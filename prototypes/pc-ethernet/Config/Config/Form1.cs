@@ -281,14 +281,17 @@ namespace Config
             SegmentsTB.Items.Clear();
             SegmentsTB.Text = "";
             // read XML from node
-            background = new Thread(ChangeNodeSelected);
+            background = new Thread(ReadXMLfile);
             background.Start();
             taskcomplete.WaitOne();
             DisplayNode();
         }
 
-        public void ChangeNodeSelected()
+        public void ReadXMLfile()
         {
+            xmld.LoadXml("<cdi></cdi>");
+            SegmentXML = null;
+            SegmentData = "";
             string datagram = "";
             string x = "";
             int adr = 0;
@@ -297,17 +300,17 @@ namespace Config
             {
                 SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text 
                     + "60" + adr.ToString("X8") + "FF" + "40");
-                for (int w = 0; w < 500; w++)
+                for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
                     if (datagrams.Count != 0)
                     {
                         datagram = datagrams.Dequeue();
-                        if (datagram.Substring(2, 4) == "E200")
+                        if (datagram.Substring(2, 4) == "E200" || datagram.Substring(2, 4) == "E4D0")
                             break;
                     }
                 }
-                if (datagram.Length < 40)
+                if (datagram.Length < 40 || datagram.Substring(2, 4) == "E4D0")
                     break;
                 for (int i = 42; i < datagram.Length; i += 2)
                 {
@@ -322,17 +325,20 @@ namespace Config
                 adr += 64;
             } 
             log(x);
-            if (!x.StartsWith("<cdi>")) {
-                log("XML files does not start with <cdi>");
-                return;
-            }
-            try
+            if (!x.StartsWith("<cdi>"))
             {
-                xmld.LoadXml(x);
+                log("No XML file or file does not start with <cdi>");
             }
-            catch (Exception e)
+            else
             {
-                log("Xml file corrupt " + e.ToString());
+                try
+                {
+                    xmld.LoadXml(x);
+                }
+                catch (Exception e)
+                {
+                    log("Xml file corrupt " + e.ToString());
+                }
             }
             taskcomplete.Release();
         }
