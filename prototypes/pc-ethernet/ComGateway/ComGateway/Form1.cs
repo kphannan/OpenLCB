@@ -47,7 +47,7 @@ namespace ComGateway
         static string aliascheck = "";
         string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
             + "<Version>Mike Johnson 4 July 2011</Version></id>"
-            +"<seg name=\"Port Speed\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
+            +"<seg name=\"Port Speed\" space=\"0\" buttons=\"1\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
 
         public ComGateway()
         {
@@ -293,6 +293,7 @@ namespace ComGateway
                 // CAN input
                 try
                 {
+                    Thread.Sleep(10);
                     line += com.ReadExisting();
                 }
                 catch (Exception e)
@@ -432,7 +433,7 @@ namespace ComGateway
 
         public void CANSendHexString(string cmd)
         {
-            log("C< " + cmd);
+            // log("C< " + cmd);
             int length = cmd.Length / 2;
             string sid = TranslateToAlias(cmd.Substring(6, 12));
             if (cmd.Substring(2, 1) == "E")
@@ -487,7 +488,7 @@ namespace ComGateway
             if (cmd.Substring(2,4)==IDENTIFIEDPRODUCER|| cmd.Substring(2,4)==IDENTIFIEDPRODUCERRANGE)
                 return false;
             if (cmd.Substring(2, 1) == "E" && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram to this node
-            { 
+            {
                 if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
                 {
                     // send XML file
@@ -500,6 +501,20 @@ namespace ComGateway
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
                     s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                    if (l < 64)
+                        s += "00";
+                    EthernetSendHexString(s);
+                    CANSendHexString(s);
+                }
+                if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "00")
+                {
+                    // send port speed
+                    string address = cmd.Substring(32, 8);
+                    string speed = com.BaudRate.ToString("X8");
+                    string data = "";
+                    for (int i = 0; i < 8; i+=2)
+                        data = speed.Substring(i,2) + data;
+                    s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "00" + data;
                     EthernetSendHexString(s);
                     CANSendHexString(s);
                 }

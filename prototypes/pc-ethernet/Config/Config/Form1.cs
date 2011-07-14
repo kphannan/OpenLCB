@@ -34,16 +34,19 @@ namespace Config
         static object loglock = new object();
         static bool serverconnected = false;
 
-        static Semaphore dg = new Semaphore(0, 1);
-        static string datagram = "";
-        static int dgsize = 0;
-        static XmlDocument xmld = new XmlDocument();
-        static XmlNode xmln = null;
+        static Queue<string> datagrams = new Queue<string>();
+
         static Label[] idlabels = new Label[4];
         static TextBox[] idtextboxes = new TextBox[4];
         static Label[] labels = new Label[10];
         static TextBox[] textboxes = new TextBox[10];
         static NumericUpDown[] numbers = new NumericUpDown[10];
+        static int[] startofdata = new int[10];
+        static int[] lengthofdata = new int[10];
+        static string[] typeofdata = new string[10];
+
+        static Thread background;
+        static Semaphore taskcomplete = new Semaphore(0, 1);
 
         public Config()
         {
@@ -67,25 +70,29 @@ namespace Config
                 idlabels[i].AutoSize = true;
                 idlabels[i].Size = new System.Drawing.Size(50, 13);
                 idlabels[i].Location = new System.Drawing.Point(10, i * 25 + 50);
-                idlabels[i].Hide();
+                idlabels[i].Visible = false;
                 Controls.Add(idlabels[i]);
                 idtextboxes[i] = new TextBox();
                 idtextboxes[i].Location = new System.Drawing.Point(90, i * 25 + 50);
                 idtextboxes[i].Size = new System.Drawing.Size(375, 20);
-                idtextboxes[i].Hide();
+                idtextboxes[i].ReadOnly = true;
+                idtextboxes[i].Visible = false;
                 Controls.Add(idtextboxes[i]);
             }
             for (int i = 0; i < 10; i++)
             {
                 labels[i] = new Label();
                 labels[i].AutoSize = true;
-                labels[i].Hide();
+                labels[i].Visible = false;
                 groupBox1.Controls.Add(labels[i]);
                 textboxes[i] = new TextBox();
-                textboxes[i].Hide();
+                textboxes[i].Size = new System.Drawing.Size(160, 20);
+                textboxes[i].Validating += new System.ComponentModel.CancelEventHandler(this.textBox_Validating);
+                textboxes[i].Visible = false;
                 groupBox1.Controls.Add(textboxes[i]);
                 numbers[i] = new NumericUpDown();
-                numbers[i].Hide();
+                numbers[i].Visible = false;
+                numbers[i].ValueChanged += new System.EventHandler(this.numericUpDown_ValueChanged);
                 groupBox1.Controls.Add(numbers[i]);
             }
             setBtns(0);
@@ -230,9 +237,7 @@ namespace Config
                 }
                 else if (cmd.Substring(2, 1) == "E" && cmd.Substring(18,12)==nodenumber.ToString("X12")) // datagram
                 {
-                    datagram = cmd.Substring(30);
-                    dgsize = datagram.Length;
-                    dg.Release(1);
+                    datagrams.Enqueue(cmd);
                 }
              }
             skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
@@ -243,49 +248,98 @@ namespace Config
             SelectNodeCB.Items.Clear();
             SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
         }
-        
+
+        //******************************************************************************************************
+        // XML Node information
+        //******************************************************************************************************
+
+        public XmlDocument xmld = new XmlDocument();
+        public XmlNode SegmentXML = null;
+        public string SegmentName = "";
+        public int SegmentSpace = 0;
+        public long SegmentOrg = 0;
+        public int SegmentSize = 0;
+        public int SegmentBtns = 3;
+
+        public string SegmentData;
+        public int bitpos;
+        public int bytepos;
+
+        public int bitsize = 0;
+
+        //******************************************************************************************************
         // Node selection, Read XML
+        //******************************************************************************************************
 
         private void SelectNodeCB_SelectedIndexChanged(object sender, EventArgs e)
         {
-            int i;
-            for (i = 0; i < 4; i++)
+            for (int i = 0; i < 4; i++)
             {
-                idlabels[i].Hide();
-                idtextboxes[i].Hide();
+                idlabels[i].Visible = false;
+                idtextboxes[i].Visible = false;
             }
-            // read XML from node
             SegmentsTB.Items.Clear();
             SegmentsTB.Text = "";
-            ErasePage(xmln);
-            string data = "";
+            // read XML from node
+            background = new Thread(ChangeNodeSelected);
+            background.Start();
+            taskcomplete.WaitOne();
+            DisplayNode();
+        }
+
+        public void ChangeNodeSelected()
+        {
+            string datagram = "";
+            string x = "";
             int adr = 0;
-            do
+            bool more = true;
+            while (more)
             {
-                dgsize = -1;
                 SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text 
                     + "60" + adr.ToString("X8") + "FF" + "40");
-                dg.WaitOne(2000);
-                if (dgsize < 10)
+                for (int w = 0; w < 500; w++)
                 {
-                    log("Failed to read XML from " + SelectNodeCB.Text);
-                    return;
+                    Thread.Sleep(10);
+                    if (datagrams.Count != 0)
+                    {
+                        datagram = datagrams.Dequeue();
+                        if (datagram.Substring(2, 4) == "E200")
+                            break;
+                    }
                 }
-                if (dgsize <= 12)
+                if (datagram.Length < 40)
                     break;
-                data += datagram.Substring(12);
+                for (int i = 42; i < datagram.Length; i += 2)
+                {
+                    int c = Convert.ToInt32(datagram.Substring(i, 2), 16);
+                    if (c == 0)
+                    {
+                        more = false;
+                        break;
+                    }
+                    x += (char)c;
+                }
                 adr += 64;
-            } while (dgsize == 128+12);
-            string x = "";
-            for (i = 0; i < data.Length; i+=2)
-                x += (char)Convert.ToInt32(data.Substring(i, 2),16);
+            } 
             log(x);
-            xmld.LoadXml(x);
-            if (xmld.FirstChild.Name != "cdi")
-            {
+            if (!x.StartsWith("<cdi>")) {
                 log("XML files does not start with <cdi>");
                 return;
             }
+            try
+            {
+                xmld.LoadXml(x);
+            }
+            catch (Exception e)
+            {
+                log("Xml file corrupt " + e.ToString());
+            }
+            taskcomplete.Release();
+        }
+
+        public void DisplayNode()
+        {
+            int i;
             XmlNode maintag = xmld.FirstChild.FirstChild;
             while (maintag != null)
             {
@@ -297,9 +351,9 @@ namespace Config
                         if (fc == null)
                             break;
                         idlabels[i].Text = fc.Name;
-                        idlabels[i].Show();
+                        idlabels[i].Visible = true;
                         idtextboxes[i].Text = fc.InnerText;
-                        idtextboxes[i].Show();
+                        idtextboxes[i].Visible = true;
                         fc = fc.NextSibling;
                     }
                 }
@@ -314,79 +368,81 @@ namespace Config
                         }
                     }
                     if (SegmentsTB.Items.Count == 1)
-                        SegmentsTB.SelectedIndex = 0;
+                         SegmentsTB.SelectedIndex = 0;
                 }
                 else
                     log("Unknown tag in XML " + maintag.Name);
                 maintag = maintag.NextSibling;
             }
+            SegmentChanged();
+            groupBox1.Refresh();
         }
 
-        public void ErasePage(XmlNode xmln)
+        public long GetNumber(string s)
         {
-            if (xmln != null) 
-                xmln = null;
-            for (int i = 0; i < 10; i++)
-            {
-                labels[i].Hide();
-                textboxes[i].Hide();
-                numbers[i].Hide();
-            }
-            setBtns(0);
-            groupBox1.Invalidate(true);
+            if (s[0] == '#')
+                return Convert.ToInt64(s.Substring(1), 16);
+            else
+                return Convert.ToInt64(s);
         }
 
         private void SegmentsTB_SelectedIndexChanged(object sender, EventArgs e)
         {
-            ErasePage(xmln);
-            string name = SegmentsTB.Text;
-            int space = 0;
-            long org = 0;
-            int size = 0x10000;
-            int btns = 3;
+            SegmentChanged();
+        }
+
+        public void SegmentChanged()
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                labels[i].Visible = false;
+                textboxes[i].Visible = false;
+                numbers[i].Visible = false;
+            }
+            SegmentName = SegmentsTB.Text;
+            int btns = 0xFFFF;
             bool wrongname = true;
 
-            xmln = xmld.FirstChild.FirstChild;
-            while(xmln!=null)
+            SegmentXML = xmld.FirstChild.FirstChild;
+            while(SegmentXML!=null)
             {
-                space = 0;
-                org = 0;
-                size = 0x10000;
-                btns = 3;
-                if ("identification".StartsWith(xmln.Name))
+                SegmentSpace = 0;
+                SegmentOrg = 0;
+                btns = 0xFFFF;
+                if ("identification".StartsWith(SegmentXML.Name))
                 { }
-                else if ("segment".StartsWith(xmln.Name))
+                else if ("segment".StartsWith(SegmentXML.Name))
                 {
-                    for (int i = 0; i < xmln.Attributes.Count; i++)
+                    for (int i = 0; i < SegmentXML.Attributes.Count; i++)
                     {
-                        if ("space".StartsWith(xmln.Attributes[i].Name))
-                            space = Convert.ToInt32(xmln.Attributes[i].InnerText);
-                        else if ("origin".StartsWith(xmln.Attributes[i].Name))
-                            org = Convert.ToInt32(xmln.Attributes[i].InnerText,16);
-                        else if ("size".StartsWith(xmln.Attributes[i].Name))
-                            size = Convert.ToInt32(xmln.Attributes[i].InnerText);
-                        else if ("buttons".StartsWith(xmln.Attributes[i].Name))
-                            btns = Convert.ToInt32(xmln.Attributes[i].InnerText);
-                        else if ("name".StartsWith(xmln.Attributes[i].Name)) 
+                        if ("space".StartsWith(SegmentXML.Attributes[i].Name))
+                            SegmentSpace = (int)GetNumber(SegmentXML.Attributes[i].InnerText);
+                        else if ("origin".StartsWith(SegmentXML.Attributes[i].Name))
+                            SegmentOrg = GetNumber(SegmentXML.Attributes[i].InnerText);
+                        else if ("buttons".StartsWith(SegmentXML.Attributes[i].Name))
+                            btns = (int)GetNumber(SegmentXML.Attributes[i].InnerText);
+                        else if ("name".StartsWith(SegmentXML.Attributes[i].Name)) 
                         {
-                            if (name == xmln.Attributes[i].InnerText)
+                            if (SegmentName == SegmentXML.Attributes[i].InnerText)
                                 wrongname = false;
                             else
                                 break;
                         }
                         else
-                            log("Segment, unknown attribute " + xmln.Attributes[i].Name);
+                            log("Segment, unknown attribute " + SegmentXML.Attributes[i].Name);
                     }
                     if (!wrongname)
                     {
-                        XmlNode fc = xmln.FirstChild;
+                        SegmentSize = sizesegment(SegmentXML);
+                        XmlNode fc = SegmentXML.FirstChild;
                         int index = 0;
                         int indent = 0;
                         while (fc != null)
                         {
                             if ("group".StartsWith(fc.Name))
                                 index = group(index, indent, fc);
-                            else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
+                            else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name)
+                              || "byte".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
                                 index = var(index, indent, fc);
                             else
                                 log(fc.Name);
@@ -396,9 +452,9 @@ namespace Config
                         break;
                     }
                 }
-                xmln = xmln.NextSibling;
+                SegmentXML = SegmentXML.NextSibling;
             }
-            groupBox1.Invalidate(true);
+            groupBox1.Refresh();
         }
 
         public int group(int index, int indent, XmlNode n)
@@ -409,7 +465,7 @@ namespace Config
             for (int i = 0; i < n.Attributes.Count; i++)
             {
                 if ("replication".StartsWith(n.Attributes[i].Name))
-                    rep = Convert.ToInt16(n.Attributes[i].InnerText);
+                    rep = (int)GetNumber(n.Attributes[i].InnerText);
                 else if ("name".StartsWith(n.Attributes[i].Name))
                     name = n.Attributes[i].InnerText;
                 else
@@ -417,11 +473,11 @@ namespace Config
             }
             labels[index].Text = name + " (Index 0 - " + (rep-1).ToString() + ") :";
             labels[index].Location = new System.Drawing.Point(indent * 10 + 10, index * 25 + 15);
-            labels[index].Show();
+            labels[index].Visible = true;
             numbers[index].Text = "0";
             numbers[index].Location = new System.Drawing.Point(indent * 10 + 150, index * 25 + 15);
             numbers[index].Maximum = rep - 1;
-            numbers[index].Show();
+            numbers[index].Visible = true;
             index++;
             indent++;
             XmlNode fc = n.FirstChild;
@@ -429,7 +485,8 @@ namespace Config
             {
                 if ("group".StartsWith(fc.Name))
                     index = group(index, indent, fc);
-                else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
+                else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name)
+                              || "byte".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
                     index = var(index, indent, fc);
                 else
                     log(fc.Name);
@@ -445,18 +502,30 @@ namespace Config
             for (int i = 0; i < n.Attributes.Count; i++)
             {
                 if ("size".StartsWith(n.Attributes[i].Name))
-                    isize = Convert.ToInt16(n.Attributes[i].InnerText);
+                    isize = (int)GetNumber(n.Attributes[i].InnerText);
                 else if ("name".StartsWith(n.Attributes[i].Name))
                     name = n.Attributes[i].InnerText;
                 else
                     log("Var, unknown attribute " + n.Attributes[i].Name);
             }
-            labels[index].Text = name + " (" + n.Name + isize.ToString() + ") :";
+            if (name == "unused")
+                return index;
+
+            if ("integer".StartsWith(n.Name))
+                typeofdata[index] = "int";
+            else if ("character".StartsWith(n.Name))
+                typeofdata[index] = "char";
+            else if ("byte".StartsWith(n.Name))
+                typeofdata[index] = "byte";
+            else if ("bit".StartsWith(n.Name))
+                typeofdata[index] = "bit";
+
+            labels[index].Text = name + " (" + typeofdata[index] + isize.ToString() + ") :";
             labels[index].Location = new System.Drawing.Point(indent * 10 + 10, index * 25 + 15);
-            labels[index].Show();
+            labels[index].Visible = true;
             textboxes[index].Text = "";
             textboxes[index].Location = new System.Drawing.Point(indent * 10 + 150, index * 25 + 15);
-            textboxes[index].Show();
+            textboxes[index].Visible = true;
             return index + 1;
         }
 
@@ -506,5 +575,351 @@ namespace Config
                 pos += 29;
             }
         }
+
+        //******************************************************************************************************
+        // Size of segment, group or variable
+        //******************************************************************************************************
+
+        private int sizesegment(XmlNode n)
+        {
+            int size = 0;
+            XmlNode fc = n.FirstChild;
+            while (fc != null)
+            {
+                if ("group".StartsWith(fc.Name))
+                    size += sizegroup(fc);
+                else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name)
+                    || "byte".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
+                    size += sizevar(fc);
+                else
+                    log(fc.Name);
+                fc = fc.NextSibling;
+            }
+            return size;
+        }
+
+        public int sizegroup(XmlNode n)
+        {
+            int rep = 1;
+            string name = "Group";
+            int size = 0;
+            for (int i = 0; i < n.Attributes.Count; i++)
+            {
+                if ("replication".StartsWith(n.Attributes[i].Name))
+                    rep = (int)GetNumber(n.Attributes[i].InnerText);
+                else if ("name".StartsWith(n.Attributes[i].Name))
+                    name = n.Attributes[i].InnerText;
+                else
+                    log("Group, unknown attribute " + n.Attributes[i].Name);
+            }
+            XmlNode fc = n.FirstChild;
+            while (fc != null)
+            {
+                if ("group".StartsWith(fc.Name))
+                    size += sizegroup(fc);
+                else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name)
+                  || "byte".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
+                    size += sizevar(fc);
+                else
+                    log(fc.Name);
+                fc = fc.NextSibling;
+            }
+            return size*rep;
+        }
+
+        public int sizevar(XmlNode n)
+        {
+            int isize = 1;
+            string name = "unused";
+            for (int i = 0; i < n.Attributes.Count; i++)
+            {
+                if ("size".StartsWith(n.Attributes[i].Name))
+                    isize = (int)GetNumber(n.Attributes[i].InnerText);
+                else if ("name".StartsWith(n.Attributes[i].Name))
+                    name = n.Attributes[i].InnerText;
+                else
+                    log("Var, unknown attribute " + n.Attributes[i].Name);
+            }
+
+            if ("bit".StartsWith(n.Name))
+            {
+                bitsize += isize;
+                isize = bitsize/8;
+                bitsize = bitsize - isize*8;
+            }
+            else if (bitsize != 0)
+            {
+                isize++;
+                bitsize = 0;
+            }
+            return isize;
+        }
+
+        //******************************************************************************************************
+        // Read from node
+        //******************************************************************************************************
+
+        private void ReadBtn_Click(object sender, EventArgs e)
+        {
+            background = new Thread(ReadData);
+            background.Start();
+        }
+
+        public void ReadData()
+        {
+            // read data
+            string datagram = "";
+            SegmentData = "";
+            long adr = SegmentOrg;
+            int left = SegmentSize;
+            while (adr < SegmentOrg + SegmentSize)
+            {
+                int l = left;
+                if (l > 64)
+                    l = 64;
+                SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text
+                    + "60" + adr.ToString("X8") + SegmentSpace.ToString("X2") + l.ToString("X2"));
+                for (int w = 0; w < 200; w++)
+                {
+                    Thread.Sleep(10);
+                    if (datagrams.Count != 0)
+                    {
+                        datagram = datagrams.Dequeue();
+                        if (datagram.Substring(2, 4) == "E200")
+                            break;
+                    }
+                }
+                if (datagram.Length < 42)
+                {
+                    log("Failed to read data from " + SelectNodeCB.Text);
+                    return;
+                }
+                SegmentData += datagram.Substring(42);
+                adr += 64;
+                left -= 64;
+            }
+            DisplayData();
+        }
+
+        public void DisplayData()
+        {
+            bytepos = 0;
+            bitpos = 0;
+            // display data
+            XmlNode fc = SegmentXML.FirstChild;
+            int index = 0;
+            while (fc != null)
+            {
+                if ("group".StartsWith(fc.Name))
+                    index = DisplayGroup(index, fc);
+                else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name)
+                    || "byte".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
+                    index = DisplayVar(index, fc);
+                else
+                    log(fc.Name);
+                fc = fc.NextSibling;
+            }
+            groupBox1.Refresh();
+        }
+
+        public int DisplayGroup(int index, XmlNode n)
+        {
+            int rep = 1;
+            string name = "Group";
+
+            for (int i = 0; i < n.Attributes.Count; i++)
+            {
+                if ("replication".StartsWith(n.Attributes[i].Name))
+                    rep = (int)GetNumber(n.Attributes[i].InnerText);
+                else if ("name".StartsWith(n.Attributes[i].Name))
+                    name = n.Attributes[i].InnerText;
+                else
+                    log("Group, unknown attribute " + n.Attributes[i].Name);
+            }
+            int recsize = sizegroup(n) / rep;
+            bytepos += Convert.ToInt32(numbers[index].Text) * recsize;
+            index++;
+            XmlNode fc = n.FirstChild;
+            while (fc != null)
+            {
+                if ("group".StartsWith(fc.Name))
+                    index = DisplayGroup(index, fc);
+                else if ("integer".StartsWith(fc.Name) || "character".StartsWith(fc.Name)
+                  || "byte".StartsWith(fc.Name) || "bit".StartsWith(fc.Name))
+                    index = DisplayVar(index, fc);
+                else
+                    log(fc.Name);
+                fc = fc.NextSibling;
+            }
+            return index;
+        }
+
+        public int DisplayVar(int index, XmlNode n)
+        {
+            int isize = 1;
+            string name = "unused";
+            for (int i = 0; i < n.Attributes.Count; i++)
+            {
+                if ("size".StartsWith(n.Attributes[i].Name))
+                    isize = (int)GetNumber(n.Attributes[i].InnerText);
+                else if ("name".StartsWith(n.Attributes[i].Name))
+                    name = n.Attributes[i].InnerText;
+                else
+                    log("Var, unknown attribute " + n.Attributes[i].Name);
+            }
+
+            startofdata[index] = bytepos;
+            lengthofdata[index] = isize * 2;
+            if ("integer".StartsWith(n.Name))
+            {
+                string t = "";
+                for (int i = 0; i < isize * 2; i += 2)
+                    t = SegmentData.Substring(bytepos+i, 2) + t;
+                bytepos += isize * 2;
+                if (name != "unused") {
+                    textboxes[index++].Text = Convert.ToInt64(t, 16).ToString();
+                }
+            }
+            else if ("character".StartsWith(n.Name))
+            {
+                string t = "";
+                for (int i = 0; i < isize * 2; i += 2)
+                {
+                    int x = Convert.ToInt16(SegmentData.Substring(bytepos+i, 2), 16);
+                    if (x == 0)
+                        break;
+                    t += (char)x;
+                }
+                bytepos += isize * 2;
+                if (name != "unused")
+                {
+                    textboxes[index++].Text = t;
+                }
+            }
+            else if ("byte".StartsWith(n.Name))
+            {
+                string t = "";
+                for (int i = 0; i < isize * 2; i += 2)
+                    t = SegmentData.Substring(bytepos + i, 2) + t;
+                bytepos += isize * 2;
+                if (name != "unused")
+                {
+                    textboxes[index++].Text = t;
+                }
+            }
+            else if ("bit".StartsWith(n.Name))
+            {
+                int i = Convert.ToInt16(SegmentData.Substring(bytepos, 2), 16);
+                // extract bits
+
+                bitpos += isize;
+                if (bitpos == 8)
+                {
+                    bytepos++;
+                    bitpos = 0;
+                }
+                if (name != "unused")
+                {
+                    textboxes[index++].Text = i.ToString();
+                }
+            }
+            return index;
+        }
+
+        //******************************************************************************************************
+        // Write to node
+        //******************************************************************************************************
+
+        private void WriteBtn_Click(object sender, EventArgs e)
+        {
+            background = new Thread(WriteData);
+            background.Start();
+        }
+
+        public void WriteData()
+        {
+            string datagram ="";
+            long adr = SegmentOrg;
+            int left = SegmentSize;
+            while (adr < SegmentOrg + SegmentSize)
+            {
+               int l = left;
+                if (l > 64)
+                    l = 64;
+                SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text
+                    + "20" + adr.ToString("X8") + SegmentSpace.ToString("X2")
+                    + SegmentData.Substring((int)(adr - SegmentOrg) * 2, l * 2));
+                for (int w = 0; w < 200; w++)
+                {
+                    Thread.Sleep(10);
+                    if (datagrams.Count != 0)
+                    {
+                        datagram = datagrams.Dequeue();
+                        if (datagram.Substring(2, 4) == "E4C0" || datagram.Substring(2, 4) == "E4D0")
+                            break;
+                    }
+                }
+                if (datagram.Length<30 || datagram.Substring(2, 4) != "E4C0")
+                {
+                    log("Failed to write data to " + SelectNodeCB.Text);
+                    return;
+                }
+                adr += 64;
+                left -= 64;
+            }
+        }
+
+        private void numericUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            DisplayData();
+        }
+
+        private void textBox_Validating(object sender, CancelEventArgs e)
+        {
+            TextBox tb = (TextBox)sender;
+            int index = (tb.Location.Y - 15) / 25;
+            if (typeofdata[index] == "byte")
+            {
+                string t = tb.Text.PadLeft(lengthofdata[index],'0');
+                string r = "";
+                for (int i = 0; i < lengthofdata[index]; i += 2)
+                    r = t.Substring(i, 2) + r;
+                SegmentData = SegmentData.Substring(0, startofdata[index]) + r
+                    + SegmentData.Substring(startofdata[index] + lengthofdata[index]);
+            }
+            else if (typeofdata[index] == "char")
+            {
+                string t = tb.Text.PadRight(lengthofdata[index], '\0');
+                string r = "";
+                for (int i = 0; i < lengthofdata[index]/2; i++)
+                    r += ((int)t[i]).ToString("X2");
+                SegmentData = SegmentData.Substring(0, startofdata[index]) + r
+                    + SegmentData.Substring(startofdata[index] + lengthofdata[index]);
+            }
+            else if (typeofdata[index] == "int")
+            {
+                string t = Convert.ToInt64(tb.Text).ToString("X" + lengthofdata[index].ToString());
+                string r = "";
+                for (int i = 0; i < lengthofdata[index]; i += 2)
+                    r = SegmentData.Substring(i, 2) + r;
+                SegmentData = SegmentData.Substring(0, startofdata[index]) + r 
+                    + SegmentData.Substring(startofdata[index] + lengthofdata[index]);
+            }
+            else if (typeofdata[index] == "bit")
+            {
+                string t = tb.Text;
+            }
+        }
+
+        private void RebootBtn_Click(object sender, EventArgs e)
+        {
+            SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A5");
+        }
+
+        private void DefaultBtn_Click(object sender, EventArgs e)
+        {
+            SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A6");
+        }
+    
     }
 }

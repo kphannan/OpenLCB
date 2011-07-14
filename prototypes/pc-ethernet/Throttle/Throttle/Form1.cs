@@ -162,6 +162,8 @@ namespace Throttle
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
                     s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                    if (l < 64)
+                        s += "00";
                     SendHexString(s);
                 }
                 else if (cmd.Substring(2, 4) == "E0A0")

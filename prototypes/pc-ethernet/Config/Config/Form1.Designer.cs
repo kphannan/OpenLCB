@@ -129,6 +129,7 @@
             this.RebootBtn.TabIndex = 6;
             this.RebootBtn.Text = "Reboot";
             this.RebootBtn.UseVisualStyleBackColor = true;
+            this.RebootBtn.Click += new System.EventHandler(this.RebootBtn_Click);
             // 
             // DefaultBtn
             // 
@@ -138,6 +139,7 @@
             this.DefaultBtn.TabIndex = 5;
             this.DefaultBtn.Text = "Set default";
             this.DefaultBtn.UseVisualStyleBackColor = true;
+            this.DefaultBtn.Click += new System.EventHandler(this.DefaultBtn_Click);
             // 
             // DeleteBtn
             // 
@@ -174,6 +176,7 @@
             this.WriteBtn.TabIndex = 1;
             this.WriteBtn.Text = "Write";
             this.WriteBtn.UseVisualStyleBackColor = true;
+            this.WriteBtn.Click += new System.EventHandler(this.WriteBtn_Click);
             // 
             // ReadBtn
             // 
@@ -183,6 +186,7 @@
             this.ReadBtn.TabIndex = 0;
             this.ReadBtn.Text = "Read";
             this.ReadBtn.UseVisualStyleBackColor = true;
+            this.ReadBtn.Click += new System.EventHandler(this.ReadBtn_Click);
             // 
             // Config
             // 

@@ -433,8 +433,8 @@ namespace LenzSvr
 
         private void InputTask(IAsyncResult ar)
         {
-            Socket s = (Socket) ar.AsyncState;
-            int read = s.EndReceive(ar);
+            Socket nskt = (Socket) ar.AsyncState;
+            int read = nskt.EndReceive(ar);
 
             string inputstring = "";
             for (int i = 0; i < read; i++)
@@ -464,7 +464,10 @@ namespace LenzSvr
                             l = xml.Length - ad;
                         for (int i = 0; i < l; i++)
                             data += ((int)xml[ad + i]).ToString("X2");
-                        SendHexString("E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data);
+                        string s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                        if (l<64)
+                            s += "00";
+                        SendHexString(s);
                     }
                     else if (cmd.Substring(2, 4) == "E0A0")
                         SendHexString(VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
