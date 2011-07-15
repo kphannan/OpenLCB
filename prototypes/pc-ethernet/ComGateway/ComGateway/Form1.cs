@@ -30,7 +30,7 @@ namespace ComGateway
         private Bonjour.DNSSDEventManager m_eventManager = null;
         private Bonjour.DNSSDService m_browser = null;
         private Bonjour.DNSSDService m_resolver = null;
- 
+
         Dictionary<string, string> AliasTable = new Dictionary<string, string>();
         Dictionary<string, string> NodeIdTable = new Dictionary<string, string>();
 
@@ -318,8 +318,7 @@ namespace ComGateway
                 string a = cmd.Substring(7,3);
                 if (aliascheck == a)
                     aliascheck = "";
-                if (cmd.Substring(3, 4) == "8004" || cmd.Substring(3, 4) == "8001" 
-                    || cmd.Substring(3, 4) == VERIFIEDNODEID || cmd.Substring(3, 4) == INITCOMPLETE)
+                if (cmd.Substring(3, 4) == VERIFIEDNODEID || cmd.Substring(3, 4) == INITCOMPLETE)
                 {
                     string n = cmd.Substring(11, 12);
                     if (NodeIdTable.ContainsKey(n)) // remove old alias
@@ -338,8 +337,8 @@ namespace ComGateway
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
-                            if (n.Substring(0, 3) != cmd.Substring(3, 3))
-                                CAN("7000" + alias, ""); // send RID
+                            if (n.Substring(0, 3) != cmd.Substring(4, 3))
+                                CAN("7000" + a, ""); // send RID
                         }
                         break;
                     case '1': // CIM
@@ -347,8 +346,8 @@ namespace ComGateway
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
-                            if (n.Substring(3, 3) != cmd.Substring(3, 3))
-                                CAN("7000" + alias, ""); // send RID
+                            if (n.Substring(3, 3) != cmd.Substring(4, 3))
+                                CAN("7000" + a, ""); // send RID
                         }
                         break;
                     case '2': // CIM
@@ -356,8 +355,8 @@ namespace ComGateway
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
-                            if (n.Substring(6, 3) != cmd.Substring(3, 3))
-                                CAN("7000" + alias, ""); // send RID
+                            if (n.Substring(6, 3) != cmd.Substring(4, 3))
+                                CAN("7000" + a, ""); // send RID
                         }
                         break;
                     case '3': // CIM
@@ -365,8 +364,8 @@ namespace ComGateway
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
-                            if (n.Substring(9, 3) != cmd.Substring(3, 3))
-                                CAN("7000" + alias, ""); // send RID
+                            if (n.Substring(9, 3) != cmd.Substring(4, 3))
+                                CAN("7000" + a, ""); // send RID
                         }
                         break;
                     case '8':

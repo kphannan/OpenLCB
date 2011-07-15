@@ -907,7 +907,7 @@ namespace Config
                 string t = Convert.ToInt64(tb.Text).ToString("X" + lengthofdata[index].ToString());
                 string r = "";
                 for (int i = 0; i < lengthofdata[index]; i += 2)
-                    r = SegmentData.Substring(i, 2) + r;
+                    r = t.Substring(i, 2) + r;
                 SegmentData = SegmentData.Substring(0, startofdata[index]) + r 
                     + SegmentData.Substring(startofdata[index] + lengthofdata[index]);
             }
