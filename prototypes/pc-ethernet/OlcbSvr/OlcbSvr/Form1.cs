@@ -145,10 +145,13 @@ namespace OlcbSvr
                     int size = connections[index].Receive(buffer);
                     if (size==0)
                         break;
-                    string l = "< (" + index.ToString() + ") ";
-                    for (i = 0; i < size; i++)
-                        l += buffer[i].ToString("X2");
-                    log(l);
+                    if (LogCB.Checked)
+                    {
+                        string l = "< (" + index.ToString() + ") ";
+                        for (i = 0; i < size; i++)
+                            l += buffer[i].ToString("X2");
+                        log(l);
+                    }
                     SendToAll(buffer, size, index);
                 } // end of while true
             }
@@ -182,7 +185,8 @@ namespace OlcbSvr
                     if (i != index && inuse[i])
                     {
                         connections[i].Send(buffer, size, SocketFlags.None);
-                        log("> (" + i.ToString() + ") " +l);
+                        if (LogCB.Checked)
+                            log("> (" + i.ToString() + ") " +l);
                     }
             }
         }

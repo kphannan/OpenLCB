@@ -38,6 +38,7 @@
             this.byte6txt = new System.Windows.Forms.TextBox();
             this.label18 = new System.Windows.Forms.Label();
             this.membertxt = new System.Windows.Forms.TextBox();
+            this.LogCB = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // LogTB
@@ -121,11 +122,22 @@
             this.membertxt.TabIndex = 75;
             this.membertxt.Validating += new System.ComponentModel.CancelEventHandler(this.membertxt_Validating);
             // 
+            // LogCB
+            // 
+            this.LogCB.AutoSize = true;
+            this.LogCB.Location = new System.Drawing.Point(219, 42);
+            this.LogCB.Name = "LogCB";
+            this.LogCB.Size = new System.Drawing.Size(66, 17);
+            this.LogCB.TabIndex = 83;
+            this.LogCB.Text = "Data log";
+            this.LogCB.UseVisualStyleBackColor = true;
+            // 
             // OlcbSvr
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(399, 269);
+            this.Controls.Add(this.LogCB);
             this.Controls.Add(this.GroupBox);
             this.Controls.Add(this.label17);
             this.Controls.Add(this.label7);
@@ -155,6 +167,7 @@
         private System.Windows.Forms.TextBox byte6txt;
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.TextBox membertxt;
+        private System.Windows.Forms.CheckBox LogCB;
     }
 }
 

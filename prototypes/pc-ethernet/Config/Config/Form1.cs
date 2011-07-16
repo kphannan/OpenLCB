@@ -45,9 +45,6 @@ namespace Config
         static int[] lengthofdata = new int[10];
         static string[] typeofdata = new string[10];
 
-        static Thread background;
-        static Semaphore taskcomplete = new Semaphore(0, 1);
-
         public Config()
         {
             InitializeComponent();
@@ -106,7 +103,8 @@ namespace Config
                 return;
             byte[] buffer = new byte[1 + s.Length / 2];
             buffer[0] = (byte)buffer.Length;
-            log(">" + buffer[0].ToString("X2") + s);
+            if (LogCB.Checked)
+                log(">" + buffer[0].ToString("X2") + s);
             int j = 1;
             for (int i = 0; i < s.Length; i+=2)
                 buffer[j++] = (byte)Convert.ToByte(s.Substring(i,2),16);
@@ -229,7 +227,8 @@ namespace Config
                     inputstring = inputstring.Substring(length * 2);
                 else
                     inputstring = "";
-                log("< " + cmd);
+                if (LogCB.Checked)
+                    log("< " + cmd);
                 if (cmd.Substring(2, 4) == VERIFIEDNODEID || cmd.Substring(2, 4) == INIT)
                 {
                     if (!SelectNodeCB.Items.Contains(cmd.Substring(6, 12)))
@@ -253,6 +252,8 @@ namespace Config
         // XML Node information
         //******************************************************************************************************
 
+        public bool xmlvalid = false;
+        public bool datavalid = false;
         public XmlDocument xmld = new XmlDocument();
         public XmlNode SegmentXML = null;
         public string SegmentName = "";
@@ -267,28 +268,48 @@ namespace Config
 
         public int bitsize = 0;
 
+        static Thread background;
+        static Semaphore taskcomplete = new Semaphore(0, 1);
+
         //******************************************************************************************************
         // Node selection, Read XML
         //******************************************************************************************************
 
         private void SelectNodeCB_SelectedIndexChanged(object sender, EventArgs e)
         {
+            datavalid = false;
             for (int i = 0; i < 4; i++)
             {
                 idlabels[i].Visible = false;
                 idtextboxes[i].Visible = false;
             }
+            for (int i = 0; i < 10; i++)
+            {
+                labels[i].Visible = false;
+                textboxes[i].Visible = false;
+                numbers[i].Visible = false;
+            }
             SegmentsTB.Items.Clear();
             SegmentsTB.Text = "";
+            groupBox1.Refresh();
             // read XML from node
             background = new Thread(ReadXMLfile);
             background.Start();
             taskcomplete.WaitOne();
+            if (!xmlvalid)
+                return;
             DisplayNode();
+            background = new Thread(ReadData);
+            background.Start();
+            taskcomplete.WaitOne();
+            if (!datavalid)
+                return;
+            DisplayData();
         }
 
         public void ReadXMLfile()
         {
+            xmlvalid = false;
             xmld.LoadXml("<cdi></cdi>");
             SegmentXML = null;
             SegmentData = "";
@@ -334,6 +355,7 @@ namespace Config
                 try
                 {
                     xmld.LoadXml(x);
+                    xmlvalid = true;
                 }
                 catch (Exception e)
                 {
@@ -369,7 +391,7 @@ namespace Config
                     {
                         if ("name".StartsWith(maintag.Attributes[i].Name))
                         {
-                            SegmentsTB.Items.Add(maintag.Attributes.GetNamedItem("name").InnerText);
+                            SegmentsTB.Items.Add(maintag.Attributes[i].InnerText);
                             break;
                         }
                     }
@@ -394,7 +416,14 @@ namespace Config
 
         private void SegmentsTB_SelectedIndexChanged(object sender, EventArgs e)
         {
+            datavalid = false;
             SegmentChanged();
+            background = new Thread(ReadData);
+            background.Start();
+            taskcomplete.WaitOne();
+            if (!datavalid)
+                return;
+            DisplayData();
         }
 
         public void SegmentChanged()
@@ -669,11 +698,16 @@ namespace Config
         {
             background = new Thread(ReadData);
             background.Start();
+            taskcomplete.WaitOne();
+            if (!datavalid)
+                return;
+            DisplayData();
         }
 
         public void ReadData()
         {
             // read data
+            datavalid = false;
             string datagram = "";
             SegmentData = "";
             long adr = SegmentOrg;
@@ -698,13 +732,15 @@ namespace Config
                 if (datagram.Length < 42)
                 {
                     log("Failed to read data from " + SelectNodeCB.Text);
-                    return;
+                    break;
                 }
                 SegmentData += datagram.Substring(42);
                 adr += 64;
                 left -= 64;
             }
-            DisplayData();
+            if (adr >= SegmentOrg + SegmentSize)
+                datavalid = true;
+            taskcomplete.Release();
         }
 
         public void DisplayData()
@@ -838,8 +874,11 @@ namespace Config
 
         private void WriteBtn_Click(object sender, EventArgs e)
         {
+            if (!datavalid)
+                return;
             background = new Thread(WriteData);
             background.Start();
+            taskcomplete.WaitOne();
         }
 
         public void WriteData()
@@ -873,6 +912,7 @@ namespace Config
                 adr += 64;
                 left -= 64;
             }
+            taskcomplete.Release();
         }
 
         private void numericUpDown_ValueChanged(object sender, EventArgs e)
@@ -882,6 +922,8 @@ namespace Config
 
         private void textBox_Validating(object sender, CancelEventArgs e)
         {
+            if (!datavalid)
+                return;
             TextBox tb = (TextBox)sender;
             int index = (tb.Location.Y - 15) / 25;
             if (typeofdata[index] == "byte")

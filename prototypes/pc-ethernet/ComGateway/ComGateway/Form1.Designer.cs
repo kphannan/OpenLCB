@@ -32,6 +32,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.ComCB = new System.Windows.Forms.ComboBox();
             this.LogTB = new System.Windows.Forms.TextBox();
+            this.LogCB = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // label1
@@ -65,11 +66,22 @@
             this.LogTB.Size = new System.Drawing.Size(405, 115);
             this.LogTB.TabIndex = 2;
             // 
+            // LogCB
+            // 
+            this.LogCB.AutoSize = true;
+            this.LogCB.Location = new System.Drawing.Point(233, 8);
+            this.LogCB.Name = "LogCB";
+            this.LogCB.Size = new System.Drawing.Size(66, 17);
+            this.LogCB.TabIndex = 3;
+            this.LogCB.Text = "Data log";
+            this.LogCB.UseVisualStyleBackColor = true;
+            // 
             // ComGateway
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(404, 149);
+            this.Controls.Add(this.LogCB);
             this.Controls.Add(this.LogTB);
             this.Controls.Add(this.ComCB);
             this.Controls.Add(this.label1);
@@ -87,6 +99,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ComboBox ComCB;
         private System.Windows.Forms.TextBox LogTB;
+        private System.Windows.Forms.CheckBox LogCB;
     }
 }
 

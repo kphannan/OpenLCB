@@ -43,6 +43,7 @@
             this.ReadAllBtn = new System.Windows.Forms.Button();
             this.WriteBtn = new System.Windows.Forms.Button();
             this.ReadBtn = new System.Windows.Forms.Button();
+            this.LogCB = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -71,16 +72,16 @@
             // SelectNodeCB
             // 
             this.SelectNodeCB.FormattingEnabled = true;
-            this.SelectNodeCB.Location = new System.Drawing.Point(178, 15);
+            this.SelectNodeCB.Location = new System.Drawing.Point(145, 15);
             this.SelectNodeCB.Name = "SelectNodeCB";
-            this.SelectNodeCB.Size = new System.Drawing.Size(287, 21);
+            this.SelectNodeCB.Size = new System.Drawing.Size(221, 21);
             this.SelectNodeCB.TabIndex = 2;
             this.SelectNodeCB.SelectedIndexChanged += new System.EventHandler(this.SelectNodeCB_SelectedIndexChanged);
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(135, 18);
+            this.label1.Location = new System.Drawing.Point(102, 18);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(37, 13);
             this.label1.TabIndex = 3;
@@ -188,11 +189,22 @@
             this.ReadBtn.UseVisualStyleBackColor = true;
             this.ReadBtn.Click += new System.EventHandler(this.ReadBtn_Click);
             // 
+            // LogCB
+            // 
+            this.LogCB.AutoSize = true;
+            this.LogCB.Location = new System.Drawing.Point(393, 17);
+            this.LogCB.Name = "LogCB";
+            this.LogCB.Size = new System.Drawing.Size(66, 17);
+            this.LogCB.TabIndex = 15;
+            this.LogCB.Text = "Data log";
+            this.LogCB.UseVisualStyleBackColor = true;
+            // 
             // Config
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(809, 488);
+            this.Controls.Add(this.LogCB);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.SegmentsTB);
             this.Controls.Add(this.label6);
@@ -225,6 +237,7 @@
         private System.Windows.Forms.Button ReadAllBtn;
         private System.Windows.Forms.Button WriteBtn;
         private System.Windows.Forms.Button ReadBtn;
+        private System.Windows.Forms.CheckBox LogCB;
     }
 }
 
