@@ -17,6 +17,7 @@ namespace ComGateway
 {
     public partial class ComGateway : Form
     {
+        const string RESERVEDID = "0700";
         const string INITCOMPLETE = "908F";
         const string VERIFYNODEIDS = "80AF";
         const string VERIFIEDNODEID = "90BF";
@@ -340,7 +341,7 @@ namespace ComGateway
                         {
                             string n = AliasTable[a];
                             if (n.Substring(0, 3) != cmd.Substring(4, 3))
-                                CAN("7000" + a, ""); // send RID
+                                CAN(RESERVEDID + a, ""); // send RID
                         }
                         break;
                     case '6': // CIM
@@ -349,7 +350,7 @@ namespace ComGateway
                         {
                             string n = AliasTable[a];
                             if (n.Substring(3, 3) != cmd.Substring(4, 3))
-                                CAN("7000" + a, ""); // send RID
+                                CAN(RESERVEDID + a, ""); // send RID
                         }
                         break;
                     case '5': // CIM
@@ -358,7 +359,7 @@ namespace ComGateway
                         {
                             string n = AliasTable[a];
                             if (n.Substring(6, 3) != cmd.Substring(4, 3))
-                                CAN("7000" + a, ""); // send RID
+                                CAN(RESERVEDID + a, ""); // send RID
                         }
                         break;
                     case '4': // CIM
@@ -367,7 +368,7 @@ namespace ComGateway
                         {
                             string n = AliasTable[a];
                             if (n.Substring(9, 3) != cmd.Substring(4, 3))
-                                CAN("7000" + a, ""); // send RID
+                                CAN(RESERVEDID + a, ""); // send RID
                         }
                         break;
                     case '0': // RID etc

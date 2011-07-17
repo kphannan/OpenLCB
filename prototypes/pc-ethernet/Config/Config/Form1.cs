@@ -299,6 +299,9 @@ namespace Config
             if (!xmlvalid)
                 return;
             DisplayNode();
+            if (SegmentsTB.Items.Count == 0)
+                return;
+            SegmentChanged();
             background = new Thread(ReadData);
             background.Start();
             taskcomplete.WaitOne();
@@ -402,7 +405,6 @@ namespace Config
                     log("Unknown tag in XML " + maintag.Name);
                 maintag = maintag.NextSibling;
             }
-            SegmentChanged();
             groupBox1.Refresh();
         }
 
@@ -417,6 +419,8 @@ namespace Config
         private void SegmentsTB_SelectedIndexChanged(object sender, EventArgs e)
         {
             datavalid = false;
+            if (SegmentsTB.Items.Count == 0)
+                return;
             SegmentChanged();
             background = new Thread(ReadData);
             background.Start();
