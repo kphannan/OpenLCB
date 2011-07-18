@@ -26,28 +26,11 @@ namespace ComGateway
         const string IDENTIFIEDPRODUCER = "926F";
         const string IDENTIFIEDPRODUCERRANGE = "925F";
 
-        // Bonjour
-        private Bonjour.DNSSDService m_service = null;
-        private Bonjour.DNSSDEventManager m_eventManager = null;
-        private Bonjour.DNSSDService m_browser = null;
-        private Bonjour.DNSSDService m_resolver = null;
+        public long nodenumber = 0;
+        public string alias = "";
 
-        Dictionary<string, string> AliasTable = new Dictionary<string, string>();
-        Dictionary<string, string> NodeIdTable = new Dictionary<string, string>();
-
-        static long nodenumber = 0;
-        static string alias = "";
-        static byte[] inputbuffer = new byte[2000];
-        static bool serverconnected = false;
-        static Socket skt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        static SerialPort com;
-        static string line = "";
-        static object loglock = new object();
-        static bool CANdatagramstart = false;
-        static string newcmd = "";
-        static string aliascheck = "";
-        string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
-            + "<Version>Mike Johnson 4 July 2011</Version></id>"
+        public string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
+            + "<Version>Mike Johnson 18 July 2011</Version></id>"
             +"<seg name=\"Port Speed\" space=\"0\" buttons=\"1\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
 
         public ComGateway()
@@ -85,21 +68,9 @@ namespace ComGateway
             catch { };
         }
         
-        public void EthernetSendHexString(string s)
-        {
-            if (!serverconnected)
-                return;
-            byte[] buffer = new byte[1 + s.Length / 2];
-            buffer[0] = (byte)buffer.Length;
-            if (LogCB.Checked)
-                log("E< " + buffer[0].ToString("X2") + s);
-            int j = 1;
-            for (int i = 0; i < s.Length; i += 2)
-                buffer[j++] = (byte)Convert.ToByte(s.Substring(i, 2), 16);
-            skt.Send(buffer);
-        }
+       public object loglock = new object();
 
-        public void log(string m)
+       public void log(string m)
         {
             lock (loglock)
             {
@@ -111,7 +82,19 @@ namespace ComGateway
             }
         }
 
-        // Get node number and connect to server
+        //*******************************************************************************************************
+        // Ethernet - Get node number and connect to server
+        //*******************************************************************************************************
+
+        public byte[] inputbuffer = new byte[2000];
+        public bool serverconnected = false;
+        public Socket skt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+        // Bonjour
+        private Bonjour.DNSSDService m_service = null;
+        private Bonjour.DNSSDEventManager m_eventManager = null;
+        private Bonjour.DNSSDService m_browser = null;
+        private Bonjour.DNSSDService m_resolver = null;
 
         public void StartGetNodeNumber()
         {
@@ -196,40 +179,51 @@ namespace ComGateway
                 log("OpenLCB server connection failed " + e.ToString());
             }
         }
-        
-        public string GetAlias(long nodenumber)
+
+        //*******************************************************************************************************
+        // Ethernet I/O
+        //*******************************************************************************************************
+
+        public void InputTask(IAsyncResult ar)
         {
-            long random = nodenumber;
-            string alias;
-            do
+            Socket s = (Socket)ar.AsyncState;
+            int read = s.EndReceive(ar);
+            string inputstring = "";
+            for (int i=0; i<read; i++)
+                inputstring += inputbuffer[i].ToString("X2");
+            while (inputstring.Length > 0)
             {
-                // generate alias from nodenumber
-                alias = (((int)(random ^ (random >> 12) ^ (random >> 24) ^ (random >> 36))) & 0x00000FFF).ToString("X3");
-                while (AliasTable.ContainsKey(alias))
-                {
-                    alias = (((int)(random ^ (random >> 12) ^ (random >> 24) ^ (random >> 36))) & 0x00000FFF).ToString("X3");
-                };
-
-                CAN("7" + ((nodenumber >> 36) & 0x00000FFF).ToString("X3") + alias, "");
-                CAN("6" + ((nodenumber >> 24) & 0x00000FFF).ToString("X3") + alias, "");
-                CAN("5" + ((nodenumber >> 12) & 0x00000FFF).ToString("X3") + alias, "");
-                CAN("4" + ((nodenumber >> 0) & 0x00000FFF).ToString("X3") + alias, "");
-
-                aliascheck = alias;
-                for (int timeout = 0; timeout < 10; timeout++)
-                {
-                    Thread.Sleep(100);
-                    if (aliascheck == "") // someone objected
-                        break;
-                }
-            } while (aliascheck == "");
-            aliascheck = "";
-
-            AliasTable.Add(alias, nodenumber.ToString("X12"));
-            NodeIdTable.Add(nodenumber.ToString("X12"), alias);
-            CAN(INITCOMPLETE + alias, nodenumber.ToString("X12"));
-            return alias;
+                int length = Convert.ToInt32(inputstring.Substring(0, 2), 16);
+                string cmd = inputstring.Substring(0, length * 2);
+                if (inputstring.Length > length * 2)
+                    inputstring = inputstring.Substring(length * 2);
+                else
+                    inputstring = "";
+                if (LogCB.Checked)
+                    log("E> " + cmd);
+                if (checkpacket(cmd))
+                    CANSendHexString(cmd);
+            }
+            skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
         }
+
+        public void EthernetSendHexString(string s)
+        {
+            if (!serverconnected)
+                return;
+            byte[] buffer = new byte[1 + s.Length / 2];
+            buffer[0] = (byte)buffer.Length;
+            if (LogCB.Checked)
+                log("E< " + buffer[0].ToString("X2") + s);
+            int j = 1;
+            for (int i = 0; i < s.Length; i += 2)
+                buffer[j++] = (byte)Convert.ToByte(s.Substring(i, 2), 16);
+            skt.Send(buffer);
+        }
+       
+        //*******************************************************************************************************
+        // Serial port connection
+        //*******************************************************************************************************
 
         private void ComCB_DropDown(object sender, EventArgs e)
         {
@@ -265,28 +259,14 @@ namespace ComGateway
             }
         }
 
-        //*********************************************************************************
+        //*******************************************************************************************************
+        // Serial port I/O
+        //*******************************************************************************************************
 
-        public string TranslateToAlias(string nodeid)
-        {
-            if (!NodeIdTable.ContainsKey(nodeid))
-                return GetAlias(Convert.ToInt64(nodeid,16));
-            return NodeIdTable[nodeid];
-        }
-
-        public string TranslateToNodeID(string alias, string cmd)
-        {
-            if (!AliasTable.ContainsKey(alias))
-            {
-                log("Unexpected alias in " + cmd);
-                return 0.ToString("X12");
-            }
-            return AliasTable[alias];
-        }
-
-        //*********************************************************************************
-
+        public SerialPort com;
+        public string line = "";
         static Thread inputtask;
+        public Dictionary<string, string> longdatagram = new Dictionary<string, string>();
 
         public void inputtaskloop()
         {
@@ -333,10 +313,12 @@ namespace ComGateway
                     NodeIdTable.Add(n, a);
                 }
                 string data = cmd.Substring(11, cmd.Length-12);
+                string newcmd = "";
                 switch (cmd[3])
                 {
                     case '7': // CIM
-                        CANdatagramstart = true;
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
@@ -345,7 +327,8 @@ namespace ComGateway
                         }
                         break;
                     case '6': // CIM
-                        CANdatagramstart = true;
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
@@ -354,7 +337,8 @@ namespace ComGateway
                         }
                         break;
                     case '5': // CIM
-                        CANdatagramstart = true;
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
@@ -363,7 +347,8 @@ namespace ComGateway
                         }
                         break;
                     case '4': // CIM
-                        CANdatagramstart = true;
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         if (AliasTable.ContainsKey(a))
                         {
                             string n = AliasTable[a];
@@ -372,50 +357,61 @@ namespace ComGateway
                         }
                         break;
                     case '0': // RID etc
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         break;
                     case '8':
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         newcmd = cmd.Substring(3, 4) + TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
-                        CANdatagramstart = true;
                         checkpacket(newcmd);
                         EthernetSendHexString(newcmd);
                         break;
                     case '9':
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         newcmd = cmd.Substring(3, 4) + TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
-                        CANdatagramstart = true;
                         checkpacket(newcmd);
                         EthernetSendHexString(newcmd);
                         break;
                     case 'C':
-                        if (CANdatagramstart)
-                        {
-                            newcmd = "E" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd) 
-                                + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
-                            CANdatagramstart = false;
-                        }
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram[a] += data;
                         else
-                            newcmd += data;
+                            longdatagram.Add(a,"E" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                                + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2));
                         break;
                     case 'D':
-                        newcmd += data;
-                        CANdatagramstart = true;
-                        checkpacket(newcmd);
-                        EthernetSendHexString(newcmd);
+                        if (longdatagram.ContainsKey(a))
+                        {
+                            newcmd = longdatagram[a] + data;
+                            longdatagram.Remove(a);
+                            checkpacket(newcmd);
+                            EthernetSendHexString(newcmd);
+                        }
+                        else
+                        {
+                            log("End of datagram without a start.");
+                        }
                         break;
                     case 'E':
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         newcmd = "E" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd) 
                             + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
-                        CANdatagramstart = true;
                         checkpacket(newcmd);
                         EthernetSendHexString(newcmd);
                         break;
                     case 'F':
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         newcmd = "F000" + TranslateToNodeID(cmd.Substring(7, 3), cmd) 
                             + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data;
-                        CANdatagramstart = true;
                         EthernetSendHexString(newcmd);
                         break;
                     default:
-                        CANdatagramstart = true;
+                        if (longdatagram.ContainsKey(a))
+                            longdatagram.Remove(a);
                         break;
                 }
             }
@@ -475,6 +471,69 @@ namespace ComGateway
             }
         }
 
+        //*******************************************************************************************************
+        // Alias handling
+        //*******************************************************************************************************
+
+        Dictionary<string, string> AliasTable = new Dictionary<string, string>();
+        Dictionary<string, string> NodeIdTable = new Dictionary<string, string>();
+        public string aliascheck = "";
+
+        public string GetAlias(long nodenumber)
+        {
+            long random = nodenumber;
+            string alias;
+            do
+            {
+                // generate alias from nodenumber
+                alias = (((int)(random ^ (random >> 12) ^ (random >> 24) ^ (random >> 36))) & 0x00000FFF).ToString("X3");
+                while (AliasTable.ContainsKey(alias))
+                {
+                    alias = (((int)(random ^ (random >> 12) ^ (random >> 24) ^ (random >> 36))) & 0x00000FFF).ToString("X3");
+                };
+
+                CAN("7" + ((nodenumber >> 36) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN("6" + ((nodenumber >> 24) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN("5" + ((nodenumber >> 12) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN("4" + ((nodenumber >> 0) & 0x00000FFF).ToString("X3") + alias, "");
+
+                aliascheck = alias;
+                for (int timeout = 0; timeout < 10; timeout++)
+                {
+                    Thread.Sleep(100);
+                    if (aliascheck == "") // someone objected
+                        break;
+                }
+            } while (aliascheck == "");
+            aliascheck = "";
+
+            AliasTable.Add(alias, nodenumber.ToString("X12"));
+            NodeIdTable.Add(nodenumber.ToString("X12"), alias);
+            CAN(INITCOMPLETE + alias, nodenumber.ToString("X12"));
+            return alias;
+        }
+
+        public string TranslateToAlias(string nodeid)
+        {
+            if (!NodeIdTable.ContainsKey(nodeid))
+                return GetAlias(Convert.ToInt64(nodeid,16));
+            return NodeIdTable[nodeid];
+        }
+
+        public string TranslateToNodeID(string alias, string cmd)
+        {
+            if (!AliasTable.ContainsKey(alias))
+            {
+                log("Unexpected alias in " + cmd);
+                return 0.ToString("X12");
+            }
+            return AliasTable[alias];
+        }
+
+        //*******************************************************************************************************
+        // Packet checking
+        //*******************************************************************************************************
+
         // true if forwarded to CAN, false if blocked
         public bool checkpacket(string cmd)
         {
@@ -530,29 +589,6 @@ namespace ComGateway
                 }
             }
             return true;
-        }
-
-        public void InputTask(IAsyncResult ar)
-        {
-            Socket s = (Socket)ar.AsyncState;
-            int read = s.EndReceive(ar);
-            string inputstring = "";
-            for (int i=0; i<read; i++)
-                inputstring += inputbuffer[i].ToString("X2");
-            while (inputstring.Length > 0)
-            {
-                int length = Convert.ToInt32(inputstring.Substring(0, 2), 16);
-                string cmd = inputstring.Substring(0, length * 2);
-                if (inputstring.Length > length * 2)
-                    inputstring = inputstring.Substring(length * 2);
-                else
-                    inputstring = "";
-                if (LogCB.Checked)
-                    log("E> " + cmd);
-                if (checkpacket(cmd))
-                    CANSendHexString(cmd);
-            }
-            skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
         }
 
     }
