@@ -13,10 +13,67 @@ namespace Throttle
 {
     public partial class Throttle : Form
     {
-        const string INIT = "908F";
-        const string VERIFYNODEIDS = "80AF";
-        const string VERIFIEDNODEID = "90BF";
-        const string XPRESSNET = "8050";
+        //*********************************************************************************
+        //        Frame Types
+        //*********************************************************************************
+
+        enum FT
+        {
+            FT_CIM0 = 0x7000,   // Top 12 bits of NID
+            FT_CIM1 = 0x6000,   // 2nd top 12 bits of NID
+            FT_CIM2 = 0x5000,   // 3rd top 12 bits of NID
+            FT_CIM3 = 0x4000,   // lowest 12 bits of NID
+            FT_RID = 0x0700,   // Reserved ID
+            FT_VNSN = 0x80AF,   // Verify Node Serial Number 
+            FT_INIT = 0x908F,   // Normal Initialization Complete
+            FT_NSN = 0x90BF,   // Node Serial Number 
+            FT_EVENT = 0x82DF,   // EVENT - 82DF for JMRI
+            FT_RFID = 0x8011,   // RFID tag
+            FT_XPRESSNET = 0x8050, // XpressNet raw message from a command station 
+            FT_DG = 0xC000,   // Datagram first packets
+            FT_DGL = 0xD000,   // Datagram last packet
+            FT_DGS = 0xE000,   // Datagram single packet
+            FT_STREAM = 0xF000    // Stream data
+        };
+
+        // Datagram protocol id, 1st byte of data
+        enum DG
+        {
+            DG_LOGMSG = 0x01,
+            DG_LOGREPLY = 0x02,
+            DG_VNSN = 0x0A,
+            DG_OIR = 0x0C,
+            DG_TDE = 0x0D,
+            DG_MEMORY = 0x20,
+            DG_REMOTE = 0x21,
+            DG_DISPLAY = 0x28,
+            DG_IDEVNT = 0x2B,
+            DG_PSI = 0x2E,
+            DG_PSR = 0x2F,
+            DG_SDP = 0x4A,
+            DG_SR = 0x4B,
+            DG_OK = 0x4C,
+            DG_ERR = 0x4D,
+            DG_SIQ = 0x4E,
+            DG_SIR = 0x4F,
+        };
+
+        // Memory transfer datagram, protocol id = 0x20
+        enum DGM
+        {
+            DGM_WRITE = 0x20,
+            DGM_REPLY = 0x30,
+            DGM_READ = 0x60,
+            DGM_UPDCOMP = 0xA4,
+            DGM_REBOOT = 0xA5,
+            DGM_FACTORY = 0xA6,
+            DGM_LOADER = 0xA7,
+        };
+
+        public string INIT = FT.FT_INIT.ToString("X4");
+        public string VERIFYNODEIDS = FT.FT_VNSN.ToString("X4");
+        public string VERIFIEDNODEID = FT.FT_NSN.ToString("X4");
+        public string XPRESSNET = FT.FT_XPRESSNET.ToString("X4");
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;

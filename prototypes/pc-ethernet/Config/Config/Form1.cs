@@ -71,7 +71,7 @@ namespace Config
                 Controls.Add(idlabels[i]);
                 idtextboxes[i] = new TextBox();
                 idtextboxes[i].Location = new System.Drawing.Point(90, i * 25 + 50);
-                idtextboxes[i].Size = new System.Drawing.Size(375, 20);
+                idtextboxes[i].Size = new System.Drawing.Size(280, 20);
                 idtextboxes[i].ReadOnly = true;
                 idtextboxes[i].Visible = false;
                 Controls.Add(idtextboxes[i]);
@@ -84,12 +84,12 @@ namespace Config
                 groupBox1.Controls.Add(labels[i]);
                 textboxes[i] = new TextBox();
                 textboxes[i].Size = new System.Drawing.Size(160, 20);
-                textboxes[i].Validating += new System.ComponentModel.CancelEventHandler(this.textBox_Validating);
+                textboxes[i].Validating += new CancelEventHandler(this.textBox_Validating);
                 textboxes[i].Visible = false;
                 groupBox1.Controls.Add(textboxes[i]);
                 numbers[i] = new NumericUpDown();
                 numbers[i].Visible = false;
-                numbers[i].ValueChanged += new System.EventHandler(this.numericUpDown_ValueChanged);
+                numbers[i].ValueChanged += new EventHandler(this.numericUpDown_ValueChanged);
                 groupBox1.Controls.Add(numbers[i]);
             }
             setBtns(0);
@@ -245,6 +245,7 @@ namespace Config
         private void NodeIdsBtn_Click(object sender, EventArgs e)
         {
             SelectNodeCB.Items.Clear();
+            SelectNodeCB.Text = "";
             SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
         }
 
@@ -254,6 +255,7 @@ namespace Config
 
         public bool xmlvalid = false;
         public bool datavalid = false;
+        public string xmldoc = "";
         public XmlDocument xmld = new XmlDocument();
         public XmlNode SegmentXML = null;
         public string SegmentName = "";
@@ -291,6 +293,7 @@ namespace Config
             }
             SegmentsTB.Items.Clear();
             SegmentsTB.Text = "";
+            setBtns(0);
             groupBox1.Refresh();
             // read XML from node
             background = new Thread(ReadXMLfile);
@@ -302,9 +305,13 @@ namespace Config
             if (SegmentsTB.Items.Count == 0)
                 return;
             SegmentChanged();
+            ReadSegmentOrg = SegmentOrg;
+            ReadSegmentSize = SegmentSize;
+            ReadSegmentSpace = SegmentSpace;
             background = new Thread(ReadData);
             background.Start();
             taskcomplete.WaitOne();
+            SegmentData = ReadSegmentData;
             if (!datavalid)
                 return;
             DisplayData();
@@ -317,8 +324,8 @@ namespace Config
             SegmentXML = null;
             SegmentData = "";
             string datagram = "";
-            string x = "";
             int adr = 0;
+            xmldoc = "";
             bool more = true;
             while (more)
             {
@@ -344,12 +351,12 @@ namespace Config
                         more = false;
                         break;
                     }
-                    x += (char)c;
+                    xmldoc += (char)c;
                 }
                 adr += 64;
-            } 
-            log(x);
-            if (!x.StartsWith("<cdi>"))
+            }
+            log(xmldoc);
+            if (!xmldoc.StartsWith("<cdi>"))
             {
                 log("No XML file or file does not start with <cdi>");
             }
@@ -357,7 +364,7 @@ namespace Config
             {
                 try
                 {
-                    xmld.LoadXml(x);
+                    xmld.LoadXml(xmldoc);
                     xmlvalid = true;
                 }
                 catch (Exception e)
@@ -422,9 +429,13 @@ namespace Config
             if (SegmentsTB.Items.Count == 0)
                 return;
             SegmentChanged();
+            ReadSegmentOrg = SegmentOrg;
+            ReadSegmentSize = SegmentSize;
+            ReadSegmentSpace = SegmentSpace;
             background = new Thread(ReadData);
             background.Start();
             taskcomplete.WaitOne();
+            SegmentData = ReadSegmentData;
             if (!datavalid)
                 return;
             DisplayData();
@@ -439,7 +450,7 @@ namespace Config
                 numbers[i].Visible = false;
             }
             SegmentName = SegmentsTB.Text;
-            int btns = 0xFFFF;
+            int btns = 0;
             bool wrongname = true;
 
             SegmentXML = xmld.FirstChild.FirstChild;
@@ -447,7 +458,7 @@ namespace Config
             {
                 SegmentSpace = 0;
                 SegmentOrg = 0;
-                btns = 0xFFFF;
+                btns = 0;
                 if ("identification".StartsWith(SegmentXML.Name))
                 { }
                 else if ("segment".StartsWith(SegmentXML.Name))
@@ -583,19 +594,7 @@ namespace Config
                 WriteBtn.Location = new System.Drawing.Point(371, pos);
                 pos += 29;
             }
-            ReadAllBtn.Visible = (mask & 0x0004) == 0x0004;
-            if (ReadAllBtn.Visible)
-            {
-                ReadAllBtn.Location = new System.Drawing.Point(371, pos);
-                pos += 29;
-            }
-            WriteAllBtn.Visible = (mask & 0x0008) == 0x0008;
-            if (WriteAllBtn.Visible)
-            {
-                WriteAllBtn.Location = new System.Drawing.Point(371, pos);
-                pos += 29;
-            }
-            DeleteBtn.Visible = (mask & 0x0010) == 0x0010;
+            DeleteBtn.Visible = (mask & 0x0004) == 0x0004;
             if (DeleteBtn.Visible)
             {
                 DeleteBtn.Location = new System.Drawing.Point(371, pos);
@@ -613,6 +612,10 @@ namespace Config
                 RebootBtn.Location = new System.Drawing.Point(371, pos);
                 pos += 29;
             }
+            progressBar1.Visible = (mask & 0x0100) == 0x0100;
+            UpgradeBtn.Visible = (mask & 0x0100) == 0x0100;
+            SaveBtn.Visible = (mask & 0x0200) == 0x0200;
+            RestoreBtn.Visible = (mask & 0x0200) == 0x0200;
         }
 
         //******************************************************************************************************
@@ -698,31 +701,42 @@ namespace Config
         // Read from node
         //******************************************************************************************************
 
+        public string ReadSegmentData = "";
+        public long ReadSegmentOrg = 0;
+        public int ReadSegmentSize = 0;
+        public int ReadSegmentSpace = 0;
+
         private void ReadBtn_Click(object sender, EventArgs e)
         {
+            ReadSegmentOrg = SegmentOrg;
+            ReadSegmentSize = SegmentSize;
+            ReadSegmentSpace = SegmentSpace;
             background = new Thread(ReadData);
             background.Start();
             taskcomplete.WaitOne();
+            SegmentData = ReadSegmentData;
             if (!datavalid)
                 return;
             DisplayData();
         }
+
+        // Read data, used by display segment, and save config.
 
         public void ReadData()
         {
             // read data
             datavalid = false;
             string datagram = "";
-            SegmentData = "";
-            long adr = SegmentOrg;
-            int left = SegmentSize;
-            while (adr < SegmentOrg + SegmentSize)
+            ReadSegmentData = "";
+            long adr = ReadSegmentOrg;
+            int left = ReadSegmentSize;
+            while (adr < ReadSegmentOrg + ReadSegmentSize)
             {
                 int l = left;
                 if (l > 64)
                     l = 64;
                 SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text
-                    + "60" + adr.ToString("X8") + SegmentSpace.ToString("X2") + l.ToString("X2"));
+                    + "60" + adr.ToString("X8") + ReadSegmentSpace.ToString("X2") + l.ToString("X2"));
                 for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
@@ -738,11 +752,11 @@ namespace Config
                     log("Failed to read data from " + SelectNodeCB.Text);
                     break;
                 }
-                SegmentData += datagram.Substring(42);
+                ReadSegmentData += datagram.Substring(42);
                 adr += 64;
                 left -= 64;
             }
-            if (adr >= SegmentOrg + SegmentSize)
+            if (adr >= ReadSegmentOrg + ReadSegmentSize)
                 datavalid = true;
             taskcomplete.Release();
         }
@@ -782,8 +796,8 @@ namespace Config
                 else
                     log("Group, unknown attribute " + n.Attributes[i].Name);
             }
-            int recsize = sizegroup(n) / rep;
-            bytepos += Convert.ToInt32(numbers[index].Text) * recsize;
+            int recsize = sizegroup(n) / rep * 2;
+            bytepos += (int)numbers[index].Value * recsize;
             index++;
             XmlNode fc = n.FirstChild;
             while (fc != null)
@@ -885,6 +899,8 @@ namespace Config
             taskcomplete.WaitOne();
         }
 
+        // needs to be used by edit config and restore config.
+
         public void WriteData()
         {
             string datagram ="";
@@ -966,12 +982,301 @@ namespace Config
         private void RebootBtn_Click(object sender, EventArgs e)
         {
             SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A5");
+            SelectNodeCB.Items.Clear();
+            SelectNodeCB.Text = "";
+            SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
         }
 
         private void DefaultBtn_Click(object sender, EventArgs e)
         {
             SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A6");
         }
-    
+
+
+        //******************************************************************************************************
+        // Save configuration
+        //******************************************************************************************************
+
+        private SaveFileDialog saveFileDialog = new SaveFileDialog();
+
+        private void SaveBtn_Click(object sender, EventArgs e)
+        {
+            if (!xmlvalid) {
+                log("No xml file");
+                return;
+            }
+            saveFileDialog.AddExtension = true;
+            saveFileDialog.Filter = "Config files|*.cfg|All files|*.*";
+            DialogResult res = saveFileDialog.ShowDialog();
+            if (!res.Equals(DialogResult.OK))
+                return;
+
+            StreamWriter savefile = new StreamWriter(saveFileDialog.FileName);
+            savefile.WriteLine("<Config>");
+            savefile.WriteLine("<Nodenumber>" + SelectNodeCB.Text + "</Nodenumber>");
+            savefile.WriteLine(xmldoc);
+
+            XmlNode SegmentXML = xmld.FirstChild.FirstChild;
+            while (SegmentXML != null)
+            {
+                ReadSegmentSpace = 0;
+                ReadSegmentOrg = 0;
+                string SegmentName = "";
+                if ("identification".StartsWith(SegmentXML.Name))
+                { }
+                else if ("segment".StartsWith(SegmentXML.Name))
+                {
+                    for (int i = 0; i < SegmentXML.Attributes.Count; i++)
+                    {
+                        if ("space".StartsWith(SegmentXML.Attributes[i].Name))
+                            ReadSegmentSpace = (int)GetNumber(SegmentXML.Attributes[i].InnerText);
+                        else if ("origin".StartsWith(SegmentXML.Attributes[i].Name))
+                            ReadSegmentOrg = GetNumber(SegmentXML.Attributes[i].InnerText);
+                        else if ("name".StartsWith(SegmentXML.Attributes[i].Name))
+                            SegmentName = SegmentXML.Attributes[i].InnerText;
+                    }
+                    ReadSegmentSize = sizesegment(SegmentXML);
+
+                    background = new Thread(ReadData);
+                    background.Start();
+                    taskcomplete.WaitOne();
+                    if (!datavalid)
+                    {
+                        log("Read error");
+                        break;
+                    }
+                    savefile.WriteLine("<Segment name=\"" + SegmentName + "\">" + ReadSegmentData + "</Segment>");
+                }
+                SegmentXML = SegmentXML.NextSibling;
+            }
+            savefile.WriteLine("</Config>");
+            savefile.Close();
+        }
+
+        //******************************************************************************************************
+        // Restore configuration
+        //******************************************************************************************************
+
+        private void RestoreBtn_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        //******************************************************************************************************
+        // Upgrade code in a node
+        //******************************************************************************************************
+
+        // prepare software download, read the Intel hex file
+        /* http://en.wikipedia.org/wiki/.hex
+             : is the colon that starts every Intel HEX record.
+            ll is the record-length field that represents the number of data
+               bytes (dd) in the record.
+            aaaa is the address field that represents the starting address for
+               subsequent data in the record.
+            tt is the field that represents the HEX record type, which may be
+               one of the following:
+               00 - data record
+               01 - end-of-file record
+               02 - extended segment address record
+               04 - extended linear address record
+            dd is a data field that represents one byte of data. A record may have
+               multiple data bytes. The number of data bytes in the record must
+               match the number specified by the ll field.
+            cc is the checksum field that represents the checksum of the record.
+               The checksum is calculated by summing the values of all hexadecimal
+               digit pairs in the record modulo 256 and taking the two's complement.
+        */
+
+        private OpenFileDialog openFileDialog1 = new OpenFileDialog();
+        static SortedList<int, byte[]> memdata = new SortedList<int, byte[]>();
+
+        // convert 2 hex characters to a number
+
+        private byte hv(int a, int b)
+        {
+            if (a >= 'a') a = (byte)(a - 'a' + 10);
+            else if (a >= 'A') a = (byte)(a - 'A' + 10);
+            else a = (byte)(a - '0');
+            if (b >= 'a') b = (byte)(b - 'a' + 10);
+            else if (b >= 'A') b = (byte)(b - 'A' + 10);
+            else b = (byte)(b - '0');
+            return (byte)(a * 16 + b);
+        }
+
+        // Store a data byte in the sorted list of 64 byte data blocks
+
+        private void storebyte(int address, byte v)
+        {
+            int ra = address & ~63;
+            int ro = address & 63;
+            byte[] t;
+            if (memdata.ContainsKey(ra))
+            {
+                t = memdata[ra];
+                t[ro] = v;
+                memdata[ra] = t;
+            }
+            else
+            {
+                t = new byte[64];
+                for (int i = 0; i < 64; i++)
+                    t[i] = 0xFF;
+                t[ro] = v;
+                memdata.Add(ra, t);
+            }
+        }
+
+        private void UpgradeBtn_Click(object sender, EventArgs e)
+        {
+            string modulestring = "";
+            progressBar1.Value = 0;
+            openFileDialog1.AddExtension = true;
+            openFileDialog1.Filter = "Intel hex files|*.hex|All files|*.*";
+            DialogResult res = openFileDialog1.ShowDialog();
+            if (!res.Equals(DialogResult.OK))
+                return;
+
+            Stream file = openFileDialog1.OpenFile();
+            int l = (int)file.Length;
+            byte[] f = new byte[l];
+            int i;
+            int recordaddress = 0;
+            // clear memory image
+            memdata.Clear();
+
+            // read intel hex file
+            file.Read(f, 0, l);
+            file.Close();
+
+            i = 0;
+            while (i < l)
+            {
+                if ((char)(f[i]) == ':')
+                {   // :llaaaattdd...cc
+                    i++;
+                    // length
+                    int recordlength = hv(f[i], f[i + 1]);
+                    int recordchecksum = recordlength;
+                    i += 2;
+                    // address high
+                    int t = hv(f[i], f[i + 1]);
+                    i += 2;
+                    recordchecksum += t;
+                    recordaddress = (int)(((UInt32)recordaddress & 0xFFFF0000) | ((UInt32)t << 8));
+                    // address low
+                    t = hv(f[i], f[i + 1]);
+                    i += 2;
+                    recordchecksum += t;
+                    recordaddress = recordaddress | t;
+                    // type
+                    int recordtype = hv(f[i], f[i + 1]);
+                    recordchecksum += recordtype;
+                    i += 2;
+                    // calc checksum
+                    for (int j = 0; j <= recordlength; j++)
+                    {
+                        recordchecksum += hv(f[i + j * 2], f[i + j * 2 + 1]);
+                    }
+                    if ((recordchecksum & 0xFF) != 0)
+                    {
+                        MessageBox.Show("File has a checksum error"
+                            , openFileDialog1.FileName); // sumcheck error
+                        return;
+                    }
+
+                    if (recordtype == 0) // data record
+                    {
+                        // data
+                        for (int j = 0; j < recordlength; j++)
+                        {
+                            t = hv(f[i], f[i + 1]);
+                            i += 2;
+                            storebyte(recordaddress, (byte)t);
+                            recordaddress++;
+                        }
+                        i += 2; // skip checksum
+                    }
+                    else if (recordtype == 1) // end of file
+                    {
+                        i += 2; // skip checksum
+                        break;
+                    }
+                    else if (recordtype == 4) // high address bits
+                    {
+                        t = hv(f[i], f[i + 1]) * 256 + hv(f[i + 2], f[i + 3]);
+                        i += 4;
+                        recordaddress = (t << 16) | (recordaddress & 0xFFFF);
+                        i += 2; // skip checksum
+                    }
+                }
+                else 
+                    i++;
+            }
+
+            while ((char)(f[i]) == '\r' || (char)(f[i]) == '\n' || (char)(f[i]) == ' ' || (char)(f[i]) == '\t')
+                i++;
+
+            // module id string
+            while ((char)(f[i]) != '\r' && (char)(f[i]) != '\n')
+            {
+                modulestring += (char)(f[i++]);
+            }
+
+            // display a message box about what will happen next
+            res = MessageBox.Show("Sending \"" + modulestring + "\" to NodeNumber " + SelectNodeCB.Text,
+                openFileDialog1.FileName, MessageBoxButtons.OKCancel);
+            if (res.Equals(DialogResult.Cancel))
+                return;
+
+            // Enter bootloader
+            SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A7");
+            background = new Thread(WriteCode);
+            background.Start();
+            taskcomplete.WaitOne();
+            // Upgrade complete
+            SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A4");
+            log("Upgrade complete");
+        }
+
+        public void WriteCode()
+        {
+            string datagram = "";
+            this.progressBar1.Maximum = memdata.Count;
+            this.progressBar1.Step = 1;
+
+            storebyte(0x1020, 0xFF); // set "no valid program loaded" flag 
+
+            for (int i = 0; i < memdata.Count; i++)
+            {
+                this.progressBar1.Value = i;
+                Thread.Sleep(1);        // allows foreground task to get any input
+                int address = memdata.Keys[i];
+                if (address < 0x1000) // don't overwrite the loader
+                    continue;
+                byte[] t = memdata.Values[i]; // 64 bytes
+                string data = "";
+                for (int j = 0; j < 64; j++)
+                    data += t[j].ToString("X2");
+                SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "20" + address.ToString("X8") + "FE" + data);
+                for (int w = 0; w < 200; w++)
+                {
+                    Thread.Sleep(10);
+                    if (datagrams.Count != 0)
+                    {
+                        datagram = datagrams.Dequeue();
+                        if (datagram.Substring(2, 4) == "E4C0" || datagram.Substring(2, 4) == "E4D0")
+                            break;
+                    }
+                }
+                if (datagram.Length < 30 || datagram.Substring(2, 4) != "E4C0")
+                {
+                    log("Failed to write data to " + SelectNodeCB.Text);
+                    return;
+                }
+            }
+            taskcomplete.Release();
+        }
+
+
     }
 }

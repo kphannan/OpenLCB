@@ -39,11 +39,13 @@
             this.RebootBtn = new System.Windows.Forms.Button();
             this.DefaultBtn = new System.Windows.Forms.Button();
             this.DeleteBtn = new System.Windows.Forms.Button();
-            this.WriteAllBtn = new System.Windows.Forms.Button();
-            this.ReadAllBtn = new System.Windows.Forms.Button();
             this.WriteBtn = new System.Windows.Forms.Button();
             this.ReadBtn = new System.Windows.Forms.Button();
             this.LogCB = new System.Windows.Forms.CheckBox();
+            this.UpgradeBtn = new System.Windows.Forms.Button();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.SaveBtn = new System.Windows.Forms.Button();
+            this.RestoreBtn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -112,8 +114,6 @@
             this.groupBox1.Controls.Add(this.RebootBtn);
             this.groupBox1.Controls.Add(this.DefaultBtn);
             this.groupBox1.Controls.Add(this.DeleteBtn);
-            this.groupBox1.Controls.Add(this.WriteAllBtn);
-            this.groupBox1.Controls.Add(this.ReadAllBtn);
             this.groupBox1.Controls.Add(this.WriteBtn);
             this.groupBox1.Controls.Add(this.ReadBtn);
             this.groupBox1.Location = new System.Drawing.Point(13, 179);
@@ -124,7 +124,7 @@
             // 
             // RebootBtn
             // 
-            this.RebootBtn.Location = new System.Drawing.Point(371, 193);
+            this.RebootBtn.Location = new System.Drawing.Point(371, 135);
             this.RebootBtn.Name = "RebootBtn";
             this.RebootBtn.Size = new System.Drawing.Size(75, 23);
             this.RebootBtn.TabIndex = 6;
@@ -134,7 +134,7 @@
             // 
             // DefaultBtn
             // 
-            this.DefaultBtn.Location = new System.Drawing.Point(371, 164);
+            this.DefaultBtn.Location = new System.Drawing.Point(371, 106);
             this.DefaultBtn.Name = "DefaultBtn";
             this.DefaultBtn.Size = new System.Drawing.Size(75, 23);
             this.DefaultBtn.TabIndex = 5;
@@ -144,30 +144,12 @@
             // 
             // DeleteBtn
             // 
-            this.DeleteBtn.Location = new System.Drawing.Point(371, 135);
+            this.DeleteBtn.Location = new System.Drawing.Point(371, 77);
             this.DeleteBtn.Name = "DeleteBtn";
             this.DeleteBtn.Size = new System.Drawing.Size(75, 23);
             this.DeleteBtn.TabIndex = 4;
             this.DeleteBtn.Text = "Delete";
             this.DeleteBtn.UseVisualStyleBackColor = true;
-            // 
-            // WriteAllBtn
-            // 
-            this.WriteAllBtn.Location = new System.Drawing.Point(371, 106);
-            this.WriteAllBtn.Name = "WriteAllBtn";
-            this.WriteAllBtn.Size = new System.Drawing.Size(75, 23);
-            this.WriteAllBtn.TabIndex = 3;
-            this.WriteAllBtn.Text = "Write All";
-            this.WriteAllBtn.UseVisualStyleBackColor = true;
-            // 
-            // ReadAllBtn
-            // 
-            this.ReadAllBtn.Location = new System.Drawing.Point(371, 77);
-            this.ReadAllBtn.Name = "ReadAllBtn";
-            this.ReadAllBtn.Size = new System.Drawing.Size(75, 23);
-            this.ReadAllBtn.TabIndex = 2;
-            this.ReadAllBtn.Text = "Read All";
-            this.ReadAllBtn.UseVisualStyleBackColor = true;
             // 
             // WriteBtn
             // 
@@ -199,11 +181,52 @@
             this.LogCB.Text = "Data log";
             this.LogCB.UseVisualStyleBackColor = true;
             // 
+            // UpgradeBtn
+            // 
+            this.UpgradeBtn.Location = new System.Drawing.Point(384, 69);
+            this.UpgradeBtn.Name = "UpgradeBtn";
+            this.UpgradeBtn.Size = new System.Drawing.Size(75, 23);
+            this.UpgradeBtn.TabIndex = 16;
+            this.UpgradeBtn.Text = "Upgrade";
+            this.UpgradeBtn.UseVisualStyleBackColor = true;
+            this.UpgradeBtn.Click += new System.EventHandler(this.UpgradeBtn_Click);
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(384, 40);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(75, 23);
+            this.progressBar1.TabIndex = 17;
+            // 
+            // SaveBtn
+            // 
+            this.SaveBtn.Location = new System.Drawing.Point(384, 98);
+            this.SaveBtn.Name = "SaveBtn";
+            this.SaveBtn.Size = new System.Drawing.Size(75, 23);
+            this.SaveBtn.TabIndex = 18;
+            this.SaveBtn.Text = "Save";
+            this.SaveBtn.UseVisualStyleBackColor = true;
+            this.SaveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
+            // 
+            // RestoreBtn
+            // 
+            this.RestoreBtn.Location = new System.Drawing.Point(384, 127);
+            this.RestoreBtn.Name = "RestoreBtn";
+            this.RestoreBtn.Size = new System.Drawing.Size(75, 23);
+            this.RestoreBtn.TabIndex = 19;
+            this.RestoreBtn.Text = "Restore";
+            this.RestoreBtn.UseVisualStyleBackColor = true;
+            this.RestoreBtn.Click += new System.EventHandler(this.RestoreBtn_Click);
+            // 
             // Config
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(809, 488);
+            this.Controls.Add(this.RestoreBtn);
+            this.Controls.Add(this.SaveBtn);
+            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.UpgradeBtn);
             this.Controls.Add(this.LogCB);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.SegmentsTB);
@@ -233,11 +256,13 @@
         private System.Windows.Forms.Button RebootBtn;
         private System.Windows.Forms.Button DefaultBtn;
         private System.Windows.Forms.Button DeleteBtn;
-        private System.Windows.Forms.Button WriteAllBtn;
-        private System.Windows.Forms.Button ReadAllBtn;
         private System.Windows.Forms.Button WriteBtn;
         private System.Windows.Forms.Button ReadBtn;
         private System.Windows.Forms.CheckBox LogCB;
+        private System.Windows.Forms.Button UpgradeBtn;
+        private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.Button SaveBtn;
+        private System.Windows.Forms.Button RestoreBtn;
     }
 }
 
