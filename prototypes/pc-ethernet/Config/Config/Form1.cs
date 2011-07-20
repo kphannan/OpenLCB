@@ -835,6 +835,8 @@ namespace Config
                 string t = "";
                 for (int i = 0; i < isize * 2; i += 2)
                     t = SegmentData.Substring(bytepos+i, 2) + t;
+                if (t[0] >= '8')
+                    t = t.PadLeft(16, 'F');
                 bytepos += isize * 2;
                 if (name != "unused") {
                     textboxes[index++].Text = Convert.ToInt64(t, 16).ToString();
@@ -966,7 +968,8 @@ namespace Config
             }
             else if (typeofdata[index] == "int")
             {
-                string t = Convert.ToInt64(tb.Text).ToString("X" + lengthofdata[index].ToString());
+                string t = Convert.ToInt64(tb.Text).ToString("X16");
+                t = t.Substring(t.Length - lengthofdata[index], lengthofdata[index]);
                 string r = "";
                 for (int i = 0; i < lengthofdata[index]; i += 2)
                     r = t.Substring(i, 2) + r;
@@ -1012,7 +1015,7 @@ namespace Config
                 return;
 
             StreamWriter savefile = new StreamWriter(saveFileDialog.FileName);
-            savefile.WriteLine("<Config>");
+            savefile.WriteLine("<Config version=\"1\">");
             savefile.WriteLine("<Nodenumber>" + SelectNodeCB.Text + "</Nodenumber>");
             savefile.WriteLine(xmldoc);
 

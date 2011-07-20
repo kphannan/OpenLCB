@@ -138,7 +138,7 @@
             this.DefaultBtn.Name = "DefaultBtn";
             this.DefaultBtn.Size = new System.Drawing.Size(75, 23);
             this.DefaultBtn.TabIndex = 5;
-            this.DefaultBtn.Text = "Set default";
+            this.DefaultBtn.Text = "Factory";
             this.DefaultBtn.UseVisualStyleBackColor = true;
             this.DefaultBtn.Click += new System.EventHandler(this.DefaultBtn_Click);
             // 
