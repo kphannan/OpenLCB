@@ -1,0 +1,6 @@
+When a node can send an addressed message later, e.g. a datagram on event, does it properly handle an intervening alias drop?
+
+Alias allocation:  Measure the time to provide a RIM on conflict and compare to limit. Measure the time to the final RIM and check within tolerance.
+
+
+
