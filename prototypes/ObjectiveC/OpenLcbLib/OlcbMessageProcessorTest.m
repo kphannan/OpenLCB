@@ -77,11 +77,11 @@ static int result;
     
     result = 0;
     [[OlcbInitializationCompleteMessage alloc] dispatch: a];
-    STAssertEquals( result, 2, @"processPCEventReceived saw %d instead of 2 on InitializationComplete", result);
+    STAssertEquals( result, 2, @"processInitialization complete saw %d instead of 2 on InitializationComplete", result);
 
     result = 0;
     [[OlcbPCEventReportMessage alloc] dispatch: a];
-    STAssertEquals( result, 1, @"processPCEventReceived saw %d instead of 1 on PCEventReport", result);
+    STAssertEquals( result, 3, @"processPCEventReport saw %d instead of 3 on PCEventReport", result);
 }
 
 @end

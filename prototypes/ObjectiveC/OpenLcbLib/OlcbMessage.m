@@ -9,8 +9,10 @@
 #import "OlcbMessage.h"
 #import "OlcbMessageProcessor.h"
 
-#import "OlcbPCEventReportMessage.h"
+#import "OlcbMtiDefinitions.h"
 
+#import "OlcbInitializationCompleteMessage.h"
+#import "OlcbPCEventReportMessage.h"
 
 @implementation OlcbMessage
 
@@ -32,12 +34,15 @@
 - (OlcbMessage*)initFromFields: (u_int16_t) mti_a data: (u_int8_t[]) content_a length: (u_int) length_a {
     
     // handle type selection
-    if (mti_a == 0x32D2) {
-        // PC Event report
-        self = [[OlcbPCEventReportMessage alloc] initFromFields:mti_a data:content_a length:length_a];
-        return self;
+    switch (mti_a) {
+        case MTI_INITIALIZATION_COMPLETE:
+            self = [[OlcbInitializationCompleteMessage alloc] initFromFields:mti_a data:content_a length:length_a];
+            return self;
+        case MTI_PC_EVENT_REPORT:
+            self = [[OlcbPCEventReportMessage alloc] initFromFields:mti_a data:content_a length:length_a];
+            return self;
     }
-
+    // no specific value found
     // build generic from specific values
     content = content_a;
     length = length_a;

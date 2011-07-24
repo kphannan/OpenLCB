@@ -31,6 +31,8 @@
 		233668201395F937007A0410 /* MtiReformat.h in Headers */ = {isa = PBXBuildFile; fileRef = 2336681C1395F937007A0410 /* MtiReformat.h */; };
 		233668231395FB74007A0410 /* MtiReformatTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 233668221395FB74007A0410 /* MtiReformatTest.m */; };
 		233668241395FB74007A0410 /* MtiReformatTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 233668221395FB74007A0410 /* MtiReformatTest.m */; };
+		2356A4CE13DBA828008724B3 /* OlcbMtiDefinitions.h in Headers */ = {isa = PBXBuildFile; fileRef = 2356A4CD13DBA828008724B3 /* OlcbMtiDefinitions.h */; };
+		2356A4CF13DBA828008724B3 /* OlcbMtiDefinitions.h in Headers */ = {isa = PBXBuildFile; fileRef = 2356A4CD13DBA828008724B3 /* OlcbMtiDefinitions.h */; };
 		2382DBF413A90BEA003DE18B /* OlcbInitializationCompleteMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = 2382DBF213A90BEA003DE18B /* OlcbInitializationCompleteMessage.h */; };
 		2382DBF513A90BEA003DE18B /* OlcbInitializationCompleteMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 2382DBF313A90BEA003DE18B /* OlcbInitializationCompleteMessage.m */; };
 		23A4094E1394DF8700993644 /* OlcbCanFrameTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 23A4094D1394DF8700993644 /* OlcbCanFrameTests.m */; };
@@ -109,6 +111,7 @@
 		2336681C1395F937007A0410 /* MtiReformat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MtiReformat.h; sourceTree = "<group>"; };
 		233668211395FB74007A0410 /* MtiReformatTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MtiReformatTest.h; sourceTree = "<group>"; };
 		233668221395FB74007A0410 /* MtiReformatTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MtiReformatTest.m; sourceTree = "<group>"; };
+		2356A4CD13DBA828008724B3 /* OlcbMtiDefinitions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbMtiDefinitions.h; sourceTree = "<group>"; };
 		2382DBEA13A905EB003DE18B /* OlcbTestDefinitions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OlcbTestDefinitions.h; sourceTree = "<group>"; };
 		2382DBF213A90BEA003DE18B /* OlcbInitializationCompleteMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OlcbInitializationCompleteMessage.h; sourceTree = "<group>"; };
 		2382DBF313A90BEA003DE18B /* OlcbInitializationCompleteMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OlcbInitializationCompleteMessage.m; sourceTree = "<group>"; };
@@ -251,6 +254,7 @@
 				23B3122B13A91F1A0063375B /* OlcbPrettyPrint.h */,
 				23B3122C13A91F1A0063375B /* OlcbPrettyPrint.m */,
 				23B09CD113952CF600A7A328 /* Supporting Files */,
+				2356A4CD13DBA828008724B3 /* OlcbMtiDefinitions.h */,
 			);
 			name = OpenLcbLib;
 			sourceTree = "<group>";
@@ -397,6 +401,7 @@
 				230F761713A5CE5C0068BF67 /* OlcbMessageProcessor.h in Headers */,
 				23B3123213A9275E0063375B /* OlcbPCEventReportMessage.h in Headers */,
 				23D7F98D13AC03B8009F773D /* OlcbCanFrame.h in Headers */,
+				2356A4CF13DBA828008724B3 /* OlcbMtiDefinitions.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -413,6 +418,7 @@
 				23B3123113A9275E0063375B /* OlcbPCEventReportMessage.h in Headers */,
 				23D7F98C13AC03B7009F773D /* OlcbCanFrame.h in Headers */,
 				2316DFE713AC8542006704FE /* FlipsideViewController.h in Headers */,
+				2356A4CE13DBA828008724B3 /* OlcbMtiDefinitions.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
