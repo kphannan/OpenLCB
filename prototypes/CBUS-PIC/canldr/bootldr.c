@@ -27,7 +27,7 @@
 
 #include "../canlib/frametypes.c"
 #include "../canlib/general.c"
-#include "../canlib/eeprom.c"
+//#include "../canlib/eeprom.c"
 #ifdef CAN
 #include "../canlib/ecan.c"
 #endif
@@ -46,7 +46,7 @@
 
 #ifdef __18F2480
 #pragma config OSC=HSPLL, FCMEN=ON, IESO=OFF                           // 1
-#pragma config BORV=1, BOREN=BOHW, PWRT=ON                             // 2
+#pragma config BORV=0, BOREN=BOHW, PWRT=ON                             // 2
 #pragma config WDT=OFF, WDTPS=8192, MCLRE=ON, LPT1OSC=OFF, PBADEN=OFF  // 3
 #pragma config DEBUG=OFF, XINST=OFF, BBSIZ=1024, LVP=OFF, STVREN=ON    // 4
 #pragma config CP0=OFF, CP1=OFF, CPB=OFF, CPD=OFF                      // 5
@@ -70,12 +70,9 @@
 
 #pragma udata
 
-unsigned int timer;        // 1 msec ticks
-unsigned int blocks;       // parts of a block received OK
-BYTE t;
-unsigned int DNID = 0;
+BYTE dgcnt;
+int DNID;
 
-//#define SENDMASK = 0xFF
 BYTE outptr, sendptr;
 #pragma udata outbuf
 far BYTE outbuf[256];
@@ -127,14 +124,6 @@ void lowintvector(void)
     _endasm
 }
 
-#pragma code
-
-#pragma romdata rominfo = 0x000020
-rom unsigned int makercode = 1;
-rom unsigned int productcode = 1;
-rom unsigned int versioncode = 1;
-#pragma romdata
-
 #pragma code jumptoloader = LOADERADDRESS
 void jumptoloader(void)
 {
@@ -143,7 +132,6 @@ void jumptoloader(void)
     _endasm
 
 }
-#pragma code
 
 #pragma romdata romnodedata = NODEDATA
 #ifdef SERIAL
@@ -162,20 +150,25 @@ rom BYTE ND_spare[64-14] = {
 };
 
 // 0x000080
+const rom BYTE ustr[64] = "Location not yet defined";
+
+const rom BYTE xml[] = "<cdi><id><loader>OpenLCB PIC "
 #ifdef USB
-rom BYTE idstring[64] = "OpenLCB PIC USB Boot Loader "  __DATE__ " " __TIME__;
-#else
+    "USB Boot Loader "
+#endif
 #ifdef RS232
-rom BYTE idstring[64] = "OpenLCB PIC RS232 Boot Loader  "  __DATE__ " " __TIME__;
-#else
-rom BYTE idstring[64] = "OpenLCB PIC CAN Boot Loader "  __DATE__ " " __TIME__;
+     "RS232 Boot Loader  "
 #endif
+#ifdef CAN
+    "CAN Boot Loader " 
 #endif
+     __DATE__ " " __TIME__
+    "</loader></id><se na=\"Loc\" or=\"#0040\" sp=\"#FE\" bu=\"#143\">"
+    "<by na=\"Node Id\" si=\"6\"/>"
+    "<by si=\"58\"/>"
+    "<ch na=\"Loc\" si=\"64\"/></se></cdi>";
 
-// 0x0000C0
-const rom BYTE ustr[64] = "User identification not yet defined";
-
-#pragma romdata
+#pragma code
 #pragma udata ovrly
 
 //*********************************************************************************
@@ -269,18 +262,14 @@ BOOL ReceiveMessage()
 #endif
 }
 
-rom unsigned int bits[10] = {
-    0x03FE, 0x03FD, 0x03FB, 0x03F7, 0x03EF, 0x03DF, 0x03BF, 0x037F, 0x02FF, 0x01FF
-};
-
 void Packet(void)
 {
     far overlay BYTE i;
 
     if (CB_SourceNID == ND.nodeIdAlias) { // conflict
-        if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
+        if ((CB_FrameType&0x8000)==0x0000) { // CIM or RID message
             CB_SourceNID = ND.nodeIdAlias;
-            CB_FrameType = FT_RIM;
+            CB_FrameType = FT_RID;
             CB_datalen = 0;
             while (SendMessage()==0) ;
         }
@@ -290,88 +279,84 @@ void Packet(void)
     else if (CB_FrameType == FT_VNSN) { // send full NID
         SendNSN(FT_NSN);
     }
-    else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
-        if (CB_data[0] == DAA_UPGADDR) { // single GP_block write
+    else if ((CB_FrameType&0xCFFF) == (FT_DG | ND.nodeIdAlias) ) { // to this address
+        if (DNID == -1)
             DNID = CB_SourceNID;
-            UP(GP_address) = CB_data[1];
-            HI(GP_address) = CB_data[2];
-            LO(GP_address) = CB_data[3];
-            blocks = 0x03FF; // 10 bits, 1 per block
-            timer = 0;
+        else if (DNID != CB_SourceNID) {
+            sendnack(CB_SourceNID,0);
+            return;
         }
-        else if (((CB_data[0]&0xF0) == DAA_DATA) && blocks != 0) { // data GP_block
-            if (DNID!=CB_SourceNID) {
-               sendack(ACK_ALIASERROR, CB_SourceNID);
-               return;
-            }
-            else {
-                t = CB_data[0];
-                blocks &= bits[t];
-                t = t * 7;
-                for (i = 1; i<8 && t<64; i++)
-                    GP_block[t++] = CB_data[i];
-                if (blocks == 0) {
-                    if (UP(GP_address) <= 1) // Up to 128k Program memory
-                        ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
-                    else if (UP(GP_address) == 0xF0) { // EEPROM 64k bytes
-                        for (t=0; t<64; t++)
-                            EEPROMWrite(LOWD(GP_address)+t, GP_block[t]);
+        for (i=0; i<CB_datalen && dgcnt<72; i++)
+            GP_block[dgcnt++] = CB_data[i];
+        if ((CB_FrameType&0xF000) == FT_DGL || (CB_FrameType&0xF000) == FT_DGS) { // end of datagram
+            DNID = -1;
+            dgcnt = 0;
+            if (GP_block[0] == DG_MEMORY) {
+                UP(GP_address) = GP_block[3];
+                HI(GP_address) = GP_block[4];
+                LO(GP_address) = GP_block[5];
+                if (GP_block[1] == DGM_WRITE) {
+                    if (GP_block[6] == 0xFE) { // program memory
+                        // write program data
+                        ProgramMemoryWrite(GP_address, 64, (BYTE * far)&GP_block[7]);
+                        sendack(CB_SourceNID);
+                        return;
                     }
-                    sendack(ACK_OK, DNID);    // OK
                 }
-            }
-        }
-        else if (CB_data[0] == DAA_UPGREAD) { // single GP_block read
-            sendblock(CB_SourceNID);
-        }
-        else if (CB_data[0] == DAA_UPGSTART) { // program upgrade
-            sendack(ACK_OK, CB_SourceNID);    // Entered loader ack
-        }
-        else if (CB_data[0] == DAA_REBOOT) {
-            // re-start the program
-            _asm
-                reset
-                goto 0x000000
-            _endasm
-        }
-        else if (CB_data[0] == DAA_UPGRESET) {
-            // change the valid program flag
-            ProgramMemoryRead(STARTADDRESS,64,(BYTE * far)GP_block);
-            if (GP_block[0x0027]!=0) {
-                GP_block[0x0027] = 0;
-                ProgramMemoryWrite(STARTADDRESS,64,(BYTE * far)GP_block);
-            }
-            // start the program
-            _asm
-                reset
-                goto 0x000000
-            _endasm
-        }
-        else if (CB_data[0] == DAA_CEERASEH || CB_data[0] == DAA_DEFAULT)
-            sendack(ACK_OK, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVREAD || CB_data[0] == DAA_CEREADH 
-          || CB_data[0] == DAA_PEREAD)
-            sendack(ACK_NODATA, CB_SourceNID);
-        else if (CB_data[0] == DAA_NVWRITE || CB_data[0] == DAA_CEWRITEH 
-          || CB_data[0] == DAA_PEWRITEH || CB_data[0] == DAA_PEERASE)
-            sendack(ACK_NOSPACE, CB_SourceNID);
-    }
+                else if (GP_block[1] == DGM_READ) {
+                    if (GP_block[6]==0xFF) { // XML file
+                        // read XML file
+                        GP_address += (unsigned short long)&xml[0];
+                        i = GP_block[7];
+                        ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                        StartSendBlock(i+7, CB_SourceNID);
+                        return;
+                    }
+                    if (GP_block[6]==0xFE) { // program memory
+                        // read program data
+                        i = GP_block[7];
+                        ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                        StartSendBlock(i+7, CB_SourceNID);
+                        return;
+                    }
+                }
+                else if (CB_data[1] == DGM_UPDCOMP) {
+		          // change the valid program flag
+		          ProgramMemoryRead(STARTADDRESS,64,(BYTE * far)GP_block);
+		          if (GP_block[0x0020]!=0) {
+		              GP_block[0x0020] = 0;
+		              ProgramMemoryWrite(STARTADDRESS,64,(BYTE * far)GP_block);
+		          }
+		          // start the program
+		          _asm
+		              reset
+		              goto 0x000000
+		          _endasm
+                }
+                else if (CB_data[1] == DGM_REBOOT) {
+                    // re-start the program
+                    _asm
+                        reset
+                        goto 0x000000
+                    _endasm
+                }
+            } // memory op
+            sendnack(CB_SourceNID,0);
+        } // end of datagram
+    } // datagram
 }
 
 void Loader2(void)
 {
-    SendNSN(FT_BOOT);
+    SendNSN(FT_INIT);
+    dgcnt = 0;
+    DNID = -1;
     while(1) {
 #ifdef RS232
         SerialIO();
 #endif
-        if (Timer3Test()) {                // 100 msec timer
-            timer++;
-            if (blocks!=0 && timer>20) {   // send timeout ack
-                sendack(ACK_TIMEOUT, DNID);          // timeout
-                blocks = 0;
-            }
-        }
+        EndSendBlock();
+
         if (ReceiveMessage()) {
             Packet();
         }
@@ -395,9 +380,6 @@ void initialize(void)
     InitSerial();
 #endif
 
-    // timer 1 for 1 msec overflow
-    Timer3Init();
-    timer = 0;
     YellowLEDOn();
     GreenLEDOn();
 }
@@ -425,7 +407,7 @@ void main(void)
     __zero_memory();    // clear all ram
 
     // read valid pogram loaded flag from program memory
-    TBLPTRL = 0x27;
+    TBLPTRL = 0x20;
     TBLPTRH = STARTADDRESS >> 8;
     TBLPTRU = 0;
     _asm

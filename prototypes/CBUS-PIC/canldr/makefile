@@ -2,7 +2,7 @@ All: bootldr.hex usbldr.hex rs232ldr.hex
 
 bootldr.hex: bootldr.c ../canlib/general.c ../canlib/frametypes.c ../canlib/ecan.c ../canlib/eeprom.c LDR18f2480.lkr
 	MCC18 -fo=bootldr.o -Oa -Opa- -DCAN=1 -p18f2480 bootldr.c 
-	mplink LDR18f2480.lkr bootldr.o /i /o bootldr.cof
+	mplink LDR18f2480.lkr bootldr.o /i /o bootldr.cof /m bootldr.map
 
 usbldr.hex: bootldr.c ../canlib/general.c ../canlib/frametypes.c ../canlib/serial.c ../canlib/eeprom.c LDR18f2480.lkr
 	MCC18 -fo=usbldr.o -Oa -Opa- -DUSB=1 -p18f2480 bootldr.c 
@@ -10,7 +10,7 @@ usbldr.hex: bootldr.c ../canlib/general.c ../canlib/frametypes.c ../canlib/seria
 
 rs232ldr.hex: bootldr.c ../canlib/general.c ../canlib/frametypes.c ../canlib/serial.c ../canlib/eeprom.c LDR18f2480.lkr
 	MCC18 -fo=rs232ldr.o -Oa -Opa- -DRS232=1 -p18f2480 bootldr.c 
-	mplink LDR18f2480.lkr rs232ldr.o /i /o rs232ldr.cof
+	mplink LDR18f2480.lkr rs232ldr.o /i /o rs232ldr.cof /m rs232ldr.map
 
 clean:
 	del *.o

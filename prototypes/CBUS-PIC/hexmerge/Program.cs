@@ -120,7 +120,7 @@ namespace HexMerge
             }
         }
 
-        static void WriteFile(string filename)
+        static void WriteFile(string filename, string comment)
         {
             StreamWriter sw = new StreamWriter(filename);
             UInt32 address = 0;
@@ -139,25 +139,28 @@ namespace HexMerge
                 sw.WriteLine(memdata.Values[i]);
             }
             sw.WriteLine(":00000001FF");
+            sw.WriteLine(comment + " " + DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString());
             sw.Close();
         }
 
         static void Main(string[] args)
         {
-            if (args.GetUpperBound(0) < 2)
+            if (args.GetUpperBound(0) < 3)
             {
-                Console.WriteLine("Use: Hexmerg file1 file2 file3");
+                Console.WriteLine("Use: Hexmerg file1 file2 file3 comment");
                 Console.WriteLine("      file1 is an Intel hex file.");
                 Console.WriteLine("      file2 is a second Intel hex file.");
                 Console.WriteLine("      file3 is an Intel hex file produced by sorting");
                 Console.WriteLine("          and merging the first 2 files.");
+                Console.WriteLine("      comment is a text record added to the file.");
+
                 return;
             }
 
             // clear memory image
             ReadFile(args[0]);
             ReadFile(args[1]);
-            WriteFile(args[2]);
+            WriteFile(args[2], args[3]);
         }
     }
 }

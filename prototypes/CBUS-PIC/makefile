@@ -1,6 +1,6 @@
-dirs = canldr canrsusb canace3 canled canrfid canlcd canacc cancs canxnet
+dirs = canldr canrsusb canacc canace3 canled canrfid canlcd cancs canxnet
 
-.PHONY: ver.h all
+.PHONY: all
 all:
 	$(foreach dir,$(dirs),$(MAKE) -C $(dir) $(newline))
 

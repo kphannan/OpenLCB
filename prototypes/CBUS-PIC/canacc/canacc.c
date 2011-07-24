@@ -6,7 +6,6 @@
     ACC8 (also ACC5) 8 outputs
     ACE8C - 8 inputs
     SERVO - 8 Servo's
-    TSOP - 7 TSOP4838's IR detectors
 
     Must define conditional compilation for hardware/module type on the command line.
 
@@ -51,22 +50,15 @@
 */
 //*********************************************************************************
 
-#ifdef TSOP
-#define INPUT 1
-#endif
-#ifdef ACE8C
-#define INPUT 1
-#endif
-
 #define SendMessage ECANSendMessage
 #define ReceiveMessage ECANReceiveMessage
 
 #include "../canlib/frametypes.c"
 #include "../canlib/general.c"
-#include "../canlib/entry.c"
 #include "../canlib/ecan.c"
+#include "../canlib/entry.c"
 #include "../canlib/eeprom.c"
-#ifndef INPUT
+#ifndef ACE8C
 #define EVENTSIZE 9
 #define TABLESIZE 640 // 10
 #include "../canlib/hash.c"
@@ -83,10 +75,9 @@ void DAA_Packet(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 #ifdef SERVO
-void servo_unlearn(void);
 void servo_setup(void);
-#endif
 void InitRamFromEEPROM(void);
+#endif
 
 //*********************************************************************************
 //    Definitions
@@ -103,7 +94,7 @@ void InitRamFromEEPROM(void);
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (((PORTB & 0x03) << 1) |((PORTB&0x20)>>5))
 #endif
-/*
+
 #ifdef ACE8C
 #define LEARN PORTAbits.RA4    // learn switch
 #define UNLEARN PORTAbits.RA5  // unlearn / setup jumper
@@ -112,7 +103,7 @@ void InitRamFromEEPROM(void);
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (PORTA & 0x07)
 #endif
-*/
+
 #ifdef ACC8
 #define LEARN PORTAbits.RA1    // learn switch
 #define UNLEARN PORTAbits.RA0  // unlearn / setup jumper
@@ -129,11 +120,6 @@ void InitRamFromEEPROM(void);
 #define POLARITY PORTBbits.RB5 // pol switch
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (((PORTB & 0x10)>>2)|(PORTB & 0x03))
-#define NUM_SERVOS       8	     // max number of servos
-#define ENDPOINT_1MS    -4000    // TMR1 delay for 1ms when new_output bit = 0
-#define SERVO_MID       -6000    // TMR1 delay for midpoint
-#define ENDPOINT_2MS    -8000    // TMR1 delay for 2ms when new_output bit = 1
-#define SERVO_MIN       -(int)40
 #endif
 
 //*********************************************************************************
@@ -142,7 +128,7 @@ void InitRamFromEEPROM(void);
 
 #pragma udata
 
-#ifdef INPUT
+#ifdef ACE8C
 BYTE sendallbits;               // event action type 0
 BYTE OutputState;               // debounced scan data buffer
 BYTE PrevInput1;                // previous scan buffer
@@ -153,31 +139,26 @@ BYTE scancount;
 volatile BYTE timer15ms;        // 15 msec timer for input scan
 volatile int timer13us;         // 13 usec timer count for input scan
 volatile BYTE timerflag;		// scan flag
+BYTE event[8];
 #endif
 
 BYTE BitMask[8];                // bit masks
 
-BYTE event[10];
-BYTE eventcnt;
-unsigned int eventindex;
 unsigned int DNID;              // block transfer source NID
-BYTE blocks;                    // loader block count
+BYTE dgcnt;
 BYTE canTraffic;                // yellow led CAN traffic indicator
 
-unsigned volatile int timer100;    // long period timer, inc every 100ms
-
 #ifdef SERVO
-BYTE next_portc;	              // used by hp interrupt to update portc 
+BYTE next_portc;	            // used by hp interrupt to update portc 
 BYTE new_output;                // next value of all the outputs
 BYTE servo_state;		        // interrupt state counter
 BYTE servo_index;               // index of servo to pulse
-int next_tmr;                   // next time for interrupt timer100
+int next_tmr;                   // next time for interrupt
 BYTE pulsetimer;                // timer for pulsing
 BYTE pulseoutput;               // bits of pulse requests
 BYTE pulseon;                   // set while pulsing
 #pragma udata svo1
-far BYTE servo_on[NUM_SERVOS];  // servo endpoint
-far BYTE servo_off[NUM_SERVOS]; // servo opposite endpoint
+far char servopos[16];          // servo endpoint
 #pragma udata
 #endif
 
@@ -209,89 +190,68 @@ BYTE pulseon;                   // set during a pulse
 #define modulestring "OpenLCB Input Driver for CANACE8C " __DATE__ " " __TIME__
 #endif
 
-#ifdef TSOP
-#define modulestring "OpenLCB TSOP Input Driver for CANACE8C " __DATE__ " " __TIME__
-#endif
-
-#ifdef MULTIFN
-#define modulestring "OpenLCB Multifunction for CANACC5/8 " __DATE__ " " __TIME__
-#endif
-
 #pragma romdata
 
 const rom BYTE xml[] = 
-    "<XML>\r\n"
-    "<NodeString>" modulestring "</NodeString>\r\n"
+    "<cdi><id><software>" modulestring "</software></id>"
+    "<se na=\"Location\" or=\"#0080\" sp=\"#FE\" bu=\"#303\">"
+      "<ch na=\"Location\" si=\"64\"/>"
+    "</se>"
+    "<se na=\"Node Id\" or=\"#0040\" sp=\"#FE\" bu=\"#343\">"
+      "<in na=\"Serial\" si=\"1\"/>"
+      "<in na=\"Member\" si=\"3\"/>"
+      "<by na=\"Group\" si=\"2\"/>"
+    "</se>"
 #ifdef ACC4
-    "<EventData>\r\n"
-      "<name>Event Number</name><bits>48</bits>\r\n"
-      "<name></name><bits>5</bits>\r\n"
-      "<name>Output</name><bits>3</bits>\r\n"
-    "</EventData>\r\n"
+    "<se na=\"Events\" bu=\"#323\">"
+      "<gr rep=\"100\">"
+      "<by na=\"Event Number\" si=\"8\"/>"
+      "<by na=\"Action\" si=\"1\"/>"
+      "</gr>"
+    "</se>"
 #endif
 #ifdef ACC8
-    "<EventData>\r\n"
-      "<name>Event Number</name><bits>48</bits>\r\n"
-      "<name></name><bits>3</bits>\r\n"
-      "<name>Toggle</name><bits>1</bits>\r\n"
-      "<name>Polarity</name><bits>1</bits>\r\n"
-      "<name>Output</name><bits>3</bits>\r\n"
-    "</EventData>\r\n"
+    "<se na=\"Events\" bu=\"#323\">"
+      "<gr rep=\"100\">"
+      "<by na=\"Event Number\" si=\"8\"/>"
+      "<by na=\"Action\" si=\"1\"/>"
+      "</gr>"
+    "</se>"
 #endif
-#ifdef SERV0
-    "<EventData>\r\n"
-      "<name>Event Number</name><bits>48</bits>\r\n"
-      "<name></name><bits>4</bits>\r\n"
-      "<name>Polarity</name><bits>1</bits>\r\n"
-      "<name>Output</name><bits>3</bits>\r\n"
-    "</EventData>\r\n"
-    "<NodeVariable>\r\n"
-      "<name>Servo#0 off position</name><default>125</default>\r\n"
-      "<name>Servo#1 off position</name><default>125</default>\r\n"
-      "<name>Servo#2 off position</name><default>125</default>\r\n"
-      "<name>Servo#3 off position</name><default>125</default>\r\n"
-      "<name>Servo#4 off position</name><default>125</default>\r\n"
-      "<name>Servo#5 off position</name><default>125</default>\r\n"
-      "<name>Servo#6 off position</name><default>125</default>\r\n"
-      "<name>Servo#7 off position</name><default>125</default>\r\n"
-      "<name>Servo#0 on position</name><default>125</default>\r\n"
-      "<name>Servo#1 on position</name><default>125</default>\r\n"
-      "<name>Servo#2 on position</name><default>125</default>\r\n"
-      "<name>Servo#3 on position</name><default>125</default>\r\n"
-      "<name>Servo#4 on position</name><default>125</default>\r\n"
-      "<name>Servo#5 on position</name><default>125</default>\r\n"
-      "<name>Servo#6 on position</name><default>125</default>\r\n"
-      "<name>Servo#7 on position</name><default>125</default>\r\n"
-    "</NodeVariable>\r\n"
+#ifdef SERVO
+    "<se na=\"Events\" bu=\"#323\">"
+      "<gr rep=\"100\">"
+        "<by na=\"Event Number\" si=\"8\"/>"
+        "<by na=\"Action\" si=\"1\"/>"
+      "</gr>"
+    "</se>"
+    "<se na=\"Servo posn.\" sp=\"1\" bu=\"#323\">"
+      "<gr rep=\"8\">"
+        "<int na=\"Servo off\" si=\"1\"/>"
+        "<int na=\"Servo on\" si=\"1\"/>"
+      "</gr>"
+    "</se>"
 #endif
 #ifdef ACE8C
-    "<NodeVariable>\r\n"
-      "<name>Debounce</name><default>0</default>\r\n"
-    "</NodeVariable>\r\n"
+    "<se na=\"Events\" bu=\"#323\">"
+      "<gr rep=\"8\">"
+        "<by na=\"Off Event Number\" si=\"8\"/>"
+        "<by na=\"On Event Number\" si=\"8\"/>"
+      "</gr>"
+    "</se>"
+    "<se na=\"Debounce\" sp=\"1\" bu=\"#323\">"
+      "<by na=\"Debounce\" si=\"1\"/>"
+    "</se>"
 #endif
-    "</XML>\r\n";
+    "</cdi>";
 
 #pragma romdata module = 0x001020
-const rom BYTE version[7] = { 
-    0,1,0,1,0,1,0 
-};
-// 0x0027
-const rom BYTE valid = 0;     // tmp set to 0xFF by PC side of loader. 
-const rom unsigned long xmlstart = (unsigned long) xml;
-const rom unsigned int xmlsize = sizeof xml;
-// 0x002E
-const rom BYTE spare[18] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF 
-};
-// 0x0040
-const rom BYTE mstr[64] = modulestring ;
+const rom BYTE valid = 0;         // tmp set to 0xFF by PC side of loader. 
 
-#ifdef INPUT
-const rom BYTE PETable[128];		// 8 inputs x 2 states x 8 bytes
+#ifdef ACE8C
+#pragma romdata events = 0x001040
+const rom BYTE EventTable[128];   // 8 inputs x 2 states x 8 bytes
 #endif
-
-#pragma romdata
 
 //*********************************************************************************
 //    EEPROM
@@ -300,16 +260,11 @@ const rom BYTE PETable[128];		// 8 inputs x 2 states x 8 bytes
 #pragma romdata eedata_scn=0xf00000
 
 #ifdef SERVO
-// Newly programmed part defaults to servo mid positions
-// NV#0 to NV#7
-rom BYTE SERVO_ON[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
-// NV#8 to NV#15
-rom BYTE SERVO_OFF[NUM_SERVOS] = { 125, 125, 125, 125, 125, 125, 125, 125 };
-// NV#16 to NV#23
+rom BYTE SERVOPOS[16];
 #endif
 
-#ifdef INPUT
-rom BYTE DEBOUNCE = 0;
+#ifdef ACE8C
+rom BYTE DEBOUNCE;
 #endif
 
 #pragma romdata
@@ -324,6 +279,8 @@ rom BYTE DEBOUNCE = 0;
 
 #ifdef SERVO
 
+// Timer1 is 2000 counts per msec
+// only 1 servo at a time
 void hpinterrupt(void) {
 
     PIR1bits.TMR1IF = 0;
@@ -333,51 +290,40 @@ void hpinterrupt(void) {
 
     next_portc = 0;    // Turn off all servos next time
 
-    if (servo_state < 2 && pulseon) {
+    if (pulseon) {
         if (servo_state == 0) {
             next_portc = pulseon;     // turn on servo next time round
             // Pre-calculate next delay for servo position
+            HI(next_tmr) = 0;
             if (new_output & pulseon) {
-                LO(next_tmr) = servo_on[servo_index];
+                LO(next_tmr) = servopos[(servo_index<<1)+1];
             } 
             else {
-                LO(next_tmr) = servo_off[servo_index];
+                LO(next_tmr) = servopos[servo_index<<1];
             }
-            HI(next_tmr) = 0;
-            next_tmr = (next_tmr<<4) - 8000;
+            next_tmr = (0-3000) - (next_tmr<<3);
+            servo_state = 1;
         } 
         else { // odd state 1
-            next_tmr = ENDPOINT_2MS - next_tmr; // Pre-calculate remaining delay
-            if (next_tmr > SERVO_MIN) 
-                next_tmr = SERVO_MIN;
+            next_tmr = (-40000) - next_tmr; // Pre-calculate remaining part of 20 msec
+            servo_state = 0;
+            if (--pulsetimer==0)
+                pulseon = 0;
         }
     } 
     else { // not a servo, or timeslot 16 to 19
-        next_tmr = ENDPOINT_1MS; // 1 msec
+        next_tmr = -40000; // 20 msec
     }
-
-    servo_state++;
-    if (servo_state == 20) { // 20 ms timer
-        servo_state = 0;
-    } 
 }
 
 #else
-#ifdef INPUT
+#ifdef ACE8C
 
 void hpinterrupt(void) {
     TMR1H = (0x10000 - 32) >> 8; // 4 * 52 / 16,000,000 = 13 usec for 38kHz
     TMR1L = (0x10000 - 32) & 0xFF;
     PIR1bits.TMR1IF = 0;
     timer13us--;
-#ifdef TSOP
-    if (timer13us<=27) {
-        if (timer13us&1)
-            PORTCbits.RC7 = 1;
-        else
-            PORTCbits.RC7 = 0;
-    }
-#endif
     if (timer13us==0) {
         timer13us = 15000/13;
         timerflag++;
@@ -477,90 +423,61 @@ void DoEvent(static BYTE * far ev)
 }
 
 //*********************************************************************************
-//    Scan and Producer Events
+//    Setdefault
 //*********************************************************************************
 
-#ifdef INPUT
-
-void PESetDefault(void)
+void SetDefault(void)
 {
+#ifdef ACE8C
     far overlay BYTE a, i,j;
-    
+    scandelay = 0;
+    EEPROMWrite((int)&DEBOUNCE, 0);
     for (a=0; a<128; a+=64)
     {
         for (j=0; j<64; j+=8) {
+            GP_block[j] = (a+j)>>3; 
+            GP_block[j+1] = 0;
             for (i=0; i<6; i++)
-                GP_block[j+i] = ND.nodeId[5-i];
-            GP_block[j+6] = 0;
-            GP_block[j+7] = (a+j)>>3; 
+                GP_block[j+i+2] = ND.nodeId[i];
         }
-        ProgramMemoryWrite((unsigned short long)&PETable[a],64,(BYTE * far)&GP_block[0]);
+        ProgramMemoryWrite((unsigned short long)&EventTable[a],64,(BYTE * far)&GP_block[0]);
     }
-}
-
-void PEReadEvent(unsigned int evno)
-{
-    far overlay BYTE a, i;
-    if (evno>=16) {
-        sendack(ACK_NODATA, CB_SourceNID);
-        return;
-    }
-    a = LO(evno)<<3;
-    i = LO(a) & 0x3F;
-    ProgramMemoryRead((unsigned short long)&PETable[a&0x40],64,(BYTE * far)&GP_block[0]);
-    CB_FrameType = FT_DAA | CB_SourceNID;
-    CB_SourceNID = ND.nodeIdAlias;
-    CB_data[0] = DAA_PEWRITEH;
-    CB_data[1] = GP_block[i];
-    CB_data[2] = GP_block[i+1];
-    CB_data[3] = GP_block[i+2];
-    CB_data[4] = GP_block[i+3];
-    CB_data[5] = GP_block[i+4];
-    CB_data[6] = GP_block[i+5];
-    CB_data[7] = GP_block[i+6];
-    CB_datalen = 8;
-    while (SendMessage()==0) ;
-    CB_data[0] = DAA_PEWRITEL;
-    CB_data[1] = GP_block[i+7];
-    CB_data[2] = HI(evno);
-    CB_data[3] = LO(evno);
-    CB_datalen = 4;
-    while (SendMessage()==0) ;
-}
-
-// event stored in 8 bytes of event global
-
-void PEWriteEvent(unsigned int evno)
-{
-    far overlay BYTE a, i, j;
-    if (evno>=16) {
-        sendack(ACK_NOSPACE, CB_SourceNID);
-        return;
-    }
-    a = LO(evno)<<3;
-    i = LO(a) & 0x3F;
-    ProgramMemoryRead((unsigned short long)&PETable[a&0x40],64,(BYTE * far)&GP_block[0]);
-    for (j=0; j<8; j++)
-        GP_block[i+j] = event[j];
-    ProgramMemoryWrite((unsigned short long)&PETable[a&0x40],64,(BYTE * far)&GP_block[0]);
-    sendack(ACK_OK,DNID);
-}
-
-// overwrite with all 0xFF
-
-void PEEraseEvent(unsigned int evno)
-{
+#endif
+#ifdef SERVO
     far overlay BYTE i;
-    event[0] = 0xFF;
-    event[1] = 0xFF;
-    event[2] = 0xFF;
-    event[3] = 0xFF;
-    event[4] = 0xFF;
-    event[5] = 0xFF;
-    event[6] = 0xFF;
-    event[7] = 0xFF;
-    PEWriteEvent(evno);
+    EraseAll();
+    event[1] = 0;
+    for (i=0; i<6; i++)
+        event[i+2] = ND.nodeId[i];
+    for (i=0; i<16; i++) {
+        event[0] = i;
+        event[8] = (i>>1) | ((i&1)<<3);
+        SaveEvent((BYTE * far)event);
+    }
+    for (i=0; i<16; i++) {
+        servopos[i] = 0;
+        EEPROMWrite((int)&SERVOPOS[i], 0);
+    }
+#endif
+#ifdef ACC8
+    far overlay BYTE i;
+    EraseAll();
+    event[1] = 0;
+    for (i=0; i<6; i++)
+        event[i+2] = ND.nodeId[i];
+    for (i=0; i<16; i++) {
+        event[0] = i;
+        event[8] = (i>>1) | ((i&1)<<3);
+        SaveEvent((BYTE * far)event);
+    }
+#endif
 }
+
+//*********************************************************************************
+//    INPUT module code
+//*********************************************************************************
+
+#ifdef ACE8C
 
 // scan and debounce inputs
 // return true if a CAN packet is sent, so it can also be acted upon in this module
@@ -573,9 +490,6 @@ BOOL scan(void)
     far overlay BOOL t;
 
     Row = PORTC;
-#ifdef TSOP
-    Row &= 0x7F;
-#endif
     Bitcng = ~(Row ^ PrevInput1) & ~(Row ^ PrevInput2) & ~(Row ^ PrevInput3) & (Row ^ OutputState);
     PrevInput3 = PrevInput2;
     PrevInput2 = PrevInput1;
@@ -591,7 +505,7 @@ BOOL scan(void)
             CB_datalen = 8;
             t = FALSE;
             for (i=0; i<8; i++) {
-                CB_data[i] = PETable[j+i];
+                CB_data[i] = EventTable[j+7-i];
                 if (CB_data[i]!=0xFF)
                     t = TRUE;
             }
@@ -612,10 +526,6 @@ BOOL scan(void)
 //  Main packet handling is here
 //*********************************************************************************
 
-rom unsigned int bits[10] = {
-    0x03FE, 0x03FD, 0x03FB, 0x03F7, 0x03EF, 0x03DF, 0x03BF, 0x037F, 0x02FF, 0x01FF
-};
-
 void Packet(void)
 {
     far overlay BYTE i;
@@ -623,7 +533,7 @@ void Packet(void)
     if (CB_SourceNID == ND.nodeIdAlias) { // conflict
         if ((CB_FrameType&0x8000)==0x0000) { // CIM
             CB_SourceNID = ND.nodeIdAlias;
-            CB_FrameType = FT_RIM;
+            CB_FrameType = FT_RID;
             CB_datalen = 0;
             while (SendMessage()==0) ;
         }
@@ -635,7 +545,7 @@ void Packet(void)
     }
     else if (CB_FrameType == FT_EVENT) {
        canTraffic = 1;
-#ifndef INPUT
+#ifndef ACE8C
        if (LEARN == SW_ON) {            // in learn mode
             if (UNLEARN==SW_ON) {        // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
@@ -666,290 +576,141 @@ void Packet(void)
             Find((BYTE * far)&CB_data[0]);
         }
 #endif
-/*
-        // send debug packet
-        CB_SourceNID = ND.nodeIdAlias;
-        CB_FrameType = 0xF000;
-        CB_datalen = 4;
-        CB_data[0] = LEARN;
-        CB_data[1] = UNLEARN;
-        CB_data[2] = SelectionSwitches();
-        CB_data[3] = PUSHBTN;
-        while (SendMessage()==0) ;
-*/
     }
 }
 
-void DAA_Packet(void)
+void DatagramPacket(void)
 {
-    far overlay BYTE i, t, tmp;
-
-    if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data block
-        if (DNID!=CB_SourceNID) {
-           sendack(ACK_ALIASERROR, CB_SourceNID);
-           sendack(ACK_ALIASERROR, DNID);
-        }
-        else {
-            t = CB_data[0];
-            blocks &= bits[t];
-            t = t * 7;
-            for (i = 1; i<8 && t<64; i++)
-                GP_block[t++] = CB_data[i];
-            if (blocks==0) {
-                DisableInterrupts();
-                ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
-                EnableInterrupts();
-                sendack(ACK_OK,DNID);    // OK
-            }
-        }
+    far overlay BYTE i;
+    if (DNID == -1)
+        DNID = CB_SourceNID;
+    else if (DNID != CB_SourceNID) {
+        sendnack(CB_SourceNID,99);
         return;
     }
-
-    switch(CB_data[0]) {
-    case DAA_UPGSTART: // program upgrade
-        DisableInterrupts();
-        Loader();               // call loader, never returns here
-        // break;
-
-    case DAA_REBOOT:
-        // re-start the program
-        _asm
-            reset
-            goto 0x000000
-        _endasm
-        break;
-
-    case DAA_UPGREAD: // single block read
-        sendblock(CB_SourceNID);
-        break;
-
-    case DAA_UPGADDR: // single block write
-        DNID = CB_SourceNID;
-        UP(GP_address) = CB_data[1];
-        HI(GP_address) = CB_data[2];
-        LO(GP_address) = CB_data[3];
-        blocks = 0x03FF;
-        timer100 = 0;
-        break;
-
-    case DAA_DEFAULT:
-#ifdef INPUT
-        PESetDefault();
+    for (i=0; i<CB_datalen && dgcnt<72; i++)
+        GP_block[dgcnt++] = CB_data[i];
+    if ((CB_FrameType&0xF000) == FT_DGL || (CB_FrameType&0xF000) == FT_DGS) { // end of datagram
+        DNID = -1;
+        dgcnt = 0;
+        if (GP_block[0] == DG_MEMORY) {
+            UP(GP_address) = GP_block[3];
+            HI(GP_address) = GP_block[4];
+            LO(GP_address) = GP_block[5];
+            if (GP_block[1] == DGM_WRITE) {
+                // write data
+#ifndef ACE8C
+                if (GP_block[6] == 0) { // event data
+                    WriteAllEvents(GP_address);
+                    sendack(CB_SourceNID);
+                    return;
+                }
 #endif
-        sendack(ACK_OK, CB_SourceNID);
-        break;
-
-    case DAA_PEERASE:
-#ifdef INPUT
-        event[0] = 0xFF;
-        event[1] = 0xFF;
-        event[2] = 0xFF;
-        event[3] = 0xFF;
-        event[4] = 0xFF;
-        event[5] = 0xFF;
-        event[6] = 0xFF;
-        event[7] = 0xFF;
-        PEWriteEvent(((unsigned int)CB_data[1]<<8) | CB_data[2]);
-#else
-        sendack(ACK_OK, CB_SourceNID);
+#ifdef ACE8C
+                if (GP_block[6] == 0) { // event data
+                    GP_address += (unsigned short long)&EventTable[0];
+                }
 #endif
-        break;
-
-    case DAA_PEREAD:
-#ifdef INPUT
-        PEReadEvent(((unsigned int)CB_data[1]<<8) | CB_data[2]);
-#else
-        sendack(ACK_NODATA, CB_SourceNID);
+                if (GP_block[6] == 0xFE || GP_block[6] == 0 ) {
+                    ProgramMemoryWrite(GP_address, 64, (BYTE * far)&GP_block[7]);
+                    sendack(CB_SourceNID);
+                    return;
+                }
+#ifdef ACE8C
+                if (GP_block[6] == 1) { // debounce
+                    scandelay = GP_block[7];
+                    EEPROMWrite((int)&DEBOUNCE, scandelay);
+                    sendack(CB_SourceNID);
+                    return;
+                }
 #endif
-        break;
-
-    case DAA_PEWRITEH:
-#ifdef INPUT
-        event[0] = CB_data[1];
-        event[1] = CB_data[2];
-        event[2] = CB_data[3];
-        event[3] = CB_data[4];
-        event[4] = CB_data[5];
-        event[5] = CB_data[6];
-        event[6] = CB_data[7];
-        goto PEW;
-
-    case DAA_PEWRITEL:
-        event[7] = CB_data[1];
-        HI(eventindex) = CB_data[2];
-        LO(eventindex) = CB_data[3];
-PEW:
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt++;
-            timer100 = 0;
-            return;
-        }
-        eventcnt = 0;
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            return;
-        }
-        PEWriteEvent(eventindex);
-#else
-        sendack(ACK_NOSPACE, CB_SourceNID);
-#endif
-        break;
-
-    case DAA_NVREAD: // Node variable read
 #ifdef SERVO
-        if (CB_data[1] <= 26) {
-            tmp = EEPROMRead(CB_data[1]); 
-            CB_FrameType = FT_DAA | CB_SourceNID;
-            CB_SourceNID = ND.nodeIdAlias;
-            CB_datalen = 3;
-            CB_data[0] = DAA_NVREPLY;
-            // CB_data[1] = CB_data[1];
-            CB_data[2] = tmp;
-            while (ECANSendMessage()==0) ;
-            return;
-        }
+                if (GP_block[6] == 1) { // servo position data
+                    for (i=0; i<16; i++) {
+                        servopos[i] = GP_block[i+7];
+                        EEPROMWrite((int)&SERVOPOS[i], servopos[i]);
+                    }
+                    sendack(CB_SourceNID);
+                    return;
+                }
 #endif
-
-#ifdef INPUT
-        if (CB_data[1] == 0) {
-            tmp = EEPROMRead(CB_data[1]); 
-            CB_FrameType = FT_DAA | CB_SourceNID;
-            CB_SourceNID = ND.nodeIdAlias;
-            CB_datalen = 3;
-            CB_data[0] = DAA_NVREPLY;
-            // CB_data[1] = CB_data[1];
-            CB_data[2] = tmp;
-            while (ECANSendMessage()==0) ;
-            return;
-        }
+            }
+            else if (GP_block[1] == DGM_READ) {
+                if (GP_block[6]==0xFF) { // XML file
+                    // read XML file
+                    GP_address += (unsigned short long)&xml[0];
+                    i = GP_block[7];
+                    ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
+                }
+#ifndef ACE8C
+                if (GP_block[6] == 0) { // event data
+                    i = GP_block[7];
+                    ReadAllEvents(GP_address);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
+                }
 #endif
-        sendack(ACK_NODATA, CB_SourceNID); 
-        break;
-
-    case DAA_NVWRITE: // Node variable write byte
+#ifdef ACE8C
+                if (GP_block[6] == 0) { // event data
+                    GP_address += (unsigned short long)&EventTable[0];
+                }
+#endif
+                if (GP_block[6] == 0xFE || GP_block[6] == 0 ) {
+                    i = GP_block[7];
+                    ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
+                }
+#ifdef ACE8C
+                if (GP_block[6] == 1) { // debounce
+                    GP_block[7] = scandelay;
+                    StartSendBlock(1+7, CB_SourceNID);
+                    return;
+                }
+#endif
 #ifdef SERVO
-        if (CB_data[1] <= 26) {
-            EEPROMWrite(CB_data[1], CB_data[2]);
-            InitRamFromEEPROM();
-            sendack(ACK_OK, CB_SourceNID);
-            return;
-        }
+                if (GP_block[6] == 1) { // servo position data
+                    for (i=0; i<16; i++)
+                        GP_block[i+7] = servopos[i];
+                    StartSendBlock(16+7, CB_SourceNID);
+                    return;
+                }
 #endif
-#ifdef INPUT
-        if (CB_data[1] == 0) {
-            scandelay = CB_data[2];
-            EEPROMWrite(CB_data[1], scandelay);
-            sendack(ACK_OK, CB_SourceNID);
-            return;
-        }
-#endif
-        sendack(ACK_NOSPACE, CB_SourceNID);
-        break;
-
-
-    case DAA_CEREADH: // Event read
-#ifdef INPUT
-        sendack(ACK_NODATA, CB_SourceNID); 
-#else
-        event[0] = CB_data[1];
-        event[1] = CB_data[2];
-        event[2] = CB_data[3];
-        event[3] = CB_data[4];
-        event[4] = CB_data[5];
-        event[5] = CB_data[6];
-        event[6] = CB_data[7];
-        goto CER;
-
-    case DAA_CEREADL: // Event read
-        event[7] = CB_data[1];
-        HI(eventindex) = CB_data[2];
-        LO(eventindex) = CB_data[3];
-CER:
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt++;
-            timer100 = 0;
-            return;
-        }
-        eventcnt = 0;
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            return;
-        }
-        ReadEvent(&event[0], eventindex);
-#endif
-        break;
-
-    case DAA_CEERASEH: // Event erase
-#if !defined(INPUT)
-        event[0] = CB_data[1];
-        event[1] = CB_data[2];
-        event[2] = CB_data[3];
-        event[3] = CB_data[4];
-        event[4] = CB_data[5];
-        event[5] = CB_data[6];
-        event[6] = CB_data[7];
-        goto CEE;
-
-    case DAA_CEERASEL: // Event erase
-        event[7] = CB_data[1];
-CEE:
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt++;
-            timer100 = 0;
-            return;
-        }
-        eventcnt = 0;
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            return;
-        }
-        EraseEvent(&event[0]);
-        sendack(ACK_OK, DNID);
-#else
-        sendack(ACK_NOSPACE, CB_SourceNID); 
-#endif
-        break;
-
-    case DAA_CEWRITEH: // Event write
-#if !defined(INPUT)
-        event[0] = CB_data[1];
-        event[1] = CB_data[2];
-        event[2] = CB_data[3];
-        event[3] = CB_data[4];
-        event[4] = CB_data[5];
-        event[5] = CB_data[6];
-        event[6] = CB_data[7];
-        goto CEW;
-
-    case DAA_CEWRITEL: // Event write
-        event[7] = CB_data[1];
-        event[8] = CB_data[3]; // data
-CEW:
-        if (eventcnt==0) {
-            DNID = CB_SourceNID;
-            eventcnt++;
-            timer100 = 0;
-            return;
-        }
-        eventcnt = 0;
-        if (DNID != CB_SourceNID) {
-            sendack(ACK_ALIASERROR, CB_SourceNID);
-            sendack(ACK_ALIASERROR, DNID);
-            return;
-        }
-        SaveEvent(event);
-        sendack(ACK_OK, CB_SourceNID);
-#else
-        sendack(ACK_NOSPACE, CB_SourceNID); 
-#endif
-        break;
-    }
+            }
+            else if (CB_data[1] == DGM_UPDCOMP) {
+		        // change the valid program flag
+		        ProgramMemoryRead(STARTADDRESS,64,(BYTE * far)GP_block);
+		        if (GP_block[0x0027]!=0) {
+		            GP_block[0x0027] = 0;
+		            ProgramMemoryWrite(STARTADDRESS,64,(BYTE * far)GP_block);
+		        }
+		        // start the program
+		        _asm
+		            reset
+		            goto 0x000000
+		        _endasm
+            }
+            else if (CB_data[1] == DGM_REBOOT) {
+                // re-start the program
+                _asm
+                    reset
+                    goto 0x000000
+                _endasm
+            }
+            else if (CB_data[1] == DGM_LOADER) { // program upgrade
+                INTCONbits.GIEH = 0;    // disable all interrupts          
+                INTCONbits.GIEL = 0;
+                Loader();               // call loader, never returns here
+            }
+            else if (CB_data[1] == DGM_FACTORY) { // defaults
+		        SetDefault();
+		        sendack(CB_SourceNID);
+            }
+        } // memory op
+        sendnack(CB_SourceNID,CB_data[1]);
+    } // end of datagram
 }
 
 //*******************************************************************************
@@ -984,7 +745,7 @@ void EnableInterrupts(void)
     INTCONbits.GIEH = 1;    // enable all high priority interrupts          
     INTCONbits.GIEL = 1;    // enable all low priority interrupts
 #endif
-#ifdef INPUT
+#ifdef ACE8C
     INTCONbits.GIEH = 1;    // enable all high priority interrupts          
     INTCONbits.GIEL = 1;    // enable all low priority interrupts
 #endif
@@ -995,17 +756,6 @@ void EnableInterrupts(void)
 //*******************************************************************************
 
 #ifdef SERVO
-
-// Set default servo endpoints
-
-void servo_unlearn(void) {
-    far overlay BYTE i;
-
-    for (i = 0; i<NUM_SERVOS; i++) {
-        EEPROMWrite((int)&SERVO_ON[i], SERVO_MID);
-        EEPROMWrite((int)&SERVO_OFF[i], SERVO_MID);
-    }
-}
 
 /*
  * Set servo endpoints
@@ -1046,11 +796,11 @@ void servo_setup(void) {
         if (UNLEARN==SW_ON) {
             // ISR updates position
             if (LEARN == SW_ON) { // Nearer 2ms endpoint
-                servo_ptr = (BYTE far *)&servo_off[servo];
+                servo_ptr = (BYTE far *)&servopos[servo<<1];
                 new_output |= BitMask[servo];
             } 
             else { // Nearer 1ms endpoint
-                servo_ptr = (BYTE far *)&servo_on[servo];
+                servo_ptr = (BYTE far *)&servopos[(servo<<1)+1];
                 new_output &= ~BitMask[servo];
             }
 	        if (PUSHBTN == SW_ON) { // Adjust servo position
@@ -1077,10 +827,10 @@ void servo_setup(void) {
             if (PUSHBTN == SW_ON) { // Check if we've already saved it
                 if (saved != servo) { // Store current setting in EEPROM
                     if (LEARN == SW_ON) { // Nearer 2ms endpoint
-                        addr = (BYTE)&SERVO_OFF[servo];
+                        addr = (BYTE)&SERVOPOS[servo<<1];
                     } 
                     else { // Nearer 1ms endpoint
-                        addr = (BYTE)&SERVO_ON[servo];
+                        addr = (BYTE)&SERVOPOS[(servo<<1)+1];
                     }
                     EEPROMWrite(addr, *servo_ptr);
                     saved = servo;
@@ -1098,16 +848,15 @@ void servo_setup(void) {
 //        MAIN
 //*********************************************************************************
 
+#ifdef SERVO
 void InitRamFromEEPROM(void)
 {
-#ifdef SERVO
     far overlay BYTE i;
-    for (i=0; i<8; i++) {
-        servo_on[i] = EEPROMRead((int)&SERVO_ON[i]);
-        servo_off[i] = EEPROMRead((int)&SERVO_OFF[i]);
+    for (i=0; i<16; i++) {
+        servopos[i] = EEPROMRead((int)&SERVOPOS[i]);
     }
-#endif
 }
+#endif
 
 void main(void) {
     far overlay BYTE i, j, k;
@@ -1126,12 +875,8 @@ void main(void) {
     TRISB = 0b00111011;
     PORTB = 0;
     PORTBbits.RB2 = 1;            // CAN recessive
-#ifdef INPUT
-#ifdef TSOP
-    TRISC = 0x7F;                 // 7 inputs, 1 output
-#else
+#ifdef ACE8C
     TRISC = 0xFF;                 // initially all inputs
-#endif
 #else
     TRISC = 0x00;                 // initially all outputs
 #endif
@@ -1161,19 +906,18 @@ void main(void) {
     BitMask[5] = 0x20;
     BitMask[6] = 0x40;
     BitMask[7] = 0x80;
-
-    InitRamFromEEPROM();
-
 #ifdef SERVO
+    InitRamFromEEPROM();
     new_output = 0;
     servo_state = 19;
     next_portc = 0;
     pulseon = 0;
     pulseoutput = 0;
-    // Setup TMR1 for servo pulse timing, 16MHz Fosc = 4MHz Fcyc, 1:1 prescale
-    TMR1H = ((int)-4000) >> 8;
-    TMR1L = (int)-4000;
-    T1CON = 0b10000000;
+    pulsetimer = 0;
+    // Setup TMR1 for servo pulse timing, 16MHz Fosc = 4MHz Fcyc, 1:2 prescale
+    TMR1H = 0; // 65536*2 msec before 1st interrupt
+    TMR1L = 0;
+    T1CON = 0b10010000;
 
     // Enable TMR1 interrupts at high priority
     T1CONbits.TMR1ON = 1;
@@ -1181,7 +925,7 @@ void main(void) {
     PIE1bits.TMR1IE = 1;
     EnableInterrupts();		// enable interrupts
 #endif
-#ifdef INPUT
+#ifdef ACE8C
     timer13us = 10000/13;
     timerflag = 0;
     T1CON = 0x81;         // enable timer1, 16 bit mode, no prescaler
@@ -1195,11 +939,7 @@ void main(void) {
     EnableInterrupts();		// enable interrupts
     timer15ms = 0;
     scancount = scandelay = EEPROMRead((unsigned int)&DEBOUNCE);
-#ifdef TSOP
-    sendallbits = 0x7F;
-#else
     sendallbits = 0xFF;
-#endif
     OutputState = PORTC & 0x7F;
     PrevInput1 = PrevInput2 = PrevInput3 = OutputState;
 #endif
@@ -1209,46 +949,25 @@ void main(void) {
     YellowLEDOff();
     canTraffic = 0;
 
-#ifndef INPUT
-    // all zero after 1st programming chip
-    ProgramMemoryRead((unsigned long)&table[0], 64, (BYTE * far)GP_block);
-    j = 0;
-    for (i=0; i<64; i++)
-        j |= GP_block[i];
-    if (j == 0) {
-        EraseEvent(event);
-    }
-
+#ifndef ACE8C
     // Test for power up mode, Unlearn switch on, learn switch off
     if ((LEARN == SW_OFF) && (UNLEARN == SW_ON)) {
-        event[0] = 0;
-        event[1] = 0;
-        event[2] = 0;
-        event[3] = 0;
-        event[4] = 0;
-        event[5] = 0;
-        event[6] = 0;
-        event[7] = 0;
-        event[8] = 0;
-        event[9] = 0;
-        EraseEvent(event);
+        EraseAll();
 #ifdef SERVO
-        if (PUSHBTN == SW_ON) { // Unlearn all servo settings
-            servo_unlearn();
-        }
+//        if (PUSHBTN == SW_ON) // Unlearn all servo settings
+//            SetDefault();
 #endif
     }
 #endif
 
+#ifdef SERVO
     // Unlearn switch on, learn switch on
     // Enter servo setting mode
-/*
-    if ((LEARN == SW_ON) && (UNLEARN == SW_ON)) {
-        servo_setup();
-    }
-*/
-    timer100 = 0;
-    eventcnt = 0;
+//    if ((LEARN == SW_ON) && (UNLEARN == SW_ON))
+//        servo_setup();
+#endif
+    dgcnt = 0;
+    DNID = -1;
     SendNSN(FT_INIT);
 
     // Simple loop looking for a received CAN frame
@@ -1261,12 +980,6 @@ void main(void) {
                 YellowLEDOff();
             }
             canTraffic = 0;
-
-            if (blocks != 0 && timer100>20) { // send timeout ack
-                sendack(ACK_TIMEOUT, DNID); // timeout
-                blocks = 0;
-            }
-
 #ifdef ACC4
             if (pulseon) { // end sending a pulse 100 msec wide
                 PORTC = 0;
@@ -1288,18 +1001,13 @@ void main(void) {
             }
 #endif
 #ifdef SERVO
-            if (pulsetimer) { // sending pulses for 500 msec
-                pulsetimer--;
-                if (pulsetimer == 0)
-                    pulseon = 0;  // end of pulses, 100 msec before next
-            }
-            else if (pulseoutput) { // select another to pulse
+            if (pulsetimer==0 && pulseoutput) { // select another to pulse
                 for (i=0; i<8; i++) {
                     if (pulseoutput&BitMask[i]) {
                         pulseoutput &= ~BitMask[i]; // clear request bit 
                         pulseon = BitMask[i];
                         servo_index = i;
-                        pulsetimer = 6;             // 500 msec of pulses
+                        pulsetimer = 25;         // no of 20 msec of pulses
                         break;                        
                     }
                 }
@@ -1307,7 +1015,7 @@ void main(void) {
 #endif
         }
 
-#ifdef INPUT 
+#ifdef ACE8C 
         // 10 msec timer
         if (timerflag) { 
             timerflag--;
@@ -1333,7 +1041,7 @@ void main(void) {
                             j += 8;
                         t = FALSE;
                         for (k=0; k<8; k++) {
-                            CB_data[k] = PETable[j+k];
+                            CB_data[k] = EventTable[j+k];
                             if (CB_data[k]!=0xFF)
                                 t = TRUE;
                         }
@@ -1348,21 +1056,12 @@ void main(void) {
             }
         }
 #endif
+        EndSendBlock();
 
         if (ECANReceiveMessage()) {
-            if (CB_SourceNID == ND.nodeIdAlias) {    // conflict
-                if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
-                    CB_SourceNID = ND.nodeIdAlias;
-                    CB_FrameType = FT_RIM;
-                    CB_datalen = 0;
-                    while (SendMessage()==0) ;
-                }
-                else
-                    CheckAlias(1);                  // get new alias
-            }
-            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+            if ((CB_FrameType&0xCFFF) == (FT_DG | ND.nodeIdAlias) )  {
                 canTraffic = 1;
-                DAA_Packet();
+                DatagramPacket();
             }
             else
                 Packet();

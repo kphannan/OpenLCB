@@ -49,18 +49,21 @@ typedef unsigned char BYTE;
 #define LOWD(n) *((unsigned int *)&n)
 
 //        Startup code and interrupts
-//        These addresses will change when a boot loader is implemented
 
-#define NODEDATA 0x0040
+#define LOADERADDRESS  0x000030
+#define NODEDATA       0x000040
 #define STARTADDRESS   0x001000
 #define HIGHINTADDRESS 0x001008
 #define LOWINTADDRESS  0x001018
-#define LOADERADDRESS  0x000030
+
+#define ECANBuffer0Full (TXB0CON & 0x08)
+#define ECANBuffersFull ((TXB0CON & 0x08) && (TXB1CON & 0x08))
 
 //*********************************************************************************
 //    define RAM storage
 //*********************************************************************************
 
+#pragma udata
 typedef enum _ECAN_MSG_FLAGS  {
     ECAN_OVERFLOW      = 0b00001000,
     ECAN_INVALID_MSG   = 0b00010000
@@ -73,6 +76,10 @@ BYTE CB_data[8];                 // up to 8 bytes of data
 BYTE CB_datalen;                 // length of data
 ECAN_MSG_FLAGS CB_msgFlags;      // message flags or'ed together
 
+BYTE SendBlockCount;
+BYTE SendBlockMax;
+unsigned int SendBlockNID;
+
 // Data stored in Program Memory has restrictions
 // Program Memory erase is for aligned 64 byte blocks
 // Write is 8 bytes at a time
@@ -84,13 +91,10 @@ struct {                         // ram copy of nodedata
 } ND;
 
 #pragma udata blockdata
-#pragma udata rt
-BYTE far GP_block[64];	                 // for program memory reads and writes
+BYTE far GP_block[72];	              // for program memory reads and writes
 far unsigned short long GP_address;      // block read or write address
 
-#pragma udata
 #pragma udata ovrly
-#pragma romdata
 
 //*********************************************************************************
 //        Forward References
@@ -112,20 +116,20 @@ BOOL ReceiveMessage(void);
 //    Timer 3	1/10 th seconds
 //*********************************************************************************
 
-// 100 msec timer
+// 25 msec timer
 
 void Timer3Init(void)
 {
     T3CON = 0b00110001;             // Timer 3 16bit R/W, 16MHz/32
-    TMR3H = (0x10000-50000)>>8;     // 50000 for (16,000,000/32/10)
-    TMR3L = (0x10000-50000) & 0xFF;
+    TMR3H = (0x10000-12500)>>8;     // 50000 for (16,000,000/32/40)
+    TMR3L = (0x10000-12500) & 0xFF;
 }
 
 BOOL Timer3Test(void)
 {
     if (PIR2bits.TMR3IF) {
-        TMR3H = (0x10000-50000)>>8;     // 50000 for (16,000,000/32/10)
-        TMR3L = (0x10000-50000) & 0xFF;
+        TMR3H = (0x10000-12500)>>8; // 50000 for (16,000,000/32/40)
+        TMR3L = (0x10000-12500) & 0xFF;
         PIR2bits.TMR3IF = 0;
         return TRUE;
     }
@@ -137,7 +141,6 @@ BOOL Timer3Test(void)
 //*********************************************************************************
 
 // read a block of up to 255 bytes
-
 void ProgramMemoryRead(unsigned short long adr, BYTE len, BYTE * far buffer)
 {
     TBLPTRL = LO(adr);
@@ -208,7 +211,7 @@ void ProgramMemoryWrite(unsigned short long adr, BYTE len, BYTE * far buffer)
 void CheckAlias(BYTE cs)
 {
     far overlay BYTE s = cs;
-    far overlay unsigned int i;
+    far overlay BYTE i;
     far overlay BYTE t[6];
     far overlay unsigned long sum;
 
@@ -259,39 +262,57 @@ tryagain:
         ND.nodeIdAlias ^= *((unsigned int *)&ND.seedNodeId[1]) >> 4;
         ND.nodeIdAlias ^= *((unsigned int *)&ND.seedNodeId[3]);
         ND.nodeIdAlias ^= *((unsigned int *)&ND.seedNodeId[4]) >> 4;
-        ND.nodeIdAlias &= 0x0FFF; 
         s = 1;	// set flag to save on exit
     }
 
     // send out the Alias in 4 CIM packets
-    CB_SourceNID = ND.nodeIdAlias;  // alias
-    CB_FrameType = FT_CIM0;
-    CB_FrameType |= *((unsigned int *)&ND.nodeId[4]) >> 4;
-    CB_datalen = 0;
-    while(SendMessage()==0) ;
-    CB_FrameType =  FT_CIM1;
-    CB_FrameType |= *((unsigned int *)&ND.nodeId[3]) & 0x0FFF;
-    while(SendMessage()==0) ;
-    CB_FrameType =  FT_CIM2;
-    CB_FrameType |= *((unsigned int *)&ND.nodeId[1]) >> 4;
-    while(SendMessage()==0) ;
-    CB_FrameType =  FT_CIM3;
-    CB_FrameType |= *((unsigned int *)&ND.nodeId[0]) & 0x0FFF;
-    while(SendMessage()==0) ;
-
-    // wait 1 second to see if anyone objects
-    Timer3Init();
-    t[0] = 0;
-    while (t[0] < 10) { // 1 second time out
-        if (Timer3Test())
-            t[0]++;
-        if (ReceiveMessage()) {
-            if (CB_SourceNID==ND.nodeIdAlias) { // someone objects
-                goto tryagain;
+    ND.nodeIdAlias &= 0x0FFF; 
+    i = 0;
+    while(TRUE) {
+        if (!ECANBuffer0Full) {
+            CB_SourceNID = ND.nodeIdAlias;  // alias
+            CB_datalen = 0;
+            if (i==0) {
+                CB_FrameType = FT_CIM0;
+                CB_FrameType |= *((unsigned int *)&ND.nodeId[4]) >> 4;
+                SendMessage();
+                i=1;
             }
+            else if (i==1) {
+                CB_FrameType =  FT_CIM1;
+                CB_FrameType |= *((unsigned int *)&ND.nodeId[3]) & 0x0FFF;
+                SendMessage();
+                i=2;
+            }
+            else if (i==2) {
+                CB_FrameType =  FT_CIM2;
+                CB_FrameType |= *((unsigned int *)&ND.nodeId[1]) >> 4;
+                SendMessage();
+                i=3;
+            }
+            else if (i==3) {
+                CB_FrameType =  FT_CIM3;
+                CB_FrameType |= *((unsigned int *)&ND.nodeId[0]) & 0x0FFF;
+                SendMessage();
+                i=4;
+            }
+            else if (i==4) { // start the timer
+                Timer3Init();
+                t[0] = 0;
+                i=5;
+           }
+        }
+        if (ReceiveMessage()) {
+            if (CB_SourceNID==ND.nodeIdAlias) // someone objects
+                goto tryagain;
+        }
+        if (Timer3Test()) {
+            t[0]++;
+            if (t[0]>6)
+                break;
         }
     }
-
+     
     // save Alias in Flash for next power on
     // a small chance of losing the unique nodeId when it erases
     if (s==1) {
@@ -321,20 +342,23 @@ void SendNSN(unsigned int ft)
 //    SendAck	Send ACk or Error back to Caller
 //*********************************************************************************
 
-// 0 for OK 
-// 1 for CRC error (not used)
-// 2 for timeout 
-// 3 for no data 
-// 4 for no space. 
-// 5 wrong SourceAlias
-
-void sendack(BYTE v, unsigned int DNID)
+void sendack(unsigned int DNID)
 {
     CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_DAA | DNID;
-    CB_datalen = 2;
-    CB_data[0] = DAA_ACK;
-    CB_data[1] = v;
+    CB_FrameType = FT_DGS | DNID;
+    CB_datalen = 1;
+    CB_data[0] = DG_OK;
+    while (SendMessage()==0) ;    
+}
+
+void sendnack(unsigned int DNID, unsigned int err)
+{
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_FrameType = FT_DGS | DNID;
+    CB_datalen = 3;
+    CB_data[0] = DG_ERR;
+    CB_data[1] = HI(err);
+    CB_data[2] = LO(err);
     while (SendMessage()==0) ;    
 }
 
@@ -345,34 +369,39 @@ void sendack(BYTE v, unsigned int DNID)
 // Send a block of 64 bytes from Program memory to the PC 
 // Node has just received a send block request
 
-void sendblock(unsigned int DNID)
+void StartSendBlock(BYTE l, int DNID)
 {
-    far overlay BYTE i;
-    far overlay BYTE j;
+    GP_block[1] = 0x30; // read reply
+    SendBlockCount = 0;
+    SendBlockMax = l;
+    SendBlockNID = DNID;
+}
 
-    UP(GP_address) = CB_data[1];
-    HI(GP_address) = CB_data[2];
-    LO(GP_address) = CB_data[3];
-
-    // get the data
-    ProgramMemoryRead(GP_address, 64, (BYTE *)&GP_block[0]);
-
-    // send data packets
-    for (i=0, j=0; i<64; i+=7, j++) {
-        // send data bytes
-        CB_SourceNID = ND.nodeIdAlias;
-        CB_FrameType = FT_DAA | DNID;
-        CB_datalen = 8;
-        CB_data[0] = DAA_DATA | j;
-        CB_data[1] = GP_block[i+0];
-        CB_data[2] = GP_block[i+1];
-        CB_data[3] = GP_block[i+2];
-        CB_data[4] = GP_block[i+3];
-        CB_data[5] = GP_block[i+4];
-        CB_data[6] = GP_block[i+5];
-        CB_data[7] = GP_block[i+6];
-        while (SendMessage()==0) ;    
+void EndSendBlock(void)
+{
+    if (SendBlockCount>=SendBlockMax || ECANBuffersFull)
+        return;
+    // send data bytes
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_FrameType = FT_DG | SendBlockNID;
+    CB_datalen = 8;
+    if (SendBlockMax-SendBlockCount <= 8) {
+        CB_datalen = SendBlockMax-SendBlockCount;
+        if (SendBlockMax<=8)
+            CB_FrameType = FT_DGS | SendBlockNID;
+        else
+            CB_FrameType = FT_DGL | SendBlockNID;
     }
+    CB_data[0] = GP_block[SendBlockCount+0];
+    CB_data[1] = GP_block[SendBlockCount+1];
+    CB_data[2] = GP_block[SendBlockCount+2];
+    CB_data[3] = GP_block[SendBlockCount+3];
+    CB_data[4] = GP_block[SendBlockCount+4];
+    CB_data[5] = GP_block[SendBlockCount+5];
+    CB_data[6] = GP_block[SendBlockCount+6];
+    CB_data[7] = GP_block[SendBlockCount+7];
+    SendBlockCount += 8;
+    SendMessage();    
 }
 
 //*********************************************************************************
@@ -383,9 +412,9 @@ void sendblock(unsigned int DNID)
 
 void Loader(void)
 {
-    sendack(ACK_OK,CB_SourceNID);
+    sendack(CB_SourceNID);
     _asm
-        goto 0x000030
+        goto LOADERADDRESS
     _endasm
 }
 

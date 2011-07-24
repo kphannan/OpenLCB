@@ -1,5 +1,5 @@
 /*
-    OpenLCB
+    OpenLCB - Only extended frames
 
     Copyright (C) 2009    Mike Johnson
 
@@ -100,8 +100,11 @@ void ECANInitialize(void)
 // Result:          TRUE, if an empty buffer was found and loaded
 //*********************************************************************************
 
-// Only extended frames
+#define ECANBuffer0Full (TXB0CON & 0x08)
+#define ECANBuffersFull ((TXB0CON & 0x08) && (TXB1CON & 0x08))
 
+// only 2 buffers used to maintain transmit packet order
+// buffer 0 always used before buffer 1
 BOOL ECANSendMessage(void)
 {
     far overlay BYTE * far ptr;       // ECAN buffer pointers
@@ -112,10 +115,10 @@ BOOL ECANSendMessage(void)
     if (*ptr & 0x08) {
         ptr = (BYTE far *)&TXB1CON;
         if (*ptr & 0x08) {
-            ptr = (BYTE far *)&TXB2CON;
-            if (*ptr & 0x08) {
+            // ptr = (BYTE far *)&TXB2CON;
+            // if (*ptr & 0x08) {
                 return FALSE;
-            }
+            // }
         }
     }
 

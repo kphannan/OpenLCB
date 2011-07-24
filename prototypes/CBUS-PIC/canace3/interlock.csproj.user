@@ -5,7 +5,7 @@
     <StartWorkingDirectory>C:\CbusOpenLCB\interlock\</StartWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <StartArguments>test.txt test.c</StartArguments>
-    <StartWorkingDirectory>C:\CbusOpenLCB\canace3\</StartWorkingDirectory>
+    <StartArguments>test</StartArguments>
+    <StartWorkingDirectory>E:\OpenLCB\CBUS-PIC\canace3\</StartWorkingDirectory>
   </PropertyGroup>
 </Project>

@@ -24,117 +24,61 @@
 
 enum FT
 {
-    FT_CIM0    = 0x0000,   // Top 12 bits of NID
-    FT_CIM1    = 0x1000,   // 2nd top 12 bits of NID
-    FT_CIM2    = 0x2000,   // 3rd top 12 bits of NID
-    FT_CIM3    = 0x3000,   // lowest 12 bits of NID
-    FT_MR      = 0x7FFE,   // Reset mapping, not sure this is actually useful ?
-    FT_RIM     = 0x7FFF,   // RIM
-
-// Broadcast type
-
-// Misc
-    FT_RESET   = 0x8000,   // System reset
-    FT_VNSN    = 0x8001,   // Verify Node Serial Number 
-    FT_INIT    = 0x8002,   // Normal Initialization Complete
-    FT_BOOT    = 0x8003,   // Boot Loader Initialization Complete
-    FT_NSN     = 0x8004,   // Node Serial Number 
-
-// Accessory
-    FT_EVENT   = 0x8010,   // EVENT
+    FT_CIM0    = 0x7000,   // Top 12 bits of NID
+    FT_CIM1    = 0x6000,   // 2nd top 12 bits of NID
+    FT_CIM2    = 0x5000,   // 3rd top 12 bits of NID
+    FT_CIM3    = 0x4000,   // lowest 12 bits of NID
+    FT_RID     = 0x0700,   // Reserved ID
+    FT_VNSN    = 0x80AF,   // Verify Node Serial Number 
+    FT_INIT    = 0x908F,   // Normal Initialization Complete
+    FT_NSN     = 0x90BF,   // Node Serial Number 
+    FT_EVENT   = 0x82DF,   // EVENT - 82DF for JMRI
     FT_RFID    = 0x8011,   // RFID tag
-
-// Track commands
-    FT_TOF     = 0x8020,   // Track Off, broadcast from CS
-    FT_TON     = 0x8021,   // Track On or Normal operation, broadcast from CS
-    FT_ESTOP   = 0x8022,   // Track Stopped (em. stop)
-    FT_RTOF    = 0x8024,   // Request Track Off, from CAB
-    FT_RTON    = 0x8025,   // Request Track On or Normal operation, from CAB
-    FT_RESTP   = 0x8026,   // Request Emergency Stop ALL
-
-// CAB commands
-    FT_RLOC    = 0x8030,   // Request loco info
-    FT_STMOD   = 0x8031,   // Request speed step change
-    FT_DSPD    = 0x8032,   // Set Engine Speed/Dir
-    FT_DFUN    = 0x8033,   // Set engine functions
-    FT_PLOC    = 0x8034,   // Engine report from CS
-    FT_PLOCF   = 0x8035,   // Engine function report from CS
-    FT_KLOC    = 0x8036,   // Release loco
-
-// Consist commands
-    FT_PCON    = 0x8037,   // Consist Engine
-    FT_KCON    = 0x8038,   // Remove engine from consist
-
-// DCC programming
-    FT_RDCC3   = 0x8040,   // Request 3 byte DCC packet
-    FT_RDCC4   = 0x8041,   // Request 4 byte DCC packet
-    FT_RDCC5   = 0x8042,   // Request 5 byte DCC packet
-    FT_RDCC6   = 0x8043,   // Request 6 byte DCC packet
-
-// XpressNet
-    FT_XPRESSNET = 0x8050, // XpressNet raw message from a command station 
-
-// Other frame types
-    FT_DAA     = 0xE000,   // Destination Alias Addressed, message type in the data
+    FT_XPRESSNET = 0x8050, // XpressNet raw message from a command station
+    FT_NALLOC  = 0x8080,   // Nodenumber allocated
+    FT_IDCONS  = 0x824F,   // Identify Consumers
+    FT_IDPROD  = 0x828F,   // Identify Producers
+    FT_IDEVNTS = 0x82BF,   // Identify Events
+    FT_CONSIR  = 0x925F,   // Consumer Identify Range
+    FT_CONSID  = 0x926F,   // Consumer Identified
+    FT_PRODIR  = 0x929F,   // Producer Identify Range
+    FT_PRODID  = 0x92AF,   // Producer Identified
+    FT_DG      = 0xC000,   // Datagram first packets
+    FT_DGL     = 0xD000,   // Datagram last packet
+    FT_DGS     = 0xE000,   // Datagram single packet
     FT_STREAM  = 0xF000    // Stream data
 };
 
-// Destination Addressed, 1st byte of data has message type
-// 0123456789012
-// :X1EdddsssN
-
-enum DAA {
-    DAA_DATA   = 0x00,      // up to 0F, 7 bytes of data sequence number in low 4 bits
-    DAA_DATA1  = 0x01,
-    DAA_DATA2  = 0x02,
-    DAA_DATA3  = 0x03,
-    DAA_DATA4  = 0x04,
-    DAA_DATA5  = 0x05,
-    DAA_DATA6  = 0x06,
-    DAA_DATA7  = 0x07,
-    DAA_DATA8  = 0x08,
-    DAA_DATA9  = 0x09,
-    DAA_DATA10 = 0x0A,
-    DAA_DATA11 = 0x0B,
-    DAA_DATA12 = 0x0C,
-    DAA_DATA13 = 0x0D,
-    DAA_DATA14 = 0x0E,
-    DAA_DATA15 = 0x0F,
-    DAA_ACK      = 0x10,      // ack with status
-// Loader
-    DAA_UPGSTART = 0x20,      // enter loader
-    DAA_UPGRESET = 0x21,      // start program
-    DAA_UPGREAD  = 0x22,      // read 64 bytes
-    DAA_UPGADDR  = 0x23,      // write 64 bytes
-// Events
-    DAA_CEERASEH = 0x30,      // consumer erase events, High 7 bytes
-    DAA_CEERASEL = 0x31,      // consumer erase events, Low byte
-    DAA_CEREADH  = 0x32,      // consumer read events, High 7 bytes
-    DAA_CEREADL  = 0x33,      // consumer read events, Low byte, index, data length byte
-    DAA_CEWRITEH = 0x34,      // consumer write event, High 7 bytes
-    DAA_CEWRITEL = 0x35,      // consumer write event, Low byte, data length, up to 5 data bytes
-    DAA_PEERASE  = 0x36,      // producer erase event, index
-    DAA_PEREAD   = 0x37,      // producer read event, index
-    DAA_PEWRITEH = 0x38,      // producer write event, High 7 bytes
-    DAA_PEWRITEL = 0x39,      // producer write event, Low byte, index  
-// Node variables
-    DAA_NVREAD   = 0x40,      // read, 1 byte index
-    DAA_NVWRITE  = 0x41,      // set, 1 byte index + 1 byte data
-    DAA_NVREPLY  = 0x42,      // reply to read
-// Misc
-    DAA_NSN      = 0x50,      // Node serial number
-    DAA_DEFAULT  = 0x51,      // Reset (almost) everything to default values
-    DAA_REBOOT   = 0x52,      // Re-boot the module, after node ID write
-// DCC
-    DAA_XPRESSNET = 0x60      // Raw XpressNet command to a command station
+// Datagram protocol id, 1st byte of datagram
+enum DG {
+    DG_LOGMSG   = 0x01,
+    DG_LOGREPLY = 0x02,
+    DG_VNSN     = 0x0A,
+    DG_OIR      = 0x0C,
+    DG_TDE      = 0x0D,
+    DG_MEMORY   = 0x20,
+    DG_REMOTE   = 0x21,
+    DG_DISPLAY  = 0x28,
+    DG_IDEVNT   = 0x2B,
+    DG_PSI      = 0x2E,
+    DG_PSR      = 0x2F,
+    DG_SDP      = 0x4A,
+    DG_SR       = 0x4B,
+    DG_OK       = 0x4C,
+    DG_ERR      = 0x4D,
+    DG_SIQ      = 0x4E,
+    DG_SIR      = 0x4F,
 };
 
-enum ACK {
-    ACK_OK       = 0,         // OK
-    ACK_TIMEOUT  = 2,         // timeout on data transfer, 2 seconds
-    ACK_NODATA   = 3,         // The requested data does not exist 
-    ACK_NOSPACE  = 4,         // No space to store this data 
-    ACK_ALIASERROR= 5         // Wrong SourceAlias, probably 2 writes at the same time
+// Memory transfer datagram, protocol id = 0x20
+enum DGM {
+    DGM_WRITE  = 0x20,
+    DGM_REPLY  = 0x30,
+    DGM_READ   = 0x60,
+    DGM_UPDCOMP= 0xA4,
+    DGM_REBOOT = 0xA5,
+    DGM_FACTORY= 0xA6,
+    DGM_LOADER = 0xA7,
 };
 
 //*********************************************************************************

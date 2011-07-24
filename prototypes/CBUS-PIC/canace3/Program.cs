@@ -7,8 +7,8 @@ namespace interlock
 {
     class Program
     {
-        static string[] rpn = new string[121];
-        static bool[] states = new bool[121];
+        static string[] rpn = new string[129];
+        static bool[] states = new bool[129];
         static string inputfile;
         static int inputptr;
         static int nexttoken;
@@ -490,6 +490,9 @@ namespace interlock
                 token();
                 if (nexttoken == 0)
                     break;
+                while (nexttoken != ',')
+                    token();
+                token();
                 if (nexttoken < 1000)
                     Error(7, "Lever should be first thing on a line");
                 else 
@@ -594,6 +597,48 @@ namespace interlock
         }
         
         // *****************************************************************************************************
+        // write cfg
+        // *****************************************************************************************************
+
+        static void writecfg(string file)
+        {
+            int i;
+            string data = "00"; // no locking entry
+            int dataptr = 1;
+
+            StreamWriter swcfg = new StreamWriter(file);
+            swcfg.WriteLine("<Config version=\"1\">");
+            swcfg.WriteLine("<Nodenumber></Nodenumber>");
+            swcfg.WriteLine("<cdi><id></id><se na=\"Interlocks\" sp=\"1\" bu=\"#303\">"
+                + "<gr na=\"Lever-1\" rep=\"128\"><in na=\"Start\" si=\"2\"/></gr>"
+                + "<gr rep=\"#800\"><by na=\"Data\"/></gr></se></cdi>");
+            swcfg.Write("<Segment name=\"Interlocks\">");
+
+            // write 128 x 4 characters for data start pointers
+            for (i = 1; i <= 128; i++)
+            {
+                if (rpn[i].Length > 0)
+                {
+                    swcfg.Write(dataptr.ToString("X4"));
+                    foreach (char c in rpn[i])
+                    {
+                        string t = ((int)c).ToString("X2");
+                        data += t.Substring(t.Length-2,2);
+                        dataptr++;
+                    }
+                    data += "00";
+                    dataptr++;
+                }
+                else
+                    swcfg.Write("0000"); // ptr to data[0], no locking
+            }
+            swcfg.Write(data);
+            swcfg.WriteLine("</Segment>");
+            swcfg.WriteLine("</Config>");
+            swcfg.Close();
+        }
+
+        // *****************************************************************************************************
         // main
         // *****************************************************************************************************
 
@@ -601,25 +646,28 @@ namespace interlock
         {
             int i;
             highestlever = 0;
-            if (args.GetUpperBound(0) < 1)
+            if (args.GetUpperBound(0) != 0)
             {
-                Console.WriteLine("Use: Interlock file1 file2");
-                Console.WriteLine("     file1 is an Interlock table in CSV format.");
-                Console.WriteLine("     file2 is an Intel hex file suitable to be downloaded to the CANACE3I.");
+                Console.WriteLine("Use: Interlock file");
+                Console.WriteLine("     file.csv is an Interlock table in CSV format.");
+                Console.WriteLine("     file.lst is a listing of the data.");
+                Console.WriteLine("     file.cfg is a data file suitable to be downloaded to the CANACE3I.");
                 return;
             }
 
-            for (i = 0; i <= 120; i++)
+            for (i = 0; i <= 128; i++)
             {
                 rpn[i] = "";
             }
             
-            ReadFile(args[0]);
+            ReadFile(args[0]+".csv");
             ProcessFile();
 
-            StreamWriter sw = new StreamWriter(args[1]);
+            writecfg(args[0] + ".cfg");
 
+            StreamWriter sw = new StreamWriter(args[0] + ".lst");
             sw.WriteLine("// Locking");
+
             for (i = 1; i <= highestlever; i++)
             {
                 if (rpn[i].Length > 0)
