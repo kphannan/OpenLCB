@@ -417,7 +417,9 @@ namespace Config
 
         public long GetNumber(string s)
         {
-            if (s[0] == '#')
+            if (s.StartsWith("0x") || s.StartsWith("0X"))
+                return Convert.ToInt64(s.Substring(2), 16);
+            else if (s[0] == '#')
                 return Convert.ToInt64(s.Substring(1), 16);
             else
                 return Convert.ToInt64(s);
@@ -984,6 +986,8 @@ namespace Config
 
         private void RebootBtn_Click(object sender, EventArgs e)
         {
+            if (SelectNodeCB.Text == "")
+                return;
             SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A5");
             SelectNodeCB.Items.Clear();
             SelectNodeCB.Text = "";
@@ -992,6 +996,8 @@ namespace Config
 
         private void DefaultBtn_Click(object sender, EventArgs e)
         {
+            if (SelectNodeCB.Text == "")
+                return;
             SendHexString("E200" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A6");
         }
 
@@ -1004,6 +1010,7 @@ namespace Config
 
         private void SaveBtn_Click(object sender, EventArgs e)
         {
+            int i;
             if (!xmlvalid) {
                 log("No xml file");
                 return;
@@ -1029,7 +1036,7 @@ namespace Config
                 { }
                 else if ("segment".StartsWith(SegmentXML.Name))
                 {
-                    for (int i = 0; i < SegmentXML.Attributes.Count; i++)
+                    for (i = 0; i < SegmentXML.Attributes.Count; i++)
                     {
                         if ("space".StartsWith(SegmentXML.Attributes[i].Name))
                             ReadSegmentSpace = (int)GetNumber(SegmentXML.Attributes[i].InnerText);
@@ -1048,6 +1055,7 @@ namespace Config
                         log("Read error");
                         break;
                     }
+                    ReadSegmentData = ReadSegmentData.TrimEnd('0');
                     savefile.WriteLine("<Segment name=\"" + SegmentName + "\">" + ReadSegmentData + "</Segment>");
                 }
                 SegmentXML = SegmentXML.NextSibling;
@@ -1060,9 +1068,33 @@ namespace Config
         // Restore configuration
         //******************************************************************************************************
 
+        private OpenFileDialog restoreFileDialog = new OpenFileDialog();
+
         private void RestoreBtn_Click(object sender, EventArgs e)
         {
+            if (!xmlvalid) {
+                log("No xml file");
+                return;
+            }
+            saveFileDialog.AddExtension = true;
+            saveFileDialog.Filter = "Config files|*.cfg|All files|*.*";
+            DialogResult res = saveFileDialog.ShowDialog();
+            if (!res.Equals(DialogResult.OK))
+                return;
 
+            XmlDocument xmldoc = new XmlDocument();
+            StreamReader file = new StreamReader(restoreFileDialog.FileName);
+            xmldoc.LoadXml(file.ReadToEnd());
+            XmlNode docnode = xmldoc.FirstChild.FirstChild;
+            XmlNode node = xmld.FirstChild.FirstChild;
+            while (docnode != null)
+            {
+
+
+
+                docnode = docnode.NextSibling;
+            }
+            file.Close();
         }
 
         //******************************************************************************************************

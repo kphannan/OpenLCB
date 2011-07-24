@@ -25,8 +25,13 @@ namespace ComGateway
         const string IDENTIFIEDCONSUMERRANGE = "925F";
         const string IDENTIFIEDPRODUCER = "926F";
         const string IDENTIFIEDPRODUCERRANGE = "925F";
+        const string CIM0 = "7";
+        const string CIM1 = "6";
+        const string CIM2 = "5";
+        const string CIM3 = "4";
 
         public long nodenumber = 0;
+        public string nodenumberstr = "";
         public string alias = "";
 
         public string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
@@ -163,7 +168,8 @@ namespace ComGateway
                 {
                     nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16) 
                         + (buffer[7] << 8) + buffer[8];
-                    log("OpenLCB Node Number " + nodenumber.ToString("X12"));
+                    nodenumberstr = nodenumber.ToString("X12");
+                    log("OpenLCB Node Number " + nodenumberstr);
                 }
                 else
                 {
@@ -172,7 +178,7 @@ namespace ComGateway
                 }
                 serverconnected = true;
                 skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
-                EthernetSendHexString(INITCOMPLETE + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
+                EthernetSendHexString(INITCOMPLETE + nodenumberstr + nodenumberstr);
             }
             catch (Exception e)
             {
@@ -200,7 +206,7 @@ namespace ComGateway
                 else
                     inputstring = "";
                 if (LogCB.Checked)
-                    log("E> " + cmd);
+                    log("Ei> " + cmd);
                 if (checkpacket(cmd))
                     CANSendHexString(cmd);
             }
@@ -214,7 +220,7 @@ namespace ComGateway
             byte[] buffer = new byte[1 + s.Length / 2];
             buffer[0] = (byte)buffer.Length;
             if (LogCB.Checked)
-                log("E< " + buffer[0].ToString("X2") + s);
+                log("Eo< " + buffer[0].ToString("X2") + s);
             int j = 1;
             for (int i = 0; i < s.Length; i += 2)
                 buffer[j++] = (byte)Convert.ToByte(s.Substring(i, 2), 16);
@@ -297,20 +303,25 @@ namespace ComGateway
                 string cmd = line.Substring(0, l + 1);
                 line = line.Substring(l + 1);
                 if (LogCB.Checked)
-                    log("> " + cmd);
+                    log("Ci> " + cmd);
                 string a = cmd.Substring(7,3);
                 if (aliascheck == a) // packet with same alias as being CIMed
                     aliascheck = "";
                 if (cmd.Substring(3, 4) == VERIFIEDNODEID || cmd.Substring(3, 4) == INITCOMPLETE)
                 {
-                    string n = cmd.Substring(11, 12);
-                    if (NodeIdTable.ContainsKey(n)) // remove old alias
+                    if (cmd.Length < 20)
+                        log("Cmd too short " + cmd);
+                    else
                     {
-                        AliasTable.Remove(NodeIdTable[n]);
-                        NodeIdTable.Remove(n);
+                        string n = cmd.Substring(11, 12);
+                        if (NodeIdTable.ContainsKey(n)) // remove old alias
+                        {
+                            AliasTable.Remove(NodeIdTable[n]);
+                            NodeIdTable.Remove(n);
+                        }
+                        AliasTable.Add(a, n);
+                        NodeIdTable.Add(n, a);
                     }
-                    AliasTable.Add(a, n);
-                    NodeIdTable.Add(n, a);
                 }
                 string data = cmd.Substring(11, cmd.Length-12);
                 string newcmd = "";
@@ -421,7 +432,7 @@ namespace ComGateway
         {
             s1 = ":X1" + s1 + "N" + s2 + ";";
             if (LogCB.Checked)
-                log("C< " + s1);
+                log("Co< " + s1);
             try
             {
                 com.WriteLine(s1);
@@ -434,40 +445,47 @@ namespace ComGateway
 
         public void CANSendHexString(string cmd)
         {
-            int length = cmd.Length / 2;
-            string sid = TranslateToAlias(cmd.Substring(6, 12));
-            if (cmd.Substring(2, 1) == "E")
-            { // datagram
-                string did = TranslateToAlias(cmd.Substring(18, 12));
-                if (length-15 <= 7)
-                {
-                    CAN("E" + did + sid, cmd.Substring(3,2) + cmd.Substring(30));
-                }
-                else
-                {
-                    length -= 15;
-                    int pl = length;
-                    if (pl >= 7)
-                        pl = 7;
-                    CAN("C" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl*2));
-                    cmd = cmd.Substring(30 + pl * 2);
-                    length -= pl;
-                    while (length >= 8)
-                    {
-                        CAN("C" + did + sid, cmd.Substring(0, 16));
-                        cmd = cmd.Substring(16);
-                        length -= 8;
-                    }
-                    CAN("D" + did + sid, cmd);
-                }
-            }
-            else if (cmd.Substring(2, 1) == "F")
-            { // stream
-
-            }
-            else // broadcast
+            try
             {
-                CAN(cmd.Substring(2, 4) + sid, cmd.Substring(18));
+                int length = cmd.Length / 2;
+                string sid = TranslateToAlias(cmd.Substring(6, 12));
+                if (cmd.Substring(2, 1) == "E")
+                { // datagram
+                    string did = TranslateToAlias(cmd.Substring(18, 12));
+                    if (length - 15 <= 7)
+                    {
+                        CAN("E" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30));
+                    }
+                    else
+                    {
+                        length -= 15;
+                        int pl = length;
+                        if (pl >= 7)
+                            pl = 7;
+                        CAN("C" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl * 2));
+                        cmd = cmd.Substring(30 + pl * 2);
+                        length -= pl;
+                        while (length >= 8)
+                        {
+                            CAN("C" + did + sid, cmd.Substring(0, 16));
+                            cmd = cmd.Substring(16);
+                            length -= 8;
+                        }
+                        CAN("D" + did + sid, cmd);
+                    }
+                }
+                else if (cmd.Substring(2, 1) == "F")
+                { // stream
+
+                }
+                else // broadcast
+                {
+                    CAN(cmd.Substring(2, 4) + sid, cmd.Substring(18));
+                }
+            }
+            catch (Exception e)
+            {
+                log("CAN output error " + e.ToString());
             }
         }
 
@@ -491,16 +509,23 @@ namespace ComGateway
                 {
                     alias = (((int)(random ^ (random >> 12) ^ (random >> 24) ^ (random >> 36))) & 0x00000FFF).ToString("X3");
                 };
-
-                CAN("7" + ((nodenumber >> 36) & 0x00000FFF).ToString("X3") + alias, "");
-                CAN("6" + ((nodenumber >> 24) & 0x00000FFF).ToString("X3") + alias, "");
-                CAN("5" + ((nodenumber >> 12) & 0x00000FFF).ToString("X3") + alias, "");
-                CAN("4" + ((nodenumber >> 0) & 0x00000FFF).ToString("X3") + alias, "");
-
                 aliascheck = alias;
+                CAN(CIM0 + ((nodenumber >> 36) & 0x00000FFF).ToString("X3") + alias, "");
+                Thread.Sleep(2);
+                if (aliascheck == "") // someone objected
+                    continue;
+                CAN(CIM1 + ((nodenumber >> 24) & 0x00000FFF).ToString("X3") + alias, "");
+                Thread.Sleep(2);
+                if (aliascheck == "") // someone objected
+                    continue;
+                CAN(CIM2 + ((nodenumber >> 12) & 0x00000FFF).ToString("X3") + alias, "");
+                Thread.Sleep(2);
+                if (aliascheck == "") // someone objected
+                    continue;
+                CAN(CIM3 + ((nodenumber >> 0) & 0x00000FFF).ToString("X3") + alias, "");
                 for (int timeout = 0; timeout < 10; timeout++)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(25);
                     if (aliascheck == "") // someone objected
                         break;
                 }
@@ -539,7 +564,7 @@ namespace ComGateway
         {
             string s;
             if (cmd.Substring(2,4)==VERIFYNODEIDS) {
-                s = VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12");
+                s = VERIFIEDNODEID + nodenumberstr + nodenumberstr;
                 EthernetSendHexString(s);
                 CANSendHexString(s);
                 return true;
@@ -550,7 +575,7 @@ namespace ComGateway
                 return false;
             if (cmd.Substring(2,4)==IDENTIFIEDPRODUCER|| cmd.Substring(2,4)==IDENTIFIEDPRODUCERRANGE)
                 return false;
-            if (cmd.Substring(2, 1) == "E" && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram to this node
+            if (cmd.Substring(2, 1) == "E" && cmd.Substring(18, 12) == nodenumberstr) // datagram to this node
             {
                 if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
                 {
@@ -563,7 +588,7 @@ namespace ComGateway
                         l = xml.Length - ad;
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
-                    s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                    s = "E200" + nodenumberstr + cmd.Substring(6, 12) + "30" + address + "FF" + data;
                     if (l < 64)
                         s += "00";
                     EthernetSendHexString(s);
@@ -577,18 +602,24 @@ namespace ComGateway
                     string data = "";
                     for (int i = 0; i < 8; i+=2)
                         data = speed.Substring(i,2) + data;
-                    s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "00" + data;
+                    s = "E200" + nodenumberstr + cmd.Substring(6, 12) + "30" + address + "00" + data;
                     EthernetSendHexString(s);
                     CANSendHexString(s);
                 }
                 else if (cmd.Substring(2, 4) == "E0A0")
                 {
-                    s = VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12");
+                    s = VERIFIEDNODEID + nodenumberstr + nodenumberstr;
                     EthernetSendHexString(s);
                     CANSendHexString(s);
                 }
             }
             return true;
+        }
+
+        private void AliasBtn_Click(object sender, EventArgs e)
+        {
+            foreach(KeyValuePair<string, string> kvp in AliasTable)
+                log("Aliases " + kvp.Key + " " + kvp.Value);  
         }
 
     }

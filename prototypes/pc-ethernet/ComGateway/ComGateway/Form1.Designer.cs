@@ -33,6 +33,7 @@
             this.ComCB = new System.Windows.Forms.ComboBox();
             this.LogTB = new System.Windows.Forms.TextBox();
             this.LogCB = new System.Windows.Forms.CheckBox();
+            this.AliasBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -69,18 +70,29 @@
             // LogCB
             // 
             this.LogCB.AutoSize = true;
-            this.LogCB.Location = new System.Drawing.Point(233, 8);
+            this.LogCB.Location = new System.Drawing.Point(326, 8);
             this.LogCB.Name = "LogCB";
             this.LogCB.Size = new System.Drawing.Size(66, 17);
             this.LogCB.TabIndex = 3;
             this.LogCB.Text = "Data log";
             this.LogCB.UseVisualStyleBackColor = true;
             // 
+            // AliasBtn
+            // 
+            this.AliasBtn.Location = new System.Drawing.Point(220, 4);
+            this.AliasBtn.Name = "AliasBtn";
+            this.AliasBtn.Size = new System.Drawing.Size(75, 23);
+            this.AliasBtn.TabIndex = 4;
+            this.AliasBtn.Text = "Alias Table";
+            this.AliasBtn.UseVisualStyleBackColor = true;
+            this.AliasBtn.Click += new System.EventHandler(this.AliasBtn_Click);
+            // 
             // ComGateway
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(404, 149);
+            this.Controls.Add(this.AliasBtn);
             this.Controls.Add(this.LogCB);
             this.Controls.Add(this.LogTB);
             this.Controls.Add(this.ComCB);
@@ -100,6 +112,7 @@
         private System.Windows.Forms.ComboBox ComCB;
         private System.Windows.Forms.TextBox LogTB;
         private System.Windows.Forms.CheckBox LogCB;
+        private System.Windows.Forms.Button AliasBtn;
     }
 }
 
