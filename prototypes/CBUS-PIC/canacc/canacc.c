@@ -296,10 +296,10 @@ void hpinterrupt(void) {
             // Pre-calculate next delay for servo position
             HI(next_tmr) = 0;
             if (new_output & pulseon) {
-                LO(next_tmr) = servopos[(servo_index<<1)+1];
+                next_tmr = servopos[(servo_index<<1)+1];
             } 
             else {
-                LO(next_tmr) = servopos[servo_index<<1];
+                next_tmr = servopos[servo_index<<1];
             }
             next_tmr = (0-3000) - (next_tmr<<3);
             servo_state = 1;
