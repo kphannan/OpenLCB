@@ -21,6 +21,7 @@ namespace Config
         const string INIT = "908F";
         const string VERIFYNODEIDS = "80AF";
         const string VERIFIEDNODEID = "90BF";
+        const string EVENT = "82DF";
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
@@ -1310,6 +1311,22 @@ namespace Config
                 }
             }
             taskcomplete.Release();
+        }
+
+        //******************************************************************************************************
+        // Send Event
+        //******************************************************************************************************
+
+        private void SendEvtBtn_Click(object sender, EventArgs e)
+        {
+            EventTB.Text = EventTB.Text.PadLeft(16,'0');
+            SendHexString(EVENT + nodenumber.ToString("X12") + EventTB.Text);
+        }
+
+        private void SendEvt2Btn_Click(object sender, EventArgs e)
+        {
+            Event2TB.Text = Event2TB.Text.PadLeft(16, '0');
+            SendHexString(EVENT + nodenumber.ToString("X12") + Event2TB.Text);
         }
 
 

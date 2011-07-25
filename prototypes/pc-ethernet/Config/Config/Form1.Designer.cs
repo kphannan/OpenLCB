@@ -46,6 +46,10 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.SaveBtn = new System.Windows.Forms.Button();
             this.RestoreBtn = new System.Windows.Forms.Button();
+            this.SendEvtBtn = new System.Windows.Forms.Button();
+            this.EventTB = new System.Windows.Forms.TextBox();
+            this.Event2TB = new System.Windows.Forms.TextBox();
+            this.SendEvt2Btn = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -58,7 +62,7 @@
             this.LogTB.Multiline = true;
             this.LogTB.Name = "LogTB";
             this.LogTB.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.LogTB.Size = new System.Drawing.Size(324, 488);
+            this.LogTB.Size = new System.Drawing.Size(324, 518);
             this.LogTB.TabIndex = 0;
             // 
             // NodeIdsBtn
@@ -118,7 +122,7 @@
             this.groupBox1.Controls.Add(this.ReadBtn);
             this.groupBox1.Location = new System.Drawing.Point(13, 179);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(452, 297);
+            this.groupBox1.Size = new System.Drawing.Size(452, 303);
             this.groupBox1.TabIndex = 14;
             this.groupBox1.TabStop = false;
             // 
@@ -218,11 +222,53 @@
             this.RestoreBtn.UseVisualStyleBackColor = true;
             this.RestoreBtn.Click += new System.EventHandler(this.RestoreBtn_Click);
             // 
+            // SendEvtBtn
+            // 
+            this.SendEvtBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.SendEvtBtn.Location = new System.Drawing.Point(13, 488);
+            this.SendEvtBtn.Name = "SendEvtBtn";
+            this.SendEvtBtn.Size = new System.Drawing.Size(75, 23);
+            this.SendEvtBtn.TabIndex = 20;
+            this.SendEvtBtn.Text = "Send Event";
+            this.SendEvtBtn.UseVisualStyleBackColor = true;
+            this.SendEvtBtn.Click += new System.EventHandler(this.SendEvtBtn_Click);
+            // 
+            // EventTB
+            // 
+            this.EventTB.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.EventTB.Location = new System.Drawing.Point(94, 490);
+            this.EventTB.Name = "EventTB";
+            this.EventTB.Size = new System.Drawing.Size(128, 20);
+            this.EventTB.TabIndex = 21;
+            // 
+            // Event2TB
+            // 
+            this.Event2TB.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.Event2TB.Location = new System.Drawing.Point(334, 490);
+            this.Event2TB.Name = "Event2TB";
+            this.Event2TB.Size = new System.Drawing.Size(128, 20);
+            this.Event2TB.TabIndex = 23;
+            // 
+            // SendEvt2Btn
+            // 
+            this.SendEvt2Btn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.SendEvt2Btn.Location = new System.Drawing.Point(253, 488);
+            this.SendEvt2Btn.Name = "SendEvt2Btn";
+            this.SendEvt2Btn.Size = new System.Drawing.Size(75, 23);
+            this.SendEvt2Btn.TabIndex = 22;
+            this.SendEvt2Btn.Text = "Send Event";
+            this.SendEvt2Btn.UseVisualStyleBackColor = true;
+            this.SendEvt2Btn.Click += new System.EventHandler(this.SendEvt2Btn_Click);
+            // 
             // Config
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(809, 488);
+            this.ClientSize = new System.Drawing.Size(809, 518);
+            this.Controls.Add(this.Event2TB);
+            this.Controls.Add(this.SendEvt2Btn);
+            this.Controls.Add(this.EventTB);
+            this.Controls.Add(this.SendEvtBtn);
             this.Controls.Add(this.RestoreBtn);
             this.Controls.Add(this.SaveBtn);
             this.Controls.Add(this.progressBar1);
@@ -263,6 +309,10 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Button SaveBtn;
         private System.Windows.Forms.Button RestoreBtn;
+        private System.Windows.Forms.Button SendEvtBtn;
+        private System.Windows.Forms.TextBox EventTB;
+        private System.Windows.Forms.TextBox Event2TB;
+        private System.Windows.Forms.Button SendEvt2Btn;
     }
 }
 
