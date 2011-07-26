@@ -1,3 +1,24 @@
+(From an email by Mike Johnson July 9, 2011)
+
+I added my Ethernet software to the prototypes directory. It uses CAN 
+mti's for the Ethernet mti's.
+
+Olcbsvr - the TCP hub and nodeid server. This allows up to 16 Ethernet 
+connections and allocates a nodenumber to each connection, which the 
+connection can ignore. No loop detection.
+
+ComGateway - a serial connection to a CAN segment, since there is no 
+loop detection opening 2 of them to the same segments is not a good 
+idea. Connection to different CAN segments should be OK. It filters out 
+InitComplete and VerifiedNodeID packets, but nothing else.
+
+Config - the start of a configuration program, so far it just reads the 
+XML from space FF.
+
+LenzSvr - A WiThrottle server to Xpressnet over OpenLCB. Allows an ipod 
+touch to be used as a throttle.
+
+
 (From an email by Mike Johnson July 16, 2011)
 
 The key part is the Ethernet server/hub. This uses Apple bonjour to
