@@ -1,7 +1,7 @@
-(From an email by Mike Johnson July 9, 2011)
 
 I added my Ethernet software to the prototypes directory. It uses CAN 
-mti's for the Ethernet mti's.
+mti's for the Ethernet mti's because the existing Ethernet mti cannot be
+simply converted from the CAN mti's and vice versa.
 
 Olcbsvr - the TCP hub and nodeid server. This allows up to 16 Ethernet 
 connections and allocates a nodenumber to each connection, which the 
@@ -12,14 +12,15 @@ loop detection opening 2 of them to the same segments is not a good
 idea. Connection to different CAN segments should be OK. It filters out 
 InitComplete and VerifiedNodeID packets, but nothing else.
 
-Config - the start of a configuration program, so far it just reads the 
-XML from space FF.
+Config - the configuration program, reads the XML from space FF and uses
+that to read and display the node configuration and also write back changes.
 
 LenzSvr - A WiThrottle server to Xpressnet over OpenLCB. Allows an ipod 
 touch to be used as a throttle.
 
+Throttle - A simple speed control for Xpressnet.
 
-(From an email by Mike Johnson July 16, 2011)
+
 
 The key part is the Ethernet server/hub. This uses Apple bonjour to
 announce its server host name and port number.
@@ -46,6 +47,5 @@ as in the basic spec document.
 Withrottle server and throttle are 2 PC programs, that talk to my
 XpressNet command station adapter over OpenLCB.
 
-So far I have the boot loader and CBUS USB adapter working. I'm slowly
-working my way through the PIC code and converting it. So far I have
-not uploaded the new PIC code.
+Most of the PIC code has now been converted, but not fully tested.
+
