@@ -165,20 +165,7 @@ const rom BYTE xml[] =
     "</XML>\r\n";
 
 #pragma romdata module = 0x001020
-const rom BYTE version[7] = { 
-    0,1,0,1,0,1,0 
-};
-// 0x0027
 const rom BYTE valid = 0;     // tmp set to 0xFF by PC side of loader. 
-const rom unsigned long xmlstart = (unsigned long) xml;
-const rom unsigned int xmlsize = sizeof xml;
-// 0x002E
-const rom BYTE spare[18] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF 
-};
-// 0x0040
-const rom BYTE mstr[64] = modulestring ;
 
 #pragma romdata
 
@@ -1034,14 +1021,10 @@ void main(void)
     // send init
     SendNSN(FT_INIT);
 
-    CB_data[0] = FT_RESET; // send reset to cabs and adapters
-    CB_datalen = 0;
-    CsSend();
-
     // Main loop
     while (1) {
 
-        // 100 msec timer
+        // 25 msec timer
         if (Timer3Test()) { 
             if (canTraffic) {
                 YellowLEDOn();
@@ -1052,28 +1035,23 @@ void main(void)
             canTraffic = 0;
 
             timer++;
-            if (dcchp==0) {     // every 100 msec
+            if (dcchp==0) {     // every 25 msec
                 dcchp = 2;      // start dcc hp sending
             }
-            if ((timer&0x007F)==0) {      // 12.8 secs
+            if ((timer&0x01FF)==0) {      // 12.8 secs
                 // Dec change timeout
                 for (i=0; i<DCCSLOTMAX; i++) {
                     if (DCC_flags[i]&TIMEOUT)
                         DCC_flags[i] -= TIMESTEP;
                 } 
             }
-            if (blocks!=0 && timer>20) { // send timeout ack
-                sendack(2, DNID); // timeout
-                blocks = 0;
-            }
-
         }
 
         if (ReceiveMessage()) {
             if (CB_SourceNID == ND.nodeIdAlias) {    // conflict
-                if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
+                if ((CB_FrameType&0x8000)==0x0000) { // CIM or RID message
                     CB_SourceNID = ND.nodeIdAlias;
-                    CB_FrameType = FT_RIM;
+                    CB_FrameType = FT_RID;
                     CB_datalen = 0;
                     while (SendMessage()==0) ;
                 }

@@ -29,6 +29,8 @@ namespace ComGateway
         const string CIM1 = "6";
         const string CIM2 = "5";
         const string CIM3 = "4";
+        const string RID = "0700";
+        const string AMD = "0701";
 
         public long nodenumber = 0;
         public string nodenumberstr = "";
@@ -257,6 +259,7 @@ namespace ComGateway
                 AliasTable.Clear();
                 NodeIdTable.Clear();
                 alias = GetAlias(nodenumber);
+                CAN(INITCOMPLETE + alias, nodenumber.ToString("X12"));
                 CAN(VERIFYNODEIDS + alias, "");
             }
             catch
@@ -307,7 +310,8 @@ namespace ComGateway
                 string a = cmd.Substring(7,3);
                 if (aliascheck == a) // packet with same alias as being CIMed
                     aliascheck = "";
-                if (cmd.Substring(3, 4) == VERIFIEDNODEID || cmd.Substring(3, 4) == INITCOMPLETE)
+                if (cmd.Substring(3, 4) == VERIFIEDNODEID || cmd.Substring(3, 4) == INITCOMPLETE 
+                    || cmd.Substring(3, 4) == AMD)
                 {
                     if (cmd.Length < 20)
                         log("Cmd too short " + cmd);
@@ -534,7 +538,8 @@ namespace ComGateway
 
             AliasTable.Add(alias, nodenumber.ToString("X12"));
             NodeIdTable.Add(nodenumber.ToString("X12"), alias);
-            CAN(INITCOMPLETE + alias, nodenumber.ToString("X12"));
+            CAN(RID + alias, "");
+            CAN(AMD + alias, nodenumber.ToString("X12"));
             return alias;
         }
 

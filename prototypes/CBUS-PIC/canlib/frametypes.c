@@ -24,21 +24,24 @@
 
 enum FT
 {
-    FT_CIM0    = 0x7000,   // Top 12 bits of NID
-    FT_CIM1    = 0x6000,   // 2nd top 12 bits of NID
-    FT_CIM2    = 0x5000,   // 3rd top 12 bits of NID
-    FT_CIM3    = 0x4000,   // lowest 12 bits of NID
     FT_RID     = 0x0700,   // Reserved ID
-    FT_VNSN    = 0x80AF,   // Verify Node Serial Number 
-    FT_INIT    = 0x908F,   // Normal Initialization Complete
-    FT_NSN     = 0x90BF,   // Node Serial Number 
-    FT_EVENT   = 0x82DF,   // EVENT - 82DF for JMRI
+    FT_AMD     = 0x0701,   // Alias Map Definition
+    FT_AME     = 0x0702,   // Alias Mapping Enquiry
+    FT_AMR     = 0x0703,   // Alias Map Reset
+    FT_CIM3    = 0x4000,   // lowest 12 bits of NID
+    FT_CIM2    = 0x5000,   // 3rd top 12 bits of NID
+    FT_CIM1    = 0x6000,   // 2nd top 12 bits of NID
+    FT_CIM0    = 0x7000,   // Top 12 bits of NID
     FT_RFID    = 0x8011,   // RFID tag
     FT_XPRESSNET = 0x8050, // XpressNet raw message from a command station
     FT_NALLOC  = 0x8080,   // Nodenumber allocated
+    FT_VNSN    = 0x80AF,   // Verify Node Serial Number 
     FT_IDCONS  = 0x824F,   // Identify Consumers
     FT_IDPROD  = 0x828F,   // Identify Producers
     FT_IDEVNTS = 0x82BF,   // Identify Events
+    FT_EVENT   = 0x82DF,   // EVENT - 82DF for JMRI
+    FT_INIT    = 0x908F,   // Normal Initialization Complete
+    FT_NSN     = 0x90BF,   // Node Serial Number 
     FT_CONSIR  = 0x925F,   // Consumer Identify Range
     FT_CONSID  = 0x926F,   // Consumer Identified
     FT_PRODIR  = 0x929F,   // Producer Identify Range

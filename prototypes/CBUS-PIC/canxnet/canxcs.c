@@ -66,7 +66,7 @@ Insert SN75176 with pin 1 in socket pin 4
 #pragma udata
 
 unsigned int DNID;        // block transfer source NID
-BYTE blocks;              // loader block count
+BYTE dgcnt;
 BYTE canTraffic;          // yellow led CAN traffic indicator
 BYTE timer100;            // 100 msec count
 #pragma udata rt
@@ -120,30 +120,22 @@ rom BYTE XNETID = DEFAULTXNETID;
 
 #pragma romdata
 const rom BYTE xml[] = 
-    "<XML>\r\n"
-    "<NodeString>" modulestring "</NodeString>\r\n"
-    "<EventData>\r\n"
-    "</EventData>\r\n"
-    "<NodeVariable>\r\n"
-      "<name>Xnetid</name><default>29</default>\r\n"
-    "</NodeVariable>\r\n"
-    "</XML>\r\n";
+    "<cdi><id><software>" modulestring "</software></id>"
+    "<se na=\"Location\" or=\"#0080\" sp=\"#FE\" bu=\"#323\">"
+      "<ch na=\"Location\" si=\"64\"/>"
+    "</se>"
+    "<se na=\"Node Id\" or=\"#0040\" sp=\"#FE\" bu=\"#343\">"
+      "<in na=\"Serial\" si=\"1\"/>"
+      "<in na=\"Member\" si=\"3\"/>"
+      "<by na=\"Group\" si=\"2\"/>"
+    "</se>"
+    "<se na=\"Xnetid\" sp=\"1\" bu=\"#303\">"
+      "<by na=\"Xnetid\" si=\"1\"/>"
+    "</se>"
+    "</cdi>";
 
 #pragma romdata module = 0x001020
-const rom BYTE version[7] = { 
-    0,1,0,1,0,1,0 
-};
-// 0x0027
 const rom BYTE valid = 0;     // tmp set to 0xFF by PC side of loader. 
-const rom unsigned long xmlstart = (unsigned long) xml;
-const rom unsigned int xmlsize = sizeof xml;
-// 0x002E
-const rom BYTE spare[18] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF 
-};
-// 0x0040
-const rom BYTE mstr[64] = modulestring ;
 
 rom BYTE pollparity[128] = {
     0x00,0x81,0x82,0x03,0x84,0x05,0x06,0x87,0x88,0x09,0x0A,0x8B,0x0C,0x8D,0x8E,0x0F,
@@ -320,10 +312,6 @@ void EnableInterrupts(void)
     INTCONbits.GIEH = 1;     // enable all high priority interrupts          
 }
 
-rom unsigned int bits[10] = {
-    0x03FE, 0x03FD, 0x03FB, 0x03F7, 0x03EF, 0x03DF, 0x03BF, 0x037F, 0x02FF, 0x01FF
-};
-
 void Packet(void)
 {
     far overlay BYTE i, t, tmp;
@@ -331,7 +319,7 @@ void Packet(void)
     if (CB_SourceNID == ND.nodeIdAlias) { // conflict
         if ((CB_FrameType&0x8000)==0x0000) { // CIM
             CB_SourceNID = ND.nodeIdAlias;
-            CB_FrameType = FT_RIM;
+            CB_FrameType = FT_RID;
             CB_datalen = 0;
             while (SendMessage()==0) ;
         }
@@ -346,7 +334,7 @@ void Packet(void)
     }
     else if (CB_FrameType == FT_XPRESSNET) {
         if (xoutrdy) {
-            sendack(ACK_NOSPACE, CB_SourceNID);
+            // sendack(ACK_NOSPACE, CB_SourceNID);
             return;
         }
         t = CB_data[0]&0x0F;
@@ -362,117 +350,80 @@ void Packet(void)
     }
 }
 
-void DAA_Packet(void)
+void DatagramPacket(void)
 {
-    far overlay BYTE i, t, tmp;
-
-    if ((CB_data[0]&0xF0) == DAA_DATA && blocks != 0) { // data block
-        if (DNID!=CB_SourceNID) {
-           sendack(ACK_ALIASERROR, CB_SourceNID);
-           sendack(ACK_ALIASERROR, DNID);
-        }
-        else {
-            t = CB_data[0];
-            blocks &= bits[t];
-            t = t * 7;
-            for (i = 1; i<8 && t<64; i++)
-                GP_block[t++] = CB_data[i];
-            if (blocks==0) {
-                DisableInterrupts();
-                ProgramMemoryWrite(GP_address, 64, (BYTE * far)GP_block);
-                EnableInterrupts();
-                sendack(ACK_OK,DNID);    // OK
-            }
-        }
+    far overlay BYTE i;
+    if (DNID == -1)
+        DNID = CB_SourceNID;
+    else if (DNID != CB_SourceNID) {
+        sendnack(CB_SourceNID,99);
         return;
     }
-
-    switch(CB_data[0]) {
-    case DAA_UPGSTART: // program upgrade
-        DisableInterrupts();
-        Loader();               // call loader, never returns here
-        // break;
-
-    case DAA_REBOOT:
-        // re-start the program
-        _asm
-            reset
-            goto 0x000000
-        _endasm
-        break;
-
-    case DAA_UPGREAD: // single block read
-        sendblock(CB_SourceNID);
-        break;
-
-    case DAA_UPGADDR: // single block write
-        DNID = CB_SourceNID;
-        UP(GP_address) = CB_data[1];
-        HI(GP_address) = CB_data[2];
-        LO(GP_address) = CB_data[3];
-        blocks = 0x03FF;
-        timer100 = 0;
-        break;
-
-    case DAA_NVREAD: // Node variable read
-        if (CB_data[1] == 0) { // xnetid
-            CB_FrameType = FT_DAA | CB_SourceNID;
-            CB_SourceNID = ND.nodeIdAlias;
-            CB_datalen = 3;
-            CB_data[0] = DAA_NVREPLY;
-            // CB_data[1] = CB_data[1];
-            CB_data[2] = xnetid;
-            while (ECANSendMessage()==0) ;
-            return;
-        }
-        sendack(ACK_NODATA, CB_SourceNID); 
-        break;
-
-    case DAA_NVWRITE: // Node variable write byte
-        if (CB_data[1] == 0) {
-            xnetid = CB_data[2];
-            EEPROMWrite((int)&XNETID, xnetid);
-            sendack(ACK_OK, CB_SourceNID);
-            return;
-        }
-        sendack(ACK_NOSPACE, CB_SourceNID);
-        break;
-
-    case DAA_DEFAULT:
-        xnetid = DEFAULTXNETID;
-        EEPROMWrite((int)&XNETID, xnetid);
-    case DAA_PEERASE:
-        sendack(ACK_OK, CB_SourceNID);
-        break;
-
-    case DAA_PEREAD:
-    case DAA_CEREADH: // Event read
-        sendack(ACK_NODATA, CB_SourceNID);
-        break;
-
-    case DAA_PEWRITEH:
-    case DAA_CEERASEH: // Event erase
-    case DAA_CEWRITEH: // Event write
-        sendack(ACK_NOSPACE, CB_SourceNID);
-        break;
-
-    case DAA_XPRESSNET:
-        if (xoutrdy) {
-            sendack(ACK_NOSPACE, CB_SourceNID);
-            return;
-        }
-        t = CB_data[1]&0x0F;
-        tmp = 0;
-        for (i=0; i<=t; i++) {
-            xoutbuf[i] = CB_data[i+1];
-            tmp ^= CB_data[i+1];
-        }
-        xoutbuf[i] = tmp;
-        xoutlen = t+2;
-        xoutptr = 1;
-        xoutrdy = TRUE;
-        break;
-    }
+    for (i=0; i<CB_datalen && dgcnt<72; i++)
+        GP_block[dgcnt++] = CB_data[i];
+    if ((CB_FrameType&0xF000) == FT_DGL || (CB_FrameType&0xF000) == FT_DGS) { // end of datagram
+        DNID = -1;
+        dgcnt = 0;
+        if (GP_block[0] == DG_MEMORY) {
+            UP(GP_address) = GP_block[3];
+            HI(GP_address) = GP_block[4];
+            LO(GP_address) = GP_block[5];
+            if (GP_block[1] == DGM_WRITE) {
+                // write data
+                if (GP_block[6] == 0) { // event data
+                }
+                if (GP_block[6] == 0xFE || GP_block[6] == 0 ) {
+                    ProgramMemoryWrite(GP_address, 64, (BYTE * far)&GP_block[7]);
+                    sendack(CB_SourceNID);
+                    return;
+                }
+            }
+            else if (GP_block[1] == DGM_READ) {
+                if (GP_block[6]==0xFF) { // XML file
+                    // read XML file
+                    GP_address += (unsigned short long)&xml[0];
+                    i = GP_block[7];
+                    ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
+                }
+                if (GP_block[6] == 0) { // event data
+                }
+                if (GP_block[6] == 0xFE || GP_block[6] == 0 ) {
+                    i = GP_block[7];
+                    ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
+                }
+            }
+            else if (CB_data[1] == DGM_UPDCOMP) {
+		        // change the valid program flag
+		        ProgramMemoryRead(STARTADDRESS,64,(BYTE * far)GP_block);
+		        if (GP_block[0x0027]!=0) {
+		            GP_block[0x0027] = 0;
+		            ProgramMemoryWrite(STARTADDRESS,64,(BYTE * far)GP_block);
+		        }
+		        // start the program
+		        _asm
+		            reset
+		            goto 0x000000
+		        _endasm
+            }
+            else if (CB_data[1] == DGM_REBOOT) {
+                // re-start the program
+                _asm
+                    reset
+                    goto 0x000000
+                _endasm
+            }
+            else if (CB_data[1] == DGM_LOADER) { // program upgrade
+                INTCONbits.GIEH = 0;    // disable all interrupts          
+                INTCONbits.GIEL = 0;
+                Loader();               // call loader, never returns here
+            }
+        } // memory op
+        sendnack(CB_SourceNID,CB_data[1]);
+    } // end of datagram
 }
 
 //*********************************************************************************
@@ -534,7 +485,8 @@ void main(void)
     // Start
     GreenLEDOff();
     YellowLEDOff();
-
+    DNID = -1;
+    dgcnt = 0;
     xnetid = EEPROMRead((int)&XNETID);
 
     i = 0x80;             // short delay needed before serial output, don't know why
@@ -557,29 +509,16 @@ void main(void)
                 YellowLEDOff();
             }
             canTraffic = 0;
-
-            if (blocks != 0 && timer100>20) { // send timeout ack
-                sendack(ACK_TIMEOUT, DNID); // timeout
-                blocks = 0;
-            }
         }
+
+        EndSendBlock();
 
         XpressNetIn();
 
         if (ECANReceiveMessage()) {
-            if (CB_SourceNID == ND.nodeIdAlias) {    // conflict
-                if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
-                    CB_SourceNID = ND.nodeIdAlias;
-                    CB_FrameType = FT_RIM;
-                    CB_datalen = 0;
-                    while (SendMessage()==0) ;
-                }
-                else
-                    CheckAlias(1);                  // get new alias
-            }
-            else if (CB_FrameType == (FT_DAA | ND.nodeIdAlias) ) {
+            if ((CB_FrameType&0xCFFF) == (FT_DG | ND.nodeIdAlias) )  {
                 canTraffic = 1;
-                DAA_Packet();
+                DatagramPacket();
             }
             else
                 Packet();

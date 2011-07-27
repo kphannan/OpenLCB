@@ -102,6 +102,7 @@ far unsigned short long GP_address;      // block read or write address
 
 BOOL SendMessage(void);
 BOOL ReceiveMessage(void);
+void SendNSN(unsigned int ft);
 
 //*********************************************************************************
 //         Green and Yellow Leds
@@ -318,6 +319,11 @@ tryagain:
     if (s==1) {
         ProgramMemoryWrite(NODEDATA, sizeof ND, (BYTE * far)&ND);
     }
+    CB_FrameType = FT_RID;
+    CB_SourceNID = ND.nodeIdAlias;
+    CB_datalen = 0;
+    while (SendMessage()==0) ;
+    SendNSN(FT_AMD);
 }
 
 //*********************************************************************************
