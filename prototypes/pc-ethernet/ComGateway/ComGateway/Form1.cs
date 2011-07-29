@@ -17,7 +17,18 @@ namespace ComGateway
 {
     public partial class ComGateway : Form
     {
-        const string RESERVEDID = "0700";
+        // CAN MTIs
+        const string FT_CIM0 = "7";
+        const string FT_CIM1 = "6";
+        const string FT_CIM2 = "5";
+        const string FT_CIM3 = "4";
+        const string FT_RID = "0700";
+        const string FT_AMD = "0701";
+        const string FT_VNSN = "80A7";
+        const string FT_NSN = "90B7";
+        const string FT_INIT = "9087";
+        
+        // Ethernet MTIs
         const string INITCOMPLETE = "908F";
         const string VERIFYNODEIDS = "80AF";
         const string VERIFIEDNODEID = "90BF";
@@ -25,12 +36,6 @@ namespace ComGateway
         const string IDENTIFIEDCONSUMERRANGE = "925F";
         const string IDENTIFIEDPRODUCER = "926F";
         const string IDENTIFIEDPRODUCERRANGE = "925F";
-        const string CIM0 = "7";
-        const string CIM1 = "6";
-        const string CIM2 = "5";
-        const string CIM3 = "4";
-        const string RID = "0700";
-        const string AMD = "0701";
 
         public long nodenumber = 0;
         public string nodenumberstr = "";
@@ -166,7 +171,7 @@ namespace ComGateway
                 skt.Connect(ep);
                 byte[] buffer = new byte[12];
                 skt.Receive(buffer);
-                if ((buffer[1] << 8) + buffer[2] == 0x8080)
+                if ((buffer[1] << 8) + buffer[2] == 0x3000)
                 {
                     nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16) 
                         + (buffer[7] << 8) + buffer[8];
@@ -228,7 +233,7 @@ namespace ComGateway
                 buffer[j++] = (byte)Convert.ToByte(s.Substring(i, 2), 16);
             skt.Send(buffer);
         }
-       
+
         //*******************************************************************************************************
         // Serial port connection
         //*******************************************************************************************************
@@ -259,8 +264,8 @@ namespace ComGateway
                 AliasTable.Clear();
                 NodeIdTable.Clear();
                 alias = GetAlias(nodenumber);
-                CAN(INITCOMPLETE + alias, nodenumber.ToString("X12"));
-                CAN(VERIFYNODEIDS + alias, "");
+                CAN(FT_INIT + alias, nodenumber.ToString("X12"));
+                CAN(FT_VNSN + alias, "");
             }
             catch
             {
@@ -305,130 +310,134 @@ namespace ComGateway
                     continue;
                 string cmd = line.Substring(0, l + 1);
                 line = line.Substring(l + 1);
-                if (LogCB.Checked)
-                    log("Ci> " + cmd);
-                string a = cmd.Substring(7,3);
-                if (aliascheck == a) // packet with same alias as being CIMed
-                    aliascheck = "";
-                if (cmd.Substring(3, 4) == VERIFIEDNODEID || cmd.Substring(3, 4) == INITCOMPLETE 
-                    || cmd.Substring(3, 4) == AMD)
+
+                ProcessCanCmd(cmd);
+
+            }
+        }
+
+        public void ProcessCanCmd(string cmd)
+        {
+            if (LogCB.Checked)
+                log("Ci> " + cmd);
+            string a = cmd.Substring(7, 3);
+            if (aliascheck == a) // packet with same alias as being CIMed
+                aliascheck = "";
+            if (cmd.Substring(3, 4) == FT_VNSN || cmd.Substring(3, 4) == FT_INIT
+                || cmd.Substring(3, 4) == FT_AMD)
+            {
+                if (cmd.Length < 20)
+                    log("Cmd too short " + cmd);
+                else
                 {
-                    if (cmd.Length < 20)
-                        log("Cmd too short " + cmd);
-                    else
+                    string n = cmd.Substring(11, 12);
+                    if (NodeIdTable.ContainsKey(n)) // remove old alias
                     {
-                        string n = cmd.Substring(11, 12);
-                        if (NodeIdTable.ContainsKey(n)) // remove old alias
-                        {
-                            AliasTable.Remove(NodeIdTable[n]);
-                            NodeIdTable.Remove(n);
-                        }
-                        AliasTable.Add(a, n);
-                        NodeIdTable.Add(n, a);
+                        AliasTable.Remove(NodeIdTable[n]);
+                        NodeIdTable.Remove(n);
                     }
+                    AliasTable.Add(a, n);
+                    NodeIdTable.Add(n, a);
                 }
-                string data = cmd.Substring(11, cmd.Length-12);
-                string newcmd = "";
-                switch (cmd[3])
-                {
-                    case '7': // CIM
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        if (AliasTable.ContainsKey(a))
-                        {
-                            string n = AliasTable[a];
-                            if (n.Substring(0, 3) != cmd.Substring(4, 3))
-                                CAN(RESERVEDID + a, ""); // send RID
-                        }
-                        break;
-                    case '6': // CIM
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        if (AliasTable.ContainsKey(a))
-                        {
-                            string n = AliasTable[a];
-                            if (n.Substring(3, 3) != cmd.Substring(4, 3))
-                                CAN(RESERVEDID + a, ""); // send RID
-                        }
-                        break;
-                    case '5': // CIM
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        if (AliasTable.ContainsKey(a))
-                        {
-                            string n = AliasTable[a];
-                            if (n.Substring(6, 3) != cmd.Substring(4, 3))
-                                CAN(RESERVEDID + a, ""); // send RID
-                        }
-                        break;
-                    case '4': // CIM
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        if (AliasTable.ContainsKey(a))
-                        {
-                            string n = AliasTable[a];
-                            if (n.Substring(9, 3) != cmd.Substring(4, 3))
-                                CAN(RESERVEDID + a, ""); // send RID
-                        }
-                        break;
-                    case '0': // RID etc
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        break;
-                    case '8':
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        newcmd = cmd.Substring(3, 4) + TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
+            }
+            string data = cmd.Substring(11, cmd.Length - 12);
+            string newcmd = "";
+            switch (cmd[3])
+            {
+                case '7': // CIM
+                    if (AliasTable.ContainsKey(a))
+                    {
+                        string n = AliasTable[a];
+                        if (n.Substring(0, 3) != cmd.Substring(4, 3))
+                            CAN(FT_RID + a, ""); // send RID
+                    }
+                    break;
+                case '6': // CIM
+                    if (AliasTable.ContainsKey(a))
+                    {
+                        string n = AliasTable[a];
+                        if (n.Substring(3, 3) != cmd.Substring(4, 3))
+                            CAN(FT_RID + a, ""); // send RID
+                    }
+                    break;
+                case '5': // CIM
+                    if (AliasTable.ContainsKey(a))
+                    {
+                        string n = AliasTable[a];
+                        if (n.Substring(6, 3) != cmd.Substring(4, 3))
+                            CAN(FT_RID + a, ""); // send RID
+                    }
+                    break;
+                case '4': // CIM
+                    if (AliasTable.ContainsKey(a))
+                    {
+                        string n = AliasTable[a];
+                        if (n.Substring(9, 3) != cmd.Substring(4, 3))
+                            CAN(FT_RID + a, ""); // send RID
+                    }
+                    break;
+                case '8':
+                    newcmd = "1" + cmd.Substring(4, 2);
+                    if (cmd[6] == '7')
+                        newcmd += "0";
+                    if (cmd[6] == '3')
+                        newcmd += "1";
+                    if (cmd[6] == 'F')
+                        newcmd += "2";
+                    if (cmd[6] == 'B')
+                        newcmd += "3";
+                    newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
+                    checkpacket(newcmd);
+                    EthernetSendHexString(newcmd);
+                    break;
+                case '9':
+                    newcmd = "3" + cmd.Substring(4, 2);
+                    if (cmd[6] == '7')
+                        newcmd += "0";
+                    if (cmd[6] == '3')
+                        newcmd += "1";
+                    if (cmd[6] == 'F')
+                        newcmd += "2";
+                    if (cmd[6] == 'B')
+                        newcmd += "3";
+                    newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
+                    checkpacket(newcmd);
+                    EthernetSendHexString(newcmd);
+                    break;
+                case 'B':
+                    if (longdatagram.ContainsKey(a))
+                        longdatagram.Remove(a);
+                    longdatagram.Add(a, "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                            + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2));
+                    break;
+                case 'C':
+                    if (longdatagram.ContainsKey(a))
+                        longdatagram[a] += data;
+                    else
+                        log("Middle of datagram without a start.");
+                    break;
+                case 'D':
+                    if (longdatagram.ContainsKey(a))
+                    {
+                        newcmd = longdatagram[a] + data;
+                        longdatagram.Remove(a);
                         checkpacket(newcmd);
                         EthernetSendHexString(newcmd);
-                        break;
-                    case '9':
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        newcmd = cmd.Substring(3, 4) + TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
-                        checkpacket(newcmd);
-                        EthernetSendHexString(newcmd);
-                        break;
-                    case 'C':
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram[a] += data;
-                        else
-                            longdatagram.Add(a,"E" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
-                                + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2));
-                        break;
-                    case 'D':
-                        if (longdatagram.ContainsKey(a))
-                        {
-                            newcmd = longdatagram[a] + data;
-                            longdatagram.Remove(a);
-                            checkpacket(newcmd);
-                            EthernetSendHexString(newcmd);
-                        }
-                        else
-                        {
-                            log("End of datagram without a start.");
-                        }
-                        break;
-                    case 'E':
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        newcmd = "E" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd) 
-                            + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
-                        checkpacket(newcmd);
-                        EthernetSendHexString(newcmd);
-                        break;
-                    case 'F':
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        newcmd = "F000" + TranslateToNodeID(cmd.Substring(7, 3), cmd) 
-                            + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data;
-                        EthernetSendHexString(newcmd);
-                        break;
-                    default:
-                        if (longdatagram.ContainsKey(a))
-                            longdatagram.Remove(a);
-                        break;
-                }
+                    }
+                    else
+                        log("End of datagram without a start.");
+                    break;
+                case 'E':
+                    newcmd = "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                        + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
+                    checkpacket(newcmd);
+                    EthernetSendHexString(newcmd);
+                    break;
+                case 'F':
+                    newcmd = "3694" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                        + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data;
+                    EthernetSendHexString(newcmd);
+                    break;
             }
         }
 
@@ -453,8 +462,28 @@ namespace ComGateway
             {
                 int length = cmd.Length / 2;
                 string sid = TranslateToAlias(cmd.Substring(6, 12));
-                if (cmd.Substring(2, 1) == "E")
-                { // datagram
+                if (cmd[2] == '1') // simple broadcast
+                {
+                    string mti = "8"+cmd.Substring(3,2);
+                    if (cmd[6] == '0')
+                        mti += "7";
+                    if (cmd[6] == '1')
+                        mti += "3";
+                    if (cmd[6] == '2')
+                        mti += "F";
+                    if (cmd[6] == '3')
+                        mti += "B";
+                    CAN(mti + sid, cmd.Substring(18));
+                    return;
+                }
+                if (cmd.Substring(2, 4) == "3694") // stream
+                {
+                    string did = TranslateToAlias(cmd.Substring(18, 12));
+                    CAN("F" + did + sid, cmd.Substring(18));
+                    return;
+                }
+                if (cmd[2] == '3' && cmd[5] == '4') // datagram
+                { 
                     string did = TranslateToAlias(cmd.Substring(18, 12));
                     if (length - 15 <= 7)
                     {
@@ -466,7 +495,7 @@ namespace ComGateway
                         int pl = length;
                         if (pl >= 7)
                             pl = 7;
-                        CAN("C" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl * 2));
+                        CAN("B" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl * 2));
                         cmd = cmd.Substring(30 + pl * 2);
                         length -= pl;
                         while (length >= 8)
@@ -477,14 +506,21 @@ namespace ComGateway
                         }
                         CAN("D" + did + sid, cmd);
                     }
+                    return;
                 }
-                else if (cmd.Substring(2, 1) == "F")
-                { // stream
-
-                }
-                else // broadcast
+                if (cmd[2] == '3') // not simple broadcast
                 {
-                    CAN(cmd.Substring(2, 4) + sid, cmd.Substring(18));
+                    string mti = "9" + cmd.Substring(3, 2);
+                    if (cmd[6] == '0')
+                        mti += "7";
+                    if (cmd[6] == '1')
+                        mti += "3";
+                    if (cmd[6] == '2')
+                        mti += "F";
+                    if (cmd[6] == '3')
+                        mti += "B";
+                    CAN(mti + sid, cmd.Substring(18));
+                    return;
                 }
             }
             catch (Exception e)
@@ -514,19 +550,19 @@ namespace ComGateway
                     alias = (((int)(random ^ (random >> 12) ^ (random >> 24) ^ (random >> 36))) & 0x00000FFF).ToString("X3");
                 };
                 aliascheck = alias;
-                CAN(CIM0 + ((nodenumber >> 36) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN(FT_CIM0 + ((nodenumber >> 36) & 0x00000FFF).ToString("X3") + alias, "");
                 Thread.Sleep(2);
                 if (aliascheck == "") // someone objected
                     continue;
-                CAN(CIM1 + ((nodenumber >> 24) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN(FT_CIM1 + ((nodenumber >> 24) & 0x00000FFF).ToString("X3") + alias, "");
                 Thread.Sleep(2);
                 if (aliascheck == "") // someone objected
                     continue;
-                CAN(CIM2 + ((nodenumber >> 12) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN(FT_CIM2 + ((nodenumber >> 12) & 0x00000FFF).ToString("X3") + alias, "");
                 Thread.Sleep(2);
                 if (aliascheck == "") // someone objected
                     continue;
-                CAN(CIM3 + ((nodenumber >> 0) & 0x00000FFF).ToString("X3") + alias, "");
+                CAN(FT_CIM3 + ((nodenumber >> 0) & 0x00000FFF).ToString("X3") + alias, "");
                 for (int timeout = 0; timeout < 10; timeout++)
                 {
                     Thread.Sleep(25);
@@ -538,8 +574,8 @@ namespace ComGateway
 
             AliasTable.Add(alias, nodenumber.ToString("X12"));
             NodeIdTable.Add(nodenumber.ToString("X12"), alias);
-            CAN(RID + alias, "");
-            CAN(AMD + alias, nodenumber.ToString("X12"));
+            CAN(FT_RID + alias, "");
+            CAN(FT_AMD + alias, nodenumber.ToString("X12"));
             return alias;
         }
 

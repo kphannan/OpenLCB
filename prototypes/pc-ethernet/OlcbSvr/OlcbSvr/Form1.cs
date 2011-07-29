@@ -130,8 +130,8 @@ namespace OlcbSvr
 
                 // send node number
                 buffer[0] = 9;
-                buffer[1] = 0x80;
-                buffer[2] = 0x80;
+                buffer[1] = 0x30;
+                buffer[2] = 0x00;
                 buffer[3] = (byte)(nodenumberused[index] >> 40);
                 buffer[4] = (byte)(nodenumberused[index] >> 32);
                 buffer[5] = (byte)(nodenumberused[index] >> 24);

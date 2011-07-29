@@ -18,10 +18,10 @@ namespace LenzSvr
     public partial class Server : Form
     {
 
-        const string INIT = "908F";
-        const string XPRESSNET = "8050";
-        const string VERIFYNODEIDS = "80AF";
-        const string VERIFIEDNODEID = "90BF";
+        const string INIT = "3080";
+        const string XPRESSNET = "3510";
+        const string VERIFYNODEIDS = "10A0";
+        const string VERIFIEDNODEID = "30B0";
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
@@ -58,7 +58,7 @@ namespace LenzSvr
         static long nodenumber = 0;
         static byte[] inputbuffer = new byte[2000];
         string xml = "<cdi><id><Software>OpenLCB WiThrottle server to XpressNet</Software>"
-            + "<Version>Mike Johnson 4 July 2011</Version></id></cdi>";
+            + "<Version>Mike Johnson 29 July 2011</Version></id></cdi>";
 
         public Server()
         {
@@ -188,7 +188,7 @@ namespace LenzSvr
                 skt.Connect(ep);
                 byte[] buffer = new byte[12];
                 skt.Receive(buffer);
-                if ((buffer[1] << 8) + buffer[2] == 0x8080)
+                if ((buffer[1] << 8) + buffer[2] == 0x3000)
                 {
                     nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16)
                         + (buffer[7] << 8) + buffer[8];
@@ -451,9 +451,9 @@ namespace LenzSvr
                 log("E> " + cmd);
                 if (cmd.Substring(2, 4) == VERIFYNODEIDS)
                     SendHexString(VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
-                else if (cmd.Substring(2, 1) == "E" && cmd.Substring(18, 12) == nodenumber.ToString("X12"))
+                else if (cmd[2] == '3' && cmd[5] == '4' && cmd.Substring(18, 12) == nodenumber.ToString("X12"))
                 { // datagram
-                    if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
+                    if (cmd.Substring(2, 4) == "3204" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
                     {
                         // send XML file
                         string address = cmd.Substring(32, 8);
@@ -464,13 +464,11 @@ namespace LenzSvr
                             l = xml.Length - ad;
                         for (int i = 0; i < l; i++)
                             data += ((int)xml[ad + i]).ToString("X2");
-                        string s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                        string s = "3204" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
                         if (l<64)
                             s += "00";
                         SendHexString(s);
                     }
-                    else if (cmd.Substring(2, 4) == "E0A0")
-                        SendHexString(VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
                 }
                 else if (cmd.Substring(2, 4) == XPRESSNET)
                 {

@@ -17,63 +17,10 @@ namespace Throttle
         //        Frame Types
         //*********************************************************************************
 
-        enum FT
-        {
-            FT_CIM0 = 0x7000,   // Top 12 bits of NID
-            FT_CIM1 = 0x6000,   // 2nd top 12 bits of NID
-            FT_CIM2 = 0x5000,   // 3rd top 12 bits of NID
-            FT_CIM3 = 0x4000,   // lowest 12 bits of NID
-            FT_RID = 0x0700,   // Reserved ID
-            FT_VNSN = 0x80AF,   // Verify Node Serial Number 
-            FT_INIT = 0x908F,   // Normal Initialization Complete
-            FT_NSN = 0x90BF,   // Node Serial Number 
-            FT_EVENT = 0x82DF,   // EVENT - 82DF for JMRI
-            FT_RFID = 0x8011,   // RFID tag
-            FT_XPRESSNET = 0x8050, // XpressNet raw message from a command station 
-            FT_DG = 0xC000,   // Datagram first packets
-            FT_DGL = 0xD000,   // Datagram last packet
-            FT_DGS = 0xE000,   // Datagram single packet
-            FT_STREAM = 0xF000    // Stream data
-        };
-
-        // Datagram protocol id, 1st byte of data
-        enum DG
-        {
-            DG_LOGMSG = 0x01,
-            DG_LOGREPLY = 0x02,
-            DG_VNSN = 0x0A,
-            DG_OIR = 0x0C,
-            DG_TDE = 0x0D,
-            DG_MEMORY = 0x20,
-            DG_REMOTE = 0x21,
-            DG_DISPLAY = 0x28,
-            DG_IDEVNT = 0x2B,
-            DG_PSI = 0x2E,
-            DG_PSR = 0x2F,
-            DG_SDP = 0x4A,
-            DG_SR = 0x4B,
-            DG_OK = 0x4C,
-            DG_ERR = 0x4D,
-            DG_SIQ = 0x4E,
-            DG_SIR = 0x4F,
-        };
-
-        // Memory transfer datagram, protocol id = 0x20
-        enum DGM
-        {
-            DGM_WRITE = 0x20,
-            DGM_REPLY = 0x30,
-            DGM_READ = 0x60,
-            DGM_UPDCOMP = 0xA4,
-            DGM_REBOOT = 0xA5,
-            DGM_FACTORY = 0xA6,
-            DGM_LOADER = 0xA7,
-        };
-
-        public string INIT = FT.FT_INIT.ToString("X4");
-        public string VERIFYNODEIDS = FT.FT_VNSN.ToString("X4");
-        public string VERIFIEDNODEID = FT.FT_NSN.ToString("X4");
-        public string XPRESSNET = FT.FT_XPRESSNET.ToString("X4");
+        public string INIT = "3080";
+        public string VERIFYNODEIDS = "10A0";
+        public string VERIFIEDNODEID = "30B0";
+        public string XPRESSNET = "3510";
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
@@ -86,7 +33,7 @@ namespace Throttle
         static Socket skt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static bool serverconnected = false;
         string xml = "<cdi><id><Software>OpenLCB Simple Throttle</Software>"
-            + "<Version>Mike Johnson 9 July 2011</Version></id></cdi>";
+            + "<Version>Mike Johnson 29 July 2011</Version></id></cdi>";
 
         public Throttle()
         {
@@ -177,7 +124,7 @@ namespace Throttle
                 skt.Connect(ep);
                 byte[] buffer = new byte[12];
                 skt.Receive(buffer);
-                if ((buffer[1] << 8) + buffer[2] == 0x8080)
+                if ((buffer[1] << 8) + buffer[2] == 0x3000)
                 {
                     nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16)
                         + (buffer[7] << 8) + buffer[8];
@@ -205,9 +152,9 @@ namespace Throttle
                 SendHexString(s);
                 return;
             }
-            if (cmd.Substring(2, 1) == "E" && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram to this node
+            if (cmd[2] == '3' && cmd[5] == '4' && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram to this node
             {
-                if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
+                if (cmd.Substring(2, 4) == "3204" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
                 {
                     // send XML file
                     string address = cmd.Substring(32, 8);
@@ -218,14 +165,9 @@ namespace Throttle
                         l = xml.Length - ad;
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
-                    s = "E200" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                    s = "3204" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
                     if (l < 64)
                         s += "00";
-                    SendHexString(s);
-                }
-                else if (cmd.Substring(2, 4) == "E0A0")
-                {
-                    s = VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12");
                     SendHexString(s);
                 }
             }
