@@ -226,7 +226,7 @@ void packet(void)
     }
     else if (CB_FrameType==(FT_DGF|ND.nodeIdAlias) || CB_FrameType==(FT_DGM|ND.nodeIdAlias)
       || CB_FrameType==(FT_DGL|ND.nodeIdAlias) || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
-        if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8)) {
+        if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) {
             dgcnt = 0;
             DNID = CB_SourceNID;
         }
