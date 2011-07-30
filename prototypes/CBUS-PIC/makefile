@@ -1,4 +1,4 @@
-dirs = canldr canrsusb canacc canace3 canled canrfid canlcd cancs canxnet
+dirs = canldr canrsusb canacc canace3 canled canrfid canlcd canxnet cancs
 
 .PHONY: all
 all:

@@ -323,7 +323,7 @@ namespace ComGateway
             string a = cmd.Substring(7, 3);
             if (aliascheck == a) // packet with same alias as being CIMed
                 aliascheck = "";
-            if (cmd.Substring(3, 4) == FT_VNSN || cmd.Substring(3, 4) == FT_INIT
+            if (cmd.Substring(3, 4) == FT_NSN || cmd.Substring(3, 4) == FT_INIT
                 || cmd.Substring(3, 4) == FT_AMD)
             {
                 if (cmd.Length < 20)
@@ -465,13 +465,13 @@ namespace ComGateway
                 if (cmd[2] == '1') // simple broadcast
                 {
                     string mti = "8"+cmd.Substring(3,2);
-                    if (cmd[6] == '0')
+                    if (cmd[5] == '0')
                         mti += "7";
-                    if (cmd[6] == '1')
+                    if (cmd[5] == '1')
                         mti += "3";
-                    if (cmd[6] == '2')
+                    if (cmd[5] == '2')
                         mti += "F";
-                    if (cmd[6] == '3')
+                    if (cmd[5] == '3')
                         mti += "B";
                     CAN(mti + sid, cmd.Substring(18));
                     return;
@@ -511,13 +511,13 @@ namespace ComGateway
                 if (cmd[2] == '3') // not simple broadcast
                 {
                     string mti = "9" + cmd.Substring(3, 2);
-                    if (cmd[6] == '0')
+                    if (cmd[5] == '0')
                         mti += "7";
-                    if (cmd[6] == '1')
+                    if (cmd[5] == '1')
                         mti += "3";
-                    if (cmd[6] == '2')
+                    if (cmd[5] == '2')
                         mti += "F";
-                    if (cmd[6] == '3')
+                    if (cmd[5] == '3')
                         mti += "B";
                     CAN(mti + sid, cmd.Substring(18));
                     return;

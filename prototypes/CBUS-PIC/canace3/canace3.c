@@ -240,7 +240,17 @@ void scan(void)
 
 void Packet(void)
 {
-    if (CB_FrameType == FT_VNSN) { // send full NID
+    if (CB_SourceNID == ND.nodeIdAlias) { // conflict
+        if ((CB_FrameType&0x8000)==0x0000) { // CIM
+            CB_SourceNID = ND.nodeIdAlias;
+            CB_FrameType = FT_RID;
+            CB_datalen = 0;
+            while (SendMessage()==0) ;
+        }
+        else
+            CheckAlias(1);
+    }
+    else if (CB_FrameType == FT_VNSN) { // send full NID
         SendNSN(FT_NSN);
     }
     else if (CB_FrameType == FT_EVENT) {
@@ -250,15 +260,17 @@ void Packet(void)
 
 void DatagramPacket(void)
 {
-    if (DNID == -1)
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8)) {
+        dgcnt = 0;
         DNID = CB_SourceNID;
+    }
     else if (DNID != CB_SourceNID) {
-        sendnack(CB_SourceNID,99);
+        sendnack(CB_SourceNID,0);
         return;
     }
     for (i=0; i<CB_datalen && dgcnt<72; i++)
         GP_block[dgcnt++] = CB_data[i];
-    if ((CB_FrameType&0xF000) == FT_DGL || (CB_FrameType&0xF000) == FT_DGS) { // end of datagram
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGL>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // end of datagram
         DNID = -1;
         dgcnt = 0;
         if (GP_block[0] == DG_MEMORY) {
@@ -464,17 +476,8 @@ void main(void) {
         EndSendBlock();
 
         if (ReceiveMessage()) {
-            if (CB_SourceNID == ND.nodeIdAlias) {    // conflict
-                if ((CB_FrameType&0x8000)==0x0000) { // CIM or RIM message
-                    CB_SourceNID = ND.nodeIdAlias;
-                    CB_FrameType = FT_RID;
-                    CB_datalen = 0;
-                    while (SendMessage()==0) ;
-                }
-                else
-                    CheckAlias(1);                  // get new alias
-            }
-            else if ((CB_FrameType&0xCFFF) == (FT_DG | ND.nodeIdAlias) )  {
+            if (CB_FrameType==(FT_DGF|ND.nodeIdAlias) || CB_FrameType==(FT_DGM|ND.nodeIdAlias)
+              || CB_FrameType==(FT_DGL|ND.nodeIdAlias) || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
                 canTraffic = 1;
                 DatagramPacket();
             }

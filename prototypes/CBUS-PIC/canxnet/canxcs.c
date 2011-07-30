@@ -353,15 +353,17 @@ void Packet(void)
 void DatagramPacket(void)
 {
     far overlay BYTE i;
-    if (DNID == -1)
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) {
+        dgcnt = 0;
         DNID = CB_SourceNID;
+    }
     else if (DNID != CB_SourceNID) {
-        sendnack(CB_SourceNID,99);
+        sendnack(CB_SourceNID,0);
         return;
     }
     for (i=0; i<CB_datalen && dgcnt<72; i++)
         GP_block[dgcnt++] = CB_data[i];
-    if ((CB_FrameType&0xF000) == FT_DGL || (CB_FrameType&0xF000) == FT_DGS) { // end of datagram
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGL>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // end of datagram
         DNID = -1;
         dgcnt = 0;
         if (GP_block[0] == DG_MEMORY) {
@@ -516,7 +518,8 @@ void main(void)
         XpressNetIn();
 
         if (ECANReceiveMessage()) {
-            if ((CB_FrameType&0xCFFF) == (FT_DG | ND.nodeIdAlias) )  {
+            if (CB_FrameType==(FT_DGF|ND.nodeIdAlias) || CB_FrameType==(FT_DGM|ND.nodeIdAlias)
+              || CB_FrameType==(FT_DGL|ND.nodeIdAlias) || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
                 canTraffic = 1;
                 DatagramPacket();
             }
