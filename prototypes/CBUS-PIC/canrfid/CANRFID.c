@@ -333,13 +333,16 @@ void main(void)
                     goto error;
                 errorflag = FALSE;
                 CB_SourceNID = ND.nodeIdAlias;
-                CB_FrameType = FT_RFID;
-                CB_datalen = 5;
-                CB_data[0] = Get2Hex(RXbuf[1], RXbuf[2]);
-                CB_data[1] = Get2Hex(RXbuf[3], RXbuf[4]);
-                CB_data[2] = Get2Hex(RXbuf[5], RXbuf[6]);
-                CB_data[3] = Get2Hex(RXbuf[7], RXbuf[8]);
-                CB_data[4] = Get2Hex(RXbuf[9], RXbuf[10]);
+                CB_FrameType = FT_EVENT;
+                CB_datalen = 8;
+                CB_data[0] = 0x07;
+                CB_data[1] = 0;
+                CB_data[2] = 0;
+                CB_data[3] = Get2Hex(RXbuf[1], RXbuf[2]);
+                CB_data[4] = Get2Hex(RXbuf[3], RXbuf[4]);
+                CB_data[5] = Get2Hex(RXbuf[5], RXbuf[6]);
+                CB_data[6] = Get2Hex(RXbuf[7], RXbuf[8]);
+                CB_data[7] = Get2Hex(RXbuf[9], RXbuf[10]);
                 if (!errorflag)
                     while (SendMessage()==0) ;
 error:          RXindex = 0;

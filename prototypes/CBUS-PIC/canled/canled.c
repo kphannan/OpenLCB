@@ -65,6 +65,8 @@ unsigned int DNID;         // block transfer address
 BYTE dgcnt;
 BYTE learnlink;            // debounce learn button
 BYTE canTraffic;           // yellow led CAN traffic indicator
+BOOL idevents;
+int eventno;
 
 //*********************************************************************************
 //        ROM module info
@@ -229,6 +231,11 @@ void Packet(void)
     switch(CB_FrameType) {
     case FT_VNSN: // send full NID
         SendNSN(FT_NSN);
+        return;
+
+    case FT_IDEVNTS: // send Identified Consumers
+        idevents = TRUE; 
+        eventno = 0;
         return;
 
     case FT_EVENT: // Event
@@ -410,6 +417,8 @@ void main(void)
 
     DNID = -1;
     dgcnt = 0;
+    idevents = TRUE; // send Identified Consumers
+    eventno = 0;
 
     INTCONbits.GIEH = 1;  // enable all high priority interrupts          
     INTCONbits.GIEL = 1;  // enable all low priority interrupts
@@ -439,7 +448,7 @@ void main(void)
 
     // Main loop
     while(1) {
-        // 100 msec timer
+        // 25 msec timer
         if (Timer3Test()) { 
             if (canTraffic) {
                 YellowLEDOn();
@@ -468,6 +477,17 @@ void main(void)
             }
             if (AllLedOnTest) {         // led startup test timer
                 --AllLedOnTest;         // end of test when zero
+            }
+            if (idevents) { // send events
+                 if (ReadOneEvent(eventno)) {
+                     CB_SourceNID = ND.nodeIdAlias;
+                     CB_FrameType = FT_CONSID;
+                     CB_datalen = 8;
+                     if (ECANSendMessage()!=0)
+                         eventno++;
+                 }
+                 else
+                    idevents = FALSE;
             }
         }
 

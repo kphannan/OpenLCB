@@ -122,14 +122,14 @@ void SendNSN(unsigned int ft);
 void Timer3Init(void)
 {
     T3CON = 0b00110001;             // Timer 3 16bit R/W, 16MHz/32
-    TMR3H = (0x10000-12500)>>8;     // 50000 for (16,000,000/32/40)
+    TMR3H = (0x10000-12500)>>8;     // 12500 for (16,000,000/32/40)
     TMR3L = (0x10000-12500) & 0xFF;
 }
 
 BOOL Timer3Test(void)
 {
     if (PIR2bits.TMR3IF) {
-        TMR3H = (0x10000-12500)>>8; // 50000 for (16,000,000/32/40)
+        TMR3H = (0x10000-12500)>>8; // 12500 for (16,000,000/32/40)
         TMR3L = (0x10000-12500) & 0xFF;
         PIR2bits.TMR3IF = 0;
         return TRUE;
@@ -309,7 +309,7 @@ tryagain:
         }
         if (Timer3Test()) {
             t[0]++;
-            if (t[0]>6)
+            if (t[0]>8)
                 break;
         }
     }

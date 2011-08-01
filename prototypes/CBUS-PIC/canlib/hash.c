@@ -204,6 +204,33 @@ void ReadAllEvents(int start)
 }
 
 //*********************************************************************************
+//        Read all events one by one
+//*********************************************************************************
+
+BOOL ReadOneEvent(int start) 
+{
+    far overlay unsigned int ba;  // bucket address
+    far overlay char j;           // byte within bucket
+    far overlay char k;           // byte within event
+    far overlay char eventoffset; // output buffer pointer
+    
+    for (ba=0; ba<TABLESIZE; ba+=64) {
+        ProgramMemoryRead((unsigned short long)&table[ba], 64, (BYTE * far)hashbuffer);
+        for (j=0; j<64; j+=EVENTSIZE) {
+            if (!equal0x00((BYTE * far)&hashbuffer[j+1], 7)) {
+                if (start==0) {
+                    for (k=0; k<8; k++)
+                        CB_data[k] = hashbuffer[j+7-k];
+                    return TRUE;
+                }
+                start--; 
+            }
+        }
+    }
+    return FALSE;
+}
+
+//*********************************************************************************
 //        Save Event
 //*********************************************************************************
 

@@ -128,6 +128,13 @@ void InitRamFromEEPROM(void);
 
 #pragma udata
 
+BYTE BitMask[8];                // bit masks
+unsigned int DNID;              // block transfer source NID
+BYTE dgcnt;
+BYTE canTraffic;                // yellow led CAN traffic indicator
+BOOL idevents;
+int eventno;
+
 #ifdef ACE8C
 BYTE sendallbits;               // event action type 0
 BYTE OutputState;               // debounced scan data buffer
@@ -141,12 +148,6 @@ volatile int timer13us;         // 13 usec timer count for input scan
 volatile BYTE timerflag;		// scan flag
 BYTE event[8];
 #endif
-
-BYTE BitMask[8];                // bit masks
-
-unsigned int DNID;              // block transfer source NID
-BYTE dgcnt;
-BYTE canTraffic;                // yellow led CAN traffic indicator
 
 #ifdef SERVO
 BYTE next_portc;	            // used by hp interrupt to update portc 
@@ -506,7 +507,7 @@ BOOL scan(void)
             t = FALSE;
             for (i=0; i<8; i++) {
                 CB_data[i] = EventTable[j+7-i];
-                if (CB_data[i]!=0xFF)
+                if (CB_data[i]!=0)
                     t = TRUE;
             }
             if (t) {
@@ -542,6 +543,10 @@ void Packet(void)
     }
     else if (CB_FrameType == FT_VNSN) { // send full NID
         SendNSN(FT_NSN);
+    }
+    else if (CB_FrameType == FT_IDEVNTS) {
+        idevents = TRUE; // send Identified Consumers
+        eventno = 0;
     }
     else if (CB_FrameType == FT_EVENT) {
        canTraffic = 1;
@@ -950,6 +955,8 @@ void main(void) {
     GreenLEDOn();
     YellowLEDOff();
     canTraffic = 0;
+    idevents = TRUE; // send Identified Consumers
+    eventno = 0;
 
 #ifndef ACE8C
     // Test for power up mode, Unlearn switch on, learn switch off
@@ -974,7 +981,7 @@ void main(void) {
 
     // Simple loop looking for a received CAN frame
     while (1) {
-        if (Timer3Test()) {
+        if (Timer3Test()) { // 25 ms timer
             if (canTraffic) {
                 YellowLEDOn();
             }
@@ -986,7 +993,7 @@ void main(void) {
             if (pulseon) { // end sending a pulse 100 msec wide
                 PORTC = 0;
                 pulseon = 0;
-                pulsetimer = 5; // 600 msec recharge delay
+                pulsetimer = 25; // 600 msec recharge delay
             }
             else if (pulsetimer) { // 600 msec delay after a pulse
                 pulsetimer--;
@@ -1013,6 +1020,19 @@ void main(void) {
                         break;                        
                     }
                 }
+            }
+#endif
+#ifndef ACE8C
+            if (idevents) { // send events
+                 if (ReadOneEvent(eventno)) {
+                     CB_SourceNID = ND.nodeIdAlias;
+                     CB_FrameType = FT_CONSID;
+                     CB_datalen = 8;
+                     if (ECANSendMessage()!=0)
+                         eventno++;
+                 }
+                 else
+                    idevents = FALSE;
             }
 #endif
         }
@@ -1043,8 +1063,8 @@ void main(void) {
                             j += 8;
                         t = FALSE;
                         for (k=0; k<8; k++) {
-                            CB_data[k] = EventTable[j+k];
-                            if (CB_data[k]!=0xFF)
+                            CB_data[k] = EventTable[j+7-k];
+                            if (CB_data[k]!=0)
                                 t = TRUE;
                         }
                         if (t) {

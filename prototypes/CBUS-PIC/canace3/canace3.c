@@ -221,7 +221,7 @@ void scan(void)
                 t = FALSE;
                 for (i=0; i<8; i++) {
                     CB_data[i] = EventTable[j+7-i];
-                    if (CB_data[i]!=0xFF)
+                    if (CB_data[i]!=0)
                         t = TRUE;
                 }
                 if (t) {
@@ -452,7 +452,7 @@ void main(void) {
             // call scan every 25msec        
             scan(); // takes at least 16 x 0.1 ms
 
-            // start of day, 1 every 25msec, about 2.5 secs
+            // start of day, 1 every 25msec, max 3.2 secs
             if (starttimeout==0 && startofday!=0) {
                 startofday--;
                 CB_SourceNID = ND.nodeIdAlias;
@@ -464,8 +464,8 @@ void main(void) {
                 j = j<<3;
                 t = FALSE;
                 for (i=0; i<8; i++) {
-                    CB_data[i] = EventTable[j+i];
-                    if (CB_data[i]!=0xFF)
+                    CB_data[i] = EventTable[j+7-i];
+                    if (CB_data[i]!=0)
                         t = TRUE;
                 }
                 if (t && SendMessage()==0) 
