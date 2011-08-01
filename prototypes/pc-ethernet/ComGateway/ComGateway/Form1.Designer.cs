@@ -34,6 +34,7 @@
             this.LogTB = new System.Windows.Forms.TextBox();
             this.LogCB = new System.Windows.Forms.CheckBox();
             this.AliasBtn = new System.Windows.Forms.Button();
+            this.EvTableBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -79,19 +80,30 @@
             // 
             // AliasBtn
             // 
-            this.AliasBtn.Location = new System.Drawing.Point(220, 4);
+            this.AliasBtn.Location = new System.Drawing.Point(186, 4);
             this.AliasBtn.Name = "AliasBtn";
-            this.AliasBtn.Size = new System.Drawing.Size(75, 23);
+            this.AliasBtn.Size = new System.Drawing.Size(56, 23);
             this.AliasBtn.TabIndex = 4;
-            this.AliasBtn.Text = "Alias Table";
+            this.AliasBtn.Text = "Aliases";
             this.AliasBtn.UseVisualStyleBackColor = true;
             this.AliasBtn.Click += new System.EventHandler(this.AliasBtn_Click);
+            // 
+            // EvTableBtn
+            // 
+            this.EvTableBtn.Location = new System.Drawing.Point(248, 4);
+            this.EvTableBtn.Name = "EvTableBtn";
+            this.EvTableBtn.Size = new System.Drawing.Size(56, 23);
+            this.EvTableBtn.TabIndex = 5;
+            this.EvTableBtn.Text = "Events";
+            this.EvTableBtn.UseVisualStyleBackColor = true;
+            this.EvTableBtn.Click += new System.EventHandler(this.EvTableBtn_Click);
             // 
             // ComGateway
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(404, 149);
+            this.Controls.Add(this.EvTableBtn);
             this.Controls.Add(this.AliasBtn);
             this.Controls.Add(this.LogCB);
             this.Controls.Add(this.LogTB);
@@ -113,6 +125,7 @@
         private System.Windows.Forms.TextBox LogTB;
         private System.Windows.Forms.CheckBox LogCB;
         private System.Windows.Forms.Button AliasBtn;
+        private System.Windows.Forms.Button EvTableBtn;
     }
 }
 

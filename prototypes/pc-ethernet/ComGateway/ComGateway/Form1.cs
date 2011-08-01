@@ -27,15 +27,18 @@ namespace ComGateway
         const string FT_VNSN = "80A7";
         const string FT_NSN = "90B7";
         const string FT_INIT = "9087";
+        const string FT_IDEVENTS = "82B7";
         
         // Ethernet MTIs
-        const string INITCOMPLETE = "908F";
-        const string VERIFYNODEIDS = "80AF";
-        const string VERIFIEDNODEID = "90BF";
-        const string IDENTIFIEDCONSUMER = "926F";
-        const string IDENTIFIEDCONSUMERRANGE = "925F";
-        const string IDENTIFIEDPRODUCER = "926F";
-        const string IDENTIFIEDPRODUCERRANGE = "925F";
+        const string INITCOMPLETE = "3080";
+        const string VERIFYNODEIDS = "10A0";
+        const string VERIFIEDNODEID = "30B0";
+        const string IDETIFYEVENTS = "12B0";
+        const string IDENTIFIEDCONSUMER = "3263";
+        const string IDENTIFIEDCONSUMERRANGE = "3252";
+        const string IDENTIFIEDPRODUCER = "32A3";
+        const string IDENTIFIEDPRODUCERRANGE = "3292";
+        const string EVENT = "12D2";
 
         public long nodenumber = 0;
         public string nodenumberstr = "";
@@ -214,7 +217,7 @@ namespace ComGateway
                     inputstring = "";
                 if (LogCB.Checked)
                     log("Ei> " + cmd);
-                if (checkpacket(cmd))
+                if (checkpacket(cmd.Substring(2), false))
                     CANSendHexString(cmd);
             }
             skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
@@ -266,6 +269,7 @@ namespace ComGateway
                 alias = GetAlias(nodenumber);
                 CAN(FT_INIT + alias, nodenumber.ToString("X12"));
                 CAN(FT_VNSN + alias, "");
+                CAN(FT_IDEVENTS + alias, "");
             }
             catch
             {
@@ -387,7 +391,7 @@ namespace ComGateway
                     if (cmd[6] == 'B')
                         newcmd += "3";
                     newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
-                    checkpacket(newcmd);
+                    checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
                     break;
                 case '9':
@@ -401,7 +405,7 @@ namespace ComGateway
                     if (cmd[6] == 'B')
                         newcmd += "3";
                     newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
-                    checkpacket(newcmd);
+                    checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
                     break;
                 case 'B':
@@ -421,7 +425,7 @@ namespace ComGateway
                     {
                         newcmd = longdatagram[a] + data;
                         longdatagram.Remove(a);
-                        checkpacket(newcmd);
+                        checkpacket(newcmd, true);
                         EthernetSendHexString(newcmd);
                     }
                     else
@@ -430,7 +434,7 @@ namespace ComGateway
                 case 'E':
                     newcmd = "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
                         + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
-                    checkpacket(newcmd);
+                    checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
                     break;
                 case 'F':
@@ -533,8 +537,8 @@ namespace ComGateway
         // Alias handling
         //*******************************************************************************************************
 
-        Dictionary<string, string> AliasTable = new Dictionary<string, string>();
-        Dictionary<string, string> NodeIdTable = new Dictionary<string, string>();
+        SortedDictionary<string, string> AliasTable = new SortedDictionary<string, string>();
+        SortedDictionary<string, string> NodeIdTable = new SortedDictionary<string, string>();
         public string aliascheck = "";
 
         public string GetAlias(long nodenumber)
@@ -596,71 +600,154 @@ namespace ComGateway
             return AliasTable[alias];
         }
 
+        private void AliasBtn_Click(object sender, EventArgs e)
+        {
+            foreach (KeyValuePair<string, string> kvp in AliasTable)
+                log("Aliases " + kvp.Key + " " + kvp.Value);
+        }
+
         //*******************************************************************************************************
-        // Packet checking
+        // Ethernet format string packet checking
         //*******************************************************************************************************
 
-        // true if forwarded to CAN, false if blocked
-        public bool checkpacket(string cmd)
+        SortedDictionary<ulong, ulong> events = new SortedDictionary<ulong, ulong>();
+
+        // return true if forwarded to CAN, false if blocked
+
+        public bool checkpacket(string cmd, bool fromCAN)
         {
             string s;
-            if (cmd.Substring(2,4)==VERIFYNODEIDS) {
+            if (cmd.Substring(0,4)==VERIFYNODEIDS) {
                 s = VERIFIEDNODEID + nodenumberstr + nodenumberstr;
                 EthernetSendHexString(s);
                 CANSendHexString(s);
                 return true;
             }
-            if (cmd.Substring(2,4)==INITCOMPLETE || cmd.Substring(2,4)==VERIFIEDNODEID)
+            if (cmd.Substring(0,4)==INITCOMPLETE || cmd.Substring(0,4)==VERIFIEDNODEID)
                 return false;
-            if (cmd.Substring(2,4)==IDENTIFIEDCONSUMER || cmd.Substring(2,4)==IDENTIFIEDCONSUMERRANGE)
-                return false;
-            if (cmd.Substring(2,4)==IDENTIFIEDPRODUCER|| cmd.Substring(2,4)==IDENTIFIEDPRODUCERRANGE)
-                return false;
-            if (cmd.Substring(2, 1) == "E" && cmd.Substring(18, 12) == nodenumberstr) // datagram to this node
+            if (cmd.Substring(0,4)==IDENTIFIEDCONSUMER)
             {
-                if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
+                ulong ev = Convert.ToUInt64(cmd.Substring(16, 16),16);
+                addevent(ev, ev);
+                return false;
+            }
+            if (cmd.Substring(0, 4) == IDENTIFIEDCONSUMERRANGE)
+            {
+                ulong ev = Convert.ToUInt64(cmd.Substring(16, 16),16);
+                ulong r = rangesize(ev);
+                addevent(ev & ~r, ev | r);
+                return false;
+            }
+            if (cmd.Substring(0,4)==IDENTIFIEDPRODUCER|| cmd.Substring(0,4)==IDENTIFIEDPRODUCERRANGE)
+                return false;
+            if (cmd.Substring(0, 4) == EVENT)
+            {
+                return findevent(Convert.ToUInt64(cmd.Substring(16, 16),16));
+            }
+            if (cmd[0] == '3' && cmd[3]=='4' && cmd.Substring(16, 12) == nodenumberstr) // datagram to this node
+            {
+                if (cmd.Substring(0, 4) == "3204" && cmd.Substring(28, 2) == "60" && cmd.Substring(38, 2) == "FF")
                 {
                     // send XML file
-                    string address = cmd.Substring(32, 8);
+                    string address = cmd.Substring(30, 8);
                     int ad = Convert.ToInt32(address, 16);
                     string data = "";
-                    int l = Convert.ToInt32(cmd.Substring(42, 2), 16);
+                    int l = Convert.ToInt32(cmd.Substring(40, 2), 16);
                     if (ad + l > xml.Length)
                         l = xml.Length - ad;
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
-                    s = "E200" + nodenumberstr + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                    s = "3204" + nodenumberstr + cmd.Substring(4, 12) + "30" + address + "FF" + data;
                     if (l < 64)
                         s += "00";
-                    EthernetSendHexString(s);
-                    CANSendHexString(s);
+                    if (fromCAN)
+                        CANSendHexString(s);
+                    else
+                        EthernetSendHexString(s);
+                    return false;
                 }
-                if (cmd.Substring(2, 4) == "E200" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "00")
+                if (cmd.Substring(0, 4) == "3204" && cmd.Substring(28, 2) == "60" && cmd.Substring(38, 2) == "00")
                 {
                     // send port speed
-                    string address = cmd.Substring(32, 8);
-                    string speed = com.BaudRate.ToString("X8");
+                    string address = cmd.Substring(30, 8);
+                    string speed = com.BaudRate.ToString("X8").PadLeft(8,'0');
                     string data = "";
                     for (int i = 0; i < 8; i+=2)
                         data = speed.Substring(i,2) + data;
-                    s = "E200" + nodenumberstr + cmd.Substring(6, 12) + "30" + address + "00" + data;
-                    EthernetSendHexString(s);
-                    CANSendHexString(s);
+                    s = "3204" + nodenumberstr + cmd.Substring(4, 12) + "30" + address + "00" + data;
+                    if (fromCAN)
+                        CANSendHexString(s);
+                    else
+                        EthernetSendHexString(s);
+                    return false;
                 }
-                else if (cmd.Substring(2, 4) == "E0A0")
-                {
-                    s = VERIFIEDNODEID + nodenumberstr + nodenumberstr;
-                    EthernetSendHexString(s);
-                    CANSendHexString(s);
-                }
+            }
+            if (cmd[0] == '3' && cmd[3] == '4') // datagram filter
+            {
+                return NodeIdTable.ContainsKey(cmd.Substring(16, 12));
             }
             return true;
         }
 
-        private void AliasBtn_Click(object sender, EventArgs e)
+        public bool findevent(ulong ev)
         {
-            foreach(KeyValuePair<string, string> kvp in AliasTable)
-                log("Aliases " + kvp.Key + " " + kvp.Value);  
+            foreach (KeyValuePair<ulong, ulong> kvp in events)
+                if (ev >= kvp.Key && ev <= kvp.Value)
+                    return true;
+            return false;
+        }
+
+        public void addevent(ulong lower, ulong upper)
+        {
+            foreach (KeyValuePair<ulong, ulong> kvp in events)
+            {
+                if ((lower >= kvp.Key && lower <= kvp.Value) || lower == kvp.Value + 1)
+                { // extend upper of range
+                    if (events[kvp.Key] < upper)
+                        events[kvp.Key] = upper;
+                    return;
+                }
+                else if (upper >= kvp.Key && upper <= kvp.Value)
+                { // merge keys
+                    events.Add(lower, Math.Max(events[kvp.Key], upper));
+                    events.Remove(kvp.Key);
+                    return;
+                }
+            }
+            events.Add(lower, upper);
+        }
+
+        public ulong rangesize(ulong s)
+        {
+            ulong mask = 1;
+            ulong bit = 1;
+            if ((s & 1) == 1)
+            {
+                for (int i = 0; i < 64; i++)
+                {
+                    bit <<= 1;
+                    if ((s & bit) != bit)
+                        break;
+                    mask |= bit;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 64; i++)
+                {
+                    bit <<= 1;
+                    if ((s & bit) != 0)
+                        break;
+                    mask |= bit;
+                }
+            }
+            return mask;
+        }
+
+        private void EvTableBtn_Click(object sender, EventArgs e)
+        {
+            foreach (KeyValuePair<ulong, ulong> kvp in events)
+                log("Event: " + kvp.Key.ToString("X16") + " - " + kvp.Value.ToString("X16"));
         }
 
     }
