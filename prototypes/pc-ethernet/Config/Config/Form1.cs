@@ -895,10 +895,19 @@ namespace Config
         // Write to node
         //******************************************************************************************************
 
+        int WriteSegmentSpace = 0;
+        int WriteSegmentSize = 0;
+        long WriteSegmentOrigin = 0;
+        string WriteSegmentData = "";
+
         private void WriteBtn_Click(object sender, EventArgs e)
         {
             if (!datavalid)
                 return;
+            WriteSegmentData = SegmentData;
+            WriteSegmentSpace = SegmentSpace;
+            WriteSegmentSize = SegmentSize;
+            WriteSegmentOrigin = SegmentOrg;
             background = new Thread(WriteData);
             background.Start();
             taskcomplete.WaitOne();
@@ -909,16 +918,17 @@ namespace Config
         public void WriteData()
         {
             string datagram ="";
-            long adr = SegmentOrg;
-            int left = SegmentSize;
-            while (adr < SegmentOrg + SegmentSize)
+            long adr = WriteSegmentOrigin;
+            int left = WriteSegmentSize;
+            WriteSegmentData = WriteSegmentData.PadRight(WriteSegmentSize*2, '0');
+            while (adr < WriteSegmentOrigin + WriteSegmentSize)
             {
                int l = left;
                 if (l > 64)
                     l = 64;
                 SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text
-                    + "20" + adr.ToString("X8") + SegmentSpace.ToString("X2")
-                    + SegmentData.Substring((int)(adr - SegmentOrg) * 2, l * 2));
+                    + "20" + adr.ToString("X8") + WriteSegmentSpace.ToString("X2")
+                    + WriteSegmentData.Substring((int)(adr - WriteSegmentOrigin) * 2, l * 2));
                 for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
@@ -1073,13 +1083,16 @@ namespace Config
 
         private void RestoreBtn_Click(object sender, EventArgs e)
         {
+            int i;
+            string segmentname = "";
+
             if (!xmlvalid) {
                 log("No xml file");
                 return;
             }
             saveFileDialog.AddExtension = true;
             saveFileDialog.Filter = "Config files|*.cfg|All files|*.*";
-            DialogResult res = saveFileDialog.ShowDialog();
+            DialogResult res = restoreFileDialog.ShowDialog();
             if (!res.Equals(DialogResult.OK))
                 return;
 
@@ -1088,12 +1101,47 @@ namespace Config
             xmldoc.LoadXml(file.ReadToEnd());
             XmlNode docnode = xmldoc.FirstChild.FirstChild;
             XmlNode node = xmld.FirstChild.FirstChild;
-            while (docnode != null)
+            while (docnode != null && node != null)
             {
-
-
-
+                WriteSegmentSpace = 0;
+                WriteSegmentOrigin = 0;
+                segmentname = "";
+                if (!"segment".StartsWith(node.Name))
+                { 
+                    node = node.NextSibling;
+                    continue;
+                }
+                if (!"Segment".StartsWith(docnode.Name))
+                {
+                    docnode = docnode.NextSibling;
+                    continue;
+                }
+                for (i = 0; i < docnode.Attributes.Count; i++)
+                {
+                    if ("name".StartsWith(docnode.Attributes[i].Name))
+                        segmentname = docnode.Attributes[i].InnerText;
+                }
+                for (i = 0; i < node.Attributes.Count; i++)
+                {
+                    if ("space".StartsWith(node.Attributes[i].Name))
+                        WriteSegmentSpace = (int)GetNumber(node.Attributes[i].InnerText);
+                    else if ("origin".StartsWith(node.Attributes[i].Name))
+                        WriteSegmentOrigin = GetNumber(node.Attributes[i].InnerText);
+                    else if ("name".StartsWith(node.Attributes[i].Name) 
+                        && segmentname != node.Attributes[i].InnerText)
+                        {
+                            node = node.NextSibling;
+                            continue;
+                        }
+                }
+                WriteSegmentData = docnode.InnerText;
+                WriteSegmentSize = sizesegment(node);
+                // write data
+                background = new Thread(WriteData);
+                background.Start();
+                taskcomplete.WaitOne();
                 docnode = docnode.NextSibling;
+                node = node.NextSibling;
             }
             file.Close();
         }

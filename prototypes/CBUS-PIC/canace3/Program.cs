@@ -608,10 +608,9 @@ namespace interlock
 
             StreamWriter swcfg = new StreamWriter(file);
             swcfg.WriteLine("<Config version=\"1\">");
-            swcfg.WriteLine("<Nodenumber></Nodenumber>");
-            swcfg.WriteLine("<cdi><id></id><se na=\"Interlocks\" sp=\"1\" bu=\"#303\">"
-                + "<gr na=\"Lever-1\" rep=\"128\"><in na=\"Start\" si=\"2\"/></gr>"
-                + "<gr rep=\"#800\"><by na=\"Data\"/></gr></se></cdi>");
+            swcfg.WriteLine("<cdi><seg name=\"Interlocks\" space=\"1\">"
+                + "<group name=\"Lever-1\" rep=\"128\"><int name=\"Start\" size=\"2\"/></group>"
+                + "<group rep=\"#800\"><byte name=\"Data\"/></group></seg></cdi>");
             swcfg.Write("<Segment name=\"Interlocks\">");
 
             // write 128 x 4 characters for data start pointers
