@@ -1,0 +1,26 @@
+"Locking table for Layout",,,,
+"Name","No"," Released by","Locks N"," Locks E/W"
+"Up Main Starter",1,,"2.4.16.20.21",
+"Up Main Shunt",2,,"1.4.16.20.21",
+"Disc at 4A",3,,"(5w4R).(19w4R).20.21",4
+"West crossover",4,,"1.2.20.21",
+"Disc at 4B",5,,"(3w4R)",4
+"West Main Uncouple",6,,,
+"West Loop Uncouple",7,,,
+"Down Main or Headshunt to Siding B",8,,,
+"Spare",9,,,
+"Siding Uncouple",10,,,
+"East Loop Uncouple",11,,,
+"East Main Uncouple",12,,,
+"Disc Loop to Down Main or Headshunt",13,,"15.18.19",16
+"DiscSiding to Down Main or Headshunt",14,15,18.19,16
+"Down Main or Headshunt to Sidings",15,,13,
+"East Crossover",16,,"1.2.17.18.20",
+"F.P.L For 16",17,,16,
+"Disc Headshunt to Loop or Sidings",18,,"13.14.16",15
+"Disc Down Main to Loop or Sidings",19,16,"(3w4R).13.14.21",4.15
+"Calling on to Platform",20,,"1.2.3.4.16.21",
+"Down Main Inner Home",21,17,"1.2.3.4.19.20",
+"Factory Gate",22,,,
+"Fiddle yard 1",23,,,
+"Fiddle yard 2",24,,,
