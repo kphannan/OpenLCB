@@ -24,6 +24,7 @@ namespace ComGateway
         const string FT_CIM3 = "4";
         const string FT_RID = "0700";
         const string FT_AMD = "0701";
+        const string FT_AME = "0702";
         const string FT_VNSN = "80A7";
         const string FT_NSN = "90B7";
         const string FT_INIT = "9087";
@@ -348,6 +349,13 @@ namespace ComGateway
             string newcmd = "";
             switch (cmd[3])
             {
+                case '0': // CAN Control
+                    if (cmd.Substring(3, 4) == FT_AME) // alias enquiry
+                    {
+                        if (NodeIdTable.ContainsKey(cmd.Substring(11, 12)))
+                            CAN(FT_AMD + NodeIdTable[cmd.Substring(11, 12)], cmd.Substring(11, 12));
+                    }
+                    break;
                 case '7': // CIM
                     if (AliasTable.ContainsKey(a))
                     {
