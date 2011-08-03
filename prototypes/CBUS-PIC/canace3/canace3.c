@@ -58,7 +58,6 @@ BYTE starttimeout;    // 2 sec delay before sending
 #ifdef INTERLOCK
 #define modulestring "OpenLCB PIC CANACE3 Interlock "  __DATE__ " " __TIME__ 
 #define DATASIZE 2048
-#define DATASIZES QUOTED(DATASIZE) // "#800"
 #else
 #define modulestring "OpenLCB PIC CANACE3 "  __DATE__ " " __TIME__ 
 #endif
@@ -73,18 +72,18 @@ const rom BYTE xml[] = "<cdi><id><software>" modulestring "</software></id>"
       "<in na=\"Member\" si=\"3\"/>"
       "<by na=\"Group\" si=\"2\"/>"
     "</se>"
-    "<se na=\"Event Data\" sp=\"0\" bu=\"#303\">"
+    "<se na=\"Event Data\" sp=\"0\" bu=\"#363\">"
       "<gr rep=\"128\">"
         "<by na=\"Event Off\" size=\"8\"/>"
         "<by na=\"Event On\" size=\"8\"/>"
       "</gr>"
     "</se>"
 #ifdef INTERLOCK
-    "<se na=\"Interlocks\" sp=\"1\" bu=\"#303\">"
+    "<se na=\"Interlocks\" sp=\"1\" bu=\"#363\">"
       "<gr na=\"Lever-1\" rep=\"128\">"
         "<in na=\"Start\" si=\"2\"/>"
       "</gr>"
-      "<gr rep=\"" DATASIZES "\">"
+      "<gr rep=\"2048\">"
         "<by na=\"Data\"/>"
       "</gr>"
     "</se>"

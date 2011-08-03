@@ -618,7 +618,7 @@ namespace interlock
             {
                 if (rpn[i].Length > 0)
                 {
-                    swcfg.Write(dataptr.ToString("X4"));
+                    swcfg.Write((dataptr&0x00FF).ToString("X2")+(dataptr>>8).ToString("X2"));
                     foreach (char c in rpn[i])
                     {
                         string t = ((int)c).ToString("X2");

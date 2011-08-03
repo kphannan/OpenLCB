@@ -789,6 +789,7 @@ namespace Config
         {
             int rep = 1;
             string name = "Group";
+            int startp = bytepos;
 
             for (int i = 0; i < n.Attributes.Count; i++)
             {
@@ -814,6 +815,7 @@ namespace Config
                     log(fc.Name);
                 fc = fc.NextSibling;
             }
+            bytepos = startp + recsize * rep;
             return index;
         }
 
@@ -1085,13 +1087,14 @@ namespace Config
         {
             int i;
             string segmentname = "";
+            string nodesegmentname = "";
 
             if (!xmlvalid) {
                 log("No xml file");
                 return;
             }
-            saveFileDialog.AddExtension = true;
-            saveFileDialog.Filter = "Config files|*.cfg|All files|*.*";
+            restoreFileDialog.AddExtension = true;
+            restoreFileDialog.Filter = "Config files|*.cfg|All files|*.*";
             DialogResult res = restoreFileDialog.ShowDialog();
             if (!res.Equals(DialogResult.OK))
                 return;
@@ -1106,6 +1109,7 @@ namespace Config
                 WriteSegmentSpace = 0;
                 WriteSegmentOrigin = 0;
                 segmentname = "";
+                nodesegmentname = "";
                 if (!"segment".StartsWith(node.Name))
                 { 
                     node = node.NextSibling;
@@ -1127,12 +1131,13 @@ namespace Config
                         WriteSegmentSpace = (int)GetNumber(node.Attributes[i].InnerText);
                     else if ("origin".StartsWith(node.Attributes[i].Name))
                         WriteSegmentOrigin = GetNumber(node.Attributes[i].InnerText);
-                    else if ("name".StartsWith(node.Attributes[i].Name) 
-                        && segmentname != node.Attributes[i].InnerText)
-                        {
-                            node = node.NextSibling;
-                            continue;
-                        }
+                    else if ("name".StartsWith(node.Attributes[i].Name)) 
+                        nodesegmentname = node.Attributes[i].InnerText;
+                }
+                if (segmentname != nodesegmentname)
+                {
+                    node = node.NextSibling;
+                    continue;
                 }
                 WriteSegmentData = docnode.InnerText;
                 WriteSegmentSize = sizesegment(node);
