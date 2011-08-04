@@ -326,7 +326,7 @@ namespace ComGateway
             if (LogCB.Checked)
                 log("Ci> " + cmd);
             string a = cmd.Substring(7, 3);
-            if (aliascheck == a) // packet with same alias as being CIMed
+            if (aliascheck == a) // packet with same alias as being CIDed
                 aliascheck = "";
             if (cmd.Substring(3, 4) == FT_NSN || cmd.Substring(3, 4) == FT_INIT
                 || cmd.Substring(3, 4) == FT_AMD)
@@ -336,10 +336,15 @@ namespace ComGateway
                 else
                 {
                     string n = cmd.Substring(11, 12);
-                    if (NodeIdTable.ContainsKey(n)) // remove old alias
+                    if (NodeIdTable.ContainsKey(n)) // remove old alias for nodeid
                     {
                         AliasTable.Remove(NodeIdTable[n]);
                         NodeIdTable.Remove(n);
+                    }
+                    if (AliasTable.ContainsKey(a)) // remove old nodeid for alias
+                    {
+                        NodeIdTable.Remove(AliasTable[a]);
+                        AliasTable.Remove(a);
                     }
                     AliasTable.Add(a, n);
                     NodeIdTable.Add(n, a);
