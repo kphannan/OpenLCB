@@ -16,24 +16,38 @@ namespace OlcbSvr
     public partial class OlcbSvr : Form
     {
         const int MAXCONNECTIONS = 15;
+
+        const int NODENUMBER = 0x3000;
+        const int NOFILTER = 0x3010;
         const int INITCOMPLETE = 0x3080;
         const int VERIFIEDNID = 0x30B0;
         const int CONSUMERINDENTIFIED = 0x3263;
         const int CONSUMERRANGE = 0x3252;
+        const int PRODUCERINDENTIFIED = 0x92AB;
+        const int PRODUCERRANGE = 0x929F;
         const int EVENT = 0x12D2;
 
         class CONNECTION
         {
             public Socket skt;
             public bool inuse;
+            public bool filter;
             public long nodenumber;
             public List<long> nodeids = new List<long>();
             public SortedDictionary<ulong, ulong> events = new SortedDictionary<ulong, ulong>();
 
+            public CONNECTION()
+            {
+                inuse = false;
+                filter = true;
+            }
+
             public void UpdateFilters(byte[] buffer, int start)
             {
                 int mti = buffer[start + 1] << 8 | buffer[start + 2];
-                if (mti == INITCOMPLETE || mti == VERIFIEDNID)
+                if (mti == NOFILTER)
+                    filter = false;
+                else if (mti == INITCOMPLETE || mti == VERIFIEDNID)
                 {
                     long srcnode = ((long)buffer[start + 3] << 40) + ((long)buffer[start + 4] << 32)
                         + ((long)buffer[start + 5] << 24) + ((long)buffer[start + 6] << 16)
@@ -62,7 +76,12 @@ namespace OlcbSvr
 
             public bool CheckFilter(byte[] buffer, int start)
             {
+                if (!filter)
+                    return true;
                 int mti = buffer[start + 1] << 8 | buffer[start + 2];
+                if (mti == NOFILTER || mti == INITCOMPLETE || mti == VERIFIEDNID || mti == CONSUMERINDENTIFIED
+                    || mti == CONSUMERRANGE || mti == PRODUCERINDENTIFIED || mti == PRODUCERRANGE)
+                    return false;
                 if ((mti & 0xF00F) == 0x3004) // datagram
                 {
                     long dest = ((long)buffer[start + 9] << 40) + ((long)buffer[start + 10] << 32)
@@ -72,7 +91,7 @@ namespace OlcbSvr
                         return true;
                     return false;
                 }
-                else if (mti == EVENT) // event
+                if (mti == EVENT) // event
                 {
                     ulong ev = ((ulong)buffer[start + 9] << 56) + ((ulong)buffer[start + 10] << 48)
                         + ((ulong)buffer[start + 11] << 40) + ((ulong)buffer[start + 12] << 32)
@@ -201,6 +220,7 @@ namespace OlcbSvr
                 }
                 catch {};
                 connects[i].inuse = false;
+                connects[i].filter = true;
                 connects[i].nodenumber = servernodenumber + i + 1;
             }
         }
@@ -229,7 +249,7 @@ namespace OlcbSvr
         }
 
         //***************************************************************************
-        // OpenLCB server
+        // Ethernet connection
         //***************************************************************************
 
         // Runs as a separate thread to handle a connection.
@@ -262,8 +282,8 @@ namespace OlcbSvr
 
                 // send node number
                 buffer[0] = 9;
-                buffer[1] = 0x30;
-                buffer[2] = 0x00;
+                buffer[1] = NODENUMBER >> 8;
+                buffer[2] = NODENUMBER & 0xFF;
                 buffer[3] = (byte)(connects[index].nodenumber >> 40);
                 buffer[4] = (byte)(connects[index].nodenumber >> 32);
                 buffer[5] = (byte)(connects[index].nodenumber >> 24);

@@ -18,6 +18,8 @@ namespace Config
 {
     public partial class Config : Form
     {
+        const int NODENUMBER = 0x3000;
+        const string NOFILTER = "3010";
         const string INIT = "3080";
         const string VERIFYNODEIDS = "10A0";
         const string VERIFIEDNODEID = "30B0";
@@ -189,7 +191,7 @@ namespace Config
                 skt.Connect(ep);
                 byte[] buffer = new byte[12];
                 skt.Receive(buffer);
-                if ((buffer[1] << 8) + buffer[2] == 0x3000)
+                if ((buffer[1] << 8) + buffer[2] == NODENUMBER)
                 {
                     nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16)
                         + (buffer[7] << 8) + buffer[8];
@@ -203,6 +205,7 @@ namespace Config
                 skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
                 serverconnected = true;
                 SendHexString(INIT + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
+                SendHexString(NOFILTER + nodenumber.ToString("X12"));
                 SelectNodeCB.Items.Clear();
                 SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
             }
