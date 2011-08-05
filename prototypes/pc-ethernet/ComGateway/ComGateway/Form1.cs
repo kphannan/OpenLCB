@@ -34,12 +34,12 @@ namespace ComGateway
         const string INITCOMPLETE = "3080";
         const string VERIFYNODEIDS = "10A0";
         const string VERIFIEDNODEID = "30B0";
-        const string IDETIFYEVENTS = "12B0";
-        const string IDENTIFIEDCONSUMER = "3263";
-        const string IDENTIFIEDCONSUMERRANGE = "3252";
-        const string IDENTIFIEDPRODUCER = "32A3";
-        const string IDENTIFIEDPRODUCERRANGE = "3292";
-        const string EVENT = "12D2";
+        // const string IDENTIFYEVENTS = "12B0";
+        // const string IDENTIFIEDCONSUMER = "3263";
+        // const string IDENTIFIEDCONSUMERRANGE = "3252";
+        // const string IDENTIFIEDPRODUCER = "32A3";
+        // const string IDENTIFIEDPRODUCERRANGE = "3292";
+        // const string EVENT = "12D2";
 
         public long nodenumber = 0;
         public string nodenumberstr = "";
@@ -270,6 +270,7 @@ namespace ComGateway
                 alias = GetAlias(nodenumber);
                 CAN(FT_INIT + alias, nodenumber.ToString("X12"));
                 CAN(FT_VNSN + alias, "");
+                Thread.Sleep(20);
                 CAN(FT_IDEVENTS + alias, "");
             }
             catch

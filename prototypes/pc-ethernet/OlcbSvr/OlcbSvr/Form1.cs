@@ -20,6 +20,8 @@ namespace OlcbSvr
         const int NODENUMBER = 0x3000;
         const int NOFILTER = 0x3010;
         const int INITCOMPLETE = 0x3080;
+        const int VERIFYNODEIDS = 0x10A0;
+        const int IDENTIFYEVENTS = 0x12B0;
         const int VERIFIEDNID = 0x30B0;
         const int CONSUMERINDENTIFIED = 0x3263;
         const int CONSUMERRANGE = 0x3252;
@@ -292,9 +294,34 @@ namespace OlcbSvr
                 buffer[8] = (byte)connects[index].nodenumber;
                 connects[index].skt.Send(buffer, 9, SocketFlags.None);
 
+                // send VerifyNodeIDs
+                buffer[0] = 9;
+                buffer[1] = VERIFYNODEIDS >> 8;
+                buffer[2] = VERIFYNODEIDS & 0xFF;
+                buffer[3] = (byte)(servernodenumber >> 40);
+                buffer[4] = (byte)(servernodenumber >> 32);
+                buffer[5] = (byte)(servernodenumber >> 24);
+                buffer[6] = (byte)(servernodenumber >> 16);
+                buffer[7] = (byte)(servernodenumber >> 8);
+                buffer[8] = (byte)servernodenumber;
+                connects[index].skt.Send(buffer, 9, SocketFlags.None);
+
+                // send Identify Events
+                buffer[0] = 9;
+                buffer[1] = IDENTIFYEVENTS >> 8;
+                buffer[2] = IDENTIFYEVENTS & 0xFF;
+                buffer[3] = (byte)(servernodenumber >> 40);
+                buffer[4] = (byte)(servernodenumber >> 32);
+                buffer[5] = (byte)(servernodenumber >> 24);
+                buffer[6] = (byte)(servernodenumber >> 16);
+                buffer[7] = (byte)(servernodenumber >> 8);
+                buffer[8] = (byte)servernodenumber;
+                connects[index].skt.Send(buffer, 9, SocketFlags.None);
+
                 connects[index].nodeids.Clear();
                 connects[index].events.Clear();
                 connects[index].nodeids.Add(connects[index].nodenumber); // should be done by InitComplete
+                
                 while (true)
                 {
                     int size = connects[index].skt.Receive(buffer);
