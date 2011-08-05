@@ -623,7 +623,7 @@ namespace ComGateway
         // Ethernet format string packet checking
         //*******************************************************************************************************
 
-        SortedDictionary<ulong, ulong> events = new SortedDictionary<ulong, ulong>();
+        // SortedDictionary<ulong, ulong> events = new SortedDictionary<ulong, ulong>();
 
         // return true if forwarded to CAN, false if blocked
 
@@ -636,6 +636,7 @@ namespace ComGateway
                 CANSendHexString(s);
                 return true;
             }
+            /*
             if (cmd.Substring(0,4)==INITCOMPLETE || cmd.Substring(0,4)==VERIFIEDNODEID)
                 return false;
             if (cmd.Substring(0,4)==IDENTIFIEDCONSUMER)
@@ -657,6 +658,11 @@ namespace ComGateway
             {
                 return findevent(Convert.ToUInt64(cmd.Substring(16, 16),16));
             }
+            if (cmd[0] == '3' && cmd[3] == '4') // datagram filter
+            {
+                return NodeIdTable.ContainsKey(cmd.Substring(16, 12));
+            }
+            */
             if (cmd[0] == '3' && cmd[3]=='4' && cmd.Substring(16, 12) == nodenumberstr) // datagram to this node
             {
                 if (cmd.Substring(0, 4) == "3204" && cmd.Substring(28, 2) == "60" && cmd.Substring(38, 2) == "FF")
@@ -695,13 +701,9 @@ namespace ComGateway
                     return false;
                 }
             }
-            if (cmd[0] == '3' && cmd[3] == '4') // datagram filter
-            {
-                return NodeIdTable.ContainsKey(cmd.Substring(16, 12));
-            }
             return true;
         }
-
+/*
         public bool findevent(ulong ev)
         {
             foreach (KeyValuePair<ulong, ulong> kvp in events)
@@ -762,6 +764,6 @@ namespace ComGateway
             foreach (KeyValuePair<ulong, ulong> kvp in events)
                 log("Event: " + kvp.Key.ToString("X16") + " - " + kvp.Value.ToString("X16"));
         }
-
+*/
     }
 }
