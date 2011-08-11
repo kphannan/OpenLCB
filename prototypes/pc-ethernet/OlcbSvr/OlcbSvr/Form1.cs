@@ -158,13 +158,15 @@ namespace OlcbSvr
         static CONNECTION[] connects = new CONNECTION[MAXCONNECTIONS];
 
         static long servernodenumber = 0x030400000000 + (2418 << 8) + 0xF0;
+        static IPEndPoint ep = new IPEndPoint(IPAddress.Any, 0);
         static Socket ServerSkt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static Socket NumberServerSkt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        static bool limitreached = false;
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
-        private Bonjour.DNSSDEventManager m_eventManager = null;
         private Bonjour.DNSSDService m_registrar = null;
+        private Bonjour.DNSSDEventManager m_eventManager = null;
 
         static object loglock = new object();
         static object sendlock = new object();
@@ -175,8 +177,8 @@ namespace OlcbSvr
             CheckForIllegalCrossThreadCalls = false;
             try
             {
+                m_eventManager = new DNSSDEventManager(); 
                 m_service = new DNSSDService();
-                m_eventManager = new DNSSDEventManager();
             }
             catch
             {
@@ -200,15 +202,19 @@ namespace OlcbSvr
             inithub();
 
             // create the async listening sockets
-            IPEndPoint ep = new IPEndPoint(IPAddress.Any, 0);
             ServerSkt.Bind(ep);
-            ServerSkt.Listen(MAXCONNECTIONS);
+            ServerSkt.Listen(1);
             ServerSkt.BeginAccept(new AsyncCallback(Acceptcallback), 0);
             ep = ((IPEndPoint)ServerSkt.LocalEndPoint);
             log("OpenLCB Server start on port " + ep.Port.ToString());
 
             // register server with zeroconfig, (alias bonjour)
-            m_registrar = m_service.Register(0, 0, System.Environment.UserName, "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, null);
+            m_registrar = m_service.Register(0, 0, Environment.UserName, "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, new DNSSDEventManager(registercallback));
+        }
+
+        public void registercallback(DNSSDFlags flags, DNSSDError err, string name, string type, string domain)
+        {
+            ;
         }
 
         public void inithub()
@@ -269,18 +275,22 @@ namespace OlcbSvr
                 log("Accept " + index.ToString() + ", Node number " + connects[index].nodenumber.ToString("X12"));
                 connects[index].skt = ServerSkt.EndAccept(result);
                 // start a new accept
-                bool ok = false;
+                limitreached = true;
                 for (i = 0; i < MAXCONNECTIONS; i++)
                 {
                     if (!connects[i].inuse)
                     {
-                        ok = true;
+                        limitreached = false;
                         ServerSkt.BeginAccept(new AsyncCallback(Acceptcallback), i);
                         break;
                     }
                 }
-                if (!ok)
+                if (limitreached)
+                {
                     log("Connections limit. No new accept started.");
+                    // stop Bonjour ?
+                    m_registrar.Stop();
+                }
 
                 // send node number
                 buffer[0] = 9;
@@ -359,6 +369,12 @@ namespace OlcbSvr
             }
             connects[index].inuse = false;
             log("Connection closed " + index.ToString());
+            if (limitreached)
+            {
+                limitreached = false;
+                ServerSkt.BeginAccept(new AsyncCallback(Acceptcallback), index);
+                // m_registrar = m_service.Register(0, 0, Environment.UserName, "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, null);
+            }
         }
 
         public void SendToAll(byte[] buffer, int start, int index)
