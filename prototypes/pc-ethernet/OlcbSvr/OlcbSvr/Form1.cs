@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.IO.Ports;
+using System.Xml;
 using Bonjour;
 
 namespace OlcbSvr
@@ -158,10 +159,12 @@ namespace OlcbSvr
         static CONNECTION[] connects = new CONNECTION[MAXCONNECTIONS];
 
         static long servernodenumber = 0x030400000000 + (2418 << 8) + 0xF0;
-        static IPEndPoint ep = new IPEndPoint(IPAddress.Any, 0);
+        static int port = 0;
+        static IPEndPoint ep;
         static Socket ServerSkt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static Socket NumberServerSkt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static bool limitreached = false;
+        static bool localhub = false;
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
@@ -188,6 +191,25 @@ namespace OlcbSvr
 
             for (int i = 0; i < MAXCONNECTIONS; i++)
                 connects[i] = new CONNECTION();
+            
+            String[] arguments = Environment.GetCommandLineArgs();
+            for (int a = 1; a < arguments.Length; a++)
+            {
+                log("Arg " + arguments[a]);
+                if ("port".StartsWith(arguments[a]))
+                {
+                    int p = arguments[a].IndexOf('=');
+                    if (p > 0)
+                    {
+                        p++;
+                        port = Convert.ToInt32(arguments[a].Substring(p));
+                    }
+                    localhub = true;
+                }
+            }
+
+            if (!localhub)
+                readxmldata();
 
             // node number server range
             GroupBox.Items.Add("NMRA");
@@ -200,6 +222,7 @@ namespace OlcbSvr
             membertxt.Text = Convert.ToInt32(RangeFromTB.Text.Substring(4, 6), 16).ToString();
 
             inithub();
+            ep = new IPEndPoint(IPAddress.Any, port);
 
             // create the async listening sockets
             ServerSkt.Bind(ep);
@@ -209,12 +232,40 @@ namespace OlcbSvr
             log("OpenLCB Server start on port " + ep.Port.ToString());
 
             // register server with zeroconfig, (alias bonjour)
-            m_registrar = m_service.Register(0, 0, Environment.UserName, "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, new DNSSDEventManager(registercallback));
+            m_registrar = m_service.Register(0, 0, Environment.UserName, "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, null);
         }
 
-        public void registercallback(DNSSDFlags flags, DNSSDError err, string name, string type, string domain)
+       public void readxmldata()
         {
-            ;
+            try
+            {
+                XmlDocument xmldoc = new XmlDocument();
+                StreamReader file = new StreamReader("hubdata.xml");
+                xmldoc.LoadXml(file.ReadToEnd());
+                file.Close();
+                XmlNode docnode = xmldoc.FirstChild.FirstChild;
+                while (docnode != null)
+                {
+                    if ("nodenumber".StartsWith(docnode.Name))
+                        servernodenumber = Convert.ToInt64(docnode.InnerText, 16);
+                    if ("port".StartsWith(docnode.Name))
+                        port = Convert.ToInt32(docnode.InnerText, 16);
+                    docnode = docnode.NextSibling;
+                }
+            }
+            catch { };
+        }
+
+        public void writexmldata()
+        {
+            if (localhub)
+                return;
+            StreamWriter savefile = new StreamWriter("hubdata.xml");
+            savefile.WriteLine("<hubconfig version=\"1\">");
+            savefile.WriteLine("<nodenumber>" + servernodenumber.ToString("X12") + "</nodenumber>");
+            savefile.WriteLine("<port>" + port.ToString() + "</port>");
+            savefile.WriteLine("</hubconfig>");
+            savefile.Close();
         }
 
         public void inithub()
@@ -235,6 +286,7 @@ namespace OlcbSvr
 
         private void Server_FormClosing(object sender, FormClosingEventArgs e)
         {
+            writexmldata();
             if (m_registrar != null)
                 m_registrar.Stop();
         }

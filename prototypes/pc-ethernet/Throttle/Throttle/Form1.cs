@@ -117,7 +117,7 @@ namespace Throttle
                 IPAddress[] ipa = Dns.GetHostAddresses(hostName);
                 for (i = 0; i < ipa.Length; i++)
                 {
-                    if (!(ipa[i].IsIPv6LinkLocal || ipa[i].IsIPv6Teredo || ipa[i].IsIPv6SiteLocal || ipa[i].IsIPv6Multicast))
+                    if (!(ipa[i].IsIPv6LinkLocal || ipa[i].IsIPv6SiteLocal || ipa[i].IsIPv6Multicast))
                         break;
                 }
                 IPEndPoint ep = new IPEndPoint(ipa[i], port);
