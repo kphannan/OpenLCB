@@ -127,7 +127,33 @@ bool can_init(uint8_t bitrate)
     PINSEL_ConfigPin(&PinCfg);
 
     //Initialize CAN_DEV
-    CAN_Init(CAN_DEV, 125000);
+    switch(bitrate)
+    {
+        case BITRATE_10_KBPS:
+            CAN_Init(CAN_DEV, 10240);
+            break;
+        case BITRATE_20_KBPS:
+            CAN_Init(CAN_DEV, 25600);
+            break;
+        case BITRATE_50_KBPS:
+            CAN_Init(CAN_DEV, 51200);
+            break;
+        case BITRATE_100_KBPS:
+            CAN_Init(CAN_DEV, 102400);
+            break;
+        case BITRATE_125_KBPS:
+            CAN_Init(CAN_DEV, 128000);
+            break;
+        case BITRATE_250_KBPS:
+            CAN_Init(CAN_DEV, 256000);
+            break;
+        case BITRATE_500_KBPS:
+            CAN_Init(CAN_DEV, 512000);
+            break;
+        case BITRATE_1_MBPS:
+            CAN_Init(CAN_DEV, 1024000);
+            break;
+    }
 
     //Enable self-test mode
     CAN_ModeConfig(CAN_DEV, CAN_OPERATING_MODE, ENABLE);
