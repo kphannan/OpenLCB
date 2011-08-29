@@ -5,7 +5,7 @@
 #define	RID_TIME_WAIT			500 //ms. Up for debate how long this should be!
 
 #include <stdint.h>
-#include "arduino.h"
+#include "WProgram.h"
 #include "OLCB_CAN_Buffer.h"
 #include "OLCB_NodeID.h"
 

@@ -2,7 +2,7 @@
 #define __OLCB_CAN_LINK_H__
 
 #include <stdint.h>
-#include "arduino.h"
+#include "WProgram.h"
 //#include "OLCB_CAN_Alias_Helper.h"
 #include "OLCB_Link.h"
 #include "OLCB_CAN_Buffer.h"
