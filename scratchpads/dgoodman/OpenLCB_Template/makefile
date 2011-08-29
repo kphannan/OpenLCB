@@ -20,41 +20,45 @@
 
 
 #  Project Name
-PROJECT=main
+PROJECT=OpenLCB_Template
+
+#  Debugging?
+DEBUGRELEASE = Release
+
 #  List of the objects files to be compiled/assembled
 OBJECTS = $(CSRCS:.c=.o)
 OBJECTS += $(ASRCS:.S=.o)
 OBJECTS += $(CPPSRCS:.cpp=.o)
 
-LDOBJECTS = $(wildcard *.a)
-LDOBJECTS += $(wildcard lib/*.a)
-LDOBJECTS += $(wildcard lib/*/*.a)
-LDOBJECTS += $(wildcard lib/*.o)
-LDOBJECTS += $(wildcard lib/*/*.o)
+#LDOBJECTS = $(wildcard ../CMSIS_v2.00/Core/CM3/CoreSupport/*.o)
+#LDOBJECTS += $(wildcard ../CMSIS_v2.00/Core/CM3/DeviceSupport/NXP/LPC17xx/*.o)
+#LDOBJECTS += $(wildcard ../CMSIS_v2.00/Drivers/library/*.a)
 
 LSCRIPT = makesection/LPC17xx.ld
 LSCRIPT2 = makesection/LPC17xx_For_NXP_USB_Bootloader.ld
 
 CSRCS = $(wildcard *.c)
-CSRCS += $(wildcard src/*.c)
-CSRCS += $(wildcard src/*/*.c)
-CSRCS += $(wildcard Core/CM3/*.c)
+CSRCS += $(wildcard Core/CM3/CoreSupport/*.c)
+CSRCS += $(wildcard Core/CM3/DeviceSupport/NXP/LPC17xx/*.c)
 CSRCS += $(wildcard Drivers/source/*.c)
+CSRCS += $(wildcard utility/source/*/*.c)
 CSRCS += $(wildcard OpenLCB/source/*.c)
+CSRCS += $(wildcard OpenLCB/utility/source/*.c)
 
-ASRCS =  $(wildcard src/*.S)
-ASRCS +=  $(wildcard src/*/*.S)
+ASRCS =  $(wildcard utility/*.S)
 
 CPPSRCS = $(wildcard *.cpp)
-CPPSRCS += $(wildcard src/*.cpp)
-CPPSRCS += $(wildcard src/*/*.cpp)
+CPPSRCS += $(wildcard utility/source/*/*.cpp)
 CPPSRCS += $(wildcard OpenLCB/source/*.cpp)
+CPPSRCS += $(wildcard OpenLCB/source/utility/*.cpp)
 
 INCDIRS = ./
-INCDIRS += $(wildcard inc/*)
-INCDIRS += $(wildcard Core/CM3/)
+INCDIRS += $(wildcard Core/CM3/CoreSupport/)
+INCDIRS += $(wildcard Core/CM3/DeviceSupport/NXP/LPC17xx/)
 INCDIRS += $(wildcard Drivers/include/)
+INCDIRS += $(wildcard utility/include/*/)
 INCDIRS += $(wildcard OpenLCB/include/)
+INCDIRS += $(wildcard OpenLCB/utility/include/)
 
 OPTIMIZATION = 2
 

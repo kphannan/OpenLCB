@@ -20,7 +20,10 @@ THE SOFTWARE.
 */
 
 #include "LPC17xx.h"
-#include "arduino.h"
+#include "WProgram.h"
+#include "can.h"
+#include "lpc17xx_can.h"
+#include "OLCB_NodeID.h"
 
 /***********LED Blinky Example**********************************************************************/
 int main()
@@ -28,6 +31,11 @@ int main()
 	LPC_GPIO0->FIODIR |= (1 << 22); // set P0.22 to output
 	LPC_GPIO0->FIOPIN &= ~(1 << 22); //and turn the LED off.
 	InitTimers(); //initialize the timer;
+	can_init(125000);
+	//CAN_Init(LPC_CAN2, 125000);
+
+	OLCB_NodeID *id = new OLCB_NodeID(1,2,3,4,5,6);
+
 	while(1)
 	{
 		LPC_GPIO0->FIOPIN ^= (1 << 22); // Toggle P1.29
