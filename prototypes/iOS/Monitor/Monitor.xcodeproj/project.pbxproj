@@ -19,7 +19,6 @@
 		23BAA96513816F7A00BFC07B /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23BAA96313816F7A00BFC07B /* MainWindow.xib */; };
 		23BAA96813816F7A00BFC07B /* MainViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BAA96713816F7A00BFC07B /* MainViewController.m */; };
 		23BAA96A13816F7A00BFC07B /* MainView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23BAA96913816F7A00BFC07B /* MainView.xib */; };
-		23BAA96D13816F7A00BFC07B /* FlipsideViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BAA96C13816F7A00BFC07B /* FlipsideViewController.m */; };
 		23BAA96F13816F7A00BFC07B /* FlipsideView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 23BAA96E13816F7A00BFC07B /* FlipsideView.xib */; };
 		23BAA97613816F7A00BFC07B /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23BAA95113816F7A00BFC07B /* UIKit.framework */; };
 		23BAA97713816F7A00BFC07B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 23BAA95313816F7A00BFC07B /* Foundation.framework */; };
@@ -27,6 +26,7 @@
 		23BAA98013816F7A00BFC07B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 23BAA97E13816F7A00BFC07B /* InfoPlist.strings */; };
 		23BAA98313816F7A00BFC07B /* MonitorTests.h in Resources */ = {isa = PBXBuildFile; fileRef = 23BAA98213816F7A00BFC07B /* MonitorTests.h */; };
 		23BAA98513816F7A00BFC07B /* MonitorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 23BAA98413816F7A00BFC07B /* MonitorTests.m */; };
+		23D7FA3F13AC4B7E009F773D /* libOpenLcb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23D7FA3E13AC4B7E009F773D /* libOpenLcb.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +36,34 @@
 			proxyType = 1;
 			remoteGlobalIDString = 23BAA94C13816F7A00BFC07B;
 			remoteInfo = Monitor;
+		};
+		23D7FA1C13AC4B2B009F773D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 23250501138A3B49003D8EE4;
+			remoteInfo = iOSBuild;
+		};
+		23D7FA1E13AC4B2B009F773D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2325050E138A3B49003D8EE4;
+			remoteInfo = iOSBuildTests;
+		};
+		23D7FA2013AC4B2B009F773D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2304E82D13950BC400B6867C;
+			remoteInfo = MacOSXBuild;
+		};
+		23D7FA2213AC4B2B009F773D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2304E83713950BC500B6867C;
+			remoteInfo = MacOSXBuildTests;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -57,8 +85,6 @@
 		23BAA96613816F7A00BFC07B /* MainViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainViewController.h; sourceTree = "<group>"; };
 		23BAA96713816F7A00BFC07B /* MainViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MainViewController.m; sourceTree = "<group>"; };
 		23BAA96913816F7A00BFC07B /* MainView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainView.xib; sourceTree = "<group>"; };
-		23BAA96B13816F7A00BFC07B /* FlipsideViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FlipsideViewController.h; sourceTree = "<group>"; };
-		23BAA96C13816F7A00BFC07B /* FlipsideViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FlipsideViewController.m; sourceTree = "<group>"; };
 		23BAA96E13816F7A00BFC07B /* FlipsideView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = FlipsideView.xib; sourceTree = "<group>"; };
 		23BAA97513816F7A00BFC07B /* MonitorTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MonitorTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		23BAA97D13816F7A00BFC07B /* MonitorTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MonitorTests-Info.plist"; sourceTree = "<group>"; };
@@ -66,6 +92,8 @@
 		23BAA98113816F7A00BFC07B /* MonitorTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MonitorTests-Prefix.pch"; sourceTree = "<group>"; };
 		23BAA98213816F7A00BFC07B /* MonitorTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MonitorTests.h; sourceTree = "<group>"; };
 		23BAA98413816F7A00BFC07B /* MonitorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MonitorTests.m; sourceTree = "<group>"; };
+		23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OpenLcbLib.xcodeproj; path = ../../ObjectiveC/OpenLcbLib/OpenLcbLib.xcodeproj; sourceTree = "<group>"; };
+		23D7FA3E13AC4B7E009F773D /* libOpenLcb.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOpenLcb.a; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +101,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23D7FA3F13AC4B7E009F773D /* libOpenLcb.a in Frameworks */,
 				23BAA95213816F7A00BFC07B /* UIKit.framework in Frameworks */,
 				23BAA95413816F7A00BFC07B /* Foundation.framework in Frameworks */,
 				23BAA95613816F7A00BFC07B /* CoreGraphics.framework in Frameworks */,
@@ -95,6 +124,7 @@
 		23BAA94213816F7900BFC07B = {
 			isa = PBXGroup;
 			children = (
+				23D7FA3E13AC4B7E009F773D /* libOpenLcb.a */,
 				232954DB138996D7009220CC /* Default.png */,
 				232954D913897A8A009220CC /* openlcb_iphone_114.png */,
 				232954D713897A7C009220CC /* openlcb_iphone_57.png */,
@@ -117,6 +147,7 @@
 		23BAA95013816F7A00BFC07B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */,
 				23BAA95113816F7A00BFC07B /* UIKit.framework */,
 				23BAA95313816F7A00BFC07B /* Foundation.framework */,
 				23BAA95513816F7A00BFC07B /* CoreGraphics.framework */,
@@ -133,8 +164,6 @@
 				23BAA96613816F7A00BFC07B /* MainViewController.h */,
 				23BAA96713816F7A00BFC07B /* MainViewController.m */,
 				23BAA96913816F7A00BFC07B /* MainView.xib */,
-				23BAA96B13816F7A00BFC07B /* FlipsideViewController.h */,
-				23BAA96C13816F7A00BFC07B /* FlipsideViewController.m */,
 				23BAA96E13816F7A00BFC07B /* FlipsideView.xib */,
 				23BAA95813816F7A00BFC07B /* Supporting Files */,
 			);
@@ -170,6 +199,17 @@
 				23BAA98113816F7A00BFC07B /* MonitorTests-Prefix.pch */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		23D7FA1613AC4B2B009F773D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				23D7FA1D13AC4B2B009F773D /* libOpenLcb.a */,
+				23D7FA1F13AC4B2B009F773D /* iOSBuildTests.octest */,
+				23D7FA2113AC4B2B009F773D /* MacOSXBuild.dylib */,
+				23D7FA2313AC4B2B009F773D /* MacOSXBuildTests.octest */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -226,6 +266,12 @@
 			mainGroup = 23BAA94213816F7900BFC07B;
 			productRefGroup = 23BAA94E13816F7A00BFC07B /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 23D7FA1613AC4B2B009F773D /* Products */;
+					ProjectRef = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				23BAA94C13816F7A00BFC07B /* Monitor */,
@@ -233,6 +279,37 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		23D7FA1D13AC4B2B009F773D /* libOpenLcb.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libOpenLcb.a;
+			remoteRef = 23D7FA1C13AC4B2B009F773D /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23D7FA1F13AC4B2B009F773D /* iOSBuildTests.octest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = iOSBuildTests.octest;
+			remoteRef = 23D7FA1E13AC4B2B009F773D /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23D7FA2113AC4B2B009F773D /* MacOSXBuild.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = MacOSXBuild.dylib;
+			remoteRef = 23D7FA2013AC4B2B009F773D /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23D7FA2313AC4B2B009F773D /* MacOSXBuildTests.octest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = MacOSXBuildTests.octest;
+			remoteRef = 23D7FA2213AC4B2B009F773D /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		23BAA94B13816F7A00BFC07B /* Resources */ = {
@@ -284,7 +361,6 @@
 				23BAA95F13816F7A00BFC07B /* main.m in Sources */,
 				23BAA96213816F7A00BFC07B /* MonitorAppDelegate.m in Sources */,
 				23BAA96813816F7A00BFC07B /* MainViewController.m in Sources */,
-				23BAA96D13816F7A00BFC07B /* FlipsideViewController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -380,9 +456,15 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Monitor/Monitor-Prefix.pch";
+				"HEADER_SEARCH_PATHS[arch=*]" = "${PROJECT_DIR}/../../ObjectiveC/OpenLcbLib/";
 				INFOPLIST_FILE = "Monitor/Monitor-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = 1;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -394,9 +476,15 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Monitor/Monitor-Prefix.pch";
+				"HEADER_SEARCH_PATHS[arch=*]" = "${PROJECT_DIR}/../../ObjectiveC/OpenLcbLib/";
 				INFOPLIST_FILE = "Monitor/Monitor-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = 1;
 				VALIDATE_PRODUCT = YES;
 				WRAPPER_EXTENSION = app;
 			};
