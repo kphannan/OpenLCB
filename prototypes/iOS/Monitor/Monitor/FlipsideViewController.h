@@ -13,10 +13,12 @@
 @interface FlipsideViewController : UIViewController {
 
     UITextField *                   _hostAddress;
+    UITextField *                   _portNumber;
 
 }
 
 @property (nonatomic, retain) IBOutlet UITextField *                   hostAddress;
+@property (nonatomic, retain) IBOutlet UITextField *                   portNumber;
 
 @property (nonatomic, assign) id <FlipsideViewControllerDelegate> delegate;
 

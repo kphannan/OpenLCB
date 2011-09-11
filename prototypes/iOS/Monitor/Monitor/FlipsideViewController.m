@@ -13,11 +13,13 @@
 
 @synthesize delegate=_delegate;
 @synthesize hostAddress=_hostAddress;
+@synthesize portNumber=_portNumber;
 
 - (void)dealloc
 {
     [super dealloc];
     [self->_hostAddress release];
+    [self->_portNumber release];
 }
 
 - (void)didReceiveMemoryWarning
@@ -42,6 +44,7 @@
     // Release any retained subviews of the main view.
     // e.g. self.myOutlet = nil;
     self.hostAddress = nil;
+    self.portNumber = nil;
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
