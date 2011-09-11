@@ -8,6 +8,8 @@
 
 #import "MainViewController.h"
 
+#import "OlcbMessage.h"
+
 // Stream stand-in from iOS Development Library QA1652
 // https://developer.apple.com/library/ios/#qa/qa1652/_index.html%23//apple_ref/doc/uid/DTS40008977
 
@@ -295,6 +297,8 @@
                     // format and place output
                     NSString* line = [NSString stringWithCString:(const char *)rcvBuffer encoding:NSASCIIStringEncoding];
                     self.lastLabel.text = line;
+                    
+                    [OlcbMessage alloc];
                     
                     int header = 0;
                     if (line.length >= 10) {
