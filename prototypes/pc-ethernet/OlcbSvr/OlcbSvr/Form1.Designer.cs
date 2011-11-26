@@ -41,6 +41,8 @@
             this.LogCB = new System.Windows.Forms.CheckBox();
             this.NodeBtn = new System.Windows.Forms.Button();
             this.EventBtn = new System.Windows.Forms.Button();
+            this.label2 = new System.Windows.Forms.Label();
+            this.MaxConTB = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // LogTB
@@ -127,7 +129,7 @@
             // LogCB
             // 
             this.LogCB.AutoSize = true;
-            this.LogCB.Location = new System.Drawing.Point(374, 43);
+            this.LogCB.Location = new System.Drawing.Point(428, 43);
             this.LogCB.Name = "LogCB";
             this.LogCB.Size = new System.Drawing.Size(66, 17);
             this.LogCB.TabIndex = 83;
@@ -136,7 +138,7 @@
             // 
             // NodeBtn
             // 
-            this.NodeBtn.Location = new System.Drawing.Point(54, 39);
+            this.NodeBtn.Location = new System.Drawing.Point(266, 39);
             this.NodeBtn.Name = "NodeBtn";
             this.NodeBtn.Size = new System.Drawing.Size(75, 23);
             this.NodeBtn.TabIndex = 84;
@@ -146,7 +148,7 @@
             // 
             // EventBtn
             // 
-            this.EventBtn.Location = new System.Drawing.Point(150, 39);
+            this.EventBtn.Location = new System.Drawing.Point(347, 39);
             this.EventBtn.Name = "EventBtn";
             this.EventBtn.Size = new System.Drawing.Size(75, 23);
             this.EventBtn.TabIndex = 85;
@@ -154,11 +156,30 @@
             this.EventBtn.UseVisualStyleBackColor = true;
             this.EventBtn.Click += new System.EventHandler(this.EventBtn_Click);
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(13, 44);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(88, 13);
+            this.label2.TabIndex = 87;
+            this.label2.Text = "Max connections";
+            // 
+            // MaxConTB
+            // 
+            this.MaxConTB.Location = new System.Drawing.Point(107, 41);
+            this.MaxConTB.Name = "MaxConTB";
+            this.MaxConTB.ReadOnly = true;
+            this.MaxConTB.Size = new System.Drawing.Size(87, 20);
+            this.MaxConTB.TabIndex = 86;
+            // 
             // OlcbSvr
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(534, 269);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.MaxConTB);
             this.Controls.Add(this.EventBtn);
             this.Controls.Add(this.NodeBtn);
             this.Controls.Add(this.LogCB);
@@ -194,6 +215,8 @@
         private System.Windows.Forms.CheckBox LogCB;
         private System.Windows.Forms.Button NodeBtn;
         private System.Windows.Forms.Button EventBtn;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox MaxConTB;
     }
 }
 

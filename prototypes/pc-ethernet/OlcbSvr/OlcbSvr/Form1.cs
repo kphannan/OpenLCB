@@ -16,8 +16,6 @@ namespace OlcbSvr
 {
     public partial class OlcbSvr : Form
     {
-        const int MAXCONNECTIONS = 15;
-
         const int NODENUMBER = 0x3000;
         const int NOFILTER = 0x3010;
         const int INITCOMPLETE = 0x3080;
@@ -30,6 +28,10 @@ namespace OlcbSvr
         const int PRODUCERRANGE = 0x929F;
         const int EVENT = 0x12D2;
 
+        //***************************************************************************
+        // Connection class
+        //***************************************************************************
+
         class CONNECTION
         {
             public Socket skt;
@@ -38,6 +40,7 @@ namespace OlcbSvr
             public long nodenumber;
             public List<long> nodeids = new List<long>();
             public SortedDictionary<ulong, ulong> events = new SortedDictionary<ulong, ulong>();
+            public byte[] buffer = new byte[1600];
 
             public CONNECTION()
             {
@@ -45,7 +48,7 @@ namespace OlcbSvr
                 filter = true;
             }
 
-            public void UpdateFilters(byte[] buffer, int start)
+            public void UpdateFilters(byte[] buffer, int start, bool localhub)
             {
                 int mti = buffer[start + 1] << 8 | buffer[start + 2];
                 if (mti == NOFILTER)
@@ -58,7 +61,7 @@ namespace OlcbSvr
                     if (!nodeids.Contains(srcnode))
                         nodeids.Add(srcnode);
                 }
-                else if (mti == CONSUMERINDENTIFIED)
+                else if (!localhub && mti == CONSUMERINDENTIFIED)
                 {
                     ulong ev = ((ulong)buffer[start + 9] << 56) + ((ulong)buffer[start + 10] << 48)
                         + ((ulong)buffer[start + 11] << 40) + ((ulong)buffer[start + 12] << 32)
@@ -66,7 +69,7 @@ namespace OlcbSvr
                         + ((ulong)buffer[start + 15] << 8) + (ulong)buffer[start + 16];
                     addevent(ev, ev);
                 }
-                else if (mti == CONSUMERRANGE)
+                else if (!localhub && mti == CONSUMERRANGE)
                 {
                     ulong ev = ((ulong)buffer[start + 9] << 56) + ((ulong)buffer[start + 10] << 48)
                         + ((ulong)buffer[start + 11] << 40) + ((ulong)buffer[start + 12] << 32)
@@ -156,7 +159,12 @@ namespace OlcbSvr
             }
         }
 
-        static CONNECTION[] connects = new CONNECTION[MAXCONNECTIONS];
+        //***************************************************************************
+        // Main program
+        //***************************************************************************
+
+        static int MAXCONNECTIONS = 15;
+        static CONNECTION[] connects;
 
         static long servernodenumber = 0x030400000000 + (2418 << 8) + 0xF0;
         static int port = 0;
@@ -170,6 +178,9 @@ namespace OlcbSvr
         private Bonjour.DNSSDService m_service = null;
         private Bonjour.DNSSDService m_registrar = null;
         private Bonjour.DNSSDEventManager m_eventManager = null;
+        private Bonjour.DNSSDService m_browser = null;
+        private Bonjour.DNSSDService m_resolver = null;
+        private Bonjour.DNSSDError m_error = 0;
 
         static object loglock = new object();
         static object sendlock = new object();
@@ -180,36 +191,69 @@ namespace OlcbSvr
             CheckForIllegalCrossThreadCalls = false;
             try
             {
-                m_eventManager = new DNSSDEventManager(); 
                 m_service = new DNSSDService();
-            }
+                m_eventManager = new DNSSDEventManager(); 
+                m_eventManager.OperationFailed += new _IDNSSDEvents_OperationFailedEventHandler(OperationFailed);
+             }
             catch
             {
-                MessageBox.Show("Bonjour Service is not available", "Error");
-                Application.Exit();
+                log("Bonjour Service is not available");
             }
-
-            for (int i = 0; i < MAXCONNECTIONS; i++)
-                connects[i] = new CONNECTION();
             
             String[] arguments = Environment.GetCommandLineArgs();
             for (int a = 1; a < arguments.Length; a++)
             {
+                localhub = true;
                 log("Arg " + arguments[a]);
-                if ("port".StartsWith(arguments[a]))
+                if (arguments[a].StartsWith("port"))
                 {
                     int p = arguments[a].IndexOf('=');
                     if (p > 0)
-                    {
-                        p++;
-                        port = Convert.ToInt32(arguments[a].Substring(p));
-                    }
-                    localhub = true;
+                        port = Convert.ToInt32(arguments[a].Substring(p+1));
+                }
+                if (arguments[a].StartsWith("max"))
+                {
+                    int p = arguments[a].IndexOf('=');
+                    if (p > 0)
+                        MAXCONNECTIONS = Convert.ToInt32(arguments[a].Substring(p+1));
                 }
             }
 
             if (!localhub)
+            {
+                // create the async listening sockets
+                ep = new IPEndPoint(IPAddress.Any, 0);
+                ServerSkt.Bind(ep);
+                ServerSkt.Listen(1);
+                ServerSkt.BeginAccept(new AsyncCallback(Acceptcallback), 0);
+                ep = ((IPEndPoint)ServerSkt.LocalEndPoint);
+                log("OpenLCB Hub start on port " + ep.Port.ToString());
+                // register server with zeroconfig, (alias bonjour)
+                // params (flags, interface, instancename, servicetype, domain, host, port, TXTrecord, eventmanager)
+                m_registrar = m_service.Register(DNSSDFlags.kDNSSDFlagsNoAutoRename, 0, "OpenLCB Hub Service",
+                    "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, m_eventManager);
+            }
+            if (localhub)
+            {
+                // connect via bonjour
+                StartOpenLCBConnect();
+
+                // create the async listening sockets
+                ep = new IPEndPoint(IPAddress.Loopback, port);
+                ServerSkt.Bind(ep);
+                ServerSkt.Listen(1);
+                ServerSkt.BeginAccept(new AsyncCallback(Acceptcallback), 0);
+                ep = ((IPEndPoint)ServerSkt.LocalEndPoint);
+                log("OpenLCB Hub start on port " + ep.Port.ToString());
+            }
+
+            if (!localhub)
                 readxmldata();
+
+            MaxConTB.Text = MAXCONNECTIONS.ToString();
+            connects = new CONNECTION[MAXCONNECTIONS];
+            for (int i = 0; i < MAXCONNECTIONS; i++)
+                connects[i] = new CONNECTION();
 
             // node number server range
             GroupBox.Items.Add("NMRA");
@@ -222,25 +266,23 @@ namespace OlcbSvr
             membertxt.Text = Convert.ToInt32(RangeFromTB.Text.Substring(4, 6), 16).ToString();
 
             inithub();
-            ep = new IPEndPoint(IPAddress.Any, port);
-
-            // create the async listening sockets
-            ServerSkt.Bind(ep);
-            ServerSkt.Listen(1);
-            ServerSkt.BeginAccept(new AsyncCallback(Acceptcallback), 0);
-            ep = ((IPEndPoint)ServerSkt.LocalEndPoint);
-            log("OpenLCB Server start on port " + ep.Port.ToString());
-
-            // register server with zeroconfig, (alias bonjour)
-            m_registrar = m_service.Register(0, 0, Environment.UserName, "_OpenLCB._tcp", null, null, (ushort)ep.Port, null, null);
         }
 
-       public void readxmldata()
+        public void OperationFailed(DNSSDService service, DNSSDError err)
+        {
+            m_error = err;
+            if (err == DNSSDError.kDNSSDError_NameConflict)
+                log("Bonjour error, Hub service already started.");
+            else
+                log("Bonjour error " + err);
+        }
+
+        public void readxmldata()
         {
             try
             {
-                XmlDocument xmldoc = new XmlDocument();
                 StreamReader file = new StreamReader("hubdata.xml");
+                XmlDocument xmldoc = new XmlDocument();
                 xmldoc.LoadXml(file.ReadToEnd());
                 file.Close();
                 XmlNode docnode = xmldoc.FirstChild.FirstChild;
@@ -248,24 +290,37 @@ namespace OlcbSvr
                 {
                     if ("nodenumber".StartsWith(docnode.Name))
                         servernodenumber = Convert.ToInt64(docnode.InnerText, 16);
-                    if ("port".StartsWith(docnode.Name))
-                        port = Convert.ToInt32(docnode.InnerText, 16);
+                    if ("max".StartsWith(docnode.Name))
+                        MAXCONNECTIONS = Convert.ToInt32(docnode.InnerText);
+                    if ("log".StartsWith(docnode.Name))
+                        LogCB.Checked = Convert.ToBoolean(docnode.InnerText);
                     docnode = docnode.NextSibling;
                 }
             }
-            catch { };
+            catch (Exception e) 
+            {
+                log("Xml file " + e);
+            };
         }
 
         public void writexmldata()
         {
             if (localhub)
                 return;
-            StreamWriter savefile = new StreamWriter("hubdata.xml");
-            savefile.WriteLine("<hubconfig version=\"1\">");
-            savefile.WriteLine("<nodenumber>" + servernodenumber.ToString("X12") + "</nodenumber>");
-            savefile.WriteLine("<port>" + port.ToString() + "</port>");
-            savefile.WriteLine("</hubconfig>");
-            savefile.Close();
+            try
+            {
+                StreamWriter savefile = new StreamWriter("hubdata.xml", false);
+                savefile.WriteLine("<hubconfig version=\"1\">");
+                savefile.WriteLine("<nodenumber>" + servernodenumber.ToString("X12") + "</nodenumber>");
+                savefile.WriteLine("<max>" + MAXCONNECTIONS.ToString() + "</max>");
+                savefile.WriteLine("<log>" + LogCB.Checked.ToString() + "</log>");
+                savefile.WriteLine("</hubconfig>");
+                savefile.Close();
+            }
+            catch (Exception e)
+            {
+                log("Save failed " + e);
+            }
         }
 
         public void inithub()
@@ -289,6 +344,118 @@ namespace OlcbSvr
             writexmldata();
             if (m_registrar != null)
                 m_registrar.Stop();
+            m_eventManager.OperationFailed -= new _IDNSSDEvents_OperationFailedEventHandler(OperationFailed);
+        }
+
+        //***************************************************************************
+        // Connect to OpenLCB
+        //***************************************************************************
+
+        public void StartOpenLCBConnect()
+        {
+            // Start
+            m_eventManager.ServiceFound += new _IDNSSDEvents_ServiceFoundEventHandler(ServiceFound);
+
+            // Browse
+            try
+            {
+                // params service discovery ref, interface index = 0 for all, service name,
+                //      domain, callback fn, context=null
+                m_browser = m_service.Browse(0, 0, "_OpenLCB._tcp", null, m_eventManager);
+            }
+            catch
+            {
+                log("OpenLCB Server browse Failed");
+                Thread.Sleep(1000);
+                m_eventManager.ServiceFound -= new _IDNSSDEvents_ServiceFoundEventHandler(ServiceFound);
+                Application.Exit();
+            }
+        }
+
+        // callback from browse
+        // params service discovery ref, status flags, interface index, error code ?, service name,
+        //      registration type, domain, context=null
+        public void ServiceFound(DNSSDService sref, DNSSDFlags flags, uint ifIndex, String serviceName,
+            String regType, String domain)
+        {
+            m_browser.Stop();
+            m_eventManager.ServiceFound -= new _IDNSSDEvents_ServiceFoundEventHandler(ServiceFound);
+            m_eventManager.ServiceResolved += new _IDNSSDEvents_ServiceResolvedEventHandler(ServiceResolved);
+
+            try
+            {
+                m_resolver = m_service.Resolve(0, ifIndex, serviceName, regType, domain, m_eventManager);
+            }
+            catch
+            {
+                log("Unable to Resolve service");
+                Thread.Sleep(1000);
+                // tidy up
+                m_eventManager.ServiceResolved -= new _IDNSSDEvents_ServiceResolvedEventHandler(ServiceResolved);
+                Application.Exit();
+            }
+        }
+
+        public void ServiceResolved(DNSSDService sref, DNSSDFlags flags, uint ifIndex, String fullName,
+            String hostName, ushort port, TXTRecord txtRecord)
+        {
+            m_resolver.Stop();
+            m_eventManager.ServiceResolved -= new _IDNSSDEvents_ServiceResolvedEventHandler(ServiceResolved);
+
+            log("OpenLCB service on " + hostName + ":" + port.ToString());
+
+            try
+            {
+                // connect to server
+                int i = 0;
+                IPAddress[] ipa = Dns.GetHostAddresses(hostName);
+                for (i = 0; i < ipa.Length; i++)
+                {
+                    if (ipa[i].AddressFamily == AddressFamily.InterNetwork)
+                        break;
+                }
+                IPEndPoint ep = new IPEndPoint(ipa[i], port);
+                connects[0].skt.Connect(ep);
+                connects[0].inuse = true;
+                byte[] buffer = new byte[12];
+                connects[0].skt.Receive(buffer);
+                if ((buffer[1] << 8) + buffer[2] == NODENUMBER)
+                {
+                    connects[0].nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24)
+                        + (buffer[6] << 16) + (buffer[7] << 8) + buffer[8];
+                    log("OpenLCB Node Number " + connects[0].nodenumber.ToString("X12"));
+                }
+                else
+                {
+                    log("No node number allocated.");
+                    return;
+                }
+
+                while (true)
+                {
+                    int size = connects[0].skt.Receive(connects[0].buffer);
+                    if (size == 0)
+                        break;
+                    if (LogCB.Checked)
+                    {
+                        string l = "";
+                        for (i = 0; i < size; i++)
+                            l += connects[0].buffer[i].ToString("X2");
+                        log("< (" + 0.ToString() + ") " + l);
+                    }
+                    int p = 0;
+                    while (p < size)
+                    {
+                        connects[0].UpdateFilters(connects[0].buffer, p, localhub);
+                        SendToAll(connects[0].buffer, p, 0);
+                        p += connects[0].buffer[p];
+                    }
+                } // end of while true
+            }
+            catch (Exception e)
+            {
+                log("OpenLCB server connection failed " + e.ToString());
+            }
         }
 
         //***************************************************************************
@@ -312,13 +479,8 @@ namespace OlcbSvr
         // Ethernet connection
         //***************************************************************************
 
-        // Runs as a separate thread to handle a connection.
-        // Re-connection is handled as a new connection because the loco/train last controlled 
-        //    has probably been taken by another throttle.
-
         private void Acceptcallback(IAsyncResult result)
         {
-            byte[] buffer = new byte[1600];
             int i;
             int index = (int)result.AsyncState;
             try
@@ -344,64 +506,65 @@ namespace OlcbSvr
                     m_registrar.Stop();
                 }
 
-                // send node number
-                buffer[0] = 9;
-                buffer[1] = NODENUMBER >> 8;
-                buffer[2] = NODENUMBER & 0xFF;
-                buffer[3] = (byte)(connects[index].nodenumber >> 40);
-                buffer[4] = (byte)(connects[index].nodenumber >> 32);
-                buffer[5] = (byte)(connects[index].nodenumber >> 24);
-                buffer[6] = (byte)(connects[index].nodenumber >> 16);
-                buffer[7] = (byte)(connects[index].nodenumber >> 8);
-                buffer[8] = (byte)connects[index].nodenumber;
-                connects[index].skt.Send(buffer, 9, SocketFlags.None);
-
-                // send VerifyNodeIDs
-                buffer[0] = 9;
-                buffer[1] = VERIFYNODEIDS >> 8;
-                buffer[2] = VERIFYNODEIDS & 0xFF;
-                buffer[3] = (byte)(servernodenumber >> 40);
-                buffer[4] = (byte)(servernodenumber >> 32);
-                buffer[5] = (byte)(servernodenumber >> 24);
-                buffer[6] = (byte)(servernodenumber >> 16);
-                buffer[7] = (byte)(servernodenumber >> 8);
-                buffer[8] = (byte)servernodenumber;
-                connects[index].skt.Send(buffer, 9, SocketFlags.None);
-
-                // send Identify Events
-                buffer[0] = 9;
-                buffer[1] = IDENTIFYEVENTS >> 8;
-                buffer[2] = IDENTIFYEVENTS & 0xFF;
-                buffer[3] = (byte)(servernodenumber >> 40);
-                buffer[4] = (byte)(servernodenumber >> 32);
-                buffer[5] = (byte)(servernodenumber >> 24);
-                buffer[6] = (byte)(servernodenumber >> 16);
-                buffer[7] = (byte)(servernodenumber >> 8);
-                buffer[8] = (byte)servernodenumber;
-                connects[index].skt.Send(buffer, 9, SocketFlags.None);
-
                 connects[index].nodeids.Clear();
                 connects[index].events.Clear();
+
+                // send node number
+                connects[index].buffer[0] = 9;
+                connects[index].buffer[1] = NODENUMBER >> 8;
+                connects[index].buffer[2] = NODENUMBER & 0xFF;
+                connects[index].buffer[3] = (byte)(connects[index].nodenumber >> 40);
+                connects[index].buffer[4] = (byte)(connects[index].nodenumber >> 32);
+                connects[index].buffer[5] = (byte)(connects[index].nodenumber >> 24);
+                connects[index].buffer[6] = (byte)(connects[index].nodenumber >> 16);
+                connects[index].buffer[7] = (byte)(connects[index].nodenumber >> 8);
+                connects[index].buffer[8] = (byte)connects[index].nodenumber;
+                connects[index].skt.Send(connects[index].buffer, 9, SocketFlags.None);
+
+                // send VerifyNodeIDs
+                connects[index].buffer[0] = 9;
+                connects[index].buffer[1] = VERIFYNODEIDS >> 8;
+                connects[index].buffer[2] = VERIFYNODEIDS & 0xFF;
+                connects[index].buffer[3] = (byte)(servernodenumber >> 40);
+                connects[index].buffer[4] = (byte)(servernodenumber >> 32);
+                connects[index].buffer[5] = (byte)(servernodenumber >> 24);
+                connects[index].buffer[6] = (byte)(servernodenumber >> 16);
+                connects[index].buffer[7] = (byte)(servernodenumber >> 8);
+                connects[index].buffer[8] = (byte)servernodenumber;
+                connects[index].skt.Send(connects[index].buffer, 9, SocketFlags.None);
+
+                // send Identify Events
+                connects[index].buffer[0] = 9;
+                connects[index].buffer[1] = IDENTIFYEVENTS >> 8;
+                connects[index].buffer[2] = IDENTIFYEVENTS & 0xFF;
+                connects[index].buffer[3] = (byte)(servernodenumber >> 40);
+                connects[index].buffer[4] = (byte)(servernodenumber >> 32);
+                connects[index].buffer[5] = (byte)(servernodenumber >> 24);
+                connects[index].buffer[6] = (byte)(servernodenumber >> 16);
+                connects[index].buffer[7] = (byte)(servernodenumber >> 8);
+                connects[index].buffer[8] = (byte)servernodenumber;
+                connects[index].skt.Send(connects[index].buffer, 9, SocketFlags.None);
+
                 connects[index].nodeids.Add(connects[index].nodenumber); // should be done by InitComplete
                 
                 while (true)
                 {
-                    int size = connects[index].skt.Receive(buffer);
+                    int size = connects[index].skt.Receive(connects[index].buffer);
                     if (size==0)
                         break;
                     if (LogCB.Checked)
                     {
                         string l = "";
                         for (i = 0; i < size; i++)
-                            l += buffer[i].ToString("X2");
+                            l += connects[index].buffer[i].ToString("X2");
                         log("< (" + index.ToString() + ") " + l);
                     }
                     int p = 0;
                     while (p < size)
                     {
-                        connects[index].UpdateFilters(buffer, p);
-                        SendToAll(buffer, p, index);
-                        p += buffer[p];
+                        connects[index].UpdateFilters(connects[index].buffer, p, localhub);
+                        SendToAll(connects[index].buffer, p, index);
+                        p += connects[index].buffer[p];
                     }
                 } // end of while true
             }
@@ -442,12 +605,14 @@ namespace OlcbSvr
                         l += buffer[start + i].ToString("X2");
                 }
                 for (i = 0; i < MAXCONNECTIONS; i++)
-                    if (i != index && connects[i].inuse && connects[i].CheckFilter(buffer, start))
+                {
+                    if (i != index && connects[i].inuse && (localhub || connects[i].CheckFilter(buffer, start)))
                     {
                         connects[i].skt.Send(buffer, start, size, SocketFlags.None);
                         if (LogCB.Checked)
-                            log("> (" + i.ToString() + ") " +l);
+                            log("> (" + i.ToString() + ") " + l);
                     }
+                }
             }
         }
 
@@ -538,7 +703,8 @@ namespace OlcbSvr
                 }
             }
         }
- 
+
+
     }
 }
 

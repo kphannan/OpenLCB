@@ -31,6 +31,7 @@ namespace ComGateway
         const string FT_IDEVENTS = "82B7";
         
         // Ethernet MTIs
+        const int NODENUMBER = 0x3000;
         const string INITCOMPLETE = "3080";
         const string VERIFYNODEIDS = "10A0";
         const string VERIFIEDNODEID = "30B0";
@@ -44,28 +45,68 @@ namespace ComGateway
         public long nodenumber = 0;
         public string nodenumberstr = "";
         public string alias = "";
+        public int port = 0;
+        public bool localhub = false;
 
         public string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
-            + "<Version>Mike Johnson 18 July 2011</Version></id>"
+            + "<Version>Mike Johnson 12 Aug 2011</Version></id>"
             +"<seg name=\"Port Speed\" space=\"0\" buttons=\"1\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
 
         public ComGateway()
         {
             InitializeComponent();
-
-            try
-            {
-                m_service = new DNSSDService();
-                m_eventManager = new DNSSDEventManager();
-            }
-            catch
-            {
-                MessageBox.Show("Bonjour Service is not available", "Error");
-                Application.Exit();
-            }
-
             CheckForIllegalCrossThreadCalls = false;
-            StartGetNodeNumber();
+
+            String[] arguments = Environment.GetCommandLineArgs();
+            for (int a = 1; a < arguments.Length; a++)
+            {
+                localhub = true;
+                log("Arg " + arguments[a]);
+                if (arguments[a].StartsWith("port"))
+                {
+                    int p = arguments[a].IndexOf('=');
+                    if (p > 0)
+                        port = Convert.ToInt32(arguments[a].Substring(p + 1));
+                }
+            }
+
+            if (localhub)
+            {
+                IPEndPoint ep = new IPEndPoint(IPAddress.Loopback, port);
+                skt.Connect(ep);
+                byte[] buffer = new byte[12];
+                skt.Receive(buffer);
+                if ((buffer[1] << 8) + buffer[2] == NODENUMBER)
+                {
+                    nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) 
+                        + (buffer[6] << 16) + (buffer[7] << 8) + buffer[8];
+                    nodenumberstr = nodenumber.ToString("X12");
+                    log("OpenLCB Node Number " + nodenumberstr);
+                }
+                else
+                {
+                    log("No node number allocated.");
+                    return;
+                }
+                serverconnected = true;
+                skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
+                EthernetSendHexString(INITCOMPLETE + nodenumberstr + nodenumberstr);
+            }
+            else
+            {
+                try
+                {
+                    m_service = new DNSSDService();
+                    m_eventManager = new DNSSDEventManager();
+                }
+                catch
+                {
+                    MessageBox.Show("Bonjour Service is not available", "Error");
+                    Application.Exit();
+                }
+
+                StartGetNodeNumber();
+            }
         }
 
         private void ComGateway_FormClosing(object sender, FormClosingEventArgs e)
@@ -168,17 +209,17 @@ namespace ComGateway
                 IPAddress[] ipa = Dns.GetHostAddresses(hostName);
                 for (i = 0; i < ipa.Length; i++)
                 {
-                    if (!(ipa[i].IsIPv6LinkLocal || ipa[i].IsIPv6Teredo || ipa[i].IsIPv6SiteLocal || ipa[i].IsIPv6Multicast))
+                    if (!(ipa[i].IsIPv6LinkLocal || ipa[i].IsIPv6SiteLocal || ipa[i].IsIPv6Multicast))
                         break;
                 }
                 IPEndPoint ep = new IPEndPoint(ipa[i], port);
                 skt.Connect(ep);
                 byte[] buffer = new byte[12];
                 skt.Receive(buffer);
-                if ((buffer[1] << 8) + buffer[2] == 0x3000)
+                if ((buffer[1] << 8) + buffer[2] == NODENUMBER)
                 {
-                    nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16) 
-                        + (buffer[7] << 8) + buffer[8];
+                    nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) 
+                        + (buffer[6] << 16) + (buffer[7] << 8) + buffer[8];
                     nodenumberstr = nodenumber.ToString("X12");
                     log("OpenLCB Node Number " + nodenumberstr);
                 }

@@ -155,11 +155,12 @@ BYTE new_output;                // next value of all the outputs
 BYTE servo_state;		        // interrupt state counter
 BYTE servo_index;               // index of servo to pulse
 int next_tmr;                   // next time for interrupt
+int current_tmr[8];			// current servo pulse width
 BYTE pulsetimer;                // timer for pulsing
 BYTE pulseoutput;               // bits of pulse requests
 BYTE pulseon;                   // set while pulsing
 #pragma udata svo1
-far char servopos[16];          // servo endpoint
+far char servopos[32];          // servo endpoint
 #pragma udata
 #endif
 
@@ -230,6 +231,8 @@ const rom BYTE xml[] =
       "<gr rep=\"8\">"
         "<int na=\"Servo off\" si=\"1\"/>"
         "<int na=\"Servo on\" si=\"1\"/>"
+        "<int na=\"Servo speed\" si=\"1\"/>"
+        "<by si=\"1\"/>"
       "</gr>"
     "</se>"
 #endif
@@ -261,7 +264,7 @@ const rom BYTE EventTable[128];   // 8 inputs x 2 states x 8 bytes
 #pragma romdata eedata_scn=0xf00000
 
 #ifdef SERVO
-rom BYTE SERVOPOS[16];
+rom BYTE SERVOPOS[32];
 #endif
 
 #ifdef ACE8C
@@ -295,14 +298,31 @@ void hpinterrupt(void) {
         if (servo_state == 0) {
             next_portc = pulseon;     // turn on servo next time round
             // Pre-calculate next delay for servo position
-            HI(next_tmr) = 0;
-            if (new_output & pulseon) {
-                next_tmr = servopos[(servo_index<<1)+1];
-            } 
-            else {
-                next_tmr = servopos[servo_index<<1];
-            }
+            if (new_output & pulseon)
+                next_tmr = (int)(signed char)servopos[(servo_index<<2)+1]; // destination value
+            else
+                next_tmr = (int)(signed char)servopos[servo_index<<2]; // destination value
             next_tmr = (0-3000) - (next_tmr<<3);
+            if (current_tmr[servo_index] < next_tmr) {
+                current_tmr[servo_index]++;
+                current_tmr[servo_index] += (unsigned char)servopos[(servo_index<<2) + 2];
+                if (current_tmr[servo_index]  < next_tmr) {
+                    next_tmr = current_tmr[servo_index];
+                    pulsetimer++;
+                }
+                else
+                    current_tmr[servo_index] = next_tmr;
+            }
+            else {
+                current_tmr[servo_index]--; 
+                current_tmr[servo_index] -= (unsigned char)servopos[(servo_index<<2) + 2]; 
+                if (current_tmr[servo_index] > next_tmr) {
+                    next_tmr = current_tmr[servo_index];
+                    pulsetimer++;
+                }  
+                else
+                    current_tmr[servo_index] = next_tmr;
+            }
             servo_state = 1;
         } 
         else { // odd state 1
@@ -312,7 +332,7 @@ void hpinterrupt(void) {
                 pulseon = 0;
         }
     } 
-    else { // not a servo, or timeslot 16 to 19
+    else { // no servo to pulse
         next_tmr = -40000; // 20 msec
     }
 }
@@ -455,9 +475,19 @@ void SetDefault(void)
         event[8] = (i>>1) | ((i&1)<<3);
         SaveEvent((BYTE * far)event);
     }
-    for (i=0; i<16; i++) {
+    for (i=0; i<32; ) {
         servopos[i] = 0;
         EEPROMWrite((int)&SERVOPOS[i], 0);
+        i++;
+        servopos[i] = 0;
+        EEPROMWrite((int)&SERVOPOS[i], 0);
+        i++;
+        servopos[i] = 0x7F;
+        EEPROMWrite((int)&SERVOPOS[i], 0x7F);
+        i++;
+        servopos[i] = 0;
+        EEPROMWrite((int)&SERVOPOS[i], 0);
+        i++;
     }
 #endif
 #ifdef ACC8
@@ -633,9 +663,19 @@ void DatagramPacket(void)
 #endif
 #ifdef SERVO
                 if (GP_block[6] == 1) { // servo position data
-                    for (i=0; i<16; i++) {
+                    for (i=0; i<32; ) {
                         servopos[i] = GP_block[i+7];
                         EEPROMWrite((int)&SERVOPOS[i], servopos[i]);
+                        i++;
+                        servopos[i] = GP_block[i+7];
+                        EEPROMWrite((int)&SERVOPOS[i], servopos[i]);
+                        i++;
+                        servopos[i] = GP_block[i+7] & 0x7F;
+                        EEPROMWrite((int)&SERVOPOS[i], servopos[i]);
+                        i++;
+                        servopos[i] = GP_block[i+7];
+                        EEPROMWrite((int)&SERVOPOS[i], servopos[i]);
+                        i++;
                     }
                     sendack(CB_SourceNID);
                     return;
@@ -679,9 +719,9 @@ void DatagramPacket(void)
 #endif
 #ifdef SERVO
                 if (GP_block[6] == 1) { // servo position data
-                    for (i=0; i<16; i++)
+                    for (i=0; i<32; i++)
                         GP_block[i+7] = servopos[i];
-                    StartSendBlock(16+7, CB_SourceNID);
+                    StartSendBlock(32+7, CB_SourceNID);
                     return;
                 }
 #endif
@@ -803,11 +843,11 @@ void servo_setup(void) {
         if (UNLEARN==SW_ON) {
             // ISR updates position
             if (LEARN == SW_ON) { // Nearer 2ms endpoint
-                servo_ptr = (BYTE far *)&servopos[servo<<1];
+                servo_ptr = (BYTE far *)&servopos[servo<<2];
                 new_output |= BitMask[servo];
             } 
             else { // Nearer 1ms endpoint
-                servo_ptr = (BYTE far *)&servopos[(servo<<1)+1];
+                servo_ptr = (BYTE far *)&servopos[(servo<<2)+1];
                 new_output &= ~BitMask[servo];
             }
 	        if (PUSHBTN == SW_ON) { // Adjust servo position
@@ -834,10 +874,10 @@ void servo_setup(void) {
             if (PUSHBTN == SW_ON) { // Check if we've already saved it
                 if (saved != servo) { // Store current setting in EEPROM
                     if (LEARN == SW_ON) { // Nearer 2ms endpoint
-                        addr = (BYTE)&SERVOPOS[servo<<1];
+                        addr = (BYTE)&SERVOPOS[servo<<2];
                     } 
                     else { // Nearer 1ms endpoint
-                        addr = (BYTE)&SERVOPOS[(servo<<1)+1];
+                        addr = (BYTE)&SERVOPOS[(servo<<2)+1];
                     }
                     EEPROMWrite(addr, *servo_ptr);
                     saved = servo;
@@ -859,8 +899,18 @@ void servo_setup(void) {
 void InitRamFromEEPROM(void)
 {
     far overlay BYTE i;
-    for (i=0; i<16; i++) {
+    for (i=0; i<32; ) {
         servopos[i] = EEPROMRead((int)&SERVOPOS[i]);
+        i++;
+        servopos[i] = EEPROMRead((int)&SERVOPOS[i]);
+        i++;
+        servopos[i] = EEPROMRead((int)&SERVOPOS[i]) & 0x7F;
+        i++;
+        servopos[i] = EEPROMRead((int)&SERVOPOS[i]);
+        i++;
+    }
+    for (i=0; i<8; i++) {
+        current_tmr[i] = (0-3000) - (((int)(signed char)servopos[i<<2])<<3);
     }
 }
 #endif
@@ -1016,7 +1066,7 @@ void main(void) {
                         pulseoutput &= ~BitMask[i]; // clear request bit 
                         pulseon = BitMask[i];
                         servo_index = i;
-                        pulsetimer = 25;         // no of 20 msec of pulses
+                        pulsetimer = 10;         // no of 20 msec of pulses after move
                         break;                        
                     }
                 }
