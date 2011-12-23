@@ -1403,6 +1403,33 @@ Basic small signal diode good up to 200mA. SMB footprint. Common part #: BAS16</
 <text x="0.0635" y="-0.4445" size="0.254" layer="51" rot="R40">PASTE</text>
 <rectangle x1="-0.2794" y1="-1.016" x2="1.4224" y2="0.9906" layer="31"/>
 </package>
+<package name="SJ_2S-TRACE">
+<description>Solder jumper, small, shorted with trace. No paste layer. Trace is cuttable.</description>
+<wire x1="0.8255" y1="-1.016" x2="-0.8255" y2="-1.016" width="0.2032" layer="21"/>
+<wire x1="0.8255" y1="1.016" x2="1.0795" y2="0.762" width="0.2032" layer="21" curve="-90"/>
+<wire x1="-1.0795" y1="0.762" x2="-0.8255" y2="1.016" width="0.2032" layer="21" curve="-90"/>
+<wire x1="-1.0795" y1="-0.762" x2="-0.8255" y2="-1.016" width="0.2032" layer="21" curve="90"/>
+<wire x1="0.8255" y1="-1.016" x2="1.0795" y2="-0.762" width="0.2032" layer="21" curve="90"/>
+<wire x1="-0.8255" y1="1.016" x2="0.8255" y2="1.016" width="0.2032" layer="21"/>
+<wire x1="-0.381" y1="0" x2="0.381" y2="0" width="0.2032" layer="1"/>
+<smd name="1" x="-0.508" y="0" dx="0.635" dy="1.27" layer="1" cream="no"/>
+<smd name="2" x="0.508" y="0" dx="0.635" dy="1.27" layer="1" cream="no"/>
+<text x="-0.9525" y="1.27" size="0.4064" layer="25">&gt;NAME</text>
+<text x="-0.9525" y="-1.651" size="0.4064" layer="27">&gt;VALUE</text>
+</package>
+<package name="SJ_2S-NOTRACE">
+<wire x1="0.8" y1="-1" x2="-0.8" y2="-1" width="0.2032" layer="21"/>
+<wire x1="0.8" y1="1" x2="1" y2="0.7" width="0.2032" layer="21" curve="-90.076445"/>
+<wire x1="-1" y1="0.7" x2="-0.8" y2="1" width="0.2032" layer="21" curve="-90.03821"/>
+<wire x1="-1" y1="-0.7" x2="-0.8" y2="-1" width="0.2032" layer="21" curve="90.03821"/>
+<wire x1="0.8" y1="-1" x2="1" y2="-0.7" width="0.2032" layer="21" curve="90.03821"/>
+<wire x1="-0.8" y1="1" x2="0.8" y2="1" width="0.2032" layer="21"/>
+<smd name="1" x="-0.4009" y="0" dx="0.635" dy="1.27" layer="1" rot="R180" cream="no"/>
+<smd name="2" x="0.4127" y="0" dx="0.635" dy="1.27" layer="1" cream="no"/>
+<text x="-0.9525" y="1.27" size="0.4064" layer="25">&gt;NAME</text>
+<text x="-0.9525" y="-1.651" size="0.4064" layer="27">&gt;VALUE</text>
+<rectangle x1="-1.016" y1="-1.016" x2="1.016" y2="1.016" layer="31"/>
+</package>
 </packages>
 <symbols>
 <symbol name="GND">
@@ -1605,6 +1632,16 @@ Basic small signal diode good up to 200mA. SMB footprint. Common part #: BAS16</
 <pin name="1" x="0" y="-2.54" visible="off" length="short" direction="pas" rot="R90"/>
 <pin name="2" x="2.54" y="-2.54" visible="off" length="short" direction="pas" rot="R90"/>
 <pin name="3" x="5.08" y="-2.54" visible="off" length="short" direction="pas" rot="R90"/>
+</symbol>
+<symbol name="SJ">
+<wire x1="0.381" y1="0.635" x2="0.381" y2="-0.635" width="1.27" layer="94" curve="-180" cap="flat"/>
+<wire x1="-0.381" y1="-0.635" x2="-0.381" y2="0.635" width="1.27" layer="94" curve="-180" cap="flat"/>
+<wire x1="2.54" y1="0" x2="1.651" y2="0" width="0.1524" layer="94"/>
+<wire x1="-2.54" y1="0" x2="-1.651" y2="0" width="0.1524" layer="94"/>
+<text x="-2.54" y="2.54" size="1.778" layer="95">&gt;NAME</text>
+<text x="-2.54" y="-5.08" size="1.778" layer="96">&gt;VALUE</text>
+<pin name="2" x="5.08" y="0" visible="off" length="short" direction="pas" swaplevel="1" rot="R180"/>
+<pin name="1" x="-5.08" y="0" visible="off" length="short" direction="pas" swaplevel="1"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -2148,6 +2185,51 @@ Basic 0.1" spaced jumper. Use with breakaway headers.</description>
 <connect gate="G$1" pin="1" pad="1"/>
 <connect gate="G$1" pin="2" pad="2"/>
 <connect gate="G$1" pin="3" pad="3"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="SOLDERJUMPER" prefix="SJ">
+<description>&lt;b&gt;Solder Jumper&lt;/b&gt;
+Standard SMD solder jumper. Used to automate production. Two varients : Normally Open and Normally Closed are the same, but have different paste layers. NC will have a large amount of paste and should jumper during reflow.</description>
+<gates>
+<gate name="1" symbol="SJ" x="0" y="0"/>
+</gates>
+<devices>
+<device name="NC" package="SJ_2S">
+<connects>
+<connect gate="1" pin="1" pad="1"/>
+<connect gate="1" pin="2" pad="2"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+<device name="TRACE" package="SJ_2S-TRACE">
+<connects>
+<connect gate="1" pin="1" pad="1"/>
+<connect gate="1" pin="2" pad="2"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+<device name="NC2" package="SJ_2S-NOTRACE">
+<connects>
+<connect gate="1" pin="1" pad="1"/>
+<connect gate="1" pin="2" pad="2"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+<device name="NO" package="SJ_2S-NO">
+<connects>
+<connect gate="1" pin="1" pad="1"/>
+<connect gate="1" pin="2" pad="2"/>
 </connects>
 <technologies>
 <technology name=""/>
@@ -20707,6 +20789,10 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <part name="R25" library="rcl" deviceset="R-US_" device="R1206" value="1K"/>
 <part name="LED11" library="led" deviceset="LED" device="CHIPLED_1206"/>
 <part name="L1" library="rcl" deviceset="L-US" device="L3216C" value="CS321613-100K"/>
+<part name="SJ1" library="SparkFun" deviceset="SOLDERJUMPER" device="TRACE"/>
+<part name="R26" library="rcl" deviceset="R-US_" device="R1206" value="100"/>
+<part name="JP11" library="SparkFun" deviceset="JUMPER-2" device="PTH"/>
+<part name="GND28" library="supply1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -20915,6 +21001,10 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <instance part="R25" gate="G$1" x="-274.32" y="213.36" rot="R180"/>
 <instance part="LED11" gate="G$1" x="-287.02" y="213.36" rot="R90"/>
 <instance part="L1" gate="G$1" x="-20.32" y="139.7" rot="R90"/>
+<instance part="SJ1" gate="1" x="-210.82" y="157.48"/>
+<instance part="R26" gate="G$1" x="-17.78" y="88.9" rot="MR0"/>
+<instance part="JP11" gate="A" x="-30.48" y="91.44"/>
+<instance part="GND28" gate="1" x="-30.48" y="86.36"/>
 </instances>
 <busses>
 </busses>
@@ -21337,14 +21427,12 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <pinref part="S3" gate="S" pin="4"/>
 </segment>
 <segment>
-<wire x1="-243.84" y1="160.02" x2="-236.22" y2="160.02" width="0.1524" layer="91"/>
 <label x="-233.68" y="160.02" size="1.778" layer="95"/>
 <pinref part="JP5" gate="G$1" pin="6"/>
-<wire x1="-236.22" y1="160.02" x2="-228.6" y2="160.02" width="0.1524" layer="91"/>
-<wire x1="-243.84" y1="157.48" x2="-236.22" y2="157.48" width="0.1524" layer="91"/>
-<pinref part="JP5" gate="G$1" pin="5"/>
-<wire x1="-236.22" y1="157.48" x2="-236.22" y2="160.02" width="0.1524" layer="91"/>
-<junction x="-236.22" y="160.02"/>
+<pinref part="SJ1" gate="1" pin="2"/>
+<wire x1="-205.74" y1="157.48" x2="-200.66" y2="157.48" width="0.1524" layer="91"/>
+<wire x1="-200.66" y1="157.48" x2="-200.66" y2="160.02" width="0.1524" layer="91"/>
+<wire x1="-200.66" y1="160.02" x2="-243.84" y2="160.02" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <wire x1="-284.48" y1="15.24" x2="-284.48" y2="22.86" width="0.1524" layer="91"/>
@@ -21488,6 +21576,10 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <pinref part="X3" gate="G$1" pin="6"/>
 <pinref part="GND2" gate="1" pin="GND"/>
 </segment>
+<segment>
+<pinref part="JP11" gate="A" pin="1"/>
+<pinref part="GND28" gate="1" pin="GND"/>
+</segment>
 </net>
 <net name="XTAL1" class="0">
 <segment>
@@ -21615,6 +21707,7 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <wire x1="-2.54" y1="88.9" x2="-12.7" y2="88.9" width="0.1524" layer="91"/>
 <label x="-10.16" y="88.9" size="1.778" layer="95"/>
 <pinref part="IC1" gate="G$1" pin="PG2(ALE)"/>
+<pinref part="R26" gate="G$1" pin="1"/>
 </segment>
 </net>
 <net name="AREF" class="0">
@@ -22481,6 +22574,20 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <wire x1="-281.94" y1="337.82" x2="-279.4" y2="337.82" width="0.1524" layer="91"/>
 <pinref part="R18" gate="G$1" pin="2"/>
 <pinref part="LED2" gate="G$1" pin="C"/>
+</segment>
+</net>
+<net name="N$23" class="2">
+<segment>
+<pinref part="JP5" gate="G$1" pin="5"/>
+<pinref part="SJ1" gate="1" pin="1"/>
+<wire x1="-243.84" y1="157.48" x2="-215.9" y2="157.48" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$25" class="0">
+<segment>
+<pinref part="R26" gate="G$1" pin="2"/>
+<pinref part="JP11" gate="A" pin="2"/>
+<wire x1="-27.94" y1="88.9" x2="-22.86" y2="88.9" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
