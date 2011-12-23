@@ -1840,7 +1840,7 @@ design rules under a new name.</description>
 <param name="mdCopperDimension" value="10mil"/>
 <param name="mdDrill" value="10mil"/>
 <param name="mdSmdStop" value="0mil"/>
-<param name="msWidth" value="10mil"/>
+<param name="msWidth" value="8mil"/>
 <param name="msDrill" value="12mil"/>
 <param name="msMicroVia" value="12mil"/>
 <param name="msBlindViaRatio" value="0.5"/>
@@ -2493,6 +2493,7 @@ design rules under a new name.</description>
 <vertex x="88.265" y="29.845"/>
 <vertex x="88.265" y="36.195"/>
 </polygon>
+<contactref element="JP5" pad="CTS"/>
 </signal>
 <signal name="RXCAN">
 <contactref element="IC2" pad="4"/>
@@ -3034,8 +3035,8 @@ design rules under a new name.</description>
 <signal name="PC1">
 <contactref element="IC1" pad="36"/>
 <contactref element="JP3" pad="3"/>
-<wire x1="31.75" y1="3.81" x2="27.94" y2="8.255" width="0.254" layer="16"/>
-<wire x1="27.94" y1="8.255" x2="21.59" y2="8.255" width="0.254" layer="16"/>
+<wire x1="31.75" y1="3.81" x2="27.305" y2="8.255" width="0.254" layer="16"/>
+<wire x1="27.305" y1="8.255" x2="21.59" y2="8.255" width="0.254" layer="16"/>
 <wire x1="21.59" y1="8.255" x2="20.32" y2="9.525" width="0.254" layer="16"/>
 <wire x1="20.32" y1="9.525" x2="20.32" y2="14.605" width="0.254" layer="16"/>
 <wire x1="41.485" y1="42.4053" x2="41.485" y2="26.46" width="0.254" layer="1"/>
@@ -3313,9 +3314,6 @@ design rules under a new name.</description>
 <wire x1="25.4" y1="65.405" x2="32.385" y2="65.405" width="0.254" layer="1"/>
 <wire x1="21.59" y1="69.215" x2="25.4" y2="65.405" width="0.254" layer="1"/>
 <wire x1="21.59" y1="69.85" x2="21.59" y2="69.215" width="0.254" layer="1"/>
-</signal>
-<signal name="N$27">
-<contactref element="JP5" pad="CTS"/>
 </signal>
 <signal name="USB_V">
 <contactref element="JP10" pad="1"/>

@@ -21337,9 +21337,14 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <pinref part="S3" gate="S" pin="4"/>
 </segment>
 <segment>
-<wire x1="-243.84" y1="160.02" x2="-228.6" y2="160.02" width="0.1524" layer="91"/>
+<wire x1="-243.84" y1="160.02" x2="-236.22" y2="160.02" width="0.1524" layer="91"/>
 <label x="-233.68" y="160.02" size="1.778" layer="95"/>
 <pinref part="JP5" gate="G$1" pin="6"/>
+<wire x1="-236.22" y1="160.02" x2="-228.6" y2="160.02" width="0.1524" layer="91"/>
+<wire x1="-243.84" y1="157.48" x2="-236.22" y2="157.48" width="0.1524" layer="91"/>
+<pinref part="JP5" gate="G$1" pin="5"/>
+<wire x1="-236.22" y1="157.48" x2="-236.22" y2="160.02" width="0.1524" layer="91"/>
+<junction x="-236.22" y="160.02"/>
 </segment>
 <segment>
 <wire x1="-284.48" y1="15.24" x2="-284.48" y2="22.86" width="0.1524" layer="91"/>
@@ -22141,13 +22146,6 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 <wire x1="-248.92" y1="81.28" x2="-269.24" y2="81.28" width="0.1524" layer="91"/>
 <label x="-266.7" y="81.28" size="1.778" layer="95" rot="MR0"/>
 <pinref part="JP6" gate="G$1" pin="1"/>
-</segment>
-</net>
-<net name="N$27" class="0">
-<segment>
-<wire x1="-243.84" y1="157.48" x2="-228.6" y2="157.48" width="0.1524" layer="91"/>
-<label x="-233.68" y="157.48" size="1.778" layer="95"/>
-<pinref part="JP5" gate="G$1" pin="5"/>
 </segment>
 </net>
 <net name="USB_V" class="0">
