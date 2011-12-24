@@ -245,5 +245,11 @@ namespace fastclock
             clock.Change(System.Threading.Timeout.Infinite, interval);
         }
 
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            clocktask.Abort();
+        }
+
+
     }
 }

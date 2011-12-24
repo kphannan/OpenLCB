@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.TimeTB = new System.Windows.Forms.TextBox();
             this.IntervalTB = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -104,8 +105,10 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.IntervalTB);
             this.Controls.Add(this.TimeTB);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
             this.Text = "Form1";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.ResumeLayout(false);
             this.PerformLayout();
 

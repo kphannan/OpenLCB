@@ -25,6 +25,7 @@
 
 #define SendMessage ECANSendMessage
 #define ReceiveMessage ECANReceiveMessage
+#define MHZ32 1
 
 #include "../canlib/frametypes.c"
 #include "../canlib/general.c"
