@@ -49,7 +49,7 @@ void loop()
 //            Serial.println("OK!");
 //          else
 //            Serial.println("ERROR!");
-        }
+//        }
         break;
       case 'E': //write eventID
         //three bytes to this command: slot to write, byte 6 of ID, byte 7 of ID (first 6 bytes are imputed from NodeID)
