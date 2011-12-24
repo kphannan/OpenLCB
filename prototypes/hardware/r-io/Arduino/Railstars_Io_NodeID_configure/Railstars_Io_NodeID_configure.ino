@@ -37,21 +37,18 @@ void loop()
         }
         //write check byte here TODO
         EEPROM.write(6, 0);
-        break;
       case 'R':  //read NodeID; automatic when NodeID is set
         for(count = 0; count < 6; ++count)
         {
           nid[count] = EEPROM.read(count);
-          Serial.print(nid[count]); //prints value as ASCII number now. Good!
-          if(count < 5)
-            Serial.print(".");
-          else
-            Serial.println();
+          Serial.write(nid[count]); //prints value as raw number
+        }
+        Serial.println();
           // TODO check check byte here
-          if(!EEPROM.read(6))
-            Serial.println("OK!");
-          else
-            Serial.println("ERROR!");
+//          if(!EEPROM.read(6))
+//            Serial.println("OK!");
+//          else
+//            Serial.println("ERROR!");
         }
         break;
       case 'E': //write eventID
