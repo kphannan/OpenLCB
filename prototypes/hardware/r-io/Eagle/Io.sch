@@ -21207,7 +21207,7 @@ Source: http://www.diodes.com/datasheets/ds23001.pdf</description>
 </net>
 <net name="VCC" class="0">
 <segment>
-<wire x1="-287.02" y1="154.94" x2="-294.64" y2="154.94" width="0.1524" layer="91"/>
+<wire x1="-287.02" y1="154.94" x2="-297.18" y2="154.94" width="0.1524" layer="91"/>
 <label x="-294.64" y="154.94" size="1.778" layer="95"/>
 <pinref part="H7" gate="G$1" pin="2"/>
 </segment>
