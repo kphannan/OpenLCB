@@ -1,1 +1,0 @@
-dns-sd -R Test _openlcb-hub._tcp. "" 12346

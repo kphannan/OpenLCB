@@ -1,1 +1,0 @@
-cat data.txt | nc -vl -i 5 12346
