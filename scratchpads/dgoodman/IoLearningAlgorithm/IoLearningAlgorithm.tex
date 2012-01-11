@@ -1,0 +1,87 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{url}
+\usepackage{slashbox}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{A Flexible Method for Allocating, Learning, and Forgetting OpenLCB EventIDs}
+\author{D.E. Goodman-Wilson}
+%\date{}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\begin{abstract}
+OpenLCB Producer/Consumer nodes require some method of storing the EventID's to which they respond. One method uses a simple array of EventIDs, the position of which indicates to which producer or consumer the EventID is assigned. This method has the benefit of simplicity and compactness, but with two distinct costs. First, each producer or consumer is limited to producing or consuming exactly one EventID, reducing the flexibility. Second, Duplicate EventIDs are stored multiple times, reducing the general case space efficiency. In this paper, I discuss an alternate strategy for storing EventIDs in a matrix, in which each row represents an EventID, and each column represents a producer or consumer. This scheme is obviously more complex, but overcomes the two stated shortcomings, although at the cost of added time complexity for production of events.
+\end{abstract}
+
+\tableofcontents
+
+\section{Motivation}
+
+Simple consumer/producer schemes in which each producer or consumer is assigned exactly one EventID are sufficient for layouts in which there is a strict one-to-one, one-to-many, or many-to-one mapping of producers to consumers. However, achieving a many-to-many mapping requires that consumer or producers be able to consume or produce more than one EventID.\footnote{Much of this discussion, and indeed the algorithm described in the paper is derivative of the note at \url{http://openlcb.org/trunk/documents/notes/ProducerConsumerModel.html}.}
+
+For example, route selection through a yard ladder. TODO ILLUSTRATION \url{http://openlcb.org/trunk/documents/drawings/CompoundLadder.png} . In order to select the routes individually though a yard ladder, either the consumers attached to each turnout (especially the root turnout) must be able to respond to multiple events, or each control panel button must be able to send multiple events. For example, if each turnout responds to exactly one event, then pressing the button for \textit{A} must send multiple eventIDs, one each for turnout 1, 2, and 7. Alternately, if each button is configured to produce exactly one event, the turnout 1 must be configured to listen for multiple events, one for each button.
+
+\section{Representation}
+
+For comparison, here is how EventIDs are stored in the current Producer/Consumer code in the C libraries of Bob Jacobsen, \textit{et al}, and of D.E. Goodman-Wilson. Assume $n$ producers and consumers; each is assigned a unique index from the range ${1,\ldots,n}$. We then create an EventID array of size $n$, as in Table \ref{linear}. Each cell in the array is of size(EventID); for $n$ producers/consumers, the storage requirements are thus size(EventID)$*n$.
+\begin{table}[htdp]
+\caption{Linear representation}
+\begin{center}
+\begin{tabular}{r|c|c|c|c|}
+producer/consumer&0&1&$\cdots$&n \\ \hline
+EventID&eid$_0$ & eid$_1$ & $\cdots$ &eid$_{n}$\\
+\end{tabular}
+\end{center}
+\label{linear}
+\end{table}%
+
+One way to expand on this scheme to work for many-to-many transactions is to use a two-dimensional array of depth $m$, as in Table \ref{two-dim}, thus permitting each producer and consumer to take $m$ EventIDs.
+
+Although this representational scheme does in fact increase the number of events that a producer or consumer can produce or consume, it does so inefficiently. First, consider that the storage requirements have increased to size(EventID)$*n*m$ bytes. Second, consider that many of the entries will sit unused.
+
+Thus, in the yard ladder example in Figure TODO, the root turnout \textit{1} must respond to nine possible route-selection-events, where the four leaf turnouts need only respond to one\footnote{Of course, each turnout has two consumers: One for straight, and one for diverging; But each of these consumers need only listen to one button each.}. Thus, because there are 8 turnouts, we need an array with 72 elements; and yet only 30 of these slots will actually be used. TODO CHECK MY MATH!
+
+\begin{table}[htdp]
+\caption{Two-dimensional representation}
+\begin{center}
+\begin{tabular}{r|c|c|c|c|}
+producer/consumer&0&1&$\cdots$&n \\ \hline
+EventID 1&eid$_{0,0}$ & eid$_{0,1}$ & $\cdots$ &eid$_{0,n}$\\
+EventID 2&eid$_{1,0}$ & eid$_{1,0}$ & $\cdots$ &eid$_{1,n}$\\
+$\vdots$ & $\vdots$ & $\vdots$ & $\ddots$ & $\vdots$\\
+EventID $m$ & eid$_{m,0}$ & eid$_{m,0}$ & $\cdots$ &eid$_{m,n}$\\
+\end{tabular}
+\end{center}
+\label{two-dim}
+\end{table}%
+
+One obvious way forward, and the method I advocate in this paper, is to use a spare matrix to represent the producer/consumer--EventID pairings. Table \ref{matrix} presents such a sparse matrix, with each row representing one EventID, and each column representing one producer or consumer. Each cell, rather than representing an EventID, represents whether a the EventID at that row is to be connected to the producer or consumer at that column. This connection can be represented with just one bit of information, rather than the full 8 bytes required by an EventID. Thus, for $n$ producers and consumers, and $m$ distinct EventIDs, a sparse matrix requires only Size(EventID)$*m + n/8$ bytes, only marginally larger than the one-dimensional representation above.
+
+A Sparse matrix has the further advantage of using this space efficiently. TODO
+
+\begin{table}[htdp]
+\caption{Sparse matrix representation}
+\begin{center}
+\begin{tabular}{c|c|c|c|c|}
+\backslashbox{EventID}{producer/consumer}	&	0	&	1	&	$\cdots$	&	n \\ \hline
+eid0				& $x_{0,0}$ & $x_{0,1}$ & $\cdots$ & $x_{0,n}$\\ \hline
+eid1				& $x_{1,0}$ & $x_{1,1}$ & $\cdots$ & $x_{1,n}$\\ \hline
+$\vdots$			& $\vdots$ & $\vdots$ & $\ddots$ &  $\vdots$  \\ \hline
+eid\textit{m}		& $x_{m,0}$ & $x_{m,1}$ & $\cdots$ & $x_{m,n}$\\ \hline
+\end{tabular}
+\end{center}
+\label{matrix}
+\end{table}%
+
+\section{Learning}
+
+\section{Forgetting}
+
+\end{document}  
