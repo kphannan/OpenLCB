@@ -26,7 +26,16 @@ OpenLCB Producer/Consumer nodes require some method of storing the EventID's to 
 
 Simple consumer/producer schemes in which each producer or consumer is assigned exactly one EventID are sufficient for layouts in which there is a strict one-to-one, one-to-many, or many-to-one mapping of producers to consumers. However, achieving a many-to-many mapping requires that consumer or producers be able to consume or produce more than one EventID.\footnote{Much of this discussion, and indeed the algorithm described in the paper is derivative of the note at \url{http://openlcb.org/trunk/documents/notes/ProducerConsumerModel.html}.}
 
-For example, route selection through a yard ladder. TODO ILLUSTRATION \url{http://openlcb.org/trunk/documents/drawings/CompoundLadder.png} . In order to select the routes individually though a yard ladder, either the consumers attached to each turnout (especially the root turnout) must be able to respond to multiple events, or each control panel button must be able to send multiple events. For example, if each turnout responds to exactly one event, then pressing the button for \textit{A} must send multiple eventIDs, one each for turnout 1, 2, and 7. Alternately, if each button is configured to produce exactly one event, the turnout 1 must be configured to listen for multiple events, one for each button.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics{CompoundLadder.png}
+\caption{A compound yard ladder with turnouts 1--8 and routes A--I}
+\label{ladder}
+\end{center}
+\end{figure}
+
+
+For example, route selection through the yard ladder in Figure \ref{ladder}. In order to select the routes individually though a yard ladder, either the consumers attached to each turnout (especially the root turnout) must be able to respond to multiple events, or each control panel button must be able to send multiple events. For example, if each turnout responds to exactly one event, then pressing the button for \textit{A} must send multiple eventIDs, one each for turnout 1, 2, and 7. Alternately, if each button is configured to produce exactly one event, the turnout 1 must be configured to listen for multiple events, one for each button.
 
 \section{Representation}
 
@@ -50,7 +59,7 @@ One way to expand on this scheme to work for many-to-many transactions is to use
 
 Although this representational scheme does in fact increase the number of events that a producer or consumer can produce or consume, it does so inefficiently. First, consider that the storage requirements have increased to size(EventID)$*n*m$ bytes. Second, consider that many of the entries will sit unused.
 
-Thus, in the yard ladder example in Figure TODO, the root turnout \textit{1} must respond to nine possible route-selection-events, where the four leaf turnouts need only respond to one\footnote{Of course, each turnout has two consumers: One for straight, and one for diverging; But each of these consumers need only listen to one button each.}. Thus, because there are 8 turnouts, we need an array with 72 elements, which amounts to a staggering 576 bytes; and yet only 30 of these slots will actually be used. TODO CHECK MY MATH!
+Thus, in the yard ladder example in Figure \ref{ladder}, the root turnout \textit{1} must respond to nine possible route-selection-events, where the four leaf turnouts need only respond to one\footnote{Of course, each turnout has two consumers: One for straight, and one for diverging; But each of these consumers need only listen to one button each.}. Thus, because there are 8 turnouts, we need an array with 72 elements, which amounts to a staggering 576 bytes; and yet only 30 of these slots will actually be used. %TODO CHECK MY MATH!
 
 \begin{table}[htdp]
 \caption{Two-dimensional representation}
