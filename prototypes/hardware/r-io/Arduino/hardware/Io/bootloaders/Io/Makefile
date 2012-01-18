@@ -204,8 +204,7 @@ io: MCU_TARGET = at90can128
 io: CFLAGS += '-DMAX_TIME_COUNT=F_CPU>>4' '-DNUM_LED_FLASHES=3'
 #  -DBAUD_RATE=57600
 io: AVR_FREQ = 16000000L
-#io: LDSECTION  = --section-start=.text=0xF000
-io: LDSECTION  = --section-start=.text=0x1E000
+io: LDSECTION  = --section-start=.text=0xF000
 io: $(PROGRAM)_io.hex
 
 io_isp: openlcb

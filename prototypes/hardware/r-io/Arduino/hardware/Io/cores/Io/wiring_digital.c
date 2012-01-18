@@ -67,7 +67,7 @@ void digitalWrite(uint8_t pin, uint8_t val)
 {
 	//permit writing to inputs on Port C to activate/deactivate pull-up resistors
 	
-	uint8_t timer = digitalPinToTimer(pin);
+//	uint8_t timer = digitalPinToTimer(pin);
 	uint8_t bit = digitalPinToBitMask(pin);
 	uint8_t port = digitalPinToPort(pin);
 	volatile uint8_t *out;
@@ -95,7 +95,7 @@ void digitalWrite(uint8_t pin, uint8_t val)
 int digitalRead(uint8_t pin)
 {
 	if( (pin >= 0) && (pin <= 7) ) //port A outputs!
-		return; //do nothing!
+		return -1; //do nothing!
 		
 	uint8_t timer = digitalPinToTimer(pin);
 	uint8_t bit = digitalPinToBitMask(pin);

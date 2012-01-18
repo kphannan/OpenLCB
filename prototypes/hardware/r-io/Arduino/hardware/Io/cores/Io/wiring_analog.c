@@ -71,7 +71,7 @@ int analogRead(uint8_t pin)
 }
 
 // No PWM support.
-static void analogWrite(uint8_t pin, int val)
+void analogWrite(uint8_t pin, int val)
 {
 	return;
 }
