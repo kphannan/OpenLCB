@@ -52,6 +52,8 @@ namespace ComGateway
             + "<Version>Mike Johnson 12 Aug 2011</Version></id>"
             +"<seg name=\"Port Speed\" space=\"0\" buttons=\"1\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
 
+        StreamWriter savefile = new StreamWriter("logfile.log");
+
         public ComGateway()
         {
             InitializeComponent();
@@ -123,6 +125,7 @@ namespace ComGateway
                 inputtask.Abort();
             }
             catch { };
+            savefile.Close();
         }
         
        public object loglock = new object();
@@ -136,6 +139,7 @@ namespace ComGateway
                     s = s.Substring(0, 2000);
                 LogTB.Text = m + "\r\n" + s;
                 LogTB.Refresh();
+                savefile.WriteLine(m);
             }
         }
 
@@ -265,6 +269,7 @@ namespace ComGateway
             skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
         }
 
+        // s is the string to send without the length
         public void EthernetSendHexString(string s)
         {
             if (!serverconnected)
@@ -515,6 +520,7 @@ namespace ComGateway
             }
         }
 
+        // cmd is the string to send including 2 hex digits for length
         public void CANSendHexString(string cmd)
         {
             try
@@ -675,7 +681,7 @@ namespace ComGateway
             if (cmd.Substring(0,4)==VERIFYNODEIDS) {
                 s = VERIFIEDNODEID + nodenumberstr + nodenumberstr;
                 EthernetSendHexString(s);
-                CANSendHexString(s);
+                CANSendHexString("00"+s);
                 return true;
             }
             /*
@@ -722,7 +728,7 @@ namespace ComGateway
                     if (l < 64)
                         s += "00";
                     if (fromCAN)
-                        CANSendHexString(s);
+                        CANSendHexString("00"+s);
                     else
                         EthernetSendHexString(s);
                     return false;
@@ -737,7 +743,7 @@ namespace ComGateway
                         data = speed.Substring(i,2) + data;
                     s = "3204" + nodenumberstr + cmd.Substring(4, 12) + "30" + address + "00" + data;
                     if (fromCAN)
-                        CANSendHexString(s);
+                        CANSendHexString("00"+s);
                     else
                         EthernetSendHexString(s);
                     return false;
