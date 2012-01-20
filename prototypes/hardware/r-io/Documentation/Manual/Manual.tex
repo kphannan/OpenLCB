@@ -5,6 +5,7 @@
 %\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
 \usepackage{graphicx}
 \usepackage{makeidx}
+\usepackage{url}
 
 \makeindex
 
@@ -52,7 +53,7 @@ TODO What is it?
 \end{figure}
 
 
-Railstars Io provides a set of 8 inputs and 8 outputs to connect to your layout. The inputs can be used with the buttons and switches on a fascia panel, or with existing accessories on your layout such as block detectors or turnout feedback units. The outputs can be used directly to control lamps or LEDs on your layout, or connected to existing accessories on your layout such as turnout controllers or signal decoders.
+Railstars Io provides a set of 8 inputs and 8 outputs to connect to your layout. The inputs can be used with the buttons and switches on a fascia panel, or with existing accessories on your layout such as block detectors or turnout feedback units. The outputs can be used directly to control bulbs or LEDs on your layout, or connected to existing accessories on your layout such as turnout controllers or signal decoders.
 
 \section{Initial Setup}
 
@@ -81,6 +82,12 @@ To use Railstars Io, you will first need to solder the appropriate terminals to 
 \label{screwterminal}
 \end{center}
 \end{figure}
+
+\section{Connecting to NMRAnet bus}
+
+TODO plug in CAT5 cable. Set termination jumper if needed
+TODO images of termination jumpers on and off
+\index{NMRAnet!termination}
 
 \section{Providing power}
 
@@ -133,7 +140,7 @@ Note that drawing power from the NMRAnet bus requires that at least one other no
 \index{Railstars Io!power, NMRAnet to@power, to NMRAnet}
 \index{NMRAnet!bus power}
 
-A Railstars Io node that is configured to use an external power supply can optionally be configured to provide power to the NMRAnet bus. In this case, a power adapter capable of providing 750mA--1,000mA is suggested. Configure the board as per \S\ref{externalpower}, and then set the ``CAN POWER'' jumper to "CAN OUT", as per Figure \ref{CANOUT}.
+A Railstars Io node that is configured to use an external power supply can optionally be configured to provide power to the NMRAnet bus. In this case, a power adapter capable of providing 750mA--1,000mA is suggested. Configure the board as per \S\ref{externalpower}, and then set the ``CAN POWER'' jumper to ``CAN OUT'', as per Figure \ref{CANOUT}.
 
 \begin{figure}[htbp]
 \begin{center}
@@ -151,13 +158,44 @@ TODO image of screw terminals and ButtonLED8
 
 \section{Usage Example: Fascia panel}
 
-TODO image of screw terminals and push-buttons
+Railstars Io can be used to interface a fascia panel or control panel to your layout. Simply wire the panel switches to the Io inputs, and the panel indicators to the Io outputs as indicated below. By default, Railstars Io is pre-loaded with a useful configuration for fascia panels, in that each input will trigger the corresponding output; that is, pressing a button wired to input 1 will cause a bulb or LED wired to output 1 to light.
 
-TODO image of screw terminals and toggle switches
+\subsection{Wiring inputs to switches}
 
-TODO image of screw terminals and lamps
+Inputs should be wired to short to ground. An open circuit on an input is read as ``off'', and shorting the input to ground is read as ``on''. (It is safe to apply 5V to the inputs, although Io cannot distinguish between an open circuit and +5V on an input line).
 
-TODO image of screw terminals and LEDs
+Normally-open pushbuttons should be wired as per Figure \ref{pushbutton}, with one leg to the desired input, and the other to ground. In this configuration, a depressed button will be read as ``on''.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=3in]{images/Inputs-pushbutton.png}
+\caption{Wiring pushbutton switches to Io inputs}
+\label{pushbutton}
+\end{center}
+\end{figure}
+
+DPDT switches should be wired as per Figure \ref{DPDT}, with the center pin wired to the desired input, one pin wired to ground, and the other left unconnected. In this configuration, moving the toggle towards the wired pin is read as ``on'', and towards the other as ``off''.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=3in]{images/Inputs-DPDT.png}
+\caption{Wiring DPDT toggle switches to Io inputs}
+\label{DPDT}
+\end{center}
+\end{figure}
+
+
+\subsection{Wiring outputs to indicators}
+
+The outputs on Io toggle between open circuit, and shorted to ground. Thus, devices to be controlled should be wired to the +5V and the output line, as per Figure \ref{indicators}. LEDs will require a current-limiting resistor (about 470 ohms will suffice), and their polarity must be carefully observed, with the long pin (anode) wired to the +5V terminal, and the short pin (cathode) wired to the desired output terminal. Incandescent bulbs must be of the 5V variety, but do not require a current-limiting resistor.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=3in]{images/Outputs-indicator.png}
+\caption{Wiring LEDs and bulbs to Io output}
+\label{indicators}
+\end{center}
+\end{figure}
 
 \section{Usage Example: Digitrax DS64 Quad Stationary Decoder}
 
@@ -185,6 +223,8 @@ TODO image of USB interface
 \printindex
 
 \newpage
+Figures \ref{DPDT}, \ref{pushbutton}, TODO were created with Fritzing. \url{http://fritzing.org/}
+
 Railstars\texttrademark and Io\texttrademark are trademarks of Railstars Limited. TCH Technology\texttrademark is a trademark of Timothy C. Hatch. NMRA\texttrademark, is a trademark of, and NMRAnet\textregistered and the NMRAnet logo are registered trademarks of the National Model Railroading Association.
 
 TODO Digitrax, NCE
