@@ -4,9 +4,9 @@
 %\geometry{landscape}                % Activate for for rotated page geometry
 %\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
 \usepackage{graphicx}
-\usepackage{amssymb}
-\usepackage{epstopdf}
-\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+\usepackage{makeidx}
+
+\makeindex
 
 \title{OpenLCB / NMRAnet S-9.7 DevKit Manual}
 %\author{The Author}
@@ -39,6 +39,7 @@ The TCH Technology OpenLCB USB/CAN Interface permits you to expand your layout's
 TODO What is it?
 
 \section{Producer-Consumer model}
+\index{producer-consumer model}
 
 \chapter{Connecting the Railstars Io boards}
 
@@ -87,6 +88,7 @@ Railstars Io can be powered in one of three ways: From an external power supply,
 
 \subsection{Powering with an external supply}
 \label{externalpower}
+\index{Railstars Io!power, power adapter}
 
 You may power Railstars Io using an external power supply that provides a 2.1mm center-positive plug, and between 9 and 12V DC at 500mA or more of current. Ensure that the ``USBPWR'' jumper is set to ``EXT'', as per Figure \ref{EXTPWR}
 
@@ -99,6 +101,7 @@ You may power Railstars Io using an external power supply that provides a 2.1mm 
 \end{figure}
 
 \subsection{Powering via USB}
+\index{Railstars Io!power, USB}
 
 Using the included USB cable, you can power Railstars Io via the USB interface. To do so set the ``USBPWR'' jumper is set to ``USB'', as per Figure \ref{USBPWR}, and then plug the USB cable into the FTDI header, following the instructions in \S\ref{FTDI}.
 
@@ -111,6 +114,8 @@ Using the included USB cable, you can power Railstars Io via the USB interface. 
 \end{figure}
 
 \subsection{Powering via the NMRAnet bus}
+\index{Railstars Io!power, NMRAnet from@power, from NMRAnet}
+\index{NMRAnet!bus power}
 
 The NMRAnet bus can provide a small amount of power to individual boards. To configure Railstars Io to draw power from the NMRAnet bus, set the ``USBPWR'' jumper to ``EXT'', as per Figure \ref{EXTPWR} above, and then set the ``CAN POWER'' jumper to ``CAN IN'', as per Figure \ref{CANIN}.
 
@@ -125,6 +130,8 @@ The NMRAnet bus can provide a small amount of power to individual boards. To con
 Note that drawing power from the NMRAnet bus requires that at least one other node be configured to provide power to the NMRAnet bus.
 
 \subsection{Providing power to the NMRAnet bus}
+\index{Railstars Io!power, NMRAnet to@power, to NMRAnet}
+\index{NMRAnet!bus power}
 
 A Railstars Io node that is configured to use an external power supply can optionally be configured to provide power to the NMRAnet bus. In this case, a power adapter capable of providing 750mA--1,000mA is suggested. Configure the board as per \S\ref{externalpower}, and then set the ``CAN POWER'' jumper to "CAN OUT", as per Figure \ref{CANOUT}.
 
@@ -174,6 +181,9 @@ TODO image of USB interface
 
 %%%%%%%%%%%%%%%%%%%%
 %end matters
+
+\printindex
+
 \newpage
 Railstars\texttrademark and Io\texttrademark are trademarks of Railstars Limited. TCH Technology\texttrademark is a trademark of Timothy C. Hatch. NMRA\texttrademark, is a trademark of, and NMRAnet\textregistered and the NMRAnet logo are registered trademarks of the National Model Railroading Association.
 
