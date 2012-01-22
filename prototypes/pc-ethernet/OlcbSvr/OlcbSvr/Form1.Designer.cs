@@ -43,13 +43,14 @@
             this.EventBtn = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.MaxConTB = new System.Windows.Forms.TextBox();
+            this.FilterCB = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // LogTB
             // 
-            this.LogTB.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.LogTB.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.LogTB.Location = new System.Drawing.Point(0, 68);
             this.LogTB.Multiline = true;
             this.LogTB.Name = "LogTB";
@@ -129,7 +130,7 @@
             // LogCB
             // 
             this.LogCB.AutoSize = true;
-            this.LogCB.Location = new System.Drawing.Point(428, 43);
+            this.LogCB.Location = new System.Drawing.Point(374, 43);
             this.LogCB.Name = "LogCB";
             this.LogCB.Size = new System.Drawing.Size(66, 17);
             this.LogCB.TabIndex = 83;
@@ -138,7 +139,7 @@
             // 
             // NodeBtn
             // 
-            this.NodeBtn.Location = new System.Drawing.Point(266, 39);
+            this.NodeBtn.Location = new System.Drawing.Point(198, 39);
             this.NodeBtn.Name = "NodeBtn";
             this.NodeBtn.Size = new System.Drawing.Size(75, 23);
             this.NodeBtn.TabIndex = 84;
@@ -148,7 +149,7 @@
             // 
             // EventBtn
             // 
-            this.EventBtn.Location = new System.Drawing.Point(347, 39);
+            this.EventBtn.Location = new System.Drawing.Point(280, 39);
             this.EventBtn.Name = "EventBtn";
             this.EventBtn.Size = new System.Drawing.Size(75, 23);
             this.EventBtn.TabIndex = 85;
@@ -170,14 +171,25 @@
             this.MaxConTB.Location = new System.Drawing.Point(107, 41);
             this.MaxConTB.Name = "MaxConTB";
             this.MaxConTB.ReadOnly = true;
-            this.MaxConTB.Size = new System.Drawing.Size(87, 20);
+            this.MaxConTB.Size = new System.Drawing.Size(52, 20);
             this.MaxConTB.TabIndex = 86;
+            // 
+            // FilterCB
+            // 
+            this.FilterCB.AutoSize = true;
+            this.FilterCB.Location = new System.Drawing.Point(450, 43);
+            this.FilterCB.Name = "FilterCB";
+            this.FilterCB.Size = new System.Drawing.Size(65, 17);
+            this.FilterCB.TabIndex = 88;
+            this.FilterCB.Text = "No Filter";
+            this.FilterCB.UseVisualStyleBackColor = true;
             // 
             // OlcbSvr
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(534, 269);
+            this.Controls.Add(this.FilterCB);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.MaxConTB);
             this.Controls.Add(this.EventBtn);
@@ -217,6 +229,7 @@
         private System.Windows.Forms.Button EventBtn;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox MaxConTB;
+        private System.Windows.Forms.CheckBox FilterCB;
     }
 }
 

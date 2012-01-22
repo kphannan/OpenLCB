@@ -606,7 +606,8 @@ namespace OlcbSvr
                 }
                 for (i = 0; i < MAXCONNECTIONS; i++)
                 {
-                    if (i != index && connects[i].inuse && (localhub || connects[i].CheckFilter(buffer, start)))
+                    if (i != index && connects[i].inuse 
+                        && (localhub || FilterCB.Checked || connects[i].CheckFilter(buffer, start)))
                     {
                         connects[i].skt.Send(buffer, start, size, SocketFlags.None);
                         if (LogCB.Checked)

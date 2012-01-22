@@ -1,5 +1,5 @@
 <hubconfig version="1">
 <nodenumber>0304000972F0</nodenumber>
 <max>15</max>
-<log>False</log>
+<log>True</log>
 </hubconfig>
