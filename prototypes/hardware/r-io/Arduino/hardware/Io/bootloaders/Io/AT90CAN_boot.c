@@ -107,9 +107,9 @@
 
 /* SW_MAJOR and MINOR needs to be updated from time to time to avoid warning message from AVR Studio */
 /* never allow AVR Studio to do an update !!!! */
-#define HW_VER	 0x03
+#define HW_VER	 0x02
 #define SW_MAJOR 0x01
-#define SW_MINOR 0x01
+#define SW_MINOR 0x10
 
 
 /* Adjust to suit whatever pin your hardware uses to enter the bootloader */
@@ -277,13 +277,6 @@ int main(void)
 {
 	uint8_t ch,ch2;
 	uint16_t w;
-	
-	/* DEG 20111212 for Io */
-	/* First things first, let's protect our equipment. Set up permanent outputs on PORT A, and permanent outputs with pullups on PORT C */
-	DDRA = 0xFF; //Port A = all outputs
-	PORTA = 0x00; //drive all outputs low, deactivates outputs. Physical pull-down accomplishes same thing, but redundancy is OK
-	DDRC = 0x00; //Port C = all inputs
-	PORTC = 0xFF; //activate pull-up resistor on all PortC inputs
 
 #ifdef WATCHDOG_MODS
 	ch = MCUSR;

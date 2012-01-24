@@ -173,17 +173,25 @@ void init()
 	// this needs to be called before setup() or some functions won't
 	// work there
 	sei();
+
+	/* DEG 20120124 for Io */
+	/* First things first, let's protect our equipment. Set up permanent outputs on PORT A, and permanent outputs with pullups on PORT C */
+	DDRA = 0xFF; //Port A = all outputs
+	PORTA = 0x00; //drive all outputs low, deactivates outputs. Physical pull-down accomplishes same thing, but redundancy is OK
+	DDRC = 0x00; //Port C = all inputs
+	PORTC = 0xFF; //activate pull-up resistor on all PortC inputs
 	
 	// on the AT90CAN, timer 0 is also used for fast hardware pwm
 	// (using phase-correct PWM would mean that timer 0 overflowed half as often
 	// resulting in different millis() behavior on the ATmega8 and ATmega168)
+	//DEG 20120124 not using PWM on the Io! TODO do we need this? Yes.
 	sbi(TCCR0A, WGM01);
 	sbi(TCCR0A, WGM00);
 
 	// set timer 0 prescale factor to 64
 	// below is the correct settings for 1/64 prescalar for AT90CAN128 DEGW 11 May 2011
     cbi(TCCR0A, CS02);
-    sbi(TCCR0A, CS01);
+	sbi(TCCR0A, CS01);
     sbi(TCCR0A, CS00);
 
 
@@ -206,10 +214,10 @@ void init()
 	// set timer 2 prescale factor to 64
 	sbi(TCCR2A, CS22);
 
-// configure timer 2 for phase correct pwm (8-bit)
+	// configure timer 2 for phase correct pwm (8-bit)
         sbi(TCCR2A, WGM20);
 
-  // configure timer 3
+ 	// configure timer 3
         sbi(TCCR3B, CS31);              // set timer 3 prescale factor to 64
         sbi(TCCR3B, CS30);
         sbi(TCCR3A, WGM30);             // put timer 3 in 8-bit phase correct pwm mode
