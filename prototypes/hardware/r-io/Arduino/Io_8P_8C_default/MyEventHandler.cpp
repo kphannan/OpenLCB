@@ -85,8 +85,18 @@ void MyEventHandler::factoryReset(void)
     EEPROM.write(2, eid6);
   EEPROM.write(3, eid7+16);
 
-  //now, increment through the eventIDs, and set them to the new values
-  for(i = 0; i < _numEvents; ++i)
+  //now, increment through the producers, and write the new EventIDs
+  for(i = 0; i < _numEvents/2; ++i)
+  {
+    for(j = 0; j < 6; ++j)
+    {
+      EEPROM.write((i*8)+j+4, OLCB_Virtual_Node::NID->val[j]);
+    }
+    EEPROM.write((i*8)+6+4, eid6);
+    EEPROM.write((i*8)+7+4, eid7+i);
+  }
+  //now do it again, so that the consumers have the same EventIDs as the producers
+    for(i = _numEvents/2; i < _numEvents; ++i)
   {
     for(j = 0; j < 6; ++j)
     {
