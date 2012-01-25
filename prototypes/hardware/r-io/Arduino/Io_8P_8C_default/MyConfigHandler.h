@@ -2,7 +2,6 @@
 #define __MYCONFIGHANDLER_H__
 
 #include "MyEventHandler.h"
-#include "Io_8P_8C_default_XML.h"
 #include "OLCB_Virtual_Node.h"
 #include "OLCB_Datagram_Handler.h"
 
@@ -34,6 +33,7 @@
 /* Class to handle Memory Configuration protocol and CDI protocol */
 class MyConfigHandler : public OLCB_Virtual_Node, public OLCB_Datagram_Handler
 {
+  public:
 	void create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler *eventHandler);
 	bool handleMessage(OLCB_Buffer *buffer);
 	void update(void);

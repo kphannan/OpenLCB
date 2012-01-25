@@ -7,13 +7,14 @@
 #include <can.h>
 
 #include "MyEventHandler.h"
+#include "MyConfigHandler.h"
+#include "Io_8P_8C_default_xml.h"
 
 //==============================================================
 // Io_8P_8C_default
 // This is the default sketch for Railstars Io NMRAnet demonstration boards
-// Sets up 8 producers on the "input" header, and 8 consumers on the "output" header
+// Sets up 8 inputs (and hence 16 producers) on the "input" header, and 8 outputs (and hence 16 consumers) on the "output" header
 // As well as a blue-gold interface for programming both
-// Provides capacity for up to 64 p-c slots
 //
 // © 2012 D.E. Goodman
 // License TBA
@@ -28,13 +29,14 @@
 OLCB_NodeID nodeid(OLCBNID); // Create the node structure with this node's NodeID
 
 //Allocate memory for the event pool
-OLCB_Event event_pool[EVENT_POOL_SIZE];
+OLCB_Event event_pool[32];
 
 /* define the CAN link to the outside world */
 OLCB_CAN_Link link;
 
 /* declare the PC Event Report handler */
 MyEventHandler pce;
+MyConfigHandler cfg;
 
 /* define the Blue/Gold devices */
 #ifndef BLUE
@@ -57,8 +59,10 @@ void setup()
   #endif
     link.initialize();
     pce.create(&link, &nodeid);
-    pce.initialize(event_pool, 16);
+    pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers
+    cfg.create(&link, &nodeid, &pce);
     link.addVNode(&pce);
+    link.addVNode(&cfg);
 }
 
 // ================ Loop ===================
