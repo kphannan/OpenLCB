@@ -1,3 +1,5 @@
+#include <EEPROM.h>
+
 #include "ButtonLedDON.h"
 
 #include <OpenLCB.h>
@@ -18,9 +20,6 @@
 //==============================================================
 
 #define DEBUG
-
-#define EVENT_POOL_SIZE 64
-#define EEPROM_START 128 //why? I don't know.
 
 #ifndef OLCBNID
 #define OLCBNID 2,1,13,0,0,3 // This node's ID (DIY space)
@@ -58,8 +57,7 @@ void setup()
   #endif
     link.initialize();
     pce.create(&link, &nodeid);
-    pce.initialize();
-    pce.loadEvents(&event_pool, &event_consumer_on_mask, &event_consumer_off_mask, &event_producer_on_mask, &event_producer_off_mask, EVENT_POOL_SIZE, EEPROM_START); //requires an offset from the base address to start reading.
+    pce.initialize(event_pool, 16);
     link.addVNode(&pce);
 }
 

@@ -10,7 +10,7 @@ void ButtonLed::init(uint8_t s) {
 }
 
 
-ButtonLed::ButtonLed(const uint8_t p,uint8_t s) : pin(p), sense(s) {      // define Button with pin and sense, 
+ButtonLed::ButtonLed(const uint8_t p,uint8_t s) : sense(s), pin(p) {      // define Button with pin and sense, 
 //                                        // Arduino pin the button/LED is attached
 //                                        // sense: HIGH=active high, LOW=active low. 
   init(s);

@@ -1,8 +1,16 @@
 #ifndef __MYEVENTHANDLER_H__
 #define __MYEVENTHANDLER_H__
 
+#include "ButtonLedDON.h"
+#include "OLCB_Virtual_Node.h"
+#include "OLCB_Event_Handler.h"
+
 extern ButtonLed blue; // button on pin 14
 extern ButtonLed gold; // button on pin 15
+
+#ifndef EVENT_POOL_SIZE
+#define EVENT_POOL_SIZE 64
+#endif
 
 
 /************************
@@ -11,6 +19,10 @@ Here is the class for handling PC Event Reports
 class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
 {
   public:
+  	MyEventHandler(void) : _inputs(0), _dirty(0)
+  	{
+		return;
+  	}
     void initialize(OLCB_Event *events, uint8_t num); //assume offset is 0, uint8_t offset);
     
     void factoryReset(void);
@@ -22,23 +34,17 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
     void update(void);
 
     bool consume(OLCB_Event *event);
+    
+    void readConfig(uint16_t address, uint8_t length, uint8_t *data);
+    void writeConfig(uint16_t address, uint8_t length, uint8_t *data);
         
-  private:
-    void store(uint8_t index);
+  protected:
+    bool store(void);
+    bool load(void);
 
-    /*************
-	Here's how we're going to handle mapping events produced or consumed by each input/output:
-	We have a pool of 64 EventIDs in memory = 64*8 bytes = 512bytes of EEPROM (we have that!)
-	Each is paired with four additional bytes that are bitfields representing the inputs and outputs (in that order).
-	*************/
-	uint8_t _event_consumer_on_mask[EVENT_POOL_SIZE];
-	uint8_t _event_consumer_off_mask[EVENT_POOL_SIZE];
-	uint8_t _event_producer_on_mask[EVENT_POOL_SIZE];
-	uint8_t _event_producer_off_mask[EVENT_POOL_SIZE];
-	uint8_t _consumer_on_learn_field, _consumer_off_learn_field;
-	uint8_t _producer_on_learn_field, _producer_off_learn_field;
-	uint8_t _consumer_on_forget_field, _consumer_off_forget_field;
-	uint8_t _producer_on_forget_field, _producer_off_forget_field;
+  private:
+  	uint8_t _inputs;
+  	uint8_t _dirty;
 };
 
 
