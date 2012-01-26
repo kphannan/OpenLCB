@@ -9,7 +9,9 @@ void MyConfigHandler::create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler *
 
 bool MyConfigHandler::handleMessage(OLCB_Buffer *buffer)
 {
+  if(isPermitted())
 	return OLCB_Datagram_Handler::handleMessage(buffer);
+  return false;
 }
 
 void MyConfigHandler::update(void)

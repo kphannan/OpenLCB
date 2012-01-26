@@ -53,7 +53,16 @@ ButtonLed gold(GOLD, LOW); // button on pin 15
 
 void setup()
 {
-  #ifdef DBEUG
+  //first, set up inputs and outputs, setting pull-up resistors on inputs
+  for(int i = 0; i < 8; ++i) //outputs
+    pinMode(i, OUTPUT);
+  for(int i = 8; i < 16; ++i)
+  {
+    pinMode(i, INPUT);
+    digitalWrite(i, HIGH);
+  }
+  
+  #ifdef DEBUG
     Serial.begin(115200);
     Serial.println("Io 8C 8P default");
   #endif
