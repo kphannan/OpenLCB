@@ -1,4 +1,4 @@
-<?xml>
+<?xml version="1.0" encoding="UTF-8"?>
 <cdi>
 	<identification>
 		<manufacturer>Railstars Limited</manufacturer>
@@ -7,13 +7,13 @@
 		<softwareVersion>1.0</softwareVersion>
 	</identification>
 	<segment origin="0" space="0">
-		<group offset="0" reps="8">
+		<group offset="0" replication="8">
 			<name>Produced Events</name>
 			<description>The EventIDs for the producers</description>
 			<eventid/>
 			<eventid/>
 		</group>
-		<group reps="8">
+		<group replication="8">
 			<name>Consumed Events</name>
 			<description>The EventIDs for the consumers</description>
 			<eventid/>
