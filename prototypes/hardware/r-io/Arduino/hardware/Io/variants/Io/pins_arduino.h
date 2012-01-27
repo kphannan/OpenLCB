@@ -42,10 +42,10 @@
 /* not gonna bother with PWM */
 #define digitalPinHasPWM(p)         (0)
 
-const static uint8_t SS   = 8;
-const static uint8_t MOSI = 10;
-const static uint8_t MISO = 11;
-const static uint8_t SCK  = 9;
+const static uint8_t SS   = 16;
+const static uint8_t MOSI = 18;
+const static uint8_t MISO = 19;
+const static uint8_t SCK  = 17;
 
 const static uint8_t SDA = 25;
 const static uint8_t SCL = 24;
