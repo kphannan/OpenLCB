@@ -1,0 +1,23 @@
+<?xml>
+<cdi>
+	<identification>
+		<manufacturer>Railstars Limited</manufacturer>
+		<model>Io</model>
+		<hardwareVersion>1.0</hardwareVersion>
+		<softwareVersion>1.0</softwareVersion>
+	</identification>
+	<segment origin="0" space="0">
+		<group offset="0" reps="8">
+			<name>Produced Events</name>
+			<description>The EventIDs for the producers</description>
+			<eventid/>
+			<eventid/>
+		</group>
+		<group reps="8">
+			<name>Consumed Events</name>
+			<description>The EventIDs for the consumers</description>
+			<eventid/>
+			<eventid/>
+		</group>
+	</segment>
+</cdi>

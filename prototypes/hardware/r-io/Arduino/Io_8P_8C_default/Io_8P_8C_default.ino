@@ -8,7 +8,6 @@
 
 #include "MyEventHandler.h"
 #include "MyConfigHandler.h"
-#include "Io_8P_8C_default_xml.h"
 
 //==============================================================
 // Io_8P_8C_default
