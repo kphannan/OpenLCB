@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet href="schema2xhtml.xsl" type="text/xsl"?>
+
+<!-- XML Schema for OpenLCB Configuration Description Information (CDI)     -->
+
+<xs:schema xmlns:xs  ="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsi ="http://www.w3.org/2001/XMLSchema-instance"
+           >
+
+   <xs:complexType name="mapType">
+          <xs:complexType>
+              <xs:element name="name" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="relation" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:element name="property" minOccurs="1" maxOccurs="1"/>
+                  <xs:element name="value" minOccurs="1" maxOccurs="1"/>
+                </xs:complexType>
+              </xs:element>
+          </xs:complexType>
+    </xs:complexType>
+
+   <xs:complexType name="intType">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="name" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
+            </xs:sequence>
+            <xs:attribute name="size" type="xs:int" />
+          </xs:complexType>
+    </xs:complexType>
+
+   <xs:complexType name="bitType">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="name" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
+            </xs:sequence>
+            <xs:attribute name="size" type="xs:int" />
+          </xs:complexType>
+    </xs:complexType>
+
+    <xs:element name="cdi">
+      <xs:annotation>
+        <xs:documentation>
+          This is the schema for Configuration Description Information (cdi)
+        </xs:documentation>
+      </xs:annotation>
+      <xs:complexType>
+        <xs:sequence>
+
+          <xs:element name="identification" minOccurs="0" maxOccurs="1">
+            <xs:annotation>
+              <xs:documentation>
+                Common first element to identify the decoder
+              </xs:documentation>
+            </xs:annotation>
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="manufacturer" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="model" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="hardwareVersion" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="softwareVersion" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+
+          <xs:element name="segment" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation>
+              <xs:documentation>
+                Define the contents of a memory space
+              </xs:documentation>
+            </xs:annotation>
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="name" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+                <xs:choice minOccurs="0" maxOccurs="unbounded">
+                  <xs:annotation>
+                    <xs:documentation>
+                      Allows any sequence of the contained element types
+                    </xs:documentation>
+                  </xs:annotation>
+                  <xs:element name="group" type="groupType" minOccurs="0" maxOccurs="1"/>
+                  <xs:element name="bit" type="bitType" minOccurs="0" maxOccurs="1"/>
+                  <xs:element name="int" type="intType" minOccurs="0" maxOccurs="1"/>
+                </xs:choice>
+              </xs:sequence>
+              <xs:attribute name="space" type="xs:int" />
+              <xs:attribute name="origin" type="xs:int" />
+            </xs:complexType>
+          </xs:element>
+
+        </xs:sequence>
+      </xs:complexType>
+    </xs:element>
+</xs:schema>
