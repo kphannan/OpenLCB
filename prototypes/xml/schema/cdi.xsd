@@ -8,20 +8,21 @@
            >
 
    <xs:complexType name="mapType">
-          <xs:complexType>
+       <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
               <xs:element name="relation" minOccurs="0" maxOccurs="unbounded">
                 <xs:complexType>
-                  <xs:element name="property" minOccurs="1" maxOccurs="1"/>
-                  <xs:element name="value" minOccurs="1" maxOccurs="1"/>
+                  <xs:sequence>
+                    <xs:element name="property" minOccurs="1" maxOccurs="1"/>
+                    <xs:element name="value" minOccurs="1" maxOccurs="1"/>
+                  </xs:sequence>
                 </xs:complexType>
               </xs:element>
-          </xs:complexType>
+       </xs:sequence>
     </xs:complexType>
 
    <xs:complexType name="groupType">
-          <xs:complexType>
             <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
@@ -34,33 +35,40 @@
                   <xs:element name="group" type="groupType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="bit" type="bitType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="int" type="intType" minOccurs="0" maxOccurs="1"/>
+                  <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
               </xs:choice>
             </xs:sequence>
             <xs:attribute name="offset" type="xs:int" />
             <xs:attribute name="replication" type="xs:int" />
-          </xs:complexType>
+    </xs:complexType>
+
+   <xs:complexType name="eventidType">
+            <xs:sequence>
+              <xs:element name="name" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
+            </xs:sequence>
     </xs:complexType>
 
    <xs:complexType name="intType">
-          <xs:complexType>
             <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="min" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="max" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="default" minOccurs="0" maxOccurs="1"/>
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
             <xs:attribute name="size" type="xs:int" />
-          </xs:complexType>
     </xs:complexType>
 
    <xs:complexType name="bitType">
-          <xs:complexType>
             <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
             <xs:attribute name="size" type="xs:int" />
-          </xs:complexType>
     </xs:complexType>
 
     <xs:element name="cdi">
@@ -108,6 +116,7 @@
                   <xs:element name="group" type="groupType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="bit" type="bitType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="int" type="intType" minOccurs="0" maxOccurs="1"/>
+                  <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
                 </xs:choice>
               </xs:sequence>
               <xs:attribute name="space" type="xs:int" />
