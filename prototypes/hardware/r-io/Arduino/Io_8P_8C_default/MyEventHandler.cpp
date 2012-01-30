@@ -33,7 +33,7 @@ bool MyEventHandler::store(void)
 
 bool MyEventHandler::load(void)
 {
-  Serial.println("Loading EventIDs from EEPROM");
+  //Serial.println("Loading EventIDs from EEPROM");
   //write the stored EventIDs into EEPROM
   for(uint8_t i = 0; i < _numEvents; ++i)
   {
@@ -41,7 +41,7 @@ bool MyEventHandler::load(void)
     {
       _events[i].val[j] = EEPROM.read((i*8)+j+4);
     }
-    _events[i].print();
+    //_events[i].print();
   }
   return true;
 }
@@ -63,12 +63,12 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
   //first, check first two bytes:
   if( (EEPROM.read(0) != 'I') || (EEPROM.read(1) != 'o') ) //not formatted!
   {
-    Serial.println("EEPROM not formatted!");
+    //Serial.println("EEPROM not formatted!");
     factoryReset();
   }
   else
   {
-      Serial.println("EEPROM already formatted");
+      //Serial.println("EEPROM already formatted");
   }
   //now, read it back out into SRAM
   load();
@@ -84,7 +84,7 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
 
 void MyEventHandler::factoryReset(void)
 {
-  Serial.println("***FACTORY RESET!***");
+  //Serial.println("***FACTORY RESET!***");
   // WARNING: THIS FUNCTION RESETS THE EVENT POOL TO FACTORY SETTINGS!
   //first, check to see if the EEPROM has been formatted yet.
   uint8_t eid6=0, eid7=0, j;
@@ -92,58 +92,58 @@ void MyEventHandler::factoryReset(void)
   bool formatted = false;
   if( (char(EEPROM.read(0)) == 'I') && (char(EEPROM.read(1)) == 'o') ) //it IS formatted!
   {
-    Serial.println("EEPROM is formatted, reading next EventID");
+    //Serial.println("EEPROM is formatted, reading next EventID");
     formatted = true;
     //grab the actual next available EventID
     eid6 = EEPROM.read(2);
     eid7 = EEPROM.read(3);
-    Serial.print("eid6 = ");
-    Serial.println(eid6,HEX);
-    Serial.print("eid7 = ");
-    Serial.println(eid7,HEX);
+    //Serial.print("eid6 = ");
+    //Serial.println(eid6,HEX);
+    //Serial.print("eid7 = ");
+    //Serial.println(eid7,HEX);
   }
   else
   {
-    Serial.println("EEPROM not formatted");
+    //Serial.println("EEPROM not formatted");
   }
 
   //first, increment the next available ID by 16, and write it back
-  Serial.print("next eid6 = ");
+  //Serial.print("next eid6 = ");
   if(eid7 == 240) //need to increment val[6] as well
   {
     EEPROM.write(2, eid6+1); //might wrap around to 0; it's gonna happen, I guess
-    Serial.println(eid6+1,HEX);
+    //Serial.println(eid6+1,HEX);
   }
   else
   {
     EEPROM.write(2, eid6);
-    Serial.println(eid6,HEX);
+    //Serial.println(eid6,HEX);
   }
   EEPROM.write(3, eid7+16);
-    Serial.print("next eid7 = ");
-    Serial.println(eid7+16,HEX);
+    //Serial.print("next eid7 = ");
+    //Serial.println(eid7+16,HEX);
 
-  Serial.println("Writing next batch of EventIDs");
-  Serial.println("Producers:");
+  //Serial.println("Writing next batch of EventIDs");
+  //Serial.println("Producers:");
   //now, increment through the producers, and write the new EventIDs
   for(i = 0; i < _numEvents/2; ++i)
   {
     for(j = 0; j < 6; ++j)
     {
       EEPROM.write((i*8)+j+4, OLCB_Virtual_Node::NID->val[j]);
-      Serial.print((i*8)+j+4, HEX);
-      Serial.print(" : ");
-      Serial.println(OLCB_Virtual_Node::NID->val[j], HEX);
+      //Serial.print((i*8)+j+4, HEX);
+      //Serial.print(" : ");
+      //Serial.println(OLCB_Virtual_Node::NID->val[j], HEX);
     }
     EEPROM.write((i*8)+6+4, eid6);
     EEPROM.write((i*8)+7+4, eid7+i);
-    Serial.print((i*8)+6+4, HEX);
-    Serial.print(" : ");
-    Serial.println(eid6, HEX);
-    Serial.print((i*8)+7+4, HEX);
-    Serial.print(" : ");
-    Serial.println(eid7+i, HEX);
-    Serial.println("---");
+    //Serial.print((i*8)+6+4, HEX);
+    //Serial.print(" : ");
+    //Serial.println(eid6, HEX);
+    //Serial.print((i*8)+7+4, HEX);
+    //Serial.print(" : ");
+    //Serial.println(eid7+i, HEX);
+    //Serial.println("---");
   }
   //now do it again, so that the consumers have the same EventIDs as the producers
   for(i = _numEvents/2; i < _numEvents; ++i)
@@ -152,61 +152,75 @@ void MyEventHandler::factoryReset(void)
     {
       EEPROM.write((i*8)+j+4, OLCB_Virtual_Node::NID->val[j]);
       EEPROM.write((i*8)+j+4, OLCB_Virtual_Node::NID->val[j]);
-      Serial.print((i*8)+j+4, HEX);
-      Serial.print(" : ");
-      Serial.println(OLCB_Virtual_Node::NID->val[j], HEX);
+      //Serial.print((i*8)+j+4, HEX);
+      //Serial.print(" : ");
+      //Serial.println(OLCB_Virtual_Node::NID->val[j], HEX);
     }
     EEPROM.write((i*8)+6+4, eid6);
     EEPROM.write((i*8)+7+4, eid7+(i-(_numEvents/2)));
-    Serial.print((i*8)+6+4, HEX);
-    Serial.print(" : ");
-    Serial.println(eid6, HEX);
-    Serial.print((i*8)+7+4, HEX);
-    Serial.print(" : ");
-    Serial.println(eid7+(i-(_numEvents/2)), HEX);
-    Serial.println("---");
+    //Serial.print((i*8)+6+4, HEX);
+    //Serial.print(" : ");
+    //Serial.println(eid6, HEX);
+    //Serial.print((i*8)+7+4, HEX);
+    //Serial.print(" : ");
+    //Serial.println(eid7+(i-(_numEvents/2)), HEX);
+    //Serial.println("---");
   }
-  Serial.println("formatting EEPROM");
+  //Serial.println("formatting EEPROM");
   EEPROM.write(0, 'I');
   EEPROM.write(1, 'o');
-  Serial.println("***FACTORY RESET COMPLETE***");
+  //Serial.println("***FACTORY RESET COMPLETE***");
 }
 
 void MyEventHandler::update(void)
 {
-  if(isPermitted())
-  {
+  if(!isPermitted())
+    return;
+    
+  for(uint8_t i = 0; i < 8; ++i)
+    _input_buttons[i].process();
     //first, are we going to set up any kind of learning? TODO
 
+  if(!_inhibit)
+  {
     // looks at the input pins and
     // and decide whether and which events to fire
     // with pce.produce(i);
     // inputs are pins 8..15
-    uint8_t state, i;
-    for(i = 0; i < 8; ++i)
+    uint8_t state, prev_state;
+    for(uint8_t i = 0; i < 8; ++i)
     {
-      state = digitalRead(i+8);
-      if( state !=  (_inputs & ((1<<i)>>i)) )
+      state = _input_buttons[i].state; //digitalRead(i+8);
+      prev_state = (_inputs & (1<<i))>>i;
+      if(state != prev_state) //change in state!
       {	//input has changed, fire event and update flag
+        //Serial.print("input state change to ");
+        //Serial.print(state, DEC);
+        //Serial.print(" on ");
+        //Serial.println(i, DEC);
+        //Serial.println(_inputs, BIN);
         _inputs ^= (1<<i); //toggle flag
-        if((i+8) == 8) 
-          Serial.println((i<<1) | state, BIN);
-        produce((i<<1) | state);
-      }	
+        //now determine which producer to fire.
+        produce((i<<1) | (state&0x01));
+      }
     }
-    OLCB_Event_Handler::update(); //called last to permit the new events to be sent out immediately.
-    if(_dirty) //check to see if we need to dump memory to EEPROM
-    {
-      store();
-      _dirty = 0;
-    }
+  }
+  OLCB_Event_Handler::update(); //called last to permit the new events to be sent out immediately.
+  if(_dirty) //check to see if we need to dump memory to EEPROM
+  {
+    store();
+    _dirty = 0;
   }
 }
 
 bool MyEventHandler::consume(OLCB_Event *event)
 {
+  if(_inhibit)
+    return true;
   /* We've received an event; let's see if we need to consume it */
+  //Serial.print("consume() ");
   int index = event->findIndexInArray(_events, _numEvents);
+  //Serial.println(index,DEC);
   if(index == -1)
     return false;
   //Outputs are pins 0..7

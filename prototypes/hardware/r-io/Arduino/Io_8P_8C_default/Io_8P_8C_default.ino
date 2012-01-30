@@ -1,6 +1,6 @@
-#include <EEPROM.h>
+#include <ButtonLED.h>
 
-#include "ButtonLedDON.h"
+#include <EEPROM.h>
 
 #include <OpenLCB.h>
 
@@ -8,6 +8,7 @@
 
 #include "MyEventHandler.h"
 #include "MyConfigHandler.h"
+#include "MyBlueGoldHandler.h"
 
 //==============================================================
 // Io_8P_8C_default
@@ -36,41 +37,58 @@ OLCB_CAN_Link link;
 /* declare the PC Event Report handler */
 MyEventHandler pce;
 MyConfigHandler cfg;
+MyBlueGoldHandler bg;
 
 /* define the Blue/Gold devices */
-#ifndef BLUE
-#define BLUE 13
-#endif
-#ifndef GOLD
-#define GOLD 14
-#endif
 ButtonLed blue(BLUE, LOW); // button on pin 14
 ButtonLed gold(GOLD, LOW); // button on pin 15
 
+
+void loadNodeID(OLCB_NodeID *nid)
+{
+	//The NodeID is stored at the very end of EEPROM
+	//on the AT90CAN128, the last EEPROM address is 0x0FFF
+	//So:
+	nid->val[0] = EEPROM.read(0x0FFA);
+	nid->val[2] = EEPROM.read(0x0FFB);
+	nid->val[3] = EEPROM.read(0x0FFC);
+	nid->val[4] = EEPROM.read(0x0FFD);
+	nid->val[5] = EEPROM.read(0x0FFE);
+	nid->val[5] = EEPROM.read(0x0FFF);
+}
 
 // =============== Setup ===================
 
 void setup()
 {
+    #ifdef DEBUG
+    Serial.begin(115200);
+    Serial.println("Io 8C 8P default");
+  #endif
   //first, set up inputs and outputs, setting pull-up resistors on inputs
   for(int i = 0; i < 8; ++i) //outputs
+  {
     pinMode(i, OUTPUT);
+    digitalWrite(i, LOW);
+  }
   for(int i = 8; i < 16; ++i)
   {
     pinMode(i, INPUT);
     digitalWrite(i, HIGH);
   }
   
-  #ifdef DEBUG
-    Serial.begin(115200);
-    Serial.println("Io 8C 8P default");
-  #endif
+  //now, load the NodeID from EEPROM
+  loadNodeID(&nodeid);
+  
+    nodeid.print();
     link.initialize();
     pce.create(&link, &nodeid);
-    pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers
+    pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers TODO REMOVE THIS!?
     cfg.create(&link, &nodeid, &pce);
+    bg.create(&link, &nodeid, &pce);
     link.addVNode(&pce);
     link.addVNode(&cfg);
+    link.addVNode(&bg);
 }
 
 // ================ Loop ===================
@@ -79,10 +97,7 @@ void loop()
 {
     // OpenLCB statndard processing:
     link.update();
-    // read the buttons (implements debouncing, etc.)
-    blue.process();
-    gold.process();
-    //TODO blue-gold here!
+    //Serial.println(millis());
 }
 
 // ---------------------------------------------------
