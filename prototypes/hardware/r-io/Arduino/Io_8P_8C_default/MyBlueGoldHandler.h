@@ -69,12 +69,16 @@ class MyBlueGoldHandler: public OLCB_Virtual_Node
     bool _last_input[8];
     bool _blue_pressed;
     bool _gold_pressed;
+    uint8_t _gold_long_pressed;
+    uint8_t _blue_long_pressed;
     bool _input_pressed[8]; //TODO this could be done far more efficiently with a bitfield!!
+    bool _any_input_pressed;
     MyEventHandler* _event_handler; //for teaching and learning from.
     ButtonLed *_input_buttons; //we know there are 8 of them.
 	
     void sendIdent();
     void factoryReset();  // ToDo: better name!  Not really a true "factory reset"
+    void moveToIdle(bool reset=false);
 };
 
 #endif

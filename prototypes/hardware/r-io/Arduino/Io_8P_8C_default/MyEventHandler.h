@@ -41,8 +41,6 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
     
     void readConfig(uint16_t address, uint8_t length, uint8_t *data);
     void writeConfig(uint16_t address, uint8_t length, uint8_t *data);
-    void teachEvent(void); //TODO
-    void learnEvent(void); //TODO
     ButtonLed *getInputs(void) {return _input_buttons;}
     void inhibit(void) {_inhibit = true; Serial.println("INHIBITED!");}
     void disInhibit(void) {_inhibit = false; Serial.println("inhibit released");}
