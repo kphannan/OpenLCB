@@ -66,13 +66,14 @@ class MyBlueGoldHandler: public OLCB_Virtual_Node
     int8_t _index;
     bool _last_blue;
     bool _last_gold;
-    bool _last_input[8];
+    uint8_t _last_double;
+    uint8_t _double_state;
     bool _blue_pressed;
     bool _gold_pressed;
-    uint8_t _gold_long_pressed;
-    uint8_t _blue_long_pressed;
-    bool _input_pressed[8]; //TODO this could be done far more efficiently with a bitfield!!
-    bool _any_input_pressed;
+    uint8_t _double_press;
+    
+    uint8_t _input_pressed;
+    uint8_t _last_input;
     MyEventHandler* _event_handler; //for teaching and learning from.
     ButtonLed *_input_buttons; //we know there are 8 of them.
 	
