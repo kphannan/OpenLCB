@@ -211,19 +211,16 @@ void MyEventHandler::update(void)
   }
 }
 
-bool MyEventHandler::consume(OLCB_Event *event)
+bool MyEventHandler::consume(uint16_t index)
 {
   if(_inhibit)
     return true;
   /* We've received an event; let's see if we need to consume it */
-  //Serial.print("consume() ");
-  int index = event->findIndexInArray(_events, _numEvents);
-  //Serial.println(index,DEC);
-  if(index == -1)
-    return false;
+  Serial.print("consume() ");
+  Serial.println(index,DEC);
   //Outputs are pins 0..7
   //odd events are off, even events are on
-  digitalWrite(index>>1, !(index&0x1));
+  digitalWrite((index-16)>>1, !(index&0x1));
   return true;
 }
 

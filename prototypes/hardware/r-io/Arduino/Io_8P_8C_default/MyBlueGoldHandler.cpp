@@ -260,10 +260,10 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 				//Serial.println("Waiting for LEARN messages!");
 				//producers first
 				if(_input_index > -1)
-					_event_handler->markToLearn(_index, true);
+					_event_handler->markToLearn(_input_index, true);
 				//consumers second
 				if(_index > -1)
-					_event_handler->markToLearn(_input_index+16, true);
+					_event_handler->markToLearn(_index+16, true);
 				moveToIdle(false);
 			}
 			else if(_input_pressed)
@@ -275,25 +275,31 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 					if((_input_pressed) & (1<<in))
 						break;
 				}
+				//Serial.print("input pressed: ");
+				//Serial.print(in, DEC);
 				//check to see if this is first, second, or third time.
 				//First time, we flag "on" producer for that channel
 				//Second time, we unflag "on", flag "off"
 				//Third time, we unflag "off"
 				//check "on"
-				if(_input_index & 0x01) //this is the third press, because it's on an "off" producer
+                //first, check to see if user has moved to a different input, changing their mind.
+				if(in != (_input_index>>1))
 				{
+					//Serial.println("new first press, move to 'on'");
+					_input_index = (in << 1);
+					blue.on(0xFFFFFFFF);
+				}
+				else if(_input_index > -1 && (_input_index & 0x01)) //this is the third press, because it's on an "off" producer
+				{
+					//Serial.println("third press, out it goes");
 					_input_index = -1;
 					blue.on(0xF0F0F0F0); //indicate that nothing is selected for learning
 				}
-				else if(!(_input_index & 0x01)) //this is the second press
+				else// if(_input_index > -1 && !(_input_index & 0x01)) //this is the second press
 				{
+					//Serial.println("second press, move to 'off'");
 					_input_index = (in << 1) + 1;
 					blue.on(0x000A000A); //indicate that "off" is selected
-				}
-				else
-				{
-					_input_index = (in << 1);
-					blue.on(0xFFFFFFFF); //indicate that "on" is selected
 				}
 			}
 			break;
@@ -362,18 +368,18 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 				//Second time, we unflag "on", flag "off"
 				//Third time, we unflag "off"
 				//check "on"
-                                //first, check to see if user has moved to a different input, changing their mind.
-                                if(in != (_input_index>>1))
-                                {
-                                    //Serial.println("new first press, move to 'on'");
-                                    _input_index = (in << 1);
-                                    blue.on(0xFFFFFFFF);
-                                }
+                //first, check to see if user has moved to a different input, changing their mind.
+				if(in != (_input_index>>1))
+				{
+					//Serial.println("new first press, move to 'on'");
+					_input_index = (in << 1);
+					blue.on(0xFFFFFFFF);
+				}
 				else if(_input_index > -1 && (_input_index & 0x01)) //this is the third press, because it's on an "off" producer
 				{
 					//Serial.println("third press, out it goes");
 					_input_index = -1;
-					blue.on(0xF0F0F0F0); //indicate that nothing is selected for learning
+					blue.on(0x00000000); //indicate that nothing is selected for learning
 				}
 				else// if(_input_index > -1 && !(_input_index & 0x01)) //this is the second press
 				{
@@ -381,14 +387,6 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 					_input_index = (in << 1) + 1;
 					blue.on(0x000A000A); //indicate that "off" is selected
 				}
-/*				else
-				{
-                                        //TODO Curiously, control never seems to move here.
-					//Serial.println("first press, move to 'on'");
-					_input_index = (in << 1);
-					blue.on(0xFFFFFFFF); //indicate that "on" is selected
-				}
-*/				//Serial.println(_input_index, DEC);
 			}
 			break;
         }
@@ -416,7 +414,7 @@ void MyBlueGoldHandler::sendIdent()
  */
 void MyBlueGoldHandler::factoryReset()
 {
-//	TODO REINSTATE AFTER TESTING BG INTERFACE!!!!!!_event_handler->factoryReset();
+_event_handler->factoryReset();
 	delay(100); //just because. Don't know if we need it
 	// reboot
     // cast a 0 to a function pointer, then dereference it. Ugly!
