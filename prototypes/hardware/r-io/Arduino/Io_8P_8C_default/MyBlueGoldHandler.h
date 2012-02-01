@@ -64,6 +64,7 @@ class MyBlueGoldHandler: public OLCB_Virtual_Node
     uint8_t _state;
     bool _started;
     int8_t _index;
+    int8_t _input_index;
     bool _last_blue;
     bool _last_gold;
     uint8_t _last_double;

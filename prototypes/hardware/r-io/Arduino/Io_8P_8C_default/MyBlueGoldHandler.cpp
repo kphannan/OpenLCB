@@ -11,6 +11,7 @@ void MyBlueGoldHandler::create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler
 {
     OLCB_Virtual_Node::create(link,nid);
     _index = -1;
+    _input_index = -1;
     _started = false;
     _event_handler = eventHandler;
   
@@ -28,7 +29,7 @@ void MyBlueGoldHandler::create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler
 
 void MyBlueGoldHandler::moveToIdle(bool reset)
 {
-	Serial.println("moving to IDLE state");
+	//Serial.println("moving to IDLE state");
 	blue.on(0x00000000);
 	gold.on(READY_BLINK);
 	if(reset)
@@ -39,11 +40,12 @@ void MyBlueGoldHandler::moveToIdle(bool reset)
     		_event_handler->markToLearn(i, false);
     	}
     }
-for(uint8_t i = 0; i < 8; ++i)
-{
+	for(uint8_t i = 0; i < 8; ++i)
+	{
 		digitalWrite(i, LOW);
 	}
-		_index = -1;
+	_index = -1;
+	_input_index = -1;
 	_event_handler->disInhibit();
 	_state = BG_IDLE;
 }
@@ -57,7 +59,7 @@ void MyBlueGoldHandler::update(void)
 
 
     if (!_started) {
-        Serial.println("Starting ready blink");
+        //Serial.println("Starting ready blink");
         _started = true;
         gold.on(READY_BLINK); // turn off waiting to init flash, start heartbeat ready blink
     }
@@ -87,8 +89,8 @@ void MyBlueGoldHandler::update(void)
 
 	if(_last_double != _double_state) //check if state has changed, 
 	{
-		Serial.print("Double press! ");
-		Serial.println(_double_state, DEC);
+		//Serial.print("Double press! ");
+		//Serial.println(_double_state, DEC);
 		_last_double = _double_state;
 		_double_press = _double_state;
 if(_double_state == 0); //reset the LEDs in case we are backing down from a flash reset
@@ -110,7 +112,7 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 	        _last_blue = blue.state;
 			if(blue.state)
 			{
-				Serial.println("Blue pressed!");
+				//Serial.println("Blue pressed!");
 				_blue_pressed = true;
 			}
 		}
@@ -128,7 +130,7 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 	        _last_gold = gold.state;
 			if(gold.state)
 			{
-				Serial.println("Gold pressed!");
+				//Serial.println("Gold pressed!");
 				_gold_pressed = true;
 			}
 		}
@@ -146,9 +148,9 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
     	{
     		if(_input_buttons[i].state)
     		{
-    			Serial.print("Input ");
-    			Serial.print(i, DEC);
-    			Serial.println(" pressed!");
+    			//Serial.print("Input ");
+    			//Serial.print(i, DEC);
+    			//Serial.println(" pressed!");
     			_last_input |= (1<<i);
     			_input_pressed |= (1<<i);
     		}
@@ -167,31 +169,31 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 	//possibilities: Blue and Gold was pressed, only Blue was pressed or only Gold was pressed, and/or an input button was pressed.
 	uint8_t channel, prev_channel;
 	//blue has been pressed.
-//	Serial.print("Current state is ");
-//	Serial.println(_state, HEX);
+//	//Serial.print("Current state is ");
+//	//Serial.println(_state, HEX);
 	switch(_state)
 	{
 		case BG_IDLE:
 			if(_double_press == 3) //8 seconds each
 			{
-				Serial.println("FACTORY RESET!!!!!");
+				//Serial.println("FACTORY RESET!!!!!");
                                 factoryReset();
 			}
 			else if(_double_press == 2) //3 seconds, begin factory reset warning
 			{
-				Serial.println("Prepare for factory reset");
+				//Serial.println("Prepare for factory reset");
 				gold.on(0xAAAAAAAA);
 				blue.on(0x55555555);
 			}
 		    else if(_double_press == 1)
 		    {
-		    	Serial.println("Send Ident");
+		    	//Serial.println("Send Ident");
 		    	sendIdent();
 		    }
 		    else if(_blue_pressed)
 		    {
 		    	//we were doing nothing before; a press of blue puts us in LEARN mode
-		    	Serial.println("Moving to LEARN");
+		    	//Serial.println("Moving to LEARN");
 				_state = BG_LEARN;
 				//inhibit the EventHandler to avoid confusions
 				_event_handler->inhibit();
@@ -201,7 +203,7 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 		    else if(_gold_pressed)
 		    {
 		    	//we were doing nothing before; a press of gold puts us in TEACH mode
-		    	Serial.println("Moving to TEACH");
+		    	//Serial.println("Moving to TEACH");
 				_state = BG_TEACH;
 				//inhibit the EventHandler to avoid confusions
 				_event_handler->inhibit(); //TODO is this right?
@@ -212,7 +214,7 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 		case BG_LEARN:
 			if(_double_press)
 		    {
-		    	Serial.println("LEARN canceled!");
+		    	//Serial.println("LEARN canceled!");
 		    	moveToIdle(true);
 			}
 			else if(_blue_pressed)
@@ -221,7 +223,7 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 				_index = ((_index+2)%17)-1;
 				if(_index == -1) //cycled through, return to beginning.
 				{
-					Serial.println("Moving to IDLE");
+					//Serial.println("Moving to IDLE");
 					digitalWrite(7, LOW); //turn off last channel.
 					blue.on(0x00000000);
 					_state = BG_IDLE;
@@ -230,10 +232,10 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 				else
 				{
 					channel = _index >> 1;
-					Serial.print("Selecting index ");
-					Serial.print(_index, DEC);
-					Serial.print(" on channel ");
-					Serial.println(channel, DEC);
+					//Serial.print("Selecting index ");
+					//Serial.print(_index, DEC);
+					//Serial.print(" on channel ");
+					//Serial.println(channel, DEC);
 					// if _index is even, we are handling the producer for the output being off; blink the blue LED to indicate
 					if(_index & 0x01)
 					{
@@ -246,8 +248,8 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 					digitalWrite(channel, HIGH);
 					if(_index>1)
 					{
-						Serial.print("...and turning off channel ");
-						Serial.println(channel-1,DEC);
+						//Serial.print("...and turning off channel ");
+						//Serial.println(channel-1,DEC);
 						digitalWrite(channel-1, LOW); //turn off previous channel
 					}
 				}
@@ -255,7 +257,13 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 			else if(_gold_pressed)
 			{
 				//send off the LEARN messages!
-				Serial.println("Sending LEARN messages!");
+				//Serial.println("Waiting for LEARN messages!");
+				//producers first
+				if(_input_index > -1)
+					_event_handler->markToLearn(_index, true);
+				//consumers second
+				if(_index > -1)
+					_event_handler->markToLearn(_input_index+16, true);
 				moveToIdle(false);
 			}
 			else if(_input_pressed)
@@ -272,20 +280,19 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 				//Second time, we unflag "on", flag "off"
 				//Third time, we unflag "off"
 				//check "on"
-				if(_event_handler->markedToLearn(in<<1)) //this is the third press
+				if(_input_index & 0x01) //this is the third press, because it's on an "off" producer
 				{
-					_event_handler->markToLearn(in<<1, false);
+					_input_index = -1;
 					blue.on(0xF0F0F0F0); //indicate that nothing is selected for learning
 				}
-				else if(_event_handler->markedToLearn(in<<0)) //this is the second press
+				else if(!(_input_index & 0x01)) //this is the second press
 				{
-					_event_handler->markToLearn(in<<0, false);
-					_event_handler->markToLearn(in<<1, true);
+					_input_index = (in << 1) + 1;
 					blue.on(0x000A000A); //indicate that "off" is selected
 				}
 				else
 				{
-					_event_handler->markToLearn(in<<0, true);
+					_input_index = (in << 1);
 					blue.on(0xFFFFFFFF); //indicate that "on" is selected
 				}
 			}
@@ -293,7 +300,7 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 		case BG_TEACH: //we've entered teach state, now we're indexing over the outputs
 			if(_double_press)
 			{
-		    	Serial.println("TEACH canceled!");
+		    	//Serial.println("TEACH canceled!");
 		    	moveToIdle(true);
             }
 			else if(_blue_pressed)
@@ -326,11 +333,64 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
         	}
         	else if(_gold_pressed)
         	{
-                Serial.println("Sending Teach Messages");
-                moveToIdle(true);
+				//send off the TEACH messages!
+				//Serial.println("Sending TEACH messages!");
+                                //Serial.println(_input_index);
+                                //Serial.println(_index);
+				//producers first
+				if(_input_index > -1)
+					_event_handler->markToTeach(_input_index, true);
+				//consumers second
+				if(_index > -1)
+					_event_handler->markToTeach(_index+16, true);
+				moveToIdle(false);
+
         	}
-        	//else if input pressed
-        	//break;
+			else if(_input_pressed)
+			{
+				//figure out which input was pressed
+				uint8_t in;
+				for(in = 0; in < 8; ++in)
+				{
+					if((_input_pressed) & (1<<in))
+						break;
+				}
+				//Serial.print("input pressed: ");
+				//Serial.print(in, DEC);
+				//check to see if this is first, second, or third time.
+				//First time, we flag "on" producer for that channel
+				//Second time, we unflag "on", flag "off"
+				//Third time, we unflag "off"
+				//check "on"
+                                //first, check to see if user has moved to a different input, changing their mind.
+                                if(in != (_input_index>>1))
+                                {
+                                    //Serial.println("new first press, move to 'on'");
+                                    _input_index = (in << 1);
+                                    blue.on(0xFFFFFFFF);
+                                }
+				else if(_input_index > -1 && (_input_index & 0x01)) //this is the third press, because it's on an "off" producer
+				{
+					//Serial.println("third press, out it goes");
+					_input_index = -1;
+					blue.on(0xF0F0F0F0); //indicate that nothing is selected for learning
+				}
+				else// if(_input_index > -1 && !(_input_index & 0x01)) //this is the second press
+				{
+					//Serial.println("second press, move to 'off'");
+					_input_index = (in << 1) + 1;
+					blue.on(0x000A000A); //indicate that "off" is selected
+				}
+/*				else
+				{
+                                        //TODO Curiously, control never seems to move here.
+					//Serial.println("first press, move to 'on'");
+					_input_index = (in << 1);
+					blue.on(0xFFFFFFFF); //indicate that "on" is selected
+				}
+*/				//Serial.println(_input_index, DEC);
+			}
+			break;
         }
 }
 

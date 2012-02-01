@@ -33,15 +33,13 @@ bool MyEventHandler::store(void)
 
 bool MyEventHandler::load(void)
 {
-  //Serial.println("Loading EventIDs from EEPROM");
-  //write the stored EventIDs into EEPROM
+  //read the stored EventIDs from EEPROM
   for(uint8_t i = 0; i < _numEvents; ++i)
   {
     for(uint8_t j = 0; j < 8; ++j)
     {
       _events[i].val[j] = EEPROM.read((i*8)+j+4);
     }
-    //_events[i].print();
   }
   return true;
 }
@@ -84,7 +82,7 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
 
 void MyEventHandler::factoryReset(void)
 {
-  //Serial.println("***FACTORY RESET!***");
+  ////Serial.println("***FACTORY RESET!***");
   // WARNING: THIS FUNCTION RESETS THE EVENT POOL TO FACTORY SETTINGS!
   //first, check to see if the EEPROM has been formatted yet.
   uint8_t eid6=0, eid7=0, j;
@@ -120,8 +118,8 @@ void MyEventHandler::factoryReset(void)
     //Serial.println(eid6,HEX);
   }
   EEPROM.write(3, eid7+16);
-    //Serial.print("next eid7 = ");
-    //Serial.println(eid7+16,HEX);
+  //Serial.print("next eid7 = ");
+  //Serial.println(eid7+16,HEX);
 
   //Serial.println("Writing next batch of EventIDs");
   //Serial.println("Producers:");
@@ -201,7 +199,7 @@ void MyEventHandler::update(void)
         //Serial.println(_inputs, BIN);
         _inputs ^= (1<<i); //toggle flag
         //now determine which producer to fire.
-        produce((i<<1) | (state&0x01));
+        produce((i<<1) | !(state&0x01)); //TODO NOT RIGHT!
       }
     }
   }
@@ -225,7 +223,7 @@ bool MyEventHandler::consume(OLCB_Event *event)
     return false;
   //Outputs are pins 0..7
   //odd events are off, even events are on
-  digitalWrite(index>>1, index&0x1);
+  digitalWrite(index>>1, !(index&0x1));
   return true;
 }
 
