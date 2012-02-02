@@ -291,8 +291,10 @@ void MyBlueGoldHandler::update(void)
 				if(_input_index > -1)
 					_event_handler->markToLearn(_input_index, true);
 				//consumers second
-				if(_index > -1)
-					_event_handler->markToLearn(_index+16, true);
+				if(_index > 15)
+					_event_handler->markToLearn(_index-16, true);
+else if(_index > -1)
+_event_handler->markToLearn(_index+16, true);
 				moveToIdle(false);
 			}
 			else if(_input_pressed)
@@ -405,8 +407,10 @@ void MyBlueGoldHandler::update(void)
 				if(_input_index > -1)
 					_event_handler->markToTeach(_input_index, true);
 				//consumers second
-				if(_index > -1)
-					_event_handler->markToTeach(_index+16, true);
+				if(_index > 15)
+					_event_handler->markToTeach(_index-16, true);
+else if(_index > -1)
+_event_handler->markToTeach(_index+16, true);
 				moveToIdle(false);
 
         	}
