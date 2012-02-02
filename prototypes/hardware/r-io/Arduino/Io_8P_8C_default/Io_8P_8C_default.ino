@@ -22,11 +22,7 @@
 
 #define DEBUG
 
-#ifndef OLCBNID
-#define OLCBNID 2,1,13,0,0,3 // This node's ID (DIY space)
-#endif
-
-OLCB_NodeID nodeid(OLCBNID); // Create the node structure with this node's NodeID
+OLCB_NodeID nodeid;
 
 //Allocate memory for the event pool
 OLCB_Event event_pool[32];
@@ -49,12 +45,13 @@ void loadNodeID(OLCB_NodeID *nid)
 	//The NodeID is stored at the very end of EEPROM
 	//on the AT90CAN128, the last EEPROM address is 0x0FFF
 	//So:
-	nid->val[0] = EEPROM.read(0x0FFA);
-	nid->val[2] = EEPROM.read(0x0FFB);
-	nid->val[3] = EEPROM.read(0x0FFC);
-	nid->val[4] = EEPROM.read(0x0FFD);
-	nid->val[5] = EEPROM.read(0x0FFE);
-	nid->val[5] = EEPROM.read(0x0FFF);
+  for(uint16_t i = 0; i < 6; ++i)
+    nid->val[i] = EEPROM.read(0x0FFA+i);
+  if((nid->val[0] == 0xFF) &&  (nid->val[1] == 0xFF) && (nid->val[2] == 0xFF) && (nid->val[3] == 0xFF) && (nid->val[4] == 0xFF) && (nid->val[5] == 0xFF) )
+        {
+            //NO NODE ID!!
+            while(1);
+        }
 }
 
 // =============== Setup ===================

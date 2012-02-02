@@ -93,11 +93,11 @@ void MyBlueGoldHandler::update(void)
 		//Serial.println(_double_state, DEC);
 		_last_double = _double_state;
 		_double_press = _double_state;
-if(_double_state == 0); //reset the LEDs in case we are backing down from a flash reset
-{
-    blue.on(0x00);
-    gold.on(READY_BLINK);
-}
+		if(_double_state == 0); //reset the LEDs in case we are backing down from a flash reset
+		{
+		    blue.on(0x00);
+ 		   gold.on(READY_BLINK);
+		}
 	}
 	else
 	{
@@ -141,7 +141,6 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
     }
     
     //check if input buttons were pressed
-    //TODO
     for(uint8_t i = 0; i < 8; ++i) //check each button!
     {
     	if( ((_last_input & (1<<i))>>i) != _input_buttons[i].state) //see if change
@@ -219,23 +218,53 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
 			}
 			else if(_blue_pressed)
 			{
+				Serial.println("blue");
+				gold.on(0);
 				//we've entered learn state, now we're indexing over the outputs
-				_index = ((_index+2)%17)-1;
+				_index = ((_index+2)%33)-1;
+				Serial.print("New _index = ");
+				Serial.println(_index, DEC);
 				if(_index == -1) //cycled through, return to beginning.
 				{
-					//Serial.println("Moving to IDLE");
+					Serial.println("Moving to IDLE");
 					digitalWrite(7, LOW); //turn off last channel.
-					blue.on(0x00000000);
-					_state = BG_IDLE;
-					_event_handler->disInhibit();
+					moveToIdle(true);
+				}
+				else if(_index > 15)
+				{
+					Serial.println("handling inputs now");
+					gold.on(0x0AAA000A);
+					channel = (_index-16) >> 1;
+					Serial.print("Selecting index ");
+					Serial.print(_index, DEC);
+					Serial.print(" on channel ");
+					Serial.println(channel, DEC);
+					// if _index is even, we are handling the consumer for the output being off; blink the blue LED to indicate
+					if(_index & 0x01)
+					{
+						blue.on(0xA000A000);
+					}
+					else
+					{
+						blue.on(0xFFFFFFFF);
+					}
+					digitalWrite(channel, HIGH);
+					if(_index == 16)
+					{
+					    digitalWrite(7, LOW);
+					}
+					else if(_index>1)
+					{
+						digitalWrite(channel-1, LOW); //turn off previous channel
+					}
 				}
 				else
 				{
 					channel = _index >> 1;
-					//Serial.print("Selecting index ");
-					//Serial.print(_index, DEC);
-					//Serial.print(" on channel ");
-					//Serial.println(channel, DEC);
+					Serial.print("Selecting index ");
+					Serial.print(_index, DEC);
+					Serial.print(" on channel ");
+					Serial.println(channel, DEC);
 					// if _index is even, we are handling the producer for the output being off; blink the blue LED to indicate
 					if(_index & 0x01)
 					{
@@ -311,31 +340,60 @@ if(_double_state == 0); //reset the LEDs in case we are backing down from a flas
             }
 			else if(_blue_pressed)
 			{
-					_index = ((_index+2)%17)-1;
-					if(_index == -1) //cycled through, return to beginning.
+				gold.on(0xF0F0F0F0);
+				_index = ((_index+2)%33)-1;
+				if(_index == -1) //cycled through, return to beginning.
+				{
+					digitalWrite(7, LOW); //turn off last channel.
+					blue.on(0xF0F0F0F0);
+					//the difference is that we don't leave BG_TEACH state when we've wrapped around the outputs
+				}
+				else if(_index > 15)
+				{
+				Serial.println("handling inputs now");
+				gold.on(0x0AAA000A);
+				channel = (_index-16) >> 1;
+				Serial.print("Selecting index ");
+				Serial.print(_index, DEC);
+				Serial.print(" on channel ");
+				Serial.println(channel, DEC);
+				// if _index is even, we are handling the consumer for the output being off; blink the blue LED to indicate
+				if(_index & 0x01)
+				{
+					blue.on(0xA000A000);
+				}
+				else
+				{
+					blue.on(0xFFFFFFFF);
+				}
+				digitalWrite(channel, HIGH);
+				if(_index == 16)
+				{
+					digitalWrite(7, LOW);
+				}
+				else if(_index>1)
+				{
+					digitalWrite(channel-1, LOW); //turn off previous channel
+				}
+			}
+				else
+				{
+					channel = _index >> 1;
+					// if _index is even, we are handling the producer for the output being off; blink the blue LED to indicate
+					if(_index & 0x01)
 					{
-						digitalWrite(7, LOW); //turn off last channel.
-						blue.on(0xF0F0F0F0);
-						//the difference is that we don't leave BG_TEACH state when we've wrapped around the outputs
+						blue.on(0xA000A000);
 					}
 					else
 					{
-						channel = _index >> 1;
-						// if _index is even, we are handling the producer for the output being off; blink the blue LED to indicate
-						if(_index & 0x01)
-						{
-							blue.on(0xA000A000);
-						}
-						else
-						{
-							blue.on(0xFFFFFFFF);
-						}
-						digitalWrite(channel, HIGH);
-						if(_index>1)
-						{
-							digitalWrite(channel-1, LOW); //turn off previous channel
-						}
+						blue.on(0xFFFFFFFF);
 					}
+					digitalWrite(channel, HIGH);
+					if(_index>1)
+					{
+						digitalWrite(channel-1, LOW); //turn off previous channel
+					}
+				}
         	}
         	else if(_gold_pressed)
         	{
