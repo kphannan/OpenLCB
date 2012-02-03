@@ -24,14 +24,14 @@ void MyConfigHandler::update(void)
 
 void MyConfigHandler::datagramResult(bool accepted, uint16_t errorcode)
 {
-	Serial.print("The datagram was ");
+	//Serial.print("The datagram was ");
 	if(!accepted)
-		Serial.print("not ");
-	Serial.println("accepted.");
+		//Serial.print("not ");
+	//Serial.println("accepted.");
 	if(!accepted)
 	{
-		Serial.print("   The reason: ");
-		Serial.println(errorcode,HEX);
+		//Serial.print("   The reason: ");
+		//Serial.println(errorcode,HEX);
 	}
 }
 
@@ -81,19 +81,24 @@ bool MyConfigHandler::processDatagram(void)
 
 	if(isPermitted()) //only act on it if we are in Permitted state. Otherwise no point.
 	{
+            //Serial.println("got a datagram!");
 		//check the first byte of the payload to see what kind of datagram we have
 		switch(_rxDatagramBuffer->data[0])
 		{
 			case MAC_PROTOCOL_ID: //MAC protocol
+                                //Serial.println("using MAC protocol");
 				switch (_rxDatagramBuffer->data[1]&0xC0)
 				{
 			        case MAC_CMD_READ:
+                                //Serial.println("read request");
             			return MACProcessRead();
 			            break;
         			case MAC_CMD_WRITE:
+        //Serial.println("write request");
             			return MACProcessWrite();
             			break;
         			case MAC_CMD_OPERATION:
+        //Serial.println("cmd request");
             			return MACProcessCommand();
             		break;
     			}
@@ -121,16 +126,18 @@ bool MyConfigHandler::MACProcessRead(void)
 	switch(space)
 	{
 		case 0xFF: //CDI request.
-			//TODO
+			//Serial.println("CDI request. ignoring");
 			break;
 		case 0xFE: //"All memory" access. Just give them what they want?
-			//TODO
+			//Serial.println("all memory request. ignoring");
 			break;
 		case 0xFD: //configuration space
-			_eventHandler->readConfig(address, length, &(reply.data[6]));
+                        //Serial.println("configuration space...");
+			reply.length = _eventHandler->readConfig(address, length, &(reply.data[6]));
 			sendDatagram(&reply);
 			return true;
 	}
+//Serial.println("NAKing");
 	return false; //send a NAK. Is this what we really want?
 }
 

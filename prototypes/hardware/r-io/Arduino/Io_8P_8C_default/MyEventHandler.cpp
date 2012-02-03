@@ -179,8 +179,8 @@ bool MyEventHandler::consume(uint16_t index)
   if(_inhibit)
     return true;
   /* We've received an event; let's see if we need to consume it */
-  Serial.print("consume() ");
-  Serial.println(index,DEC);
+  //Serial.print("consume() ");
+  //Serial.println(index,DEC);
   //Outputs are pins 0..7
   //odd events are off, even events are on
   digitalWrite((index-16)>>1, !(index&0x1));
@@ -189,13 +189,41 @@ bool MyEventHandler::consume(uint16_t index)
 
 
 
-void MyEventHandler::readConfig(uint16_t address, uint8_t length, uint8_t *data)
+uint8_t MyEventHandler::readConfig(uint16_t address, uint8_t length, uint8_t *data)
 {
   //This method gets called by configuration handlers. Basically, we are being asked for an EventID. We'll simply read from memory.
   //decode the address into a producer/consumer by dividing by 8
-  //TODO THIS PRESUMES THAT THE REQUEST IS BEING MADE AT EVENTID BOUNDARIES! HAMFISTED!!!! WE ARE ALSO IGNORING LENGTH!
   uint8_t index = (address>>3);
-  memcpy(data, _events[index].val, 8);
+  uint16_t offset = address - (index<<3);
+    if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
+    //TODO caculate a shorter length to prevent overflow
+    length = (_numEvents*8) - (address);
+  //Serial.println("readConfig");
+  //Serial.print("length: ");
+  //Serial.println(length);
+  //Serial.print("offset: ");
+  //Serial.println(offset);
+  //Serial.print("reading eventID from event pool index ");
+  //Serial.println(index, DEC);
+  //we can't do a straight memcpy, because EventIDs are actually NINE bytes long (the flags), and we want to skip every ninth byte.
+  //so, we skip an address if it is even divisible by 8?
+  uint8_t i, j, k;
+  j = offset;
+  k = index;
+  for(i = 0; i < length; ++i, ++j)
+  {
+    if(j == 8)
+    {
+        j = 0;
+        ++k;
+    }
+    *(data+i) = _events[k].val[j];
+    //Serial.println(_events[k].val[j], HEX);
+  }
+  //Serial.println("===");
+  //for(i = 0; i < length; ++i)
+    //Serial.println(*(data+i), HEX);
+  return length;
 }
 
 void MyEventHandler::writeConfig(uint16_t address, uint8_t length, uint8_t *data)
@@ -203,9 +231,36 @@ void MyEventHandler::writeConfig(uint16_t address, uint8_t length, uint8_t *data
   //This method gets called by configuration handlers. We are being asked to write an EventID. We'll write it to memory, and do a lazy write to EEPROM later.
     _dirty = 1;
 
-  //decode the address into a producer/consumer by dividing by 8
-  //TODO THIS PRESUMES THAT THE REQUEST IS BEING MADE AT EVENTID BOUNDARIES! HAMFISTED!!!! WE ARE ALSO IGNORING LENGTH!
+    //decode the address into a producer/consumer by dividing by 8
   uint8_t index = (address>>3);
-  memcpy(_events[index].val, data, 8);
+  uint16_t offset = address - (index<<3);
+    if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
+    //TODO caculate a shorter length to prevent overflow
+    length = (_numEvents*8) - (address);
+  //Serial.println("writeConfig");
+  //Serial.print("length: ");
+  //Serial.println(length);
+  //Serial.print("offset: ");
+  //Serial.println(offset);
+  //Serial.print("writing eventID from event pool index ");
+  //Serial.println(index, DEC);
+  //we can't do a straight memcpy, because EventIDs are actually NINE bytes long (the flags), and we want to skip every ninth byte.
+  //so, we skip an address if it is even divisible by 8?
+  uint8_t i, j, k;
+  j = offset;
+  k = index;
+  for(i = 0; i < length; ++i, ++j)
+  {
+    if(j == 8)
+    {
+        j = 0;
+        ++k;
+    }
+    _events[k].val[j] = *(data+i);
+    //Serial.println(_events[k].val[j], HEX);
+  }
+  //Serial.println("===");
+  //for(i = 0; i < length; ++i)
+    //Serial.println(*(data+i), HEX);
 }
 

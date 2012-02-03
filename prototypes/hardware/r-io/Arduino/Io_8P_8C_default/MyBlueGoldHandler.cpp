@@ -218,27 +218,27 @@ void MyBlueGoldHandler::update(void)
 			}
 			else if(_blue_pressed)
 			{
-				Serial.println("blue");
+				//Serial.println("blue");
 				gold.on(0);
 				//we've entered learn state, now we're indexing over the outputs
 				_index = ((_index+2)%33)-1;
-				Serial.print("New _index = ");
-				Serial.println(_index, DEC);
+				//Serial.print("New _index = ");
+				//Serial.println(_index, DEC);
 				if(_index == -1) //cycled through, return to beginning.
 				{
-					Serial.println("Moving to IDLE");
+					//Serial.println("Moving to IDLE");
 					digitalWrite(7, LOW); //turn off last channel.
 					moveToIdle(true);
 				}
 				else if(_index > 15)
 				{
-					Serial.println("handling inputs now");
+					//Serial.println("handling inputs now");
 					gold.on(0x0AAA000A);
 					channel = (_index-16) >> 1;
-					Serial.print("Selecting index ");
-					Serial.print(_index, DEC);
-					Serial.print(" on channel ");
-					Serial.println(channel, DEC);
+					//Serial.print("Selecting index ");
+					//Serial.print(_index, DEC);
+					//Serial.print(" on channel ");
+					//Serial.println(channel, DEC);
 					// if _index is even, we are handling the consumer for the output being off; blink the blue LED to indicate
 					if(_index & 0x01)
 					{
@@ -261,10 +261,10 @@ void MyBlueGoldHandler::update(void)
 				else
 				{
 					channel = _index >> 1;
-					Serial.print("Selecting index ");
-					Serial.print(_index, DEC);
-					Serial.print(" on channel ");
-					Serial.println(channel, DEC);
+					//Serial.print("Selecting index ");
+					//Serial.print(_index, DEC);
+					//Serial.print(" on channel ");
+					//Serial.println(channel, DEC);
 					// if _index is even, we are handling the producer for the output being off; blink the blue LED to indicate
 					if(_index & 0x01)
 					{
@@ -352,13 +352,13 @@ _event_handler->markToLearn(_index+16, true);
 				}
 				else if(_index > 15)
 				{
-				Serial.println("handling inputs now");
+				//Serial.println("handling inputs now");
 				gold.on(0x0AAA000A);
 				channel = (_index-16) >> 1;
-				Serial.print("Selecting index ");
-				Serial.print(_index, DEC);
-				Serial.print(" on channel ");
-				Serial.println(channel, DEC);
+				//Serial.print("Selecting index ");
+				//Serial.print(_index, DEC);
+				//Serial.print(" on channel ");
+				//Serial.println(channel, DEC);
 				// if _index is even, we are handling the consumer for the output being off; blink the blue LED to indicate
 				if(_index & 0x01)
 				{
