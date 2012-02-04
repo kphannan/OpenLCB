@@ -74,16 +74,28 @@ This page was produced by <a href="http://jmri.org">OpenLCB</a>.
 <xsl:template match="value"><td><xsl:apply-templates/></td></xsl:template>
 
 <!-- Segment -->
+<!-- needs conditional handling of origin, space attribute presense (or default values?) -->
 <xsl:template match="segment">
 <h3>Segment at origin <xsl:value-of select="@origin"/> in space <xsl:value-of select="@space"/></h3>
 <xsl:apply-templates/>
 </xsl:template>
 
 <!-- Group -->
+<!-- needs conditional handling of offset, replication attribute presense (or default values?) -->
 <xsl:template match="group">
-<h3>Group at offset <xsl:value-of select="@offset"/> replication count <xsl:value-of select="@replication"/></h3>
+<h4>Group at offset <xsl:value-of select="@offset"/> replication count <xsl:value-of select="@replication"/></h4>
 <xsl:apply-templates/>
 </xsl:template>
+
+<xsl:template match="eventid">EventID: <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+<xsl:template match="bit">Bit: <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+<xsl:template match="int">Int: <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+
+<xsl:template match="name">Name: <xsl:apply-templates/><br/></xsl:template>
+<xsl:template match="description">Description: <xsl:apply-templates/><br/></xsl:template>
+<xsl:template match="min">Min: <xsl:apply-templates/><br/></xsl:template>
+<xsl:template match="max">Max: <xsl:apply-templates/><br/></xsl:template>
+<xsl:template match="default">Default: <xsl:apply-templates/><br/></xsl:template>
 
 
 </xsl:stylesheet>
