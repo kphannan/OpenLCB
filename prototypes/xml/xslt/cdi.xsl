@@ -74,22 +74,31 @@ This page was produced by <a href="http://jmri.org">OpenLCB</a>.
 <xsl:template match="value"><td><xsl:apply-templates/></td></xsl:template>
 
 <!-- Segment -->
-<!-- needs conditional handling of origin, space attribute presense (or default values?) -->
 <xsl:template match="segment">
-<h3>Segment at origin <xsl:value-of select="@origin"/> in space <xsl:value-of select="@space"/></h3>
+<h3>Segment 
+<xsl:if test="string-length(@origin)!=0" > at origin <xsl:value-of select="@origin"/> </xsl:if>
+<xsl:if test="string-length(@space)!=0" > in space <xsl:value-of select="@space"/> </xsl:if>
+</h3>
 <xsl:apply-templates/>
 </xsl:template>
 
 <!-- Group -->
-<!-- needs conditional handling of offset, replication attribute presense (or default values?) -->
 <xsl:template match="group">
-<h4>Group at offset <xsl:value-of select="@offset"/> replication count <xsl:value-of select="@replication"/></h4>
+<h4>Group
+<xsl:if test="string-length(@offset)!=0" > at offset <xsl:value-of select="@offset"/> </xsl:if>
+<xsl:if test="string-length(@replication)!=0" > replication count <xsl:value-of select="@replication"/> </xsl:if>
+</h4>
 <xsl:apply-templates/>
 </xsl:template>
 
-<xsl:template match="eventid">EventID: <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
-<xsl:template match="bit">Bit: <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
-<xsl:template match="int">Int: <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+<xsl:template match="eventid">EventID: 
+    <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+<xsl:template match="bit">Bit<xsl:if test="string-length(@size)!=0" > (size <xsl:value-of select="@size"/>)</xsl:if>:
+    <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+<xsl:template match="int">Int<xsl:if test="string-length(@size)!=0" > (size <xsl:value-of select="@size"/>)</xsl:if>:
+    <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
+<xsl:template match="string">String<xsl:if test="string-length(@size)!=0" > (size <xsl:value-of select="@size"/>)</xsl:if>:
+    <blockquote><xsl:apply-templates/></blockquote><br/></xsl:template>
 
 <xsl:template match="name">Name: <xsl:apply-templates/><br/></xsl:template>
 <xsl:template match="description">Description: <xsl:apply-templates/><br/></xsl:template>

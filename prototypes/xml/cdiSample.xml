@@ -13,7 +13,17 @@
 </identification>
 
 <segment origin="0" space="0">
-    <group offset="0" replication="2">
+    <group offset="128">
+        <name>User Identification</name>
+        <description>Lets the user add his own description</description>
+        <string size="32">
+            <name>Node Name</name>
+        </string>
+        <string size="96">
+            <name>Node Description</name>
+        </string>
+    </group>
+    <group offset="128" replication="2">
         <name>Produced Events</name>
         <description>The EventIDs for the producers</description>
         <eventid/>
