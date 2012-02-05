@@ -1,0 +1,12 @@
+Bob Jacobsen's note on starting from bare R-Io boards Feb 2012
+
+Background:  
+    Bare R-Io boards, no bootloader; 
+    Mac OS X 10.7.2 host
+    USBtinyISP AVR programmer (https://www.adafruit.com/products/46)
+    OpenLCB SVN at revision 1734
+    
+Solder on ICSP 2x3 header
+    
+Assume pin 1 on ICSP is top, toward reset button
+        
