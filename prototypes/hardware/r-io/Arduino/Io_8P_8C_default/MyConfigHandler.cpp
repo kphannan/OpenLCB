@@ -133,7 +133,7 @@ bool MyConfigHandler::MACProcessRead(void)
 			break;
 		case 0xFD: //configuration space
                         //Serial.println("configuration space...");
-			reply.length = _eventHandler->readConfig(address, length, &(reply.data[6]));
+			reply.length = _eventHandler->readConfig(address, length, &(reply.data[6])) + 6;
 			sendDatagram(&reply);
 			return true;
 	}
