@@ -54,6 +54,7 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
   	uint8_t _inputs;
   	uint8_t _dirty;
   	ButtonLed _input_buttons[8];
+  void firstInitialization(void);
 };
 
 

@@ -80,7 +80,7 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
   
 }
 
-void firstInitialization(void)
+void MyEventHandler::firstInitialization(void)
 {
   //This method should only ever be called once. It formats the EEPROM to contain a set of universal EventIDs from the Railstars pool 05.02.01.02.02.00.00.XX
 
