@@ -80,6 +80,42 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
   
 }
 
+void firstInitialization(void)
+{
+  //This method should only ever be called once. It formats the EEPROM to contain a set of universal EventIDs from the Railstars pool 05.02.01.02.02.00.00.XX
+
+  //First for the producers
+  for(uint8_t i = 0; i < 16; ++i)
+  {
+    EEPROM.write(0x04+(i*8)+0, 0x05);
+    EEPROM.write(0x04+(i*8)+1, 0x02);
+    EEPROM.write(0x04+(i*8)+2, 0x01);
+    EEPROM.write(0x04+(i*8)+3, 0x02);
+    EEPROM.write(0x04+(i*8)+4, 0x02);
+    EEPROM.write(0x04+(i*8)+5, 0x00);
+    EEPROM.write(0x04+(i*8)+6, 0x00);
+    EEPROM.write(0x04+(i*8)+7, i);
+  }
+  //Second for the consumers
+  for(uint8_t i = 0; i < 16; ++i)
+  {
+    EEPROM.write(0x04+((i+16)*8)+0, 0x05);
+    EEPROM.write(0x04+((i+16)*8)+1, 0x02);
+    EEPROM.write(0x04+((i+16)*8)+2, 0x01);
+    EEPROM.write(0x04+((i+16)*8)+3, 0x02);
+    EEPROM.write(0x04+((i+16)*8)+4, 0x02);
+    EEPROM.write(0x04+((i+16)*8)+5, 0x00);
+    EEPROM.write(0x04+((i+16)*8)+6, 0x00);
+    EEPROM.write(0x04+((i+16)*8)+7, i);
+  }
+  //Write next EventID for when factoryReset gets called
+  EEPROM.write(0x02, 0x00);
+  EEPROM.write(0x03, 0x00);
+  //And the formatted tag
+  EEPROM.write(0x00, 'I');
+  EEPROM.write(0x01, 'o');
+}
+
 void MyEventHandler::factoryReset(void)
 {
   // WARNING: THIS FUNCTION RESETS THE EVENT POOL TO FACTORY SETTINGS!
@@ -94,6 +130,12 @@ void MyEventHandler::factoryReset(void)
     eid6 = EEPROM.read(2);
     eid7 = EEPROM.read(3);
     EEPROM.write(0, 'X');
+  }
+  else //not formatted
+  {
+      //do a different routine instead
+      firstInitialization();
+      return;
   }
 
   //first, increment the next available ID by 16, and write it back
@@ -193,13 +235,15 @@ uint8_t MyEventHandler::readConfig(uint16_t address, uint8_t length, uint8_t *da
 {
   //This method gets called by configuration handlers. Basically, we are being asked for an EventID. We'll simply read from memory.
   //decode the address into a producer/consumer by dividing by 8
+  //Serial.println("readConfig");
+  //Serial.print("length: ");
+  //Serial.println(length);
   uint8_t index = (address>>3);
   uint16_t offset = address - (index<<3);
     if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
     //TODO caculate a shorter length to prevent overflow
     length = (_numEvents*8) - (address);
-  //Serial.println("readConfig");
-  //Serial.print("length: ");
+  //Serial.print("modified length: ");
   //Serial.println(length);
   //Serial.print("offset: ");
   //Serial.println(offset);
