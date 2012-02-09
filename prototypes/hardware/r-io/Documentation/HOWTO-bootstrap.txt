@@ -25,7 +25,7 @@ Set fuses:
     avrdude -c usbtiny -p c128 -U hfuse:w:0xD0:m
     avrdude -c usbtiny -p c128 -U efuse:w:0xFD:m
 
-(Tim recommends ext 0xF5 high 0x58 low 0xFF )
+(Tim recommends ext 0xF5 high 0x58 low 0xFF ; also tried with -B 1000 option)
 
 In openlcb/trunk/prototypes/hardware/r-io/Arduino/hardware/Io/bootloaders/Io/
 
@@ -69,3 +69,8 @@ Compile
     this isn't a workable solution.
 
         
+
+
+
+/Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf -v -v -v -v -pat90can128 -carduino -P/dev/cu.usbserial-A900fLVC -b57600 -D -Uflash:w:IoBlink.cpp.hex:i
+
