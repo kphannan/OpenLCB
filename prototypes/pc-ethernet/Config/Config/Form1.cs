@@ -118,9 +118,10 @@ namespace Config
         {
             lock (loglock)
             {
+                m = Environment.TickCount.ToString("D9") + ": " + m;
                 string s = LogTB.Text;
-                if (s.Length > 2000)
-                    s = s.Substring(0, 2000);
+                if (s.Length > 5000)
+                    s = s.Substring(0, 5000);
                 LogTB.Text = m + "\r\n" + s;
                 LogTB.Refresh();
             }

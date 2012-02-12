@@ -134,9 +134,10 @@ namespace ComGateway
         {
             lock (loglock)
             {
+                m = Environment.TickCount.ToString("D9") + ": " + m;
                 string s = LogTB.Text;
-                if (s.Length > 2000)
-                    s = s.Substring(0, 2000);
+                if (s.Length > 5000)
+                    s = s.Substring(0, 5000);
                 LogTB.Text = m + "\r\n" + s;
                 LogTB.Refresh();
                 savefile.WriteLine(m);
@@ -261,7 +262,7 @@ namespace ComGateway
                     inputstring = inputstring.Substring(length * 2);
                 else
                     inputstring = "";
-                if (LogCB.Checked)
+                if (EthernetCB.Checked)
                     log("Ei> " + cmd);
                 if (checkpacket(cmd.Substring(2), false))
                     CANSendHexString(cmd);
@@ -276,7 +277,7 @@ namespace ComGateway
                 return;
             byte[] buffer = new byte[1 + s.Length / 2];
             buffer[0] = (byte)buffer.Length;
-            if (LogCB.Checked)
+            if (EthernetCB.Checked)
                 log("Eo< " + buffer[0].ToString("X2") + s);
             int j = 1;
             for (int i = 0; i < s.Length; i += 2)
@@ -338,10 +339,10 @@ namespace ComGateway
         {
             while (true)
             {
+                Thread.Sleep(1);
                 // CAN input
                 try
                 {
-                    Thread.Sleep(10);
                     line += com.ReadExisting();
                 }
                 catch (Exception e)
@@ -351,20 +352,22 @@ namespace ComGateway
                     ComCB.Text = "";
                     return;
                 }
-                // ignore anything before :
-                int l = line.IndexOf(':');
-                if (l == -1)
-                    continue;
-                line = line.Substring(l);
-                // find a complete CAN packet
-                l = line.IndexOf(';');
-                if (l == -1)
-                    continue;
-                string cmd = line.Substring(0, l + 1);
-                line = line.Substring(l + 1);
+                while (true) // process all packets in the buffer
+                {
+                    // ignore anything before :
+                    int l = line.IndexOf(':');
+                    if (l == -1)
+                        break;
+                    line = line.Substring(l);
+                    // find a complete CAN packet
+                    l = line.IndexOf(';');
+                    if (l == -1)
+                        break;
+                    string cmd = line.Substring(0, l + 1);
+                    line = line.Substring(l + 1);
 
-                ProcessCanCmd(cmd);
-
+                    ProcessCanCmd(cmd);
+                }
             }
         }
 

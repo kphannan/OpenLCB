@@ -466,7 +466,7 @@ namespace OlcbSvr
         {
             lock (loglock)
             {
-                m = DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString() + " " + m;
+                m = Environment.TickCount.ToString("D9") + " " + m;
                 string s = LogTB.Text;
                 if (s.Length>5000)
                     s = s.Substring(0, 5000);

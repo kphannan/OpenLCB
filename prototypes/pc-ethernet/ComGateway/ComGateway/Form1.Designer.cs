@@ -34,6 +34,7 @@
             this.LogTB = new System.Windows.Forms.TextBox();
             this.LogCB = new System.Windows.Forms.CheckBox();
             this.AliasBtn = new System.Windows.Forms.Button();
+            this.EthernetCB = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // label1
@@ -57,9 +58,9 @@
             // 
             // LogTB
             // 
-            this.LogTB.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.LogTB.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.LogTB.Location = new System.Drawing.Point(-1, 33);
             this.LogTB.Multiline = true;
             this.LogTB.Name = "LogTB";
@@ -70,16 +71,16 @@
             // LogCB
             // 
             this.LogCB.AutoSize = true;
-            this.LogCB.Location = new System.Drawing.Point(326, 8);
+            this.LogCB.Location = new System.Drawing.Point(328, 8);
             this.LogCB.Name = "LogCB";
-            this.LogCB.Size = new System.Drawing.Size(66, 17);
+            this.LogCB.Size = new System.Drawing.Size(65, 17);
             this.LogCB.TabIndex = 3;
-            this.LogCB.Text = "Data log";
+            this.LogCB.Text = "CAN log";
             this.LogCB.UseVisualStyleBackColor = true;
             // 
             // AliasBtn
             // 
-            this.AliasBtn.Location = new System.Drawing.Point(264, 4);
+            this.AliasBtn.Location = new System.Drawing.Point(164, 4);
             this.AliasBtn.Name = "AliasBtn";
             this.AliasBtn.Size = new System.Drawing.Size(56, 23);
             this.AliasBtn.TabIndex = 4;
@@ -87,11 +88,22 @@
             this.AliasBtn.UseVisualStyleBackColor = true;
             this.AliasBtn.Click += new System.EventHandler(this.AliasBtn_Click);
             // 
+            // EthernetCB
+            // 
+            this.EthernetCB.AutoSize = true;
+            this.EthernetCB.Location = new System.Drawing.Point(239, 8);
+            this.EthernetCB.Name = "EthernetCB";
+            this.EthernetCB.Size = new System.Drawing.Size(83, 17);
+            this.EthernetCB.TabIndex = 5;
+            this.EthernetCB.Text = "Ethernet log";
+            this.EthernetCB.UseVisualStyleBackColor = true;
+            // 
             // ComGateway
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(404, 149);
+            this.Controls.Add(this.EthernetCB);
             this.Controls.Add(this.AliasBtn);
             this.Controls.Add(this.LogCB);
             this.Controls.Add(this.LogTB);
@@ -113,6 +125,7 @@
         private System.Windows.Forms.TextBox LogTB;
         private System.Windows.Forms.CheckBox LogCB;
         private System.Windows.Forms.Button AliasBtn;
+        private System.Windows.Forms.CheckBox EthernetCB;
     }
 }
 

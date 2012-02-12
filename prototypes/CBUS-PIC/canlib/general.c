@@ -172,7 +172,7 @@ void ProgramMemoryWrite(unsigned short long adr, BYTE len, BYTE * far buffer)
     INTCONbits.GIEL = 0;      // disable all low priority interrupts
     EECON2 = 0x55;
     EECON2 = 0xAA;
-    EECON1bits.WR = 1;        // Start the write, cpu stalls for 2 msec
+    EECON1bits.WR = 1;        // Start the erase, cpu stalls for 2 msec
     INTCON = intsave;         // restore interrupts
 
     // because the tblptr has to be in the block being written its best to
@@ -187,7 +187,7 @@ void ProgramMemoryWrite(unsigned short long adr, BYTE len, BYTE * far buffer)
         _asm
             tblwtpreinc
         _endasm
-        if ((TBLPTRL&0x07)==0x07 || len==0) {
+        if ((TBLPTRL&0x1F)==0x1F || len==0) {
             EECON1 = 0x84;          // program memory, write enable
             intsave = INTCON;
             INTCONbits.GIEH = 0;    // disable all high priority interrupts          
