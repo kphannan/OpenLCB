@@ -45,7 +45,7 @@ enum FT
     FT_CONSID  = 0x926B,   // Consumer Identified
     FT_PRODIR  = 0x929F,   // Producer Identify Range
     FT_PRODID  = 0x92AB,   // Producer Identified
-    FT_DGF     = 0xB000,   // Datagram first packet
+    // FT_DGF     = 0xB000,   // Datagram first packet
     FT_DGM     = 0xC000,   // Datagram middle packets
     FT_DGL     = 0xD000,   // Datagram last packet
     FT_DGS     = 0xE000,   // Datagram single packet

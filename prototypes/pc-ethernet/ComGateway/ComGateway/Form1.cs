@@ -472,16 +472,14 @@ namespace ComGateway
                     EthernetSendHexString(newcmd);
                     break;
                 case 'B':
-                    if (longdatagram.ContainsKey(a))
-                        longdatagram.Remove(a);
-                    longdatagram.Add(a, "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
-                            + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2));
+                    log("Unexpected MTI start Bxxx.");
                     break;
                 case 'C':
-                    if (longdatagram.ContainsKey(a))
+                    if (longdatagram.ContainsKey(a)) // continue datagram
                         longdatagram[a] += data;
-                    else
-                        log("Middle of datagram without a start.");
+                    else // new datagram
+                        longdatagram.Add(a, "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                            + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2));
                     break;
                 case 'D':
                     if (longdatagram.ContainsKey(a))
@@ -563,7 +561,7 @@ namespace ComGateway
                         int pl = length;
                         if (pl >= 7)
                             pl = 7;
-                        CAN("B" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl * 2));
+                        CAN("C" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl * 2));
                         cmd = cmd.Substring(30 + pl * 2);
                         length -= pl;
                         while (length >= 8)
@@ -687,33 +685,7 @@ namespace ComGateway
                 CANSendHexString("00"+s);
                 return true;
             }
-            /*
-            if (cmd.Substring(0,4)==INITCOMPLETE || cmd.Substring(0,4)==VERIFIEDNODEID)
-                return false;
-            if (cmd.Substring(0,4)==IDENTIFIEDCONSUMER)
-            {
-                ulong ev = Convert.ToUInt64(cmd.Substring(16, 16),16);
-                addevent(ev, ev);
-                return false;
-            }
-            if (cmd.Substring(0, 4) == IDENTIFIEDCONSUMERRANGE)
-            {
-                ulong ev = Convert.ToUInt64(cmd.Substring(16, 16),16);
-                ulong r = rangesize(ev);
-                addevent(ev & ~r, ev | r);
-                return false;
-            }
-            if (cmd.Substring(0,4)==IDENTIFIEDPRODUCER|| cmd.Substring(0,4)==IDENTIFIEDPRODUCERRANGE)
-                return false;
-            if (cmd.Substring(0, 4) == EVENT)
-            {
-                return findevent(Convert.ToUInt64(cmd.Substring(16, 16),16));
-            }
-            if (cmd[0] == '3' && cmd[3] == '4') // datagram filter
-            {
-                return NodeIdTable.ContainsKey(cmd.Substring(16, 12));
-            }
-            */
+
             if (cmd[0] == '3' && cmd[3]=='4' && cmd.Substring(16, 12) == nodenumberstr) // datagram to this node
             {
                 if (cmd.Substring(0, 4) == "3204" && cmd.Substring(28, 2) == "60" && cmd.Substring(38, 2) == "FF")
@@ -754,67 +726,6 @@ namespace ComGateway
             }
             return true;
         }
-/*
-        public bool findevent(ulong ev)
-        {
-            foreach (KeyValuePair<ulong, ulong> kvp in events)
-                if (ev >= kvp.Key && ev <= kvp.Value)
-                    return true;
-            return false;
-        }
 
-        public void addevent(ulong lower, ulong upper)
-        {
-            foreach (KeyValuePair<ulong, ulong> kvp in events)
-            {
-                if ((lower >= kvp.Key && lower <= kvp.Value) || lower == kvp.Value + 1)
-                { // extend upper of range
-                    if (events[kvp.Key] < upper)
-                        events[kvp.Key] = upper;
-                    return;
-                }
-                else if (upper >= kvp.Key && upper <= kvp.Value)
-                { // merge keys
-                    events.Add(lower, Math.Max(events[kvp.Key], upper));
-                    events.Remove(kvp.Key);
-                    return;
-                }
-            }
-            events.Add(lower, upper);
-        }
-
-        public ulong rangesize(ulong s)
-        {
-            ulong mask = 1;
-            ulong bit = 1;
-            if ((s & 1) == 1)
-            {
-                for (int i = 0; i < 64; i++)
-                {
-                    bit <<= 1;
-                    if ((s & bit) != bit)
-                        break;
-                    mask |= bit;
-                }
-            }
-            else
-            {
-                for (int i = 0; i < 64; i++)
-                {
-                    bit <<= 1;
-                    if ((s & bit) != 0)
-                        break;
-                    mask |= bit;
-                }
-            }
-            return mask;
-        }
-
-        private void EvTableBtn_Click(object sender, EventArgs e)
-        {
-            foreach (KeyValuePair<ulong, ulong> kvp in events)
-                log("Event: " + kvp.Key.ToString("X16") + " - " + kvp.Value.ToString("X16"));
-        }
-*/
     }
 }

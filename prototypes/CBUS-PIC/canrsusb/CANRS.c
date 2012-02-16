@@ -224,9 +224,13 @@ void packet(void)
     else if (CB_FrameType == FT_EVENT) {
         canTraffic = 1;
     }
-    else if (CB_FrameType==(FT_DGF|ND.nodeIdAlias) || CB_FrameType==(FT_DGM|ND.nodeIdAlias)
-      || CB_FrameType==(FT_DGL|ND.nodeIdAlias) || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
-        if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) {
+    else if (CB_FrameType == FT_AMD && CB_SourceNID == DNID) { // node reset before end of datagram
+        DNID = -1;
+        dgcnt = 0;
+    }
+    else if (CB_FrameType==(FT_DGM|ND.nodeIdAlias) || CB_FrameType==(FT_DGL|ND.nodeIdAlias)
+      || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
+        if (DNID == (-1) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
             dgcnt = 0;
             DNID = CB_SourceNID;
         }

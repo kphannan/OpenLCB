@@ -390,8 +390,8 @@ void EndSendBlock(void)
     // send data bytes
     CB_SourceNID = ND.nodeIdAlias;
     CB_FrameType = FT_DGM;
-    if (SendBlockCount==0)
-        CB_FrameType = FT_DGF;
+    // if (SendBlockCount==0)
+    //    CB_FrameType = FT_DGF;
     CB_datalen = 8;
     if (SendBlockMax-SendBlockCount <= 8) {
         CB_datalen = SendBlockMax-SendBlockCount;
