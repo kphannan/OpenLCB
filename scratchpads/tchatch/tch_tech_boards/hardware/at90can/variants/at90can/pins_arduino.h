@@ -55,8 +55,8 @@ const static uint8_t GOLD = 42;
 
 const static uint8_t A0 = 40;
 const static uint8_t A1 = 41;
-const static uint8_t A2 = 42;
-const static uint8_t A3 = 43;
+//const static uint8_t A2 = 42;
+//const static uint8_t A3 = 43;
 const static uint8_t A4 = 44;
 const static uint8_t A5 = 45;
 const static uint8_t A6 = 46;
@@ -81,6 +81,7 @@ const uint16_t PROGMEM port_to_mode_PGM[] = {
 	(uint16_t) &DDRD,
 	(uint16_t) &DDRE,
 	(uint16_t) &DDRF,
+	(uint16_t) &DDRG,
 };
 
 const uint16_t PROGMEM port_to_output_PGM[] = {
@@ -91,6 +92,7 @@ const uint16_t PROGMEM port_to_output_PGM[] = {
 	(uint16_t) &PORTD,
 	(uint16_t) &PORTE,
 	(uint16_t) &PORTF,
+	(uint16_t) &PORTG,
 };
 
 const uint16_t PROGMEM port_to_input_PGM[] = {
@@ -101,6 +103,7 @@ const uint16_t PROGMEM port_to_input_PGM[] = {
 	(uint16_t) &PIND,
 	(uint16_t) &PINE,
 	(uint16_t) &PINF,
+	(uint16_t) &PING,
 };
 
 const uint8_t PROGMEM digital_pin_to_port_PGM[] = {
@@ -292,7 +295,7 @@ const uint8_t PROGMEM digital_pin_to_timer_PGM[] = {
 	NOT_ON_TIMER	, // PB 0 ** 34 ** NONE!	
 	NOT_ON_TIMER	, // PB 0 ** 35 ** NONE!	
 	NOT_ON_TIMER	, // PB 0 ** 36 ** NONE!	
-	NOT_ON_TIMER	, // PB 0 ** 37 ** NONE!	
+	NOT_ON_TIMER	, // PB 0 ** 37 ** NONE!
 	NOT_ON_TIMER	, // PB 0 ** 38 ** NONE!	
 	NOT_ON_TIMER	, // PB 0 ** 39 ** NONE!	
 	NOT_ON_TIMER	, // PB 0 ** 40 ** NONE!	
