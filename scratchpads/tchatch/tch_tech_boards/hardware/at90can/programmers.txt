@@ -1,4 +1,0 @@
-jtagice.name=JTAG ICE
-jtagice.communication=serial
-jtagice.protocol=jtagmki
-
