@@ -178,7 +178,10 @@ void MyEventHandler::factoryReset(void)
 void MyEventHandler::update(void)
 {
   if(!isPermitted())
+  {
+//    Serial.println("not permitted!");
     return;
+  }
     
   for(uint8_t i = 0; i < 8; ++i)
     _input_buttons[i].process();

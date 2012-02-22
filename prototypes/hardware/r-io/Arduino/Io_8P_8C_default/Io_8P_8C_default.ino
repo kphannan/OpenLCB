@@ -10,6 +10,8 @@
 #include "MyConfigHandler.h"
 #include "MyBlueGoldHandler.h"
 
+uint32_t old_time;
+
 //==============================================================
 // Io_8P_8C_default
 // This is the default sketch for Railstars Io NMRAnet demonstration boards
@@ -39,6 +41,16 @@ MyBlueGoldHandler bg;
 ButtonLed blue(BLUE, LOW); // button on pin 14
 ButtonLed gold(GOLD, LOW); // button on pin 15
 
+int available()
+{
+    byte stack = 1;
+    extern char *__brkval;
+    extern char *__malloc_heap_end;
+    extern size_t __malloc_margin;
+    if (__malloc_heap_end)
+	  return __malloc_heap_end - __brkval;
+    return (byte*)((byte*)(&stack) - (byte*)__brkval) - (byte*)__malloc_margin;
+} 
 
 void loadNodeID(OLCB_NodeID *nid)
 {
@@ -86,6 +98,13 @@ void setup()
     link.addVNode(&pce);
     link.addVNode(&cfg);
     link.addVNode(&bg);
+    
+    Serial.println(sizeof(link), DEC);
+    Serial.println(sizeof(pce), DEC);
+    Serial.println(sizeof(cfg), DEC);
+    Serial.println(sizeof(bg), DEC);
+    Serial.println(available(), DEC);
+    old_time = millis();
 }
 
 // ================ Loop ===================
@@ -94,8 +113,13 @@ void loop()
 {
     // OpenLCB statndard processing:
     link.update();
-    //Serial.println(millis());
 }
 
 // ---------------------------------------------------
 
+
+// TODO
+// testConfigurationProtocol
+// simpleNodeIdentificationInformation
+// ProtocolIdentificationProtocol
+// unknownMtiAddressed

@@ -45,8 +45,8 @@ static PROGMEM prog_uchar cdixml[] = {
 #define MAC_CMD_READ                        0x40
 #define MAC_CMD_OPERATION                   0x80
 #define MAC_CMD_READ_REPLY                  0x50
-#define MAC_CMD_GET_CONFIG                  0x80
-#define MAC_CMD_GET_CONFIG_REPLY            0x82
+#define MAC_CMD_GET_CONFIG_OPTIONS          0x80
+#define MAC_CMD_GET_CONFIG_OPTIONS_REPLY    0x82
 #define MAC_CMD_GET_ADD_SPACE_INFO          0x84
 #define MAC_CMD_GET_ADD_SPACE_INFO_REPLY    0x86
 #define MAC_CMD_LOCK                        0x88
@@ -57,6 +57,14 @@ static PROGMEM prog_uchar cdixml[] = {
 #define MAC_CMD_FREEZE                      0xA0
 #define MAC_CMD_INDICATE                    0xA4
 #define MAC_CMD_RESETS                      0xA8
+
+
+#define MAC_CONFIG_OPTIONS_1_BYTE_WRITE      0x8000
+#define MAC_CONFIG_OPTIONS_2_BYTE_WRITE      0x4000
+#define MAC_CONFIG_OPTIONS_4_BYTE_WRITE      0x2000
+#define MAC_CONFIG_OPTIONS_64_BYTE_WRITE     0x1000
+#define MAC_CONFIG_OPTIONS_STREAM_WRITE      0x0080
+#define MAC_CONFIG_OPTIONS_WRITE_UNDER_MASK  0x0040
 
 
 /* Class to handle Memory Configuration protocol and CDI protocol */

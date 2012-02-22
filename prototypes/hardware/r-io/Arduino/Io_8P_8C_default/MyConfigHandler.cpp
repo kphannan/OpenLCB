@@ -81,31 +81,31 @@ bool MyConfigHandler::processDatagram(void)
 
 	if(isPermitted()) //only act on it if we are in Permitted state. Otherwise no point.
 	{
-            //Serial.println("got a datagram!");
-		//check the first byte of the payload to see what kind of datagram we have
-		switch(_rxDatagramBuffer->data[0])
-		{
-			case MAC_PROTOCOL_ID: //MAC protocol
-                                //Serial.println("using MAC protocol");
-				switch (_rxDatagramBuffer->data[1]&0xC0)
-				{
-			        case MAC_CMD_READ:
-                                //Serial.println("read request");
-            			return MACProcessRead();
-			            break;
-        			case MAC_CMD_WRITE:
-        //Serial.println("write request");
-            			return MACProcessWrite();
-            			break;
-        			case MAC_CMD_OPERATION:
-        //Serial.println("cmd request");
-            			return MACProcessCommand();
-            		break;
-    			}
-    			return false;
+            Serial.println("got a datagram!");
+            Serial.println(_rxDatagramBuffer->data[0], HEX);
+            //check the first byte of the payload to see what kind of datagram we have
+            switch(_rxDatagramBuffer->data[0])
+            {
+              case MAC_PROTOCOL_ID: //MAC protocol
+                Serial.println("using MAC protocol");
+                switch (_rxDatagramBuffer->data[1]&0xC0)
+                {
+                  case MAC_CMD_READ:
+                    Serial.println("read request");
+  		    return MACProcessRead();
+                    break;
+                  case MAC_CMD_WRITE:
+                    Serial.println("write request");
+                    return MACProcessWrite();
+                    break;
+                  case MAC_CMD_OPERATION:
+                    Serial.println("cmd request");
+                    return MACProcessCommand();
+                    break;
 		}
-		return false;
+	    }
 	}
+        Serial.println("Not for us to handle, going to NAK");
 	return false;
 }
 
@@ -113,10 +113,13 @@ bool MyConfigHandler::processDatagram(void)
 bool MyConfigHandler::MACProcessRead(void)
 {
 	OLCB_Datagram reply;
-	
+        memcpy(&(reply.destination), &(_rxDatagramBuffer->source), sizeof(OLCB_NodeID));
 	//copy first six bytes. TODO why?
 	memcpy(reply.data, _rxDatagramBuffer->data, 6);
-	reply.data[0] = MAC_CMD_READ_REPLY | reply.data[0]&0x0F; //WTF?
+	reply.data[1] = MAC_CMD_READ_REPLY | reply.data[1]&0x0F; //WTF?
+        Serial.print("Making reply with MTI ");
+        Serial.println(reply.data[0], HEX);
+        Serial.println(reply.data[1], HEX);
 	//TODO presume datagram?
 	uint8_t length = decodeLength(_rxDatagramBuffer->data);
 	uint32_t address = getAddress(_rxDatagramBuffer->data);
@@ -126,14 +129,16 @@ bool MyConfigHandler::MACProcessRead(void)
 	switch(space)
 	{
 		case 0xFF: //CDI request.
-			//Serial.println("CDI request. ignoring");
+			Serial.println("CDI request. ignoring");
 			break;
 		case 0xFE: //"All memory" access. Just give them what they want?
-			//Serial.println("all memory request. ignoring");
+			Serial.println("all memory request. ignoring");
 			break;
 		case 0xFD: //configuration space
-                        //Serial.println("configuration space...");
+                        Serial.println("configuration space...");
 			reply.length = _eventHandler->readConfig(address, length, &(reply.data[6])) + 6;
+                        Serial.print("total length of reply = ");
+                        Serial.println(reply.length, DEC);
 			sendDatagram(&reply);
 			return true;
 	}
@@ -164,14 +169,37 @@ bool MyConfigHandler::MACProcessWrite(void)
 }
 
 bool MyConfigHandler::MACProcessCommand(void)
-{       
+{
+    OLCB_Datagram reply;
+    reply.data[0] = MAC_PROTOCOL_ID;
+    memcpy(&(reply.destination), &(_rxDatagramBuffer->source), sizeof(OLCB_NodeID));
     switch (_rxDatagramBuffer->data[1]&0xFC)
     {
-        case MAC_CMD_GET_CONFIG:
-        	break;
+        case MAC_CMD_GET_CONFIG_OPTIONS:
+                Serial.println("MAC_CMD_GET_CONFIG_OPTIONS");
+                reply.length = 6;
+                reply.data[1] = MAC_CMD_GET_CONFIG_OPTIONS_REPLY;
+                reply.data[2] = (MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE) >> 8;
+                reply.data[3] = (MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE) & 0xFF;
+                reply.data[4] = 0xFF; //highest address space
+                reply.data[5] = 0xFD; //lowest address space
+                sendDatagram(&reply);
+             	break;
         case MAC_CMD_GET_ADD_SPACE_INFO:
+                Serial.println("MAC_CMD_GET_ADD_SPACE_INFO");
+//                uint8_t space = _rxDatagramBuffer->data[0];
+//                reply.length = TODO
+//                reply.data[1] = MAC_CMD_GET_ADD_SPACE_INFO_REPLY;
+//                if(space >= 0xFE)
+//                  reply.data[2] = 
+//                uint16_t write_opts = MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE;
+//                reply.data[2] = write_opts >> 8;
+//                reply.data[3] = write_opts & 0xFF;
+//                reply.data[4] = 0xFF; //highest address space
+//                reply.data[5] = 0xFD; //lowest address space
         	break;
         case MAC_CMD_RESETS:
+            Serial.println("MAC_CMD_RESETS");
             // force restart (may not reply?)
             if ((_rxDatagramBuffer->data[1]&0x03) == 0x01)
             { // restart/reboot?
@@ -181,14 +209,30 @@ bool MyConfigHandler::MACProcessCommand(void)
             }
             // TODO: Handle other cases
             break;
-        case MAC_CMD_GET_CONFIG_REPLY :
+        case MAC_CMD_GET_CONFIG_OPTIONS_REPLY :
+            Serial.println("MAC_CMD_GET_CONFIG_REPLY");
+            break;
         case MAC_CMD_GET_ADD_SPACE_INFO_REPLY:
+            Serial.println("MAC_CMD_GET_ADD_SPACE_INFO_REPLY");
+            break;
         case MAC_CMD_LOCK:
+            Serial.println("MAC_CMD_LOCK");
+            break;
         case MAC_CMD_LOCK_REPLY:
+            Serial.println("MAC_CMD_LOCK_REPLY");
+            break;
         case MAC_CMD_GET_UNIQUEID:
+            Serial.println("MAC_CMD_GET_UNIQUEID");
+            break;
         case MAC_CMD_GET_UNIQUEID_REPLY:
+            Serial.println("MAC_CMD_GET_UNIQUEID_REPLY");
+            break;
         case MAC_CMD_FREEZE:
+            Serial.println("MAC_CMD_FREEZE");
+            break;
         case MAC_CMD_INDICATE:
+            Serial.println("MAC_CMD_INDICATE");
+            break;
         default:
             break;
     }
