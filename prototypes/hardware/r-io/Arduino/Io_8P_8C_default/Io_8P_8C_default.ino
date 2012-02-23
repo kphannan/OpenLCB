@@ -9,6 +9,7 @@
 #include "MyEventHandler.h"
 #include "MyConfigHandler.h"
 #include "MyBlueGoldHandler.h"
+#include "MyInfoHandler.h"
 
 uint32_t old_time;
 
@@ -36,6 +37,7 @@ OLCB_CAN_Link link;
 MyEventHandler pce;
 MyConfigHandler cfg;
 MyBlueGoldHandler bg;
+MyInfoHandler info;
 
 /* define the Blue/Gold devices */
 ButtonLed blue(BLUE, LOW); // button on pin 14
@@ -95,16 +97,11 @@ void setup()
     pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers TODO REMOVE THIS!?
     cfg.create(&link, &nodeid, &pce);
     bg.create(&link, &nodeid, &pce);
+    info.create(&link, &nodeid);
     link.addVNode(&pce);
     link.addVNode(&cfg);
     link.addVNode(&bg);
-    
-    Serial.println(sizeof(link), DEC);
-    Serial.println(sizeof(pce), DEC);
-    Serial.println(sizeof(cfg), DEC);
-    Serial.println(sizeof(bg), DEC);
-    Serial.println(available(), DEC);
-    old_time = millis();
+    link.addVNode(&info);
 }
 
 // ================ Loop ===================

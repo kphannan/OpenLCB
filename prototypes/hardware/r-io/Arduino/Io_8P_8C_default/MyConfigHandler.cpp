@@ -24,14 +24,8 @@ void MyConfigHandler::update(void)
 
 void MyConfigHandler::datagramResult(bool accepted, uint16_t errorcode)
 {
-	//Serial.print("The datagram was ");
-	if(!accepted)
-		//Serial.print("not ");
-	//Serial.println("accepted.");
 	if(!accepted)
 	{
-		//Serial.print("   The reason: ");
-		//Serial.println(errorcode,HEX);
 	}
 }
 

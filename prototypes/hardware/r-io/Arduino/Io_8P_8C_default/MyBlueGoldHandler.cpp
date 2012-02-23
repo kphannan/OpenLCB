@@ -29,7 +29,6 @@ void MyBlueGoldHandler::create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler
 
 void MyBlueGoldHandler::moveToIdle(bool reset)
 {
-	//Serial.println("moving to IDLE state");
 	blue.on(0x00000000);
 	gold.on(READY_BLINK);
 	if(reset)
@@ -59,7 +58,6 @@ void MyBlueGoldHandler::update(void)
 
 
     if (!_started) {
-        //Serial.println("Starting ready blink");
         _started = true;
         gold.on(READY_BLINK); // turn off waiting to init flash, start heartbeat ready blink
     }
@@ -89,8 +87,6 @@ void MyBlueGoldHandler::update(void)
 
 	if(_last_double != _double_state) //check if state has changed, 
 	{
-		//Serial.print("Double press! ");
-		//Serial.println(_double_state, DEC);
 		_last_double = _double_state;
 		_double_press = _double_state;
 		if(_double_state == 0); //reset the LEDs in case we are backing down from a flash reset
@@ -112,7 +108,6 @@ void MyBlueGoldHandler::update(void)
 	        _last_blue = blue.state;
 			if(blue.state)
 			{
-				//Serial.println("Blue pressed!");
 				_blue_pressed = true;
 			}
 		}
@@ -130,7 +125,6 @@ void MyBlueGoldHandler::update(void)
 	        _last_gold = gold.state;
 			if(gold.state)
 			{
-				//Serial.println("Gold pressed!");
 				_gold_pressed = true;
 			}
 		}
@@ -147,9 +141,6 @@ void MyBlueGoldHandler::update(void)
     	{
     		if(_input_buttons[i].state)
     		{
-    			//Serial.print("Input ");
-    			//Serial.print(i, DEC);
-    			//Serial.println(" pressed!");
     			_last_input |= (1<<i);
     			_input_pressed |= (1<<i);
     		}
@@ -168,31 +159,25 @@ void MyBlueGoldHandler::update(void)
 	//possibilities: Blue and Gold was pressed, only Blue was pressed or only Gold was pressed, and/or an input button was pressed.
 	uint8_t channel, prev_channel;
 	//blue has been pressed.
-//	//Serial.print("Current state is ");
-//	//Serial.println(_state, HEX);
 	switch(_state)
 	{
 		case BG_IDLE:
 			if(_double_press == 3) //8 seconds each
 			{
-				//Serial.println("FACTORY RESET!!!!!");
                                 factoryReset();
 			}
 			else if(_double_press == 2) //3 seconds, begin factory reset warning
 			{
-				//Serial.println("Prepare for factory reset");
 				gold.on(0xAAAAAAAA);
 				blue.on(0x55555555);
 			}
 		    else if(_double_press == 1)
 		    {
-		    	//Serial.println("Send Ident");
 		    	sendIdent();
 		    }
 		    else if(_blue_pressed)
 		    {
 		    	//we were doing nothing before; a press of blue puts us in LEARN mode
-		    	//Serial.println("Moving to LEARN");
 				_state = BG_LEARN;
 				//inhibit the EventHandler to avoid confusions
 				_event_handler->inhibit();
@@ -202,7 +187,6 @@ void MyBlueGoldHandler::update(void)
 		    else if(_gold_pressed)
 		    {
 		    	//we were doing nothing before; a press of gold puts us in TEACH mode
-		    	//Serial.println("Moving to TEACH");
 				_state = BG_TEACH;
 				//inhibit the EventHandler to avoid confusions
 				_event_handler->inhibit(); //TODO is this right?
@@ -213,32 +197,22 @@ void MyBlueGoldHandler::update(void)
 		case BG_LEARN:
 			if(_double_press)
 		    {
-		    	//Serial.println("LEARN canceled!");
 		    	moveToIdle(true);
 			}
 			else if(_blue_pressed)
 			{
-				//Serial.println("blue");
 				gold.on(0);
 				//we've entered learn state, now we're indexing over the outputs
 				_index = ((_index+2)%33)-1;
-				//Serial.print("New _index = ");
-				//Serial.println(_index, DEC);
 				if(_index == -1) //cycled through, return to beginning.
 				{
-					//Serial.println("Moving to IDLE");
 					digitalWrite(7, LOW); //turn off last channel.
 					moveToIdle(true);
 				}
 				else if(_index > 15)
 				{
-					//Serial.println("handling inputs now");
 					gold.on(0x0AAA000A);
 					channel = (_index-16) >> 1;
-					//Serial.print("Selecting index ");
-					//Serial.print(_index, DEC);
-					//Serial.print(" on channel ");
-					//Serial.println(channel, DEC);
 					// if _index is even, we are handling the consumer for the output being off; blink the blue LED to indicate
 					if(_index & 0x01)
 					{
@@ -261,10 +235,6 @@ void MyBlueGoldHandler::update(void)
 				else
 				{
 					channel = _index >> 1;
-					//Serial.print("Selecting index ");
-					//Serial.print(_index, DEC);
-					//Serial.print(" on channel ");
-					//Serial.println(channel, DEC);
 					// if _index is even, we are handling the producer for the output being off; blink the blue LED to indicate
 					if(_index & 0x01)
 					{
@@ -277,8 +247,6 @@ void MyBlueGoldHandler::update(void)
 					digitalWrite(channel, HIGH);
 					if(_index>1)
 					{
-						//Serial.print("...and turning off channel ");
-						//Serial.println(channel-1,DEC);
 						digitalWrite(channel-1, LOW); //turn off previous channel
 					}
 				}
@@ -286,7 +254,6 @@ void MyBlueGoldHandler::update(void)
 			else if(_gold_pressed)
 			{
 				//send off the LEARN messages!
-				//Serial.println("Waiting for LEARN messages!");
 				//producers first
 				if(_input_index > -1)
 					_event_handler->markToLearn(_input_index, true);
@@ -306,8 +273,6 @@ _event_handler->markToLearn(_index+16, true);
 					if((_input_pressed) & (1<<in))
 						break;
 				}
-				//Serial.print("input pressed: ");
-				//Serial.print(in, DEC);
 				//check to see if this is first, second, or third time.
 				//First time, we flag "on" producer for that channel
 				//Second time, we unflag "on", flag "off"
@@ -316,19 +281,16 @@ _event_handler->markToLearn(_index+16, true);
                 //first, check to see if user has moved to a different input, changing their mind.
 				if(in != (_input_index>>1))
 				{
-					//Serial.println("new first press, move to 'on'");
 					_input_index = (in << 1);
 					blue.on(0xFFFFFFFF);
 				}
 				else if(_input_index > -1 && (_input_index & 0x01)) //this is the third press, because it's on an "off" producer
 				{
-					//Serial.println("third press, out it goes");
 					_input_index = -1;
 					blue.on(0xF0F0F0F0); //indicate that nothing is selected for learning
 				}
 				else// if(_input_index > -1 && !(_input_index & 0x01)) //this is the second press
 				{
-					//Serial.println("second press, move to 'off'");
 					_input_index = (in << 1) + 1;
 					blue.on(0x000A000A); //indicate that "off" is selected
 				}
@@ -337,7 +299,6 @@ _event_handler->markToLearn(_index+16, true);
 		case BG_TEACH: //we've entered teach state, now we're indexing over the outputs
 			if(_double_press)
 			{
-		    	//Serial.println("TEACH canceled!");
 		    	moveToIdle(true);
             }
 			else if(_blue_pressed)
@@ -352,13 +313,8 @@ _event_handler->markToLearn(_index+16, true);
 				}
 				else if(_index > 15)
 				{
-				//Serial.println("handling inputs now");
 				gold.on(0x0AAA000A);
 				channel = (_index-16) >> 1;
-				//Serial.print("Selecting index ");
-				//Serial.print(_index, DEC);
-				//Serial.print(" on channel ");
-				//Serial.println(channel, DEC);
 				// if _index is even, we are handling the consumer for the output being off; blink the blue LED to indicate
 				if(_index & 0x01)
 				{
@@ -400,9 +356,6 @@ _event_handler->markToLearn(_index+16, true);
         	else if(_gold_pressed)
         	{
 				//send off the TEACH messages!
-				//Serial.println("Sending TEACH messages!");
-                                //Serial.println(_input_index);
-                                //Serial.println(_index);
 				//producers first
 				if(_input_index > -1)
 					_event_handler->markToTeach(_input_index, true);
@@ -423,8 +376,6 @@ _event_handler->markToTeach(_index+16, true);
 					if((_input_pressed) & (1<<in))
 						break;
 				}
-				//Serial.print("input pressed: ");
-				//Serial.print(in, DEC);
 				//check to see if this is first, second, or third time.
 				//First time, we flag "on" producer for that channel
 				//Second time, we unflag "on", flag "off"
@@ -433,19 +384,16 @@ _event_handler->markToTeach(_index+16, true);
                 //first, check to see if user has moved to a different input, changing their mind.
 				if(in != (_input_index>>1))
 				{
-					//Serial.println("new first press, move to 'on'");
 					_input_index = (in << 1);
 					blue.on(0xFFFFFFFF);
 				}
 				else if(_input_index > -1 && (_input_index & 0x01)) //this is the third press, because it's on an "off" producer
 				{
-					//Serial.println("third press, out it goes");
 					_input_index = -1;
 					blue.on(0x00000000); //indicate that nothing is selected for learning
 				}
 				else// if(_input_index > -1 && !(_input_index & 0x01)) //this is the second press
 				{
-					//Serial.println("second press, move to 'off'");
 					_input_index = (in << 1) + 1;
 					blue.on(0x000A000A); //indicate that "off" is selected
 				}
@@ -456,9 +404,10 @@ _event_handler->markToTeach(_index+16, true);
 
 bool MyBlueGoldHandler::handleMessage(OLCB_Buffer *buffer)
 {
-  if(isPermitted());
+  if(isPermitted())
+  {
     return OLCB_Virtual_Node::handleMessage(buffer);
-
+  }
   return false;
 }
 
