@@ -1,0 +1,370 @@
+   connect to  172.16.0.20 : 23
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+verifyNodeGlobal w no NodeID
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+verifyNodeGlobal with NodeID
+   send     :X180A7AAAN020304050609;
+   receive  :X180B7740N020304050609;
+verifyNodeAddressed
+   send     :X1E740AAAN0A020304050609;
+   receive  :X180B7740N020304050609;
+protocolIdentProtocol
+ProtocolIdentificationProtocol check OK
+   send     :X1E740AAAN2E;
+   receive  :X1EAAA740N2F0304050609FF;
+ProtocolIdentificationProtocol not addressed, no reply
+   send     :X1E8BFAAAN2E;
+   receive  <none>
+identifyEventsGlobal
+   send     :X182B7AAAN;
+   receive  :X192AB740N0203040506090001;
+   receive  :X192AB740N0203040506090002;
+   receive  :X192AB740N0203040506090003;
+   receive  :X192AB740N0203040506090004;
+   receive  :X1926B740N0203040506090005;
+   receive  :X1926B740N0203040506090006;
+   receive  :X1926B740N0203040506090007;
+   receive  :X1926B740N0203040506090008;
+   receive  <none>
+Found 8 events
+identifyEventsAddressed
+   send     :X1E740AAAN2B;
+   receive  :X192AB740N0203040506090001;
+   receive  :X192AB740N0203040506090002;
+   receive  :X192AB740N0203040506090003;
+   receive  :X192AB740N0203040506090004;
+   receive  :X1926B740N0203040506090005;
+   receive  :X1926B740N0203040506090006;
+   receive  :X1926B740N0203040506090007;
+   receive  :X1926B740N0203040506090008;
+   receive  <none>
+Found 8 events
+identifyConsumers
+   send     :X1824FAAAN0102030405060708;
+   receive  <none>
+Found 0 nodes
+identifyProducers
+   send     :X1828FAAAN0102030405060708;
+   receive  <none>
+Found 0 nodes
+datagram
+   send     :X1D740AAAN01020304;
+   receive  :X1EAAA740N4C;
+testProducerConsumerNotification
+   send     :X1E740AAAN2B;
+   receive  :X192AB740N0203040506090001;
+produces  [2, 3, 4, 5, 6, 9, 0, 1]
+   receive  :X192AB740N0203040506090002;
+produces  [2, 3, 4, 5, 6, 9, 0, 2]
+   receive  :X192AB740N0203040506090003;
+produces  [2, 3, 4, 5, 6, 9, 0, 3]
+   receive  :X192AB740N0203040506090004;
+produces  [2, 3, 4, 5, 6, 9, 0, 4]
+   receive  :X1926B740N0203040506090005;
+consumes  [2, 3, 4, 5, 6, 9, 0, 5]
+   receive  :X1926B740N0203040506090006;
+consumes  [2, 3, 4, 5, 6, 9, 0, 6]
+   receive  :X1926B740N0203040506090007;
+consumes  [2, 3, 4, 5, 6, 9, 0, 7]
+   receive  :X1926B740N0203040506090008;
+consumes  [2, 3, 4, 5, 6, 9, 0, 8]
+   receive  <none>
+Start individual checks
+   send     :X1824FAAAN0203040506090005;
+   receive  :X1926B740N0203040506090005;
+   receive  <none>
+   send     :X1824FAAAN0203040506090006;
+   receive  :X1926B740N0203040506090006;
+   receive  <none>
+   send     :X1824FAAAN0203040506090007;
+   receive  :X1926B740N0203040506090007;
+   receive  <none>
+   send     :X1824FAAAN0203040506090008;
+   receive  :X1926B740N0203040506090008;
+   receive  <none>
+   send     :X1828FAAAN0203040506090001;
+   receive  :X192AB740N0203040506090001;
+   receive  <none>
+   send     :X1828FAAAN0203040506090002;
+   receive  :X192AB740N0203040506090002;
+   receive  <none>
+   send     :X1828FAAAN0203040506090003;
+   receive  :X192AB740N0203040506090003;
+   receive  <none>
+   send     :X1828FAAAN0203040506090004;
+   receive  :X192AB740N0203040506090004;
+   receive  <none>
+testConfigurationProtocol
+   send     :X1D740AAAN2080;
+   receive  :X1EAAA740N4C;
+   receive  :X1DAAA740N2082030138FFFC;
+   send     :X1E740AAAN4C;
+Configuration Options:
+   Available commands  0x301
+        Write lengths  0x38
+        Highest space  255
+         Lowest space  252
+   send     :X1D740AAAN20420000000001;
+   receive  :X1EAAA740N4C;
+   receive  :X1DAAA740N205200000000EE;
+   send     :X1E740AAAN4C;
+read value [238]
+   send     :X1D740AAAN20420000000008;
+   receive  :X1EAAA740N4C;
+   receive  :X1CAAA740N205200000000EE55;
+   receive  :X1DAAA740N5EE500080203;
+   send     :X1E740AAAN4C;
+read value [238, 85, 94, 229, 0, 8, 2, 3]
+   send     :X1D740AAAN2084FF;
+   receive  :X1EAAA740N4C;
+   receive  :X1DAAA740N2086FF00FFFFFF0F;
+   send     :X1E740AAAN4C;
+Address Space Options:
+      Highest address  0xffffff
+      Alignment flags  0xf
+           Space name  []
+testResponseTime 100
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+   send     :X180A7AAAN;
+   receive  :X180B7740N020304050609;
+1.19899988174
+unknownMtiAddressed
+   send     :X1E740AAAN00;
+   receive  <none>
+Expected reply not received for 0
+testAliasConflict
+  check no-response global message with alias conflict
+   send     :X180A7740N000000000000;
+   receive  :X1702002CN;
+   receive  :X1630402CN;
+   receive  :X1505002CN;
+   receive  :X1460902CN;
+   receive  :X1070002CN;
+   receive  :X1908702CN020304050609;
+  check response-inducing global message with alias conflict
+   send     :X180A702CN;
+   receive  :X170206D0N;
+   receive  :X163046D0N;
+   receive  :X150506D0N;
+   receive  :X146096D0N;
+   receive  :X107006D0N;
+   receive  :X190876D0N020304050609;
+  check addressed message with alias conflict
+   send     :X1EAAA6D0N0A;
+   receive  :X17020565N;
+   receive  :X16304565N;
+   receive  :X15050565N;
+   receive  :X14609565N;
+   receive  :X10700565N;
+   receive  :X19087565N020304050609;
+  check CheckID with alias conflict
+   send     :X17020565N;
+   receive  :X10700565N;
+   send     :X10700565N;
+  check ReserveID with alias conflict
+   receive  :X17020B2DN;
+   receive  :X16304B2DN;
+   receive  :X15050B2DN;
+   receive  :X14609B2DN;
+   receive  :X10700B2DN;
+   receive  :X19087B2DN020304050609;
+note: Did not perform testStartup, which is manual

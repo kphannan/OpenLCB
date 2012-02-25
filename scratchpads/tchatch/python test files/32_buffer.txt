@@ -1,0 +1,660 @@
+   connect to  COM9  at  500000
+   send     :X180A7AAAN;
+   receive  :X180B71B1N020036021203;
+Found alias 433 (0x1b1) for node ID  [2, 0, 54, 2, 18, 3]
+aliasMapEnquiry
+   send     :X10702AAAN020036021203;
+   receive  :X107011B1N020036021203;
+   send     :X10702AAAN000000000001;
+   receive  <none>
+verifyNodeGlobal w no NodeID
+   send     :X180A7AAAN;
+   receive  :X180B71B1N020036021203;
+   send     :X180A7AAAN;
+   receive  :X180B71B1N020036021203;
+   send     :X180A7AAAN000000000001;
+   receive  <none>
+verifyNodeGlobal with NodeID
+   send     :X180A7AAAN020036021203;
+   receive  :X180B71B1N020036021203;
+   send     :X180A7AAAN;
+   receive  :X180B71B1N020036021203;
+   send     :X180A7AAAN000000000001;
+   receive  <none>
+verifyNodeAddressed
+   send     :X1E1B1AAAN0A020036021203;
+   receive  :X180B71B1N020036021203;
+   send     :X1DE4EAAAN0A020036021203;
+   receive  <none>
+protocolIdentProtocol
+ProtocolIdentificationProtocol check OK
+   send     :X1E1B1AAAN2E;
+   receive  :X1EAAA1B1N2F003602120300;
+ProtocolIdentificationProtocol not addressed, no reply
+   send     :X1EE4EAAAN2E;
+   receive  <none>
+identifyEventsGlobal
+   send     :X182B7AAAN;
+   receive  :X1926B1B1N0200360212030001;
+   receive  :X1926B1B1N0200360212030002;
+   receive  :X1926B1B1N0200360212030003;
+   receive  :X1926B1B1N0200360212030004;
+   receive  :X1926B1B1N0200360212030005;
+   receive  :X1926B1B1N0200360212030006;
+   receive  :X1926B1B1N0200360212030007;
+   receive  :X1926B1B1N0200360212030008;
+   receive  :X1926B1B1N0200360212030009;
+   receive  :X1926B1B1N020036021203000A;
+   receive  :X1926B1B1N020036021203000B;
+   receive  :X1926B1B1N020036021203000C;
+   receive  :X1926B1B1N020036021203000D;
+   receive  :X1926B1B1N020036021203000E;
+   receive  :X1926B1B1N020036021203000F;
+   receive  :X1926B1B1N0200360212030010;
+   receive  :X1926B1B1N0200360212030011;
+   receive  :X1926B1B1N0200360212030012;
+   receive  :X1926B1B1N0200360212030013;
+   receive  :X1926B1B1N0200360212030014;
+   receive  :X1926B1B1N0200360212030015;
+   receive  :X1926B1B1N0200360212030016;
+   receive  :X1926B1B1N0200360212030017;
+   receive  :X1926B1B1N0200360212030018;
+   receive  :X1926B1B1N0200360212030019;
+   receive  :X1926B1B1N020036021203001A;
+   receive  :X1926B1B1N020036021203001B;
+   receive  :X1926B1B1N020036021203001C;
+   receive  :X1926B1B1N020036021203001D;
+   receive  :X1926B1B1N020036021203001E;
+   receive  :X1926B1B1N020036021203001F;
+   receive  :X1926B1B1N0200360212030020;
+   receive  :X1926B1B1N0200360212030021;
+   receive  :X1926B1B1N0200360212030022;
+   receive  :X1926B1B1N0200360212030023;
+   receive  :X1926B1B1N0200360212030024;
+   receive  :X1926B1B1N0200360212030025;
+   receive  :X192AB1B1N0200360212030046;
+   receive  :X192AB1B1N0200360212030047;
+   receive  :X192AB1B1N0200360212030048;
+   receive  :X192AB1B1N0200360212030049;
+   receive  :X192AB1B1N020036021203004A;
+   receive  :X192AB1B1N020036021203004B;
+   receive  :X192AB1B1N020036021203004C;
+   receive  :X192AB1B1N020036021203004D;
+   receive  :X192AB1B1N020036021203004E;
+   receive  :X192AB1B1N020036021203004F;
+   receive  :X192AB1B1N0200360212030050;
+   receive  :X192AB1B1N0200360212030031;
+   receive  :X192AB1B1N0200360212030032;
+   receive  :X192AB1B1N0200360212030033;
+   receive  :X192AB1B1N0200360212030034;
+   receive  :X192AB1B1N0200360212030035;
+   receive  :X192AB1B1N0200360212030036;
+   receive  :X192AB1B1N0200360212030037;
+   receive  :X192AB1B1N0200360212030038;
+   receive  :X192AB1B1N0200360212030039;
+   receive  :X192AB1B1N020036021203003A;
+   receive  :X192AB1B1N020036021203003B;
+   receive  :X192AB1B1N020036021203003C;
+   receive  :X192AB1B1N020036021203003D;
+   receive  :X192AB1B1N020036021203003E;
+   receive  :X192AB1B1N020036021203003F;
+   receive  :X192AB1B1N0200360212030040;
+   receive  :X192AB1B1N0200360212030041;
+   receive  :X192AB1B1N0200360212030042;
+   receive  :X192AB1B1N0200360212030043;
+   receive  :X192AB1B1N0200360212030044;
+   receive  :X192AB1B1N0200360212030045;
+   receive  <none>
+Found 69 events
+identifyEventsAddressed
+   send     :X1E1B1AAAN2B;
+   receive  :X1926B1B1N0200360212030016;
+   receive  :X1926B1B1N0200360212030017;
+   receive  :X1926B1B1N0200360212030018;
+   receive  :X1926B1B1N0200360212030019;
+   receive  :X1926B1B1N020036021203001A;
+   receive  :X1926B1B1N020036021203001B;
+   receive  :X1926B1B1N020036021203001C;
+   receive  :X1926B1B1N020036021203001D;
+   receive  :X1926B1B1N020036021203001E;
+   receive  :X1926B1B1N020036021203001F;
+   receive  :X1926B1B1N0200360212030020;
+   receive  :X1926B1B1N0200360212030021;
+   receive  :X1926B1B1N0200360212030022;
+   receive  :X1926B1B1N0200360212030023;
+   receive  :X1926B1B1N0200360212030024;
+   receive  :X1926B1B1N0200360212030025;
+   receive  :X1926B1B1N0200360212030026;
+   receive  :X1926B1B1N0200360212030027;
+   receive  :X1926B1B1N0200360212030028;
+   receive  :X1926B1B1N0200360212030029;
+   receive  :X1926B1B1N020036021203002A;
+   receive  :X1926B1B1N020036021203002B;
+   receive  :X1926B1B1N020036021203002C;
+   receive  :X1926B1B1N020036021203002D;
+   receive  :X1926B1B1N020036021203002E;
+   receive  :X1926B1B1N020036021203002F;
+   receive  :X1926B1B1N0200360212030030;
+   receive  :X192AB1B1N0200360212030031;
+   receive  :X192AB1B1N0200360212030032;
+   receive  :X192AB1B1N0200360212030033;
+   receive  :X192AB1B1N0200360212030034;
+   receive  :X192AB1B1N0200360212030035;
+   receive  :X192AB1B1N0200360212030036;
+   receive  :X192AB1B1N0200360212030037;
+   receive  :X192AB1B1N0200360212030038;
+   receive  :X192AB1B1N0200360212030039;
+   receive  :X192AB1B1N020036021203003A;
+   receive  :X192AB1B1N020036021203003B;
+   receive  :X192AB1B1N020036021203003C;
+   receive  :X192AB1B1N020036021203003D;
+   receive  :X192AB1B1N020036021203003E;
+   receive  :X192AB1B1N020036021203003F;
+   receive  :X192AB1B1N0200360212030040;
+   receive  :X192AB1B1N0200360212030041;
+   receive  :X192AB1B1N0200360212030042;
+   receive  :X192AB1B1N0200360212030043;
+   receive  :X192AB1B1N0200360212030044;
+   receive  :X192AB1B1N0200360212030045;
+   receive  :X192AB1B1N0200360212030046;
+   receive  :X192AB1B1N0200360212030047;
+   receive  :X192AB1B1N0200360212030048;
+   receive  :X192AB1B1N0200360212030049;
+   receive  :X192AB1B1N020036021203004A;
+   receive  :X192AB1B1N020036021203004B;
+   receive  :X192AB1B1N020036021203004C;
+   receive  :X192AB1B1N020036021203004D;
+   receive  :X192AB1B1N020036021203004E;
+   receive  :X192AB1B1N020036021203004F;
+   receive  :X192AB1B1N0200360212030050;
+   receive  <none>
+Found 59 events
+identifyConsumers
+   send     :X1824FAAAN0102030405060708;
+   receive  <none>
+Found 0 nodes
+identifyProducers
+   send     :X1828FAAAN0102030405060708;
+   receive  <none>
+Found 0 nodes
+testProducerConsumerNotification
+   send     :X1E1B1AAAN2B;
+   receive  :X1926B1B1N0200360212030001;
+consumes  [2, 0, 54, 2, 18, 3, 0, 1]
+   receive  :X1926B1B1N0200360212030002;
+consumes  [2, 0, 54, 2, 18, 3, 0, 2]
+   receive  :X1926B1B1N0200360212030003;
+consumes  [2, 0, 54, 2, 18, 3, 0, 3]
+   receive  :X1926B1B1N0200360212030004;
+consumes  [2, 0, 54, 2, 18, 3, 0, 4]
+   receive  :X1926B1B1N0200360212030005;
+consumes  [2, 0, 54, 2, 18, 3, 0, 5]
+   receive  :X1926B1B1N0200360212030006;
+consumes  [2, 0, 54, 2, 18, 3, 0, 6]
+   receive  :X1926B1B1N0200360212030007;
+consumes  [2, 0, 54, 2, 18, 3, 0, 7]
+   receive  :X1926B1B1N0200360212030008;
+consumes  [2, 0, 54, 2, 18, 3, 0, 8]
+   receive  :X1926B1B1N0200360212030009;
+consumes  [2, 0, 54, 2, 18, 3, 0, 9]
+   receive  :X1926B1B1N020036021203000A;
+consumes  [2, 0, 54, 2, 18, 3, 0, 10]
+   receive  :X1926B1B1N020036021203000B;
+consumes  [2, 0, 54, 2, 18, 3, 0, 11]
+   receive  :X1926B1B1N020036021203000C;
+consumes  [2, 0, 54, 2, 18, 3, 0, 12]
+   receive  :X1926B1B1N020036021203000D;
+consumes  [2, 0, 54, 2, 18, 3, 0, 13]
+   receive  :X1926B1B1N020036021203000E;
+consumes  [2, 0, 54, 2, 18, 3, 0, 14]
+   receive  :X1926B1B1N020036021203000F;
+consumes  [2, 0, 54, 2, 18, 3, 0, 15]
+   receive  :X1926B1B1N0200360212030010;
+consumes  [2, 0, 54, 2, 18, 3, 0, 16]
+   receive  :X1926B1B1N0200360212030011;
+consumes  [2, 0, 54, 2, 18, 3, 0, 17]
+   receive  :X1926B1B1N0200360212030012;
+consumes  [2, 0, 54, 2, 18, 3, 0, 18]
+   receive  :X1926B1B1N0200360212030013;
+consumes  [2, 0, 54, 2, 18, 3, 0, 19]
+   receive  :X1926B1B1N0200360212030014;
+consumes  [2, 0, 54, 2, 18, 3, 0, 20]
+   receive  :X1926B1B1N0200360212030015;
+consumes  [2, 0, 54, 2, 18, 3, 0, 21]
+   receive  :X1926B1B1N0200360212030016;
+consumes  [2, 0, 54, 2, 18, 3, 0, 22]
+   receive  :X1926B1B1N0200360212030017;
+consumes  [2, 0, 54, 2, 18, 3, 0, 23]
+   receive  :X1926B1B1N0200360212030018;
+consumes  [2, 0, 54, 2, 18, 3, 0, 24]
+   receive  :X1926B1B1N0200360212030019;
+consumes  [2, 0, 54, 2, 18, 3, 0, 25]
+   receive  :X1926B1B1N020036021203001A;
+consumes  [2, 0, 54, 2, 18, 3, 0, 26]
+   receive  :X1926B1B1N020036021203001B;
+consumes  [2, 0, 54, 2, 18, 3, 0, 27]
+   receive  :X1926B1B1N020036021203001C;
+consumes  [2, 0, 54, 2, 18, 3, 0, 28]
+   receive  :X1926B1B1N020036021203001D;
+consumes  [2, 0, 54, 2, 18, 3, 0, 29]
+   receive  :X1926B1B1N020036021203001E;
+consumes  [2, 0, 54, 2, 18, 3, 0, 30]
+   receive  :X1926B1B1N020036021203001F;
+consumes  [2, 0, 54, 2, 18, 3, 0, 31]
+   receive  :X1926B1B1N0200360212030020;
+consumes  [2, 0, 54, 2, 18, 3, 0, 32]
+   receive  :X1926B1B1N0200360212030021;
+consumes  [2, 0, 54, 2, 18, 3, 0, 33]
+   receive  :X1926B1B1N0200360212030023;
+consumes  [2, 0, 54, 2, 18, 3, 0, 35]
+   receive  :X1926B1B1N0200360212030024;
+consumes  [2, 0, 54, 2, 18, 3, 0, 36]
+   receive  :X1926B1B1N0200360212030025;
+consumes  [2, 0, 54, 2, 18, 3, 0, 37]
+   receive  :X1926B1B1N0200360212030026;
+consumes  [2, 0, 54, 2, 18, 3, 0, 38]
+   receive  :X1926B1B1N0200360212030027;
+consumes  [2, 0, 54, 2, 18, 3, 0, 39]
+   receive  :X1926B1B1N0200360212030028;
+consumes  [2, 0, 54, 2, 18, 3, 0, 40]
+   receive  :X192AB1B1N0200360212030049;
+produces  [2, 0, 54, 2, 18, 3, 0, 73]
+   receive  :X192AB1B1N020036021203004A;
+produces  [2, 0, 54, 2, 18, 3, 0, 74]
+   receive  :X192AB1B1N020036021203004B;
+produces  [2, 0, 54, 2, 18, 3, 0, 75]
+   receive  :X192AB1B1N020036021203004C;
+produces  [2, 0, 54, 2, 18, 3, 0, 76]
+   receive  :X192AB1B1N020036021203004D;
+produces  [2, 0, 54, 2, 18, 3, 0, 77]
+   receive  :X192AB1B1N020036021203004E;
+produces  [2, 0, 54, 2, 18, 3, 0, 78]
+   receive  :X192AB1B1N020036021203004F;
+produces  [2, 0, 54, 2, 18, 3, 0, 79]
+   receive  :X192AB1B1N0200360212030050;
+produces  [2, 0, 54, 2, 18, 3, 0, 80]
+   receive  :X192AB1B1N0200360212030031;
+produces  [2, 0, 54, 2, 18, 3, 0, 49]
+   receive  :X192AB1B1N0200360212030032;
+produces  [2, 0, 54, 2, 18, 3, 0, 50]
+   receive  :X192AB1B1N0200360212030033;
+produces  [2, 0, 54, 2, 18, 3, 0, 51]
+   receive  :X192AB1B1N0200360212030034;
+produces  [2, 0, 54, 2, 18, 3, 0, 52]
+   receive  :X192AB1B1N0200360212030035;
+produces  [2, 0, 54, 2, 18, 3, 0, 53]
+   receive  :X192AB1B1N0200360212030036;
+produces  [2, 0, 54, 2, 18, 3, 0, 54]
+   receive  :X192AB1B1N0200360212030037;
+produces  [2, 0, 54, 2, 18, 3, 0, 55]
+   receive  :X192AB1B1N0200360212030038;
+produces  [2, 0, 54, 2, 18, 3, 0, 56]
+   receive  :X192AB1B1N0200360212030039;
+produces  [2, 0, 54, 2, 18, 3, 0, 57]
+   receive  :X192AB1B1N020036021203003A;
+produces  [2, 0, 54, 2, 18, 3, 0, 58]
+   receive  :X192AB1B1N020036021203003B;
+produces  [2, 0, 54, 2, 18, 3, 0, 59]
+   receive  :X192AB1B1N020036021203003C;
+produces  [2, 0, 54, 2, 18, 3, 0, 60]
+   receive  :X192AB1B1N020036021203003D;
+produces  [2, 0, 54, 2, 18, 3, 0, 61]
+   receive  :X192AB1B1N020036021203003E;
+produces  [2, 0, 54, 2, 18, 3, 0, 62]
+   receive  :X192AB1B1N020036021203003F;
+produces  [2, 0, 54, 2, 18, 3, 0, 63]
+   receive  :X192AB1B1N0200360212030040;
+produces  [2, 0, 54, 2, 18, 3, 0, 64]
+   receive  :X192AB1B1N0200360212030041;
+produces  [2, 0, 54, 2, 18, 3, 0, 65]
+   receive  :X192AB1B1N0200360212030042;
+produces  [2, 0, 54, 2, 18, 3, 0, 66]
+   receive  :X192AB1B1N0200360212030043;
+produces  [2, 0, 54, 2, 18, 3, 0, 67]
+   receive  :X192AB1B1N0200360212030044;
+produces  [2, 0, 54, 2, 18, 3, 0, 68]
+   receive  :X192AB1B1N0200360212030045;
+produces  [2, 0, 54, 2, 18, 3, 0, 69]
+   receive  :X192AB1B1N0200360212030046;
+produces  [2, 0, 54, 2, 18, 3, 0, 70]
+   receive  :X192AB1B1N0200360212030047;
+produces  [2, 0, 54, 2, 18, 3, 0, 71]
+   receive  :X192AB1B1N0200360212030048;
+produces  [2, 0, 54, 2, 18, 3, 0, 72]
+   receive  <none>
+Start individual checks
+   send     :X1824FAAAN0200360212030001;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 1]
+   receive  <none>
+   send     :X1824FAAAN0200360212030002;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 2]
+   receive  <none>
+   send     :X1824FAAAN0200360212030003;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 3]
+   receive  <none>
+   send     :X1824FAAAN0200360212030004;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 4]
+   receive  <none>
+   send     :X1824FAAAN0200360212030005;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 5]
+   receive  <none>
+   send     :X1824FAAAN0200360212030006;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 6]
+   receive  <none>
+   send     :X1824FAAAN0200360212030007;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 7]
+   receive  <none>
+   send     :X1824FAAAN0200360212030008;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 8]
+   receive  <none>
+   send     :X1824FAAAN0200360212030009;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 9]
+   receive  <none>
+   send     :X1824FAAAN020036021203000A;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 10]
+   receive  <none>
+   send     :X1824FAAAN020036021203000B;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 11]
+   receive  <none>
+   send     :X1824FAAAN020036021203000C;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 12]
+   receive  <none>
+   send     :X1824FAAAN020036021203000D;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 13]
+   receive  <none>
+   send     :X1824FAAAN020036021203000E;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 14]
+   receive  <none>
+   send     :X1824FAAAN020036021203000F;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 15]
+   receive  <none>
+   send     :X1824FAAAN0200360212030010;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 16]
+   receive  <none>
+   send     :X1824FAAAN0200360212030011;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 17]
+   receive  <none>
+   send     :X1824FAAAN0200360212030012;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 18]
+   receive  <none>
+   send     :X1824FAAAN0200360212030013;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 19]
+   receive  <none>
+   send     :X1824FAAAN0200360212030014;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 20]
+   receive  <none>
+   send     :X1824FAAAN0200360212030015;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 21]
+   receive  <none>
+   send     :X1824FAAAN0200360212030016;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 22]
+   receive  <none>
+   send     :X1824FAAAN0200360212030017;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 23]
+   receive  <none>
+   send     :X1824FAAAN0200360212030018;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 24]
+   receive  <none>
+   send     :X1824FAAAN0200360212030019;
+   receive  :X1926B1B1N0200360212030019;
+   receive  <none>
+   send     :X1824FAAAN020036021203001A;
+   receive  :X1926B1B1N020036021203001A;
+   receive  <none>
+   send     :X1824FAAAN020036021203001B;
+   receive  :X1926B1B1N020036021203001B;
+   receive  <none>
+   send     :X1824FAAAN020036021203001C;
+   receive  :X1926B1B1N020036021203001C;
+   receive  <none>
+   send     :X1824FAAAN020036021203001D;
+   receive  :X1926B1B1N020036021203001D;
+   receive  <none>
+   send     :X1824FAAAN020036021203001E;
+   receive  :X1926B1B1N020036021203001E;
+   receive  <none>
+   send     :X1824FAAAN020036021203001F;
+   receive  :X1926B1B1N020036021203001F;
+   receive  <none>
+   send     :X1824FAAAN0200360212030020;
+   receive  :X1926B1B1N0200360212030020;
+   receive  :X1926B1B1N0200360212030001;
+   receive  :X1926B1B1N0200360212030002;
+   receive  :X1926B1B1N0200360212030003;
+   receive  :X1926B1B1N0200360212030004;
+   receive  :X1926B1B1N0200360212030005;
+   receive  :X1926B1B1N0200360212030006;
+   receive  :X1926B1B1N0200360212030007;
+   receive  :X1926B1B1N0200360212030008;
+   receive  :X1926B1B1N0200360212030009;
+   receive  :X1926B1B1N020036021203000A;
+   receive  :X1926B1B1N020036021203000B;
+   receive  :X1926B1B1N020036021203000C;
+   receive  :X1926B1B1N020036021203000D;
+   receive  :X1926B1B1N020036021203000E;
+   receive  :X1926B1B1N020036021203000F;
+   receive  :X1926B1B1N0200360212030010;
+   receive  :X1926B1B1N0200360212030011;
+   receive  :X1926B1B1N0200360212030012;
+   receive  :X1926B1B1N0200360212030013;
+   receive  :X1926B1B1N0200360212030014;
+   receive  :X1926B1B1N0200360212030015;
+   receive  :X1926B1B1N0200360212030016;
+   receive  :X1926B1B1N0200360212030017;
+   receive  :X1926B1B1N0200360212030018;
+   receive  <none>
+   send     :X1824FAAAN0200360212030021;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 33]
+   receive  <none>
+   send     :X1824FAAAN0200360212030023;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 35]
+   receive  <none>
+   send     :X1824FAAAN0200360212030024;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 36]
+   receive  <none>
+   send     :X1824FAAAN0200360212030025;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 37]
+   receive  <none>
+   send     :X1824FAAAN0200360212030026;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 38]
+   receive  <none>
+   send     :X1824FAAAN0200360212030027;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 39]
+   receive  <none>
+   send     :X1824FAAAN0200360212030028;
+   receive  <none>
+no reply for consumer  [2, 0, 54, 2, 18, 3, 0, 40]
+   receive  <none>
+   send     :X1828FAAAN0200360212030049;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 73]
+   receive  <none>
+   send     :X1828FAAAN020036021203004A;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 74]
+   receive  <none>
+   send     :X1828FAAAN020036021203004B;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 75]
+   receive  <none>
+   send     :X1828FAAAN020036021203004C;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 76]
+   receive  <none>
+   send     :X1828FAAAN020036021203004D;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 77]
+   receive  <none>
+   send     :X1828FAAAN020036021203004E;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 78]
+   receive  <none>
+   send     :X1828FAAAN020036021203004F;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 79]
+   receive  <none>
+   send     :X1828FAAAN0200360212030050;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 80]
+   receive  <none>
+   send     :X1828FAAAN0200360212030031;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 49]
+   receive  <none>
+   send     :X1828FAAAN0200360212030032;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 50]
+   receive  <none>
+   send     :X1828FAAAN0200360212030033;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 51]
+   receive  <none>
+   send     :X1828FAAAN0200360212030034;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 52]
+   receive  <none>
+   send     :X1828FAAAN0200360212030035;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 53]
+   receive  <none>
+   send     :X1828FAAAN0200360212030036;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 54]
+   receive  <none>
+   send     :X1828FAAAN0200360212030037;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 55]
+   receive  <none>
+   send     :X1828FAAAN0200360212030038;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 56]
+   receive  <none>
+   send     :X1828FAAAN0200360212030039;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 57]
+   receive  <none>
+   send     :X1828FAAAN020036021203003A;
+   receive  :X192AB1B1N020036021203003A;
+   receive  <none>
+   send     :X1828FAAAN020036021203003B;
+   receive  :X192AB1B1N020036021203003B;
+   receive  <none>
+   send     :X1828FAAAN020036021203003C;
+   receive  :X192AB1B1N020036021203003C;
+   receive  <none>
+   send     :X1828FAAAN020036021203003D;
+   receive  :X192AB1B1N020036021203003D;
+   receive  <none>
+   send     :X1828FAAAN020036021203003E;
+   receive  :X192AB1B1N020036021203003E;
+   receive  <none>
+   send     :X1828FAAAN020036021203003F;
+   receive  :X192AB1B1N020036021203003F;
+   receive  <none>
+   send     :X1828FAAAN0200360212030040;
+   receive  :X192AB1B1N0200360212030040;
+   receive  <none>
+   send     :X1828FAAAN0200360212030041;
+   receive  :X192AB1B1N0200360212030041;
+   receive  :X1926B1B1N0200360212030021;
+Unexpected reply :X1926B1B1N0200360212030021;
+
+   receive  :X1926B1B1N0200360212030023;
+Unexpected reply :X1926B1B1N0200360212030023;
+
+   receive  :X1926B1B1N0200360212030024;
+Unexpected reply :X1926B1B1N0200360212030024;
+
+   receive  :X1926B1B1N0200360212030025;
+Unexpected reply :X1926B1B1N0200360212030025;
+
+   receive  :X1926B1B1N0200360212030026;
+Unexpected reply :X1926B1B1N0200360212030026;
+
+   receive  :X1926B1B1N0200360212030027;
+Unexpected reply :X1926B1B1N0200360212030027;
+
+   receive  :X1926B1B1N0200360212030028;
+Unexpected reply :X1926B1B1N0200360212030028;
+
+   receive  :X192AB1B1N0200360212030049;
+   receive  :X192AB1B1N020036021203004A;
+   receive  :X192AB1B1N020036021203004B;
+   receive  :X192AB1B1N020036021203004C;
+   receive  :X192AB1B1N020036021203004D;
+   receive  :X192AB1B1N020036021203004E;
+   receive  :X192AB1B1N020036021203004F;
+   receive  :X192AB1B1N0200360212030050;
+   receive  :X192AB1B1N0200360212030031;
+   receive  :X192AB1B1N0200360212030032;
+   receive  :X192AB1B1N0200360212030033;
+   receive  :X192AB1B1N0200360212030034;
+   receive  :X192AB1B1N0200360212030035;
+   receive  :X192AB1B1N0200360212030036;
+   receive  :X192AB1B1N0200360212030037;
+   receive  :X192AB1B1N0200360212030038;
+   receive  :X192AB1B1N0200360212030039;
+   receive  <none>
+   send     :X1828FAAAN0200360212030042;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 66]
+   receive  <none>
+   send     :X1828FAAAN0200360212030043;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 67]
+   receive  <none>
+   send     :X1828FAAAN0200360212030044;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 68]
+   receive  <none>
+   send     :X1828FAAAN0200360212030045;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 69]
+   receive  <none>
+   send     :X1828FAAAN0200360212030046;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 70]
+   receive  <none>
+   send     :X1828FAAAN0200360212030047;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 71]
+   receive  <none>
+   send     :X1828FAAAN0200360212030048;
+   receive  <none>
+no reply for producer  [2, 0, 54, 2, 18, 3, 0, 72]
+   receive  <none>
+datagram
+   send     :X1D1B1AAAN01020304;
+   receive  <none>
+Did not receive reply
+Error in datagram

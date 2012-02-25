@@ -1,0 +1,778 @@
+   connect to  172.16.0.20 : 23
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+verifyNodeGlobal w no NodeID
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+verifyNodeGlobal with NodeID
+   send     :X180A7AAAN020136011203;
+   receive  :X180B7F8FN020136011203;
+verifyNodeAddressed
+   send     :X1EF8FAAAN0A020136011203;
+   receive  :X180B7F8FN020136011203;
+identifyEventsAddressed
+   send     :X1EF8FAAAN2B;
+   receive  :X1926BF8FN0201360112030001;
+   receive  :X1926BF8FN0201360112030002;
+   receive  :X1926BF8FN0201360112030003;
+   receive  :X1926BF8FN0201360112030004;
+   receive  :X1926BF8FN0201360112030005;
+   receive  :X1926BF8FN0201360112030006;
+   receive  :X1926BF8FN0201360112030007;
+   receive  :X1926BF8FN0201360112030008;
+   receive  :X1926BF8FN0201360112030009;
+   receive  :X1926BF8FN020136011203000A;
+   receive  :X1926BF8FN020136011203000B;
+   receive  :X1926BF8FN020136011203000C;
+   receive  :X1926BF8FN020136011203000D;
+   receive  :X1926BF8FN020136011203000E;
+   receive  :X1926BF8FN020136011203000F;
+   receive  :X1926BF8FN0201360112030010;
+   receive  :X1926BF8FN0201360112030011;
+   receive  :X1926BF8FN0201360112030012;
+   receive  :X1926BF8FN0201360112030013;
+   receive  :X1926BF8FN0201360112030014;
+   receive  :X1926BF8FN0201360112030015;
+   receive  :X1926BF8FN0201360112030016;
+   receive  :X1926BF8FN0201360112030017;
+   receive  :X1926BF8FN0201360112030018;
+   receive  :X1926BF8FN0201360112030019;
+   receive  :X1926BF8FN020136011203001A;
+   receive  :X1926BF8FN020136011203001B;
+   receive  :X1926BF8FN020136011203001C;
+   receive  :X1926BF8FN020136011203001D;
+   receive  :X1926BF8FN020136011203001E;
+   receive  :X1926BF8FN020136011203001F;
+   receive  :X1926BF8FN0201360112030020;
+   receive  :X1926BF8FN0201360112030021;
+   receive  :X1926BF8FN0201360112030022;
+   receive  :X1926BF8FN0201360112030023;
+   receive  :X1926BF8FN0201360112030024;
+   receive  :X1926BF8FN0201360112030025;
+   receive  :X1926BF8FN0201360112030026;
+   receive  :X1926BF8FN0201360112030027;
+   receive  :X1926BF8FN0201360112030028;
+   receive  :X1926BF8FN0201360112030029;
+   receive  :X1926BF8FN020136011203002A;
+   receive  :X1926BF8FN020136011203002B;
+:X1926BF8FN020136011203002C;
+   receive  :X1926BF8FN020136011203002D;
+   receive  :X1926BF8FN020136011203002E;
+   receive  :X1926BF8FN020136011203002F;
+   receive  :X192ABF8FN0201360112030031;
+   receive  :X192ABF8FN0201360112030032;
+   receive  :X192ABF8FN0201360112030033;
+   receive  :X192ABF8FN0201360112030034;
+   receive  :X192ABF8FN0201360112030035;
+   receive  :X192ABF8FN0201360112030036;
+   receive  :X192ABF8FN0201360112030037;
+   receive  :X192ABF8FN0201360112030038;
+   receive  :X192ABF8FN0201360112030039;
+   receive  :X192ABF8FN020136011203003A;
+   receive  :X192ABF8FN020136011203003B;
+   receive  :X192ABF8FN020136011203003C;
+   receive  :X192ABF8FN020136011203003D;
+   receive  :X192ABF8FN020136011203003E;
+   receive  :X192ABF8FN020136011203003F;
+   receive  :X192ABF8FN0201360112030040;
+   receive  :X192ABF8FN0201360112030041;
+   receive  :X192ABF8FN0201360112030042;
+   receive  :X192ABF8FN0201360112030043;
+   receive  :X192ABF8FN0201360112030044;
+   receive  :X192ABF8FN0201360112030045;
+   receive  :X192ABF8FN0201360112030046;
+   receive  :X192ABF8FN0201360112030047;
+   receive  :X192ABF8FN0201360112030048;
+   receive  :X192ABF8FN0201360112030049;
+   receive  :X192ABF8FN020136011203004A;
+   receive  :X192ABF8FN020136011203004B;
+   receive  :X192ABF8FN020136011203004C;
+   receive  :X192ABF8FN020136011203004D;
+   receive  :X192ABF8FN020136011203004E;
+   receive  :X192ABF8FN020136011203004F;
+   receive  :X192ABF8FN0201360112030050;
+   receive  <none>
+Found 78 events
+identifyConsumers
+   send     :X1824FAAAN0102030405060708;
+   receive  <none>
+Found 0 nodes
+identifyProducers
+   send     :X1828FAAAN0102030405060708;
+   receive  <none>
+Found 0 nodes
+datagram
+   send     :X1DF8FAAAN01020304;
+   receive  :X1EAAAF8FN4C;
+testProducerConsumerNotification
+   send     :X1EF8FAAAN2B;
+   receive  :X1926BF8FN0201360112030001;
+consumes  [2, 1, 54, 1, 18, 3, 0, 1]
+   receive  :X1926BF8FN0201360112030002;
+consumes  [2, 1, 54, 1, 18, 3, 0, 2]
+   receive  :X1926BF8FN0201360112030003;
+consumes  [2, 1, 54, 1, 18, 3, 0, 3]
+   receive  :X1926BF8FN0201360112030004;
+consumes  [2, 1, 54, 1, 18, 3, 0, 4]
+   receive  :X1926BF8FN0201360112030005;
+consumes  [2, 1, 54, 1, 18, 3, 0, 5]
+   receive  :X1926BF8FN0201360112030006;
+consumes  [2, 1, 54, 1, 18, 3, 0, 6]
+   receive  :X1926BF8FN0201360112030007;
+consumes  [2, 1, 54, 1, 18, 3, 0, 7]
+   receive  :X1926BF8FN0201360112030008;
+consumes  [2, 1, 54, 1, 18, 3, 0, 8]
+   receive  :X1926BF8FN0201360112030009;
+consumes  [2, 1, 54, 1, 18, 3, 0, 9]
+   receive  :X1926BF8FN020136011203000A;
+consumes  [2, 1, 54, 1, 18, 3, 0, 10]
+   receive  :X1926BF8FN020136011203000B;
+consumes  [2, 1, 54, 1, 18, 3, 0, 11]
+   receive  :X1926BF8FN020136011203000C;
+consumes  [2, 1, 54, 1, 18, 3, 0, 12]
+   receive  :X1926BF8FN020136011203000D;
+consumes  [2, 1, 54, 1, 18, 3, 0, 13]
+   receive  :X1926BF8FN020136011203000E;
+consumes  [2, 1, 54, 1, 18, 3, 0, 14]
+   receive  :X1926BF8FN020136011203000F;
+consumes  [2, 1, 54, 1, 18, 3, 0, 15]
+   receive  :X1926BF8FN0201360112030010;
+consumes  [2, 1, 54, 1, 18, 3, 0, 16]
+   receive  :X1926BF8FN0201360112030011;
+consumes  [2, 1, 54, 1, 18, 3, 0, 17]
+   receive  :X1926BF8FN0201360112030012;
+consumes  [2, 1, 54, 1, 18, 3, 0, 18]
+   receive  :X1926BF8FN0201360112030013;
+consumes  [2, 1, 54, 1, 18, 3, 0, 19]
+   receive  :X1926BF8FN0201360112030014;
+consumes  [2, 1, 54, 1, 18, 3, 0, 20]
+   receive  :X1926BF8FN0201360112030015;
+consumes  [2, 1, 54, 1, 18, 3, 0, 21]
+   receive  :X1926BF8FN0201360112030017;
+consumes  [2, 1, 54, 1, 18, 3, 0, 23]
+   receive  :X1926BF8FN0201360112030018;
+consumes  [2, 1, 54, 1, 18, 3, 0, 24]
+   receive  :X1926BF8FN0201360112030019;
+consumes  [2, 1, 54, 1, 18, 3, 0, 25]
+   receive  :X1926BF8FN020136011203001A;
+consumes  [2, 1, 54, 1, 18, 3, 0, 26]
+   receive  :X1926BF8FN020136011203001B;
+consumes  [2, 1, 54, 1, 18, 3, 0, 27]
+   receive  :X1926BF8FN020136011203001C;
+consumes  [2, 1, 54, 1, 18, 3, 0, 28]
+   receive  :X1926BF8FN020136011203001D;
+consumes  [2, 1, 54, 1, 18, 3, 0, 29]
+   receive  :X1926BF8FN020136011203001E;
+consumes  [2, 1, 54, 1, 18, 3, 0, 30]
+   receive  :X1926BF8FN020136011203001F;
+consumes  [2, 1, 54, 1, 18, 3, 0, 31]
+   receive  :X1926BF8FN0201360112030020;
+consumes  [2, 1, 54, 1, 18, 3, 0, 32]
+   receive  :X1926BF8FN0201360112030021;
+consumes  [2, 1, 54, 1, 18, 3, 0, 33]
+   receive  :X1926BF8FN0201360112030022;
+consumes  [2, 1, 54, 1, 18, 3, 0, 34]
+   receive  :X1926BF8FN0201360112030023;
+consumes  [2, 1, 54, 1, 18, 3, 0, 35]
+   receive  :X1926BF8FN0201360112030024;
+consumes  [2, 1, 54, 1, 18, 3, 0, 36]
+   receive  :X1926BF8FN0201360112030025;
+consumes  [2, 1, 54, 1, 18, 3, 0, 37]
+   receive  :X1926BF8FN0201360112030026;
+consumes  [2, 1, 54, 1, 18, 3, 0, 38]
+   receive  :X1926BF8FN0201360112030027;
+consumes  [2, 1, 54, 1, 18, 3, 0, 39]
+   receive  :X1926BF8FN0201360112030028;
+consumes  [2, 1, 54, 1, 18, 3, 0, 40]
+   receive  :X1926BF8FN0201360112030029;
+consumes  [2, 1, 54, 1, 18, 3, 0, 41]
+   receive  :X1926BF8FN020136011203002A;
+consumes  [2, 1, 54, 1, 18, 3, 0, 42]
+   receive  :X1926BF8FN020136011203002B;
+consumes  [2, 1, 54, 1, 18, 3, 0, 43]
+   receive  :X1926BF8FN020136011203002C;
+consumes  [2, 1, 54, 1, 18, 3, 0, 44]
+   receive  :X1926BF8FN020136011203002D;
+consumes  [2, 1, 54, 1, 18, 3, 0, 45]
+   receive  :X1926BF8FN020136011203002E;
+consumes  [2, 1, 54, 1, 18, 3, 0, 46]
+   receive  :X1926BF8FN020136011203002F;
+consumes  [2, 1, 54, 1, 18, 3, 0, 47]
+   receive  :X1926BF8FN0201360112030030;
+consumes  [2, 1, 54, 1, 18, 3, 0, 48]
+   receive  :X192ABF8FN0201360112030031;
+produces  [2, 1, 54, 1, 18, 3, 0, 49]
+   receive  :X192ABF8FN0201360112030032;
+produces  [2, 1, 54, 1, 18, 3, 0, 50]
+   receive  :X192ABF8FN0201360112030033;
+produces  [2, 1, 54, 1, 18, 3, 0, 51]
+   receive  :X192ABF8FN0201360112030034;
+produces  [2, 1, 54, 1, 18, 3, 0, 52]
+   receive  :X192ABF8FN0201360112030035;
+produces  [2, 1, 54, 1, 18, 3, 0, 53]
+   receive  :X192ABF8FN0201360112030036;
+produces  [2, 1, 54, 1, 18, 3, 0, 54]
+   receive  :X192ABF8FN0201360112030037;
+produces  [2, 1, 54, 1, 18, 3, 0, 55]
+   receive  :X192ABF8FN0201360112030038;
+produces  [2, 1, 54, 1, 18, 3, 0, 56]
+   receive  :X192ABF8FN0201360112030039;
+produces  [2, 1, 54, 1, 18, 3, 0, 57]
+   receive  :X192ABF8FN020136011203003A;
+produces  [2, 1, 54, 1, 18, 3, 0, 58]
+   receive  :X192ABF8FN020136011203003B;
+produces  [2, 1, 54, 1, 18, 3, 0, 59]
+   receive  :X192ABF8FN020136011203003C;
+produces  [2, 1, 54, 1, 18, 3, 0, 60]
+   receive  :X192ABF8FN020136011203003D;
+produces  [2, 1, 54, 1, 18, 3, 0, 61]
+   receive  :X192ABF8FN020136011203003E;
+produces  [2, 1, 54, 1, 18, 3, 0, 62]
+   receive  :X192ABF8FN020136011203003F;
+produces  [2, 1, 54, 1, 18, 3, 0, 63]
+   receive  :X192ABF8FN0201360112030040;
+produces  [2, 1, 54, 1, 18, 3, 0, 64]
+   receive  :X192ABF8FN0201360112030041;
+produces  [2, 1, 54, 1, 18, 3, 0, 65]
+   receive  :X192ABF8FN0201360112030042;
+produces  [2, 1, 54, 1, 18, 3, 0, 66]
+   receive  :X192ABF8FN0201360112030043;
+produces  [2, 1, 54, 1, 18, 3, 0, 67]
+   receive  :X192ABF8FN0201360112030044;
+produces  [2, 1, 54, 1, 18, 3, 0, 68]
+   receive  :X192ABF8FN0201360112030045;
+produces  [2, 1, 54, 1, 18, 3, 0, 69]
+   receive  :X192ABF8FN0201360112030046;
+produces  [2, 1, 54, 1, 18, 3, 0, 70]
+   receive  :X192ABF8FN0201360112030047;
+produces  [2, 1, 54, 1, 18, 3, 0, 71]
+   receive  :X192ABF8FN0201360112030048;
+produces  [2, 1, 54, 1, 18, 3, 0, 72]
+   receive  :X192ABF8FN0201360112030049;
+produces  [2, 1, 54, 1, 18, 3, 0, 73]
+   receive  :X192ABF8FN020136011203004A;
+produces  [2, 1, 54, 1, 18, 3, 0, 74]
+   receive  :X192ABF8FN020136011203004B;
+produces  [2, 1, 54, 1, 18, 3, 0, 75]
+   receive  :X192ABF8FN020136011203004C;
+produces  [2, 1, 54, 1, 18, 3, 0, 76]
+   receive  :X192ABF8FN020136011203004D;
+produces  [2, 1, 54, 1, 18, 3, 0, 77]
+   receive  :X192ABF8FN020136011203004E;
+produces  [2, 1, 54, 1, 18, 3, 0, 78]
+   receive  :X192ABF8FN020136011203004F;
+produces  [2, 1, 54, 1, 18, 3, 0, 79]
+   receive  :X192ABF8FN0201360112030050;
+produces  [2, 1, 54, 1, 18, 3, 0, 80]
+   receive  <none>
+Looks good
+Start individual checks
+   send     :X1824FAAAN0201360112030001;
+   receive  :X1926BF8FN0201360112030001;
+   receive  <none>
+   send     :X1824FAAAN0201360112030002;
+   receive  :X1926BF8FN0201360112030002;
+   receive  <none>
+   send     :X1824FAAAN0201360112030003;
+   receive  :X1926BF8FN0201360112030003;
+   receive  <none>
+   send     :X1824FAAAN0201360112030004;
+   receive  :X1926BF8FN0201360112030004;
+   receive  <none>
+   send     :X1824FAAAN0201360112030005;
+   receive  :X1926BF8FN0201360112030005;
+   receive  <none>
+   send     :X1824FAAAN0201360112030006;
+   receive  :X1926BF8FN0201360112030006;
+   receive  <none>
+   send     :X1824FAAAN0201360112030007;
+   receive  :X1926BF8FN0201360112030007;
+   receive  <none>
+   send     :X1824FAAAN0201360112030008;
+   receive  :X1926BF8FN0201360112030008;
+   receive  <none>
+   send     :X1824FAAAN0201360112030009;
+   receive  :X1926BF8FN0201360112030009;
+   receive  <none>
+   send     :X1824FAAAN020136011203000A;
+   receive  :X1926BF8FN020136011203000A;
+   receive  <none>
+   send     :X1824FAAAN020136011203000B;
+   receive  :X1926BF8FN020136011203000B;
+   receive  <none>
+   send     :X1824FAAAN020136011203000C;
+   receive  :X1926BF8FN020136011203000C;
+   receive  <none>
+   send     :X1824FAAAN020136011203000D;
+   receive  :X1926BF8FN020136011203000D;
+   receive  <none>
+   send     :X1824FAAAN020136011203000E;
+   receive  :X1926BF8FN020136011203000E;
+   receive  <none>
+   send     :X1824FAAAN020136011203000F;
+   receive  :X1926BF8FN020136011203000F;
+   receive  <none>
+   send     :X1824FAAAN0201360112030010;
+   receive  :X1926BF8FN0201360112030010;
+   receive  <none>
+   send     :X1824FAAAN0201360112030011;
+   receive  :X1926BF8FN0201360112030011;
+   receive  <none>
+   send     :X1824FAAAN0201360112030012;
+   receive  :X1926BF8FN0201360112030012;
+   receive  <none>
+   send     :X1824FAAAN0201360112030013;
+   receive  :X1926BF8FN0201360112030013;
+   receive  <none>
+   send     :X1824FAAAN0201360112030014;
+   receive  :X1926BF8FN0201360112030014;
+   receive  <none>
+   send     :X1824FAAAN0201360112030015;
+   receive  :X1926BF8FN0201360112030015;
+   receive  <none>
+   send     :X1824FAAAN0201360112030017;
+   receive  :X1926BF8FN0201360112030017;
+   receive  <none>
+   send     :X1824FAAAN0201360112030018;
+   receive  :X1926BF8FN0201360112030018;
+   receive  <none>
+   send     :X1824FAAAN0201360112030019;
+   receive  :X1926BF8FN0201360112030019;
+   receive  <none>
+   send     :X1824FAAAN020136011203001A;
+   receive  :X1926BF8FN020136011203001A;
+   receive  <none>
+   send     :X1824FAAAN020136011203001B;
+   receive  :X1926BF8FN020136011203001B;
+   receive  <none>
+   send     :X1824FAAAN020136011203001C;
+   receive  :X1926BF8FN020136011203001C;
+   receive  <none>
+   send     :X1824FAAAN020136011203001D;
+   receive  :X1926BF8FN020136011203001D;
+   receive  <none>
+   send     :X1824FAAAN020136011203001E;
+   receive  :X1926BF8FN020136011203001E;
+   receive  <none>
+   send     :X1824FAAAN020136011203001F;
+   receive  :X1926BF8FN020136011203001F;
+   receive  <none>
+   send     :X1824FAAAN0201360112030020;
+   receive  :X1926BF8FN0201360112030020;
+   receive  <none>
+   send     :X1824FAAAN0201360112030021;
+   receive  :X1926BF8FN0201360112030021;
+   receive  <none>
+   send     :X1824FAAAN0201360112030022;
+   receive  :X1926BF8FN0201360112030022;
+   receive  <none>
+   send     :X1824FAAAN0201360112030023;
+   receive  :X1926BF8FN0201360112030023;
+   receive  <none>
+   send     :X1824FAAAN0201360112030024;
+   receive  :X1926BF8FN0201360112030024;
+   receive  <none>
+   send     :X1824FAAAN0201360112030025;
+   receive  :X1926BF8FN0201360112030025;
+   receive  <none>
+   send     :X1824FAAAN0201360112030026;
+   receive  :X1926BF8FN0201360112030026;
+   receive  <none>
+   send     :X1824FAAAN0201360112030027;
+   receive  :X1926BF8FN0201360112030027;
+   receive  <none>
+   send     :X1824FAAAN0201360112030028;
+   receive  :X1926BF8FN0201360112030028;
+   receive  <none>
+   send     :X1824FAAAN0201360112030029;
+   receive  :X1926BF8FN0201360112030029;
+   receive  <none>
+   send     :X1824FAAAN020136011203002A;
+   receive  :X1926BF8FN020136011203002A;
+   receive  <none>
+   send     :X1824FAAAN020136011203002B;
+   receive  :X1926BF8FN020136011203002B;
+   receive  <none>
+   send     :X1824FAAAN020136011203002C;
+   receive  :X1926BF8FN020136011203002C;
+   receive  <none>
+   send     :X1824FAAAN020136011203002D;
+   receive  :X1926BF8FN020136011203002D;
+   receive  <none>
+   send     :X1824FAAAN020136011203002E;
+   receive  :X1926BF8FN020136011203002E;
+   receive  <none>
+   send     :X1824FAAAN020136011203002F;
+   receive  :X1926BF8FN020136011203002F;
+   receive  <none>
+   send     :X1824FAAAN0201360112030030;
+   receive  :X1926BF8FN0201360112030030;
+   receive  <none>
+   send     :X1828FAAAN0201360112030031;
+   receive  :X192ABF8FN0201360112030031;
+   receive  <none>
+   send     :X1828FAAAN0201360112030032;
+   receive  :X192ABF8FN0201360112030032;
+   receive  <none>
+   send     :X1828FAAAN0201360112030033;
+   receive  :X192ABF8FN0201360112030033;
+   receive  <none>
+   send     :X1828FAAAN0201360112030034;
+   receive  :X192ABF8FN0201360112030034;
+   receive  <none>
+   send     :X1828FAAAN0201360112030035;
+   receive  :X192ABF8FN0201360112030035;
+   receive  <none>
+   send     :X1828FAAAN0201360112030036;
+   receive  :X192ABF8FN0201360112030036;
+   receive  <none>
+   send     :X1828FAAAN0201360112030037;
+   receive  :X192ABF8FN0201360112030037;
+   receive  <none>
+   send     :X1828FAAAN0201360112030038;
+   receive  :X192ABF8FN0201360112030038;
+   receive  <none>
+   send     :X1828FAAAN0201360112030039;
+   receive  :X192ABF8FN0201360112030039;
+   receive  <none>
+   send     :X1828FAAAN020136011203003A;
+   receive  :X192ABF8FN020136011203003A;
+   receive  <none>
+   send     :X1828FAAAN020136011203003B;
+   receive  :X192ABF8FN020136011203003B;
+   receive  <none>
+   send     :X1828FAAAN020136011203003C;
+   receive  :X192ABF8FN020136011203003C;
+   receive  <none>
+   send     :X1828FAAAN020136011203003D;
+   receive  :X192ABF8FN020136011203003D;
+   receive  <none>
+   send     :X1828FAAAN020136011203003E;
+   receive  :X192ABF8FN020136011203003E;
+   receive  <none>
+   send     :X1828FAAAN020136011203003F;
+   receive  :X192ABF8FN020136011203003F;
+   receive  <none>
+   send     :X1828FAAAN0201360112030040;
+   receive  :X192ABF8FN0201360112030040;
+   receive  <none>
+   send     :X1828FAAAN0201360112030041;
+   receive  :X192ABF8FN0201360112030041;
+   receive  <none>
+   send     :X1828FAAAN0201360112030042;
+   receive  :X192ABF8FN0201360112030042;
+   receive  <none>
+   send     :X1828FAAAN0201360112030043;
+   receive  :X192ABF8FN0201360112030043;
+   receive  <none>
+   send     :X1828FAAAN0201360112030044;
+   receive  :X192ABF8FN0201360112030044;
+   receive  <none>
+   send     :X1828FAAAN0201360112030045;
+   receive  :X192ABF8FN0201360112030045;
+   receive  <none>
+   send     :X1828FAAAN0201360112030046;
+   receive  :X192ABF8FN0201360112030046;
+   receive  <none>
+   send     :X1828FAAAN0201360112030047;
+   receive  :X192ABF8FN0201360112030047;
+   receive  <none>
+   send     :X1828FAAAN0201360112030048;
+   receive  :X192ABF8FN0201360112030048;
+   receive  <none>
+   send     :X1828FAAAN0201360112030049;
+   receive  :X192ABF8FN0201360112030049;
+   receive  <none>
+   send     :X1828FAAAN020136011203004A;
+   receive  :X192ABF8FN020136011203004A;
+   receive  <none>
+   send     :X1828FAAAN020136011203004B;
+   receive  :X192ABF8FN020136011203004B;
+   receive  <none>
+   send     :X1828FAAAN020136011203004C;
+   receive  :X192ABF8FN020136011203004C;
+   receive  <none>
+   send     :X1828FAAAN020136011203004D;
+   receive  :X192ABF8FN020136011203004D;
+   receive  <none>
+   send     :X1828FAAAN020136011203004E;
+   receive  :X192ABF8FN020136011203004E;
+   receive  <none>
+   send     :X1828FAAAN020136011203004F;
+   receive  :X192ABF8FN020136011203004F;
+   receive  <none>
+   send     :X1828FAAAN0201360112030050;
+   receive  :X192ABF8FN0201360112030050;
+   receive  <none>
+testConfigurationProtocol
+   send     :X1DF8FAAAN2080;
+   receive  :X1EAAAF8FN4C;
+   receive  :X1DAAAF8FN2082030138FFFC;
+   send     :X1EF8FAAAN4C;
+Configuration Options:
+   Available commands  0x301
+        Write lengths  0x38
+        Highest space  255
+         Lowest space  252
+   send     :X1DF8FAAAN20420000000001;
+   receive  :X1EAAAF8FN4C;
+   receive  :X1DAAAF8FN205200000000EE;
+   send     :X1EF8FAAAN4C;
+read value [238]
+   send     :X1DF8FAAAN20420000000008;
+   receive  :X1EAAAF8FN4C;
+   receive  :X1CAAAF8FN205200000000EE55;
+   receive  :X1DAAAF8FN5EE500500201;
+   send     :X1EF8FAAAN4C;
+read value [238, 85, 94, 229, 0, 80, 2, 1]
+   send     :X1DF8FAAAN2084FF;
+   receive  :X1EAAAF8FN4C;
+   receive  :X1DAAAF8FN2086FF00FFFFFF0F;
+   send     :X1EF8FAAAN4C;
+Address Space Options:
+      Highest address  0xffffff
+      Alignment flags  0xf
+           Space name  []
+testResponseTime 100
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+   send     :X180A7AAAN;
+   receive  :X180B7F8FN020136011203;
+1.17700004578
+unknownMtiAddressed
+   send     :X1EF8FAAAN00;
+   receive  <none>
+Expected reply not received for 0
+testAliasConflict
+  check no-response global message with alias conflict
+   send     :X180A7F8FN000000000000;
+   receive  :X170203D4N;
+   receive  :X161063D4N;
+   receive  :X150113D4N;
+   receive  :X142033D4N;
+   receive  :X107003D4N;
+   receive  :X190873D4N020136011203;
+  check response-inducing global message with alias conflict
+   send     :X180A73D4N;
+   receive  :X17020DACN;
+   receive  :X16106DACN;
+   receive  :X15011DACN;
+   receive  :X14203DACN;
+   receive  :X10700DACN;
+   receive  :X19087DACN020136011203;
+  check addressed message with alias conflict
+   send     :X1EAAADACN0A;
+   receive  :X1702090DN;
+   receive  :X1610690DN;
+   receive  :X1501190DN;
+   receive  :X1420390DN;
+   receive  :X1070090DN;
+   receive  :X1908790DN020136011203;
+  check CheckID with alias conflict
+   send     :X1702090DN;
+   receive  :X1070090DN;
+   send     :X1070090DN;
+  check ReserveID with alias conflict
+   receive  :X170207B0N;
+   receive  :X161067B0N;
+   receive  :X150117B0N;
+   receive  :X142037B0N;
+   receive  :X107007B0N;
+   receive  :X190877B0N020136011203;
+note: Did not perform testStartup, which is manual

@@ -1,0 +1,9 @@
+   connect to  COM37  at  333333
+   send     :X180A7AAAN;
+   receive  <none>
+verifyNodeGlobal w no NodeID
+   send     :X180A7AAAN;
+   receive  
+Unexpected reply received  
+
+Error in verifyNodeGlobal w no NodeID

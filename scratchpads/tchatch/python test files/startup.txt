@@ -1,0 +1,4 @@
+Restart node now
+Start checking node output
+delay was  0.427000045776
+AMD node ID  020036021203  did not match one in CID frames  020006021203
