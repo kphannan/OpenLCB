@@ -14,14 +14,15 @@
  *
  * For data directed from USB -> CAN, the sketch provides flow
  * control using the (virtual) CTS signal.
+ * added memory free support to monitor free memory in a running sketch.  Tim Hatch.
+ * To look and free memory.  run python monitor.py and press the reset button
+ * on the CAN/USB board, it will reply with the amount of free bytes.
  */
 
-//#define         BAUD_RATE       115200
-#define         BAUD_RATE       333333
+//#define         BAUD_RATE       115300
+#define         BAUD_RATE       288000
 //#define         BAUD_RATE       333333
-//#if defined (FACTORY_DEFAULT_PIN)
-  // pinMode(FACTORY_DEFAULT_PIN, INPUT);
-   //if (digitalRead(FACTORY_DEFAULT_PIN) != 1)
+
 
 #include <arduino.h>
 
@@ -29,6 +30,7 @@
 #include <can.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <MemoryFree.h>
 
 #define         RXCAN_BUF_COUNT   64
 tCAN 		rxCAN[RXCAN_BUF_COUNT]; // CAN receive buffers
@@ -75,11 +77,15 @@ void setup()
 {
   pinMode(RX_CTS_PIN,OUTPUT);
   digitalWrite(RX_CTS_PIN,LOW);
-
+  UCSR0A |= _BV(U2X0); 
+  
   Serial.begin(BAUD_RATE);
   Serial.println();
-  Serial.println(":I LEDuino CAN-USB Adaptor Version: 1;");
-
+  Serial.println("<<<TCH Technology CAN/USB interface>>>");
+  Serial.print("This is with 64 bytes in buffer ");
+  Serial.println();
+  Serial.print("free memory in bytes ");
+  Serial.println( freeMemory() );
   // Initialize MCP2515
   can_init(BITRATE_125_KBPS);
   rxCanBuffCounter = 0;
@@ -89,6 +95,8 @@ void setup()
 }
 
 void loop()
+
+
 {
   // check for RTS flow control to PC on USB side
   //int charWaiting = Serial.available();
