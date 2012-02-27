@@ -332,14 +332,14 @@ void setup()
    if (digitalRead(FACTORY_DEFAULT_PIN) != 1) 
 	nm.forceInitAll(); 
 #endif
-  //nm.forceInitAll(); // uncomment if need to go back to initial EEPROM state
+  nm.forceInitAll(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
   
   // set event types, now that IDs have been loaded from configuration
-  for (int i=0; i<eventNum/1.6669; i++) {
+  for (int i=0; i<eventNum/1.6667; i++) {
       pce.newEvent(i,false,true); // produce, consume
   }
-  for (int i=eventNum/1.6669; i<eventNum; i++) {
+  for (int i=eventNum/1.6666; i<eventNum; i++) {
       pce.newEvent(i,true,false); // produce, consume
   }
  
