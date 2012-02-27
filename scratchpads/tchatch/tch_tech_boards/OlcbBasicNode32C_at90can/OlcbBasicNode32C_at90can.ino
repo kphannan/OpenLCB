@@ -10,7 +10,7 @@
 //==============================================================
 
 // next line for stand-alone compile
-#include <WProgram.h>
+#include <Arduino.h>
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -47,6 +47,8 @@ class foo{};
 #include "Configuration.h"
 #include "NodeMemory.h"
 #include "PCE.h"
+#include "PIP.h"
+#include "SNII.h"
 #include "BG.h"
 #include "ButtonLed.h"
 
@@ -70,6 +72,10 @@ OlcbStream str(&txBuffer, streamRcvCallback, &link);
  */
 prog_char configDefInfo[] PROGMEM = "OlcbBasicNode"; // null terminated string
 
+extern "C" {
+const prog_char SNII_const_data[] PROGMEM = "\001OpenLCB\000OlcbBasicNode\0000.4";
+} 
+
 const uint8_t getRead(uint32_t address, int space) {
   if (space == 0xFF) {
     // Configuration definition information
@@ -79,6 +85,12 @@ const uint8_t getRead(uint32_t address, int space) {
     return *(((uint8_t*)&rxBuffer)+address);
   } else if (space == 0xFD) {
     // Configuration space
+    return EEPROM.read(address);
+  } else if (space == 0xFC) { // 
+    // used by ADCDI for constant data
+    return pgm_read_byte(SNII_const_data+address);
+  } else if (space == 0xFB) { // 
+    // used by ADCDI for variable data
     return EEPROM.read(address);
   } else {
     // unknown space
@@ -96,6 +108,8 @@ void getWrite(uint32_t address, int space, uint8_t val) {
   // all other spaces not written
 }
 
+uint8_t protocolIdent[6] = {0xD5,0x40,0,0,0,0};
+
 Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
 
 unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int from){
@@ -104,10 +118,8 @@ unsigned int datagramCallback(uint8_t *rbuf, unsigned int length, unsigned int f
   for (int i = 0; i<length; i++) printf("%x ", rbuf[i]);
   printf("\n");
   // pass to consumers
-  cfg.receivedDatagram(rbuf, length, from);
-  
-  return 0;  // return pre-ordained result
-}
+ return cfg.receivedDatagram(rbuf, length, from);
+ }
 
 unsigned int resultcode;
 unsigned int streamRcvCallback(uint8_t *rbuf, unsigned int length){
@@ -266,11 +278,14 @@ void setup()
   //for (int i=eventNum/2; i<eventNum; i++) {
       //pce.newEvent(i,false,true); // produce, consume
   }
-  
+ 
+ // Init protocol blocks
+  PIP_setup(protocolIdent, &txBuffer, &link);
+  SNII_setup((uint8_t)sizeof(SNII_const_data), &txBuffer, &link);  
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
-  
-  // Initialize OpenLCB CAN link controller
+ 
+   // Initialize OpenLCB CAN link controller
   link.reset();
 }
 
@@ -281,20 +296,23 @@ void loop() {
   
   // process link control first
   link.check();
+  bool handled = false;
   if (rcvFramePresent) {
     // blink blue to show that the frame was received
     blue.blink(0x1);
     // see if recieved frame changes link state
-    link.receivedFrame(&rxBuffer);
+     handled = link.receivedFrame(&rxBuffer);
   }
 
   // if link is initialized, higher-level operations possible
   if (link.linkInitialized()) {
-     // if frame present, pass to handlers
-     if (rcvFramePresent) {
-        pce.receivedFrame(&rxBuffer);
-        dg.receivedFrame(&rxBuffer);
-        str.receivedFrame(&rxBuffer);
+     if (rcvFramePresent && rxBuffer.isMsgForHere(link.getAlias())) {
+        handled |= pce.receivedFrame(&rxBuffer);
+        handled |= dg.receivedFrame(&rxBuffer);
+        handled |= str.receivedFrame(&rxBuffer);
+        handled |= PIP_receivedFrame(&rxBuffer);
+        handled |= SNII_receivedFrame(&rxBuffer);
+        if (!handled && rxBuffer.isAddressedMessage()) link.rejectMessage(&rxBuffer);
      }
      // periodic processing of any state changes
      pce.check();
@@ -302,6 +320,8 @@ void loop() {
      str.check();
      cfg.check();
      bg.check();
+     PIP_check();
+     SNII_check();
      //produceFromPins();
   } else {
     // link not up, but continue to show indications on blue and gold
