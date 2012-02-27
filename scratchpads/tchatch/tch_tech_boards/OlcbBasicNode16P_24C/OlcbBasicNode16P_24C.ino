@@ -332,7 +332,7 @@ void setup()
    if (digitalRead(FACTORY_DEFAULT_PIN) != 1) 
 	nm.forceInitAll(); 
 #endif
-  nm.forceInitAll(); // uncomment if need to go back to initial EEPROM state
+  //nm.forceInitAll(); // uncomment if need to go back to initial EEPROM state
   nm.setup(&nodeid, events, eventNum);  
   
   // set event types, now that IDs have been loaded from configuration
