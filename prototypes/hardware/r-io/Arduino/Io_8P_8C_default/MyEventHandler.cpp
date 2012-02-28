@@ -233,6 +233,10 @@ bool MyEventHandler::consume(uint16_t index)
 }
 
 
+uint32_t MyEventHandler::getLargestAddress(void)
+{
+  return (_numEvents*8) - 1;
+}
 
 uint8_t MyEventHandler::readConfig(uint16_t address, uint8_t length, uint8_t *data)
 {

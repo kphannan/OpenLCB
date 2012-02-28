@@ -39,6 +39,7 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
 
     bool consume(uint16_t index);
     
+    uint32_t getLargestAddress(void);
     uint8_t readConfig(uint16_t address, uint8_t length, uint8_t *data);
     void writeConfig(uint16_t address, uint8_t length, uint8_t *data);
     ButtonLed *getInputs(void) {return _input_buttons;}

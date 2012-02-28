@@ -123,8 +123,12 @@ bool MyConfigHandler::MACProcessRead(void)
 	switch(space)
 	{
 		case 0xFF: //CDI request.
-			Serial.println("CDI request. ignoring");
-			break;
+			Serial.println("CDI request.");
+                        reply.length = readCDI(address, length, &(reply.data[6])) + 6;
+                        Serial.print("total length of CDI reply = ");
+                        Serial.println(reply.length, DEC);
+			sendDatagram(&reply);
+			return true;
 		case 0xFE: //"All memory" access. Just give them what they want?
 			Serial.println("all memory request. ignoring");
 			break;
@@ -171,27 +175,48 @@ bool MyConfigHandler::MACProcessCommand(void)
     {
         case MAC_CMD_GET_CONFIG_OPTIONS:
                 Serial.println("MAC_CMD_GET_CONFIG_OPTIONS");
-                reply.length = 6;
+                reply.length = 7;
                 reply.data[1] = MAC_CMD_GET_CONFIG_OPTIONS_REPLY;
-                reply.data[2] = (MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE) >> 8;
-                reply.data[3] = (MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE) & 0xFF;
-                reply.data[4] = 0xFF; //highest address space
-                reply.data[5] = 0xFD; //lowest address space
+                reply.data[2] = 0x03; //available commands byte 1
+                reply.data[3] = 0x01; //available commands byte 2
+                reply.data[4] = MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE;
+                reply.data[5] = 0xFF; //highest address space
+                reply.data[6] = 0xFD; //lowest address space
                 sendDatagram(&reply);
              	break;
         case MAC_CMD_GET_ADD_SPACE_INFO:
                 Serial.println("MAC_CMD_GET_ADD_SPACE_INFO");
-//                uint8_t space = _rxDatagramBuffer->data[0];
-//                reply.length = TODO
-//                reply.data[1] = MAC_CMD_GET_ADD_SPACE_INFO_REPLY;
-//                if(space >= 0xFE)
-//                  reply.data[2] = 
-//                uint16_t write_opts = MAC_CONFIG_OPTIONS_1_BYTE_WRITE | MAC_CONFIG_OPTIONS_2_BYTE_WRITE | MAC_CONFIG_OPTIONS_4_BYTE_WRITE | MAC_CONFIG_OPTIONS_64_BYTE_WRITE;
-//                reply.data[2] = write_opts >> 8;
-//                reply.data[3] = write_opts & 0xFF;
-//                reply.data[4] = 0xFF; //highest address space
-//                reply.data[5] = 0xFD; //lowest address space
-        	break;
+                reply.length = 9; //minimally!
+                reply.data[1] = MAC_CMD_GET_ADD_SPACE_INFO_REPLY;
+                reply.data[2] = 0x00; //default: not present
+                reply.data[3] = _rxDatagramBuffer->data[2];
+                reply.data[4] = 0x00; //largest address
+                reply.data[5] = 0x00;
+                reply.data[6] = 0x00;
+                reply.data[7] = 0x00; //largest address continued
+                reply.data[8] = 0x00; //byte alignment flags; we require no byte alignment
+                switch(_rxDatagramBuffer->data[2])
+                {
+                  case 0xFF: //CDI
+                    reply.data[2] = 0x01; //present
+                    reply.data[4] = (uint32_t)(sizeof(cdixml))>>24 & 0xFF;
+                    reply.data[5] = (uint32_t)(sizeof(cdixml))>>16 & 0xFF;
+                    reply.data[6] = (uint32_t)(sizeof(cdixml))>>8 & 0xFF;
+                    reply.data[7] = (uint32_t)(sizeof(cdixml)) & 0xFF;
+                    break;
+                  case 0xFE: //"all memory"
+                    break;
+                  case 0xFD: //configuration space
+                    reply.data[2] = 0x01; //present
+                    //largest address is...
+                    reply.data[4] = _eventHandler->getLargestAddress()>>24 & 0xFF;
+                    reply.data[5] = _eventHandler->getLargestAddress()>>16 & 0xFF;
+                    reply.data[6] = _eventHandler->getLargestAddress()>>8 & 0xFF;
+                    reply.data[7] = _eventHandler->getLargestAddress() & 0xFF;
+                    break;
+                }
+                sendDatagram(&reply);
+                break;
         case MAC_CMD_RESETS:
             Serial.println("MAC_CMD_RESETS");
             // force restart (may not reply?)
@@ -230,4 +255,30 @@ bool MyConfigHandler::MACProcessCommand(void)
         default:
             break;
     }
+}
+
+uint8_t MyConfigHandler::readCDI(uint16_t address, uint8_t length, uint8_t *data)
+{
+  //This method gets called by configuration handlers. We are being requested for the CDI file, a chunk at a time.
+  Serial.println("readCDI");
+  Serial.print("length: ");
+  Serial.println(length);
+  uint16_t capacity = sizeof(cdixml);
+  if( (length+address) > (capacity) ) //too much! Would cause overflow
+    //caculate a shorter length to prevent overflow
+    length = capacity - address;
+  Serial.print("modified length: ");
+  Serial.println(length);
+  Serial.print("Read from index ");
+  Serial.println(address, DEC);
+  //we can't do a straight memcpy, because xmlcdi is PROGMEM. So, we have to use read_bytes instead
+  uint16_t i;
+  for(i = 0; i < length; ++i)
+  {
+    *(data+(i)) = pgm_read_byte(&cdixml[i+address]);
+  }
+  Serial.println("===");
+  for(i = 0; i < length; ++i)
+    Serial.println(*(data+i), HEX);
+  return length;
 }

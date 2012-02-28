@@ -59,12 +59,13 @@ static PROGMEM prog_uchar cdixml[] = {
 #define MAC_CMD_RESETS                      0xA8
 
 
-#define MAC_CONFIG_OPTIONS_1_BYTE_WRITE      0x8000
-#define MAC_CONFIG_OPTIONS_2_BYTE_WRITE      0x4000
-#define MAC_CONFIG_OPTIONS_4_BYTE_WRITE      0x2000
-#define MAC_CONFIG_OPTIONS_64_BYTE_WRITE     0x1000
-#define MAC_CONFIG_OPTIONS_STREAM_WRITE      0x0080
-#define MAC_CONFIG_OPTIONS_WRITE_UNDER_MASK  0x0040
+#define MAC_CONFIG_OPTIONS_1_BYTE_WRITE      0x80
+#define MAC_CONFIG_OPTIONS_2_BYTE_WRITE      0x40
+#define MAC_CONFIG_OPTIONS_4_BYTE_WRITE      0x20
+#define MAC_CONFIG_OPTIONS_64_BYTE_WRITE     0x10
+#define MAC_CONFIG_OPTIONS_STREAM_WRITE      0x04
+#define MAC_CONFIG_OPTIONS_STREAM_READ       0x02
+#define MAC_CONFIG_OPTIONS_WRITE_UNDER_MASK  0x01
 
 
 /* Class to handle Memory Configuration protocol and CDI protocol */
@@ -87,6 +88,7 @@ class MyConfigHandler : public OLCB_Virtual_Node, public OLCB_Datagram_Handler
         uint32_t getAddress(uint8_t* data);
         uint8_t decodeLength(uint8_t* data);
         uint8_t decodeSpace(uint8_t* data);
+        uint8_t readCDI(uint16_t address, uint8_t length, uint8_t *data);
 };
 
 
