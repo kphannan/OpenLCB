@@ -14,13 +14,10 @@
  *
  * For data directed from USB -> CAN, the sketch provides flow
  * control using the (virtual) CTS signal.
- * added memory free support to monitor free memory in a running sketch.  Tim Hatch.
- * To look and free memory.  run python monitor.py and press the reset button
- * on the CAN/USB board, it will reply with the amount of free bytes.
  */
 
 //#define         BAUD_RATE       115300
-#define         BAUD_RATE       288000
+#define         BAUD_RATE       500000
 //#define         BAUD_RATE       333333
 
 
@@ -77,8 +74,8 @@ void setup()
 {
   pinMode(RX_CTS_PIN,OUTPUT);
   digitalWrite(RX_CTS_PIN,LOW);
-  UCSR0A |= _BV(U2X0); 
-  
+  //UCSR0A |= _BV(U2X0); 
+ 
   Serial.begin(BAUD_RATE);
   Serial.println();
   Serial.println("<<<TCH Technology CAN/USB interface>>>");
@@ -86,7 +83,8 @@ void setup()
   Serial.println();
   Serial.print("free memory in bytes ");
   Serial.println( freeMemory() );
-  // Initialize MCP2515
+  bitSet(UCSR0A, U2X0);
+   //Initialize MCP2515
   can_init(BITRATE_125_KBPS);
   rxCanBuffCounter = 0;
   rxCanFlagCounter = 0;
@@ -99,13 +97,13 @@ void loop()
 
 {
   // check for RTS flow control to PC on USB side
-  //int charWaiting = Serial.available();
+  int charWaiting = Serial.available();
   
-  //if( charWaiting < RX_BUF_LOW )
-    //digitalWrite(RX_CTS_PIN,LOW);
+  if( charWaiting < RX_BUF_LOW )
+    digitalWrite(RX_CTS_PIN,LOW);
     
-  //else if( charWaiting > RX_BUF_HIGH )
-    //digitalWrite(RX_CTS_PIN,HIGH);
+  else if( charWaiting > RX_BUF_HIGH )
+    digitalWrite(RX_CTS_PIN,HIGH);
   
   if(!ptxCAN)
   {  
