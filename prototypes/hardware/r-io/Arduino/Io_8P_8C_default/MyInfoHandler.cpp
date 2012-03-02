@@ -38,49 +38,47 @@ void MyInfoHandler::update(void)
     //handle pending snip request responses
     if(_info_index > -1)
     {
-       Serial.println("Working on SNIP response!");
+       ////Serial.println("Working on SNIP response!");
        //we have work to do.
        //figure out how many bytes to send. Either 7 bytes, or whatever remains
        _reply.length = (strlen(_buffer)+1)-_string_index + 1; //(the first +1 is to INCLUDE the null; the second, because the first byte is the MTI)
        if(_reply.length > 8)
          _reply.length = 8;
-       Serial.print("len = ");
-       Serial.println(_reply.length, DEC);
-       Serial.print("start index= ");
-       Serial.println(_string_index, DEC);
+       ////Serial.print("len = ");
+       ////Serial.println(_reply.length, DEC);
+       ////Serial.print("start index= ");
+       ////Serial.println(_string_index, DEC);
        memcpy(&(_reply.data[1]), &(_buffer[_string_index]), _reply.length-1);
        for(uint8_t i = 1; i < _reply.length; ++i)
-         Serial.print((char)(_reply.data[i]));
-       Serial.println();
+         ////Serial.print((char)(_reply.data[i]));
+       ////Serial.println();
        _link->sendMessage(&_reply);
        //now, set up for next run.
-       Serial.println("setting up for next time");
+       ////Serial.println("setting up for next time");
        _string_index += (_reply.length-1);
-       Serial.print("new string index = ");
-       Serial.println(_string_index, DEC);
-       Serial.print("str len = ");
-       Serial.println(strlen(_buffer), DEC);
-       Serial.print(_string_index > strlen(_buffer));
+       ////Serial.print("new string index = ");
+       ////Serial.println(_string_index, DEC);
+       ////Serial.print("str len = ");
+       ////Serial.println(strlen(_buffer), DEC);
+       ////Serial.print(_string_index > strlen(_buffer));
        if(_string_index > strlen(_buffer)) //next string!
        {
-          Serial.println("new string!");
+          ////Serial.println("new string!");
           _string_index = 0;
           _info_index++;
-          Serial.print("new info index = ");
-          Serial.println(_info_index, DEC);
+          ////Serial.print("new info index = ");
+          ////Serial.println(_info_index, DEC);
           if(_info_index > MAX_STRING)
           {
-            Serial.println("done!!");
+            ////Serial.println("done!!");
             _info_index = -1; //done!
           }
           else
           {
             strcpy_P(_buffer, (char*)pgm_read_word(&(SNIP_table[_info_index])));
-            Serial.println(_buffer);
+            ////Serial.println(_buffer);
           }
         }
-        else
-          Serial.println("truckin' on!");
     }
     OLCB_Virtual_Node::update();
 }
@@ -110,11 +108,11 @@ bool MyInfoHandler::handleMessage(OLCB_Buffer *buffer)
 		buffer->getDestinationNID(&dest);
 		if(dest == *NID)
 		{
-			Serial.println("Got SNIP request");
+			////Serial.println("Got SNIP request");
                         _info_index = 0;
                         _string_index = 0;
                         strcpy_P(_buffer, (char*)pgm_read_word(&(SNIP_table[0])));
-                        Serial.println(_buffer);
+                        ////Serial.println(_buffer);
                         OLCB_NodeID source_address;
                         buffer->getSourceNID(&source_address);
                         _reply.init(NID);
@@ -127,14 +125,14 @@ bool MyInfoHandler::handleMessage(OLCB_Buffer *buffer)
     else if(isPIPRequest(buffer))
     {
     	//is it for us?
-		Serial.println("got PIP aimed at...");
+		////Serial.println("got PIP aimed at...");
 		OLCB_NodeID dest;
 		buffer->getDestinationNID(&dest);
-		Serial.println(dest.alias, DEC);
-		Serial.println(NID->alias, DEC);
+		////Serial.println(dest.alias, DEC);
+		////Serial.println(NID->alias, DEC);
 		if(dest == *NID)
 		{
-			Serial.println("Got PIP request");
+			////Serial.println("Got PIP request");
 			OLCB_Buffer reply;
 			OLCB_NodeID source_address;
 			buffer->getSourceNID(&source_address);

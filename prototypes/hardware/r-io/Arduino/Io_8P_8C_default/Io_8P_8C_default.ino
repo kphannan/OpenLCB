@@ -73,8 +73,8 @@ void loadNodeID(OLCB_NodeID *nid)
 void setup()
 {
     #ifdef DEBUG
-    Serial.begin(115200);
-    Serial.println("Io 8C 8P default");
+    //Serial.begin(115200);
+    //Serial.println("Io 8C 8P default");
   #endif
   //first, set up inputs and outputs, setting pull-up resistors on inputs
   for(int i = 0; i < 8; ++i) //outputs
@@ -91,7 +91,7 @@ void setup()
   //now, load the NodeID from EEPROM
   loadNodeID(&nodeid);
   
-    nodeid.print();
+    //nodeid.print();
     link.initialize();
     pce.create(&link, &nodeid);
     pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers TODO REMOVE THIS!?

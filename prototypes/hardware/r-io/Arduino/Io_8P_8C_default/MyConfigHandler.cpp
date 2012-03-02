@@ -75,31 +75,31 @@ bool MyConfigHandler::processDatagram(void)
 
 	if(isPermitted()) //only act on it if we are in Permitted state. Otherwise no point.
 	{
-            Serial.println("got a datagram!");
-            Serial.println(_rxDatagramBuffer->data[0], HEX);
+            //Serial.println("got a datagram!");
+            //Serial.println(_rxDatagramBuffer->data[0], HEX);
             //check the first byte of the payload to see what kind of datagram we have
             switch(_rxDatagramBuffer->data[0])
             {
               case MAC_PROTOCOL_ID: //MAC protocol
-                Serial.println("using MAC protocol");
+                //Serial.println("using MAC protocol");
                 switch (_rxDatagramBuffer->data[1]&0xC0)
                 {
                   case MAC_CMD_READ:
-                    Serial.println("read request");
+                    //Serial.println("read request");
   		    return MACProcessRead();
                     break;
                   case MAC_CMD_WRITE:
-                    Serial.println("write request");
+                    //Serial.println("write request");
                     return MACProcessWrite();
                     break;
                   case MAC_CMD_OPERATION:
-                    Serial.println("cmd request");
+                    //Serial.println("cmd request");
                     return MACProcessCommand();
                     break;
 		}
 	    }
 	}
-        Serial.println("Not for us to handle, going to NAK");
+        //Serial.println("Not for us to handle, going to NAK");
 	return false;
 }
 
@@ -111,9 +111,9 @@ bool MyConfigHandler::MACProcessRead(void)
 	//copy first six bytes. TODO why?
 	memcpy(reply.data, _rxDatagramBuffer->data, 6);
 	reply.data[1] = MAC_CMD_READ_REPLY | reply.data[1]&0x0F; //WTF?
-        Serial.print("Making reply with MTI ");
-        Serial.println(reply.data[0], HEX);
-        Serial.println(reply.data[1], HEX);
+        //Serial.print("Making reply with MTI ");
+        //Serial.println(reply.data[0], HEX);
+        //Serial.println(reply.data[1], HEX);
 	//TODO presume datagram?
 	uint8_t length = decodeLength(_rxDatagramBuffer->data);
 	uint32_t address = getAddress(_rxDatagramBuffer->data);
@@ -123,24 +123,24 @@ bool MyConfigHandler::MACProcessRead(void)
 	switch(space)
 	{
 		case 0xFF: //CDI request.
-			Serial.println("CDI request.");
+			//Serial.println("CDI request.");
                         reply.length = readCDI(address, length, &(reply.data[6])) + 6;
-                        Serial.print("total length of CDI reply = ");
-                        Serial.println(reply.length, DEC);
+                        //Serial.print("total length of CDI reply = ");
+                        //Serial.println(reply.length, DEC);
 			sendDatagram(&reply);
 			return true;
 		case 0xFE: //"All memory" access. Just give them what they want?
-			Serial.println("all memory request. ignoring");
+			//Serial.println("all memory request. ignoring");
 			break;
 		case 0xFD: //configuration space
-                        Serial.println("configuration space...");
+                        //Serial.println("configuration space...");
 			reply.length = _eventHandler->readConfig(address, length, &(reply.data[6])) + 6;
-                        Serial.print("total length of reply = ");
-                        Serial.println(reply.length, DEC);
+                        //Serial.print("total length of reply = ");
+                        //Serial.println(reply.length, DEC);
 			sendDatagram(&reply);
 			return true;
 	}
-//Serial.println("NAKing");
+////Serial.println("NAKing");
 	return false; //send a NAK. Is this what we really want?
 }
 
@@ -174,7 +174,7 @@ bool MyConfigHandler::MACProcessCommand(void)
     switch (_rxDatagramBuffer->data[1]&0xFC)
     {
         case MAC_CMD_GET_CONFIG_OPTIONS:
-                Serial.println("MAC_CMD_GET_CONFIG_OPTIONS");
+                //Serial.println("MAC_CMD_GET_CONFIG_OPTIONS");
                 reply.length = 7;
                 reply.data[1] = MAC_CMD_GET_CONFIG_OPTIONS_REPLY;
                 reply.data[2] = 0x03; //available commands byte 1
@@ -185,7 +185,7 @@ bool MyConfigHandler::MACProcessCommand(void)
                 sendDatagram(&reply);
              	break;
         case MAC_CMD_GET_ADD_SPACE_INFO:
-                Serial.println("MAC_CMD_GET_ADD_SPACE_INFO");
+                //Serial.println("MAC_CMD_GET_ADD_SPACE_INFO");
                 reply.length = 9; //minimally!
                 reply.data[1] = MAC_CMD_GET_ADD_SPACE_INFO_REPLY;
                 reply.data[2] = 0x00; //default: not present
@@ -218,7 +218,7 @@ bool MyConfigHandler::MACProcessCommand(void)
                 sendDatagram(&reply);
                 break;
         case MAC_CMD_RESETS:
-            Serial.println("MAC_CMD_RESETS");
+            //Serial.println("MAC_CMD_RESETS");
             // force restart (may not reply?)
             if ((_rxDatagramBuffer->data[1]&0x03) == 0x01)
             { // restart/reboot?
@@ -229,28 +229,28 @@ bool MyConfigHandler::MACProcessCommand(void)
             // TODO: Handle other cases
             break;
         case MAC_CMD_GET_CONFIG_OPTIONS_REPLY :
-            Serial.println("MAC_CMD_GET_CONFIG_REPLY");
+            //Serial.println("MAC_CMD_GET_CONFIG_REPLY");
             break;
         case MAC_CMD_GET_ADD_SPACE_INFO_REPLY:
-            Serial.println("MAC_CMD_GET_ADD_SPACE_INFO_REPLY");
+            //Serial.println("MAC_CMD_GET_ADD_SPACE_INFO_REPLY");
             break;
         case MAC_CMD_LOCK:
-            Serial.println("MAC_CMD_LOCK");
+            //Serial.println("MAC_CMD_LOCK");
             break;
         case MAC_CMD_LOCK_REPLY:
-            Serial.println("MAC_CMD_LOCK_REPLY");
+            //Serial.println("MAC_CMD_LOCK_REPLY");
             break;
         case MAC_CMD_GET_UNIQUEID:
-            Serial.println("MAC_CMD_GET_UNIQUEID");
+            //Serial.println("MAC_CMD_GET_UNIQUEID");
             break;
         case MAC_CMD_GET_UNIQUEID_REPLY:
-            Serial.println("MAC_CMD_GET_UNIQUEID_REPLY");
+            //Serial.println("MAC_CMD_GET_UNIQUEID_REPLY");
             break;
         case MAC_CMD_FREEZE:
-            Serial.println("MAC_CMD_FREEZE");
+            //Serial.println("MAC_CMD_FREEZE");
             break;
         case MAC_CMD_INDICATE:
-            Serial.println("MAC_CMD_INDICATE");
+            //Serial.println("MAC_CMD_INDICATE");
             break;
         default:
             break;
@@ -260,25 +260,25 @@ bool MyConfigHandler::MACProcessCommand(void)
 uint8_t MyConfigHandler::readCDI(uint16_t address, uint8_t length, uint8_t *data)
 {
   //This method gets called by configuration handlers. We are being requested for the CDI file, a chunk at a time.
-  Serial.println("readCDI");
-  Serial.print("length: ");
-  Serial.println(length);
+  //Serial.println("readCDI");
+  //Serial.print("length: ");
+  //Serial.println(length);
   uint16_t capacity = sizeof(cdixml);
   if( (length+address) > (capacity) ) //too much! Would cause overflow
     //caculate a shorter length to prevent overflow
     length = capacity - address;
-  Serial.print("modified length: ");
-  Serial.println(length);
-  Serial.print("Read from index ");
-  Serial.println(address, DEC);
+  //Serial.print("modified length: ");
+  //Serial.println(length);
+  //Serial.print("Read from index ");
+  //Serial.println(address, DEC);
   //we can't do a straight memcpy, because xmlcdi is PROGMEM. So, we have to use read_bytes instead
   uint16_t i;
   for(i = 0; i < length; ++i)
   {
     *(data+(i)) = pgm_read_byte(&cdixml[i+address]);
   }
-  Serial.println("===");
+  //Serial.println("===");
   for(i = 0; i < length; ++i)
-    Serial.println(*(data+i), HEX);
+    //Serial.println(*(data+i), HEX);
   return length;
 }
