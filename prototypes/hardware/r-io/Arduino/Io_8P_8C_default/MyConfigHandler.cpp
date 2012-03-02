@@ -1,4 +1,5 @@
 #include "MyConfigHandler.h"
+#include <EEPROM.h>
 
 void MyConfigHandler::create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler *eventHandler)
 {
@@ -226,25 +227,49 @@ bool MyConfigHandler::MACProcessCommand(void)
             	void (*restart)() = 0x00;
                 (*restart)();
             }
+            else if((_rxDatagramBuffer->data[1]&0x03) == 0x02) //factory reset!
+            {
+                //check NID first!
+                OLCB_NodeID n;
+                memcpy(&n, &(_rxDatagramBuffer->data[2]), 6);
+                if(n.sameNID(OLCB_Virtual_Node::NID))
+                {
+                  _eventHandler->factoryReset();
+                  void (*restart)() = 0x00;
+                  (*restart)();
+                }
+            }
             // TODO: Handle other cases
-            break;
-        case MAC_CMD_GET_CONFIG_OPTIONS_REPLY :
-            //Serial.println("MAC_CMD_GET_CONFIG_REPLY");
-            break;
-        case MAC_CMD_GET_ADD_SPACE_INFO_REPLY:
-            //Serial.println("MAC_CMD_GET_ADD_SPACE_INFO_REPLY");
             break;
         case MAC_CMD_LOCK:
             //Serial.println("MAC_CMD_LOCK");
             break;
-        case MAC_CMD_LOCK_REPLY:
-            //Serial.println("MAC_CMD_LOCK_REPLY");
-            break;
         case MAC_CMD_GET_UNIQUEID:
             //Serial.println("MAC_CMD_GET_UNIQUEID");
-            break;
-        case MAC_CMD_GET_UNIQUEID_REPLY:
-            //Serial.println("MAC_CMD_GET_UNIQUEID_REPLY");
+            {
+            uint8_t num = (_rxDatagramBuffer->data[2] & 0x07);
+            reply.length = 2+(8*num);
+            reply.data[1] = MAC_CMD_GET_UNIQUEID_REPLY;
+            uint8_t eid6 = EEPROM.read(2);
+            uint8_t eid7 = EEPROM.read(3);
+            for(uint8_t i = 0; i < num; ++i)
+            {
+              for(uint8_t j = 0; i < 6; ++j)
+              {
+                reply.data[(i*8)+j+2] = OLCB_Virtual_Node::NID->val[j];
+              }
+              reply.data[(i*8)+7+2] = eid6;
+              reply.data[(i*8)+8+2] = eid7;
+              if(eid7 == 254) //need to increment val[6] as well
+              {
+                eid6++; //might wrap around to 0; it's gonna happen, I guess
+              }
+              eid7++;
+            }
+            sendDatagram(&reply);
+            EEPROM.write(2,eid6);
+            EEPROM.write(3,eid7);
+            }
             break;
         case MAC_CMD_FREEZE:
             //Serial.println("MAC_CMD_FREEZE");
