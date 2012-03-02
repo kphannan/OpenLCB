@@ -55,8 +55,7 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
    * 	3) A set of 32 EventIDs
    * On the other hand, if the string "Io" is present, the EEPROM is read into memory
    ****/
-  _events = events;
-  _numEvents = num;
+  loadEvents(events, num);
 
   //first, check first two bytes:
   if( (EEPROM.read(0) != 'I') || (EEPROM.read(1) != 'o') ) //not formatted!

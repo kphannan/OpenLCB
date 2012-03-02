@@ -14,6 +14,12 @@ class MyInfoHandler: public OLCB_Virtual_Node
     void update(void);
     bool handleMessage(OLCB_Buffer *buffer);
     void create(OLCB_Link *link, OLCB_NodeID *nid);
+    
+  private:
+    char _buffer[19];
+    int8_t _info_index;
+    int8_t _string_index;
+    OLCB_Buffer _reply;
 };
 
 #endif
