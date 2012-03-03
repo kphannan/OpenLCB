@@ -182,7 +182,10 @@ void MyBlueGoldHandler::update(void)
 				//inhibit the EventHandler to avoid confusions
 				_event_handler->inhibit();
 				blue.on(0xF0F0F0F0); //light the BLUE lamp solid for learning
-				
+				for(uint8_t i = 0; i < 8; ++i)
+                          	{
+	                        	digitalWrite(i, LOW);
+	                        }
 		    }
 		    else if(_gold_pressed)
 		    {
@@ -191,7 +194,10 @@ void MyBlueGoldHandler::update(void)
 				//inhibit the EventHandler to avoid confusions
 				_event_handler->inhibit(); //TODO is this right?
 				gold.on(0xF0F0F0F0); //light the GOLD lamp solid for learning
-				
+				for(uint8_t i = 0; i < 8; ++i)
+                          	{
+	                        	digitalWrite(i, LOW);
+	                        }
 		    }
 		    break;
 		case BG_LEARN:
