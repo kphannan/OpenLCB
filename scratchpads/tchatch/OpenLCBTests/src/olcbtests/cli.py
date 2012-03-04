@@ -1,6 +1,9 @@
 from messages import can
 import argparse
 import comms
+import logging
+
+root_logger = logging.getLogger()
 
 def main():
     '''Main command-line interface for OpenLCBTests'''
@@ -28,9 +31,14 @@ def main():
     #    conn = comms.SerialConnection()
    
     ### Test Implementation ###
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    ))
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(console_handler)
     msg = can.VerifyNodeIDNumberSimple(args.src_alias)
     conn.send(msg)
-    print msg
     response = conn.receive()
     conn.close()
-    print response
