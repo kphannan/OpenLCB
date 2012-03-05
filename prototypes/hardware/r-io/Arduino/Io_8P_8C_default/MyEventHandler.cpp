@@ -183,7 +183,6 @@ void MyEventHandler::update(void)
   }
     
   for(uint8_t i = 0; i < 8; ++i)
-    _input_buttons[i].process();
     //first, are we going to set up any kind of learning? TODO
 
   if(!_inhibit)
@@ -195,7 +194,7 @@ void MyEventHandler::update(void)
     uint8_t state, prev_state;
     for(uint8_t i = 0; i < 8; ++i)
     {
-      state = _input_buttons[i].state; //digitalRead(i+8);
+      state = digitalRead(_input_buttons[i]); //digitalRead(i+8);
       prev_state = (_inputs & (1<<i))>>i;
       if(state != prev_state) //change in state!
       {	//input has changed, fire event and update flag
@@ -206,7 +205,7 @@ void MyEventHandler::update(void)
         ////Serial.println(_inputs, BIN);
         _inputs ^= (1<<i); //toggle flag
         //now determine which producer to fire.
-        produce((i<<1) | !(state&0x01)); //TODO NOT RIGHT!
+        produce((i<<1) | !(state^0x01)); //TODO NOT RIGHT!
       }
     }
   }
@@ -223,8 +222,8 @@ bool MyEventHandler::consume(uint16_t index)
   if(_inhibit)
     return true;
   /* We've received an event; let's see if we need to consume it */
-  ////Serial.print("consume() ");
-  ////Serial.println(index,DEC);
+  Serial.print("consume() ");
+  Serial.println(index,DEC);
   //Outputs are pins 0..7
   //odd events are off, even events are on
   digitalWrite((index-16)>>1, !(index&0x1));

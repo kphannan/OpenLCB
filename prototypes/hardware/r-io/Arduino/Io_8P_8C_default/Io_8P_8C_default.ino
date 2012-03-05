@@ -73,8 +73,8 @@ void loadNodeID(OLCB_NodeID *nid)
 void setup()
 {
     #ifdef DEBUG
-    //Serial.begin(115200);
-    //Serial.println("Io 8C 8P default");
+    Serial.begin(115200);
+    Serial.println("Io 8C 8P default");
   #endif
   //first, set up inputs and outputs, setting pull-up resistors on inputs
   for(int i = 0; i < 8; ++i) //outputs
@@ -82,7 +82,7 @@ void setup()
     pinMode(i, OUTPUT);
     digitalWrite(i, LOW);
   }
-  for(int i = 8; i < 16; ++i)
+  for(int i = 8; i < 16; ++i) //inputs
   {
     pinMode(i, INPUT);
     digitalWrite(i, HIGH);

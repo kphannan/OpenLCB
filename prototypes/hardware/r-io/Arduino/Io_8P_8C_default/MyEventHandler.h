@@ -22,11 +22,10 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
   public:
   	MyEventHandler(void) : _inhibit(false), _inputs(0x00), _dirty(0)
   	{
-              for(uint8_t i = 0; i < 8; ++i)
-              {
-                _input_buttons[i].setPinSense(i+8, LOW);
-              }
+          for(uint8_t i = 0; i < 8; ++i)
+            _input_buttons[i] = i+8;
   	}
+  
     void initialize(OLCB_Event *events, uint8_t num); //assume offset is 0, uint8_t offset);
     
     void factoryReset(void);
@@ -42,7 +41,7 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
     uint32_t getLargestAddress(void);
     uint8_t readConfig(uint16_t address, uint8_t length, uint8_t *data);
     void writeConfig(uint16_t address, uint8_t length, uint8_t *data);
-    ButtonLed *getInputs(void) {return _input_buttons;}
+    uint8_t *getInputs(void) {return _input_buttons;}
     void inhibit(void) {_inhibit = true;}
     void disInhibit(void) {_inhibit = false;}
     
@@ -54,7 +53,7 @@ class MyEventHandler: public OLCB_Virtual_Node, public OLCB_Event_Handler
   	bool _inhibit;
   	uint8_t _inputs;
   	uint8_t _dirty;
-  	ButtonLed _input_buttons[8];
+  	uint8_t _input_buttons[8]; //TODO 
   void firstInitialization(void);
 };
 

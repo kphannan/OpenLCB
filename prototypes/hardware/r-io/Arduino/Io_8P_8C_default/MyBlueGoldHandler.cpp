@@ -67,8 +67,6 @@ void MyBlueGoldHandler::update(void)
     blue.process();
     gold.process();
     for(uint8_t i = 0; i < 8; ++i)
-    	_input_buttons[i].process();
-
 	// first, check and see if we've got a double-press
         _double_state = (blue.state && gold.state);
 	if(_double_state)
@@ -137,9 +135,10 @@ void MyBlueGoldHandler::update(void)
     //check if input buttons were pressed
     for(uint8_t i = 0; i < 8; ++i) //check each button!
     {
-    	if( ((_last_input & (1<<i))>>i) != _input_buttons[i].state) //see if change
+        uint8_t ibstate = digitalRead(_input_buttons[i]);
+    	if( ((_last_input & (1<<i))>>i) != ibstate) //see if change
     	{
-    		if(_input_buttons[i].state)
+    		if(ibstate == HIGH)
     		{
     			_last_input |= (1<<i);
     			_input_pressed |= (1<<i);

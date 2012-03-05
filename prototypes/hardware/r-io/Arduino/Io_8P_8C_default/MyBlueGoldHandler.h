@@ -76,7 +76,7 @@ class MyBlueGoldHandler: public OLCB_Virtual_Node
     uint8_t _input_pressed;
     uint8_t _last_input;
     MyEventHandler* _event_handler; //for teaching and learning from.
-    ButtonLed *_input_buttons; //we know there are 8 of them.
+    uint8_t *_input_buttons; //we know there are 8 of them.
 	
     void sendIdent();
     void factoryReset();  // ToDo: better name!  Not really a true "factory reset"
