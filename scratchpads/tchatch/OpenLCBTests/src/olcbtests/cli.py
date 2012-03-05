@@ -1,4 +1,4 @@
-from messages import can
+from olcbtests.tests import nodeverification, general
 import argparse
 import comms
 import logging
@@ -30,7 +30,8 @@ def main():
     #elif arguments.commtype == 'serial':
     #    conn = comms.SerialConnection()
    
-    ### Test Implementation ###
+    # Set up console logging
+    # TODO: Get logging parameters from cli/config file
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(logging.Formatter(
@@ -38,7 +39,10 @@ def main():
     ))
     root_logger.setLevel(logging.DEBUG)
     root_logger.addHandler(console_handler)
-    msg = can.VerifyNodeIDNumberSimple(args.src_alias)
-    conn.send(msg)
-    response = conn.receive()
+
+    # Run the tests!
+    # TODO: Dynamically discover tests to run
+    nodeverification.verify_node_global(conn, args.src_alias)
+    general.read_config_memory(conn, args.src_alias, 0x234) #FIXME
+
     conn.close()
