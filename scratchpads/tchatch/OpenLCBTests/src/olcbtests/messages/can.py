@@ -23,7 +23,26 @@ class CANMessage(object):
        originate (i.e. this computer)
 
     Calling ``str()`` on ``CANMessage`` instances returns a string
-    containing the OpenLCB message.
+    containing the OpenLCB frame.
+
+    .. py:attribute:: src_alias
+
+       The node alias of the node sending the message
+
+    .. py:attribute:: header
+
+       The value of the header that would be sent in the frame
+
+    .. py:attribute:: body
+
+       The value of the body that would be sent with the frame
+
+    .. py:attribute:: MTI
+
+       The message type indicator, as an integer. This value should be
+       set by subclasses of :py:class:CANMessage. See
+       http://www.openlcb.org/trunk/specs/MtiAllocations.pdf for a list
+       of MTI allocations.
     '''
 
     def __init__(self, src_alias, body=''):
@@ -44,9 +63,20 @@ class CANMessage(object):
 
     @classmethod
     def from_string(cls, message):
+        '''Create a :py:class:CANMessage instance from a frame string
+        
+        :param str message: The complete message frame, including
+           control characters
+        :returns: A new instance of the :py:class:CANMessage subclass
+
+        Subclasses of :py:class:CANMessage should override this method
+        and provide their own unique logic for parsing the header and
+        body into usable properties.
+        '''
+
         header, body = message.split('N')
         header = header[2:] # Trim the :X from the beginning of the header
-        body = body[:-1] # Trim the ; from the end of the body
+        body = body.strip()[:-1] # Trim the ; from the end of the body
 
         src_alias = int(header[-3:], 16)
 
@@ -59,6 +89,16 @@ class VerifyNodeIDNumberSimple(CANMessage):
 
 class VerifiedNodeIDNumber(CANMessage):
     MTI = 0x180b7
+
+    #: The full ID of the node sending the message
+    node_id = None
+
+    @classmethod
+    def from_string(cls, message):
+        msg = super(VerifiedNodeIDNumber, cls).from_string(message)
+        b = msg.body
+        msg.node_id = [int(b[i:i+2], 16) for i in range(0, len(b), 2)]
+        return msg
 
 class GeneralDatagram(CANMessage):
     MTI = 0x1d

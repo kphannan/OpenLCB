@@ -1,4 +1,4 @@
-from olcbtests.tests import nodeverification, general
+from olcbtests.tests import discover_node, nodeverification, general
 import argparse
 import comms
 import logging
@@ -24,12 +24,7 @@ def main():
         help='TCP port of the Eth2CAN node (default: 23)')
 
     args = aparser.parse_args()
-    if args.commtype == 'ethernet':
-        conn = comms.EthernetConnection(args.hostname, args.port)
-        conn.connect()
-    #elif arguments.commtype == 'serial':
-    #    conn = comms.SerialConnection()
-   
+
     # Set up console logging
     # TODO: Get logging parameters from cli/config file
     console_handler = logging.StreamHandler()
@@ -40,9 +35,16 @@ def main():
     root_logger.setLevel(logging.DEBUG)
     root_logger.addHandler(console_handler)
 
-    # Run the tests!
-    # TODO: Dynamically discover tests to run
-    nodeverification.verify_node_global(conn, args.src_alias)
-    general.read_config_memory(conn, args.src_alias, 0x234) #FIXME
+    if args.commtype == 'ethernet':
+        conn = comms.EthernetConnection(args.hostname, args.port)
+    #elif arguments.commtype == 'serial':
+    #    conn = comms.SerialConnection()
+   
+    with conn as c:
+        # Run the tests!
+        # TODO: Dynamically discover tests to run
+        dst_alias, dst_id = discover_node(conn, args.src_alias)
+        nodeverification.verify_node_global(c, args.src_alias)
+        general.read_config_memory(c, args.src_alias, dst_alias)
 
     conn.close()

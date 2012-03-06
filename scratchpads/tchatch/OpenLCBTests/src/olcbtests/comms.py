@@ -23,6 +23,14 @@ class EthernetConnection(object):
         self.port = port
         self._socket = None
 
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, trace):
+        if exc_type is not None:
+            logger.exception('Error communicating with node')
+
     def connect(self):
         '''Connect to the Eth2CAN device over TCP/IP'''
 
@@ -58,10 +66,14 @@ class EthernetConnection(object):
         except socket.error, e:
             raise CommunicationException(e)
 
-        logger.debug('Received response: {0}'.format(response))
+        logger.debug('Received response: {0}'.format(response.strip()))
         return response
 
     def close(self):
         '''Close the TCP/IP communication socket'''
 
+        logger.debug('Closing connection to {hostname}:{port}'.format(
+            hostname=self.hostname,
+            port=self.port
+        ))
         self._socket.close()
