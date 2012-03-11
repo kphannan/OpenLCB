@@ -7,6 +7,7 @@ except ImportError:
     from setuptools import setup, find_packages
 
 install_requires=[
+    'setuptools',
 ]
 
 if sys.version_info < (2, 7):
