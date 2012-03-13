@@ -11,9 +11,9 @@ messages.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,8 +36,10 @@ class NodeAlias(object):
         return self._alias
 
     def __str__(self):
-        return '0x{0}'.format(hex(self._alias)[2:].upper())
+        return '0x{0:X}'.format(self._alias)
 
+    def __repr__(self):
+        return 'NodeAlias(0x{0:X})'.format(self._alias)
 
 class InvalidMessage(Exception):
     '''Raised when attempting to parse an improperly-formatted frame'''
@@ -60,13 +62,6 @@ class CANMessage(object):
     .. py:attribute:: body
 
        The value of the body that would be sent with the frame
-
-    .. py:attribute:: MTI
-
-       The message type indicator, as an integer. This value should be
-       set by subclasses of :py:class:`CANMessage`. See
-       http://www.openlcb.org/trunk/specs/MtiAllocations.pdf for a list
-       of MTI allocations.
     '''
 
     def __init__(self, header='', body=''):
@@ -80,11 +75,14 @@ class CANMessage(object):
         )
 
     @classmethod
-    def _parse_frame(cls, frame):
+    def parse_frame(cls, frame):
         '''Parse a string containing a CAN frame into its parts
 
-        :returns tuple: A two-tuple containing the frame header and
-           body, in that order
+        :returns dict: A dictionary containing the valuable message parts
+
+        Subclasses of :py:class:`CANMessage` should override this method
+        and provide their own unique logic for parsing the header and
+        body into usable properties.
         '''
 
         try:
@@ -101,7 +99,10 @@ class CANMessage(object):
         else:
             raise InvalidMessage(frame)
 
-        return header, body
+        return {
+            'header': header,
+            'body': body
+        }
 
     @classmethod
     def from_string(cls, frame):
@@ -111,21 +112,20 @@ class CANMessage(object):
            control characters
         :returns: A new instance of the :py:class:`CANMessage` subclass
 
-        Subclasses of :py:class:`CANMessage` should override this method
-        and provide their own unique logic for parsing the header and
-        body into usable properties.
+        Subclasses of :py:class:`CANMessage` should *not* override this
+        method, but rather :py:meth:`parse_frame` instead.
         '''
 
-        header, body = cls._parse_frame(frame)
+        parts = cls.parse_frame(frame)
 
-        return cls(header, body)
+        return cls(**parts)
 
     @classmethod
     def from_sequence(cls, seq):
         '''Convert a sequence (list, etc.) of strings to Message objects
-        
+
         :param sequence seq: A sequence of OpenLCB frame strings
-        :yields: The :py:class:`CANMessage` subclass
+        :yields: Instances of the :py:class:`CANMessage` subclass
         '''
 
         for frame in seq:
@@ -141,23 +141,33 @@ class OpenLCBMessage(CANMessage):
     .. py:attribute:: src_alias
 
        The node alias of the node sending the message
+
+    .. py:attribute:: MTI
+
+       The message type indicator, as an integer. This value should be
+       set by subclasses of :py:class:`CANMessage`. See
+       http://www.openlcb.org/trunk/specs/MtiAllocations.pdf for a list
+       of MTI allocations.
     '''
 
-    def __init__(self, src_alias, body=''):
-        self.src_alias = NodeAlias(src_alias)
-        self.body = body
+    def __init__(self, **keywords):
+        try:
+            self.src_alias = NodeAlias(keywords['src_alias'])
+        except KeyError:
+            self.src_alias = None
+        self.body = keywords.get('body', '')
 
     @property
     def header(self):
         # Shift the Message Type Indicator to the left 12 bits to make
         # room, then append the source alias
-        return hex((self.MTI << 12) + int(self.src_alias)).upper()[2:]
+        return '{0:X}'.format((self.MTI << 12 | int(self.src_alias)))
 
     @classmethod
-    def from_string(cls, frame):
-       header, body = cls._parse_frame(frame)
-       src_alias = int(header, 16) & 0xfff
-       return cls(src_alias, body)
+    def parse_frame(cls, frame):
+        parts = super(OpenLCBMessage, cls).parse_frame(frame)
+        parts['src_alias'] = int(parts['header'], 16) & 0xfff
+        return parts
 
 
 class GlobalMessage(OpenLCBMessage):
@@ -181,9 +191,12 @@ class AddressedMessage(OpenLCBMessage):
        The alias of the node for which the message is intended
     '''
 
-    def __init__(self, src_alias, dst_alias, body=''):
-        super(AddressedMessage, self).__init__(src_alias, body)
-        self.dst_alias = NodeAlias(dst_alias)
+    def __init__(self, **keywords):
+        super(AddressedMessage, self).__init__(**keywords)
+        try:
+            self.dst_alias = NodeAlias(keywords['dst_alias'])
+        except KeyError:
+            self.dst_alias = None
 
     @property
     def header(self):
@@ -191,37 +204,66 @@ class AddressedMessage(OpenLCBMessage):
         header |= int(self.dst_alias)
         header <<= 12
         header |= int(self.src_alias)
-        return hex(header).upper()[2:]
+        return '{0:X}'.format(header)
+
+    @classmethod
+    def parse_frame(cls, frame):
+        parts = super(AddressedMessage, cls).parse_frame(frame)
+        parts['dst_alias'] = (int(parts['header'], 16) & 0xfff000) >> 12
+        return parts
+
+
+class MessageWithBody(OpenLCBMessage):
+    '''Represents a message that contains a body
+
+    .. py:attribute:: node_id
+
+       The full of the ID of the node sending the message
+    '''
+
+    def __init__(self, **keywords):
+        super(MessageWithBody, self).__init__(**keywords)
+        self.node_id = keywords.get('node_id', None)
+
+    @classmethod
+    def parse_frame(cls, frame):
+        parts = super(MessageWithBody, cls).parse_frame(frame)
+        parts['node_id'] = [
+            int(parts['body'][i:i+2], 16)
+            for i in range(0, 12, 2)
+        ]
+        return parts
+
+
+class EventMessage(MessageWithBody):
+    '''Represents a message containing an event ID
+
+    .. py:attribute:: event_id
+
+       The ID of the event identified in the message
+    '''
+
+    def __init__(self, **keywords):
+        super(EventMessage, self).__init__(**keywords)
+        self.event_id = keywords.get('event_id', None)
+
+    @classmethod
+    def parse_frame(cls, frame):
+        parts = super(EventMessage, cls).parse_frame(frame)
+        parts['event_id'] = int(parts['body'], 16) & 0xffff
+        return parts
 
 
 class VerifyNodeIDNumberSimple(GlobalMessage):
     MTI = 0x180a7
 
 
-class MessageWithBody(OpenLCBMessage):
-    '''Represents a message that contains a body'''
-    
-    #: The full ID of the node sending the message
-    node_id = None
-
-    @classmethod
-    def from_string(cls, frame):
-        msg = super(MessageWithBody, cls).from_string(frame)
-        b = msg.body
-        msg.node_id = [int(b[i:i+2], 16) for i in range(0, 12, 2)]
-        return msg
-
-    
 class VerifiedNodeIDNumber(GlobalMessage, MessageWithBody):
     MTI = 0x180b7
 
 
 class IdentifyEventsAddressed(AddressedMessage):
     MTI = 0x1e
-
-    def __init__(self, src_alias, dst_alias, body):
-        super(IdentifyEventsAddressed, self).__init__(src_alias, body)
-        self.dst_alias = dst_alias
 
 
 class IdentifyEventsGlobal(GlobalMessage):
@@ -236,14 +278,15 @@ class GeneralDatagram(AddressedMessage):
     MTI = 0x1d
 
 
-class ConsumerIdentified(GlobalMessage, MessageWithBody):
+class ConsumerIdentified(GlobalMessage, EventMessage):
     MTI = 0x1926b
 
-    #: The ID of an event produced or consumed by the node
-    event_id = None
 
-    @classmethod
-    def from_string(cls, frame):
-        msg = super(ConsumerIdentified, cls).from_string(frame)
-        msg.event_id = int(msg.body, 16) & 0xffff
-        return msg
+class DatagramReceived(AddressedMessage):
+    MTI = 0x1e
+
+class StartDatagramFrame(AddressedMessage):
+    MTI = 0x1c
+   
+class IdentifyProducers(GlobalMessage):
+    MTI = 0x1828f

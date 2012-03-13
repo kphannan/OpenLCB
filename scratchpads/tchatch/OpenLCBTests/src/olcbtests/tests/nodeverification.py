@@ -10,7 +10,7 @@ def verify_node_global(conn, config):
 
     src_alias = config['src_alias']
 
-    msg = can.VerifyNodeIDNumberSimple(src_alias)
+    msg = can.VerifyNodeIDNumberSimple(src_alias=src_alias)
     logger.info('Sending VerifyNode message from {src}'.format(
         src=msg.src_alias
     ))
