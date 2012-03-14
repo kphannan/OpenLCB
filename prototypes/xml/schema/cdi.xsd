@@ -34,6 +34,7 @@
                   </xs:annotation>
                   <xs:element name="group" type="groupType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="bit" type="bitType" minOccurs="0" maxOccurs="1"/>
+                  <xs:element name="string" type="stringType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="int" type="intType" minOccurs="0" maxOccurs="1"/>
                   <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
               </xs:choice>
@@ -63,6 +64,15 @@
     </xs:complexType>
 
    <xs:complexType name="bitType">
+            <xs:sequence>
+              <xs:element name="name" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
+            </xs:sequence>
+            <xs:attribute name="size" type="xs:int" />
+    </xs:complexType>
+
+   <xs:complexType name="stringType">
             <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
