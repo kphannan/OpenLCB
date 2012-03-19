@@ -130,7 +130,7 @@ void getWrite(uint32_t address, int space, uint8_t val) {
   // all other spaces not written
 }
 
-uint8_t protocolIdent[6] = {0xD5,0x40,0,0,0,0};
+uint8_t protocolIdentValue[6] = {0xD5,0x40,0,0,0,0};
 
 Configuration cfg(&dg, &str, &getRead, &getWrite, (void (*)())0);
 
@@ -324,7 +324,7 @@ void setup()
   }
  
  // Init protocol blocks
-  PIP_setup(protocolIdent, &txBuffer, &link);
+  PIP_setup(&txBuffer, &link);
   SNII_setup((uint8_t)sizeof(SNII_const_data), &txBuffer, &link); 
   // Initialize OpenLCB CAN connection
   OpenLcb_can_init();
