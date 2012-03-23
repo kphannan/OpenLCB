@@ -45,37 +45,37 @@ ButtonLed gold(GOLD, LOW); // button on pin 15
 
 int available()
 {
-    byte stack = 1;
-    extern char *__brkval;
-    extern char *__malloc_heap_end;
-    extern size_t __malloc_margin;
-    if (__malloc_heap_end)
-	  return __malloc_heap_end - __brkval;
-    return (byte*)((byte*)(&stack) - (byte*)__brkval) - (byte*)__malloc_margin;
+  byte stack = 1;
+  extern char *__brkval;
+  extern char *__malloc_heap_end;
+  extern size_t __malloc_margin;
+  if (__malloc_heap_end)
+    return __malloc_heap_end - __brkval;
+  return (byte*)((byte*)(&stack) - (byte*)__brkval) - (byte*)__malloc_margin;
 } 
 
 void loadNodeID(OLCB_NodeID *nid)
 {
-	//The NodeID is stored at the very end of EEPROM
-	//on the AT90CAN128, the last EEPROM address is 0x0FFF
-	//So:
+  //The NodeID is stored at the very end of EEPROM
+  //on the AT90CAN128, the last EEPROM address is 0x0FFF
+  //So:
   for(uint16_t i = 0; i < 6; ++i)
     nid->val[i] = EEPROM.read(0x0FFA+i);
   if((nid->val[0] == 0xFF) &&  (nid->val[1] == 0xFF) && (nid->val[2] == 0xFF) && (nid->val[3] == 0xFF) && (nid->val[4] == 0xFF) && (nid->val[5] == 0xFF) )
-        {
-            //NO NODE ID!!
-            while(1);
-        }
+  {
+    //Serial.println("NO NODE ID!");
+    while(1);
+  }
 }
 
 // =============== Setup ===================
 
 void setup()
 {
-    #ifdef DEBUG
-    Serial.begin(115200);
-    Serial.println("Io 8C 8P default");
-  #endif
+#ifdef DEBUG
+  //Serial.begin(115200);
+  //Serial.println("Io 8C 8P default");
+#endif
   //first, set up inputs and outputs, setting pull-up resistors on inputs
   for(int i = 0; i < 8; ++i) //outputs
   {
@@ -87,29 +87,29 @@ void setup()
     pinMode(i, INPUT);
     digitalWrite(i, HIGH);
   }
-  
+
   //now, load the NodeID from EEPROM
   loadNodeID(&nodeid);
-  
-    //nodeid.print();
-    link.initialize();
-    pce.create(&link, &nodeid);
-    pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers TODO REMOVE THIS!?
-    cfg.create(&link, &nodeid, &pce);
-    bg.create(&link, &nodeid, &pce);
-    info.create(&link, &nodeid);
-    link.addVNode(&pce);
-    link.addVNode(&cfg);
-    link.addVNode(&bg);
-    link.addVNode(&info);
+
+  //nodeid.print();
+  link.initialize();
+  pce.create(&link, &nodeid);
+  pce.initialize(event_pool, 32); //set up a space for 32 events: 16 producers and 16 consumers TODO REMOVE THIS!?
+  cfg.create(&link, &nodeid, &pce);
+  bg.create(&link, &nodeid, &pce);
+  info.create(&link, &nodeid);
+  link.addVNode(&pce);
+  link.addVNode(&cfg);
+  link.addVNode(&bg);
+  link.addVNode(&info);
 }
 
 // ================ Loop ===================
 
 void loop()
 {
-    // OpenLCB statndard processing:
-    link.update();
+  // OpenLCB statndard processing:
+  link.update();
 }
 
 // ---------------------------------------------------
@@ -120,3 +120,4 @@ void loop()
 // simpleNodeIdentificationInformation
 // ProtocolIdentificationProtocol
 // unknownMtiAddressed
+

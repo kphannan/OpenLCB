@@ -42,45 +42,47 @@ extern ButtonLed gold; // button on pin 49
  * Pressing both at the same time for less than 5 seconds sends an ident message.
  *
  */
- 
- 
- /* modifications to the above:
+
+
+/* modifications to the above:
  for teaching/learning producers: User must set teach or learn mode as above, then press the input button: Once to select "on" and a second time for "off"
  	TODO this method is reasonable for pushbuttons, but does it work for DPDTs?
  for teaching/learning cosumers: User uses gold button as above to select the output. Notice that this is not a particularly good method if there are turnouts connected to the outputs?
  */
 
-class MyBlueGoldHandler: public OLCB_Virtual_Node
+class MyBlueGoldHandler: 
+public OLCB_Virtual_Node
 {
-  public:
+public:
 
-    void update(void);
-    bool handleMessage(OLCB_Buffer *buffer);
-    void create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler *eventHandler);
+  void update(void);
+  bool handleMessage(OLCB_Buffer *buffer);
+  void create(OLCB_Link *link, OLCB_NodeID *nid, MyEventHandler *eventHandler);
 
-        
-  protected:
-  private:
-    uint8_t _state;
-    bool _started;
-    int8_t _index;
-    int8_t _input_index;
-    bool _last_blue;
-    bool _last_gold;
-    uint8_t _last_double;
-    uint8_t _double_state;
-    bool _blue_pressed;
-    bool _gold_pressed;
-    uint8_t _double_press;
-    
-    uint8_t _input_pressed;
-    uint8_t _last_input;
-    MyEventHandler* _event_handler; //for teaching and learning from.
-    uint8_t *_input_buttons; //we know there are 8 of them.
-	
-    void sendIdent();
-    void factoryReset();  // ToDo: better name!  Not really a true "factory reset"
-    void moveToIdle(bool reset=false);
+
+protected:
+private:
+  uint8_t _state;
+  bool _started;
+  int8_t _index;
+  int8_t _input_index;
+  bool _last_blue;
+  bool _last_gold;
+  uint8_t _last_double;
+  uint8_t _double_state;
+  bool _blue_pressed;
+  bool _gold_pressed;
+  uint8_t _double_press;
+
+  uint8_t _input_pressed;
+  uint8_t _last_input;
+  MyEventHandler* _event_handler; //for teaching and learning from.
+  uint8_t *_input_buttons; //we know there are 8 of them.
+
+  void sendIdent();
+  void factoryReset();  // ToDo: better name!  Not really a true "factory reset"
+  void moveToIdle(bool reset=false);
 };
 
 #endif
+

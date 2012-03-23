@@ -12,7 +12,7 @@ void MyEventHandler::create(OLCB_Link *link, OLCB_NodeID *nid)
 bool MyEventHandler::handleMessage(OLCB_Buffer *buffer)
 {
   if(isPermitted());
-    return OLCB_Event_Handler::handleMessage(buffer);
+  return OLCB_Event_Handler::handleMessage(buffer);
 
   return false;
 }
@@ -65,25 +65,25 @@ void MyEventHandler::initialize(OLCB_Event *events, uint8_t num)
   }
   else
   {
-      ////Serial.println("EEPROM already formatted");
+    ////Serial.println("EEPROM already formatted");
   }
   //now, read it back out into SRAM
   load(); //TODO add check for valid EEPROM.
-  
+
   //and a little more setup...first the 16 producers
   for(uint8_t i = 0; i < 16; ++i)
     newEvent(i, true, false);
   //and the 16 consumers
   for(uint8_t i = 16; i < 32; ++i)
     newEvent(i, false, true);
-  
+
 }
 
 void MyEventHandler::firstInitialization(void)
 {
   //This method should only ever be called once. It formats the EEPROM to contain a set of universal EventIDs from the Railstars pool 05.02.01.02.02.00.00.XX
 
-  //First for the producers
+    //First for the producers
   for(uint8_t i = 0; i < 16; ++i)
   {
     EEPROM.write(0x04+(i*8)+0, 0x05);
@@ -132,9 +132,9 @@ void MyEventHandler::factoryReset(void)
   }
   else //not formatted
   {
-      //do a different routine instead
-      firstInitialization();
-      return;
+    //do a different routine instead
+    firstInitialization();
+    return;
   }
 
   //first, increment the next available ID by 16, and write it back
@@ -178,37 +178,37 @@ void MyEventHandler::update(void)
 {
   if(!isPermitted())
   {
-//    //Serial.println("not permitted!");
+    //    //Serial.println("not permitted!");
     return;
   }
-    
+
   for(uint8_t i = 0; i < 8; ++i)
     //first, are we going to set up any kind of learning? TODO
 
-  if(!_inhibit)
-  {
-    // looks at the input pins and
-    // and decide whether and which events to fire
-    // with pce.produce(i);
-    // inputs are pins 8..15
-    uint8_t state, prev_state;
-    for(uint8_t i = 0; i < 8; ++i)
+    if(!_inhibit)
     {
-      state = digitalRead(_input_buttons[i]); //digitalRead(i+8);
-      prev_state = (_inputs & (1<<i))>>i;
-      if(state != prev_state) //change in state!
-      {	//input has changed, fire event and update flag
-        ////Serial.print("input state change to ");
-        ////Serial.print(state, DEC);
-        ////Serial.print(" on ");
-        ////Serial.println(i, DEC);
-        ////Serial.println(_inputs, BIN);
-        _inputs ^= (1<<i); //toggle flag
-        //now determine which producer to fire.
-        produce((i<<1) | !(state^0x01)); //TODO NOT RIGHT!
+      // looks at the input pins and
+      // and decide whether and which events to fire
+      // with pce.produce(i);
+      // inputs are pins 8..15
+      uint8_t state, prev_state;
+      for(uint8_t i = 0; i < 8; ++i)
+      {
+        state = digitalRead(_input_buttons[i]); //digitalRead(i+8);
+        prev_state = (_inputs & (1<<i))>>i;
+        if(state != prev_state) //change in state!
+        {	//input has changed, fire event and update flag
+          ////Serial.print("input state change to ");
+          ////Serial.print(state, DEC);
+          ////Serial.print(" on ");
+          ////Serial.println(i, DEC);
+          ////Serial.println(_inputs, BIN);
+          _inputs ^= (1<<i); //toggle flag
+          //now determine which producer to fire.
+          produce((i<<1) | !(state^0x01)); //TODO NOT RIGHT!
+        }
       }
     }
-  }
   OLCB_Event_Handler::update(); //called last to permit the new events to be sent out immediately.
   if(_dirty) //check to see if we need to dump memory to EEPROM
   {
@@ -245,7 +245,7 @@ uint8_t MyEventHandler::readConfig(uint16_t address, uint8_t length, uint8_t *da
   ////Serial.println(length);
   uint8_t index = (address>>3);
   uint16_t offset = address - (index<<3);
-    if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
+  if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
     //TODO caculate a shorter length to prevent overflow
     length = (_numEvents*8) - (address);
   ////Serial.print("modified length: ");
@@ -263,15 +263,15 @@ uint8_t MyEventHandler::readConfig(uint16_t address, uint8_t length, uint8_t *da
   {
     if(j == 8)
     {
-        j = 0;
-        ++k;
+      j = 0;
+      ++k;
     }
     *(data+i) = _events[k].val[j];
     ////Serial.println(_events[k].val[j], HEX);
   }
   ////Serial.println("===");
   //for(i = 0; i < length; ++i)
-    ////Serial.println(*(data+i), HEX);
+  ////Serial.println(*(data+i), HEX);
   return length;
 }
 
@@ -280,10 +280,10 @@ void MyEventHandler::writeConfig(uint16_t address, uint8_t length, uint8_t *data
   //This method gets called by configuration handlers. We are being asked to write an EventID. We'll write it to memory, and do a lazy write to EEPROM later.
     _dirty = 1;
 
-    //decode the address into a producer/consumer by dividing by 8
+  //decode the address into a producer/consumer by dividing by 8
   uint8_t index = (address>>3);
   uint16_t offset = address - (index<<3);
-    if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
+  if( (length+address) > (_numEvents*8) ) //too much! Would cause overflow
     //TODO caculate a shorter length to prevent overflow
     length = (_numEvents*8) - (address);
   ////Serial.println("writeConfig");
@@ -302,14 +302,15 @@ void MyEventHandler::writeConfig(uint16_t address, uint8_t length, uint8_t *data
   {
     if(j == 8)
     {
-        j = 0;
-        ++k;
+      j = 0;
+      ++k;
     }
     _events[k].val[j] = *(data+i);
     ////Serial.println(_events[k].val[j], HEX);
   }
   ////Serial.println("===");
   //for(i = 0; i < length; ++i)
-    ////Serial.println(*(data+i), HEX);
+  ////Serial.println(*(data+i), HEX);
 }
+
 

@@ -7,19 +7,21 @@
  * A class for generating basic canned messages for PIP and SNIP.
  */
 
-class MyInfoHandler: public OLCB_Virtual_Node
+class MyInfoHandler: 
+public OLCB_Virtual_Node
 {
-  public:
+public:
 
-    void update(void);
-    bool handleMessage(OLCB_Buffer *buffer);
-    void create(OLCB_Link *link, OLCB_NodeID *nid);
-    
-  private:
-    char _buffer[19];
-    int8_t _info_index;
-    int8_t _string_index;
-    OLCB_Buffer _reply;
+  void update(void);
+  bool handleMessage(OLCB_Buffer *buffer);
+  void create(OLCB_Link *link, OLCB_NodeID *nid);
+
+private:
+  char _buffer[19];
+  int8_t _info_index;
+  int8_t _string_index;
+  OLCB_Buffer _reply;
 };
 
 #endif
+
