@@ -1,8 +1,0 @@
-   connect to  COM8  at  333333
-   send     :X180A7AAAN;
-   receive  <none>
-aliasMapEnquiry
-   send     :X10702AAAN;
-   receive  <none>
-Expected reply when node ID matches not received
-Error in aliasMapEnquiry

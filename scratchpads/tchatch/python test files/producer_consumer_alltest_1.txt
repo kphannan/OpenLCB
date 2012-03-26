@@ -1,9 +1,0 @@
-   connect to  COM36  at  333333
-   send     :X180A7AAAN;
-   receive  <none>
-aliasMapEnquiry
-   send     :X10702AAAN;
-   receive  
-Unexpected reply received  
-
-Error in aliasMapEnquiry
