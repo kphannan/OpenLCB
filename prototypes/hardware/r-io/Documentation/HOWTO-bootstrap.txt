@@ -66,11 +66,46 @@ Compile
     At this point, I got stuck; Arduino could not download.
     I was able to locate the .hex file
     that Arduino had created and directly load OK via avrdude, but 
-    this isn't a workable solution.
+    that doesn't work either.
 
         
-
+--------------
 
 
 /Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/bin/avrdude -C/Applications/Arduino.app/Contents/Resources/Java/hardware/tools/avr/etc/avrdude.conf -v -v -v -v -pat90can128 -carduino -P/dev/cu.usbserial-A900fLVC -b57600 -D -Uflash:w:IoBlink.cpp.hex:i
+
+
+--------------
+
+DPH Procedure for Io
+
+(A) Loading Bootloader
+
+(1) Power Io with Ext Power Link
+(2) Attach AVR JTagII
+(3) Set Main.ProgMode to ISP, settings to 100Hz, Write.
+(4) Fuses --> Lo-Extd: FF 58 F5 Program
+(5) Set Main.Settings --> 4MHz Write
+(6) Program --> Input Hex File = AY90CAN_boot_io.hex Program
+
+Io should now blink blue LED 3 times repeatedly.  
+
+(B) Initializing Eeprom NodeID and testing LEDs
+
+(1) Run Arduino 1.0 IDE and load IoIoTesting1.ino
+(2) Change 'CHANGE THIS' line to NodeID
+(3) Choose Tools/Board=Railstars Io OpenLCB Board
+(4) Plug in USB-Serial Adapter
+(5) Choose Tools/Serial Port = /dev/....
+(6) Attach USB-Serial Adapter to node
+(6) Compile and load.  
+
+Io should flash all Green LEDs in unison, and blink Blue and Gold LEDs.  
+
+(C) Load Sketch
+
+(1) Load Io_8P_8C_default into IDE
+(2) Compile and upload to Io
+
+Io's Blue, Gold and Power should light.
 
