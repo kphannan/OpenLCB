@@ -9,7 +9,7 @@
 #define MTI_PIP_RESPONSE  0x2F
 
 prog_char string_0[] PROGMEM = "\x01Railstars Limited";   // "String 0" etc are strings to store - change to suit. First character must be a '1', which is a version byte.
-prog_char string_1[] PROGMEM = "Railstars Io Developer's Board";
+prog_char string_1[] PROGMEM = "Io Dev Board";
 prog_char string_2[] PROGMEM = "1.0";
 PROGMEM const char *SNIP_table[] =	   // change "string_table" name to suit
 {   
@@ -48,7 +48,7 @@ void MyInfoHandler::update(void)
     //Serial.println(_reply.length, DEC);
     //Serial.print("start index= ");
     //Serial.println(_string_index, DEC);
-    for(uint8_t i = 1; i < _reply.length; ++i)
+    for(uint8_t i = 1; i <= _reply.length; ++i)
     {
       _reply.data[i] = _buffer[_string_index+i-1];
       //Serial.print((char)(_reply.data[i]));
@@ -63,8 +63,8 @@ void MyInfoHandler::update(void)
     //Serial.println(_string_index, DEC);
     //Serial.print("str len = ");
     //Serial.println(strlen(_buffer), DEC);
-    //Serial.println(_string_index > strlen(_buffer));
-    if(_string_index > strlen(_buffer)) //next string!
+    //Serial.print(_string_index >= strlen(_buffer));
+    if(_string_index >= strlen(_buffer)) //next string!
     {
       //Serial.println("new string!");
       _string_index = 0;
@@ -85,6 +85,7 @@ void MyInfoHandler::update(void)
   }
   OLCB_Virtual_Node::update();
 }
+
 
 
 void MyInfoHandler::create(OLCB_Link *link, OLCB_NodeID *nid)
