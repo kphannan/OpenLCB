@@ -18,8 +18,8 @@ public:
 
 private:
   char _buffer[19];
-  int8_t _info_index;
   int8_t _string_index;
+  uint8_t _string_length;
   OLCB_Buffer _reply;
 };
 
