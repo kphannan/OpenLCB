@@ -196,7 +196,7 @@ void MyEventHandler::update(void)
       {
         state = digitalRead(_input_buttons[i]); //digitalRead(i+8);
         prev_state = (_inputs & (1<<i))>>i;
-        if(state != prev_state) //change in state!
+        if((state != prev_state) || _first_run) //change in state!
         {	//input has changed, fire event and update flag
           //Serial.print("input state change to ");
           //Serial.print(state, DEC);
@@ -205,9 +205,12 @@ void MyEventHandler::update(void)
           //Serial.println(_inputs, BIN);
           _inputs ^= (1<<i); //toggle flag
           //now determine which producer to fire.
-          produce((i<<1) | !(state^0x01)); //TODO NOT RIGHT!
+          //Serial.print("Producing ");
+          //Serial.println((i<<1) | !(state^0x01), HEX);
+          produce((i<<1) | !(state^0x01));
         }
       }
+      _first_run = false;
     }
   OLCB_Event_Handler::update(); //called last to permit the new events to be sent out immediately.
   if(_dirty) //check to see if we need to dump memory to EEPROM
