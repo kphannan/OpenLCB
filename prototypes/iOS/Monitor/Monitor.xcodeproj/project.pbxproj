@@ -92,6 +92,10 @@
 		23BAA98113816F7A00BFC07B /* MonitorTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MonitorTests-Prefix.pch"; sourceTree = "<group>"; };
 		23BAA98213816F7A00BFC07B /* MonitorTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MonitorTests.h; sourceTree = "<group>"; };
 		23BAA98413816F7A00BFC07B /* MonitorTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MonitorTests.m; sourceTree = "<group>"; };
+		23C183891529F68E00D9B8FD /* Monitor copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Monitor copy-Info.plist"; path = "/Users/jake/Documents/Trains/MRRLCB/OpenLCB/svn/openlcb/trunk/prototypes/iOS/Monitor/Monitor copy-Info.plist"; sourceTree = "<absolute>"; };
+		23C1838B1529F69300D9B8FD /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = "Resources-iPad/Monitor/en.lproj/MainWindow.xib"; sourceTree = "<group>"; };
+		23C1838C1529F69300D9B8FD /* MainView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = MainView.xib; path = "Resources-iPad/Monitor/MainView.xib"; sourceTree = "<group>"; };
+		23C1838D1529F69300D9B8FD /* FlipsideView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = FlipsideView.xib; path = "Resources-iPad/Monitor/FlipsideView.xib"; sourceTree = "<group>"; };
 		23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OpenLcbLib.xcodeproj; path = ../../ObjectiveC/OpenLcbLib/OpenLcbLib.xcodeproj; sourceTree = "<group>"; };
 		23D7FA3E13AC4B7E009F773D /* libOpenLcb.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOpenLcb.a; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -124,6 +128,7 @@
 		23BAA94213816F7900BFC07B = {
 			isa = PBXGroup;
 			children = (
+				23C183881529F68D00D9B8FD /* Resources-iPad */,
 				23D7FA3E13AC4B7E009F773D /* libOpenLcb.a */,
 				232954DB138996D7009220CC /* Default.png */,
 				232954D913897A8A009220CC /* openlcb_iphone_114.png */,
@@ -132,6 +137,7 @@
 				23BAA97B13816F7A00BFC07B /* MonitorTests */,
 				23BAA95013816F7A00BFC07B /* Frameworks */,
 				23BAA94E13816F7A00BFC07B /* Products */,
+				23C183891529F68E00D9B8FD /* Monitor copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -199,6 +205,16 @@
 				23BAA98113816F7A00BFC07B /* MonitorTests-Prefix.pch */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		23C183881529F68D00D9B8FD /* Resources-iPad */ = {
+			isa = PBXGroup;
+			children = (
+				23C1838A1529F69300D9B8FD /* MainWindow.xib */,
+				23C1838C1529F69300D9B8FD /* MainView.xib */,
+				23C1838D1529F69300D9B8FD /* FlipsideView.xib */,
+			);
+			name = "Resources-iPad";
 			sourceTree = "<group>";
 		};
 		23D7FA1613AC4B2B009F773D /* Products */ = {
@@ -407,6 +423,14 @@
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
 		};
+		23C1838A1529F69300D9B8FD /* MainWindow.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				23C1838B1529F69300D9B8FD /* en */,
+			);
+			name = MainWindow.xib;
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -445,6 +469,7 @@
 				PROVISIONING_PROFILE = "";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SDKROOT = iphoneos;
+				"VALID_ARCHS[sdk=*]" = "armv6 armv7";
 			};
 			name = Release;
 		};
@@ -458,13 +483,13 @@
 				GCC_PREFIX_HEADER = "Monitor/Monitor-Prefix.pch";
 				"HEADER_SEARCH_PATHS[arch=*]" = "${PROJECT_DIR}/../../ObjectiveC/OpenLcbLib/";
 				INFOPLIST_FILE = "Monitor/Monitor-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -478,13 +503,13 @@
 				GCC_PREFIX_HEADER = "Monitor/Monitor-Prefix.pch";
 				"HEADER_SEARCH_PATHS[arch=*]" = "${PROJECT_DIR}/../../ObjectiveC/OpenLcbLib/";
 				INFOPLIST_FILE = "Monitor/Monitor-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 				WRAPPER_EXTENSION = app;
 			};
