@@ -1,10 +1,10 @@
 \begin{theindex}
 
   \item Baud rate
-    \subitem 230,400, 11
-    \subitem 333,333, 10
-    \subitem 500k, 10
-    \subitem Selection, 10
+    \subitem 230,400, 12
+    \subitem 333,333, 11
+    \subitem 500k, 11
+    \subitem Selection, 11
 
   \indexspace
 
@@ -14,18 +14,18 @@
   \indexspace
 
   \item Power
-    \subitem  power, from 2.1 mm input, 7
-    \subitem  power, from usb, to usb, 7
-    \subitem OpenLCB, from bus, 8
-    \subitem OpenLCB, to bus, 8
+    \subitem  power, from 2.1 mm input, 8
+    \subitem  power, from usb, to usb, 8
+    \subitem OpenLCB, from bus, 9
+    \subitem OpenLCB, to bus, 9
   \item Proceedure
-    \subitem baud rate, 10
+    \subitem baud rate, 11
 
   \indexspace
 
   \item Termination
-    \subitem Capacitive, 9
-    \subitem None, 9
-    \subitem Resistive, 9
+    \subitem Capacitive, 11
+    \subitem None, 10
+    \subitem Resistive, 10
 
 \end{theindex}

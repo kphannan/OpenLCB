@@ -1,25 +1,25 @@
 \contentsline {chapter}{\numberline {1}Hardware}{5}
 \contentsline {subsection}{\numberline {1.0.1}Included with purchase}{5}
 \contentsline {chapter}{\numberline {2}Provisioning the CAN/USB Interface}{7}
-\contentsline {section}{\numberline {2.1}Powering the CAN/USB Interface}{7}
-\contentsline {subsection}{\numberline {2.1.1}Power from the external jack}{7}
-\contentsline {subsection}{\numberline {2.1.2}Power from the USB}{7}
-\contentsline {section}{\numberline {2.2}Power on the OpenLCB bus}{8}
-\contentsline {subsection}{\numberline {2.2.1}Provide power to the OpenLCB bus}{8}
-\contentsline {subsection}{\numberline {2.2.2}Provide Power from the OpenLCB bus}{8}
-\contentsline {section}{\numberline {2.3}Termination of the Bus}{9}
-\contentsline {subsection}{\numberline {2.3.1}No termination}{9}
-\contentsline {subsection}{\numberline {2.3.2}Resistive termination}{9}
-\contentsline {subsection}{\numberline {2.3.3}Capacitive termination}{9}
-\contentsline {section}{\numberline {2.4}Baud Rate Selection}{10}
-\contentsline {subsection}{\numberline {2.4.1}Proceedure for setting baud rate}{10}
-\contentsline {subsection}{\numberline {2.4.2}Default 500k baud}{10}
-\contentsline {subsection}{\numberline {2.4.3}333,333 baud rate selection}{10}
-\contentsline {subsection}{\numberline {2.4.4}230,400 baud rate selection}{11}
+\contentsline {section}{\numberline {2.1}Powering the CAN/USB Interface}{8}
+\contentsline {subsection}{\numberline {2.1.1}Power from the external jack}{8}
+\contentsline {subsection}{\numberline {2.1.2}Power from the USB}{8}
+\contentsline {section}{\numberline {2.2}Power on the OpenLCB bus}{9}
+\contentsline {subsection}{\numberline {2.2.1}Provide power to the OpenLCB bus}{9}
+\contentsline {subsection}{\numberline {2.2.2}Provide Power from the OpenLCB bus}{9}
+\contentsline {section}{\numberline {2.3}Termination of the Bus}{10}
+\contentsline {subsection}{\numberline {2.3.1}No termination}{10}
+\contentsline {subsection}{\numberline {2.3.2}Resistive termination}{10}
+\contentsline {subsection}{\numberline {2.3.3}Capacitive termination}{11}
+\contentsline {section}{\numberline {2.4}Baud Rate Selection}{11}
+\contentsline {subsection}{\numberline {2.4.1}Proceedure for setting baud rate}{11}
+\contentsline {subsection}{\numberline {2.4.2}Default 500k baud}{11}
+\contentsline {subsection}{\numberline {2.4.3}333,333 baud rate selection}{11}
+\contentsline {subsection}{\numberline {2.4.4}230,400 baud rate selection}{12}
 \contentsline {chapter}{\numberline {3}Using JMRI Panel Pro}{13}
-\contentsline {section}{\numberline {3.1}JMRI Preferences}{13}
-\contentsline {subsection}{\numberline {3.1.1}Connections}{13}
+\contentsline {section}{\numberline {3.1}JMRI Preferences}{14}
+\contentsline {subsection}{\numberline {3.1.1}Connections}{14}
 \contentsline {subsection}{\numberline {3.1.2}TCH Tech Adapter}{14}
-\contentsline {subsection}{\numberline {3.1.3}JMRI comport}{14}
-\contentsline {subsection}{\numberline {3.1.4}JMRI baud rate }{14}
+\contentsline {subsection}{\numberline {3.1.3}JMRI comport}{15}
+\contentsline {subsection}{\numberline {3.1.4}JMRI baud rate }{15}
 \contentsline {subsection}{\numberline {3.1.5}JMRI complete }{16}

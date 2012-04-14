@@ -1,4 +1,4 @@
-\documentclass[15pt]{book}
+\documentclass[11pt]{book}
 \usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
 \geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
 %\geometry{landscape}                % Activate for for rotated page geometry
@@ -9,7 +9,7 @@
 
 \makeindex
 
-\title{TCH Technology OpenLCB CAN/USB interface}
+\title{TCH Technology OpenLCB CAN/USB Interface}
 
 
 \author{Written by Tim Hatch}
@@ -33,7 +33,13 @@
 The TCH Technology CAN/USB interface is used for connecting a computer to an OpenLCB CAN network. The  CAN/USB interface is a plug and play device.  Provisioning is by selection of various jumpers.
 
 \chapter{Provisioning the CAN/USB Interface}
-
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=2in]{images/can_usb_jumpers.png}
+\caption{TCH TechnologyCAN/USB jumpers and connecters}
+\label{CONNECT}
+\end{center}
+\end{figure}
 The CAN/USB interface has various jumpers that need to be provisioned before it will work with your computer and other OpenLCB boards.
 
 \section{Powering the CAN/USB Interface}
@@ -44,7 +50,7 @@ The TCH Technology CAN/USB can be powered in one of three ways: From an external
 You may power the CAN/USB using an external power supply that provides a 2.1mm center-positive plug, and between 9 and 12V DC at 500mA or more of current. 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=1in]{images/power_line_in.png}
+\includegraphics[width=1.5in]{images/power_line_in.png}
 \caption{Jumper set to provide power from line in jack}
 \label{CANOUT}
 \end{center}
@@ -53,19 +59,19 @@ You may power the CAN/USB using an external power supply that provides a 2.1mm c
 Powering the CAN/USB interface from the USB connector.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=1in]{images/power_line_usb.png}
+\includegraphics[width=1.5in]{images/power_line_usb.png}
 \caption{Jumper set to provide power from PC USB}
 \label{CANOUT}
 \end{center}
 \end{figure}
 \section{Power on the OpenLCB bus}
 \index{Power!OpenLCB, to bus}
-Note that drawing power from the OpenLCB bus requires that at least one other node be configured to provide power to the OpenLCB bus.
-CAN/USB configured to use an external power supply can optionally be configured to provide power to the OpenLCB bus.
+Note: Drawing power from the OpenLCB bus requires that at least one other node be configured to provide power to the OpenLCB bus.
+If the CAN/USB Interface is configured to use an external power supply, optionality it can be configured to provide power to the OpenLCB bus.
 \subsection{Provide power to the OpenLCB bus}
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=1in]{images/power_out.png}
+\includegraphics[width=1.5in]{images/power_out.png}
 \caption{CAN POWER jumper set to provide power to the OpenLCB bus}
 \label{CANOUT}
 \end{center}
@@ -109,7 +115,7 @@ Resistive termination uses just one yellow shorting jumper set parallel with the
 Capacitive termination uses two yellow shorting jumpers in parallel.  See\S\ref{CapTerm}
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=1in]{images/term_capacitive.png}
+\includegraphics[width=2in]{images/term_capacitive.png}
 \caption{Capacitive termination}
 \label{CapTerm}
 \end{center}
@@ -133,7 +139,7 @@ For the selection of the default 500k baud there shall be no yellow shorting jum
 Position the yellow shorting jumper as per the figure in \S\ref{333333}
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3in]{images/333333_baud.png}
+\includegraphics[width=3.5in]{images/333333_baud.png}
 \caption{333,333 baud rate selection}
 \label{333333}
 \end{center}
@@ -145,7 +151,7 @@ Position the yellow shorting jumper as per the figure in \S\ref{333333}
 Position the yellow shorting jumper as per the figure in \S\ref{230400}
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3in]{images/230400_baud.png}
+\includegraphics[width=3.5in]{images/230400_baud.png}
 \caption{230,400 baud rate selection}
 \label{230400}
 \end{center}
@@ -166,7 +172,7 @@ JMRI Main Screen
 JMRI Preferences Screen.  Select OpenLCB for your connection.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3.5in]{images/jmri_preferences.png}
+\includegraphics[width=4in]{images/jmri_preferences.png}
 \caption{JMRI Preferences}
 \end{center}
 \end{figure}
@@ -176,7 +182,7 @@ JMRI Preferences Screen.  Select OpenLCB for your connection.
 Select the ``CAN via TCH Tech CAN/USB adapter"
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3.5in]{images/jmri_tch_adapter.png}
+\includegraphics[width=4in]{images/jmri_tch_adapter.png}
 \caption{JMRI TCH Tech Adapter}
 \end{center}
 \end{figure}
@@ -185,7 +191,7 @@ Select the ``CAN via TCH Tech CAN/USB adapter"
 Select the ``COM Port"
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3.5in]{images/jmri_comport.png}
+\includegraphics[width=4in]{images/jmri_comport.png}
 \caption{JMRI comport}
 \end{center}
 \end{figure}
@@ -194,7 +200,7 @@ Select the ``COM Port"
 Type in your ``Connection Name"  usually ``OpenLCB".  Click on the box for Additional Connection Settings. Select the ``comport baud rate"
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3.5in]{images/baud_rate.png}
+\includegraphics[width=4in]{images/baud_rate.png}
 \caption{JMRI baud rate selection}
 \end{center}
 \end{figure}
@@ -203,7 +209,7 @@ Type in your ``Connection Name"  usually ``OpenLCB".  Click on the box for Addit
 Your connection to JMRI should now be complete.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=3.5in]{images/jmri_complete.png}
+\includegraphics[width=4in]{images/jmri_complete.png}
 \caption{JMRI Completion}
 \end{center}
 \end{figure}
