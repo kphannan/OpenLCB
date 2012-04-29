@@ -130,7 +130,6 @@ void jumptoloader(void)
     _asm
         goto loader
     _endasm
-
 }
 
 #pragma romdata romnodedata = NODEDATA

@@ -95,7 +95,7 @@ namespace interlock
             Console.WriteLine("Error " + n + " in line near " + s3 + " at \'" + s1 + "\', " + s2 + " expected.");
         }
 
-        static void primary()
+        static void simpleprimary()
         {
             if (nexttoken < 1000)
             {
@@ -114,6 +114,11 @@ namespace interlock
             token();
             pexp_ilock = 'r';
             pexp_nlock = 'n';
+        }
+
+        static void primary()
+        {
+            simpleprimary();
             if (nexttoken == 'r')
             {
                 token();
@@ -179,14 +184,14 @@ namespace interlock
                 Error(2, "W");
             token();
             emitlever(alever, lever, 'r');
-            emitlever(lever, alever, ailock);
+            emitlever(lever, alever, anlock);
 
             do
             {
                 primary();
                 emitlever(lever, pexp_lever, pexp_ilock);
                 emitop(lever, '&');
-                emitlever(alever, pexp_lever, pexp_nlock);
+                emitlever(alever, pexp_lever, pexp_ilock);
                 emitop(alever, '&');
                 emitlever(pexp_lever, lever, 'r');
                 emitop(pexp_lever, '|');
@@ -405,7 +410,7 @@ namespace interlock
                 if (nexttoken == '(')
                 {
                     token();
-                    primary();
+                    simpleprimary();
                     if (nexttoken == ')')
                     {
                         token();
@@ -418,7 +423,7 @@ namespace interlock
                         emitlever(alever, lever, 'r');
                         token();
                         primary();
-                        emitlever(alever, pexp_lever, pexp_nlock);
+                        emitlever(alever, pexp_lever, pexp_ilock);
                         emitop(alever, '&');
                         emitop(alever, '|');
                         emitlever(pexp_lever, lever, 'r');
@@ -431,7 +436,7 @@ namespace interlock
                 }
                 else if (nexttoken >= 1000)
                 {
-                    primary(); // get a locks both ways lever
+                    simpleprimary(); // get a locks both ways lever
                     emitlever(pexp_lever, lever, 'r');
                     emitop(pexp_lever, '|');
                 }

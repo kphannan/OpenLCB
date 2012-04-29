@@ -114,15 +114,12 @@ BOOL ECANSendMessage(void)
     far overlay BYTE * far ptr;       // ECAN buffer pointers
     far overlay BYTE i;
 
-    // check all 3 transmit buffers to find one empty
+    // check only 2 (of 3) transmit buffers to find one empty
     ptr = (BYTE far *)&TXB0CON;
     if (*ptr & 0x08) {
         ptr = (BYTE far *)&TXB1CON;
         if (*ptr & 0x08) {
-            // ptr = (BYTE far *)&TXB2CON;
-            // if (*ptr & 0x08) {
-                return FALSE;
-            // }
+            return FALSE;
         }
     }
 

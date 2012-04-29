@@ -83,6 +83,7 @@ void InitRamFromEEPROM(void);
 //    Definitions
 //*********************************************************************************
 
+#ifdef SWITCHES
 #define SW_ON    0          // switch positions
 #define SW_OFF   1
 
@@ -121,6 +122,7 @@ void InitRamFromEEPROM(void);
 // Macro to unscramble output address from DIP switches
 #define SelectionSwitches() (((PORTB & 0x10)>>2)|(PORTB & 0x03))
 #endif
+#endif
 
 //*********************************************************************************
 //    Ram
@@ -150,9 +152,10 @@ BYTE event[8];
 #endif
 
 #ifdef SERVO
-BYTE next_portc;	            // used by hp interrupt to update portc 
+BYTE ondelay;                   // power up servo on delay
+BYTE next_portc;                // used by hp interrupt to update portc 
 BYTE new_output;                // next value of all the outputs
-BYTE servo_state;		        // interrupt state counter
+BYTE servo_state;		     // interrupt state counter
 BYTE servo_index;               // index of servo to pulse
 int next_tmr;                   // next time for interrupt
 int current_tmr[8];			// current servo pulse width
@@ -221,6 +224,9 @@ const rom BYTE xml[] =
     "</se>"
 #endif
 #ifdef SERVO
+    "<se na=\"OnDelay\" sp=\"2\" bu=\"#323\">"
+      "<int na=\"On delay\" si=\"1\"/>"
+    "</se>"
     "<se na=\"Events\" bu=\"#323\">"
       "<gr rep=\"100\">"
         "<by na=\"Event Number\" si=\"8\"/>"
@@ -265,6 +271,7 @@ const rom BYTE EventTable[128];   // 8 inputs x 2 states x 8 bytes
 
 #ifdef SERVO
 rom BYTE SERVOPOS[32];
+rom BYTE ONDELAY;
 #endif
 
 #ifdef ACE8C
@@ -583,13 +590,14 @@ void Packet(void)
         eventno = 0;
     }
     else if (CB_FrameType == FT_EVENT) {
-       canTraffic = 1;
+        canTraffic = 1;
 #ifndef ACE8C
-       if (LEARN == SW_ON) {            // in learn mode
-            if (UNLEARN==SW_ON) {        // unlean all events with this event number
+#ifdef SWITCHES
+        if (LEARN == SW_ON) {            // in learn mode
+            if (UNLEARN==SW_ON) {       // unlean all events with this event number
                 EraseEvent(&CB_data[0]);
             }
-            else {                  // learn this event, using the switches and links
+            else {                      // learn this event, using the switches and links
                 event[0] = CB_data[0];
                 event[1] = CB_data[1];
                 event[2] = CB_data[2];
@@ -614,6 +622,9 @@ void Packet(void)
         else {
             Find((BYTE * far)&CB_data[0]);
         }
+#else
+        Find((BYTE * far)&CB_data[0]);
+#endif
 #endif
     }
 }
@@ -684,6 +695,12 @@ void DatagramPacket(void)
                     sendack(CB_SourceNID);
                     return;
                 }
+                if (GP_block[6] == 2) { // on delay
+                    ondelay = GP_block[7];
+                    EEPROMWrite((int)&ONDELAY, ondelay);
+                    sendack(CB_SourceNID);
+                    return;
+                }
 #endif
             }
             else if (GP_block[1] == DGM_READ) {
@@ -726,6 +743,11 @@ void DatagramPacket(void)
                     for (i=0; i<32; i++)
                         GP_block[i+7] = servopos[i];
                     StartSendBlock(32+7, CB_SourceNID);
+                    return;
+                }
+                if (GP_block[6] == 2) { // On delay
+                    GP_block[7] = EEPROMRead((int)&ONDELAY);
+                    StartSendBlock(1+7, CB_SourceNID);
                     return;
                 }
 #endif
@@ -806,6 +828,7 @@ void EnableInterrupts(void)
 //    Servo routines
 //*******************************************************************************
 
+#ifdef SWITCHES
 #ifdef SERVO
 
 /*
@@ -894,6 +917,7 @@ void servo_setup(void) {
 }
 
 #endif
+#endif
 
 //*********************************************************************************
 //        MAIN
@@ -903,6 +927,7 @@ void servo_setup(void) {
 void InitRamFromEEPROM(void)
 {
     far overlay BYTE i;
+    ondelay = EEPROMRead((int)&ONDELAY);
     for (i=0; i<32; ) {
         servopos[i] = EEPROMRead((int)&SERVOPOS[i]);
         i++;
@@ -926,22 +951,33 @@ void main(void) {
     INTCON = 0;
     ADCON0 = 0;
     ADCON1 = 0b00001111;
-#ifdef ACC4
-    TRISA =  0b00101000;    // Port A 5 is unlearn, 3 = S1
-#else
-    TRISA =  0b00000111;    // Port A 0 is unlearn, 1 is polarity, 2 = S1
-#endif
     // RB0,1 logic inputs,  RB2 = CANTX, RB3 = CANRX, RB4,5 are logic input 
     // RB6,7 for debug, ICSP and diagnostics LEDs
     TRISB = 0b00111011;
     PORTB = 0;
     PORTBbits.RB2 = 1;            // CAN recessive
-#ifdef ACE8C
-    TRISC = 0xFF;                 // initially all inputs
-#else
+#ifdef ACC4
+    TRISA =  0b00101000;          // Port A 5 is unlearn, 3 = S1
+    PORTC = 0;                    // all outputs off
     TRISC = 0x00;                 // initially all outputs
 #endif
+#ifdef ACC8
+    TRISA =  0b00000111;          // Port A 0 is unlearn, 1 is polarity, 2 = S1
+    PORTC = 0;                    // all outputs off
+    TRISC = 0x00;                 // initially all outputs
+#endif
+#ifdef SERVO
+    PORTA = 0;                    // Bit 3 = servos on
+    TRISA =  0b00000111;          // Port A 0 is unlearn, 1 is polarity, 2 = S1
+    PORTC = 0xFF;                 // all servo lines high
+    TRISC = 0x00;                 // initially all outputs
+#endif
+#ifdef ACE8C
+    TRISA =  0b00000111;          // Port A 0 is unlearn, 1 is polarity, 2 = S1
     PORTC = 0;                    // all outputs/servo's off
+    TRISC = 0xFF;                 // initially all inputs
+#endif
+
     RCONbits.IPEN = 1;            // enable interrupt priority levels
     EECON1 = 0;
 
@@ -969,6 +1005,11 @@ void main(void) {
     BitMask[7] = 0x80;
 #ifdef SERVO
     InitRamFromEEPROM();
+    Timer3Init();
+    while ((ondelay--)!=0) {
+        while(!Timer3Test()) ;
+    }
+    PORTA = 0x08;            // servos power on
     new_output = 0;
     servo_state = 19;
     next_portc = 0;
@@ -1012,6 +1053,7 @@ void main(void) {
     idevents = TRUE; // send Identified Consumers
     eventno = 0;
 
+#ifdef SWITCHES
 #ifndef ACE8C
     // Test for power up mode, Unlearn switch on, learn switch off
     if ((LEARN == SW_OFF) && (UNLEARN == SW_ON)) {
@@ -1029,6 +1071,8 @@ void main(void) {
 //    if ((LEARN == SW_ON) && (UNLEARN == SW_ON))
 //        servo_setup();
 #endif
+#endif
+
     dgcnt = 0;
     DNID = -1;
     SendNSN(FT_INIT);

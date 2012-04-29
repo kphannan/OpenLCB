@@ -159,13 +159,16 @@ BOOL locked(BYTE n)
     sp = 1;
     while ((c = *p++) != 0)
     {
-        if (c == 0xFF) {
+        if (c == 0xFF) { // and
             sp--;
             stack[sp-1] &= stack[sp];
         }
-        else if (c == 0x7F) {
+        else if (c == 0x7F) { // or
             sp--;
             stack[sp-1] |= stack[sp];
+        }
+        else if (c == 0xFE) { // not
+            stack[sp-1] = !stack[sp-1];
         }
         else if ((c&0x80)==0x80) {
             c--;
