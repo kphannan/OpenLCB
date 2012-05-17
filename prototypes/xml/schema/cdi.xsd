@@ -39,7 +39,13 @@
                   <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
               </xs:choice>
             </xs:sequence>
-            <xs:attribute name="offset" type="xs:int" />
+            <xs:attribute name="offset" type="xs:int">
+                  <xs:annotation>
+                    <xs:documentation>
+                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                    </xs:documentation>
+                  </xs:annotation>
+                </xs:attribute>
             <xs:attribute name="replication" type="xs:int" />
     </xs:complexType>
 
@@ -49,6 +55,13 @@
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
+            <xs:attribute name="offset" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
     </xs:complexType>
 
    <xs:complexType name="intType">
@@ -61,6 +74,13 @@
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
             <xs:attribute name="size" type="xs:int" />
+            <xs:attribute name="offset" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
     </xs:complexType>
 
    <xs:complexType name="bitType">
@@ -70,6 +90,13 @@
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
             <xs:attribute name="size" type="xs:int" />
+            <xs:attribute name="offset" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
     </xs:complexType>
 
    <xs:complexType name="stringType">
@@ -79,6 +106,13 @@
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
             <xs:attribute name="size" type="xs:int" />
+            <xs:attribute name="offset" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
     </xs:complexType>
 
     <xs:element name="cdi">
@@ -130,7 +164,13 @@
                 </xs:choice>
               </xs:sequence>
               <xs:attribute name="space" type="xs:int" />
-              <xs:attribute name="origin" type="xs:int" />
+              <xs:attribute name="origin" type="xs:int">
+                  <xs:annotation>
+                    <xs:documentation>
+                      Starting address of the segment's contents within the memory space.
+                    </xs:documentation>
+                  </xs:annotation>
+              </xs:attribute>
             </xs:complexType>
           </xs:element>
 
