@@ -26,6 +26,7 @@
             <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
+              <xs:element name="repname" minOccurs="0" maxOccurs="1"/>
               <xs:choice minOccurs="0" maxOccurs="unbounded">
                   <xs:annotation>
                     <xs:documentation>
