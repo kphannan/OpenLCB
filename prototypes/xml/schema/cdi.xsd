@@ -71,7 +71,7 @@
               <xs:element name="min" minOccurs="0" maxOccurs="1"/>
               <xs:element name="max" minOccurs="0" maxOccurs="1"/>
               <xs:element name="default" minOccurs="0" maxOccurs="1"/>
-              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"
+              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1">
                   <xs:annotation>
                     <xs:documentation>
                           The 'value' of each entry is displayed, and the 'property' content (number) is sent to/from the node
@@ -93,7 +93,7 @@
             <xs:sequence>
               <xs:element name="name" minOccurs="0" maxOccurs="1"/>
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
-              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"
+              <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1">
                   <xs:annotation>
                     <xs:documentation>
                           The 'value' of each entry is displayed, and the 'property' content (number) is sent to/from the node
