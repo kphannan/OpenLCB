@@ -25,22 +25,35 @@ namespace ComGateway
         const string FT_RID = "0700";
         const string FT_AMD = "0701";
         const string FT_AME = "0702";
-        const string FT_VNSN = "80A7";
-        const string FT_NSN = "90B7";
-        const string FT_INIT = "9087";
-        const string FT_IDEVENTS = "82B7";
+        const string FT_VNSN = "88A7";
+        const string FT_NSN = "88B7";
+        const string FT_INIT = "8087";
+        const string FT_IDEVENTS = "8AB7";
+        const string FT_DGS = "A";
+        const string FT_DGF = "B";
+        const string FT_DGM = "C";
+        const string FT_DGL = "D";
+        const string FT_ADDR = "E";
         
         // Ethernet MTIs
-        const int NODENUMBER = 0x3000;
-        const string INITCOMPLETE = "3080";
-        const string VERIFYNODEIDS = "10A0";
-        const string VERIFIEDNODEID = "30B0";
-        // const string IDENTIFYEVENTS = "12B0";
-        // const string IDENTIFIEDCONSUMER = "3263";
-        // const string IDENTIFIEDCONSUMERRANGE = "3252";
-        // const string IDENTIFIEDPRODUCER = "32A3";
-        // const string IDENTIFIEDPRODUCERRANGE = "3292";
-        // const string EVENT = "12D2";
+        const int NODENUMBER = 0xF000;
+        const string NOFILTER = "0017";
+        const string INITCOMPLETE = "0087";
+        const string VERIFYNODEIDS = "08A7";
+        const string VERIFIEDNID = "08B7";
+        const string IDENTIFYCONSUMERS = "0A4F";
+        const string CONSUMERRANGE = "025F";
+        const string CONSUMERINDENTIFIED = "026B";
+        const string IDENTIFYPRODUCERS = "0A8F";
+        const string PRODUCERRANGE = "029F";
+        const string PRODUCERINDENTIFIED = "02AB";
+        const string IDENTIFYEVENTS = "0AB7";
+        const string EVENT = "0ADF";
+        const string XPRESSNET = "0517";
+        const string DATAGRAM = "1400";
+        const string DATAGRAMACK = "14C0";
+        const string DATAGRAMNACK = "14D0";
+        const string STREAM = "1690";
 
         public long nodenumber = 0;
         public string nodenumberstr = "";
@@ -359,6 +372,13 @@ namespace ComGateway
                     if (l == -1)
                         break;
                     line = line.Substring(l);
+                    if (line.Length < 2)
+                        break;
+                    if (line[1] != 'X' && line[1] != 'x')
+                    {
+                        line = line.Substring(1);
+                        continue;
+                    }
                     // find a complete CAN packet
                     l = line.IndexOf(';');
                     if (l == -1)
@@ -444,42 +464,33 @@ namespace ComGateway
                     }
                     break;
                 case '8':
-                    newcmd = "1" + cmd.Substring(4, 2);
-                    if (cmd[6] == '7')
-                        newcmd += "0";
-                    if (cmd[6] == '3')
-                        newcmd += "1";
-                    if (cmd[6] == 'F')
-                        newcmd += "2";
-                    if (cmd[6] == 'B')
-                        newcmd += "3";
+                    newcmd = "0" + cmd.Substring(4, 3);
                     newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
                     checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
                     break;
                 case '9':
-                    newcmd = "3" + cmd.Substring(4, 2);
-                    if (cmd[6] == '7')
-                        newcmd += "0";
-                    if (cmd[6] == '3')
-                        newcmd += "1";
-                    if (cmd[6] == 'F')
-                        newcmd += "2";
-                    if (cmd[6] == 'B')
-                        newcmd += "3";
-                    newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
+                    log("Unexpected MTI start 9xxx.");
+                    break;
+                case 'A': // single frame datagram
+                    newcmd = DATAGRAM + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                        + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data;
                     checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
                     break;
-                case 'B':
-                    log("Unexpected MTI start Bxxx.");
+                case 'B': // start of datagram
+                    if (longdatagram.ContainsKey(a)) {
+                        longdatagram.Remove(a);
+                        log("New datagram without an end of the previous.");
+                    }
+                    longdatagram.Add(a, DATAGRAM + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                        + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data);
                     break;
                 case 'C':
                     if (longdatagram.ContainsKey(a)) // continue datagram
                         longdatagram[a] += data;
-                    else // new datagram
-                        longdatagram.Add(a, "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
-                            + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2));
+                    else // no datagram
+                        log("Middle of datagram without a start.");
                     break;
                 case 'D':
                     if (longdatagram.ContainsKey(a))
@@ -493,13 +504,13 @@ namespace ComGateway
                         log("End of datagram without a start.");
                     break;
                 case 'E':
-                    newcmd = "3" + data.Substring(0, 2) + "4" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                    newcmd = "1" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
                         + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
                     checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
                     break;
                 case 'F':
-                    newcmd = "3694" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                    newcmd = STREAM + TranslateToNodeID(cmd.Substring(7, 3), cmd)
                         + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data;
                     EthernetSendHexString(newcmd);
                     break;
@@ -528,40 +539,26 @@ namespace ComGateway
             {
                 int length = cmd.Length / 2;
                 string sid = TranslateToAlias(cmd.Substring(6, 12));
-                if (cmd[2] == '1') // simple broadcast
-                {
-                    string mti = "8"+cmd.Substring(3,2);
-                    if (cmd[5] == '0')
-                        mti += "7";
-                    if (cmd[5] == '1')
-                        mti += "3";
-                    if (cmd[5] == '2')
-                        mti += "F";
-                    if (cmd[5] == '3')
-                        mti += "B";
-                    CAN(mti + sid, cmd.Substring(18));
-                    return;
-                }
-                if (cmd.Substring(2, 4) == "3694") // stream
+                if (cmd.Substring(2, 4) == STREAM) // stream
                 {
                     string did = TranslateToAlias(cmd.Substring(18, 12));
                     CAN("F" + did + sid, cmd.Substring(18));
                     return;
                 }
-                if (cmd[2] == '3' && cmd[5] == '4') // datagram
-                { 
+                if (cmd.Substring(2,4) == DATAGRAM) // datagram
+                {
                     string did = TranslateToAlias(cmd.Substring(18, 12));
-                    if (length - 15 <= 7)
+                    if (length - 15 <= 8)
                     {
-                        CAN("E" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30));
+                        CAN("A" + did + sid, cmd.Substring(30));
                     }
                     else
                     {
                         length -= 15;
                         int pl = length;
-                        if (pl >= 7)
-                            pl = 7;
-                        CAN("C" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30, pl * 2));
+                        if (pl >= 8)
+                            pl = 8;
+                        CAN("B" + did + sid, cmd.Substring(30, pl * 2));
                         cmd = cmd.Substring(30 + pl * 2);
                         length -= pl;
                         while (length >= 8)
@@ -574,17 +571,15 @@ namespace ComGateway
                     }
                     return;
                 }
-                if (cmd[2] == '3') // not simple broadcast
+                if (cmd[2] == '1' && cmd[5] == '0') // addressed
                 {
-                    string mti = "9" + cmd.Substring(3, 2);
-                    if (cmd[5] == '0')
-                        mti += "7";
-                    if (cmd[5] == '1')
-                        mti += "3";
-                    if (cmd[5] == '2')
-                        mti += "F";
-                    if (cmd[5] == '3')
-                        mti += "B";
+                    string did = TranslateToAlias(cmd.Substring(18, 12));
+                    CAN("E" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30));
+                    return;
+                }
+                if (cmd[2] == '0') // simple broadcast
+                {
+                    string mti = "8"+cmd.Substring(3,3);
                     CAN(mti + sid, cmd.Substring(18));
                     return;
                 }
@@ -680,26 +675,26 @@ namespace ComGateway
         {
             string s;
             if (cmd.Substring(0,4)==VERIFYNODEIDS) {
-                s = VERIFIEDNODEID + nodenumberstr + nodenumberstr;
+                s = VERIFIEDNID + nodenumberstr + nodenumberstr;
                 EthernetSendHexString(s);
                 CANSendHexString("00"+s);
                 return true;
             }
 
-            if (cmd[0] == '3' && cmd[3]=='4' && cmd.Substring(16, 12) == nodenumberstr) // datagram to this node
+            if (cmd.Substring(0,4) == DATAGRAM && cmd.Substring(16, 12) == nodenumberstr) // datagram to this node
             {
-                if (cmd.Substring(0, 4) == "3204" && cmd.Substring(28, 2) == "60" && cmd.Substring(38, 2) == "FF")
+                if (cmd.Substring(28, 4) == "2060" && cmd.Substring(40, 2) == "FF")
                 {
                     // send XML file
-                    string address = cmd.Substring(30, 8);
+                    string address = cmd.Substring(32, 8);
                     int ad = Convert.ToInt32(address, 16);
                     string data = "";
-                    int l = Convert.ToInt32(cmd.Substring(40, 2), 16);
+                    int l = Convert.ToInt32(cmd.Substring(42, 2), 16);
                     if (ad + l > xml.Length)
                         l = xml.Length - ad;
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
-                    s = "3204" + nodenumberstr + cmd.Substring(4, 12) + "30" + address + "FF" + data;
+                    s = DATAGRAM + nodenumberstr + cmd.Substring(4, 12) + "2030" + address + "FF" + data;
                     if (l < 64)
                         s += "00";
                     if (fromCAN)
@@ -708,15 +703,15 @@ namespace ComGateway
                         EthernetSendHexString(s);
                     return false;
                 }
-                if (cmd.Substring(0, 4) == "3204" && cmd.Substring(28, 2) == "60" && cmd.Substring(38, 2) == "00")
+                if (cmd.Substring(28, 4) == "2060" && cmd.Substring(40, 2) == "00")
                 {
                     // send port speed
-                    string address = cmd.Substring(30, 8);
+                    string address = cmd.Substring(32, 8);
                     string speed = com.BaudRate.ToString("X8").PadLeft(8,'0');
                     string data = "";
                     for (int i = 0; i < 8; i+=2)
                         data = speed.Substring(i,2) + data;
-                    s = "3204" + nodenumberstr + cmd.Substring(4, 12) + "30" + address + "00" + data;
+                    s = DATAGRAM + nodenumberstr + cmd.Substring(4, 12) + "2030" + address + "00" + data;
                     if (fromCAN)
                         CANSendHexString("00"+s);
                     else

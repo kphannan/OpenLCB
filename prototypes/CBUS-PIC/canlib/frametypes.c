@@ -32,45 +32,51 @@ enum FT
     FT_CIM2    = 0x5000,   // 3rd top 12 bits of NID
     FT_CIM1    = 0x6000,   // 2nd top 12 bits of NID
     FT_CIM0    = 0x7000,   // Top 12 bits of NID
-    FT_RFID    = 0x9507,   // RFID tag
-    FT_XPRESSNET = 0x9517, // XpressNet raw message from a command station
-    FT_VNSN    = 0x80A7,   // Verify Node Serial Number 
-    FT_IDCONS  = 0x824F,   // Identify Consumers
-    FT_IDPROD  = 0x828F,   // Identify Producers
-    FT_IDEVNTS = 0x82B7,   // Identify Events
-    FT_EVENT   = 0x82DF,   // EVENT
-    FT_INIT    = 0x9087,   // Initialization Complete
-    FT_NSN     = 0x90B7,   // Node Serial Number 
-    FT_CONSIR  = 0x925F,   // Consumer Identify Range
-    FT_CONSID  = 0x926B,   // Consumer Identified
-    FT_PRODIR  = 0x929F,   // Producer Identify Range
-    FT_PRODID  = 0x92AB,   // Producer Identified
-    // FT_DGF     = 0xB000,   // Datagram first packet
+    FT_XPRESSNET = 0x8517, // XpressNet raw message from a command station
+    FT_VNSN    = 0x88A7,   // Verify Node Serial Number 
+    FT_IDCONS  = 0x8A4F,   // Identify Consumers
+    FT_IDPROD  = 0x8A8F,   // Identify Producers
+    FT_IDEVNTS = 0x8AB7,   // Identify Events
+    FT_EVENT   = 0x8ADF,   // EVENT
+    FT_INIT    = 0x8087,   // Initialization Complete
+    FT_NSN     = 0x88B7,   // Node Serial Number 
+    FT_CONSIR  = 0x825F,   // Consumer Identify Range
+    FT_CONSID  = 0x826B,   // Consumer Identified
+    FT_PRODIR  = 0x829F,   // Producer Identify Range
+    FT_PRODID  = 0x82AB,   // Producer Identified
+    FT_DGS     = 0xA000,   // Datagram single packet
+    FT_DGF     = 0xB000,   // Datagram first packet
     FT_DGM     = 0xC000,   // Datagram middle packets
     FT_DGL     = 0xD000,   // Datagram last packet
-    FT_DGS     = 0xE000,   // Datagram single packet
+    FT_ADDR    = 0xE000,   // Addressed packet
     FT_STREAM  = 0xF000    // Stream data
+};
+
+// Protocol id, 1st byte of datagram
+enum DA {
+    DA_VNSN     = 0x0A,
+    DA_OIR      = 0x0C,
+    DA_TDE      = 0x0D,
+    DA_IDEVNT   = 0x2B,
+    DA_PSI      = 0x2E,
+    DA_PSR      = 0x2F,
+    DA_DG       = 0x40,
+    DA_OK       = 0x4C,
+    DA_ERR      = 0x4D,
+    DA_SIQ      = 0x4E,
+    DA_SIR      = 0x4F,
+    DA_STR      = 0x69,
+    DA_SDP      = 0x6A,
+    DA_SRC      = 0x6B,
 };
 
 // Datagram protocol id, 1st byte of datagram
 enum DG {
     DG_LOGMSG   = 0x01,
     DG_LOGREPLY = 0x02,
-    DG_VNSN     = 0x0A,
-    DG_OIR      = 0x0C,
-    DG_TDE      = 0x0D,
     DG_MEMORY   = 0x20,
     DG_REMOTE   = 0x21,
     DG_DISPLAY  = 0x28,
-    DG_IDEVNT   = 0x2B,
-    DG_PSI      = 0x2E,
-    DG_PSR      = 0x2F,
-    DG_SDP      = 0x4A,
-    DG_SR       = 0x4B,
-    DG_OK       = 0x4C,
-    DG_ERR      = 0x4D,
-    DG_SIQ      = 0x4E,
-    DG_SIR      = 0x4F,
 };
 
 // Memory transfer datagram, protocol id = 0x20

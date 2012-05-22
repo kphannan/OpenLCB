@@ -229,13 +229,6 @@ void Packet(void)
     far overlay BYTE i;
 
     switch(CB_FrameType) {
-    case FT_AMD: // node reset before end of datagram
-        if (CB_SourceNID == DNID) {
-            DNID = -1;
-            dgcnt = 0;
-        }
-        return;
-
     case FT_VNSN: // send full NID
         SendNSN(FT_NSN);
         return;
@@ -278,7 +271,7 @@ void Packet(void)
 void DatagramPacket(void)
 {
     far overlay BYTE i;
-    if (DNID == (-1) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
         dgcnt = 0;
         DNID = CB_SourceNID;
     }
@@ -325,19 +318,6 @@ void DatagramPacket(void)
                 if (GP_block[6] == 0) { // event data
 
                 }
-            }
-            else if (CB_data[1] == DGM_UPDCOMP) {
-		        // change the valid program flag
-		        ProgramMemoryRead(STARTADDRESS,64,(BYTE * far)GP_block);
-		        if (GP_block[0x0027]!=0) {
-		            GP_block[0x0027] = 0;
-		            ProgramMemoryWrite(STARTADDRESS,64,(BYTE * far)GP_block);
-		        }
-		        // start the program
-		        _asm
-		            reset
-		            goto 0x000000
-		        _endasm
             }
             else if (CB_data[1] == DGM_REBOOT) {
                 // re-start the program
@@ -512,7 +492,7 @@ void main(void)
                     CheckAlias(1);                  // get new alias
             }
             else if (CB_FrameType==(FT_DGM|ND.nodeIdAlias) || CB_FrameType==(FT_DGL|ND.nodeIdAlias)
-              || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
+              || CB_FrameType==(FT_DGF|ND.nodeIdAlias) || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
                 canTraffic = 1; 
                 DatagramPacket();
             }

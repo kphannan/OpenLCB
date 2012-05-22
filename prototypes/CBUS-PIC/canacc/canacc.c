@@ -310,6 +310,10 @@ void hpinterrupt(void) {
             else
                 next_tmr = (int)(signed char)servopos[servo_index<<2]; // destination value
             next_tmr = (0-3000) - (next_tmr<<3);
+            if (current_tmr[servo_index] == 0) { // start of day
+                current_tmr[servo_index] = next_tmr;
+                pulsetimer = 25; // 500 msec          
+            }
             if (current_tmr[servo_index] < next_tmr) {
                 current_tmr[servo_index]++;
                 current_tmr[servo_index] += (unsigned char)servopos[(servo_index<<2) + 2];
@@ -578,10 +582,6 @@ void Packet(void)
         else
             CheckAlias(1);
     }
-    else if (CB_FrameType == FT_AMD && CB_SourceNID == DNID) { // node reset before end of datagram
-        DNID = -1;
-        dgcnt = 0;
-    }
     else if (CB_FrameType == FT_VNSN) { // send full NID
         SendNSN(FT_NSN);
     }
@@ -632,7 +632,7 @@ void Packet(void)
 void DatagramPacket(void)
 {
     far overlay BYTE i;
-    if (DNID == (-1) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
         dgcnt = 0;
         DNID = CB_SourceNID;
     }
@@ -751,19 +751,6 @@ void DatagramPacket(void)
                     return;
                 }
 #endif
-            }
-            else if (CB_data[1] == DGM_UPDCOMP) {
-		        // change the valid program flag
-		        ProgramMemoryRead(STARTADDRESS,64,(BYTE * far)GP_block);
-		        if (GP_block[0x0027]!=0) {
-		            GP_block[0x0027] = 0;
-		            ProgramMemoryWrite(STARTADDRESS,64,(BYTE * far)GP_block);
-		        }
-		        // start the program
-		        _asm
-		            reset
-		            goto 0x000000
-		        _endasm
             }
             else if (CB_data[1] == DGM_REBOOT) {
                 // re-start the program
@@ -939,7 +926,8 @@ void InitRamFromEEPROM(void)
         i++;
     }
     for (i=0; i<8; i++) {
-        current_tmr[i] = (0-3000) - (((int)(signed char)servopos[i<<2])<<3);
+        //current_tmr[i] = (0-3000) - (((int)(signed char)servopos[i<<2])<<3);
+        current_tmr[i] = 0;
     }
 }
 #endif
@@ -1180,7 +1168,7 @@ void main(void) {
 
         if (ECANReceiveMessage()) {
             if (CB_FrameType==(FT_DGM|ND.nodeIdAlias) || CB_FrameType==(FT_DGL|ND.nodeIdAlias)
-              || CB_FrameType==(FT_DGS|ND.nodeIdAlias)) {
+              || CB_FrameType==(FT_DGS|ND.nodeIdAlias) || CB_FrameType==(FT_DGF|ND.nodeIdAlias)) {
                 canTraffic = 1;
                 DatagramPacket();
             }

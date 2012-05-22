@@ -18,12 +18,24 @@ namespace Config
 {
     public partial class Config : Form
     {
-        const int NODENUMBER = 0x3000;
-        const string NOFILTER = "3010";
-        const string INIT = "3080";
-        const string VERIFYNODEIDS = "10A0";
-        const string VERIFIEDNODEID = "30B0";
-        const string EVENT = "12D2";
+        const int NODENUMBER = 0xF000;
+        const string NOFILTER = "0017";
+        const string INITCOMPLETE = "0087";
+        const string VERIFYNODEIDS = "08A7";
+        const string VERIFIEDNID = "08B7";
+        const string IDENTIFYCONSUMERS = "0A4F";
+        const string CONSUMERRANGE = "025F";
+        const string CONSUMERINDENTIFIED = "026B";
+        const string IDENTIFYPRODUCERS = "0A8F";
+        const string PRODUCERRANGE = "029F";
+        const string PRODUCERINDENTIFIED = "02AB";
+        const string IDENTIFYEVENTS = "0AB7";
+        const string EVENT = "0ADF";
+        const string XPRESSNET = "0517";
+        const string DATAGRAM = "1400";
+        const string ACCEPTED = "14C0";
+        const string REJECTED = "14D0";
+        const string STREAM = "1690";
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
@@ -205,7 +217,7 @@ namespace Config
                 }
                 skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
                 serverconnected = true;
-                SendHexString(INIT + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
+                SendHexString(INITCOMPLETE + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
                 SendHexString(NOFILTER + nodenumber.ToString("X12"));
                 SelectNodeCB.Items.Clear();
                 SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
@@ -234,12 +246,13 @@ namespace Config
                     inputstring = "";
                 if (LogCB.Checked)
                     log("< " + cmd);
-                if (cmd.Substring(2, 4) == VERIFIEDNODEID || cmd.Substring(2, 4) == INIT)
+                if (cmd.Substring(2, 4) == VERIFIEDNID || cmd.Substring(2, 4) == INITCOMPLETE)
                 {
                     if (!SelectNodeCB.Items.Contains(cmd.Substring(6, 12)))
                         SelectNodeCB.Items.Add(cmd.Substring(6, 12));
                 }
-                else if (cmd[2] == '3' && cmd[5] == '4' && cmd.Substring(18,12)==nodenumber.ToString("X12")) // datagram
+                else if ((cmd.Substring(2, 4) == DATAGRAM || cmd.Substring(2, 4) == ACCEPTED || cmd.Substring(2, 4) == REJECTED)
+                    && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram
                 {
                     datagrams.Enqueue(cmd);
                 }
@@ -334,21 +347,21 @@ namespace Config
             bool more = true;
             while (more)
             {
-                SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text 
-                    + "60" + adr.ToString("X8") + "FF" + "40");
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text 
+                    + "2060" + adr.ToString("X8") + "FF" + "40");
                 for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
                     if (datagrams.Count != 0)
                     {
                         datagram = datagrams.Dequeue();
-                        if (datagram.Substring(2, 4) == "3204" || datagram.Substring(2, 4) == "34D4")
+                        if (datagram.Substring(2, 4) == DATAGRAM || datagram.Substring(2, 4) == REJECTED)
                             break;
                     }
                 }
-                if (datagram.Length < 40 || datagram.Substring(2, 4) == "34D4")
+                if (datagram.Length < 40 || datagram.Substring(2, 4) == REJECTED)
                     break;
-                for (int i = 42; i < datagram.Length; i += 2)
+                for (int i = 44; i < datagram.Length; i += 2)
                 {
                     int c = Convert.ToInt32(datagram.Substring(i, 2), 16);
                     if (c == 0)
@@ -742,15 +755,15 @@ namespace Config
                 int l = left;
                 if (l > 64)
                     l = 64;
-                SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text
-                    + "60" + adr.ToString("X8") + ReadSegmentSpace.ToString("X2") + l.ToString("X2"));
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text
+                    + "2060" + adr.ToString("X8") + ReadSegmentSpace.ToString("X2") + l.ToString("X2"));
                 for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
                     if (datagrams.Count != 0)
                     {
                         datagram = datagrams.Dequeue();
-                        if (datagram.Substring(2, 4) == "3204")
+                        if (datagram.Substring(2, 4) == DATAGRAM)
                             break;
                     }
                 }
@@ -759,7 +772,7 @@ namespace Config
                     log("Failed to read data from " + SelectNodeCB.Text);
                     break;
                 }
-                ReadSegmentData += datagram.Substring(42);
+                ReadSegmentData += datagram.Substring(44);
                 adr += 64;
                 left -= 64;
             }
@@ -932,8 +945,8 @@ namespace Config
                int l = left;
                 if (l > 64)
                     l = 64;
-                SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text
-                    + "20" + adr.ToString("X8") + WriteSegmentSpace.ToString("X2")
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text
+                    + "2020" + adr.ToString("X8") + WriteSegmentSpace.ToString("X2")
                     + WriteSegmentData.Substring((int)(adr - WriteSegmentOrigin) * 2, l * 2));
                 for (int w = 0; w < 200; w++)
                 {
@@ -941,11 +954,11 @@ namespace Config
                     if (datagrams.Count != 0)
                     {
                         datagram = datagrams.Dequeue();
-                        if (datagram.Substring(2, 4) == "34C4" || datagram.Substring(2, 4) == "34D4")
+                        if (datagram.Substring(2, 4) == ACCEPTED || datagram.Substring(2, 4) == REJECTED)
                             break;
                     }
                 }
-                if (datagram.Length<30 || datagram.Substring(2, 4) != "34C4")
+                if (datagram.Length < 30 || datagram.Substring(2, 4) != ACCEPTED)
                 {
                     log("Failed to write data to " + SelectNodeCB.Text);
                     return;
@@ -1005,7 +1018,7 @@ namespace Config
         {
             if (SelectNodeCB.Text == "")
                 return;
-            SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A5");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A5");
             SelectNodeCB.Items.Clear();
             SelectNodeCB.Text = "";
             SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
@@ -1015,7 +1028,7 @@ namespace Config
         {
             if (SelectNodeCB.Text == "")
                 return;
-            SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A6");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A6");
         }
 
 
@@ -1306,7 +1319,7 @@ namespace Config
                     i++;
             }
 
-            while ((char)(f[i]) == '\r' || (char)(f[i]) == '\n' || (char)(f[i]) == ' ' || (char)(f[i]) == '\t')
+            while (i<f.GetUpperBound(0) && ((char)(f[i]) == '\r' || (char)(f[i]) == '\n' || (char)(f[i]) == ' ' || (char)(f[i]) == '\t'))
                 i++;
 
             // module id string
@@ -1322,12 +1335,12 @@ namespace Config
                 return;
 
             // Enter bootloader
-            SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A7");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A7");
             background = new Thread(WriteCode);
             background.Start();
             taskcomplete.WaitOne();
             // Upgrade complete
-            SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text + "A4");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A4");
             log("Upgrade complete");
         }
 
@@ -1350,18 +1363,18 @@ namespace Config
                 string data = "";
                 for (int j = 0; j < 64; j++)
                     data += t[j].ToString("X2");
-                SendHexString("3204" + nodenumber.ToString("X12") + SelectNodeCB.Text + "20" + address.ToString("X8") + "FE" + data);
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "2020" + address.ToString("X8") + "FE" + data);
                 for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
                     if (datagrams.Count != 0)
                     {
                         datagram = datagrams.Dequeue();
-                        if (datagram.Substring(2, 4) == "34C4" || datagram.Substring(2, 4) == "34D4")
+                        if (datagram.Substring(2, 4) == ACCEPTED || datagram.Substring(2, 4) == REJECTED)
                             break;
                     }
                 }
-                if (datagram.Length < 30 || datagram.Substring(2, 4) != "34C4")
+                if (datagram.Length < 30 || datagram.Substring(2, 4) != ACCEPTED)
                 {
                     log("Failed to write data to " + SelectNodeCB.Text);
                     return;

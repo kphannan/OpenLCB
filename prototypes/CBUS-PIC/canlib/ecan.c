@@ -104,40 +104,36 @@ void ECANInitialize(void)
 // Result:          TRUE, if an empty buffer was found and loaded
 //*********************************************************************************
 
-#define ECANBuffer0Full (TXB0CON & 0x08)
-#define ECANBuffersFull ((TXB0CON & 0x08) && (TXB1CON & 0x08))
+// only 1 buffers used to maintain transmit packet order
 
-// only 2 buffers used to maintain transmit packet order
-// buffer 0 always used before buffer 1
+#define ECANBufferFull (TXB0CON & 0x08)
+
 BOOL ECANSendMessage(void)
 {
-    far overlay BYTE * far ptr;       // ECAN buffer pointers
-    far overlay BYTE i;
+    if (TXB0CON & 0x08)
+        return FALSE;
 
-    // check only 2 (of 3) transmit buffers to find one empty
-    ptr = (BYTE far *)&TXB0CON;
-    if (*ptr & 0x08) {
-        ptr = (BYTE far *)&TXB1CON;
-        if (*ptr & 0x08) {
-            return FALSE;
-        }
-    }
-
-    *ptr &= 0xFC;                     // clear send priority bits
-    *(ptr+5) = CB_datalen;
+    TXB0CON &= 0xFC;                     // clear send priority bits
+    TXB0DLC = CB_datalen;
 
     // Rearrange header
-    *(ptr+1) = 0x80 | (HI(CB_FrameType) >> 1);                         // SIDH
-    *(ptr+2) = ((HI(CB_FrameType)&0x01) << 7 ) | ((LO(CB_FrameType)&0xC0)>>1) 
-               | 0x08 | ((LO(CB_FrameType)&0x30)>>4);                  // SIDL
-    *(ptr+3) = (HI(CB_SourceNID)&0x0F) | ((LO(CB_FrameType)&0x0F)<<4); // EIDH
-    *(ptr+4) = LO(CB_SourceNID);                                       // EIDL
+    TXB0SIDH = 0x80 | (HI(CB_FrameType) >> 1);
+    TXB0SIDL = ((HI(CB_FrameType)&0x01) << 7 ) | ((LO(CB_FrameType)&0xC0)>>1) 
+               | 0x08 | ((LO(CB_FrameType)&0x30)>>4);
+    TXB0EIDH = (HI(CB_SourceNID)&0x0F) | ((LO(CB_FrameType)&0x0F)<<4);
+    TXB0EIDL = LO(CB_SourceNID);
 
-    // Copy given number of data bytes.
-    for ( i = 0 ; i < CB_datalen; i++ )
-        ptr[i+6] = CB_data[i];
+    // Copy data bytes.
+    TXB0D0 = CB_data[0];
+    TXB0D1 = CB_data[1];
+    TXB0D2 = CB_data[2];
+    TXB0D3 = CB_data[3];
+    TXB0D4 = CB_data[4];
+    TXB0D5 = CB_data[5];
+    TXB0D6 = CB_data[6];
+    TXB0D7 = CB_data[7];
 
-    *ptr |= 0x08;                    // set TXREQ bit.
+    TXB0CON |= 0x08;                    // set TXREQ bit.
     return TRUE;
 }
 

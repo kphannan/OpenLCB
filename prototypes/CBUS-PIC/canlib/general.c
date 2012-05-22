@@ -56,8 +56,7 @@ typedef unsigned char BYTE;
 #define HIGHINTADDRESS 0x001008
 #define LOWINTADDRESS  0x001018
 
-#define ECANBuffer0Full (TXB0CON & 0x08)
-#define ECANBuffersFull ((TXB0CON & 0x08) && (TXB1CON & 0x08))
+#define ECANBufferFull (TXB0CON & 0x08)
 
 //*********************************************************************************
 //    define RAM storage
@@ -270,7 +269,7 @@ tryagain:
     ND.nodeIdAlias &= 0x0FFF; 
     i = 0;
     while(TRUE) {
-        if (!ECANBuffer0Full) {
+        if (!ECANBufferFull) {
             CB_SourceNID = ND.nodeIdAlias;  // alias
             CB_datalen = 0;
             if (i==0) {
@@ -351,18 +350,18 @@ void SendNSN(unsigned int ft)
 void sendack(unsigned int DNID)
 {
     CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_DGS | DNID;
+    CB_FrameType = FT_ADDR | DNID;
     CB_datalen = 1;
-    CB_data[0] = DG_OK;
+    CB_data[0] = DA_OK;
     while (SendMessage()==0) ;    
 }
 
 void sendnack(unsigned int DNID, unsigned int err)
 {
     CB_SourceNID = ND.nodeIdAlias;
-    CB_FrameType = FT_DGS | DNID;
+    CB_FrameType = FT_ADDR | DNID;
     CB_datalen = 3;
-    CB_data[0] = DG_ERR;
+    CB_data[0] = DA_ERR;
     CB_data[1] = HI(err);
     CB_data[2] = LO(err);
     while (SendMessage()==0) ;    
@@ -385,13 +384,14 @@ void StartSendBlock(BYTE l, int DNID)
 
 void EndSendBlock(void)
 {
-    if (SendBlockCount>=SendBlockMax || ECANBuffersFull)
+    if (SendBlockCount>=SendBlockMax || ECANBufferFull)
         return;
     // send data bytes
     CB_SourceNID = ND.nodeIdAlias;
     CB_FrameType = FT_DGM;
-    // if (SendBlockCount==0)
-    //    CB_FrameType = FT_DGF;
+    if (SendBlockCount==0) {
+        CB_FrameType = FT_DGF;
+    }
     CB_datalen = 8;
     if (SendBlockMax-SendBlockCount <= 8) {
         CB_datalen = SendBlockMax-SendBlockCount;

@@ -16,17 +16,24 @@ namespace OlcbSvr
 {
     public partial class OlcbSvr : Form
     {
-        const int NODENUMBER = 0x3000;
-        const int NOFILTER = 0x3010;
-        const int INITCOMPLETE = 0x3080;
-        const int VERIFYNODEIDS = 0x10A0;
-        const int IDENTIFYEVENTS = 0x12B0;
-        const int VERIFIEDNID = 0x30B0;
-        const int CONSUMERINDENTIFIED = 0x3263;
-        const int CONSUMERRANGE = 0x3252;
-        const int PRODUCERINDENTIFIED = 0x92AB;
-        const int PRODUCERRANGE = 0x929F;
-        const int EVENT = 0x12D2;
+        const int NODENUMBER = 0xF000;
+        const int NOFILTER = 0x0017;
+        const int INITCOMPLETE = 0x0087;
+        const int VERIFYNODEIDS = 0x08A7;
+        const int VERIFIEDNID = 0x08B7;
+        const int IDENTIFYCONSUMERS = 0x0A4F;
+        const int CONSUMERRANGE = 0x025F;
+        const int CONSUMERINDENTIFIED = 0x026B;
+        const int IDENTIFYPRODUCERS = 0x0A8F;
+        const int PRODUCERRANGE = 0x029F;
+        const int PRODUCERINDENTIFIED = 0x02AB;
+        const int IDENTIFYEVENTS = 0x0AB7;
+        const int EVENT = 0x0ADF;
+        const int XPRESSNET = 0x0517;
+        const int DATAGRAM = 0x1400;
+        const int DATAGRAMACK = 0x14C0;
+        const int DATAGRAMNACK = 0x14D0;
+        const int STREAM = 0x1690;
 
         //***************************************************************************
         // Connection class

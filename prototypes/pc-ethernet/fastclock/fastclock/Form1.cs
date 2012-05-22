@@ -18,11 +18,26 @@ namespace fastclock
         //        Frame Types
         //*********************************************************************************
 
-        static public string INIT = "3080";
-        static public string VERIFYNODEIDS = "10A0";
-        static public string VERIFIEDNODEID = "30B0";
-        static public string EVENT = "12D2";
-        static public string FASTCLOCK = "110001";
+        const int NODENUMBER = 0xF000;
+        const string NOFILTER = "0017";
+        const string INITCOMPLETE = "0087";
+        const string VERIFYNODEIDS = "08A7";
+        const string VERIFIEDNID = "08B7";
+        const string IDENTIFYCONSUMERS = "0A4F";
+        const string CONSUMERRANGE = "025F";
+        const string CONSUMERINDENTIFIED = "026B";
+        const string IDENTIFYPRODUCERS = "0A8F";
+        const string PRODUCERRANGE = "029F";
+        const string PRODUCERINDENTIFIED = "02AB";
+        const string IDENTIFYEVENTS = "0AB7";
+        const string EVENT = "0ADF";
+        const string XPRESSNET = "0517";
+        const string DATAGRAM = "1400";
+        const string ACCEPTED = "14C0";
+        const string REJECTED = "14D0";
+        const string STREAM = "1690";
+
+        static public string FASTCLOCK = "010100000001";
 
         // Bonjour
         private Bonjour.DNSSDService m_service = null;
@@ -129,7 +144,7 @@ namespace fastclock
                 skt.Connect(ep);
                 byte[] buffer = new byte[12];
                 skt.Receive(buffer);
-                if ((buffer[1] << 8) + buffer[2] == 0x3000)
+                if ((buffer[1] << 8) + buffer[2] == NODENUMBER)
                 {
                     nodenumber = ((long)buffer[3] << 40) + ((long)buffer[4] << 32) + (buffer[5] << 24) + (buffer[6] << 16)
                         + (buffer[7] << 8) + buffer[8];
@@ -140,7 +155,7 @@ namespace fastclock
                 }
                 skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
                 serverconnected = true;
-                SendHexString(INIT + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
+                SendHexString(INITCOMPLETE + nodenumber.ToString("X12") + nodenumber.ToString("X12"));
             }
             catch
             {
@@ -153,24 +168,24 @@ namespace fastclock
             string s;
             if (cmd.Substring(2, 4) == VERIFYNODEIDS)
             {
-                s = VERIFIEDNODEID + nodenumber.ToString("X12") + nodenumber.ToString("X12");
+                s = VERIFIEDNID + nodenumber.ToString("X12") + nodenumber.ToString("X12");
                 SendHexString(s);
                 return;
             }
-            if (cmd[2] == '3' && cmd[5] == '4' && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram to this node
+            if (cmd.Substring(2, 4) == DATAGRAM && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram to this node
             {
-                if (cmd.Substring(2, 4) == "3204" && cmd.Substring(30, 2) == "60" && cmd.Substring(40, 2) == "FF")
+                if (cmd.Substring(30, 4) == "2060" && cmd.Substring(42, 2) == "FF")
                 {
                     // send XML file
-                    string address = cmd.Substring(32, 8);
+                    string address = cmd.Substring(34, 8);
                     int ad = Convert.ToInt32(address, 16);
                     string data = "";
-                    int l = Convert.ToInt32(cmd.Substring(42, 2), 16);
+                    int l = Convert.ToInt32(cmd.Substring(44, 2), 16);
                     if (ad + l > xml.Length)
                         l = xml.Length - ad;
                     for (int i = 0; i < l; i++)
                         data += ((int)xml[ad + i]).ToString("X2");
-                    s = "3204" + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "30" + address + "FF" + data;
+                    s = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "2030" + address + "FF" + data;
                     if (l < 64)
                         s += "00";
                     SendHexString(s);
@@ -227,7 +242,7 @@ namespace fastclock
                         hours = 0;
                 }
                 TimeTB.Text = hours.ToString("D2") + ":" + mins.ToString("D2");
-                SendHexString(EVENT + nodenumber.ToString("X12") + "010100000001" + (hours * 64 + mins).ToString("X4"));
+                SendHexString(EVENT + nodenumber.ToString("X12") + FASTCLOCK + (hours * 64 + mins).ToString("X4"));
             }
         }
 

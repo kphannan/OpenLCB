@@ -26,7 +26,7 @@ namespace HexMerge
             return String.Format("{0:X2}", a & 0x00FF);
         }
 
-        static void ReadFile(string fileName)
+        static void ReadFile(string fileName, UInt32 offset)
         {
             System.IO.StreamReader sr = System.IO.File.OpenText(fileName);
             String f = sr.ReadToEnd().ToUpper();
@@ -34,7 +34,7 @@ namespace HexMerge
             int l = f.Length;
 
             // read intel hex file
-            UInt32 address = 0;
+            UInt32 address = offset;
             int startptr;
             int i = 0;
             while(i < l)
@@ -56,7 +56,7 @@ namespace HexMerge
                     i+=2;
                     checksum += t;
                     ra = ra * 256 + t;
-                    address = (address & 0xFFFF0000) | (UInt32)ra;
+                    address = ((address & 0xFFFF0000) | ((UInt32)ra & 0x0000FFFF) ) + offset;
                     // type
                     UInt32 rt = hv(f[i], f[i + 1]);
                     checksum += rt;
@@ -94,7 +94,7 @@ namespace HexMerge
                     {
                         t = hv(f[i], f[i + 1]) * 256 + hv(f[i+2], f[i + 3]);
                         i += 4;
-                        address = t<<16;
+                        address = (UInt32)(t<<16) + offset;
                     }
                }
                 else i++;
@@ -148,18 +148,21 @@ namespace HexMerge
             if (args.GetUpperBound(0) < 3)
             {
                 Console.WriteLine("Use: Hexmerg file1 file2 file3 comment");
-                Console.WriteLine("      file1 is an Intel hex file.");
+                Console.WriteLine("      file1 is an Intel hex boot file.");
                 Console.WriteLine("      file2 is a second Intel hex file.");
                 Console.WriteLine("      file3 is an Intel hex file produced by sorting");
                 Console.WriteLine("          and merging the first 2 files.");
                 Console.WriteLine("      comment is a text record added to the file.");
+                Console.WriteLine("      if the comment starts with replace, the boot file is also placed in the top 4k.");
 
                 return;
             }
 
             // clear memory image
-            ReadFile(args[0]);
-            ReadFile(args[1]);
+            ReadFile(args[0], 0);
+            ReadFile(args[1], 0);
+            if (args[3].StartsWith("Replace "))
+                ReadFile(args[0], 0x3000);
             WriteFile(args[2], args[3]);
         }
     }
