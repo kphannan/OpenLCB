@@ -16,24 +16,24 @@ namespace OlcbSvr
 {
     public partial class OlcbSvr : Form
     {
-        const int NODENUMBER = 0xF000;
-        const int NOFILTER = 0x0017;
-        const int INITCOMPLETE = 0x0087;
-        const int VERIFYNODEIDS = 0x08A7;
-        const int VERIFIEDNID = 0x08B7;
-        const int IDENTIFYCONSUMERS = 0x0A4F;
-        const int CONSUMERRANGE = 0x025F;
-        const int CONSUMERINDENTIFIED = 0x026B;
-        const int IDENTIFYPRODUCERS = 0x0A8F;
-        const int PRODUCERRANGE = 0x029F;
-        const int PRODUCERINDENTIFIED = 0x02AB;
-        const int IDENTIFYEVENTS = 0x0AB7;
-        const int EVENT = 0x0ADF;
-        const int XPRESSNET = 0x0517;
-        const int DATAGRAM = 0x1400;
-        const int DATAGRAMACK = 0x14C0;
-        const int DATAGRAMNACK = 0x14D0;
-        const int STREAM = 0x1690;
+        const int NODENUMBER = 0x0000;
+        const int NOFILTER = 0x2017;
+        const int INITCOMPLETE = 0x2087;
+        const int VERIFYNODEIDS = 0x28A7;
+        const int VERIFIEDNID = 0x28B7;
+        const int IDENTIFYCONSUMERS = 0x2A4F;
+        const int CONSUMERRANGE = 0x225F;
+        const int CONSUMERINDENTIFIED = 0x226B;
+        const int IDENTIFYPRODUCERS = 0x2A8F;
+        const int PRODUCERRANGE = 0x229F;
+        const int PRODUCERINDENTIFIED = 0x22AB;
+        const int IDENTIFYEVENTS = 0x2AB7;
+        const int EVENT = 0x2ADF;
+        const int XPRESSNET = 0x2517;
+        const int DATAGRAM = 0x3400;
+        const int DATAGRAMACK = 0x34C0;
+        const int DATAGRAMNACK = 0x34D0;
+        const int STREAM = 0x3690;
 
         //***************************************************************************
         // Connection class
@@ -68,7 +68,7 @@ namespace OlcbSvr
                     if (!nodeids.Contains(srcnode))
                         nodeids.Add(srcnode);
                 }
-                else if (!localhub && mti == CONSUMERINDENTIFIED)
+                else if (!localhub && (mti&0xFFFC) == (CONSUMERINDENTIFIED&0xFFFC))
                 {
                     ulong ev = ((ulong)buffer[start + 9] << 56) + ((ulong)buffer[start + 10] << 48)
                         + ((ulong)buffer[start + 11] << 40) + ((ulong)buffer[start + 12] << 32)
@@ -92,8 +92,9 @@ namespace OlcbSvr
                 if (!filter)
                     return true;
                 int mti = buffer[start + 1] << 8 | buffer[start + 2];
-                if (mti == NOFILTER || mti == INITCOMPLETE || mti == VERIFIEDNID || mti == CONSUMERINDENTIFIED
-                    || mti == CONSUMERRANGE || mti == PRODUCERINDENTIFIED || mti == PRODUCERRANGE)
+                if (mti == NOFILTER || mti == INITCOMPLETE || mti == VERIFIEDNID
+                    || (mti & 0xFFFC) == (CONSUMERINDENTIFIED & 0xFFFC) || mti == CONSUMERRANGE
+                    || (mti & 0xFFFC) == (PRODUCERINDENTIFIED & 0xFFFC) || mti == PRODUCERRANGE)
                     return false;
                 if ((mti & 0xF00F) == 0x3004) // datagram
                 {

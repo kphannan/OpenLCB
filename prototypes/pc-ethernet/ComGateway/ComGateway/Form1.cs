@@ -36,24 +36,24 @@ namespace ComGateway
         const string FT_ADDR = "E";
         
         // Ethernet MTIs
-        const int NODENUMBER = 0xF000;
-        const string NOFILTER = "0017";
-        const string INITCOMPLETE = "0087";
-        const string VERIFYNODEIDS = "08A7";
-        const string VERIFIEDNID = "08B7";
-        const string IDENTIFYCONSUMERS = "0A4F";
-        const string CONSUMERRANGE = "025F";
-        const string CONSUMERINDENTIFIED = "026B";
-        const string IDENTIFYPRODUCERS = "0A8F";
-        const string PRODUCERRANGE = "029F";
-        const string PRODUCERINDENTIFIED = "02AB";
-        const string IDENTIFYEVENTS = "0AB7";
-        const string EVENT = "0ADF";
-        const string XPRESSNET = "0517";
-        const string DATAGRAM = "1400";
-        const string DATAGRAMACK = "14C0";
-        const string DATAGRAMNACK = "14D0";
-        const string STREAM = "1690";
+        const int NODENUMBER = 0x0000;
+        const string NOFILTER = "2017";
+        const string INITCOMPLETE = "2087";
+        const string VERIFYNODEIDS = "28A7";
+        const string VERIFIEDNID = "28B7";
+        const string IDENTIFYCONSUMERS = "2A4F";
+        const string CONSUMERRANGE = "225F";
+        const string CONSUMERINDENTIFIED = "226B";
+        const string IDENTIFYPRODUCERS = "2A8F";
+        const string PRODUCERRANGE = "229F";
+        const string PRODUCERINDENTIFIED = "22AB";
+        const string IDENTIFYEVENTS = "2AB7";
+        const string EVENT = "2ADF";
+        const string XPRESSNET = "2517";
+        const string DATAGRAM = "3400";
+        const string ACCEPTED = "34C0";
+        const string REJECTED = "34D0";
+        const string STREAM = "3690";
 
         public long nodenumber = 0;
         public string nodenumberstr = "";
