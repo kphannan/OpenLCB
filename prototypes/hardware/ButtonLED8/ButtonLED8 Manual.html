@@ -1,0 +1,296 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=utf-8">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice.org 3.2  (Unix)">
+	<META NAME="AUTHOR" CONTENT="David Harris">
+	<META NAME="CREATED" CONTENT="20120507;12125800">
+	<META NAME="CHANGEDBY" CONTENT="David Harris">
+	<META NAME="CHANGED" CONTENT="20120512;16343100">
+	<STYLE TYPE="text/css">
+	<!--
+		@page { margin: 0.79in }
+		P { margin-bottom: 0.08in }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-CA" DIR="LTR">
+<P ALIGN=CENTER STYLE="margin-bottom: 0in"><FONT SIZE=4 STYLE="font-size: 16pt">ButtonLED8
+User Manual</FONT></P>
+<P ALIGN=CENTER STYLE="margin-bottom: 0in"><FONT SIZE=2>(c) 2012 D.P.
+Harris</FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><IMG SRC="ButtonLED8%20Manual_html_2ecfac4a.jpg" NAME="graphics1" ALIGN=LEFT WIDTH=322 HEIGHT=185 BORDER=2></FONT><BR>
+</P>
+<P STYLE="margin-bottom: 0in">The ButtonLED8 board is a small pcb
+board with eight buttons and eight LEDs on it.  It is meant to be
+used as a mini-control panel, particularly with the OpenLCB / NMRAnet
+Development Kit (DevKit), but it can be useful in its own right.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">It has a button and a LED connected to
+each of eight digital lines.  This allows the use of each
+microprocessor pin to be used as an input and output at the same
+time, with multiplexing software.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">It can be used as either a simple
+button panel used with the Io INPUTS.  Alternately, it can be used as
+a auxillary LED panel for the Io OUTPUTS.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><U><B>Connectors</B></U></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">The ButtonLED can have a number of
+connectors installed.  The assembled ButtonLED8 has a 1x10 female
+connector installed on the bottom side.  By inserting a 1x10 male
+header into this, the ButtonLED8 can be inserted into the Io INPUTS
+or OUTPUTS holes for testing perposes.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">If a 1x10 male header is installed on
+the Input or Output Io connectors, then a ButtonLED8 with a 1x10
+female header can be directly connected to those connectors. 
+Alternately, if screw-terminals are installed on the Io, then a
+right-angle male connector installed on the ButtonLED8 will let it be
+attached to the Io.  Other possibilities for connector combinations
+exist.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">Another useful option is to install a
+2x5 male header onto the top or bottom side.  This lets you use a IDC
+ribbon cable to attach the ButtonLED8 to one of the Io nodes 2x5
+connectors.  This allows the ButtonLED8 to be used as a mini-panel at
+some distance from the Io.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><SPAN ID="Frame2" DIR="LTR" STYLE="float: left; width: 1.59in; height: 1.5in; border: 1.00pt solid #000000; padding: 0.02in; background: #ffffff">
+	<P STYLE="margin-top: 0.08in"><IMG SRC="ButtonLED8%20Manual_html_56d263.png" NAME="graphics2" ALIGN=LEFT WIDTH=100% BORDER=0><BR CLEAR=LEFT><FONT SIZE=3><I>1x10
+	Male</I></FONT></P>
+</SPAN>
+<SPAN ID="Frame3" DIR="LTR" STYLE="float: left; width: 1.9in; height: 1.5in; border: 1.00pt solid #000000; padding: 0.02in; background: #ffffff">
+	<P STYLE="margin-top: 0.08in"><IMG SRC="ButtonLED8%20Manual_html_m1f7faf01.png" NAME="graphics3" ALIGN=LEFT WIDTH=100% BORDER=0><BR CLEAR=LEFT><FONT SIZE=3><I>2x5
+	Male on Top</I></FONT></P>
+</SPAN>
+<SPAN ID="Frame1" DIR="LTR" STYLE="float: left; width: 1.58in; height: 1.5in; border: 1.00pt solid #000000; padding: 0.02in; background: #ffffff">
+	<P STYLE="margin-top: 0.08in"><IMG SRC="ButtonLED8%20Manual_html_m69d5f38b.png" NAME="graphics6" ALIGN=LEFT WIDTH=100% BORDER=0><BR CLEAR=LEFT><FONT SIZE=3><I>2x5
+	Male on Bottom</I></FONT></P>
+</SPAN><BR CLEAR=LEFT><BR>
+</P>
+<P STYLE="margin-bottom: 0in; page-break-before: always"><FONT COLOR="#000000"><IMG SRC="ButtonLED8%20Manual_html_mfdb9dea.png" NAME="graphics4" ALIGN=LEFT WIDTH=161 HEIGHT=178 BORDER=2></FONT><U><B>The
+Hardware, How It Works</B></U></P>
+<P STYLE="margin-bottom: 0in">The circuit diagram for one digital
+line is shown to the right.  The microprocessor pin can be in one of
+three states: 
+</P>
+<OL>
+	<LI><P STYLE="margin-bottom: 0in">Input, or high impedance.  This
+	results in the LED reflecting the state of the button.  When the
+	button is depressed, the LED will be lit.  
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">Output Low.  This sinks current
+	through the LED and lights it. 
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">Output High. This turns the LED
+	off.  Pushing the button may turn it on.  
+	</P>
+</OL>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><U><B>The ButtonLED Library</B></U></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">This library was written to use the
+above circuit.  Each microprocessor pin is represented by an
+ButtonLED object.  Its API allows the LED to be set on, off, or
+flashing according to a pattern.  The button state is available as an
+object variable, as are the duration of the current and last states. 
+To make it operate, the library includes a service routine that has
+to called repetitively, as least every 32 ms, and this can be easily
+done by calling it the main program loop.  
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">Each time it is called more often than
+32 ms it returns.  Other wise it updates the LED state, performing
+any flashing pattern.  The output pin is kept as an output for most
+of the time, and the button-state is ignored, but every 64 ms, the
+pin is briefly set an output, and the button-state is sampled,
+debounced  and its state stored.    
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in; page-break-before: always"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3><B><U>API</U></B></FONT></FONT></FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3><SPAN STYLE="text-decoration: none">public</SPAN><SPAN STYLE="text-decoration: none">:</SPAN></FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>uint16_t sense;     
+   // active sense of button/LED </FONT></FONT></FONT>
+</P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>long
+pattern;             // current output drive pattern (rotates)</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>long
+duration;           // how long the button has been in its current
+state in msec</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>long
+lastDuration;    // how long it was in the previous state, in msec</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>uint8_t pin;        
+      // connected pin number</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>uint8_t once;       
+     // mask for single blink</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>bool
+ledState;           // current output drive state</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>bool
+state;                 // current button state</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><BR>
+</P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>ButtonLed(uint8_t
+pin, uint8_t sense);  // associate pin and sense for active state</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>ButtonLed(uint8_t
+pin);                         // associate pin, default sense=HIGH</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>ButtonLed();</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>void
+setPinSense(uint8_t p, uint8_t s);  // initialize pin and sense,
+useful for arrays</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>void
+on(long pattern);                            // set the output
+repeating pattern</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>void
+blink(uint8_t pattern);                    // set the output blink
+pattern one time only</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> <FONT FACE="Times New Roman, serif"><FONT SIZE=3>void
+process();                                       // processes LED and
+buttons, call periodically</FONT></FONT></FONT></P>
+<P STYLE="margin-bottom: 0in; text-decoration: none"><FONT COLOR="#000000">
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>bool
+ButtonLed::unique()                      // returns if there has been
+a change in button state</FONT></FONT></FONT></P>
+<P STYLE="margin-bottom: 0in; text-decoration: none"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>					
+    // unique() calls process() internally</FONT></FONT></FONT></P>
+<P STYLE="margin-bottom: 0in"><U>Example use</U>: 
+</P>
+<P STYLE="margin-bottom: 0in">include “ButtonLED”             //
+Include the library</P>
+<P STYLE="margin-bottom: 0in">ButtonLED aBL(15);              // pin
+15 is declared to be a BL</P>
+<P STYLE="margin-bottom: 0in">void setup() {</P>
+<P STYLE="margin-bottom: 0in">   aBL.on(0L);                        
+// turn LED off 
+</P>
+<P STYLE="margin-bottom: 0in">}</P>
+<P STYLE="margin-bottom: 0in">void loop() {</P>
+<P STYLE="margin-bottom: 0in">   if(aBL.unique()) {                //
+Has the button-state changed?, this calls process() internally</P>
+<P STYLE="margin-bottom: 0in">     if(aBL.state) 
+</P>
+<P STYLE="margin-bottom: 0in">        aBL.on(0x0000FFFFL);  // slow
+flashing</P>
+<P STYLE="margin-bottom: 0in">     else 
+</P>
+<P STYLE="margin-bottom: 0in">        aBL.on(0x0F0F0F0FL);  // rapid
+flashing</P>
+<P STYLE="margin-bottom: 0in">   }</P>
+<P STYLE="margin-bottom: 0in">}</P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>//
+defining an array of buttons</FONT></FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>ButtonLed
+b[64];</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>void
+setup() {</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">  <FONT FACE="Times New Roman, serif"><FONT SIZE=3>DDRG
+|= 0x03;</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> 
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>for(int i=0; i&lt;50;
+i++) {</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">   
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>b[i].setPinSense(i,
+LOW);</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">   
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>b[i].pattern =
+0x0F0F0F0FL;</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000">  <FONT FACE="Times New Roman, serif"><FONT SIZE=3>}</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>}</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>int
+p;</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>void
+loop() {</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> 
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>if(p&gt;=50) p=0;</FONT></FONT></FONT></P>
+<P ALIGN=LEFT STYLE="margin-bottom: 0in"><FONT COLOR="#000000"> 
+<FONT FACE="Times New Roman, serif"><FONT SIZE=3>b[p++].process();</FONT></FONT></FONT></P>
+<P STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><FONT FACE="Times New Roman, serif"><FONT SIZE=3>}</FONT></FONT></FONT></P>
+<P STYLE="margin-bottom: 0in; page-break-before: always"><U><B>Assembling
+ButtonLED8</B></U></P>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<OL>
+	<LI><P STYLE="margin-bottom: 0in"><FONT COLOR="#000000"><IMG SRC="ButtonLED8%20Manual_html_m1f7faf01.png" NAME="graphics5" ALIGN=LEFT WIDTH=107 HEIGHT=328 BORDER=2></FONT>Parts
+	list:<BR>	1 x pcb board<BR>	8 x LEDs<BR>	8 x buttons<BR>	8 x ~1200
+	ohm resistors<BR>	8 x ~470 ohm resistors<BR>	1 x 1x10 male female
+	header<BR>Optionally: 1 x 2x5 male header (you could also use two
+	1x5 male strips)</P>
+	<LI><P STYLE="margin-bottom: 0in">Insert and solder in the 8
+	buttons, and solder.</P>
+	<LI><P STYLE="margin-bottom: 0in">Insert eight 1k resistors, solder
+	and clip.</P>
+	<LI><P STYLE="margin-bottom: 0in">Insert the eight 500 ohm
+	resistors, solder and clip.</P>
+	<LI><P STYLE="margin-bottom: 0in">Insert the eight LEDs, the flat
+	side should be oriented as shown, solder and clip.</P>
+	<LI><P STYLE="margin-bottom: 0in">Insert the 1x10 female header on
+	the BOTTOM of the board, solder.  
+	</P>
+	<P STYLE="margin-bottom: 0in">Optionally:</P>
+	<LI><P STYLE="margin-bottom: 0in">Insert the 2x5 male header on the
+	TOP of the board. <BR>To make use of this, you will also need to
+	insert 2x5 headers onto an Io board, and construct a cable using two
+	2x5 female displacement connectors and ribbon cable.  
+	</P>
+</OL>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+<P STYLE="margin-bottom: 0in">Notes: 
+</P>
+<OL>
+	<LI><P STYLE="margin-bottom: 0in">The ButtonLED8 can make a
+	mini-panel when used with a longer ribbon cable.  
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">The 1x10 and 2x5 were placed
+	slight close together, and using one or the other may be required.  
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">The 1x10 and 2x5 connectors can be
+	any combination of: male, female, straight, 90-degree, hooded, bare;
+	and the particular choice may depend on the use of the board.  Eg, a
+	min-panel may want to use a connector mounted on the back.  
+	</P>
+	<LI><P STYLE="margin-bottom: 0in">Button-caps can be mounted onto
+	the button, if desired.  
+	</P>
+</OL>
+<P STYLE="margin-bottom: 0in"><BR>
+</P>
+</BODY>
+</HTML>
