@@ -59,7 +59,7 @@
             <xs:attribute name="offset" type="xs:int">
               <xs:annotation>
                 <xs:documentation>
-                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                      Positive or negative offset between the address of the end of previous element and the start of this elements's contents.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
@@ -84,7 +84,7 @@
             <xs:attribute name="offset" type="xs:int">
               <xs:annotation>
                 <xs:documentation>
-                      Positive or negative offset between the address of the previous element and the start of this group's contents.
+                      Positive or negative offset between the address of the end of previous element and the start of this elements's contents.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
