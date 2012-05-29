@@ -1,0 +1,16 @@
+{\rtf1\ansi\ansicpg1252\cocoartf949\cocoasubrtf540
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww9000\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f0\fs24 \cf0 Io List\
+\
+1. Io must not loose frames on transmit if a transmit-buffer is not available.  Also, it cannot spin-wait, as it will loose incoming frames.  Solutions include, backing out of transaction, and retrying later, or include buffering of incoming frames while waiting for a transmit buffer.  \
+\
+2. Request Events (from JMRI Send CAN Frame) is an addressed message: \
+    At the moment all Ios respond to these, but only the addressed node should be replying.  \
+    Note: there are both global and addressed Identify Events message forms.\
+\
+3.  Factory Reset should load next set of events, but inputs and outputs need different sets.  So, first set is 00..0F10..1F (ie 32 events), the next reload 20..2F30..3F (the 32 new events).  \
+}
