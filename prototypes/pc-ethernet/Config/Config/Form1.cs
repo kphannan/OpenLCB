@@ -60,6 +60,9 @@ namespace Config
         static int[] lengthofdata = new int[10];
         static string[] typeofdata = new string[10];
 
+        string xml = "<cdi><id><Software>OpenLCB Configuration Tool</Software>"
+            + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id></cdi>";
+
         public Config()
         {
             InitializeComponent();
@@ -246,17 +249,44 @@ namespace Config
                     inputstring = "";
                 if (LogCB.Checked)
                     log("< " + cmd);
-                if (cmd.Substring(2, 4) == VERIFIEDNID || cmd.Substring(2, 4) == INITCOMPLETE)
+                if (cmd.Substring(2, 4) == VERIFYNODEIDS)
+                {
+                    string str = VERIFIEDNID + nodenumber.ToString("X12") + nodenumber.ToString("X12");
+                    SendHexString(str);
+                }
+                else if (cmd.Substring(2, 4) == VERIFIEDNID || cmd.Substring(2, 4) == INITCOMPLETE)
                 {
                     if (!SelectNodeCB.Items.Contains(cmd.Substring(6, 12)))
                         SelectNodeCB.Items.Add(cmd.Substring(6, 12));
                 }
-                else if ((cmd.Substring(2, 4) == DATAGRAM || cmd.Substring(2, 4) == ACCEPTED || cmd.Substring(2, 4) == REJECTED)
+                else if ((cmd.Substring(2, 4) == ACCEPTED || cmd.Substring(2, 4) == REJECTED)
                     && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram
                 {
                     datagrams.Enqueue(cmd);
                 }
-             }
+                else if (cmd.Substring(2, 4) == DATAGRAM && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram
+                {
+                    if (cmd.Substring(30, 4) == "2060" && cmd.Substring(42, 2) == "FF")
+                    {
+                        // send XML file
+                        string address = cmd.Substring(34, 8);
+                        int ad = Convert.ToInt32(address, 16);
+                        string data = "";
+                        int l = Convert.ToInt32(cmd.Substring(44, 2), 16);
+                        byte[] utf8bytes = Encoding.UTF8.GetBytes(xml);
+                        if (ad + l > utf8bytes.Length)
+                            l = utf8bytes.Length - ad;
+                        for (int i = 0; i < l; i++)
+                            data += ((int)utf8bytes[ad + i]).ToString("X2");
+                        string str = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "2030" + address + "FF" + data;
+                        if (l < 64)
+                            str += "00";
+                        SendHexString(str);
+                    }
+                    else
+                        datagrams.Enqueue(cmd);
+                }
+            }
             skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
         }
 
@@ -871,18 +901,21 @@ namespace Config
             }
             else if ("character".StartsWith(n.Name))
             {
-                string t = "";
+                byte[] utf8data = new byte[1024];
+                int datap = 0;
                 for (int i = 0; i < isize * 2; i += 2)
                 {
                     int x = Convert.ToInt16(SegmentData.Substring(bytepos+i, 2), 16);
+                    utf8data[datap++] = (byte)x;
                     if (x == 0)
                         break;
-                    t += (char)x;
                 }
+                utf8data[datap] = 0;
                 bytepos += isize * 2;
                 if (name != "unused")
                 {
-                    textboxes[index++].Text = t;
+                    UTF8Encoding utf8 = new UTF8Encoding();
+                    textboxes[index++].Text = utf8.GetString(utf8data);
                 }
             }
             else if ("byte".StartsWith(n.Name))
@@ -996,10 +1029,15 @@ namespace Config
             }
             else if (typeofdata[index] == "char")
             {
-                string t = tb.Text.PadRight(lengthofdata[index], '\0');
+                byte[] utf8bytes = Encoding.UTF8.GetBytes(tb.Text);
                 string r = "";
-                for (int i = 0; i < lengthofdata[index]/2; i++)
-                    r += ((int)t[i]).ToString("X2");
+                for (int i = 0; i < lengthofdata[index] / 2; i++)
+                {
+                    if (i < utf8bytes.Length)
+                        r += ((int)utf8bytes[i]).ToString("X2");
+                    else
+                        r += "00";
+                }
                 SegmentData = SegmentData.Substring(0, startofdata[index]) + r
                     + SegmentData.Substring(startofdata[index] + lengthofdata[index]);
             }

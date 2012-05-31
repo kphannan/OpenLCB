@@ -476,7 +476,7 @@ namespace ComGateway
                     }
                     break;
                 case '8':
-                    newcmd = "0" + cmd.Substring(4, 3);
+                    newcmd = "2" + cmd.Substring(4, 3);
                     newcmd += TranslateToNodeID(cmd.Substring(7, 3), cmd) + data;
                     checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
@@ -516,7 +516,7 @@ namespace ComGateway
                         log("End of datagram without a start.");
                     break;
                 case 'E':
-                    newcmd = "1" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
+                    newcmd = "3" + data.Substring(0, 2) + "0" + TranslateToNodeID(cmd.Substring(7, 3), cmd)
                         + TranslateToNodeID(cmd.Substring(4, 3), cmd) + data.Substring(2);
                     checkpacket(newcmd, true);
                     EthernetSendHexString(newcmd);
@@ -583,13 +583,13 @@ namespace ComGateway
                     }
                     return;
                 }
-                if (cmd[2] == '1' && cmd[5] == '0') // addressed
+                if (cmd[2] == '3' && cmd[5] == '0') // addressed
                 {
                     string did = TranslateToAlias(cmd.Substring(18, 12));
                     CAN("E" + did + sid, cmd.Substring(3, 2) + cmd.Substring(30));
                     return;
                 }
-                if (cmd[2] == '0') // simple broadcast
+                if (cmd[2] == '2') // simple broadcast
                 {
                     string mti = "8"+cmd.Substring(3,3);
                     CAN(mti + sid, cmd.Substring(18));
