@@ -344,6 +344,8 @@ namespace Config
             string datagram = "";
             int adr = 0;
             xmldoc = "";
+            byte[] doc = new byte[8000];
+            int docp = 0;
             bool more = true;
             while (more)
             {
@@ -366,13 +368,16 @@ namespace Config
                     int c = Convert.ToInt32(datagram.Substring(i, 2), 16);
                     if (c == 0)
                     {
+                        doc[docp] = 0;
                         more = false;
                         break;
                     }
-                    xmldoc += (char)c;
+                    doc[docp++] = (byte)c;
                 }
                 adr += 64;
             }
+            UTF8Encoding utf8 = new UTF8Encoding();
+            xmldoc = utf8.GetString(doc);
             log(xmldoc);
             if (!xmldoc.StartsWith("<cdi>"))
             {

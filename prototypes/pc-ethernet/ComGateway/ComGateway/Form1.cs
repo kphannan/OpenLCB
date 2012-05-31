@@ -62,7 +62,7 @@ namespace ComGateway
         public bool localhub = false;
 
         public string xml = "<cdi><id><Software>OpenLCB USB/RS232 Com Gateway</Software>"
-            + "<Version>Mike Johnson 12 Aug 2011</Version></id>"
+            + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id>"
             +"<seg name=\"Port Speed\" space=\"0\" buttons=\"1\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
 
         StreamWriter savefile = new StreamWriter("logfile.log");
@@ -263,7 +263,15 @@ namespace ComGateway
         public void InputTask(IAsyncResult ar)
         {
             Socket s = (Socket)ar.AsyncState;
-            int read = s.EndReceive(ar);
+            int read = 0;
+            try
+            {
+                read = s.EndReceive(ar);
+            }
+            catch
+            {
+                return;
+            }
             string inputstring = "";
             for (int i=0; i<read; i++)
                 inputstring += inputbuffer[i].ToString("X2");
@@ -280,7 +288,11 @@ namespace ComGateway
                 if (checkpacket(cmd.Substring(2), false))
                     CANSendHexString(cmd);
             }
-            skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
+            try
+            {
+                skt.BeginReceive(inputbuffer, 0, 2000, SocketFlags.None, (AsyncCallback)InputTask, skt);
+            }
+            catch { }
         }
 
         // s is the string to send without the length
@@ -690,10 +702,11 @@ namespace ComGateway
                     int ad = Convert.ToInt32(address, 16);
                     string data = "";
                     int l = Convert.ToInt32(cmd.Substring(42, 2), 16);
-                    if (ad + l > xml.Length)
-                        l = xml.Length - ad;
+                    byte[] utf8bytes = Encoding.UTF8.GetBytes(xml);
+                    if (ad + l > utf8bytes.Length)
+                        l = utf8bytes.Length - ad;
                     for (int i = 0; i < l; i++)
-                        data += ((int)xml[ad + i]).ToString("X2");
+                        data += ((int)utf8bytes[ad + i]).ToString("X2");
                     s = DATAGRAM + nodenumberstr + cmd.Substring(4, 12) + "2030" + address + "FF" + data;
                     if (l < 64)
                         s += "00";
@@ -707,7 +720,12 @@ namespace ComGateway
                 {
                     // send port speed
                     string address = cmd.Substring(32, 8);
-                    string speed = com.BaudRate.ToString("X8").PadLeft(8,'0');
+                    string speed = "00000000";
+                    try
+                    {
+                        speed = com.BaudRate.ToString("X8").PadLeft(8, '0');
+                    }
+                    catch { };
                     string data = "";
                     for (int i = 0; i < 8; i+=2)
                         data = speed.Substring(i,2) + data;

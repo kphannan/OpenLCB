@@ -47,7 +47,7 @@ namespace Throttle
         static Socket skt = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static bool serverconnected = false;
         string xml = "<cdi><id><Software>OpenLCB Simple Throttle</Software>"
-            + "<Version>Mike Johnson 29 July 2011</Version></id></cdi>";
+            + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id></cdi>";
 
         public Throttle()
         {
@@ -175,10 +175,11 @@ namespace Throttle
                     int ad = Convert.ToInt32(address, 16);
                     string data = "";
                     int l = Convert.ToInt32(cmd.Substring(44, 2), 16);
-                    if (ad + l > xml.Length)
-                        l = xml.Length - ad;
+                    byte[] utf8bytes = Encoding.UTF8.GetBytes(xml);
+                    if (ad + l > utf8bytes.Length)
+                        l = utf8bytes.Length - ad;
                     for (int i = 0; i < l; i++)
-                        data += ((int)xml[ad + i]).ToString("X2");
+                        data += ((int)utf8bytes[ad + i]).ToString("X2");
                     s = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "2030" + address + "FF" + data;
                     if (l < 64)
                         s += "00";

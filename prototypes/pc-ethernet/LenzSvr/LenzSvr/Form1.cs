@@ -71,7 +71,7 @@ namespace LenzSvr
         static long nodenumber = 0;
         static byte[] inputbuffer = new byte[2000];
         string xml = "<cdi><id><Software>OpenLCB WiThrottle server to XpressNet</Software>"
-            + "<Version>Mike Johnson 29 July 2011</Version></id></cdi>";
+            + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id></cdi>";
 
         public Server()
         {
@@ -470,15 +470,16 @@ namespace LenzSvr
                     {
                         // send XML file
                         string address = cmd.Substring(34, 8);
-                        int ad = Convert.ToInt32(address,16);
+                        int ad = Convert.ToInt32(address, 16);
                         string data = "";
-                        int l = Convert.ToInt32(cmd.Substring(44, 2),16);
-                        if (ad + l > xml.Length)
-                            l = xml.Length - ad;
+                        int l = Convert.ToInt32(cmd.Substring(44, 2), 16);
+                        byte[] utf8bytes = Encoding.UTF8.GetBytes(xml);
+                        if (ad + l > utf8bytes.Length)
+                            l = utf8bytes.Length - ad;
                         for (int i = 0; i < l; i++)
-                            data += ((int)xml[ad + i]).ToString("X2");
-                        string s = DATAGRAM+ nodenumber.ToString("X12") + cmd.Substring(6, 12) + "2030" + address + "FF" + data;
-                        if (l<64)
+                            data += ((int)utf8bytes[ad + i]).ToString("X2");
+                        string s = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "2030" + address + "FF" + data;
+                        if (l < 64)
                             s += "00";
                         SendHexString(s);
                     }
