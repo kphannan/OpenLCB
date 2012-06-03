@@ -72,6 +72,7 @@ namespace LenzSvr
         static byte[] inputbuffer = new byte[2000];
         string xml = "<cdi><id><Software>OpenLCB WiThrottle server to XpressNet</Software>"
             + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id></cdi>";
+        string nodename = "LenzServer";
 
         public Server()
         {
@@ -482,6 +483,17 @@ namespace LenzSvr
                         if (l < 64)
                             s += "00";
                         SendHexString(s);
+                    }
+                    else if (cmd.Substring(30, 4) == "2060" && cmd.Substring(42, 2) == "FB")
+                    {
+                        // send node name
+                        string data = "";
+                        byte[] utf8bytes = Encoding.UTF8.GetBytes(nodename);
+                        int l = utf8bytes.Length;
+                        for (int i = 0; i < l; i++)
+                            data += ((int)utf8bytes[i]).ToString("X2");
+                        string str = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "203000000000FB" + data + "00";
+                        SendHexString(str);
                     }
                 }
                 else if (cmd.Substring(2, 4) == XPRESSNET)

@@ -71,8 +71,8 @@ far BYTE serrcbuf[128];
 
 #pragma romdata
 const rom BYTE xml[] = "<cdi><id><software>" modulestring "</software></id>"
-    "<se na=\"Location\" or=\"#0080\" sp=\"#FE\" bu=\"#103\">"
-      "<ch na=\"Location\" si=\"64\"/>"
+    "<se na=\"Name\" sp=\"#FB\" bu=\"#103\">"
+      "<ch na=\"Name\" si=\"64\"/>"
     "</se>"
     "<se na=\"Node Id\" or=\"#0040\" sp=\"#FE\" bu=\"#143\">"
       "<in na=\"Serial\" si=\"1\"/>"
@@ -244,6 +244,10 @@ void packet(void)
                 UP(GP_address) = GP_block[3];
                 HI(GP_address) = GP_block[4];
                 LO(GP_address) = GP_block[5];
+                if (GP_block[6] == 0xFB) { // Name and description
+                    GP_block[6] = 0xFE;
+                    LO(GP_address) = 0x80;
+                } 
                 if (GP_block[1] == DGM_WRITE) {
                     if (GP_block[6] == 0xFE) { // program memory
                         // write program data

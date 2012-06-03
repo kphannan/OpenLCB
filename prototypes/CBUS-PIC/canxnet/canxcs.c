@@ -121,8 +121,8 @@ rom BYTE XNETID = DEFAULTXNETID;
 #pragma romdata
 const rom BYTE xml[] = 
     "<cdi><id><software>" modulestring "</software></id>"
-    "<se na=\"Location\" or=\"#0080\" sp=\"#FE\" bu=\"#323\">"
-      "<ch na=\"Location\" si=\"64\"/>"
+    "<se na=\"Name\" sp=\"#FB\" bu=\"#323\">"
+      "<ch na=\"Name\" si=\"64\"/>"
     "</se>"
     "<se na=\"Node Id\" or=\"#0040\" sp=\"#FE\" bu=\"#343\">"
       "<in na=\"Serial\" si=\"1\"/>"
@@ -130,7 +130,7 @@ const rom BYTE xml[] =
       "<by na=\"Group\" si=\"2\"/>"
     "</se>"
     "<se na=\"Xnetid\" sp=\"1\" bu=\"#303\">"
-      "<by na=\"Xnetid\" si=\"1\"/>"
+      "<int na=\"Xnetid\" si=\"1\"/>"
     "</se>"
     "</cdi>";
 
@@ -370,9 +370,17 @@ void DatagramPacket(void)
             UP(GP_address) = GP_block[3];
             HI(GP_address) = GP_block[4];
             LO(GP_address) = GP_block[5];
+            if (GP_block[6] == 0xFB) { // Name and description
+                GP_block[6] = 0xFE;
+                LO(GP_address) = 0x80;
+            } 
             if (GP_block[1] == DGM_WRITE) {
                 // write data
-                if (GP_block[6] == 0) { // event data
+                if (GP_block[6] == 1) { // xnetid
+                    xnetid = GP_block[7];
+                    EEPROMWrite((int)&XNETID, xnetid);
+                    sendack(CB_SourceNID);
+                    return;
                 }
                 if (GP_block[6] == 0xFE || GP_block[6] == 0 ) {
                     ProgramMemoryWrite(GP_address, 64, (BYTE * far)&GP_block[7]);
@@ -389,7 +397,10 @@ void DatagramPacket(void)
                     StartSendBlock(i+7, CB_SourceNID);
                     return;
                 }
-                if (GP_block[6] == 0) { // event data
+                if (GP_block[6] == 1) { // xnetid
+                    GP_block[7] = xnetid;
+                    StartSendBlock(1+7, CB_SourceNID);
+                    return;
                 }
                 if (GP_block[6] == 0xFE || GP_block[6] == 0 ) {
                     i = GP_block[7];

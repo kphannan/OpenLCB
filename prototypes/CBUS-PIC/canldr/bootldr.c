@@ -162,10 +162,10 @@ const rom BYTE xml[] = "<cdi><id><loader>OpenLCB PIC "
     "CAN Boot Loader " 
 #endif
      __DATE__ " " __TIME__
-    "</loader></id><se na=\"Loc\" or=\"#0040\" sp=\"#FE\" bu=\"#143\">"
-    "<by na=\"Node Id\" si=\"6\"/>"
+    "</loader></id><se na=\"Node\" or=\"#0040\" sp=\"#FE\" bu=\"#143\">"
+    "<by na=\"Id\" si=\"6\"/>"
     "<by si=\"58\"/>"
-    "<ch na=\"Loc\" si=\"64\"/></se></cdi>";
+    "<ch na=\"Name\" si=\"64\"/></se></cdi>";
 
 #pragma code
 #pragma udata ovrly
@@ -297,6 +297,10 @@ void Packet(void)
                 UP(GP_address) = GP_block[3];
                 HI(GP_address) = GP_block[4];
                 LO(GP_address) = GP_block[5];
+                if (GP_block[6] == 0xFB) { // Name and description
+                    GP_block[6] = 0xFE;
+                    LO(GP_address) = 0x80;
+                } 
                 if (GP_block[1] == DGM_WRITE) {
                     if (GP_block[6] == 0xFE) { // program memory
                         // write program data

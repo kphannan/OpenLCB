@@ -63,6 +63,8 @@ namespace Config
         string xml = "<cdi><id><Software>OpenLCB Configuration Tool</Software>"
             + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id></cdi>";
 
+        string nodename = "ConfigTool";
+
         public Config()
         {
             InitializeComponent();
@@ -113,6 +115,13 @@ namespace Config
             setBtns(0);
 
             StartGetNodeNumber();
+            GetNodeNames = new Thread(GetNodeName);
+            GetNodeNames.Start();
+        }
+
+        private void Config_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            GetNodeNames.Abort();
         }
 
         public void SendHexString(string s)
@@ -256,8 +265,17 @@ namespace Config
                 }
                 else if (cmd.Substring(2, 4) == VERIFIEDNID || cmd.Substring(2, 4) == INITCOMPLETE)
                 {
-                    if (!SelectNodeCB.Items.Contains(cmd.Substring(6, 12)))
+                    bool found = false;
+                    for (int i = 0; i < SelectNodeCB.Items.Count; i++)
+                    {
+                        if (SelectNodeCB.Items[i].ToString().Substring(0, 12) == cmd.Substring(6, 12))
+                            found = true;
+                    }
+                    if (!found)
+                    {
                         SelectNodeCB.Items.Add(cmd.Substring(6, 12));
+                        NewNode.Release();
+                    }
                 }
                 else if ((cmd.Substring(2, 4) == ACCEPTED || cmd.Substring(2, 4) == REJECTED)
                     && cmd.Substring(18, 12) == nodenumber.ToString("X12")) // datagram
@@ -283,6 +301,17 @@ namespace Config
                             str += "00";
                         SendHexString(str);
                     }
+                    else if (cmd.Substring(30, 4) == "2060" && cmd.Substring(42, 2) == "FB")
+                    {
+                        // send node name
+                        string data = "";
+                        byte[] utf8bytes = Encoding.UTF8.GetBytes(nodename);
+                        int l = utf8bytes.Length;
+                        for (int i = 0; i < l; i++)
+                            data += ((int)utf8bytes[i]).ToString("X2");
+                        string str = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(6, 12) + "203000000000FB" + data + "00";
+                        SendHexString(str);
+                    }
                     else
                         datagrams.Enqueue(cmd);
                 }
@@ -295,6 +324,55 @@ namespace Config
             SelectNodeCB.Items.Clear();
             SelectNodeCB.Text = "";
             SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
+        }
+
+        //******************************************************************************************************
+        // Get Node Names
+        //******************************************************************************************************
+
+        static Thread GetNodeNames;
+        static Semaphore NewNode = new Semaphore(0, 1000);
+
+        void GetNodeName()
+        {
+            string datagram = "";
+            byte[] nameb = new byte[100];
+
+            while (true)
+            {
+                NewNode.WaitOne();
+                for (int i = 0; i < SelectNodeCB.Items.Count; i++)
+                {
+                    string nodeid = SelectNodeCB.Items[i].ToString();
+                    if (nodeid.Length == 12) // no name
+                    {
+                        SendHexString(DATAGRAM + nodenumber.ToString("X12") + nodeid + "206000000000FB40");
+                        for (int w = 0; w < 200; w++)
+                        {
+                            Thread.Sleep(10);
+                            if (datagrams.Count != 0)
+                            {
+                                datagram = datagrams.Dequeue();
+                                if (datagram.Substring(2, 4) == DATAGRAM || datagram.Substring(2, 4) == REJECTED)
+                                    break;
+                            }
+                        }
+                        if (datagram.Substring(2, 4) == DATAGRAM && datagram.Substring(6, 12) == nodeid)
+                        {
+                            for (int j = 44, p = 0; j < datagram.Length; j += 2)
+                            {
+                                int c = Convert.ToInt32(datagram.Substring(j, 2), 16);
+                                nameb[p++] = (byte)c;
+                                if (c == 0)
+                                    break;
+                            }
+                            UTF8Encoding utf8 = new UTF8Encoding();
+                            string name = utf8.GetString(nameb);
+                            SelectNodeCB.Items[i] = nodeid + " " + name;
+                        }
+                    }
+                }
+            }
         }
 
         //******************************************************************************************************
@@ -379,7 +457,7 @@ namespace Config
             bool more = true;
             while (more)
             {
-                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text 
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0,12) 
                     + "2060" + adr.ToString("X8") + "FF" + "40");
                 for (int w = 0; w < 200; w++)
                 {
@@ -790,7 +868,7 @@ namespace Config
                 int l = left;
                 if (l > 64)
                     l = 64;
-                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0,12)
                     + "2060" + adr.ToString("X8") + ReadSegmentSpace.ToString("X2") + l.ToString("X2"));
                 for (int w = 0; w < 200; w++)
                 {
@@ -983,7 +1061,7 @@ namespace Config
                int l = left;
                 if (l > 64)
                     l = 64;
-                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0, 12)
                     + "2020" + adr.ToString("X8") + WriteSegmentSpace.ToString("X2")
                     + WriteSegmentData.Substring((int)(adr - WriteSegmentOrigin) * 2, l * 2));
                 for (int w = 0; w < 200; w++)
@@ -1061,7 +1139,7 @@ namespace Config
         {
             if (SelectNodeCB.Text == "")
                 return;
-            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A5");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0, 12) + "20A5");
             SelectNodeCB.Items.Clear();
             SelectNodeCB.Text = "";
             SendHexString(VERIFYNODEIDS + nodenumber.ToString("X12"));
@@ -1071,7 +1149,7 @@ namespace Config
         {
             if (SelectNodeCB.Text == "")
                 return;
-            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A6");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0, 12) + "20A6");
         }
 
 
@@ -1096,7 +1174,7 @@ namespace Config
 
             StreamWriter savefile = new StreamWriter(saveFileDialog.FileName);
             savefile.WriteLine("<Config version=\"1\">");
-            savefile.WriteLine("<Nodenumber>" + SelectNodeCB.Text + "</Nodenumber>");
+            savefile.WriteLine("<Nodenumber>" + SelectNodeCB.Text.Substring(0, 12) + "</Nodenumber>");
             savefile.WriteLine(xmldoc);
 
             XmlNode SegmentXML = xmld.FirstChild.FirstChild;
@@ -1378,12 +1456,12 @@ namespace Config
                 return;
 
             // Enter bootloader
-            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A7");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0, 12) + "20A7");
             background = new Thread(WriteCode);
             background.Start();
             taskcomplete.WaitOne();
             // Upgrade complete
-            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "20A4");
+            SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0, 12) + "20A4");
             log("Upgrade complete");
         }
 
@@ -1406,7 +1484,7 @@ namespace Config
                 string data = "";
                 for (int j = 0; j < 64; j++)
                     data += t[j].ToString("X2");
-                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text + "2020" + address.ToString("X8") + "FE" + data);
+                SendHexString(DATAGRAM + nodenumber.ToString("X12") + SelectNodeCB.Text.Substring(0, 12) + "2020" + address.ToString("X8") + "FE" + data);
                 for (int w = 0; w < 200; w++)
                 {
                     Thread.Sleep(10);
@@ -1441,7 +1519,6 @@ namespace Config
             Event2TB.Text = Event2TB.Text.PadLeft(16, '0');
             SendHexString(EVENT + nodenumber.ToString("X12") + Event2TB.Text);
         }
-
 
     }
 }

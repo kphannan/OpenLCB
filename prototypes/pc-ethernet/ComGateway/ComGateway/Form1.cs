@@ -65,6 +65,8 @@ namespace ComGateway
             + "<Version>Mike Johnson 31 May 2012, マイク12年5月31日</Version></id>"
             +"<seg name=\"Port Speed\" space=\"0\" buttons=\"1\"><int name=\"Port Speed\" size=\"4\"/></seg></cdi>";
 
+        public string nodename = "ComGateway";
+
         StreamWriter savefile = new StreamWriter("logfile.log");
 
         public ComGateway()
@@ -714,6 +716,21 @@ namespace ComGateway
                         CANSendHexString("00"+s);
                     else
                         EthernetSendHexString(s);
+                    return false;
+                }
+                if (cmd.Substring(28, 4) == "2060" && cmd.Substring(40, 2) == "FB")
+                {
+                    // send node name
+                    string data = "";
+                    byte[] utf8bytes = Encoding.UTF8.GetBytes(nodename);
+                    int l = utf8bytes.Length;
+                    for (int i = 0; i < l; i++)
+                        data += ((int)utf8bytes[i]).ToString("X2");
+                    string str = DATAGRAM + nodenumber.ToString("X12") + cmd.Substring(4, 12) + "203000000000FB" + data + "00";
+                    if (fromCAN)
+                        CANSendHexString("00" + str);
+                    else
+                        EthernetSendHexString(str);
                     return false;
                 }
                 if (cmd.Substring(28, 4) == "2060" && cmd.Substring(40, 2) == "00")

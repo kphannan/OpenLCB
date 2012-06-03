@@ -76,8 +76,8 @@ int eventno;
 
 #pragma romdata
 const rom BYTE xml[] = "<cdi><id><software>" modulestring "</software></id>"
-    "<se na=\"Location\" or=\"#0080\" sp=\"#FE\" bu=\"#303\">"
-      "<ch na=\"Location\" si=\"64\"/>"
+    "<se na=\"Name\" sp=\"#FB\" bu=\"#303\">"
+      "<ch na=\"Name\" si=\"64\"/>"
     "</se>"
     "<se na=\"Node Id\" or=\"#0040\" sp=\"#FE\" bu=\"#343\">"
       "<in na=\"Serial\" si=\"1\"/>"
