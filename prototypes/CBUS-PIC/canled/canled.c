@@ -85,7 +85,7 @@ const rom BYTE xml[] = "<cdi><id><software>" modulestring "</software></id>"
       "<by na=\"Group\" si=\"2\"/>"
     "</se>"
     "<se na=\"Events\" sp=\"0\" bu=\"#303\">"
-      "<gr rep=\"150\"/>"
+      "<gr rep=\"150\">"
         "<by na=\"Event\" si=\"8\"/>"
         "<by na=\"Action\"/>"
       "</gr>"
@@ -288,6 +288,10 @@ void DatagramPacket(void)
             UP(GP_address) = GP_block[3];
             HI(GP_address) = GP_block[4];
             LO(GP_address) = GP_block[5];
+            if (GP_block[6] == 0xFB) { // Name and description
+                GP_block[6] = 0xFE;
+                LO(GP_address) = 0x80;
+            } 
             if (GP_block[1] == DGM_WRITE) {
                 if (GP_block[6] == 0xFE) { // program memory
                     // write program data
@@ -296,7 +300,9 @@ void DatagramPacket(void)
                     return;
                 }
                 if (GP_block[6] == 0) { // event data
-
+                    WriteAllEvents(GP_address);
+                    sendack(CB_SourceNID);
+                    return;
                 }
             }
             else if (GP_block[1] == DGM_READ) {
@@ -316,7 +322,10 @@ void DatagramPacket(void)
                     return;
                 }
                 if (GP_block[6] == 0) { // event data
-
+                    i = GP_block[7];
+                    ReadAllEvents(GP_address);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
                 }
             }
             else if (CB_data[1] == DGM_REBOOT) {

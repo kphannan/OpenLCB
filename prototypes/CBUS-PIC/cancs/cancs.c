@@ -1,12 +1,11 @@
 /*
     Command station - DCC with OpenLCB interface
-    Based on MERG CANACC5 or CANACC8 with DCC booster
 
-    Jan 2010
+    June 2012
 
-    All timers and delays configured for 16MHz clock
+    All timers and delays configured for 32MHz clock
 
-    Copyright (C) 2008, 2009    Mike Johnson
+    Copyright (C) 2008, 2009, 2012    Mike Johnson
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -157,13 +156,16 @@ int DNID;
 
 #pragma romdata
 const rom BYTE xml[] = 
-    "<XML>\r\n"
-    "<NodeString>" modulestring "</NodeString>\r\n"
-    "<EventData>\r\n"
-    "</EventData>\r\n"
-    "<NodeVariable>\r\n"
-    "</NodeVariable>\r\n"
-    "</XML>\r\n";
+    "<cdi><id><software>" modulestring "</software></id>"
+    "<se na=\"Name\" sp=\"#FB\" bu=\"#303\">"
+      "<ch na=\"Name\" si=\"64\"/>"
+    "</se>"
+    "<se na=\"Node Id\" or=\"#0040\" sp=\"#FE\" bu=\"#343\">"
+      "<in na=\"Serial\" si=\"1\"/>"
+      "<in na=\"Member\" si=\"3\"/>"
+      "<by na=\"Group\" si=\"2\"/>"
+    "</se>"
+    "</cdi>";
 
 #pragma romdata module = 0x001020
 const rom BYTE valid = 0;     // tmp set to 0xFF by PC side of loader. 

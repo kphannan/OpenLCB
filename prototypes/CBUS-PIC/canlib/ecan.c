@@ -35,11 +35,13 @@ void ECANInitialize(void)
     // Bit rate 125000
 #ifdef MHZ32 // 32 MHz processor
     BRGCON1 = 0x07;            // SJW=0, 1 x Tq, prescaler BRP=8
-#else // 16 MHz processor
-    BRGCON1 = 0x03;            // SJW=0, 1 x Tq, prescaler BRP=4
-#endif
     BRGCON2 = 0xDE;            // DE or 9E Sample=thrice or once?, phseg1=4, propseg=7
     BRGCON3 = 0x03;            // WAKEUP enable, filter disable, phseg2=4
+#else // 16 MHz processor
+    BRGCON1 = 0x03;            // SJW=0, 1 x Tq, prescaler BRP=4
+    BRGCON2 = 0xDE;            // DE or 9E Sample=thrice or once?, phseg1=4, propseg=7
+    BRGCON3 = 0x03;            // WAKEUP enable, filter disable, phseg2=4
+#endif
     CIOCON  = 0x20;            // drive high(not tristate), disable capture mode
     ECANCON = 0x80;            // mode 2
     ECANCONbits.FIFOWM = 1;    // 1 buffer left warning

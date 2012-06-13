@@ -164,38 +164,33 @@ void lcdchar(BYTE b)
     lcdwrite(0x20 | (b&0x0F));
 }
 
-void LcdRomString(BYTE rom far *p)
+void LcdRamString(void)
 {
+    far overlay BYTE i;
+    i = 0;
     line = 0;
     lcdcontrol(0x01); // clear display
     wait(2);
     lcdcontrol(0x80); // 1st line is character 0
-    while (*p) {
-        if (*p=='\n') {
-            p++;
+    while (i<160 && textdata[i]) {
+        if (textdata[i]=='\n') {
+            i++;
             line++;
             lcdcontrol(0x80+40*line); // 2nd line is character 40
         }
         else
-            lcdchar(*p++);
+            lcdchar(textdata[i++]);
     }
 }
 
-void LcdRamString(BYTE far *p)
+void LcdRomString(BYTE rom far *p)
 {
-    line = 0;
-    lcdcontrol(0x01); // clear display
-    wait(2);
-    lcdcontrol(0x80); // 1st line is character 0
-    while (*p) {
-        if (*p=='\n') {
-            p++;
-            line++;
-            lcdcontrol(0x80+40*line); // 2nd line is character 40
-        }
-        else
-            lcdchar(*p++);
+    far overlay BYTE i;
+    i = 0;
+    while(*p) {
+        textdata[i++] = *p++;
     }
+    LcdRamString();
 }
 
 void lcdinit(void)
@@ -284,24 +279,13 @@ void DatagramPacket(void)
                 if (GP_block[6] == 0) {
                     j = LO(GP_address);
                     lcdcontrol(0x80 | j); // set character position
-                    for (i=7; i<64+7; i++) {
-                        if (GP_block[i]==0)
+                    for (i=0; i<64; i++) {
+                        if (GP_block[i+7]==0 || i+j >= 159)
                             break;
-                        if (GP_block[i]=='\n') {
-                            if (j<40) {
-                                j = 40;
-                                lcdcontrol(0x80+40); // 2nd line is character 40
-                            }
-                            else {
-                                j = 0;
-                                lcdcontrol(0x80); // back to 1st line
-                            }
-                        }
-                        else {
-                            lcdchar(GP_block[i]);
-                            j++;
-                        }
+                        textdata[i+j] = GP_block[i+7];
+                        textdata[i+j+1] = 0;
                     }
+                    LcdRamString();
                     sendack(CB_SourceNID);
                     return;
                 }
@@ -318,6 +302,13 @@ void DatagramPacket(void)
                 if (GP_block[6] == 0xFE) {
                     i = GP_block[7];
                     ProgramMemoryRead(GP_address, i, (BYTE * far)&GP_block[7]);
+                    StartSendBlock(i+7, CB_SourceNID);
+                    return;
+                }
+                if (GP_block[6] == 0) { // display text
+                    i = GP_block[7];
+                    for (j=0; j<i; j++)
+                        GP_block[j+7] = textdata[LO(GP_address)+j];
                     StartSendBlock(i+7, CB_SourceNID);
                     return;
                 }
