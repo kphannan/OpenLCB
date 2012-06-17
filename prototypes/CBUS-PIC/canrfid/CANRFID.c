@@ -182,7 +182,7 @@ void Packet(void)
 void DatagramPacket(void)
 {
     far overlay BYTE i;
-    if ((HI(CB_FrameType)&0xF0)==(FT_DGS>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
+    if ((HI(CB_FrameType)&0xF0)==(FT_DGF>>8) || (HI(CB_FrameType)&0xF0)==(FT_DGS>>8)) { // first packet
         dgcnt = 0;
         DNID = CB_SourceNID;
     }

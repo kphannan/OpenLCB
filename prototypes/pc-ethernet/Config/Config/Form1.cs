@@ -485,7 +485,9 @@ namespace Config
                 adr += 64;
             }
             UTF8Encoding utf8 = new UTF8Encoding();
-            xmldoc = utf8.GetString(doc);
+            string txmldoc = utf8.GetString(doc);
+            for (int j=0; j<txmldoc.Length && txmldoc[j]!=0; j++)
+               xmldoc += txmldoc[j];
             log(xmldoc);
             if (!xmldoc.StartsWith("<cdi>"))
             {
