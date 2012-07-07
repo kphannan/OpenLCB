@@ -176,7 +176,13 @@
                   <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
                 </xs:choice>
               </xs:sequence>
-              <xs:attribute name="space" type="xs:int" />
+              <xs:attribute name="space" type="xs:int">
+                  <xs:annotation>
+                    <xs:documentation>
+                      The decimal number of the address space where the information is found.
+                    </xs:documentation>
+                  </xs:annotation>
+              </xs:attribute>
               <xs:attribute name="origin" type="xs:int">
                   <xs:annotation>
                     <xs:documentation>
