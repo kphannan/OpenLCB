@@ -80,11 +80,18 @@
                   </xs:annotation>
               </xs:element>
             </xs:sequence>
-            <xs:attribute name="size" type="xs:int" />
+            <xs:attribute name="size" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Storage size of this variable in bytes.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
             <xs:attribute name="offset" type="xs:int">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the end of previous element and the start of this elements's contents.
+                      Offset of zero means that this element starts immediately after the previous one.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
@@ -102,11 +109,18 @@
                   </xs:annotation>
               </xs:element>
             </xs:sequence>
-            <xs:attribute name="size" type="xs:int" />
+            <xs:attribute name="size" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Storage size of this variable in bytes.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
             <xs:attribute name="offset" type="xs:int">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the previous element and the start of this group's contents.
+                      Offset of zero means that this element starts immediately after the previous one.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
@@ -118,11 +132,19 @@
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
-            <xs:attribute name="size" type="xs:int" />
+            <xs:attribute name="size" type="xs:int">
+              <xs:annotation>
+                <xs:documentation>
+                      Storage size of this variable in bytes. 
+                      This includes the trailing null byte that terminates the string content.
+                </xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
             <xs:attribute name="offset" type="xs:int">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the previous element and the start of this group's contents.
+                      Offset of zero means that this element starts immediately after the previous one.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
