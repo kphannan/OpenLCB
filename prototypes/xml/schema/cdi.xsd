@@ -45,14 +45,14 @@
                   <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
               </xs:choice>
             </xs:sequence>
-            <xs:attribute name="offset" type="xs:int">
+            <xs:attribute name="offset" type="xs:int" default="0">
                   <xs:annotation>
                     <xs:documentation>
                       Positive or negative offset between the address of the previous element and the start of this group's contents.
                     </xs:documentation>
                   </xs:annotation>
                 </xs:attribute>
-            <xs:attribute name="replication" type="xs:int" />
+            <xs:attribute name="replication" type="xs:int"  default="1"/>
     </xs:complexType>
 
    <xs:complexType name="eventidType">
@@ -61,7 +61,7 @@
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
-            <xs:attribute name="offset" type="xs:int">
+            <xs:attribute name="offset" type="xs:int" default="0">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the end of previous element and the start of this elements's contents.
@@ -85,14 +85,14 @@
                   </xs:annotation>
               </xs:element>
             </xs:sequence>
-            <xs:attribute name="size" type="xs:int">
+            <xs:attribute name="size" type="xs:int" default="1">
               <xs:annotation>
                 <xs:documentation>
                       Storage size of this variable in bytes.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
-            <xs:attribute name="offset" type="xs:int">
+            <xs:attribute name="offset" type="xs:int" default="0">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the end of previous element and the start of this elements's contents.
@@ -114,14 +114,14 @@
                   </xs:annotation>
               </xs:element>
             </xs:sequence>
-            <xs:attribute name="size" type="xs:int">
+            <xs:attribute name="size" type="xs:int" default="1">
               <xs:annotation>
                 <xs:documentation>
                       Storage size of this variable in bytes.
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
-            <xs:attribute name="offset" type="xs:int">
+            <xs:attribute name="offset" type="xs:int" default="0">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the previous element and the start of this group's contents.
@@ -137,7 +137,7 @@
               <xs:element name="description" minOccurs="0" maxOccurs="1"/>
               <xs:element name="map" type="mapType" minOccurs="0" maxOccurs="1"/>
             </xs:sequence>
-            <xs:attribute name="size" type="xs:int">
+            <xs:attribute name="size" type="xs:int" use="required">
               <xs:annotation>
                 <xs:documentation>
                       Storage size of this variable in bytes. 
@@ -145,7 +145,7 @@
                 </xs:documentation>
               </xs:annotation>
             </xs:attribute>
-            <xs:attribute name="offset" type="xs:int">
+            <xs:attribute name="offset" type="xs:int" default="0">
               <xs:annotation>
                 <xs:documentation>
                       Positive or negative offset between the address of the previous element and the start of this group's contents.
@@ -187,6 +187,31 @@
             </xs:complexType>
           </xs:element>
 
+          <xs:element name="acdi" minOccurs="0" maxOccurs="1">
+            <xs:annotation>
+              <xs:documentation>
+                Element that identifies that memory information is available as defined by
+                the Abbreviated Common Description Information (ACDI) standard.
+              </xs:documentation>
+            </xs:annotation>
+            <xs:complexType>
+              <xs:attribute name="fixed" type="xs:int" default="1">
+                  <xs:annotation>
+                    <xs:documentation>
+                      The decimal version number of the format for the fixed definition information; "1"
+                    </xs:documentation>
+                  </xs:annotation>
+              </xs:attribute>
+              <xs:attribute name="var" type="xs:int" default="1">
+                  <xs:annotation>
+                    <xs:documentation>
+                      The decimal version number of the format for the variable definition information; "1"
+                    </xs:documentation>
+                  </xs:annotation>
+              </xs:attribute>
+            </xs:complexType>
+          </xs:element>
+
           <xs:element name="segment" minOccurs="0" maxOccurs="unbounded">
             <xs:annotation>
               <xs:documentation>
@@ -210,14 +235,14 @@
                   <xs:element name="eventid" type="eventidType" minOccurs="0" maxOccurs="1"/>
                 </xs:choice>
               </xs:sequence>
-              <xs:attribute name="space" type="xs:int">
+              <xs:attribute name="space" type="xs:int" use="required">
                   <xs:annotation>
                     <xs:documentation>
                       The decimal number of the address space where the information is found.
                     </xs:documentation>
                   </xs:annotation>
               </xs:attribute>
-              <xs:attribute name="origin" type="xs:int">
+              <xs:attribute name="origin" type="xs:int" default="0">
                   <xs:annotation>
                     <xs:documentation>
                       Starting address of the segment's contents within the memory space.
