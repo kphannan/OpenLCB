@@ -93,8 +93,8 @@ int main (void)
         //- Start application else start boot loader
 			//check if alias is in EEPROM
 		U16 alias;
-		alias = (eeprom_rd_byte(0x0FF8)) << 8;
-		alias |= eeprom_rd_byte(0x0FF9);
+		alias = (eeprom_rd_byte(0x0FF6)) << 8;
+		alias |= eeprom_rd_byte(0x0FF7);
 		if(alias != 0x0000)
 		{
 			if(alias != 0xFFFF)
