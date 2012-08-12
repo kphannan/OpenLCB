@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="xslt/testmatrix.xsl"?>
+
+<TestMatrix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/testmatrix.xsd">
+  <Test>
+    <Name>IdentifyNodes</Name>
+    <Description>Identifies all nodes on the network using VerifyNodeID</Description>
+    <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+    <Classname>TTestVerifyNodeID</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <Objective>Send global Verify Node ID Message Network Layer Message</Objective>
+      <Results>Verified Node ID from all nodes on the network</Results>
+    </TestObjective>
+  </Test>
+  <Test>
+    <Name>AliasMapEnquiry</Name>
+    <Description>Test the Alias Map Enquiry Message</Description>
+    <SpecDoc>"OpenLCB-CAN Frame Transfer Paragraph 6.2.3</SpecDoc>
+    <Classname>TTestAliasMapEnquiry</Classname>
+    <Enabled>False</Enabled>
+    <TestObjective>
+      <Objective>Send AME message with Full Node ID of Node Under Test as CAN data payload</Objective>
+      <Results>Receive Alias Map Definition (AMD) from node matching the Full Node ID sent</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send AME message with an empty data payload</Objective>
+      <Results>Alias Map Definitions (AMD) from all nodes on network</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send AME message with Full Node ID of no known node on the network in the CAN data payload</Objective>
+      <Results>No Response</Results>
+    </TestObjective>
+  </Test>
+</TestMatrix>
