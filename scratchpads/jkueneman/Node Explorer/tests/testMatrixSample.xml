@@ -61,12 +61,20 @@
   <Test>
     <Name>Protocol Identification Protocol (PIP)</Name>
     <Description>Requests what protocols a node supports, optional but recommended implementation</Description>
-    <SpecDoc>"Protocol Identification Protocol" Paragraph 6</SpecDoc>
+    <SpecDoc>"Protocol Identification Protocol"</SpecDoc>
     <Classname>TTestProtocolSupport</Classname>
     <Enabled>True</Enabled>
     <TestObjective>
-      <Objective>Send addressed Protocol Identification Protocol message</Objective>
+      <Objective>Test that NUT responds to PIP message addressed to it</Objective>
       <Results>Receive protocols supported by the node (or no response if does not support)</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Test that NUT does not respond to PIP message addressed to another</Objective>
+      <Results>No response</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Test that NUT understands start and end bits in PIP message</Objective>
+      <Results>One response</Results>
     </TestObjective>
   </Test>
 </TestMatrix>
