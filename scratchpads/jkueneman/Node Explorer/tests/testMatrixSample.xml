@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="xslt/testmatrix.xsl"?>
+<TestMatrix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/testmatrix.xsd">
+  <Test>
+    <Name>Identify Nodes</Name>
+    <Description>Identifies all nodes on the network using VerifyNodeID</Description>
+    <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+    <Classname>TTestVerifyNodesID</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <Objective>Send global Verify Node ID Message Network Layer Message</Objective>
+      <Results>Verified Node ID from all nodes on the network</Results>
+    </TestObjective>
+  </Test>
+  <Test>
+    <Name>Alias Map Enquiry</Name>
+    <Description>Tests target for correct implementation of the Alias Map Enquiry (AME) Message</Description>
+    <SpecDoc>"OpenLCB-CAN Frame Transfer Paragraph 6.2.3</SpecDoc>
+    <Classname>TTestAliasMapEnquiry</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <Objective>Send AME message with no CAN data</Objective>
+      <Results>Receive Alias Map Definition (AMD) from all nodes on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send AME message with Full Node ID of node under test in the data payload</Objective>
+      <Results>Receive Alias Map Definition (AMD) from node matching the Full Node ID in the data payload</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send AME message with Full Node ID of non existent node in the data payload</Objective>
+      <Results>No reply</Results>
+    </TestObjective>
+  </Test>
+  <Test>
+    <Name>Verify Node </Name>
+    <Description>Tests target for correct implementation of the VerifyNodeID message</Description>
+    <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+    <Classname>TTestVerifyNodeID</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <Objective>Send Global Identify Nodes message</Objective>
+      <Results>All nodes on network reply with the target of interest included</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send Identify Nodes message with Full Node ID of node under test in data payload</Objective>
+      <Results>Verified Node ID from target node on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send Identify Nodes message with Full Node ID of non existent node in the data payload</Objective>
+      <Results>No reply expected</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send Addressed Identify Nodes message with Full Node ID in the data payload</Objective>
+      <Results>Verified Node ID from target node on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send Addressed Identify Nodes message with Full Node ID in the data payload to the incorrect alias address</Objective>
+      <Results> No reply expected</Results>
+    </TestObjective>
+  </Test>
+  <Test>
+    <Name>Protocol Identification Protocol (PIP)</Name>
+    <Description>Requests what protocols a node supports, optional but recommended implementation</Description>
+    <SpecDoc>"Protocol Identification Protocol" Paragraph 6</SpecDoc>
+    <Classname>TTestProtocolSupport</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <Objective>Send addressed Protocol Identification Protocol message</Objective>
+      <Results>Receive protocols supported by the node (or no response if does not support)</Results>
+    </TestObjective>
+  </Test>
+</TestMatrix>
