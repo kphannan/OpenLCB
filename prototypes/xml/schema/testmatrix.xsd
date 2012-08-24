@@ -43,6 +43,7 @@
                   </xs:annotation>
                   <xs:complexType>
                     <xs:sequence>
+                      <xs:element name="SpecDoc" minOccurs="0" maxOccurs="1"/>
                       <xs:element name="Objective" minOccurs="1" maxOccurs="1"/>
                       <xs:element name="Results" minOccurs="1" maxOccurs="1"/>
                     </xs:sequence>
