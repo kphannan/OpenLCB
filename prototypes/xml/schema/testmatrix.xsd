@@ -24,17 +24,10 @@
             </xs:annotation>
             <xs:complexType>
               <xs:sequence>
-
                 <xs:element name="Name" minOccurs="1" maxOccurs="1"/>
-
                 <xs:element name="Description" minOccurs="0" maxOccurs="1"/>
-
-                <xs:element name="SpecDoc" minOccurs="0" maxOccurs="1"/>
-
-                <xs:element name="Classname" minOccurs="0" maxOccurs="unbounded"/>
-
+                <xs:element name="Classname" minOccurs="0" maxOccurs="1"/>
                 <xs:element name="Enabled" minOccurs="0" maxOccurs="1"/>
-
                 <xs:element name="TestObjective" minOccurs="1" maxOccurs="unbounded">
                   <xs:annotation>
                     <xs:documentation>
