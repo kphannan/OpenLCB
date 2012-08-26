@@ -1,35 +1,129 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <?xml-stylesheet type="text/xsl" href="xslt/testmatrix.xsl"?>
-
 <TestMatrix xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/testmatrix.xsd">
   <Test>
-    <Name>IdentifyNodes</Name>
+    <Name>Get Node(s) under Test</Name>
     <Description>Identifies all nodes on the network using VerifyNodeID</Description>
-    <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
-    <Classname>TTestVerifyNodeID</Classname>
+    <Classname>TTestGetNodesUnderTest</Classname>
     <Enabled>True</Enabled>
     <TestObjective>
+      <SpecDoc></SpecDoc>
       <Objective>Send global Verify Node ID Message Network Layer Message</Objective>
       <Results>Verified Node ID from all nodes on the network</Results>
     </TestObjective>
   </Test>
   <Test>
-    <Name>AliasMapEnquiry</Name>
-    <Description>Test the Alias Map Enquiry Message</Description>
-    <SpecDoc>"OpenLCB-CAN Frame Transfer Paragraph 6.2.3</SpecDoc>
+    <Name>Alias Map Enquiry</Name>
+    <Description>Tests target for correct implementation of the Alias Map Enquiry (AME) Message</Description>    
     <Classname>TTestAliasMapEnquiry</Classname>
-    <Enabled>False</Enabled>
+    <Enabled>True</Enabled>
     <TestObjective>
-      <Objective>Send AME message with Full Node ID of Node Under Test as CAN data payload</Objective>
-      <Results>Receive Alias Map Definition (AMD) from node matching the Full Node ID sent</Results>
+      <SpecDoc>"OpenLCB-CAN Frame Transfer Paragraph 6.2.3</SpecDoc>
+      <Objective>Send AME message with no CAN data</Objective>
+      <Results>Receive Alias Map Definition (AMD) from all nodes on the network</Results>
     </TestObjective>
     <TestObjective>
-      <Objective>Send AME message with an empty data payload</Objective>
-      <Results>Alias Map Definitions (AMD) from all nodes on network</Results>
+      <SpecDoc>"OpenLCB-CAN Frame Transfer Paragraph 6.2.3</SpecDoc>
+      <Objective>Send AME message with Full Node ID of node under test in the data payload</Objective>
+      <Results>Receive Alias Map Definition (AMD) from node matching the Full Node ID in the data payload</Results>
     </TestObjective>
     <TestObjective>
-      <Objective>Send AME message with Full Node ID of no known node on the network in the CAN data payload</Objective>
-      <Results>No Response</Results>
+      <SpecDoc>"OpenLCB-CAN Frame Transfer Paragraph 6.2.3</SpecDoc>
+      <Objective>Send AME message with Full Node ID of non existent node in the data payload</Objective>
+      <Results>No reply</Results>
     </TestObjective>
+  </Test>
+  <Test>
+    <Name>Verify Node </Name>
+    <Description>Tests target for correct implementation of the VerifyNodeID message</Description>    
+    <Classname>TTestVerifyNodeID</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send Global Identify Nodes message with empty payload</Objective>
+      <Results>All nodes on network reply with the target of interest included</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send Global Identify Nodes message with Full Node ID of node under test in data payload</Objective>
+      <Results>Verified Node ID from target node on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <Objective>Send Global Identify Nodes message with Full Node ID of non existent node in the data payload</Objective>
+      <Results>No reply expected</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send Addressed Identify Nodes message with empty payload</Objective>
+      <Results>Verified Node ID from target node on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send Addressed Identify Nodes message with Full Node ID in the data payload</Objective>
+      <Results>Verified Node ID from target node on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send Addressed Identify Nodes message with Full Node ID in the data payload to the incorrect alias address</Objective>
+      <Results>Verified Node ID from target node on the network</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send incorrectly Addressed Identify Nodes message with empty payload</Objective>
+      <Results>No response</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send incorrectly Addressed Identify Nodes message with Full Node ID in the data payload</Objective>
+      <Results>No response</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"OpenLCB Message Network" Paragraph 2.6.2</SpecDoc>
+      <Objective>Send incorrectly Addressed Identify Nodes message with Full Node ID in the data payload to the incorrect alias address</Objective>
+      <Results>No response</Results>
+    </TestObjective>
+  </Test>
+  <Test>
+    <Name>Protocol Identification Protocol (PIP)</Name>
+    <Description>Requests what protocols a node supports, optional but recommended implementation</Description>    
+    <Classname>TTestProtocolSupport</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <SpecDoc>"Protocol Identification Protocol"</SpecDoc>
+      <Objective>Test that NUT responds to PIP message addressed to it</Objective>
+      <Results>Receive protocols supported by the node (or no response if does not support)</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"Protocol Identification Protocol"</SpecDoc>
+      <Objective>Test that NUT does not respond to PIP message addressed to another</Objective>
+      <Results>No response</Results>
+    </TestObjective>
+    <TestObjective>
+      <SpecDoc>"Protocol Identification Protocol"</SpecDoc>
+      <Objective>Test that NUT understands start and end bits in PIP message</Objective>
+      <Results>One response</Results>
+    </TestObjective>
+  </Test>
+    <Test>
+    <Name>Standard Frame Test</Name>
+    <Description>Sends standard frames that a node should ignore</Description>    
+    <Classname>TTestStandardFrame</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <SpecDoc>"TODO:"</SpecDoc>
+      <Objective>Test that NUT does not reply to stardard CAN frames</Objective>
+      <Results>No response</Results>
+    </TestObjective>    
+  </Test>
+    <Test>
+    <Name>Unknown MTI Addressed</Name>
+    <Description>Sends undefined MTI values through an addressed message</Description>    
+    <Classname>TTestUnknownMTIAddressed</Classname>
+    <Enabled>True</Enabled>
+    <TestObjective>
+      <SpecDoc>"TODO:"</SpecDoc>
+      <Objective>Test that NUT does not reply to unknown MTI values</Objective>
+      <Results>No response</Results>
+    </TestObjective>    
   </Test>
 </TestMatrix>
