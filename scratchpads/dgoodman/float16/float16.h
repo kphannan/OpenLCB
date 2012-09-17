@@ -20,8 +20,8 @@ typedef union
 	
 	struct
 	{
-		uint8_t msw;
 		uint8_t lsw;
+		uint8_t msw;
 	} words;
 	
 	uint16_t bits;
