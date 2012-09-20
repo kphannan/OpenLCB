@@ -222,9 +222,9 @@
     // Open a stream to the server directly.
     
     // iStream and oStream are instance variables
-    //[NSStream getStreamsToHostNamed:@"10.0.1.98" port:23 inputStream:&input outputStream:nil];
+    //[NSStream getStreamsToHostNamed:@"10.0.1.98" port:12021 inputStream:&input outputStream:nil];
     NSLog(@"Use host address %@", self.hostAddress);
-    [NSStream getStreamsToHostNamed:self.hostAddress port:23 inputStream:&input outputStream:nil];
+    [NSStream getStreamsToHostNamed:self.hostAddress port:12021 inputStream:&input outputStream:nil];
     [input retain];
     //}
     
