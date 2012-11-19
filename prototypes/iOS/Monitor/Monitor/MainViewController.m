@@ -402,7 +402,7 @@
     
     NSLog(@"RVC viewDidLoad s");
     
-    self.hostAddress = @"10.0.1.98"; // default
+    self.hostAddress = @"192.168.1.11"; // default
     
     assert(self.statusLabel != nil);
     assert(self.lastLabel != nil);
