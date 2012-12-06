@@ -1,0 +1,405 @@
+unit NMRAnetDefines;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//
+// *****************************************************************************
+
+{$I Options.inc}
+
+uses
+  NMRAnetAppDefines;
+
+type
+  Generic16BitPointer = Word;
+  Generic32BitPointer = DWord;
+
+  TBufferTag = Word;
+  
+  
+// *****************************************************************************
+// Buffer Pool Defines
+// *****************************************************************************
+
+const
+  CBS_ALLOCATED                            = $01;                               // CommonBufferState is allocated but may be in Process, need to check for inprocess flags
+  CBS_PROCESSING                           = $02;                               // CommonBufferState is Processing (what that means depends on the Buffer type, implys that the buffer is not ready for the main loop to use yet)
+  CBS_OUTGOING                             = $04;                               // CommonBufferState is an outgoing Buffer (Transmitting to the CAN Bus)
+  CBS_TRANSFER_COMPLETE                    = $08;                               // Multi Frame Message transfer is complete
+
+  // These must be in Priority Order for transmit, higher = higher priority
+  BMC_PROTOCOL_SUPPORT_QUERY               = $01;                               // [IN] Buffer Message Code is a Protocol Support Query    [BaseBuffer]
+  BMC_PRODUCER_IDENTIFY                    = $02;                               // [IN] Buffer Message Code is Producer Identify           [DataBuffer]
+  BMC_CONSUMER_IDENTIFY                    = $03;                               // [IN] Buffer Message Code is Consumer Identify           [DataBuffer]
+  BMC_EVENT_LEARN                          = $04;                               // [IN] Buffer Message Code is Event Learn                 [BaseBuffer]
+  BMC_SIMPLE_NODE_INFO_REQEUST             = $05;                               // [IN] Buffer Message Code is ACDI Request                [BaseBuffer]
+  BMC_DATAGRAM                             = $07;
+  BMC_DATAGRAM_MEMORY_CONFIG               = $08;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
+  BMC_DATAGRAM_TRACTION_CONTROL            = $09;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
+  {$IFDEF BOOTLOADER}
+  BMC_DATAGRAM_BOOTLOADER                  = $10;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
+  {$ENDIF}
+type
+  TBaseBuffer = record                                                          // Common Buffer layout that allow overlaying of bytes with TDatagramBuffer,  etc
+    State: Byte;                                                                // State of Buffer, see CBS_xxx constants
+    Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
+    Next: ^TBaseBuffer;                                                         // Pointer to the next Message Buffer
+    mCode: Byte;                                                                // Buffer Message Code for what the message is
+    StateMachine: Byte;                                                         // Local StateMachine Index for use
+    Tag: TBufferTag;                                                            // General Purpose useage depending on the message type
+  end;
+  PBaseBuffer = ^TBaseBuffer;
+
+// *****************************************************************************
+// Datagram and Datagram Buffer Defines
+// *****************************************************************************
+
+type
+  TDatagramErrorCode = array[0..1] of Byte;
+  PDatagramErrorCode = ^TDatagramErrorCode;
+
+const
+  DATAGRAM_RESULT_OKAY                                    : TDatagramErrorCode = ($00, $00);
+  // Errors that will cause sender to not retry
+  DATAGRAM_RESULT_REJECTED_PERMANENT_ERROR                : TDatagramErrorCode = ($10, $00);
+  DATAGRAM_RESULT_REJECTED_INFORMATION_LOGGED             : TDatagramErrorCode = ($10, $10);
+  DATAGRAM_RESULT_REJECTED_SOURCE_NOT_PERMITTED           : TDatagramErrorCode = ($10, $20);
+  DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED  : TDatagramErrorCode = ($10, $40);
+  // Error that should cause sender to retry
+  DATAGRAM_RESULT_REJECTED_BUFFER_FULL                    : TDatagramErrorCode = ($20, $00);
+  // Error that was a transport problem
+  DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER                   : TDatagramErrorCode = ($60, $00);
+
+  DATAGRAM_RESULT_REJECTED_NO_RESENT_MASK                 = $1000;
+  DATAGRAM_RESULT_REJECTED_RESEND_MASK                    = $2000;
+  DATAGRAM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
+
+
+  LEN_DATAGRAM       = 72;                                                      // How many Bytes in the datagram
+
+  // Datagram Buffer States
+  DGS_EMPTY               = $00;                                                // [RX/TX] The Datagram Packet Buffer is empty
+  DGS_ALLOCATED           = $01;                                                // Allocated
+  DGS_IN_PROCESS          = $02;                                                // [RX/TX] The Datagram Packet Buffer is currently collecting/transmitting frames
+  DGS_TRANSFER_COMPLETE   = $04;                                                // [RX/TX] The Datagram Packet has responded to the sender and ready for use (DATAGRAM_REJECTED_BUFFER_FULL response needed)
+
+  // Datagram Receive Statemachine States
+  STATE_DATAGRAM_RECEIVE_START         = 0;                                     // Receive Statemachine states
+  STATE_DATAGRAM_RECEIVE_COMPLETE      = 1;
+  STATE_DATAGRAM_HANDLED_MESSASGE      = 2;
+  STATE_DATAGRAM_UNHANDLED_MESSAGE     = 3;
+  STATE_DATAGRAM_SENDING_RESPONSE      = 4;
+  STATE_DATAGRAM_ERROR_RESPONSES       = 5;
+
+  // Datagram Transmit Statemachine States
+  STATE_DATAGRAM_TRANSMIT_START                          = 0;                   // Transmit Statemachine states
+  STATE_DATAGRAM_TRANSMIT_SINGLE_FRAME                   = 1;
+  STATE_DATAGRAM_TRANSMIT_WAIT_FOR_RESPONSE_SINGLE_FRAME = 2;
+  STATE_DATAGRAM_TRANSMIT_MULTI_FRAME                    = 3;
+  STATE_DATAGRAM_TRANSMIT_WAIT_FOR_RESPONSE_MULTI_FRAME  = 4;
+
+
+  DATAGRAM_WATCHDOG_MAX = 30;                                                   // 100ms counts before the buffer (base/datagram) is declared abandon, spec is must be greater than 3 seconds
+  DATAGRAM_MAX_RETRY_COUNT = 3;                                                 // Number of try a datagram will try to be resent
+
+
+  // The first byte in a datagram is a command byte that allows datagrams to be "tagged" as special through these codes
+  // The first byte is always reserved for this special purpose
+  DATAGRAM_TYPE_MEMORY_CONFIGURATION        = $20;                              // Memory Configuration Protocol
+  DATAGRAM_TYPE_TRAIN_CONTROL               = $30;                              // Train Control Protocol
+  {$IFDEF BOOTLOADER}
+  DATAGRAM_TYPE_BOOTLOADER                  = $40;                              // MAKING A GUESS ON A NUMBER>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  {$ENDIF}
+  DATAGRAM_TYPE_TWO_BYTE_CMD_MASK           = $E0;                              // Next two bytes are command bytes and not data
+  DATAGRAM_TYPE_SIX_BYTE_CMD_MASK           = $F0;                              // Next six bytes are command bytes and not data
+
+type
+  TDatagram = array[0..LEN_DATAGRAM-1] of Byte;
+  PDatagram = ^TDatagram;
+
+  TDatagramError = record
+    SubType: TDatagramErrorCode;
+    Count: Byte;                                                                // Number of Bytes to move into the CAN Databyte (MTI + SubType if needed)
+  end;
+  PDatagramError = ^TDatagramError;
+
+  TDatagramBuffer = record                                                      // Overlays TBaseBuffer..........
+    State: Byte;                                                                // State of Buffer, see CBS_xxx constants
+    Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
+    Next: ^TDatagramBuffer;                                                     // Pointer to the next Message Buffer
+    mCode: Byte;                                                                // Buffer Message Code for what the message is
+    StateMachine: Byte;                                                         // Local StateMachine Index for use
+    Tag: TBufferTag;                                                            // Datagram Only: Tracks the current index of the block of 8 bytes being sent
+    iByteCount: Byte;                                                           // The number of bytes recevied as they come in, or the number of bytes to transmit
+    DataBytes: TDatagram;                                                       // The 72 bytes sent in the datagram
+    ErrorCode: TDatagramError;                                                  // Tracks any errors that occur through the MTI/Error Codes send as the first few bytes in the datagram
+    SourceNodePtr: Generic16BitPointer;                                         // Pointer to the Node that is transmitting the Datagram
+
+    iWatchdog: Word;                                                            // Increments every 1ms or so to allow detecting a datagram that was abandon and never sent the End message or during transmit the Target Node never responds
+    iRetransmit: Byte;                                                          // Number of times the Datagram was attempted to transmit use to test before not trying any more
+  end;
+  PDatagramBuffer = ^TDatagramBuffer;
+
+// *****************************************************************************
+// General NMRAnet Defines
+// *****************************************************************************
+
+const
+  MAX_BUS_LOGIN_TIMEOUT = 3;                                                  // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
+
+  CAN_TX_0 = 0;
+  CAN_TX_1 = 1;
+  CAN_TX_2 = 2;
+
+  CAN_RX_0 = 0;
+  CAN_RX_1 = 1;
+
+  CAN_TX_PRIORITY_0 = 0;
+  CAN_TX_PRIORITY_1 = 1;
+  CAN_TX_PRIORITY_2 = 2;
+  CAN_TX_PRIORITY_3 = 3;
+  
+// *****************************************************************************
+//  Extended CAN Frames
+//  29 Bits Divided as follows:
+//     - 1 Bit = Priority (1 = Low Priority typical)
+//     - 4 Bits = Frame Type (FT_xxxx Constants)
+//     - 12 Bits = Destination Node Address Alias or Message Type (MT_xxx Constants)
+//     - 12 Bits = Source Node Address Alias
+//
+// Frame Types.  These define what the Frame of the CAN message consists of.
+const
+  MTI_CAN                            = $00000000;                                // Frame Type CAN Control Message
+  MTI_CID0                           = $07000000;                                // First 12 Bits of 48 bit Node ID
+  MTI_CID1                           = $06000000;                                // 2rd 12 Bits of 48 bit Node ID
+  MTI_CID2                           = $05000000;                                // 3nd 12 Bits of 48 bit Node ID
+  MTI_CID3                           = $04000000;                                // Last 12 Bits of 48 bit Node ID
+  MTI_CID4                           = $03000000;                                // non-OpenLCB Protocol
+  MTI_CID5                           = $02000000;                                // non-OpenLCB Protocol
+  MTI_CID6                           = $01000000;                                // non-OpenLCB Protocol
+  MTI_CID_MASK                       = $07000000;
+  
+  MTI_RID                            = $00700000;                                // Reserve ID
+  MTI_AMD                            = $00701000;                                // Alias Map Definition
+  MTI_AME                            = $00702000;                                // Alias Mapping Enquiry
+  MTI_AMR                            = $00703000;                                // Alias Map Reset Frame
+
+  MTI_MASK                              = $0FFFF000;
+  MTI_FRAME_TYPE_MASK                   = $0F000000;
+  MTI_FRAME_TYPE_GENERAL                = $09000000;
+  MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME    = $0A000000;
+  MTI_FRAME_TYPE_DATAGRAM_FRAME_START   = $0B000000;
+  MTI_FRAME_TYPE_DATAGRAM_FRAME         = $0C000000;
+  MTI_FRAME_TYPE_DATAGRAM_FRAME_END     = $0D000000;
+  MTI_FRAME_TYPE_STREAM_SEND            = $0F000000;
+
+  MTI_ADDRESSED_MASK                 = $00008000;
+  MTI_SIMPLE_PROTOCOL_MASK           = $00010000;
+  MTI_EVENT_PRESENT_MASK             = $00002000;
+  
+  MTI_TRACTION_PROTOCOL              = $095E8000;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
+  MTI_INITIALIZATION_COMPLETE        = $09100000;                                // Databytes = Full Node ID
+  MTI_VERIFY_NODE_ID_NUMBER_DEST     = $09488000;                                // Databytes = Destination Alias
+  MTI_VERIFY_NODE_ID_NUMBER          = $09490000;                                //
+  MTI_VERIFIED_NODE_ID_NUMBER        = $09170000;                                // {Optional Full Node ID}
+  MTI_OPTIONAL_INTERACTION_REJECTED  = $09068000;                                // Databytes = Destination Alias, Error, {Optional Info}
+  MTI_TERMINATE_DUE_TO_ERROR         = $090A8000;                                // Databytes = Destination Alias, Error, {Optional Info}
+  
+  MTI_PROTOCOL_SUPPORT_INQUIRY       = $09828000;                                // Databytes = Destination Alias
+  MTI_PROTOCOL_SUPPORT_REPLY         = $09668000;                                // Databytes = Destination Alias, Protocol Flags
+  
+  MTI_CONSUMER_IDENTIFY              = $098F4000;                                // Databytes = EventID
+  MTI_CONSUMER_IDENTIFY_RANGE        = $094A4000;                                // Databytes = EventID with Mask
+  MTI_CONSUMER_IDENTIFIED_UNKNOWN    = $094C7000;                                // Databytes = EventID
+  MTI_CONSUMER_IDENTIFIED_SET        = $094C4000;                                // Databytes = EventID
+  MTI_CONSUMER_IDENTIFIED_CLEAR      = $094C5000;                                // Databytes = EventID
+  MTI_CONSUMER_IDENTIFIED_RESERVED   = $094C6000;                                // Databytes = EventID
+  MTI_PRODUCER_IDENDIFY              = $09914000;                                // Databytes = EventID
+  MTI_PRODUCER_IDENTIFY_RANGE        = $09524000;                                // Databytes = EventID with Mask
+  MTI_PRODUCER_IDENTIFIED_UNKNOWN    = $09547000;                                // Databytes = EventID
+  MTI_PRODUCER_IDENTIFIED_SET        = $09544000;                                // Databytes = EventID
+  MTI_PRODUCER_IDENTIFIED_CLEAR      = $09545000;                                // Databytes = EventID
+  MTI_PRODUCER_IDENTIFIED_RESERVED   = $09546000;                                // Databytes = EventID
+  MTI_EVENTS_IDENTIFY_DEST           = $09968000;                                // Databytes = Destination Alias
+  MTI_EVENTS_IDENTIFY                = $09970000;                                //
+  MTI_EVENT_LEARN                    = $09594000;                                // Databytes = EventID
+  MTI_PC_EVENT_REPORT                = $095B4000;                                // Databytes = EventID  (Infamouse PCER)
+  
+  MTI_SIMPLE_NODE_INFO_REQUEST       = $09DE8000;                                // Databytes = Destination Alias
+  MTI_SIMPLE_NODE_INFO_REPLY         = $09A08000;                                // Databytes = Destination Alias, ACDI Data
+  
+  MTI_DATAGRAM_OK_REPLY              = $09A28000;                                // Databytes = Destination Alias
+  MTI_DATAGRAM_REJECTED_REPLY        = $09A48000;                                // Databytes = Destination Alias, Error Code
+  
+  MASK_SOURCE_ALIAS                  = $00000FFF;                                // Masks out just the Source Alias Address
+  
+  // These are Negavitve Logic so "xx01" = Start, "xx10" = End were the "0" is the bit of interest
+  PIP_EXTENSION_START_BIT            = $1000;                                    // Flags in the Destination word for future extension of PIP
+  PIP_EXTENSION_END_BIT              = $2000;                                    // Flags in the Destination word for future extension of PIP
+  PIP_EXTENSION_START_BIT_MASK       = $2000;                                    // Confusing for sure....
+  PIP_EXTENSION_END_BIT_MASK         = $1000;                                    // Confusing for sure....
+  PIP_EXTENSION_START_END_BIT        = $0000;                                    // Both Start and End are "set" (active zero)
+  
+  TERMINATE_DUE_TO_ERROR_TEMPORARY  = $1000;                                      // Upper nibble of the Destination Alias in the DataBytes
+  TERMINATE_DUE_TO_ERROR_PERMANENT  = $2000;                                      // Upper nibble of the Destination Alias in the DataBytes
+  
+  EVENT_STATE_CLEAR                 = $00;
+  EVENT_STATE_VALID                 = $01;
+  EVENT_STATE_INVALID               = $02;
+  EVENT_STATE_UNKOWN                = $03;
+
+  STATE_NMRABUS_START                       = 0;
+  STATE_NMRABUS_GENERATE_NODE_ALIAS         = 1;
+  STATE_RANDOM_NUMBER_GENERATOR             = 2;
+  STATE_NMRABUS_TRANSMIT_CID                = 3;
+  STATE_NMRABUS_NEXT_CDI                    = 4;
+  STATE_NMRABUS_WAITSTATE                   = 5;
+  STATE_NMRABUS_SEND_LOGIN_RID              = 6;
+  STATE_NMRABUS_SEND_LOGIN_AMD              = 8;
+  STATE_NMRABUS_INITIALIZED                 = 9;
+  STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS       = 10;
+  STATE_NMRABUS_PERMITTED                   = 11;
+  STATE_NMRABUS_INHIBITED                   = 12;
+  STATE_NMRABUS_DUPLICATE_FULL_ID           = 13;
+  STATE_NMRABUS_TAKE_OFFLINE                = 14;
+  STATE_NMRABUS_OFFLINE                     = 15;
+  
+  STATE_ACDI_MFG_VERSION                    = 0;
+  STATE_ACDI_MFG_INFO                       = 1;
+  STATE_ACDI_USER_VERSION                   = 3;
+  STATE_ACDI_USER_NAME                      = 4;
+  STATE_ACDI_START_DESC                     = 5;
+  STATE_ACDI_USER_DESC                      = 6;
+  STATE_ACDI_DONE                           = 7;
+  
+type
+  TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
+
+  TNodeIDs = record
+    ID: TNodeID;
+    AliasID: Word;
+  end;
+  
+  TNodeInfo = record
+    ID: TNodeID;                                                                // Unique 48 Bit ID for Node
+    Seed: TNodeID;                                                              // Seed for Random Number Generator in case we have to reseed because of a duplicate ID
+    AliasID: Word;                                                              // 12 Bit Alias ID
+  end;
+
+const
+  // NMRABus States
+  NS_EMPTY                = $00;
+  NS_ALLOCATED            = $01;
+  NS_PERMITTED            = $02;                                                // NodeState CAN Frame Layer is permitted (Node ID's resolved with bus)
+  NS_INITIALIZED          = $04;                                                // NodeState Message Layer has sent its first Initialize Complete Message
+  NS_VIRTUAL              = $08;                                                // NodeState If is a virtual node
+  
+  // MsgFlags in order of precidence (= 0 highest precidence)
+  MF_DUPLICATE_NODE_ID        = $01;                                            // MsgFlag, a Duplicate Node ID was detected, critical fault
+  MF_DUPLICATE_ALIAS          = $02;                                            // MsgFlag, a Duplicate Alias was Detected, critical fault
+  MF_DUPLICATE_ALIAS_RID      = $04;                                            // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
+  MF_ALIAS_MAP_ENQUIRY        = $08;                                            // MsgFlag, an AMD message need to be responded to
+  MF_VERIFY_NODE_ID           = $10;                                            // MsgFlag, a Verify Node ID message needs to be responded to
+
+type
+  TNMRAnetNodeLoginInfo = record
+    TimeCounter: Byte;                                                          // Number of timer ticks into the time waiting for a RID response from another node for our RID broadcasts
+    iCID: Byte;                                                                 // Which of the 4 CIDs we are broadcasting
+  end;
+  
+  TNMRAnetNode = record
+    State: Byte;                                                                // See the NS_xxxx flags; State of the Node
+    Info: TNodeInfo;                                                            // Information about a Node
+    Login: TNMRAnetNodeLoginInfo;                                               // Login Information
+    MsgFlags: Byte;                                                             // Message Flags for messages that do not require information to be passed to the Node, see the MF_xxxx flags
+    EventsProducedFlags: array[0..MAX_EVENTS_PRODUCED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast
+    EventsConsumedFlags: array[0..MAX_EVENTS_CONSUMED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast
+    iStateMachine: Byte;                                                        // Statemachine index for the main bus login
+    BaseBuffers: PBaseBuffer;
+    DatagramBuffers: PDatagramBuffer;
+    ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory
+    ParentAlias,                                                                // Definition depends on what kind of node.  If a Throttle then Parent should never be set, If a Train then the will be the Owner Throttle
+    ChildAlias,                                                                 // Definition depends on what kind of node.  If a Throttle then Child should the Train it is controlling, if a Train then should not be set
+    LeftSibling,                                                                // Definition depends on what kind of node.  If Train then may be the next in a Consist Chain
+    RightSibling: ^TNMRAnetNode;                                                // Definition depends on what kind of node.  If Train then may be the previous in a Consist Chain
+    RAMAddress: Generic32BitPointer;                                            // Pointer to a DataStructure that is in RAM
+  end;
+  PNMRAnetNode = ^TNMRAnetNode;
+  
+type
+  TNodes = record
+    RawList: array[0..MAX_NODE_COUNT-1] of TNMRAnetNode;                        // Node [0] is ALWAYS the physical node
+    AllocatedList: array[0..MAX_NODE_COUNT-1] of PNMRAnetNode;                  // Node List sorted by Alias
+    AllocatedCount: Integer;                                                    // Number of Nodes Allocated
+    iActiveNode: Word;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
+  end;
+  PNodes = ^TNodes;
+  
+type
+  TDatagramTaskCallbackFunc = procedure(NodeBuffer: PNMRAnetNode; Datagram: PDatagramBuffer);
+  PDatagramTaskCallbackFunc = ^TDatagramTaskCallbackFunc;
+  
+
+// *****************************************************************************
+// Memory Configuration Defines
+// *****************************************************************************
+  
+const
+  MCP_WRITE                           = $00;                                    // MemoryConfigurationProtocol - Write Memory Mask
+  MCP_READ                            = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
+  MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
+  MCP_READ_DATAGRAM_REPLY             = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
+  MCP_READ_STREAM_REPLY               = $30;
+
+  MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
+  MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask
+  MCP_CONFIGURATION                   = $01;                                    // Address space = Basic Configuration ($FD) access Mask
+  MCP_NONE                            = $00;                                    // Use the optional {Space} byte in the datagram to defin the address space
+
+  MCP_OP_GET_CONFIG                  = $80;                                     // MemoryConfigurationProtocol Operation - Get Configuration
+  MCP_OP_GET_CONFIG_REPLY            = $82;                                     // MemoryConfigurationProtocol Operation - Get Configuration Reply
+  MCP_OP_GET_ADD_SPACE_INFO          = $84;                                     // MemoryConfigurationProtocol Operation - Get Add Space Info
+  MCP_OP_GET_ADD_SPACE_INFO_REPLY    = $86;                                     // MemoryConfigurationProtocol Operation - Get Add Space Info Reply
+  MCP_OP_LOCK                        = $88;                                     // MemoryConfigurationProtocol Operation - Lock Node
+  MCP_OP_LOCK_REPLY                  = $8A;                                     // MemoryConfigurationProtocol Operation - Lock Node Reply
+  MCP_OP_GET_UNIQUEID                = $8C;                                     // MemoryConfiguratio                    nProtocol Operation - Get Unique ID Key
+  MCP_OP_GET_UNIQUEID_REPLY          = $8E;                                     // MemoryConfigurationProtocol Operation - Get Unique ID Key Reply
+
+  MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT = $01;
+
+  MCP_OP_FREEZE                      = $A0;                                     // MemoryConfigurationProtocol Operation - Freeze Node
+  MCP_OP_INDICATE                    = $A4;                                     // MemoryConfigurationProtocol Operation - Indicate
+  MCP_OP_RESETS                      = $A8;                                     // MemoryConfigurationProtocol Operation - Resets
+
+  STATE_MEM_CONFIG_SEND_REPLY            = $00;
+  STATE_MEM_CONFIG_OPERATION_DATAGRAM    = $01;
+  STATE_MEM_CONFIG_READ_DATAGRAM         = $02;
+  STATE_MEM_CONFIG_WRITE_DATAGRAM        = $03;
+  STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM = $04;
+  STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM = $05;
+  STATE_MEM_CONFIG_WAITFOR_REPLY         = $06;
+
+
+var
+  DatagramTrainControlCallbackFunc: PDatagramTaskCallbackFunc;                      // Callback to the user app from the NMRADatagrams.mpas when a Train Control datagram is received
+
+
+  MaxTime_StateMachine: Word;
+  MaxTime_RX: Word;
+
+
+implementation
+
+end.

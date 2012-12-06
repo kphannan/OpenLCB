@@ -1,0 +1,46 @@
+unit NodeIDs;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//
+// * Description:
+//    Implements a NMRABus Unique IDs for various Mustangpeak Nodes
+//
+// ******************************************************************************
+
+
+// Mustangpeak NMRANet allocated ID's  $05, $01, $01, $01, $07, $xx
+const
+
+// NOTE: THE ONLY TIME THIS IS USEFUL IN THIS FORM IS WHEN CREATING THE ALIAS OTHERWISE
+//       THE REQUIRED FORMAT IS THE ARRAY OF 8 BYTES..........
+//       EVENTIDs ARE USING THE ARRAY NEED TO THINK ABOUT CHANGING THIS AND THEN
+//       DYNAMICLLY CREATING THIS FORM TO RUN THE ALGORITHM SINCE THAT IS THE ONLY
+//       TIME IT IS NEEDED........
+
+  MUSTANGPEAK_ID_0_HI = $00050101;  // The Top 3 Bytes
+  
+
+  MUSTANGPEAK_COMMANDSTATION_ID_0_LO     = $00010700;  // The Bottom 3 Bytes 
+  // vNodes for Train Control            = $00010701 -  $00010781 (128 Possibilities)
+  
+  MUSTANGPEAK_TRACKBOOSTER_ID_0_LO       = $00010782;  // The Bottom 3 Bytes
+  MUSTANGPEAK_ACCESSORYBOOSTER_ID_0_LO   = $00010783;  // The Bottom 3 Bytes
+  MUSTANGPEAK_PROGRAMMINGBOOSTER_ID_0_LO = $00010784;  // The Bottom 3 Bytes
+  MUSTANGPEAK_TFT_THROTTLE_ID_0_LO       = $00010785;  // The Bottom 3 Bytes
+  MUSTANGPEAK_XPRESSNET_ID_0_LO          = $00010786;  // The Bottom 3 Bytes
+  MUSTANGPEAK_ROSTER_NODE_ID_0_LO        = $00010787;  // The bottom 3 bytes
+
+implementation
+
+
+end.

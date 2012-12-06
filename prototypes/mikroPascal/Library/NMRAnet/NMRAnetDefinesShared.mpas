@@ -1,0 +1,106 @@
+unit NMRAnetDefinesShared;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-11-02:   Created
+//
+// * Description:
+//         Defines global types and constants that are shared between the AppDefines and the NMRAnetDefines
+//         to eliminate circular references between those two units
+//
+// *****************************************************************************
+
+var
+  s1: array[32] of char;
+  
+const
+  LF = #13+#10;
+
+// *****************************************************************************
+// Shared Protocol Identification Protocol Defines
+// *****************************************************************************
+
+type
+  TPIVProtocolValueArray = array[6] of Byte;
+
+const
+  LEN_PIV_PROTOCOL = 6;                                                         // 6 Bytes long
+  PIV_PROTOCOL_ID_PROTOCOL: TPIVProtocolValueArray           = ($80, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_DATAGRAM: TPIVProtocolValueArray           = ($40, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_STREAM: TPIVProtocolValueArray             = ($20, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_CONFIGURATION: TPIVProtocolValueArray      = ($10, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_RESERVATION: TPIVProtocolValueArray        = ($08, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_PRODUCER_CONSUMER: TPIVProtocolValueArray  = ($04, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_IDENTIFICATION: TPIVProtocolValueArray     = ($02, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_TEACH_LEARN: TPIVProtocolValueArray        = ($01, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_REMOTE_BUTTON: TPIVProtocolValueArray      = ($00, $80, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_CDI: TPIVProtocolValueArray                = ($00, $40, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_DISPLAY: TPIVProtocolValueArray            = ($00, $20, $00, $00, $00, $00);
+  
+// *****************************************************************************
+// Shared Event Defines
+// *****************************************************************************
+
+const
+  EVENT_ARRAY_LENGTH = 8;
+
+type
+  TEventID = array[0..EVENT_ARRAY_LENGTH-1] of Byte;                        // Is the 48 Bit node ID + 16 Bits of unique Event ID = 64 Bits
+  PEventID = ^TEventID;
+  
+type
+  TSettableEventID = record
+    Event: TEventID;
+    State: Byte;                                                                // Is the event Clear (0), Set (1), Undefined (> 1)
+  end;
+  PSettableEventID = ^TSettableEventID;
+
+const
+  EVENT_EMERGENCY_STOP_ALL: TEventID = ($01, $01, $00, $00, $00, $00, $FF, $FF);
+  EVENT_LOG_ENTRY_RECORDED: TEventID = ($01 ,$10, $00, $00, $00, $00, $FF, $F8);
+  EVENT_IDENT_BUTTON_PRESSED: TEventID = ($01, $10, $00, $00, $00, $00, $FE, $00);
+  EVENT_DUPLICATE_ID_DETECTED: TEventID = ($01, $10, $00, $00, $00, $00, $02, $01);
+
+// *****************************************************************************
+// Shared Memory Configuration Defines
+// *****************************************************************************
+type
+  TMemConfigurationOptions = record
+    MemoryConfigOptions: Word;                                                  // The commands that are avialable to the system, see the MCO_xxx constants
+    MemoryConfigWriteLength: Byte;                                              // The length of writes supported by the EEPROM, see the MCWL_xxx constants
+    MemoryConfigHighestSpace: Byte;                                             // Highest space, see MSI_xxx constants
+    MemoryConfigLowestSpace: Byte;                                              // Lowest space, see MSI_xxx constants
+  end;
+  
+const
+  MSI_CDI                            = $FF;                                     // MemorySpaceIdentifer - Access the Configuration Definition Infomation (CDI)
+  MSI_ALL                            = $FE;                                     // MemorySpaceIdentifer - Access All memory (define all in the application)
+  MSI_CONFIG                         = $FD;                                     // MemorySpaceIdentifer - Access basic configuration memory that feeds into the CDI
+  MSI_ACDI_MFG                       = $FC;                                     // MemorySpaceIdentifer - Access the ACDI Manfacturers Info
+  MSI_ACDI_USER                      = $FB;                                     // MemorySpaceIdentifer - Access the ACDI User definable Info
+
+  MCO_WRITE_UNDER_MASK               = $8000;                                   // MemoryConfigurationOptions - Write under mask supported
+  MCO_UNALIGNED_READS                = $4000;                                   // MemoryConfigurationOptions - Unaligned memory Reads supported
+  MCO_ACDI_MFG_READS                 = $0800;                                   // MemoryConfigurationOptions - Address Space 0xFC supported (ACDI Manufacturer Area) for reads
+  MCO_ACDI_USER_READS                = $0400;                                   // MemoryConfigurationOptions - Address Space 0xFB supported (ACDI User Defined Area) for reads
+  MCO_ACDI_USER_WRITES               = $0200;                                   // MemoryConfigurationOptions - Address Space 0xFB supported (ACDI User Defined Area) for writes
+
+  MCWL_ONE_BYTE                      = $80;                                     // MemoryConfigurationWriteLength - 1 Byte Write Supported
+  MCWL_TWO_BYTE                      = $40;                                     // MemoryConfigurationWriteLength - 2 Byte Write Supported
+  MCWL_FOUR_BYTE                     = $20;                                     // MemoryConfigurationWriteLength - 4 Byte Write Supported
+  MCWL_64_BYTE                       = $10;                                     // MemoryConfigurationWriteLength - 64 Byte (exactly) Write Supported
+  MCWL_ARBITRARY_BYTE                = $02;                                     // MemoryConfigurationWriteLength - Any Number of Byte Write Supported
+  MCWL_STREAM_WRITE_SUPPORTED        = $01;                                     // MemoryConfigurationWriteLength - Stream Write Supported
+  
+implementation
+
+
+end.

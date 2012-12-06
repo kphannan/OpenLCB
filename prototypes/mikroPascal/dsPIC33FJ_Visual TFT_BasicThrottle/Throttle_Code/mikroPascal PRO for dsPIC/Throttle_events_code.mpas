@@ -1,0 +1,139 @@
+unit Throttle_events_code;
+
+uses Throttle_objects, Throttle_resources;
+
+procedure ButtonRoundSpeedDecOnClick();
+procedure ButtonRoundSpeedIncOnClick();
+procedure ButtonRoundTrainSelction0OnClick();
+procedure ImageRGS455OnClick();
+//--------------------- Externals ---------------------//
+const Bkgnd : TCBox; code; far; external;
+const LabelStartMustangpeak : TCLabel; code; far; external;
+const LabelStartThrottle : TCLabel; code; far; external;
+const LabelStartLoading : TCLabel; code; far; external;
+const LabelStartVer : TCLabel; code; far; external;
+var BoxRoundStartBkGnd : TBox_Round; external;
+var ImageStart : TImage; external;
+var ProgressBarStart : TProgressBar; external;
+var ProgressBarStart_Caption : string[3]; external;
+var Button1 : TButton; external;
+var Button1_Caption : string[5]; external;
+var ButtonHeader : TButton; external;
+var ButtonHeader_Caption : string[9]; external;
+var ButtonRound1 : TButton_Round; external;
+var ButtonRound1_Caption : string[2]; external;
+var ButtonRound2 : TButton_Round; external;
+var ButtonRound2_Caption : string[6]; external;
+var ButtonRound3 : TButton_Round; external;
+var ButtonRound3_Caption : string[8]; external;
+var ButtonRound4 : TButton_Round; external;
+var ButtonRound4_Caption : string[5]; external;
+var ButtonRound5 : TButton_Round; external;
+var ButtonRound5_Caption : string[8]; external;
+var ButtonRound6 : TButton_Round; external;
+var ButtonRound6_Caption : string[5]; external;
+var ButtonRound7 : TButton_Round; external;
+var ButtonRound7_Caption : string[10]; external;
+var ButtonRound8 : TButton_Round; external;
+var ButtonRound8_Caption : string[5]; external;
+var ButtonRound9 : TButton_Round; external;
+var ButtonRound9_Caption : string[12]; external;
+var ButtonRound10 : TButton_Round; external;
+var ButtonRound10_Caption : string[11]; external;
+var ButtonRound11 : TButton_Round; external;
+var ButtonRound11_Caption : string[7]; external;
+var ButtonRound12 : TButton_Round; external;
+var ButtonRound12_Caption : string[6]; external;
+var ButtonRound13 : TButton_Round; external;
+var ButtonRound13_Caption : string[1]; external;
+var ProgressBarSpeed : TProgressBar; external;
+var ProgressBarSpeed_Caption : string[3]; external;
+var ButtonRoundSpeedInc : TButton_Round; external;
+var ButtonRoundSpeedInc_Caption : string[10]; external;
+var ButtonRoundSpeedDec : TButton_Round; external;
+var ButtonRoundSpeedDec_Caption : string[10]; external;
+var ButtonRound23 : TButton_Round; external;
+var ButtonRound23_Caption : string[1]; external;
+var ButtonRoundTrainSelction0 : TButton_Round; external;
+var ButtonRoundTrainSelction0_Caption : string[12]; external;
+var ButtonRoundTrainSelction1 : TButton_Round; external;
+var ButtonRoundTrainSelction1_Caption : string[15]; external;
+var ButtonRoundTrainSelction2 : TButton_Round; external;
+var ButtonRoundTrainSelction2_Caption : string[13]; external;
+var ButtonRoundTrainSelction3 : TButton_Round; external;
+var ButtonRoundTrainSelction3_Caption : string[23]; external;
+var ButtonRoundTrainSelction04 : TButton_Round; external;
+var ButtonRoundTrainSelction04_Caption : string[14]; external;
+var ButtonRoundTrainSelction5 : TButton_Round; external;
+var ButtonRoundTrainSelction5_Caption : string[13]; external;
+var Button3 : TButton; external;
+var Button3_Caption : string[15]; external;
+var ButtonRound20 : TButton_Round; external;
+var ButtonRound20_Caption : string[2]; external;
+var ButtonRound21 : TButton_Round; external;
+var ButtonRound21_Caption : string[3]; external;
+var ButtonRound22 : TButton_Round; external;
+var ButtonRound22_Caption : string[5]; external;
+const Start           : TCScreen; code; far;  external;
+var Train           : TScreen; external;
+var TrainSelector           : TScreen; external;
+procedure DrawScreen(aScreenID : word); external;
+procedure DrawButton(Abutton : ^TButton); external;
+procedure DrawRoundButton(Around_button : ^TButton_Round); external;
+procedure DrawCLabel(ALabel : ^TCLabel); external;
+procedure DrawImage(AImage : ^TImage); external;
+procedure DrawCImage(AImage : ^TCImage); external;
+procedure DrawCBox(ABox : ^TCBox); external;
+procedure DrawRoundBox(Around_box : ^TBox_Round); external;
+procedure DrawProgressBar(AProgressBar : ^TProgressBar); external;
+procedure UpdatePBPosition(AProgressBar : ^TProgressBar); external;
+//----------------- End of Externals ------------------//
+
+//-------------- User code declarations ---------------//
+
+
+//-------------- End of User code declarations --------//
+
+implementation
+
+//--------------------- User code ---------------------//
+
+//----------------- End of User code ------------------//
+
+// Event Handlers
+
+procedure ButtonRoundSpeedIncOnClick();
+begin
+  if ProgressBarSpeed.Position < 28 then
+    Inc(ProgressbarSpeed.Position);
+  DrawProgressBar(@ProgressBarSpeed);
+end;
+
+procedure ButtonRoundSpeedDecOnClick();
+begin
+  if ProgressBarSpeed.Position > 0 then
+    Dec(ProgressbarSpeed.Position);
+  DrawProgressBar(@ProgressBarSpeed);
+end;
+
+procedure ImageTrainOnClick();
+begin
+  DrawScreen(TrainSelectorScreenID);
+end;
+
+procedure ButtonRoundTrainSelction0OnClick();
+begin
+  DrawScreen(TrainScreenID);
+end;
+
+procedure ImageRGS455OnClick();
+begin
+
+end;
+
+procedure ImageRGS40OnClick();
+begin
+
+end;
+
+end.

@@ -1,0 +1,1210 @@
+unit NMRAnetStateMachine;
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//MF_DUPLICATE_ALIAS
+// * Revision History:
+//     2012-02-01:   Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//    Implements NMRAnet StateMachine for the main loop in a program.
+//
+// ******************************************************************************
+{$I Options.inc}
+
+uses
+  {$IFDEF dsPIC33}
+  dsPIC33_CAN,
+  {$ELSE}
+  dsPIC30_CAN,
+  {$ENDIF}
+  NMRAnetAppDefines,
+  NMRAnetDefines,
+  NMRAnetDefinesShared,
+  NMRAnetUtilities,
+  NMRAnetCANReceive,
+  CANStorage,
+  NMRAnetNode,
+  NMRAnetDatagrams,
+  NMRAnetBufferPools;
+
+
+{.$DEFINE TRACE_DATAGRAM_SEND}
+{.$DEFINE TRACE_BUFFER_ADDRESSES}
+{.$DEFINE TRACE_MEM_CONFIG_STATEMACHINE}
+{.$DEFINE TRACE_DATAGRAM_REPLY}
+{.$DEFINE TRACE_CONFIG_MEM_DECODE}
+{.$DEFINE TRACE_NODE_STATEMACHINE}
+{.DEFINE TRACE_ACDI}
+{.$DEFINE TRACE_SNIP}
+
+  procedure NMRAnetStateMachine_Process(Node: PNMRAnetNode);
+  procedure NMRAnetStateMachine_Disconnect(Node: PNMRAnetNode);
+  procedure NMRAnetStateMachine_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
+  procedure NMRAnetStateMachine_InitializeNode(Node: PNMRAnetNode; NodeID_HI, NodeID_Lo: DWord);
+  procedure NMRAnetStateMachine_100ms_Timer(Node: PNMRAnetNode);
+
+  // Send Helper Functions, send via Statemachine loops
+  function NMRAnetStateMachine_TrySendIdentifyProducer(Node: PNMRAnetNode; EventID: PEventID): Boolean;
+  function NMRAnetStateMachine_TrySendIdentifyConsumer(Node: PNMRAnetNode; EventID: PEventID): Boolean;
+  function NMRAnetStateMachine_TrySendIdentifyEvents(Node: PNMRAnetNode): Boolean;
+  function NMRAnetStateMachine_TrySendAliasMapEnquiry(Node: PNMRAnetNode): Boolean;
+  function NMRAnetStateMachine_TrySendAliasMapReset(Node: PNMRAnetNode): Boolean;
+  function NMRAnetStateMachine_TrySendVerifyNodeID(Node: PNMRAnetNode; DestinationAliasID: Word): Boolean;
+  function NMRAnetStateMachine_TrySendAbbreviatedCDI(Node: PNMRAnetNode; DestinationAliasID: Word): Boolean;
+  function NMRAnetStateMachine_TrySendDatagram(Node: PNMRAnetNode; CANBuffer: PCANBuffer; Datagram: PDatagramBuffer): Boolean;
+
+  procedure NMRAnetAppCallbacks_Initialize; external;
+  function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;  external;
+  procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);  external;
+  function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;  external;
+  function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean; external;
+  
+
+
+// Forward declarations
+function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord; DestinationAliasID: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean): Boolean; forward;
+function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean; forward;
+function NMRABusBufferAvailable: Boolean; forward;
+
+implementation
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendAbbreviatedCDI
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendAbbreviatedCDI(Node: PNMRAnetNode; DestinationAliasID: Word): Boolean;
+var
+  CANBuffer: TCANBUffer;
+  DataBytes: TCAN_DataBytes;
+begin
+  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_SIMPLE_NODE_INFO_REQUEST, DestinationAliasID, 0, @DataBytes, False);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendIdentifyProducer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendIdentifyProducer(Node: PNMRAnetNode; EventID: PEventID): Boolean;
+var
+  CANBuffer: TCANBUffer;
+begin
+  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_PRODUCER_IDENDIFY, 0, EVENT_ARRAY_LENGTH, PCAN_DataBytes( EventID), False)
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendIdentifyConsumer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendIdentifyConsumer(Node: PNMRAnetNode; EventID: PEventID): Boolean;
+var
+  CANBuffer: TCANBUffer;
+begin
+  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_CONSUMER_IDENTIFY, 0, EVENT_ARRAY_LENGTH,  PCAN_DataBytes( EventID), False);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendIdentifyEvents
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendIdentifyEvents(Node: PNMRAnetNode): Boolean;
+var
+  CANBuffer: TCANBUffer;
+begin
+  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_EVENTS_IDENTIFY, 0, 0, nil, False);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendAliasMapEnquiry
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendAliasMapEnquiry(Node: PNMRAnetNode): Boolean;
+var
+  CANBuffer: TCANBUffer;
+begin
+  Result := TransmitCANLayerMsg(Node, @CANBuffer, MTI_AME);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendAliasMapReset
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendAliasMapReset(Node: PNMRAnetNode): Boolean;
+var
+  CANBuffer: TCANBUffer;
+begin
+  Result := TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendVerifyNodeID
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendVerifyNodeID(Node: PNMRAnetNode; DestinationAliasID: Word): Boolean;
+var
+  DataBytes: TCAN_DataBytes;
+  CANBuffer: TCANBUffer;
+begin
+  if DestinationAliasID <> 0 then
+    Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_VERIFY_NODE_ID_NUMBER_DEST, DestinationAliasID, 0, @DataBytes, False)
+  else
+    Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_VERIFY_NODE_ID_NUMBER, 0, 0, nil, False);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendDatagram
+//     Parameters:
+//     Returns:
+//
+//     Description:  Returns True when the Datagram is COMPLETLY sent
+//                   Expects the iDataCount, DataBytes, Alias (destination) to be valid and Tag to be
+//                   initaialized to 0
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendDatagram(Node: PNMRAnetNode; CANBuffer: PCANBuffer; Datagram: PDatagramBuffer): Boolean;
+var
+  i: Integer;
+  DataBytes: TCAN_DataBytes;
+  MTI: DWord;
+begin
+  Result := False;
+  if NMRABusBufferAvailable then
+  begin
+
+    {$IFDEF TRACE_DATAGRAM_SEND}IntToStr(Datagram^.iByteCount, s1); UART1_Write_Text('ByteCount = '+s1+LF);{$ENDIF}
+    {$IFDEF TRACE_DATAGRAM_SEND}IntToStr(Datagram^.Tag, s1); UART1_Write_Text('Tag = '+s1+LF);{$ENDIF}
+  
+    if Datagram^.iByteCount <= 8 then                                           // Single Frame Datagram
+    begin
+      {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME'+LF);{$ENDIF}
+      for i := 0 to Datagram^.iByteCount - 1 do
+        DataBytes[i] := Datagram^.DataBytes[i];
+      TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME, Datagram^.Alias, Datagram^.iByteCount, @DataBytes, True);
+      Result := True;
+    end else
+    begin 
+      // Calculate which frame it is for the Multi Frame Datagram
+      if Datagram^.Tag = 0 then
+      begin
+        MTI := MTI_FRAME_TYPE_DATAGRAM_FRAME_START  {$IFDEF TRACE_DATAGRAM_SEND};UART1_Write_Text('MTI_DATAGRAM_FRAME_START_SEND'+LF);{$ENDIF}
+      end
+      else
+      if Datagram^.iByteCount - Datagram^.Tag > 8 then
+      begin
+        MTI := MTI_FRAME_TYPE_DATAGRAM_FRAME  {$IFDEF TRACE_DATAGRAM_SEND};UART1_Write_Text('MTI_DATAGRAM_FRAME_SEND'+LF);{$ENDIF}
+      end
+      else begin
+        MTI := MTI_FRAME_TYPE_DATAGRAM_FRAME_END; {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('MTI_DATAGRAM_FRAME_END_SEND'+LF);{$ENDIF}
+        Result := True
+      end;
+
+      i := 0;
+      while (Datagram^.Tag < Datagram^.iByteCount) and (i < 8) do               // Copy 8 Data Byte, or as many that are left to the buffer
+      begin
+        DataBytes[i] := Datagram^.DataBytes[Datagram^.Tag];
+        Inc(i);
+        Inc(Datagram^.Tag);
+      end;
+      {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('TransmitNMRABusLayerMsg = Transmitting'+LF);{$ENDIF}
+      TransmitNMRABusLayerMsg(Node, CANBuffer, MTI, Datagram^.Alias, i, @DataBytes, True);
+      {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('TransmitNMRABusLayerMsg = Transmitted'+LF);{$ENDIF}
+    end;
+  end
+end;
+
+// *****************************************************************************
+//  procedure ReleaseBuffers
+//     Parameters:
+//     Returns:
+//
+//     Description:  Expects CAN Disabled
+//
+// *****************************************************************************
+procedure ReleaseBuffers(Node: PNMRAnetNode);
+var
+  BaseTemp: PBaseBuffer;
+  DatagramTemp: PDatagramBuffer;
+begin
+  while Node^.BaseBuffers <> nil do
+  begin
+    BaseTemp := Node^.BaseBuffers;
+    NMRAnetUtilities_BaseBufferUnLink(Node, BaseTemp);
+    NMRAnetBufferPools_ReleaseBaseBuffer(BaseTemp);
+  end;
+  while Node^.DatagramBuffers <> nil do
+  begin
+    DatagramTemp := Node^.DatagramBuffers;
+    NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramTemp);
+    NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramTemp);
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_InitializeNode
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetStateMachine_InitializeNode(Node: PNMRAnetNode; NodeID_HI, NodeID_LO: DWord);
+var
+  i: Integer;
+begin     
+  // Don't Reset the Addresses here, they are initialized on bootup and are fixed thoughout the life of the program
+  Node^.BaseBuffers := nil;
+  Node^.DatagramBuffers := nil;
+  Node^.State := 0;
+  Node^.MsgFlags := 0;
+  Node^.ParentAlias := 0;
+  Node^.ChildAlias := 0;
+  if (NodeID_HI <> 0) and (NodeID_LO <> 0) then
+  begin
+    // Only done on the very first initialization
+    Node^.Info.ID[0] := NodeID_LO;
+    Node^.Info.ID[1] := NodeID_HI;
+    Node^.Info.Seed := Node^.Info.ID;
+    Node^.Login.TimeCounter := 0;
+    Node^.Login.iCID := 0;
+  end;
+  for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+    Node^.EventsConsumedFlags[i] := 0;
+  for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do
+    Node^.EventsProducedFlags[i] := 0;
+  Node^.iStateMachine := STATE_NMRABUS_START;
+  Node^.ParentAlias := nil;
+  Node^.ChildAlias := nil;
+  Node^.LeftSibling := nil;
+  Node^.RightSibling := nil;
+  Node^.Login.TimeCounter := 0;
+  Node^.Login.iCID := 0;
+ // I don't think I want to reset these as they are set at startup
+ // ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory
+ // RAMAddress: Generic32BitPointer;                                            // Pointer to a DataStructure that is in RAM
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_Initialize
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetStateMachine_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
+begin
+  {$IFDEF dsPIC33}
+  dsPIC33_CAN_Initialize;
+  {$ENDIF}
+  CANStorage_Initialize;
+  NMRAnetDatagrams_Initialize;
+  NMRAnetCANReceive_Initialize;
+  NMRAnetBufferPools_Initialize;
+  NMRAnetAppCallbacks_Initialize;
+  NMRAnetNode_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_100ms_Timer;
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetStateMachine_100ms_Timer(Node: PNMRAnetNode);
+begin
+  Inc(Node^.Login.TimeCounter);
+end;
+
+// *****************************************************************************
+//  procedure TransmitCANLayerMsg
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean;
+begin
+  Result := False;
+  if CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = 0 then
+  begin
+    NMRAnetUtilities_CreateCANControlFrameCANBuffer(Node, Buffer, VariableField);
+    CAN_Engine.TX_CANBuffer := Buffer^;
+    CAN_Engine.TX_CANBuffer.State := CAN_Engine.TX_CANBuffer.State or BS_ALLOCATED;
+    StartCANMessageEngine();
+    Result := True
+  end;
+end;
+
+// *****************************************************************************
+//  procedure CANBusBufferAvailable
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function CANBusBufferAvailable: Boolean;
+begin
+  Result := CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = 0
+end;
+
+// *****************************************************************************
+//  procedure TransmitNMRABusLayerMsg
+//     Parameters:
+//     Returns:
+//
+//     Description: This assumes the caller has tested for room in the buffer
+//
+// *****************************************************************************
+function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean): Boolean;
+begin          
+
+ // TODO:  IF THE DESTINATION IS A VNNODE THEN WE NEED TO NOT PUT IT IN THE CAN BUFFER BUT JUST SHORT CUT IT TO THE RECEIVE BUFFER
+ 
+  Result := False;
+  
+  if CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0 then
+  begin
+    if AliasInHeader then
+      NMRAnetUtilities_CreateNMRABusMessageCANBufferWithDestInMTI(Node, Buffer, MTI, DestinationAlias, DataCount, DataBytes)
+    else
+      NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, Buffer, MTI, DestinationAlias, DataCount, DataBytes);
+
+    CAN_Engine.TX_NMRAnetBuffer := Buffer^;
+    CAN_Engine.TX_NMRAnetBuffer.State := CAN_Engine.TX_NMRAnetBuffer.State or BS_ALLOCATED;
+    StartCANMessageEngine();
+    Result := True
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRABusBufferAvailable
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRABusBufferAvailable: Boolean;
+begin
+  Result := CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0
+end;
+
+// *****************************************************************************
+//  procedure MaxAddressByAddressSpace
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+{$IFNDEF BOOTLOADER}
+function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
+ begin
+   case AddressSpace of
+      MSI_CDI       : begin
+                        {$IFDEF SUPPORT_VIRTUAL_NODES}
+                        if Node^.State and NS_VIRTUAL <> 0 then
+                          Result := MAX_CDI_ARRAY_VNODE
+                        else {$ENDIF}
+                          Result := MAX_CDI_ARRAY;
+                      end;
+      MSI_ALL       : Result := ALL_MAP.HighMem;
+      MSI_CONFIG    : Result := AppCallback_ConfigurationSize(Node);
+      MSI_ACDI_MFG  : begin
+                        {$IFDEF SUPPORT_VIRTUAL_NODES}
+                        if Node^.State and NS_VIRTUAL <> 0 then
+                          Result := MAX_ACDI_MFG_ARRAY_VNODE + 1 // for the Version ID Byte
+                        else {$ENDIF}
+                          Result := MAX_ACDI_MFG_ARRAY + 1 // for the Version ID Byte
+                      end;
+      MSI_ACDI_USER : Result := AppCallback_ConfigurationSize(Node) + 1  // for the Version ID Byte
+    else
+      Result := 0;
+    end;
+ end;
+ {$ENDIF}
+
+// *****************************************************************************
+//  procedure DecodeMemoryConfigurationReadWrite
+//     Parameters:
+//     Returns:
+//
+//     Description:
+// *****************************************************************************
+{$IFNDEF BOOTLOADER}
+procedure DecodeMemoryConfigurationReadWrite(Node: PNMRAnetNode; DataBytes: PCAN_DataBytes; var MemorySpace: Byte; var MemorySpaceAddress: DWord; var MemorySpaceCount: Short);
+var
+  MemorySpaceMaxAddress : DWord;
+begin
+  MemorySpaceCount := DataBytes^[6];
+  case DataBytes^[1] and $03 of      // Strip off bottom two bits
+    MCP_CDI            : MemorySpace := MSI_CDI;
+    MCP_ALL            : MemorySpace := MSI_ALL;
+    MCP_CONFIGURATION  : MemorySpace := MSI_CONFIG;
+    MCP_NONE           : begin
+                           MemorySpace := DataBytes^[6];
+                           MemorySpaceCount := DataBytes^[7]       // Should not be larger than 64 bytes
+                         end;
+  end;
+  MemorySpaceAddress := DWord( DataBytes^[2] shl 24) or DWord( DataBytes^[3] shl 16) or DWord( DataBytes^[4] shl 8) or DWord( DataBytes^[5]);
+   
+  MemorySpaceMaxAddress := MaxAddressByAddressSpace(Node, MemorySpace);
+  
+  if MemorySpaceAddress >= MemorySpaceMaxAddress then
+     MemorySpaceCount := 0
+  else begin
+    if MemorySpaceAddress + MemorySpaceCount >= MemorySpaceMaxAddress then
+      MemorySpaceCount := MemorySpaceMaxAddress - MemorySpaceAddress
+  end;
+  if MemorySpaceCount > 64 then
+    MemorySpaceCount := 64;       // By the spec the requestor can NOT send a request for more than 64 Bytes
+end;
+{$ENDIF}
+
+// *****************************************************************************
+//  procedure ProcessNode
+//     Parameters:
+//     Returns:
+//
+//     Description: Expects CAN Disabled
+//
+// *****************************************************************************
+procedure ProcessNode(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+const
+  ADDRESSED = True;
+  NONADDRESSED = False;
+  CRITICAL_MSG_MASK = MF_DUPLICATE_NODE_ID or MF_DUPLICATE_ALIAS or MF_DUPLICATE_ALIAS_RID;
+  
+type
+  TByteArray = array[0..0] of Byte;                                             // Byte array of any length
+  PByteArray = ^TByteArray;
+
+var
+  DataBytes: TCAN_DataBytes;
+  DataBytesPtr: PCAN_DataBytes;
+  i, j, EventIndex: Integer;
+  BaseBuffer: PBaseBuffer;
+  DatagramBuffer: PDatagramBuffer;
+  MemorySpace: Byte;
+  MemorySpaceCount: Short;
+  DatagramAddress, State: Byte;
+  MemorySpaceAddress, MemorySpaceMaxAddress: DWord;
+  ByteArray: PByteArray;
+begin
+  // The first thing to check is for duplicate Node ID's or Aliases and handle
+  // them first and exclusively
+
+  if Node^.MsgFlags <> 0 then
+  begin
+    if Node^.MsgFlags and CRITICAL_MSG_MASK <> 0 then                           // Subdivide to Critical vs. Noncritical messages
+    begin
+      // Critial Fault Messages
+      if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_NODE_ID, True) then        // Jump Statemachine here
+        Node^.iStateMachine := STATE_NMRABUS_DUPLICATE_FULL_ID
+      else
+      if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then          // Jump Statemachine here
+        Node^.iStateMachine := STATE_NMRABUS_INHIBITED
+      else
+      if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS_RID, False) then     // Tell the node that is our Alias
+      begin
+        if CANBusBufferAvailable then
+        begin
+         TransmitCANLayerMsg(Node, CANBuffer, MTI_RID);
+         NMRAnetNode_ClearMsgFlag(Node, MF_DUPLICATE_ALIAS_RID);
+        end
+      end;
+      Exit;                                                                     // Important things happened and were handled, exit
+    end;
+
+    // Non Critical Fault Messages that require a response
+    if NMRAnetNode_TestMsgFlags(Node, MF_ALIAS_MAP_ENQUIRY, False) then
+    begin
+      if CANBusBufferAvailable then
+      begin
+        TransmitCANLayerMsg(Node, CANBuffer, MTI_AMD);
+        NMRAnetNode_ClearMsgFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+      end
+    end else
+    if NMRAnetNode_TestMsgFlags(Node, MF_VERIFY_NODE_ID, False) then
+    begin     //  UART1_Write_Text('MF_VERIFY_NODE_ID'+LF);
+      if NMRABusBufferAvailable then
+      begin    //  UART1_Write_Text('MF_VERIFY_NODE_ID /w Buffer'+LF);
+        NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(Node, CANBuffer);
+        TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_VERIFIED_NODE_ID_NUMBER, 0, 6, @CANBuffer^.DataBytes, False);
+        NMRAnetNode_ClearMsgFlag(Node, MF_VERIFY_NODE_ID);
+      end;
+    end;
+    Exit;              // Don't interleave Buffer Replies...
+  end else
+  begin
+    // Callback gets first crack... for now
+    if AppCallback_StateMachine(Node, CANBuffer, @DataBytes) then
+    begin
+      Exit
+    end;
+
+    BaseBuffer := NMRAnetUtilities_NextBaseBuffer(Node);
+    if BaseBuffer <> nil then
+    begin
+      {$IFDEF TRACE_BUFFER_ADDRESSES}UART1_Write_Text('BaseBuffer Statemachine :'); WordToHex(BaseBuffer, s1); UART1_Write_Text('$'+s1+LF); {$ENDIF}
+      case BaseBuffer^.mCode of
+        BMC_PROTOCOL_SUPPORT_QUERY :        begin
+                                              if NMRABusBufferAvailable then
+                                              begin
+                                                NMRAnetUtilities_ZeroCANData(DataBytes);
+                                                {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                                if NMRAnetNode_TestStateFlag(NOde, NS_VIRTUAL) then
+                                                begin
+                                                  for i := 0 to LEN_PIV_PROTOCOL-1 do
+                                                    for j := 0 to PIV_VNODE_SUPPORTED_PROTOCOL_COUNT - 1 do
+                                                      DataBytes[i] := DataBytes[i] or PIV_VNODE_SUPPORTED_PROTOCOLS[j][i];
+                                                end else
+                                                {$ENDIF}
+                                                begin
+                                                  for i := 0 to LEN_PIV_PROTOCOL-1 do
+                                                    for j := 0 to PIV_SUPPORTED_PROTOCOL_COUNT - 1 do
+                                                      DataBytes[i] := DataBytes[i] or PIV_SUPPORTED_PROTOCOLS[j][i];
+                                                end;
+                                                TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PROTOCOL_SUPPORT_REPLY, BaseBuffer^.Alias, 6, @DataBytes, False);
+                                                NMRAnetUtilities_BaseBufferUnLink(Node, BaseBuffer);
+                                                NMRAnetBufferPools_ReleaseBaseBuffer(BaseBuffer);
+                                              end;
+                                            end;
+        {$IFNDEF BOOTLOADER}
+        BMC_SIMPLE_NODE_INFO_REQEUST :      begin
+                                              if NMRABusBufferAvailable then
+                                              begin
+                                                i := 0;
+                                                while (BaseBuffer^.StateMachine <> STATE_ACDI_DONE) and (i < 6) do   // All messages have the Destination Alias as the first 2 bytes so only 6 left to use
+                                                begin
+                                                  case BaseBuffer^.StateMachine of
+                                                    STATE_ACDI_MFG_VERSION  : begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_MFG_VERSION'+LF); {$ENDIF}
+                                                                                DataBytes[i] := ACDI_MFG_VERSION;
+                                                                                Inc(i);
+                                                                                BaseBuffer^.Tag := 0;
+                                                                                BaseBuffer^.StateMachine := STATE_ACDI_MFG_INFO;
+                                                                              end;
+                                                    STATE_ACDI_MFG_INFO    :  begin  {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_MFG_INFO'+LF); {$ENDIF}
+                                                                                {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                                                                if Node^.State and NS_VIRTUAL <> 0 then
+                                                                                begin
+                                                                                  if BaseBuffer^.Tag < MAX_ACDI_MFG_ARRAY_VNODE then
+                                                                                  begin
+                                                                                    DataBytes[i] := ACDI_MFG_STRINGS_VNODE[BaseBuffer^.Tag];
+                                                                                    Inc(BaseBuffer^.Tag);
+                                                                                    Inc(i);
+                                                                                  end else
+                                                                                    BaseBuffer^.StateMachine := STATE_ACDI_USER_VERSION;
+                                                                                end else {$ENDIF}
+                                                                                begin
+                                                                                  if BaseBuffer^.Tag < MAX_ACDI_MFG_ARRAY then
+                                                                                  begin
+                                                                                    DataBytes[i] := ACDI_MFG_STRINGS[BaseBuffer^.Tag];
+                                                                                    Inc(BaseBuffer^.Tag);
+                                                                                    Inc(i);
+                                                                                  end else
+                                                                                    BaseBuffer^.StateMachine := STATE_ACDI_USER_VERSION;
+                                                                                end;
+                                                                              end;
+                                                    STATE_ACDI_USER_VERSION : begin    {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_VERSION'+LF); {$ENDIF}
+                                                                                DataBytes[i] := ACDI_USER_VERSION;
+                                                                                Inc(i);
+                                                                                BaseBuffer^.StateMachine := STATE_ACDI_USER_NAME;
+                                                                                BaseBuffer^.Tag := 0;
+                                                                              end;
+                                                    STATE_ACDI_USER_NAME    : begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_NAME'+LF); {$ENDIF}
+                                                                                if BaseBuffer^.Tag < MAX_USER_NAME then
+                                                                                begin
+                                                                                  // Very wasteful and slow 1 at a time but it is easy
+                                                                                  AppCallback_ConfigurationRead(Node, @DataBytes[i], BaseBuffer^.Tag, 1);
+                                                                                  if DataBytes[i] = #0 then
+                                                                                    BaseBuffer^.StateMachine := STATE_ACDI_START_DESC
+                                                                                  else
+                                                                                  if BaseBuffer^.Tag = MAX_USER_NAME - 1 then
+                                                                                    DataBytes[i] := #0;
+                                                                                  Inc(i);
+                                                                                  Inc(BaseBuffer^.Tag);
+                                                                                end else
+                                                                                   BaseBuffer^.StateMachine := STATE_ACDI_START_DESC;
+                                                                              end;
+                                                    STATE_ACDI_START_DESC   : begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_START_DESC'+LF); {$ENDIF}
+                                                                                BaseBuffer^.Tag := MAX_USER_NAME;
+                                                                                BaseBuffer^.StateMachine := STATE_ACDI_USER_DESC;
+                                                                              end;
+                                                    STATE_ACDI_USER_DESC    : begin     {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_DESC'+LF); {$ENDIF}
+                                                                                if BaseBuffer^.Tag < MAX_CONFIG_DATA then
+                                                                                begin
+                                                                                  // Very wasteful and slow 1 at a time but it is easy
+                                                                                  AppCallback_ConfigurationRead(Node, @DataBytes[i], BaseBuffer^.Tag, 1);
+                                                                                  if DataBytes[i] = #0 then
+                                                                                    BaseBuffer^.StateMachine := STATE_ACDI_DONE
+                                                                                  else
+                                                                                  if BaseBuffer^.Tag = MAX_CONFIG_DATA - 1 then
+                                                                                    DataBytes[i] := #0;
+                                                                                  Inc(i);
+                                                                                  Inc(BaseBuffer^.Tag);
+                                                                                end else
+                                                                                   BaseBuffer^.StateMachine := STATE_ACDI_DONE;
+                                                                              end;
+                                                    STATE_ACDI_DONE         : begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_DONE'+LF); {$ENDIF}
+
+
+
+                                                                              end;
+                                                  end;
+                                                end;
+
+                                                if i > 0 then
+                                                  TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_SIMPLE_NODE_INFO_REPLY, BaseBuffer^.Alias, i, @DataBytes, False);
+
+                                                if BaseBuffer^.StateMachine >= STATE_ACDI_DONE then
+                                                begin
+                                                  NMRAnetUtilities_BaseBufferUnLink(Node, BaseBuffer);
+                                                  NMRAnetBufferPools_ReleaseBaseBuffer(BaseBuffer);
+                                                end;
+                                              end
+                                            end;
+       {$ENDIF} // BOOTLOADER
+
+      end;
+    end;
+    
+    if BaseBuffer <> nil then
+      Exit;              // Don't interleave Buffer Replies...
+      
+    {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+      if NMRABusBufferAvailable then
+      begin
+        if NMRAnetNode_IsAnyConsumerEventSet(Node) then
+        begin
+          EventIndex := NMRAnetNode_NextConsumerEventFlag(Node, State);
+          if EventIndex > -1 then
+          begin
+            {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
+              if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+                DataBytesPtr := PCAN_DataBytes( @SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex])
+              else
+            {$ENDIF}
+              DataBytesPtr := PCAN_DataBytes( @SUPPORTED_EVENTS_CONSUMED[EventIndex]);
+            case State of
+              EVENT_STATE_UNKOWN : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_UNKNOWN, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_VALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_INVALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_CLEAR, 0, 8, DataBytesPtr, False);
+            end;
+          end
+        end else
+        if NMRAnetNode_IsAnyProducerEventSet(Node) then
+        begin
+          EventIndex := NMRAnetNode_NextProducerEventFlag(Node, State);
+          if EventIndex > -1 then
+          begin
+            {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
+              if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+                DataBytesPtr := PCAN_DataBytes( @SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex])
+              else
+            {$ENDIF}
+              DataBytesPtr := PCAN_DataBytes( @SUPPORTED_EVENTS_PRODUCED[EventIndex]);
+            case State of
+              EVENT_STATE_UNKOWN : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_UNKNOWN, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_VALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_INVALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_CLEAR, 0, 8, DataBytesPtr, False);
+            end;
+          end
+        end;
+      end;
+    {$ENDIF}
+
+    DatagramBuffer := NMRAnetUtilities_NextDatagramBuffer(Node);                // Grab the next completed Datagram to work on
+    if DatagramBuffer <> nil then
+    begin
+      {$IFDEF TRACE_BUFFER_ADDRESSES}
+      UART1_Write_Text('DatagramBuffer Statemachine :');
+      WordToHex(DatagramBuffer, s1);
+      UART1_Write_Text('$'+s1+LF);
+      {$ENDIF}
+      
+      case DatagramBuffer^.mCode of
+        {$IFDEF BOOTLOADER}
+        BMC_DATAGRAM_BOOTLOADER            : begin
+                                               TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
+                                             end;
+        {$ENDIF}
+        BMC_DATAGRAM_MEMORY_CONFIG         : begin
+                                               case DatagramBuffer^.StateMachine of
+                                                 STATE_MEM_CONFIG_SEND_REPLY           : begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_SEND_REPLY'+LF); {$ENDIF}
+                                                                                           if DatagramBuffer^.DataBytes[1] and $C0 = MCP_OPERATION then
+                                                                                           begin
+                                                                                             if NMRABusBufferAvailable then
+                                                                                             begin
+                                                                                               TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
+                                                                                               DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_OPERATION_DATAGRAM
+                                                                                             end
+                                                                                           end else
+                                                                                           if DatagramBuffer^.DataBytes[1] and $C0 = MCP_READ then
+                                                                                           begin
+                                                                                             if NMRABusBufferAvailable then
+                                                                                             begin
+                                                                                               TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
+                                                                                               DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_READ_DATAGRAM
+                                                                                             end
+                                                                                           end else
+                                                                                           if DatagramBuffer^.DataBytes[1] and $C0 = MCP_WRITE then
+                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WRITE_DATAGRAM
+                                                                                         end;
+                                                 STATE_MEM_CONFIG_OPERATION_DATAGRAM   : begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_OPERATION_DATAGRAM'+LF);    {$ENDIF}
+                                                                                             // Reusing the Datagram for the send out
+                                                                                             case DatagramBuffer^.DataBytes[1] of      // Mask off the upper 2 bits
+                                                                                               MCP_OP_GET_CONFIG         : begin
+                                                                                                                             DatagramBuffer^.DataBytes[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+                                                                                                                             DatagramBuffer^.DataBytes[1] := MCP_OP_GET_CONFIG_REPLY;
+                                                                                                                             DatagramBuffer^.DataBytes[2] := Hi( MEMORY_CONFIG_OPTIONS.MemoryConfigOptions);
+                                                                                                                             DatagramBuffer^.DataBytes[3] := Lo( MEMORY_CONFIG_OPTIONS.MemoryConfigOptions);
+                                                                                                                             DatagramBuffer^.DataBytes[4] := MEMORY_CONFIG_OPTIONS.MemoryConfigWriteLength;
+                                                                                                                             DatagramBuffer^.DataBytes[5] := MEMORY_CONFIG_OPTIONS.MemoryConfigHighestSpace;
+                                                                                                                             DatagramBuffer^.DataBytes[6] := MEMORY_CONFIG_OPTIONS.MemoryConfigLowestSpace;
+                                                                                                                             DatagramBuffer^.iByteCount := 7;
+                                                                                                                           end;
+                                                                                               MCP_OP_GET_ADD_SPACE_INFO : begin
+                                                                                                                              DatagramBuffer^.DataBytes[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+                                                                                                                             DatagramBuffer^.DataBytes[1] := MCP_OP_GET_ADD_SPACE_INFO_REPLY or MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT;  // assumption is we support ALL Address Spaces
+                                                                                                                             DatagramBuffer^.DataBytes[2] := DatagramBuffer^.DataBytes[2];
+                                                                                                                               // I am not supporting the ability to return anything but a $0 for the lower address so we only deal with offsets from zero in these calls
+                                                                                                                             MemorySpaceMaxAddress := MaxAddressByAddressSpace(Node, DatagramBuffer^.DataBytes[2]);
+                                                                                                                             DatagramBuffer^.DataBytes[3] := (DWord(MemorySpaceMaxAddress) shr 24) and $000000FF;
+                                                                                                                             DatagramBuffer^.DataBytes[4] := (DWord(MemorySpaceMaxAddress) shr 16) and $000000FF;
+                                                                                                                             DatagramBuffer^.DataBytes[5] := (DWord(MemorySpaceMaxAddress) shr 8) and $000000FF;
+                                                                                                                             DatagramBuffer^.DataBytes[6] := DWord(MemorySpaceMaxAddress) and $000000FF;
+                                                                                                                             case DatagramBuffer^.DataBytes[2] of
+                                                                                                                               MSI_CONFIG, MSI_ACDI_USER : DatagramBuffer^.DataBytes[7] := $00          // Read/Write
+                                                                                                                             else
+                                                                                                                               DatagramBuffer^.DataBytes[7] := $01;                                     // Read Only
+                                                                                                                             end;
+                                                                                                                            DatagramBuffer^.iByteCount := 8;
+                                                                                                                           end;
+                                                                                               MCP_OP_LOCK               : begin
+                                                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WAITFOR_REPLY
+                                                                                                                            end;
+                                                                                               MCP_OP_GET_UNIQUEID       : begin
+                                                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WAITFOR_REPLY
+                                                                                                                           end;
+                                                                                               MCP_OP_FREEZE             : begin
+                                                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WAITFOR_REPLY
+                                                                                                                           end;
+                                                                                               MCP_OP_INDICATE           : begin
+                                                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WAITFOR_REPLY
+                                                                                                                           end;
+                                                                                               MCP_OP_RESETS             : begin
+                                                                                                                              DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WAITFOR_REPLY
+                                                                                                                           end;
+                                                                                             end; // case [Operation Type]
+                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM
+                                                                                          end;
+                                                 STATE_MEM_CONFIG_READ_DATAGRAM         : begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_READ_DATAGRAM'+LF);    {$ENDIF}
+                                                                                            MemorySpace := 0;
+                                                                                            MemorySpaceAddress := 0;
+                                                                                            MemorySpaceCount := 0;
+                                                                                            DecodeMemoryConfigurationReadWrite(Node, @DatagramBuffer^.DataBytes, MemorySpace, MemorySpaceAddress, MemorySpaceCount);
+
+                                                                                            // Reuse the Datagram and the first 6 Bytes.  The beauty here is the defines for this allow it to be a reply and still correctly enter this statemachine!  Thanks Bob!
+                                                                                            DatagramBuffer^.DataBytes[1] := MCP_READ_DATAGRAM_REPLY or DatagramBuffer^.DataBytes[1];
+
+                                                                                            // Depends on if the {Space} byte is used
+                                                                                            if DatagramBuffer^.DataBytes[1] and $03 = 0 then
+                                                                                              DatagramAddress := 7
+                                                                                            else
+                                                                                              DatagramAddress := 6;
+                                                                                            DatagramBuffer^.iByteCount := DatagramAddress;  // Start out with the 6 or 7 bytes for the header
+
+                                                                                            case MemorySpace of
+                                                                                              MSI_CDI       : begin {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                                                                                                if Node^.State and NS_VIRTUAL <> 0 then
+                                                                                                                begin
+                                                                                                                  for i := 0 to MemorySpaceCount - 1 do
+                                                                                                                    DatagramBuffer^.DataBytes[i+DatagramAddress] := CDI_ARRAY_VNODE[i+MemorySpaceAddress]
+                                                                                                                end else {$ENDIF}
+                                                                                                                begin
+                                                                                                                  for i := 0 to MemorySpaceCount - 1 do
+                                                                                                                    DatagramBuffer^.DataBytes[i+DatagramAddress] := CDI_ARRAY[i+MemorySpaceAddress]
+                                                                                                                end;
+                                                                                                                DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
+                                                                                                              end;
+                                                                                              MSI_ALL       : begin
+                                                                                                                ByteArray := PByteArray( ALL_MAP.LowMem);
+                                                                                                                for i := 0 to MemorySpaceCount - 1 do
+                                                                                                                  DatagramBuffer^.DataBytes[i+DatagramAddress] := ByteArray^[i+MemorySpaceAddress];
+                                                                                                                DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
+                                                                                                              end;
+                                                                                              MSI_CONFIG    : begin
+                                                                                                                DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + AppCallback_ConfigurationRead(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
+                                                                                                              end;
+                                                                                              MSI_ACDI_MFG  : begin
+                                                                                                                if MemorySpaceAddress = 0 then
+                                                                                                                begin
+                                                                                                                  DatagramBuffer^.DataBytes[DatagramAddress] := ACDI_MFG_VERSION;
+                                                                                                                  Inc(DatagramAddress);
+                                                                                                                  Dec(MemorySpaceCount);
+                                                                                                                  Inc(DatagramBuffer^.iByteCount);
+                                                                                                                end else
+                                                                                                                  Dec(MemorySpaceAddress);        // Need to adjust the Address Pointer in subsequent calls to account for the virtual Version Byte
+
+                                                                                                                {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                                                                                                if Node^.State and NS_VIRTUAL <> 0 then
+                                                                                                                begin
+                                                                                                                  for i := 0 to MemorySpaceCount - 1 do
+                                                                                                                    DatagramBuffer^.DataBytes[i+DatagramAddress] := ACDI_MFG_STRINGS_VNODE[i+MemorySpaceAddress]
+                                                                                                                end else {$ENDIF}
+                                                                                                                begin
+                                                                                                                  for i := 0 to MemorySpaceCount - 1 do
+                                                                                                                    DatagramBuffer^.DataBytes[i+DatagramAddress] := ACDI_MFG_STRINGS[i+MemorySpaceAddress]
+                                                                                                                end;
+                                                                                                                DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
+                                                                                                              end;
+                                                                                              MSI_ACDI_USER : begin
+                                                                                                                if MemorySpaceAddress = 0 then
+                                                                                                                begin
+                                                                                                                  DatagramBuffer^.DataBytes[DatagramAddress] := ACDI_USER_VERSION;
+                                                                                                                  Inc(DatagramAddress);
+                                                                                                                  Dec(MemorySpaceCount);
+                                                                                                                  Inc(DatagramBuffer^.iByteCount);
+                                                                                                                end else
+                                                                                                                  Dec(MemorySpaceAddress);        // Need to adjust the Address Pointer in subsequent calls to account for the virtual Version Byte
+
+                                                                                                                DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + AppCallback_ConfigurationRead(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
+                                                                                                              end;
+                                                                                            end;
+                                                                                            DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM;
+                                                                                          end;
+                                                 STATE_MEM_CONFIG_WRITE_DATAGRAM :        begin   {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_WRITE_DATAGRAM'+LF);    {$ENDIF}
+
+                                                                                            DatagramAddress := 6;
+                                                                                            case DatagramBuffer^.DataBytes[1] and $03 of      // Strip off bottom two bits
+                                                                                              MCP_CDI            : MemorySpace := MSI_CDI;
+                                                                                              MCP_ALL            : MemorySpace := MSI_ALL;
+                                                                                              MCP_CONFIGURATION  : MemorySpace := MSI_CONFIG;
+                                                                                              MCP_NONE           : begin
+                                                                                                                     DatagramAddress := 7;
+                                                                                                                     MemorySpace := DatagramBuffer^.DataBytes[6];
+                                                                                                                   end;
+                                                                                            end;
+                                                                                            MemorySpaceAddress := DWord( DatagramBuffer^.DataBytes[2] shl 24) or DWord( DatagramBuffer^.DataBytes[3] shl 16) or DWord( DatagramBuffer^.DataBytes[4] shl 8) or DWord( DatagramBuffer^.DataBytes[5]);
+                                                                                            MemorySpaceCount := DatagramBuffer^.iByteCount - DatagramAddress;
+                                                                                            case MemorySpace of
+                                                                                              MSI_CONFIG    : begin
+                                                                                                                AppCallback_ConfigurationWrite(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
+                                                                                                              end;
+                                                                                              MSI_ACDI_USER : begin
+                                                                                                                UART1_Write_Text('Unimplemented Configuration Mem write'+LF)
+                                                                                                              end;
+                                                                                            end;
+                                                                                            DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM;
+                                                                                          end;
+                                               STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM : begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM'+LF);    {$ENDIF}
+                                                                                            if NMRABusBufferAvailable then
+                                                                                            begin
+                                                                                              TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
+                                                                                              NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
+                                                                                              NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer)
+                                                                                            end
+                                                                                          end;
+                                                 STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM : begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM'+LF);    {$ENDIF}
+                                                                                            // This is safe because this will not be called until CBS_PROCESSSING is cleared simulating a "WaitForSendComplete"
+                                                                                            DatagramBuffer^.State := (DatagramBuffer^.State or CBS_OUTGOING or CBS_PROCESSING) and not CBS_TRANSFER_COMPLETE;  // Turn it into an outgoing Datagram
+                                                                                            DatagramBuffer^.Tag := 0;                                                          // Reset for the Transmit side
+                                                                                            DatagramBuffer^.iWatchdog := 0;
+                                                                                            DatagramBuffer^.SourceNodePtr := Generic16BitPointer( Node);                       // So the Transmit Engine knows what source Node and Alias to associate the Datagram to
+                                                                                            DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WAITFOR_REPLY;
+                                                                                          end;
+                                                 STATE_MEM_CONFIG_WAITFOR_REPLY :         begin   {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_WAITFOR_REPLY'+LF);   {$ENDIF}
+                                                                                            // This is updated within the CAN Interrupt
+                                                                                             {$IFDEF TRACE_CONFIG_MEM_DECODE}
+                                                                                              UART1_Write_Text('After'+LF); ByteToStr(MemorySpace, s1);
+                                                                                              UART1_Write_Text('MemorySpace= '+s1+LF); LongWordToStr(MemorySpaceMaxAddress, s1);
+                                                                                              UART1_Write_Text('MemorySpaceMaxAddress= '+s1+LF); LongWordToStr(MemorySpaceAddress, s1);
+                                                                                              UART1_Write_Text('MemorySpaceAddress= '+s1+LF); ShortToStr(MemorySpaceCount, s1);
+                                                                                              UART1_Write_Text('MemorySpaceCount= '+s1+LF);
+                                                                                              {$ENDIF}
+                                                                                          end;
+                                               end
+                                             end;
+        BMC_DATAGRAM_TRACTION_CONTROL      : begin
+                                               if DatagramTrainControlCallbackFunc <> PDatagramTaskCallbackFunc( nil) then
+                                                 DatagramTrainControlCallbackFunc(Node, DatagramBuffer);
+                                               TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
+                                               NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
+                                               NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer)
+                                             end;
+      end;
+    end;
+  end;
+end;
+
+
+// *****************************************************************************
+//  procedure ProcessOutgoingNode
+//     Parameters:
+//     Returns:
+//
+//     Description: If outgoing messages need to be queued up then this function
+//                  ensures all needed messages are sent;
+//                  Expects CAN to be disabled
+//
+// *****************************************************************************
+procedure ProcessOutgoingNode(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+var
+  DatagramBuffer: PDatagramBuffer;
+begin
+  // Look for outgoing Datagrams
+  DatagramBuffer := nil;
+  if NMRAnetUtilities_FindOutgoingDatagram(Node, DatagramBuffer, True) then
+  begin
+    {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetUtilities_FindOutgoingDatagram = Found'+LF);{$ENDIF}
+    {$IFDEF TRACE_DATAGRAM_SEND}WordToHex(DatagramBuffer^.SourceNodePtr, s1); UART1_Write_Text('SourceNodePtr = '+s1+LF);{$ENDIF}
+    
+    if NMRAnetStateMachine_TrySendDatagram(PNMRAnetNode( DatagramBuffer^.SourceNodePtr), CANBuffer, DatagramBuffer) then
+    begin
+      {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetStateMachine_TrySendDatagram = Sent'+LF);{$ENDIF}
+      DatagramBuffer^.State := (DatagramBuffer^.State and not CBS_PROCESSING) or CBS_TRANSFER_COMPLETE;    // Flag as complete so the caller and unlink and free
+    end;
+  end;
+end;
+
+procedure ProcessAbandonBuffers(Node: PNMRAnetNode);
+var
+  DatagramBuffer: PDatagramBuffer;
+begin
+  DatagramBuffer := Node^.DatagramBuffers;
+  if DatagramBuffer <> nil then
+  begin
+    if DatagramBuffer^.iWatchdog >= DATAGRAM_WATCHDOG_MAX then
+    begin
+      NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
+      NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);
+    end
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_Process
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetStateMachine_Process(Node: PNMRAnetNode);
+var
+  CANBuffer: TCANBuffer;
+  VariableField: DWord;
+begin
+ // WordToSTr(Node, s1);
+ // UART1_Write_Text(s1 +' '+LF);
+  
+  LockCANInterrupt;
+  case Node^.iStateMachine of
+    STATE_NMRABUS_START :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_START'+LF); {$ENDIF}
+        CANStorage_FlushBuffers(Node^.Info.AliasID);
+        while CAN_Engine.State and CES_TRANSMITTING <> 0 do;                             // Wait for the last transmited CANBuffer
+        Node^.iStateMachine := STATE_NMRABUS_GENERATE_NODE_ALIAS;
+      end;
+    STATE_NMRABUS_GENERATE_NODE_ALIAS :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_GENERATE_NODE_ALIAS'+LF); {$ENDIF}
+        Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False);
+        NMRAnetNode_SortNodeList(Nodes);
+        Node^.Login.iCID := 0;
+        Node^.iStateMachine := STATE_NMRABUS_TRANSMIT_CID;
+      end;
+    STATE_RANDOM_NUMBER_GENERATOR :
+      begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_RANDOM_NUMBER_GENERATOR'+LF); {$ENDIF}
+        NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(Node^.Info.Seed);
+        Node^.iStateMachine := STATE_NMRABUS_GENERATE_NODE_ALIAS;
+      end;
+    STATE_NMRABUS_TRANSMIT_CID :
+      begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_TRANSMIT_CID'+LF); {$ENDIF}
+        case Node^.Login.iCID of
+          0 : VariableField := MTI_CID0;                                         // Queue up
+          1 : VariableField := MTI_CID1;
+          2 : VariableField := MTI_CID2;
+          3 : VariableField := MTI_CID3;
+        end;
+        if CANBusBufferAvailable then
+        begin
+          TransmitCANLayerMsg(Node, @CANBuffer, VariableField);
+          Node^.iStateMachine := STATE_NMRABUS_NEXT_CDI;
+        end
+      end;
+    STATE_NMRABUS_NEXT_CDI :
+      begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_NEXT_CDI'+LF); {$ENDIF}
+        if Node^.Login.iCID < 3 then
+        begin
+          Inc(Node^.Login.iCID);
+          Node^.iStateMachine := STATE_NMRABUS_TRANSMIT_CID
+        end else 
+        begin
+          if CAN_Engine.State and CES_TRANSMITTING = 0 then                     // Wait until the transmission is complete before waiting the 200ms
+          begin
+            Node^.iStateMachine := STATE_NMRABUS_WAITSTATE;
+            Node^.Login.TimeCounter := 0;
+          end
+        end
+      end;
+    STATE_NMRABUS_WAITSTATE :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_WAITSTATE'+LF); {$ENDIF}
+        if Node^.Login.TimeCounter > MAX_BUS_LOGIN_TIMEOUT then
+          Node^.iStateMachine := STATE_NMRABUS_SEND_LOGIN_RID;
+      end;
+    STATE_NMRABUS_SEND_LOGIN_RID :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_SEND_LOGIN_RID'+LF); {$ENDIF}
+        if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then    
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
+        else begin
+          if CANBusBufferAvailable then
+          begin
+            TransmitCANLayerMsg(Node, @CANBuffer, MTI_RID);
+           Node^.iStateMachine := STATE_NMRABUS_SEND_LOGIN_AMD;
+          end
+        end
+      end;
+    STATE_NMRABUS_SEND_LOGIN_AMD :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_SEND_LOGIN_AMD'+LF); {$ENDIF}
+        if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
+        else begin
+          if CANBusBufferAvailable then
+          begin
+            TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMD);
+            NMRAnetNode_SetStateFlag(Node, NS_PERMITTED);
+            Node^.iStateMachine := STATE_NMRABUS_INITIALIZED
+          end
+        end
+      end;
+    STATE_NMRABUS_INITIALIZED :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_INITIALIZED'+LF); {$ENDIF}
+        if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
+        else begin
+          if NMRABusBufferAvailable then
+          begin
+            NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(Node, @CANBuffer);
+            TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_INITIALIZATION_COMPLETE, 0, 6, @CANBuffer.DataBytes, False);
+            Node^.iStateMachine := STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS;
+            NMRAnetNode_SetStateFlag(Node, NS_INITIALIZED);
+          end
+        end
+      end;
+    STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS :
+      begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS'+LF); {$ENDIF}
+   //     LockCANInterrupt;
+        // Fake an Identify Events to allow the AppCallbacks to be called
+        CANBuffer.State := CANBuffer.State or BS_EXTENDED;
+        CANBuffer.ID := $10000000 or MTI_EVENTS_IDENTIFY_DEST;                  // Make Alias ID $000 so we don't trigger a duplicate Alias ID loop!
+        CANBuffer.DataCount := 2;
+        CANBuffer.DataBytes[0] := Hi( Node^.Info.AliasID);                      // Addressed to this node
+        CANBuffer.DataBytes[1] := Lo( Node^.Info.AliasID);
+        ReceivedOnFilter1(@CANBuffer);
+  //      UnLockCANInterrupt;
+        Node^.iStateMachine := STATE_NMRABUS_PERMITTED;
+      end;
+    STATE_NMRABUS_PERMITTED :
+      begin  //    {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_PERMITTED'+LF); {$ENDIF}
+     //   UART1_Write_Text('inA'+LF);
+        ProcessNode(Node, @CANBuffer);                                             // Handle auto Actions to CAN/NMRAnet messages coming in
+        ProcessOutgoingNode(Node, @CANBuffer);
+        {$IFNDEF DISABLE_DATAGRAM_ABANDON_TIMEOUT}
+        ProcessAbandonBuffers(Node);
+        {$ENDIF}
+    //    UART1_Write_Text('outA'+LF);
+      end;
+    STATE_NMRABUS_INHIBITED :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_INHIBITED'+LF); {$ENDIF}  
+        CANStorage_FlushBuffers(Node^.Info.AliasID);
+        if CANBusBufferAvailable then
+        begin
+          TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
+          ReleaseBuffers(Node);
+          NMRAnetNode_ClearStateFlag(Node, NS_PERMITTED);
+          NMRAnetNode_ClearMsgFlags(Node);
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
+        end
+      end;
+    STATE_NMRABUS_DUPLICATE_FULL_ID :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_DUPLICATE_FULL_ID'+LF); {$ENDIF}
+        CANStorage_FlushBuffers(Node^.Info.AliasID);
+        if CANBusBufferAvailable then
+        begin
+          TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
+          ReleaseBuffers(Node);
+          NMRAnetNode_ClearStateFlag(Node, NS_PERMITTED);
+          NMRAnetNode_ClearMsgFlags(Node);
+          Node^.iStateMachine := STATE_NMRABUS_TAKE_OFFLINE
+        end
+      end;
+    STATE_NMRABUS_TAKE_OFFLINE :
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_TAKE_OFFLINE'+LF); {$ENDIF}
+        if NMRABusBufferAvailable then
+        begin
+          TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_PC_EVENT_REPORT, 0, 8, @EVENT_DUPLICATE_ID_DETECTED, False);
+          Node^.iStateMachine := STATE_NMRABUS_OFFLINE
+        end
+      end;
+    STATE_NMRABUS_OFFLINE :
+      begin
+        // Done until reboot
+      end
+  else
+    Node^.iStateMachine := STATE_NMRABUS_START;
+  end;
+  UnLockCANInterrupt;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_Disconnect
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetStateMachine_Disconnect(Node: PNMRAnetNode);
+begin
+  Node^.iStateMachine := STATE_NMRABUS_INHIBITED
+end;
+
+end.

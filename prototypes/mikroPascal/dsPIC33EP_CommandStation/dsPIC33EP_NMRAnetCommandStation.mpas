@@ -1,0 +1,232 @@
+program dsPIC33EP_NMRAnetCommandStation;
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//     2012-11-13:   Converted to the dsPIC33EP
+//     2012-11-13:   Updated to v2 of the NMRAbus Library
+//
+// * Description:
+//    Implements a NMRABus based Command Station
+//
+//
+//
+// ******************************************************************************
+
+uses
+  NMRAnetStateMachine,
+  NMRAnetDefines,
+  NMRAnetAppCallbacks,
+  NMRAnetDCC,
+  MCU_Setup_dsPIC33EP64GP502,
+  _25AAxxxx,
+  NMRAnetBufferPools,
+  NMRAnetNode,
+  NodeIDs;
+
+{$I Options.inc}
+
+var
+  // EEPROM SPI PINS
+  CS_Bank_0                         : sbit at LATB6_bit;
+  CS_Bank_0_Direction               : sbit at TRISB6_bit;
+  EE_PROM_Hold                      : sbit at LATB5_bit;
+  EEPROM_Hold_Direction             : sbit at TRISB5_bit;
+
+  // DCC SIGNAL PINS
+  H_Bridge_A_Lo                     : sbit at LATA1_bit;
+  H_Bridge_A_Hi                     : sbit at LATB0_bit;
+  H_Bridge_B_Lo                     : sbit at LATB1_bit;
+  H_Bridge_B_Hi                     : sbit at LATB4_bit;
+
+  H_Bridge_A_Lo_Direction           : sbit at TRISA1_bit;
+  H_Bridge_A_Hi_Direction           : sbit at TRISB0_bit;
+  H_Bridge_B_Lo_Direction           : sbit at TRISB1_bit;
+  H_Bridge_B_Hi_Direction           : sbit at TRISB4_bit;
+
+// *****************************************************************************
+//  INTERRUPTS
+// *****************************************************************************
+
+var
+  DCCTime: Word;
+  
+procedure INTERRUPT_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT;
+begin
+  T1IF_bit := 0;                                                                // Clear the Flag
+  
+  TMR5 := 0;
+
+
+  // Toggle the Bridge
+  H_Bridge_A_Lo := 0;                                                           // Bridge Off
+  H_Bridge_A_Hi := 0;                                                           // Bridge Off
+  H_Bridge_B_Lo := 0;                                                           // Bridge Off
+  H_Bridge_B_Hi := 0;                                                           // Bridge Off
+  
+  
+  if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
+  begin
+    H_Bridge_A_Lo := 1;
+    H_Bridge_B_Hi := 1;
+  end else
+  begin
+    H_Bridge_A_Hi := 1;
+    H_Bridge_B_Lo := 1;
+  end;
+
+  // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
+  NMRA_DCC_56us_TimeTick(@Track);                                                         // < 1us
+  NMRA_DCC_TransmitterStateMachine(@Track);                                               // < 5us
+  NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
+  
+  if TMR5 > DCCTime then DCCTime := TMR5;
+end;
+
+procedure INTERRUPT_1ms_Timer(); iv IVT_ADDR_T2INTERRUPT;
+// Called once every 100m
+var
+  i: Integer;
+begin
+  T2IF_bit := 0;                                                                // Clear the Flag
+  for i := 0 to Nodes.AllocatedCount - 1 do
+    NMRAnetStateMachine_100ms_Timer(Nodes.AllocatedList[i]);
+  NMRAnetBufferPools_100ms_TimeTick;
+end;
+
+// *******************
+// MAIN LOOP
+// *******************
+var
+  ActiveNode, TempNode: PNMRAnetNode;
+  i, j: Integer;
+  x, y: Word;
+  TickTime: real;
+  LastRxTime, LastStateMachineTime, LastDCCTime: Word;
+
+  ProxyData: PDccProxyData;
+begin
+  _25AAxxxx_Initialize;
+  NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_COMMANDSTATION_ID_0_LO);
+  MCU_Setup_Initialize;                                                         // Start the timers and perpherials last
+  NMRA_DCC_Initialize;
+
+  H_Bridge_A_Lo := 0;                                                           // Bridge Off
+  H_Bridge_A_Hi := 0;                                                           // Bridge Off
+  H_Bridge_B_Lo := 0;                                                           // Bridge Off
+  H_Bridge_B_Hi := 0;                                                           // Bridge Off
+  H_Bridge_A_Lo_Direction := 0;                                                 // Output
+  H_Bridge_A_Hi_Direction := 0;                                                 // Output
+  H_Bridge_B_Lo_Direction := 0;                                                 // Output
+  H_Bridge_B_Hi_Direction := 0;                                                 // Output
+
+  {$IFNDEF DCCTIMER_DISABLE}
+  TON_T1CON_bit := 1;                                                           // Start the DCC Timer
+  NMRA_DCC_Packet_Init;                                                         // Send our 20 Idle Packets per the spec, note we are not on the OLCB bus yet so this will block until done.
+  {$ENDIF}
+  
+  UART1_Write_Text('Starting'+LF);
+
+  x := 0;
+  y := 0;
+  j := 0;
+  i := 0;
+  MaxTime_RX := 0;
+  LastRxTime := 0;
+  MaxTime_StateMachine := 0;
+  LastStateMachineTime := 0;
+  DCCTime := 0;
+  LastDCCTime := 0;
+
+    TRISA4_bit := 0;
+    LATA4_bit := 0;                                                   // Output
+
+  j := 0;
+  
+  TON_T3CON_bit := 1;       // Turn on Timer 3 to time loops
+  TON_T4CON_bit := 1;       // Turn on Timer 3 to time loops
+  TON_T5CON_bit := 1;
+  
+  while (TRUE) do
+  begin
+    ActiveNode := NMRAnetNode_NextNode;
+    if ActiveNode <> PNMRAnetNode( nil) then
+    begin
+    
+      TMR3 := 0;
+      NMRAnetStateMachine_Process(ActiveNode);
+      if TMR3 > MaxTime_StateMachine then MaxTime_StateMachine := TMR3;
+
+      if MaxTime_StateMachine > LastStateMachineTime then
+      begin
+        LastStateMachineTime := MaxTime_StateMachine;
+        TickTime := real( LastStateMachineTime) * 16.6666666e-9;  // nano seconds
+        TickTime := TickTime*1e6;  // micro seconds (us)
+        FloatToStr(TickTime, s1) ;
+        UART1_Write_Text('StateMachineTime = ' + s1 + 'us'+LF);
+      end;
+      if MaxTime_Rx > LastRxTime then
+      begin
+        LastRxTime := MaxTime_Rx;
+        TickTime := real( LastRxTime) * 16.6666666e-9;  // nano seconds
+        TickTime := TickTime*1e6;  // micro seconds (us)
+        FloatToStr(TickTime, s1) ;
+        UART1_Write_Text('Rx Interrupt = ' + s1 + 'us'+LF);
+      end;
+      if DCCTime > LastDCCTime then
+      begin
+        LastDCCTime:= DCCTime;
+        TickTime := real( LastDCCTime) * 16.6666666e-9;  // nano seconds
+        TickTime := TickTime*1e6;  // micro seconds (us)
+        FloatToStr(TickTime, s1) ;
+        UART1_Write_Text('DCC Interrupt = ' + s1 + 'us'+LF);
+      end;
+        
+      if UART1_Data_Ready then
+      begin
+        case UART1_Read of
+          'P' : begin
+               //PrintDMABuffers
+             end;
+          'X' : begin
+                NMRAnetStateMachine_TrySendVerifyNodeID(ActiveNode, 0);
+             end;
+          'A', 'a' :
+            begin
+              NMRAnetNode_Allocate;
+            end;
+          'D', 'd' :
+            begin
+              TempNode := NMRAnetNode_FindFirstVirtualNode;
+              if TempNode <> nil then
+              begin
+                ProxyData := GetProxyData( TempNode);
+                ProxyData^.State := PS_ALLOCATED;
+              end;
+            end;
+          'F', 'f' :
+            begin
+              TempNode := NMRAnetNode_FindFirstVirtualNode;
+              if TempNode <> nil then
+              begin
+                // BETTER TO SET A STATE OF THE NODE TO SPIN UNTIL IT CAN SEND THE MESSAGE
+                while not NMRAnetStateMachine_TrySendAliasMapReset(TempNode) do;
+                  NMRAnetNode_Release(TempNode);
+              end;
+            end;
+        end;
+      end;
+    end;
+
+    if C1IE_bit = 0 then
+      UART1_Write_Text('CAN Disabled!');
+      
+  end;
+end.

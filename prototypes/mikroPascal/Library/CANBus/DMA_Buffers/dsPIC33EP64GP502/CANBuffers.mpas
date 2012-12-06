@@ -1,0 +1,32 @@
+unit CANBuffers;
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-04-01:   1.0.0.0 Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//                Implements an easy to use interface into the dsPIC33 ECAN Module Registers
+//                It is fast, no.  Is it efficient, no.  Is it easy to experiment with to try to
+//                understand how this module works, YES
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+uses
+  CANStorage;
+
+var
+  TX_Main_RawBufferArray: TCAN_TxRawBufferArray; absolute $1000;                                                 // Transmit buffer for all filters.  The software pulls the data to the right list
+  RX_Main_RawBufferArray: TCAN_RxRawBufferArray; absolute ($1000 + (SizeOf(TCANRawBuffer)*MAX_ECAN_TX_BUFFER));  // Recieve buffer for all filters.  The software moves the data to the right list
+
+
+end.

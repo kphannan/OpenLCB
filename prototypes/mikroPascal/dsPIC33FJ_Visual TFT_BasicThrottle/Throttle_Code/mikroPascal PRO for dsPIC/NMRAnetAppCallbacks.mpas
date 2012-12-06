@@ -1,0 +1,121 @@
+unit NMRAnetAppCallbacks;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//
+// * Description:
+//    Implements program specific callbacks for memory configuration etc.
+//
+//   AppCallbacks for the Mustangpeak Command Station
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+uses
+  NMRAnetAppDefines,
+  NMRAnetDefines;
+
+type
+  TVolatileData = record
+    Dummy: Byte;
+  end;
+  PVolatileData = ^TVolatileData;
+
+const
+  MAX_CFG_DATA = 1024;                                                          // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TConfigurationData up to 1024
+
+type
+  TConfigurationData = record
+    Dummy: Byte;
+  end;
+  PConfigurationData = ^TConfigurationData;
+
+procedure NMRAnetAppCallbacks_Initialize;
+function ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+function ConfigurationSize(Node: PNMRAnetNode): Word;
+procedure AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+procedure AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+
+implementation
+
+// Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
+// node in the AssignRAMAddress function below
+var
+  VolatileData: array[0..MAX_NODE_COUNT - 1] of TVolatileData;
+
+// *****************************************************************************
+// Writes the Configuration Memory from the App defined storage device
+//  Node:  The Node to write the Configuration Data for
+//  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the EEPROM
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+procedure ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+begin
+
+end;
+
+// *****************************************************************************
+// Reads the Configuration Memory from the App defined storage device
+//  Node:  The Node to read the Configuration Data for
+//  DataTarget  : A pointer memory space to write the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the DataTarget
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+function ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+begin
+  Result := 0;
+end;
+
+//******************************************************************************
+//  Returns the overall size of the Configuration Data
+//******************************************************************************
+function ConfigurationSize(Node: PNMRAnetNode): Word;
+begin
+  Result := MAX_CONFIG_DATA;
+end;
+
+//******************************************************************************
+//  Associates the offset of the EEPROM for the Configuration Data for the Node
+//******************************************************************************
+procedure AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  Node^.ConfigurationAddress := Generic32BitPointer( iNode * MAX_CFG_DATA);
+end;
+
+//******************************************************************************
+//  Associates the Address of the RAM for Volatile Node Data
+//******************************************************************************
+procedure AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  Node^.RAMAddress := Generic32BitPointer( @VolatileData[iNode]);
+end;
+
+//******************************************************************************
+//  Initialize the VolatileData structure
+//******************************************************************************
+procedure NMRAnetAppCallbacks_Initialize;
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_NODE_COUNT - 1 do
+  begin
+  end
+end;
+
+end.

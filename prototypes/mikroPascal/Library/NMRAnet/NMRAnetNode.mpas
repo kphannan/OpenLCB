@@ -1,0 +1,822 @@
+unit NMRAnetNode;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-06-15:   Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+
+//
+// *****************************************************************************
+
+{$I Options.inc}
+
+uses
+  NMRAnetUtilities,
+  NMRAnetAppDefines,
+  NMRAnetDefines,
+  NMRAnetDefinesShared;
+  
+  procedure NMRAnetNode_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
+  function NMRAnetNode_Allocate: PNMRAnetNode;
+  procedure NMRAnetNode_Release(Node: PNMRAnetNode);
+  function NMRAnetNode_FindByAlias(AliasID: Word): PNMRAnetNode;
+  function NMRAnetNode_FindByNodeID(var NodeID: TNodeID): PNMRAnetNode;
+  function NMRAnetNode_FindFirstVirtualNode: PNMRAnetNode;
+  function NMRAnetNode_FindLastVirtualNode: PNMRAnetNode;
+
+  function NMRAnetNode_NextNode: PNMRAnetNode;
+  procedure NMRAnetNode_SortNodeList(var LocalNodes: TNodes);
+  
+  procedure NMRAnetNode_SetStateFlag(Node: PNMRAnetNode; Flag: Byte);
+  procedure NMRAnetNode_ClearStateFlag(Node: PNMRAnetNode; Flag: Byte);
+  function NMRAnetNode_TestStateFlag(Node: PNMRAnetNode; Flag: Byte): Boolean;
+  
+  procedure NMRAnetNode_SetMsgFlag(Node: PNMRAnetNode; Flag: Byte);   
+  procedure NMRAnetNode_SetMsgFlags(StateFlags: Word);
+  procedure NMRAnetNode_ClearMsgFlag(Node: PNMRAnetNode; Flag: Byte);
+  procedure NMRAnetNode_ClearMsgFlags(Node: PNMRAnetNode);
+  function NMRAnetNode_TestMsgFlags(Node: PNMRAnetNode; Flag: Word; DoClear: Boolean): Boolean;
+  
+  procedure NMRAnetNode_SetProducerEventFlags(Node: PNMRAnetNode; State: Byte);
+  procedure NMRAnetNode_SetProducerEventFlag(Node: PNMRAnetNode; EventIndex: Integer; State: Byte);
+  procedure NMRAnetNode_ClearProducerEventFlags(Node: PNMRAnetNode);
+  function NMRAnetNode_NextProducerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
+  function NMRAnetNode_IsAnyProducerEventSet(Node: PNMRAnetNode): Boolean;
+  
+  procedure NMRAnetNode_SetConsumerEventFlags(Node: PNMRAnetNode; State: Byte);
+  procedure NMRAnetNode_SetConsumerEventFlag(Node: PNMRAnetNode; EventIndex: Integer; State: Byte);
+  procedure NMRAnetNode_ClearConsumerEventFlags(Node: PNMRAnetNode);
+  function NMRAnetNode_NextConsumerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
+  function NMRAnetNode_IsAnyConsumerEventSet(Node: PNMRAnetNode): Boolean;
+
+  
+  
+  // Defined in NMRAnetStateMachine.mpas
+  procedure NMRAnetStateMachine_InitializeNode(NodeBuffer: PNMRAnetNode; NodeID_HI, NodeID_Lo: DWord); external;
+  procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);  external;
+  procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);  external;
+  procedure AppCallback_NodeAllocate(Node: PNMRAnetNode); external;
+  procedure LockCANInterrupt; external;
+  procedure UnLockCANInterrupt; external;
+
+var
+  Nodes: TNodes;
+  
+implementation
+
+// *****************************************************************************
+//  procedure NMRAnetNode_SortNodeList;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+//
+//    procedure InsertionSort(a:array of char, arrlength:integer);
+//    var
+//      i,j,v : integer;
+//    begin
+//      for i := 2 to arrlength do
+//      begin
+//        v := a[i];
+//        j := i;
+//        while (j > 0) and (a[j-1] > v) do
+//        begin
+//          a[j] := a[j-1];
+//          j := j - 1;
+//        end; //while
+//        a[j] := v;
+//      end; //for
+//    end
+// *****************************************************************************
+procedure NMRAnetNode_SortNodeList(var LocalNodes: TNodes);
+var
+  i, j: Integer;
+  LocalData: PNMRAnetNode;
+begin
+  for i := 1 to LocalNodes.AllocatedCount - 1 do
+  begin
+    LocalData := LocalNodes.AllocatedList[i];
+    j := i;
+    while (j > 0) and (LocalNodes.AllocatedList[j-1]^.Info.AliasID > LocalData^.Info.AliasID) do
+    begin
+      LocalNodes.AllocatedList[j] := LocalNodes.AllocatedList[j-1];
+      j := j - 1;
+      if j = 0 then                                                             // mPascal does not support short circuit Boolean so the [j-1] when j = 0 is bad in the while conditional define
+        Break;
+    end;
+    LocalNodes.AllocatedList[j] := LocalData;
+    
+  end;
+end;
+
+// *****************************************************************************
+//  procedure BinarySearchAliasID;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+//
+// function BinarySearch(const DataSortedAscending: array of Integer; const ElementValueWanted: Integer): Integer;
+// var
+//   MinIndex, MaxIndex: Integer;
+//   MedianIndex, MedianValue: Integer;
+//  begin
+//      MinIndex := Low(DataSortedAscending);
+//      MaxIndex := High(DataSortedAscending);
+//      while MinIndex <= MaxIndex do begin
+//          MedianIndex := (MinIndex + MaxIndex) div 2; (* If you're going to change the data type here e.g. Integer to SmallInt consider the possibility of an overflow. All it needs to go bad is MinIndex=(High(MinIndex) div 2), MaxIndex = Succ(MinIndex). *)
+//          MedianValue := DataSortedAscending[MedianIndex];
+//          if ElementValueWanted < MedianValue then
+//              MaxIndex := Pred(MedianIndex)
+//          else if ElementValueWanted = MedianValue then begin
+//              Result := MedianIndex;
+//              Exit; (* Successful exit. *)
+//          end else
+//              MinIndex := Succ(MedianIndex);
+//      end;
+//      Result := -1; (* We couldn't find it. *)
+//  end;
+// *****************************************************************************
+function BinarySearchAliasID(var LocalNodes: TNodes; AliasID: Word): Integer;
+var
+  Min, Max, Middle: Integer;
+  MidAliasID: Word;
+begin
+  Min := 0;
+  Max := LocalNodes.AllocatedCount - 1;
+  while Min <= Max do
+  begin
+    Middle := (Min + Max) shr 1;
+    MidAliasID := LocalNodes.AllocatedList[Middle]^.Info.AliasID;
+    if AliasID < MidAliasID then
+      Max := Middle - 1
+    else
+    if AliasID = MidAliasID then
+    begin
+      Result := Middle;
+      Exit
+    end else
+      Min := Middle + 1
+  end;
+  Result := -1;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetlNode_FindByAlias;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetNode_FindByAlias(AliasID: Word): PNMRAnetNode;
+var
+  Index: Integer;
+begin
+  Result := PNMRAnetNode( nil);
+ {
+  for Index := 0 to Nodes.AllocatedCount- 1 do
+  begin
+    if Nodes.AllocatedList[Index]^.Info.AliasID = AliasID then
+    begin
+      Result := Nodes.AllocatedList[Index];
+      Exit;
+    end;
+  end;
+    }
+  Index := BinarySearchAliasID(Nodes, AliasID);
+  if (Index > -1) and (Index < Nodes.AllocatedCount) then
+    Result := Nodes.AllocatedList[Index];
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_FindByNodeID;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+//                READ ME:
+//                   Currently this uses a dog slow search.  If we declare that
+//                   the vNodes must be continous and have the same upper 3 bytes
+//                   then this can collapse to a check the upper 3 bytes then check
+//                   the lower 3 bytes to be between two values (NodeID and NodeID+vNodeCount)
+// *****************************************************************************
+function NMRAnetNode_FindByNodeID(var NodeID: TNodeID): PNMRAnetNode;
+var
+  i: Integer;
+begin
+  Result := PNMRAnetNode( nil);
+  for i := 0 to Nodes.AllocatedCount - 1 do
+  begin
+    if Nodes.AllocatedList[i]^.Info.ID[0] = NodeID[0] then
+      if Nodes.AllocatedList[i]^.Info.ID[1] = NodeID[1] then
+      begin
+        Result := Nodes.AllocatedList[i];
+        Break
+      end;
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_FindByNodeID;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+//                READ ME:
+//                   Currently this uses a dog slow search.  If we declare that
+//                   the vNodes must be continous and have the same upper 3 bytes
+//                   then this can collapse to a check the upper 3 bytes then check
+//                   the lower 3 bytes to be between two values (NodeID and NodeID+vNodeCount)
+// *****************************************************************************
+function NMRAnetNode_FindFirstVirtualNode: PNMRAnetNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := 0;
+  while (i < Nodes.AllocatedCount) do
+  begin
+    if Nodes.AllocatedList[i]^.State and NS_VIRTUAL = NS_VIRTUAL then
+    begin
+      Result := Nodes.AllocatedList[i];
+      Break;
+    end;
+    Inc(i);
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_FindLastVirtualNode;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+//                READ ME:
+//                   Currently this uses a dog slow search.  If we declare that
+//                   the vNodes must be continous and have the same upper 3 bytes
+//                   then this can collapse to a check the upper 3 bytes then check
+//                   the lower 3 bytes to be between two values (NodeID and NodeID+vNodeCount)
+// *****************************************************************************
+function NMRAnetNode_FindLastVirtualNode: PNMRAnetNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := Nodes.AllocatedCount - 1;
+  while (i > -1) do
+  begin
+    if Nodes.AllocatedList[i]^.State and NS_VIRTUAL = NS_VIRTUAL then
+    begin
+      Result := Nodes.AllocatedList[i];
+      Break;
+    end;
+    Dec(i);
+  end;
+end;
+  
+
+// *****************************************************************************
+//  procedure NMRAnetNode_Initialize;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
+var
+  i: Integer;
+  Node: PNMRAnetNode;
+begin
+  Nodes.iActiveNode := 0;
+  Nodes.AllocatedCount := 0;
+  for i := 0 to MAX_NODE_COUNT - 1 do
+  begin
+    NMRAnetStateMachine_InitializeNode(@Nodes.RawList[i], PhysicalNodeID_HI, PhysicalNodeID_LO + i);  // Physical Node + i MUST FIT IN THE LOWER 3 BYTES
+    AppCallback_AssignConfigurationAddress(@Nodes.RawList[i], i);
+    AppCallback_AssignRAMAddress(@Nodes.RawList[i], i);
+  end;
+  Node := NMRAnetNode_Allocate;                                                 // Allocate the Physical Node
+  Node^.State := Node^.State and not NS_VIRTUAL;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_Allocate;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:  The new Node will create its alias and register to the CAN bus
+//                automatically as its statemachine begins to run
+// *****************************************************************************
+function NMRAnetNode_Allocate: PNMRAnetNode;
+begin
+  Result := PNMRAnetNode( nil);
+  if Nodes.AllocatedCount < MAX_NODE_COUNT then
+  begin
+    Result := @Nodes.RawList[Nodes.AllocatedCount];
+    NMRAnetStateMachine_InitializeNode(Result, 0, 0);                           // The NodeID was already created in the initialization
+    NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);
+    Nodes.AllocatedList[Nodes.AllocatedCount] := Result;
+    Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Info.Seed, False); // Pregenerate it so it can be sorted
+    Inc(Nodes.AllocatedCount);
+    NMRAnetNode_SortNodeList(Nodes);
+    AppCallback_NodeAllocate(Result);
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_Release;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_Release(Node: PNMRAnetNode);
+var
+  i, j: Word;
+begin
+  if Node <> nil then
+  begin
+    if Node^.State and NS_VIRTUAL = NS_VIRTUAL then                                     // Only release Virtual Nodes
+    begin
+      i := 0;
+      while i < Nodes.AllocatedCount do
+      begin
+        if Nodes.AllocatedList[i] = Node then
+        begin
+          Nodes.AllocatedList[i] := PNMRAnetNode( nil);
+          j := i;
+          while j < Nodes.AllocatedCount - 1 do
+          begin
+            Nodes.AllocatedList[j] := Nodes.AllocatedList[j + 1];
+            Nodes.AllocatedList[j + 1] := PNMRAnetNode( nil);
+            Inc(j);
+          end;
+          Dec(Nodes.AllocatedCount);
+          i := Nodes.AllocatedCount;                                                     // Done, break out
+        end;
+        Inc(i);
+      end;
+      Node^.State := NS_EMPTY;                                                  // Do this last so item is not allocated in an interrupt half way through this
+    end;
+  end;
+end;
+
+
+// *****************************************************************************
+//  procedure NMRAnetNode_SetMsgFlags;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_SetMsgFlags(MsgFlags: Word);
+var
+  i: Integer;
+  Node: PNMRAnetNode;
+begin
+  for i := 0 to Nodes.AllocatedCount - 1 do
+  begin
+    Node := Nodes.AllocatedList[i];
+    if Node^.State and NS_PERMITTED = NS_PERMITTED then
+      Node^.MsgFlags := Node^.MsgFlags or MsgFlags
+    else
+      Node^.MsgFlags := 0;
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_NextNode;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetNode_NextNode: PNMRAnetNode;
+begin
+  LockCANInterrupt;
+  Result := PNMRAnetNode( nil);
+  if Nodes.AllocatedCount > 0 then
+  begin
+    if Nodes.iActiveNode > Nodes.AllocatedCount - 1 then
+      Nodes.iActiveNode := 0;
+    Result := Nodes.AllocatedList[Nodes.iActiveNode];
+    Inc(Nodes.iActiveNode);
+  end;
+  UnLockCANInterrupt;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_SetStateFlag;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_SetStateFlag(Node: PNMRAnetNode; Flag: Byte);
+begin
+  Node^.State := Node^.State or Flag;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_ClearStateFlag;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_ClearStateFlag(Node: PNMRAnetNode; Flag: Byte);
+begin
+  Node^.State := Node^.State and not Flag;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_TestStateFlag;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetNode_TestStateFlag(Node: PNMRAnetNode; Flag: Byte): Boolean;
+begin
+  Result := Node^.State and Flag = Flag;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_SetMsgFlag;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_SetMsgFlag(Node: PNMRAnetNode; Flag: Byte);
+begin
+  Node^.MsgFlags := Node^.MsgFlags or Flag;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_ClearMsgFlag;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_ClearMsgFlag(Node: PNMRAnetNode; Flag: Byte);
+begin
+  Node^.MsgFlags := Node^.MsgFlags and not Flag;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetNode_ClearMsgFlags;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetNode_ClearMsgFlags(Node: PNMRAnetNode);
+begin
+  Node^.MsgFlags := 0;
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_TestMsgFlags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_TestMsgFlags(Node: PNMRAnetNode; Flag: Word; DoClear: Boolean): Boolean;
+begin
+  Result := Node^.MsgFlags and Flag = Flag;
+  if DoClear then
+    NMRAnetNode_ClearMsgFlag(Node, Flag);
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_SetProducerEventFlags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_SetProducerEventFlags(Node: PNMRAnetNode; State: Byte);
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+    ByteOffset, i, EventOffset: Integer;
+    Mask: Byte;
+{$ENDIF}
+begin
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+    {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+    if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    begin
+      for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
+        NMRAnetNode_SetProducerEventFlag(Node, i, State);
+    end else
+    {$ENDIF}
+    begin
+      for i := 0 to MAX_SUPPORTED_EVENTS_PRODUCED - 1 do
+        NMRAnetNode_SetProducerEventFlag(Node, i, State);
+    end
+ {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_SetProducerEventFlag
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_SetProducerEventFlag(Node: PNMRAnetNode; EventIndex: Integer; State: Byte);
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+    ByteOffset, EventOffset: Integer;
+    Mask: Byte;
+{$ENDIF}
+begin
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  ByteOffset := EventIndex div 4;    // There are 4 Events supported in each Byte
+  EventOffset := EventIndex mod 4;   // There are
+  Mask := %00000011;
+  Mask := Mask shl (EventOffset * 2);  // 2 bits per event
+  Mask := not Mask;
+  Node^.EventsProducedFlags[ByteOffset] := Node^.EventsProducedFlags[ByteOffset] and Mask;  // Clear it
+  Mask := State shl (EventOffset * 2);
+  Node^.EventsProducedFlags[ByteOffset] := Node^.EventsProducedFlags[ByteOffset] or Mask;  // Set it to the State
+ {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_ClearProducerEventFlags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_ClearProducerEventFlags(Node: PNMRAnetNode);
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+    i: Integer;
+{$ENDIF}
+begin
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+    for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do                          // Shortcut to clear all
+      Node^.EventsProducedFlags[i] := 0;
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_NextProducerEventFlag
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_NextProducerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+    i, j: Integer;
+    Temp: Byte;
+{$ENDIF}
+begin
+  Result := -1;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+    for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do
+    begin
+      if Node^.EventsProducedFlags[i] <> 0 then
+      begin
+        Temp := Node^.EventsProducedFlags[i];
+        for j := 0 to 3 do                                                      // Find the first non zero state in the byte
+        begin
+          State := Temp and $03;
+          if State <> 0 then
+          begin
+            Result := (i*4) + j;
+            NMRAnetNode_SetProducerEventFlag(Node, Result, EVENT_STATE_CLEAR); // Clear the flag
+            Exit;
+          end else
+            Temp := Temp shr 2;
+        end
+      end
+    end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_IsAnyProducerEventSet
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_IsAnyProducerEventSet(Node: PNMRAnetNode): Boolean;
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+   i: Integer;
+{$ENDIF}
+begin
+  Result := False;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+    for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do                          // Shortcut to see if any bits are set in any event
+    begin
+      if Node^.EventsProducedFlags[i] <> 0 then
+      begin
+        Result := True;
+        Exit
+      end
+    end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_SetConsumerEventFlags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_SetConsumerEventFlags(Node: PNMRAnetNode; State: Byte);
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+    i: Integer;
+{$ENDIF}
+begin
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+    {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+    if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    begin
+      for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
+        NMRAnetNode_SetConsumerEventFlag(Node, i, State);
+    end else
+    {$ENDIF}
+    begin
+      for i := 0 to MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
+        NMRAnetNode_SetConsumerEventFlag(Node, i, State);
+    end
+ {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_SetConsumerEventFlag
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_SetConsumerEventFlag(Node: PNMRAnetNode; EventIndex: Integer; State: Byte);
+{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  var
+    ByteOffset, EventOffset: Integer;
+    Mask: Byte;
+{$ENDIF}
+begin
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  ByteOffset := EventIndex div 4;    // There are 4 Events supported in each Byte
+  EventOffset := EventIndex mod 4;   // There are
+  Mask := %00000011;
+  Mask := Mask shl (EventOffset * 2);  // 2 bits per event
+  Mask := not Mask;
+  Node^.EventsConsumedFlags[ByteOffset] := Node^.EventsConsumedFlags[ByteOffset] and Mask;
+  Mask := State shl (EventOffset * 2);
+  Node^.EventsConsumedFlags[ByteOffset] := Node^.EventsConsumedFlags[ByteOffset] or Mask;
+ {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_ClearConsumerEventFlags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_ClearConsumerEventFlags(Node: PNMRAnetNode);
+{$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+  var
+    i: Integer;
+{$ENDIF}
+begin
+  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+    for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do                          // Shortcut to clear them all
+      Node^.EventsConsumedFlags[i] := 0;
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_NextConsumerEventFlag
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_NextConsumerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
+{$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+  var
+    i, j: Integer;
+    Temp: Byte;
+{$ENDIF}
+begin
+  Result := -1;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+    for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+    begin
+      if Node^.EventsConsumedFlags[i] <> 0 then
+      begin
+        Temp := Node^.EventsConsumedFlags[i];
+        for j := 0 to 3 do                                                      // Find the first non zero state in the byte
+        begin
+          State := Temp and $03;
+          if State <> 0 then
+          begin
+            Result := (i*4) + j;
+            NMRAnetNode_SetConsumerEventFlag(Node, Result, EVENT_STATE_CLEAR); // Clear the flag
+            Exit;
+          end else
+            Temp := Temp shr 2;
+        end
+      end
+    end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_IsAnyConsumerEventSet
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_IsAnyConsumerEventSet(Node: PNMRAnetNode): Boolean;
+{$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+  var
+    i: Integer;
+{$ENDIF}
+begin
+  Result := False;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+    for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+    begin
+      if Node^.EventsConsumedFlags[i] <> 0 then
+      begin
+        Result := True;
+        Exit
+      end
+    end
+  {$ENDIF}
+end;
+
+end.

@@ -1,0 +1,100 @@
+[DEVICE]
+Name=P33FJ256GP710A
+Clock=64000000
+[MEMORY_MODEL]
+Value=0
+[BUILD_TYPE]
+Value=0
+[ACTIVE_TAB]
+Value=Throttle_driver.mpas
+[USE_EEPROM]
+Value=0
+[EEPROM_DEFINITION]
+Value=
+[USE_HEAP]
+Value=0
+[HEAP_SIZE]
+Value=2000
+[FILES]
+Count=21
+File0=Throttle_main.mpas
+File1=Throttle_objects.mpas
+File2=Throttle_driver.mpas
+File3=Throttle_events_code.mpas
+File4=Throttle_resources.mpas
+File5=MCU_Setup_dsPIC33FJ256GP710A.mpas
+File6=NMRAnetAppCallbacks.mpas
+File7=NMRAnetAppDefines.mpas
+File8=..\..\..\Library\CANBus\CANStorage.mpas
+File9=..\..\..\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\CANBuffers.mpas
+File10=..\..\..\Library\dsPIC33F\dsPIC33_CAN.mpas
+File11=..\..\..\Library\dsPIC33F\dsPIC33_DMA.mpas
+File12=..\..\..\Library\NMRAnet\NMRAnetBufferPools.mpas
+File13=..\..\..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File14=..\..\..\Library\NMRAnet\NMRAnetDatagrams.mpas
+File15=..\..\..\Library\NMRAnet\NMRAnetDefines.mpas
+File16=..\..\..\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File17=..\..\..\Library\NMRAnet\NMRAnetNode.mpas
+File18=..\..\..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File19=..\..\..\Library\NMRAnet\NMRAnetUtilities.mpas
+File20=..\..\..\Library\NodeIDs.mpas
+[BINARIES]
+Count=0
+[IMAGES]
+Count=0
+ActiveImageIndex=-1
+[OPENED_FILES]
+Count=12
+File0=Throttle_main.mpas
+File1=..\..\..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File2=..\..\..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File3=..\..\..\Library\dsPIC33F\dsPIC33_CAN.mpas
+File4=MCU_Setup_dsPIC33FJ256GP710A.mpas
+File5=..\..\..\Library\CANBus\CANStorage.mpas
+File6=..\..\..\Library\dsPIC33F\dsPIC33_DMA.mpas
+File7=NMRAnetAppDefines.mpas
+File8=..\..\..\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\CANBuffers.mpas
+File9=..\..\..\Library\NMRAnet\NMRAnetNode.mpas
+File10=..\..\..\Library\NMRAnet\NMRAnetDefines.mpas
+File11=Throttle_driver.mpas
+[EEPROM]
+Count=0
+[ACTIVE_COMMENTS_FILES]
+Count=0
+[OTHER_FILES]
+Count=1
+File0=Options.inc
+[SEARCH_PATH]
+Count=9
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path2=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
+Path4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
+Path5=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
+Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
+Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
+Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
+[HEADER_PATH]
+Count=0
+[HEADERS]
+Count=0
+[PLDS]
+Count=0
+[Useses]
+Count=11
+File0=TFT
+File1=TFT_Fonts
+File2=ADC
+File3=TFT_TouchPanel
+File4=Spi
+File5=String
+File6=C_Type
+File7=Conversions
+File8=ECAN
+File9=Button
+File10=UART
+[EXPANDED NODES]
+Node1=Sources
+Node2=Other Files
+Count=2

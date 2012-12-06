@@ -1,0 +1,538 @@
+unit NMRAnetAppCallbacks;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//
+// * Description:
+//    Implements program specific callbacks for memory configuration etc.
+//
+//   AppCallbacks for the Mustangpeak Command Station
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+uses
+  _25AAxxxx,
+  NMRAnetStateMachine,
+  NMRAnetDCC,
+  CANStorage,
+  NMRAnetAppDefines,
+  NMRAnetDefines,
+  NMRAnetNode,
+  NMRAnetUtilities,
+  Float16,
+  NMRAnetDefinesShared;
+
+const
+  TRACTION_PROTOCOL_MASK             = $F0;
+  TRACTION_OLCB                      = $00;
+  TRACTION_DCC                       = $80;
+
+  TRACTION_OP_MASK                   = $0F;
+  TRACTION_OP_SPEED_DIR              = $00;
+  TRACTION_OP_FUNCTION               = $01;
+  TRACTION_OP_PROXY_MGMT             = $02;
+
+  DCC_ALLOCATE_ADDRESS               = $01;
+  DCC_FUNCTION_28                    = $00;
+  DCC_FUNCTION_32k                   = $01;
+  
+  DCC_FUNCTION_TABLE: array[0..28] of byte = (
+    %10010000,        // F0
+    %10000001,        // F1
+    %10000010,        // F2
+    %10000100,        // F3
+    %10001000,        // F4
+    %10110001,        // F5
+    %10110010,        // F6
+    %10110100,        // F7
+    %10111000,        // F8
+    %10100001,        // F9
+    %10100010,        // F10
+    %10100100,        // F11
+    %10101000,        // F12
+    %00000001,        // F13
+    %00000010,        // F14
+    %00000100,        // F15
+    %00001000,        // F16
+    %00010000,        // F17
+    %00100000,        // F18
+    %01000000,        // F19
+    %10000000,        // F20
+    %00000001,        // F21
+    %00000010,        // F22
+    %00000100,        // F23
+    %00001000,        // F24
+    %00010000,        // F25
+    %00100000,        // F26
+    %01000000,        // F27
+    %10000000         // F28
+  );
+  
+const
+  PS_ALLOCATED             = $01;                                               // The Proxy is Allocated
+  
+  MSG_DCC_ADDRESS_ALLOCATED = $01;                                               // Need to send a Message for the DCC Address was Allocated
+  
+type
+  TDccProxyData = record
+    State: Byte;                                                                // State of the Proxy Node
+    MsgFlags: Byte;                                                             // Message Flags for messages that need to be sent in the Statemachine
+    Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
+    Functions: DWord;                                                           // Function State (F0..F28)
+    Address: Word;                                                              // DCC Address
+  end;
+  PDccProxyData = ^TDccProxyData;
+
+const
+  MAX_DCC_CFG_DATA = 1024;                                                      // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TDCCConfigurationData up to 1024
+
+type
+  TDCCConfigurationData = record
+    FunctionLatch: DWord;                                                       // If the Function is latching or not, F0..F31    //   4 Bytes
+    FunctionName: array[32] of string[16];                                      // Names for the Functions                        // 512 Bytes
+    ConsistNext,                                                                //                                                //   4 Bytes
+    ConsistPrev: TNodeID;                                                       //                                                //   4 Bytes
+  end;
+  PDCCConfigurationData = ^TDCCConfigurationData;
+
+procedure NMRAnetAppCallbacks_Initialize;
+function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_EventsIdentify: Boolean;
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+
+function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
+
+
+implementation
+
+// Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
+// node in the AssignRAMAddress function below
+var
+  VolatileData: array[0..MAX_NODE_COUNT - 1] of TDccProxyData;
+  
+  
+function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
+begin
+  Result := nil;
+  if Node <> nil then
+    Result := PDccProxyData( Node^.RAMAddress);
+end;
+
+// *****************************************************************************
+// Writes the Configuration Memory from the App defined storage device
+//  Node:  The Node to write the Configuration Data for
+//  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the EEPROM
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+begin
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+  _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+end;
+
+// *****************************************************************************
+// Reads the Configuration Memory from the App defined storage device
+//  Node:  The Node to read the Configuration Data for
+//  DataTarget  : A pointer memory space to write the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the DataTarget
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+begin
+   while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+
+   Result := MaxCount;
+   _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+end;
+
+//******************************************************************************
+//  Returns the overall size of the Configuration Data
+//******************************************************************************
+function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
+begin
+  Result := MAX_CONFIG_DATA;
+end;
+
+//******************************************************************************
+//  Associates the offset of the EEPROM for the Configuration Data for the Node
+//******************************************************************************
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  Node^.ConfigurationAddress := Generic32BitPointer( iNode * MAX_DCC_CFG_DATA);
+end;
+
+//******************************************************************************
+//  Associates the Address of the RAM for Volatile Node Data
+//******************************************************************************
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  Node^.RAMAddress := Generic32BitPointer( @VolatileData[iNode]);
+end;
+
+//******************************************************************************
+//  Initialize the VolatileData structure
+//******************************************************************************
+procedure NMRAnetAppCallbacks_Initialize;
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_NODE_COUNT - 1 do
+  begin
+    VolatileData[i].State := 0;
+    VolatileData[i].Speed := 0;
+    VolatileData[i].Functions := 0;
+    VolatileData[i].MsgFlags := 0;
+    VolatileData[i].Address := 0;
+  end
+end;
+
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+var
+  ProxyData: PDccProxyData;
+begin
+  ProxyData := GetProxyData(Node);
+  ProxyData^.State := 0;
+  ProxyData^.Address := 0;
+  ProxyData^.MsgFlags := 0;
+  ProxyData^.Speed := 0;
+  ProxyData^.Functions := 0;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure SetProxyNodeDccAddressFlags(Node: PNMRAnetNode; Event: PEventID);
+var
+  TestForSetFlag: Boolean;
+  ProxyData: PDccProxyData;
+  Address: Word;
+begin
+  TestForSetFlag := True;
+  if Event <> nil then
+    TestForSetFlag := (Event^[0] = $06) and (Event^[1] = $01);
+
+  if TestForSetFlag then
+  begin
+    ProxyData := GetProxyData(Node);
+    if ProxyData^.State and PS_ALLOCATED = PS_ALLOCATED then
+    begin
+      Address := (Event^[4] shl 8) or Event^[5];
+      if ProxyData^.Address = Address then
+        ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_DCC_ADDRESS_ALLOCATED;
+    end
+  end
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure SetProxyNodeProducerFlags(Node: PNMRAnetNode; EventIndex: Integer);
+begin
+  // This uses the fact that there are hard coded will known Event ID offsets in the Event Arrays
+  case EventIndex of
+    EVENT_TRAIN_INDEX           : NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
+    EVENT_TRAIN_DCC_IDLE_INDEX  : begin
+                                    if GetProxyData(Node)^.State and PS_ALLOCATED = PS_ALLOCATED then
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID)
+                                    else
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
+                                  end;
+    EVENT_TRAIN_DCC_INUSE_INDEX : begin
+                                    if GetProxyData(Node)^.State and PS_ALLOCATED = PS_ALLOCATED then
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID)
+                                    else
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID);
+                                  end
+  else
+    NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_UNKOWN);
+  end
+end;
+
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+var
+  i, VNodeEventIndex, NodeEventIndex: Integer;
+  VNodeEvent, NodeEvent: Boolean;
+begin
+  Result := True;                                                               // We handle the message
+  VNodeEventIndex := -1;
+  NodeEventIndex := -1;
+  VNodeEvent := NMRAnetUtilities_SupportsVNodeEventAsProducer(Event, VNodeEventIndex);
+  NodeEvent := NMRAnetUtilities_SupportsEventAsProducer(Event, NodeEventIndex);
+  for i := 0 to Nodes.AllocatedCount - 1 do
+  begin
+    if NMRAnetNode_TestStateFlag(Nodes.AllocatedList[i], NS_VIRTUAL) then
+    begin
+      if VNodeEvent then
+        SetProxyNodeProducerFlags(Nodes.AllocatedList[i], VNodeEventIndex);
+      SetProxyNodeDccAddressFlags(Nodes.AllocatedList[i], Event);
+    end else
+    begin
+      if NodeEvent then
+        NMRAnetNode_SetProducerEventFlag(Nodes.AllocatedList[0], NodeEventIndex, EVENT_STATE_UNKOWN);
+    end
+  end;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+begin
+  Result := False;                                                              // Do the default
+end;
+
+function AppCallback_EventsIdentify: Boolean;
+var
+  j, ProducerIndex: Integer;
+  Node: PNMRAnetNode;
+begin
+  Result := True;                                                               // We handled it
+  for j := 0 to Nodes.AllocatedCount - 1 do
+  begin
+    Node := Nodes.AllocatedList[j];
+    if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    begin
+      NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);              // Consumers are eaay.
+      for ProducerIndex := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do      // Producers take some work
+      begin
+        SetProxyNodeProducerFlags(Node, ProducerIndex);
+        SetProxyNodeDccAddressFlags(Node, nil);
+      end
+    end else
+    begin
+      NMRAnetNode_SetProducerEventFlags(Node, EVENT_STATE_UNKOWN);
+      NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);
+    end
+  end;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+var
+  ProducerIndex: Integer;
+begin
+  Result := True;                                                               // We handled it
+  NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);                  // Consumers are eaay.
+
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+  begin
+    for ProducerIndex := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do        // Producers take some work
+      SetProxyNodeProducerFlags(Node, ProducerIndex);
+    SetProxyNodeDccAddressFlags(Node, nil);
+  end else
+  begin
+    NMRAnetNode_SetProducerEventFlags(Node, EVENT_STATE_UNKOWN);
+    NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);
+  end;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+var
+  ProxyData: PDccProxyData;
+  FunctionAddress: Word;
+  SpeedInt: Integer;
+  DCCPacket: TDCCPacket;
+  AddressHi, AddressLo, FunctionMask, FunctionExtendedCode, FunctionValue: Byte;
+  WideFunctionMask: DWord;
+begin
+  ProxyData := GetProxyData(Node);
+  AddressHi := (ProxyDAta^.Address shr 8) and $00FF;
+  AddressLo := ProxyDAta^.Address and $00FF;
+  case CANBuffer^.DataBytes[2] and TRACTION_PROTOCOL_MASK of
+    TRACTION_OLCB :
+      begin  // OLCB Train Protocol
+        case CANBuffer^.DataBytes[2] and TRACTION_OP_MASK of
+          TRACTION_OP_SPEED_DIR :
+            begin
+            
+              SpeedInt := HalfToFloat( (CANBuffer^.DataBytes[3] shl 8) or (CANBuffer^.DataBytes[4]));
+
+            end;
+          TRACTION_OP_FUNCTION :
+            begin
+            end;
+        end;
+      end;
+    TRACTION_DCC :
+      begin  // DCC Train Protocol
+        case CANBuffer^.DataBytes[2] and $0F of
+          TRACTION_OP_SPEED_DIR :
+            begin
+              ProxyData^.Speed := CANBuffer^.DataBytes[3];
+              if AddressHi and $C0 = $C0 then
+              begin    // Extended Address
+                if CANBuffer^.DataBytes[4] = 128 then
+                begin
+                {  UART1_Write_Text('Extended Address; 128 Step'+LF);IntToHex(AddressHi, s1);UART1_Write_Text(s1+LF);IntToHex(AddressLo, s1);UART1_Write_Text(s1+LF);IntToHex(ProxyData^.Speed, s1);UART1_Write_Text(s1+LF);     }
+                  NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, ProxyData^.Speed, 0, 4);
+                end
+                else
+                begin
+             {   UART1_Write_Text('Extended Address; 14/28 Step'+LF); IntToHex(AddressHi, s1);UART1_Write_Text(s1+LF); IntToHex(AddressLo, s1);UART1_Write_Text(s1+LF);IntToHex(ProxyData^.Speed, s1);UART1_Write_Text(s1+LF);}
+                  NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, ProxyData^.Speed, 0, 0, 3);
+                end;
+                NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+              end else
+              begin    // Short Address
+                if CANBuffer^.DataBytes[4] < 128 then // Can't do short address with 128 Step
+                begin
+              {   UART1_Write_Text('Short Address; 14/28 Step'+LF); IntToHex(AddressLo, s1); UART1_Write_Text(s1+LF); IntToHex(ProxyData^.Speed, s1); UART1_Write_Text(s1+LF); }
+                  NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, ProxyData^.Speed, 0, 0, 0, 2);
+                  NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                end else
+                begin
+                {  UART1_Write_Text('Short Address; 128 Step: INVALID'+LF); }
+                end
+              end;
+            end;
+          TRACTION_OP_FUNCTION :
+            begin
+              FunctionAddress := (CANBuffer^.DataBytes[4] shl 8) or CANBuffer^.DataBytes[5];
+              FunctionValue := CANBuffer^.DataBytes[6];
+              
+              case CANBuffer^.DataBytes[3] of
+                DCC_FUNCTION_28 :
+                  begin
+                 { UART1_Write_Text('DCC_FUNCTION_28'+LF); IntToHex(CANBuffer^.DataBytes[2], s1); UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[3], s1); UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[4], s1); UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[5], s1);UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[6], s1); UART1_Write_Text(s1+LF);}
+                    
+                    WideFunctionMask := $00000001;
+                    WideFunctionMask := WideFunctionMask shl FunctionAddress;   // Set the correct Function Bit
+                    ProxyData^.Functions := ProxyData^.Functions and not WideFunctionMask; // Clear the bit
+                    if FunctionValue > 0 then
+                      ProxyData^.Functions := ProxyData^.Functions or WideFunctionMask;      // Set the bit if needed
+
+                    if FunctionAddress < 29 then
+                    begin
+                      if FunctionAddress < 5 then
+                      begin
+                        FunctionMask := (ProxyData^.Functions shr 1) and $0F;
+                        FunctionMask.4 := ProxyData^.Functions.0;
+                        FunctionMask := FunctionMask or %10000000;                    // Opcode bits
+                      end else
+                      if FunctionAddress < 9 then
+                      begin
+                        FunctionMask := (ProxyData^.Functions shr 5) and $0F;
+                        FunctionMask := FunctionMask or %10110000;                    // Opcode bits
+                      end else
+                      if FunctionAddress < 13 then
+                      begin
+                        FunctionMask := (ProxyData^.Functions shr 9) and $0F;
+                        FunctionMask := FunctionMask or %10100000;                    // Opcode bits
+                      end else
+                      if FunctionAddress < 21 then
+                      begin
+                        FunctionMask := ProxyData^.Functions shr 13;
+                        FunctionExtendedCode := %11011110
+                      end else
+                      begin
+                        FunctionMask := ProxyData^.Functions shr 21;
+                        FunctionExtendedCode := %11011111
+                      end;
+                      
+                      // Now create the DCC Packet
+                      if AddressHi and $C0 = $C0 then
+                      begin    // UART1_Write_Text('Long Address'+LF);
+                        if FunctionAddress < 13 then
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionMask, 0, 0, 3)
+                        else
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionExtendedCode, FunctionMask, 0, 4)
+                      end else
+                      begin
+                        if FunctionAddress < 13 then
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionMask, 0, 0, 0, 3)
+                        else
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionExtendedCode, FunctionMask, 0, 0, 4)
+                      end;
+
+                      NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                    end
+                  end;
+                DCC_FUNCTION_32k :
+                  begin
+                    UART1_Write_Text('DCC_FUNCTION_32k'+LF);
+                  end;
+              end;
+            end;
+          TRACTION_OP_PROXY_MGMT :
+            begin
+              case CANBuffer^.DataBytes[3] of
+                DCC_ALLOCATE_ADDRESS :
+                  begin
+                    ProxyData^.State := ProxyData^.State or PS_ALLOCATED;
+                    ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
+                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
+                    ProxyData^.Address := Word ((CANBuffer^.DataBytes[4] shl 8)) or CANBuffer^.DataBytes[5];  // This is in NMRA DCC format for short/long address
+                  end;
+                end;
+            end;
+        end;
+      end;
+  end
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+var
+  ProxyData: PDccProxyData;
+begin
+  // We are in a CAN Lock block already
+  Result := False;
+  ProxyData := GetProxyData(Node);
+  if ProxyData^.MsgFlags and MSG_DCC_ADDRESS_ALLOCATED = MSG_DCC_ADDRESS_ALLOCATED then
+  begin
+    DataBytesPtr^[0] := $06;
+    DataBytesPtr^[1] := $01;
+    DataBytesPtr^[2] := $00;
+    DataBytesPtr^[3] := $00;
+    DataBytesPtr^[4] := (ProxyData^.Address shr 8) and $00FF;
+    DataBytesPtr^[5] := ProxyData^.Address and $00FF;
+    DataBytesPtr^[6] := $00;
+    DataBytesPtr^[7] := $01;
+    if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False) then
+    begin
+      ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_DCC_ADDRESS_ALLOCATED;
+      Result := True;
+    end
+  end;
+end;
+
+end.

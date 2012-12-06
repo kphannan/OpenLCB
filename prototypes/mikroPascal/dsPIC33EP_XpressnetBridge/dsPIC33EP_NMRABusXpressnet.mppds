@@ -1,0 +1,88 @@
+[DEVICE]
+Name=P33EP64GP502
+Clock=64000000
+[MEMORY_MODEL]
+Value=-1
+[BUILD_TYPE]
+Value=0
+[ACTIVE_TAB]
+Value=NMRAnetAppDefines.mpas
+[USE_EEPROM]
+Value=0
+[USE_HEAP]
+Value=0
+[HEAP_SIZE]
+Value=2000
+[EEPROM_DEFINITION]
+Value=
+[FILES]
+Count=19
+File0=dsPIC33EP_NMRABusXpressnet.mpas
+File1=MCU_Setup_dsPIC33EP64GP502.mpas
+File2=NMRAnetAppCallbacks.mpas
+File3=NMRAnetAppDefines.mpas
+File4=..\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\CANBuffers.mpas
+File5=..\Library\CANBus\CANStorage.mpas
+File6=..\Library\dsPIC33F\dsPIC33_CAN.mpas
+File7=..\Library\dsPIC33F\dsPIC33_DMA.mpas
+File8=..\Library\InterfaceIntegratedCircuits\_25AAxxxx.mpas
+File9=..\Library\NMRAnet\NMRAnetBufferPools.mpas
+File10=..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File11=..\Library\NMRAnet\NMRAnetDatagrams.mpas
+File12=..\Library\NMRAnet\NMRAnetDefines.mpas
+File13=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File14=..\Library\NMRAnet\NMRAnetNode.mpas
+File15=..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File16=..\Library\NMRAnet\NMRAnetUtilities.mpas
+File17=..\Library\Xpressnet\NMRANetXpressnet.mpas
+File18=..\Library\NodeIDs.mpas
+[BINARIES]
+Count=0
+[IMAGES]
+Count=0
+ActiveImageIndex=-1
+[OPENED_FILES]
+Count=6
+File0=dsPIC33EP_NMRABusXpressnet.mpas
+File1=..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File2=..\Library\NMRAnet\NMRAnetNode.mpas
+File3=..\Library\NMRAnet\NMRAnetDefines.mpas
+File4=..\Library\Xpressnet\NMRAnetXpressnet.mpas
+File5=NMRAnetAppDefines.mpas
+[EEPROM]
+Count=0
+[ACTIVE_COMMENTS_FILES]
+Count=0
+[OTHER_FILES]
+Count=1
+File0=Options.inc
+[SEARCH_PATH]
+Count=10
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path2=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_XpressnetBridge\
+Path3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
+Path4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
+Path5=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
+Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
+Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
+Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\Xpressnet\
+Path9=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
+[HEADER_PATH]
+Count=0
+[HEADERS]
+Count=0
+[PLDS]
+Count=0
+[Useses]
+Count=6
+File0=Conversions
+File1=String
+File2=CAN
+File3=UART
+File4=Peripheral_Pin_Select
+File5=SPI
+[EXPANDED NODES]
+Node1=Sources
+Node2=Other Files
+Count=2

@@ -1,0 +1,285 @@
+unit MCP2515;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+
+//
+// *****************************************************************************
+
+uses
+  CAN_Data;
+  
+{$I Options.inc}
+
+const
+  CAN_TX_PRIORITY_0 = 0;     // Lowest Transmit Priority
+  CAN_TX_PRIORITY_1 = 1;
+  CAN_TX_PRIORITY_2 = 2;
+  CAN_TX_PRIORITY_3 = 3;    // Highest Transmit Priority
+  
+  CAN_TX_0 = 0;                 // Transmitter Buffer 0
+  CAN_TX_1 = 1;                 // Transmitter Buffer 1
+  CAN_TX_2 = 2;                 // Transmitter Buffer 2
+  
+  TXB0CTRL_MCP2515 = $30;
+  TXB1CTRL_MCP2515 = $40;
+  TXB2CTRL_MCP2515 = $50;
+  
+  ABTF_MCP2515 = 6;
+  MLOA_MCP2515 = 5;
+  TXERR_MCP2515 = 4;
+  TXREQ_MCP2515 = 3;
+  TXP_0_MCP2515 = 0;
+  TXP_1_MCP2515 = 1;
+
+  TXRTSCTRL_MCP2515 = $0D;
+  
+  B2RTS_MCP2515 = 5;
+  B1RTS_MCP2515 = 4;
+  B0RTS_MCP2515 = 3;
+  B2RTSM_MCP2515 = 2;
+  B1RTSM_MCP2515 = 1;
+  B0RTSM_MCP2515 = 0;
+
+
+  // Interrupt Enables
+  CANINTE_MCP2515 = $2B;
+  
+  MERRE_MCP2515 = 7;
+  WAKIE_MCP2515 = 6;
+  ERRIE_MCP2515 = 5;
+  TX2IE_MCP2515 = 4;
+  TX1IE_MCP2515 = 3;
+  TX0IE_MCP2515 = 2;
+  RX1IE_MCP2515 = 1;
+  RX0IE_MCP2515 = 0;
+  
+  // Interrupt Flags
+  CANINTF_MCP2515 = $2C;
+
+  MERRF_MCP2515 = 7;
+  WAKIF_MCP2515 = 6;
+  ERRIF_MCP2515 = 5;
+  TX2IF_MCP2515 = 4;
+  TX1IF_MCP2515 = 3;
+  TX0IF_MCP2515 = 2;
+  RX1IF_MCP2515 = 1;
+  RX0IF_MCP2515 = 0;
+  
+  CANINTF_RX_FLAGS_MASK = $03;      // RXnIF flags
+  CANINTF_TX_FLAGS_MASK = $1C;      // TXnIF flags
+  CANINTF_ERROR_FLAG_MASK = $20;    // ERRIF flag
+  
+  // CAN Control Register
+  CANCTRL_MCP2515 = $0F;   // Actually any upper 4 bits are valid this register maps across all banks $0F to $FF are equal
+
+  REQOP2_MCP2515 = 7;
+  REQOP1_MCP2515 = 6;
+  REQOP0_MCP2515 = 5;
+  ABAT_MCP2515 = 4;
+  OSM_MCP2515 = 3;
+  CLKEN_MCP2515 = 2;
+  CLKPRE1_MCP2515 = 1;
+  CLKPRE0_MCP2515 = 0;
+  
+  // CAN Status Register
+  CANSTAT_MCP2515 = $0E;  // Actually any upper 4 bits are valid this register maps across all banks $0E to $FE are equal
+
+  OPMOD2_MCP_2515 = 7;
+  OPMOD1_MCP_2515 = 6;
+  OPMOD0_MCP_2515 = 5;
+  ICOD2_MCP_2515 = 3;
+  ICOD1_MCP_2515 = 2;
+  ICOD0_MCP_2515 = 1;
+  
+  RXB0CTRL_MCP2515 = $60;  // Receive Buffer 0 Control
+  
+  RXB1CTRL_MCP2515 = $70;  // Receive Buffer 1 Control
+  
+  CNF1_MCP2515 = $2A;      // Configuration 1
+  
+  CNF2_MCP2515 = $29;      // Configuration 2
+  
+  CNF3_MCP2515 = $28;      // Configuration 3
+  
+  EFLG_MCP2515 = $2D;
+  
+var
+  CanSpi_CS_MCP2515: sBit; sfr; external;
+  CanSpi_CS_Direction_MCP2515: sBit; sfr; external;
+  
+procedure MCP2515_Initialize;
+procedure MCP2515_CANWriteRegister(iRegister, Value: Byte);
+function MCP2515_CANReadRegister(iRegister: Byte): Byte;
+procedure MCP2515_CANModifyBit(iRegister, BitIndex: Byte; IsOne: Boolean);
+procedure MCP2515_CANReadRXBuffer(Buffer: Byte; var ID: DWord; var DataCount: Byte; var DataBytes: TCANData; var IsExtended: Boolean);
+procedure MCP2515_CANWriteTXBuffer(Buffer: Byte; ID: DWord; DataCount: Byte; var DataBytes: TCANData; IsExtended: Boolean; Priority: Byte);
+  
+implementation
+
+function SPI_Write_MP(DataByte: Byte): Byte;
+begin
+  // We have waited for the SPI to empty before returning so the buffer is empty on entry
+  Result := SPI1BUF;       // Force the SPIRBF flag to clear
+  nop;
+  SPI1BUF := DataByte;   // This will set the SPITBF flag until the byte is written into the output latch to be sent.
+  {$IFNDEF SIMULATE_SPI}
+  while SPIRBF_bit = 0 do;
+  {$ENDIF}
+  Result := SPI1BUF;
+end;
+
+function SPI_Read_MP(Dummy: Byte): Byte;
+begin
+  // We have waited for the SPI to empty before returning so the buffer is empty on entry
+  Result := SPI1BUF;       // Force the SPIRBF flag to clear
+  nop;
+  SPI1BUF := Dummy;   // This will set the SPITBF flag until the byte is written into the output latch to be sent.
+  {$IFNDEF SIMULATE_SPI}
+  while SPIRBF_bit = 0 do;
+  {$ENDIF}
+  Result := SPI1BUF;
+end;
+
+procedure MCP2515_Initialize;
+begin
+  CanSpi_CS_Direction_MCP2515 := 0; // Output
+end;
+
+function MCP2515_CANReadRegister(iRegister: Byte): Byte;
+begin
+  CanSpi_CS_MCP2515 := 0; nop;
+  SPI_Write_MP(%00000011);
+  SPI_Write_MP(iRegister);
+  Result := SPI_Read_MP(iRegister);
+  CanSpi_CS_MCP2515 := 1;
+end;
+
+procedure MCP2515_CANWriteRegister(iRegister, Value: Byte);
+begin
+  CanSpi_CS_MCP2515 := 0; nop;
+  SPI_Write_MP(%00000010);
+  SPI_Write_MP(iRegister);
+  SPI_Write_MP(Value);
+  CanSpi_CS_MCP2515 := 1;
+end;
+
+procedure MCP2515_CANModifyBit(iRegister, BitIndex: Byte; IsOne: Boolean);
+var
+  Mask: Byte;
+begin
+  Mask := $01;
+  Mask := Mask shl BitIndex;
+  CanSpi_CS_MCP2515 := 0; nop;
+  SPI_Write_MP(%00000101);
+  SPI_Write_MP(iRegister);
+  SPI_Write_MP(Mask);
+  if IsOne then
+    Mask := $FF
+  else
+    Mask := $00;
+  SPI_Write_MP(Mask);
+  CanSpi_CS_MCP2515 := 1;
+end;
+
+procedure MCP2515_CANReadRXBuffer(Buffer: Byte; var ID: DWord; var DataCount: Byte; var DataBytes: TCANData; var IsExtended: Boolean);
+//
+// Fast reads the Receive Registers.  C
+//
+var
+  i: Integer;
+begin
+  ID := 0;
+  CanSpi_CS_MCP2515 := 0; nop;
+
+  if Buffer = 0 then
+    SPI_Write_MP(%10010000)
+  else
+    SPI_Write_MP(%10010100);
+
+  ID := (SPI_Read_MP(Buffer) shl 24) or ID;
+  ID := (SPI_Read_MP(Buffer) shl 16) or ID;
+  ID := (SPI_Read_MP(Buffer) shl 8) or ID;
+  ID := SPI_Read_MP(Buffer) or ID;
+
+  DataCount := SPI_Read_MP(Buffer) and $0F;
+  for i := 0 to DataCount - 1 do
+    DataBytes[i] := SPI_Read_MP(Buffer);
+
+  IsExtended := ID and $00080000 <> 0;     // Check the IDE (ID Extended) bit
+  if IsExtended then
+    ID := ((ID and $FFE00000) shr 3) or (ID and $0003FFFF)  // Strip out the SRR/IDE/Unimplemented Bits
+  else
+    ID := (ID and $FFE00000) shr 21;
+
+  CanSpi_CS_MCP2515 := 1;     // This will also clear the corresponding interrupt flag....
+end;
+
+procedure MCP2515_CANWriteTXBuffer(Buffer: Byte; ID: DWord; DataCount: Byte; var DataBytes: TCANData; IsExtended: Boolean; Priority: Byte);
+//
+// Fast reads the Receive Registers.  Currently limited by the SPI_Read function that takes
+// 1us-2us dead times due to delays (need to try to write SPI routines again...)
+//
+//   Priorty = 0..3 with 3 being highest priority, see CAN_TX_PRIORITY_x constants
+//
+var
+  i: Integer;
+  Address: Byte;
+begin
+  CanSpi_CS_MCP2515 := 0; nop;
+
+  if Buffer = 0 then
+  begin
+    SPI_Write_MP(%01000000);
+    Address := TXB0CTRL_MCP2515
+  end else
+  if Buffer = 1 then
+  begin
+    SPI_Write_MP(%01000010);
+    Address := TXB1CTRL_MCP2515
+  end else
+  begin
+    SPI_Write_MP(%01000100);
+    Address := TXB2CTRL_MCP2515
+  end;
+  ID := ((ID and $1FFC0000) shl 3) or (ID and $0003FFFF);
+  
+  if IsExtended then
+  begin
+    ID := ID or $00080000;
+    SPI_Write_MP(Byte( ID shr 24));
+    SPI_Write_MP(Byte( ID shr 16));
+    SPI_Write_MP(Byte( ID shr 8));
+    SPI_Write_MP(Byte( ID))
+  end else
+  begin
+    SPI_Write_MP(Byte( ID shr 3));
+    SPI_Write_MP(Byte( ID shl 5));
+    SPI_Write_MP($00);
+    SPI_Write_MP($00);
+  end;
+
+  SPI_Write_MP(Byte( DataCount ));
+  
+  for i := 0 to DataCount - 1 do
+    SPI_Write_MP( DataBytes[i]);
+
+  CanSpi_CS_MCP2515 := 1; nop;
+  
+  // Now set the Control Tx Request to start the transmission
+  MCP2515_CANWriteRegister(Address, Priority or $08)   // Set Priority and Set Transmit Request Bit (TxREQ)
+end;
+
+end.

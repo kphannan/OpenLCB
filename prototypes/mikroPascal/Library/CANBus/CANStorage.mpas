@@ -1,0 +1,177 @@
+unit CANStorage;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-04-01:   1.0.0.0 Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//    Implements a FIFO data structure for CAN Message Buffers
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+{.$DEFINE TRACK_CAN_BUFFER_OVERFLOWS}
+
+uses
+  NMRAnetDefines;
+
+const
+  TX_CAN_BUFFER_LEN = 2;
+  TX_NMRANET_BUFFER_LEN = 2;
+
+  CAN_DIRECTION_READ = 1;
+  CAN_DIRECTION_WRITE = 0;
+  
+  MAX_ECAN_TX_BUFFER = 2;
+  MAX_ECAN_RX_BUFFER = 2;
+
+const
+  CES_TRANSMITTING = $0001;                                                     // CAN Engine State constants
+  
+const
+  BS_EXTENDED     = $01;                                                       // CAN Buffer State constants, Buffer is extended
+  BS_ALLOCATED    = $02;                                                       // Buffer Slot contains valid data to send
+  
+const
+  CAN_DATA_LEN = 8;
+
+type
+  TCAN_DataBytes = array[CAN_DATA_LEN] of Byte;
+  PCAN_DataBytes = ^TCAN_DataBytes;
+
+  // ***************************************************************************
+  // CAN Message Buffers in raw form that can be loaded into the CAN controller
+  // registers
+  //   NOTE: For the dsPIC33 RX and TX are identical, for the dsPIC30 the bit
+  //         patterns are different between RX and TX
+  // ***************************************************************************
+  TCANRawBuffer = record
+    Word0    : Word;   // if Standard Message then SID else EID upper Bits
+    Word1    : Word;   // if Standard Message then Data Length Code else low bits of EID and upper bits of SID
+    Word2    : Word;   // if Standard Message then Data 0 and Data 1 else low bits of SID and Data Length Code
+    Word3    : Word;   // if Standard Message then Data 2 and Data 3 else Data 0 and Data 1
+    Word4    : Word;   // if Standard Message then Data 4 and Data 5 else Data 2 and Data 3
+    Word5    : Word;   // if Standard Message then Data 6 and Data 7 else Data 4 and Data 5
+    Word6    : Word;   // if Standard Message then, not used, else Data 6 and Data 7
+    Word7    : Word;   // dsPIC33 only, For TX not used for RX the Filter that passed the message
+  end;
+  PCANRawBuffer = ^TCANRawBuffer;
+
+  TCAN_RxRawBufferArray = array[0..MAX_ECAN_RX_BUFFER-1] of TCANRawBuffer;
+  TCAN_TxRawBufferArray = array[0..MAX_ECAN_TX_BUFFER-1] of TCANRawBuffer;
+  
+type
+ // ***************************************************************************
+  // CAN Message Buffers in user friendly form that can be easily maniuplated then
+  // loaded into the Raw CAN FIFOs
+  // ***************************************************************************
+  TCANBuffer = record
+    ID: DWord;
+    DataCount: Byte;
+    DataBytes: TCAN_DataBytes;
+    State: Byte;                                                                // See CBS_xxxx Constants (CAN Buffer State)
+  end;
+  PCANBuffer = ^TCANBuffer;
+
+ type
+  TCAN_Engine = record
+    State: Byte;                                                                // See the CES_xxx constants (CAN Engine State)
+    InterruptLockCount: Byte;
+    TX_CANBuffer,
+    TX_NMRAnetBuffer,
+    TX_AddressedErrorBuffer,
+    TX_DatagramRejected: TCANBuffer;
+  end;
+
+procedure CANStorage_Initialize;
+procedure CANStorage_FlushBuffers(AliasID: Word);
+
+// *****************************************************************************
+// These are exported through the "external" modifier
+// *****************************************************************************
+function CANStorage_NextToSend: PCANBuffer;
+function CANStorage_NextHighPriorityToSend: PCANBuffer;
+// *****************************************************************************
+
+var
+  CAN_Engine: TCAN_Engine;
+
+implementation
+
+procedure CANStorage_Initialize;
+begin
+  CAN_Engine.State := 0;
+  CAN_Engine.InterruptLockCount := 0;
+  
+  CAN_Engine.TX_CANBuffer.ID := 0;
+  CAN_Engine.TX_CANBuffer.DataCount := 0;
+  CAN_Engine.TX_CANBuffer.State := 0;
+
+  CAN_Engine.TX_NMRAnetBuffer.ID := 0;
+  CAN_Engine.TX_NMRAnetBuffer.DataCount := 0;
+  CAN_Engine.TX_NMRAnetBuffer.State := 0;
+
+  CAN_Engine.TX_AddressedErrorBuffer.ID := 0;
+  CAN_Engine.TX_AddressedErrorBuffer.DataCount := 0;
+  CAN_Engine.TX_AddressedErrorBuffer.State := 0;
+
+  CAN_Engine.TX_DatagramRejected.ID := 0;
+  CAN_Engine.TX_DatagramRejected.DataCount := 0;
+  CAN_Engine.TX_DatagramRejected.State := 0;
+end;
+
+procedure CANStorage_FlushBuffers(AliasID: Word);
+begin
+  if AliasID = 0 then
+  begin
+    CAN_Engine.TX_CANBuffer.State := 0;
+    CAN_Engine.TX_NMRAnetBuffer.State := 0;
+    CAN_Engine.TX_AddressedErrorBuffer.State := 0;
+    CAN_Engine.TX_DatagramRejected.State := 0;
+  end else
+  begin
+    if CAN_Engine.TX_CANBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_CANBuffer.State := 0;
+    if CAN_Engine.TX_NMRAnetBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_NMRAnetBuffer.State := 0;
+    if CAN_Engine.TX_AddressedErrorBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_AddressedErrorBuffer.State := 0;
+    if CAN_Engine.TX_DatagramRejected.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_DatagramRejected.State := 0;
+  end
+end;
+
+function CANStorage_NextToSend: PCANBuffer;
+begin
+  // High Priority to Low
+  if CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_CANBuffer
+  else
+  if CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_NMRAnetBuffer
+  else
+    Result := PCANBuffer( nil);
+end;
+
+function CANStorage_NextHighPriorityToSend: PCANBuffer;
+begin
+  if CAN_Engine.TX_AddressedErrorBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_AddressedErrorBuffer
+  else
+  if CAN_Engine.TX_DatagramRejected.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_DatagramRejected
+  else
+    Result := PCANBuffer( nil);
+end;
+
+end.
