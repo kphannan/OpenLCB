@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <Compiler Value="/usr/local/bin/ppc386" Date="1325254654"/>
+  <Params Value=" -MObjFPC -Scghi -O1 -g -gl -vewnhi -l -Fu/Developer/lazarus/packager/units/i386-darwin -Fu/Users/jimkueneman/Documents/Lazarus/synapse40/source/lib/ -FU/Users/jimkueneman/Documents/Lazarus/synapse40/source/lib/lib/i386-darwin/ laz_synapse.pas"/>
+</CONFIG>

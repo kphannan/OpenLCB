@@ -1,0 +1,672 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <MainUnit Value="0"/>
+      <Title Value="NodeExplorer"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <i18n>
+      <EnableI18N LFM="False"/>
+    </i18n>
+    <VersionInfo>
+      <StringTable ProductVersion=""/>
+    </VersionInfo>
+    <BuildModes Count="1" Active="Default">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <LaunchingApplication PathPlusParams="\usr\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="3">
+      <Item1>
+        <PackageName Value="RunTimeTypeInfoControls"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="SynEdit"/>
+      </Item2>
+      <Item3>
+        <PackageName Value="LCL"/>
+      </Item3>
+    </RequiredPackages>
+    <Units Count="45">
+      <Unit0>
+        <Filename Value="NodeExplorer.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="NodeExplorer"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="31" Y="12"/>
+        <UsageCount Value="201"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="unitmainform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMain"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="UnitMainForm"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="15" Y="216"/>
+        <UsageCount Value="201"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="unitlogwindow.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormLog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitlogwindow"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="31"/>
+        <CursorPos X="51" Y="46"/>
+        <UsageCount Value="201"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="Z:\synapse40\source\lib\synaser.pas"/>
+        <UnitName Value="synaser"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1333"/>
+        <CursorPos X="31" Y="1391"/>
+        <UsageCount Value="26"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="Z:\synapse40\source\lib\synautil.pas"/>
+        <UnitName Value="synautil"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="843"/>
+        <CursorPos X="41" Y="864"/>
+        <UsageCount Value="24"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\unix\bunxovlh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="41" Y="15"/>
+        <UsageCount Value="24"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\bsd\ostypes.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="201"/>
+        <CursorPos X="41" Y="243"/>
+        <UsageCount Value="24"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\unix\bunxh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="71"/>
+        <CursorPos X="15" Y="96"/>
+        <UsageCount Value="24"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="Y:\Developer\lazarus\lcl\include\control.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="2840"/>
+        <CursorPos X="1" Y="2808"/>
+        <UsageCount Value="24"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\darwin\termios.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="62"/>
+        <CursorPos X="30" Y="372"/>
+        <UsageCount Value="24"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\darwin\termio.pp"/>
+        <UnitName Value="termio"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="12" Y="17"/>
+        <UsageCount Value="2"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\unix\baseunix.pp"/>
+        <UnitName Value="BaseUnix"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="2"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="Y:\usr\local\share\fpcsrc\rtl\unix\termiosh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="11" Y="18"/>
+        <UsageCount Value="2"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="olcb_utilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_utilities"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="12" Y="103"/>
+        <UsageCount Value="200"/>
+        <Loaded Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="olcb_stringconstants.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_stringconstants"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="26" Y="1"/>
+        <UsageCount Value="200"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="unitolcb_defines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="unitolcb_defines"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="49" Y="40"/>
+        <UsageCount Value="200"/>
+        <Loaded Value="True"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="unitsettings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormSettings"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitsettings"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="40"/>
+        <CursorPos X="33" Y="63"/>
+        <UsageCount Value="245"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="serialport_thread.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="serialport_thread"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="65"/>
+        <CursorPos X="15" Y="83"/>
+        <UsageCount Value="209"/>
+        <Loaded Value="True"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_testmatrix"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="9"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="424"/>
+        <CursorPos X="48" Y="442"/>
+        <UsageCount Value="209"/>
+        <Loaded Value="True"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="nodeexplorer_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="nodeexplorer_settings"/>
+        <EditorIndex Value="10"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="110"/>
+        <CursorPos X="1" Y="120"/>
+        <UsageCount Value="209"/>
+        <Loaded Value="True"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="unitdebuglogger.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormDebugLogger"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitDebugLogger"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="38" Y="14"/>
+        <UsageCount Value="204"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="unitlinuxftdi.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="unitLinuxFTDI"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="202"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\classesh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1558"/>
+        <CursorPos X="14" Y="1581"/>
+        <UsageCount Value="5"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\lists.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="294"/>
+        <CursorPos X="3" Y="305"/>
+        <UsageCount Value="4"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="unitrestartnodeform.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormRestartNode"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitrestartnodeform"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="55" Y="7"/>
+        <UsageCount Value="92"/>
+        <Loaded Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\classes.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="141"/>
+        <CursorPos X="5" Y="145"/>
+        <UsageCount Value="5"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="C:\lazarus\lcl\comctrls.pp"/>
+        <UnitName Value="ComCtrls"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="923"/>
+        <CursorPos X="15" Y="944"/>
+        <UsageCount Value="5"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\compon.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="25"/>
+        <CursorPos X="3" Y="27"/>
+        <UsageCount Value="4"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="C:\lazarus\lcl\interfaces\win32\win32callback.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1076"/>
+        <CursorPos X="1" Y="1099"/>
+        <UsageCount Value="4"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="unitintegerlist.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="unitintegerlist"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="74"/>
+        <CursorPos X="22" Y="93"/>
+        <UsageCount Value="89"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="C:\lazarus\lcl\include\progressbar.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="139"/>
+        <CursorPos X="1" Y="167"/>
+        <UsageCount Value="4"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="W:\usr\local\share\fpcsrc\rtl\objpas\sysutils\sysstrh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="10" Y="85"/>
+        <UsageCount Value="4"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="unitrawmessasgelog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormLog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitlogwindow"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="25"/>
+        <CursorPos X="57" Y="44"/>
+        <UsageCount Value="80"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="unitlogwindow.lfm"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="516"/>
+        <CursorPos X="4" Y="558"/>
+        <UsageCount Value="4"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="unitrawmessasgelog.lfm"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="41" Y="18"/>
+        <UsageCount Value="4"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="unitrestartnodeform.lfm"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="4"/>
+        <DefaultSyntaxHighlighter Value="LFM"/>
+      </Unit35>
+      <Unit36>
+        <Filename Value="unitrawmessagelog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormRawMessageLog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitrawmessagelog"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="62" Y="9"/>
+        <UsageCount Value="80"/>
+        <Loaded Value="True"/>
+      </Unit36>
+      <Unit37>
+        <Filename Value="C:\lazarus\lcl\controls.pp"/>
+        <UnitName Value="Controls"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="405"/>
+        <CursorPos X="36" Y="422"/>
+        <UsageCount Value="4"/>
+      </Unit37>
+      <Unit38>
+        <Filename Value="C:\lazarus\lcl\include\dragobject.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="84"/>
+        <CursorPos X="3" Y="86"/>
+        <UsageCount Value="4"/>
+      </Unit38>
+      <Unit39>
+        <Filename Value="C:\lazarus\lcl\include\listitems.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="136"/>
+        <CursorPos X="38" Y="142"/>
+        <UsageCount Value="4"/>
+      </Unit39>
+      <Unit40>
+        <Filename Value="C:\lazarus\lcl\include\listitem.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="717"/>
+        <CursorPos X="1" Y="738"/>
+        <UsageCount Value="4"/>
+      </Unit40>
+      <Unit41>
+        <Filename Value="Z:\media\psf\Home\Documents\Lazarus\synapse40\source\lib\synaser.pas"/>
+        <UnitName Value="synaser"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="976"/>
+        <CursorPos X="67" Y="991"/>
+        <UsageCount Value="7"/>
+      </Unit41>
+      <Unit42>
+        <Filename Value="Z:\media\psf\Home\Documents\Lazarus\OpenLCB\NodeExplorer\unitmainform.pas"/>
+        <ComponentName Value="FormMain"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="UnitMainForm"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="288"/>
+        <CursorPos X="1" Y="307"/>
+        <UsageCount Value="7"/>
+      </Unit42>
+      <Unit43>
+        <Filename Value="Z:\usr\share\fpcsrc\2.6.0\rtl\unix\bunxovlh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="11" Y="29"/>
+        <UsageCount Value="7"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="Z:\usr\local\share\fpcsrc\rtl\unix\bunxovlh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="10"/>
+        <CursorPos X="11" Y="29"/>
+        <UsageCount Value="23"/>
+      </Unit44>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="serialport_thread.pas"/>
+        <Caret Line="91" Column="1" TopLine="73"/>
+      </Position1>
+      <Position2>
+        <Filename Value="serialport_thread.pas"/>
+        <Caret Line="57" Column="79" TopLine="29"/>
+      </Position2>
+      <Position3>
+        <Filename Value="serialport_thread.pas"/>
+        <Caret Line="83" Column="14" TopLine="65"/>
+      </Position3>
+      <Position4>
+        <Filename Value="serialport_thread.pas"/>
+        <Caret Line="82" Column="28" TopLine="65"/>
+      </Position4>
+      <Position5>
+        <Filename Value="serialport_thread.pas"/>
+        <Caret Line="83" Column="15" TopLine="65"/>
+      </Position5>
+      <Position6>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="5" Column="29" TopLine="1"/>
+      </Position6>
+      <Position7>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="58" Column="20" TopLine="25"/>
+      </Position7>
+      <Position8>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="205" Column="30" TopLine="172"/>
+      </Position8>
+      <Position9>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="543" Column="36" TopLine="510"/>
+      </Position9>
+      <Position10>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="268" Column="27" TopLine="258"/>
+      </Position10>
+      <Position11>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="282" Column="68" TopLine="258"/>
+      </Position11>
+      <Position12>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="513" Column="41" TopLine="489"/>
+      </Position12>
+      <Position13>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="129" Column="14" TopLine="110"/>
+      </Position13>
+      <Position14>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="11" Column="53" TopLine="1"/>
+      </Position14>
+      <Position15>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="41" Column="133" TopLine="7"/>
+      </Position15>
+      <Position16>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="42" Column="67" TopLine="8"/>
+      </Position16>
+      <Position17>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="89" Column="46" TopLine="55"/>
+      </Position17>
+      <Position18>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="492" Column="52" TopLine="458"/>
+      </Position18>
+      <Position19>
+        <Filename Value="unitsettings.pas"/>
+        <Caret Line="66" Column="70" TopLine="36"/>
+      </Position19>
+      <Position20>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="607" Column="35" TopLine="575"/>
+      </Position20>
+      <Position21>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="744" Column="1" TopLine="744"/>
+      </Position21>
+      <Position22>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="207" Column="42" TopLine="187"/>
+      </Position22>
+      <Position23>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="208" Column="46" TopLine="188"/>
+      </Position23>
+      <Position24>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="562" Column="52" TopLine="534"/>
+      </Position24>
+      <Position25>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="216" Column="15" TopLine="196"/>
+      </Position25>
+      <Position26>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="208" Column="35" TopLine="188"/>
+      </Position26>
+      <Position27>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="562" Column="41" TopLine="528"/>
+      </Position27>
+      <Position28>
+        <Filename Value="unitmainform.pas"/>
+        <Caret Line="624" Column="10" TopLine="591"/>
+      </Position28>
+      <Position29>
+        <Filename Value="olcb_testmatrix.pas"/>
+        <Caret Line="276" Column="15" TopLine="196"/>
+      </Position29>
+      <Position30>
+        <Filename Value="nodeexplorer_settings.pas"/>
+        <Caret Line="28" Column="1" TopLine="14"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\NodeExplorer"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="..\Components\kHexEditor\source;..\Components\synapse40\source\lib"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <CodeGeneration>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <UseValgrind Value="True"/>
+        <UseExternalDbgSyms Value="True"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
+      <CustomOptions Value="-dUseCThreads
+-k-macosx_version_min -k10.5
+-XR/Developer/SDKs/MacOSX10.5.sdk/"/>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <BreakPoints Count="5">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="C:\lazarus\fpc\2.6.0\source\packages\fcl-xml\src\dom.pp"/>
+        <Line Value="1463"/>
+      </Item1>
+      <Item2>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="Z:\synapse40\source\lib\synaser.pas"/>
+        <Line Value="1719"/>
+      </Item2>
+      <Item3>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="Z:\synapse40\source\lib\synaser.pas"/>
+        <Line Value="1682"/>
+      </Item3>
+      <Item4>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="Z:\media\psf\Home\Documents\Lazarus\synapse40\source\lib\synaser.pas"/>
+        <Line Value="1684"/>
+      </Item4>
+      <Item5>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="Z:\media\psf\Home\Documents\Lazarus\synapse40\source\lib\synaser.pas"/>
+        <Line Value="991"/>
+      </Item5>
+    </BreakPoints>
+    <Watches Count="2">
+      <Item1>
+        <Expression Value="FileName"/>
+      </Item1>
+      <Item2>
+        <Expression Value="FMTIManager"/>
+      </Item2>
+    </Watches>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

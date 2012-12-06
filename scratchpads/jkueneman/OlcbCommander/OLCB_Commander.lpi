@@ -1,0 +1,172 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
+      <Title Value="OLCB_Commander"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+    </General>
+    <i18n>
+      <EnableI18N LFM="False"/>
+    </i18n>
+    <VersionInfo>
+      <StringTable ProductVersion=""/>
+    </VersionInfo>
+    <MacroValues Count="1">
+      <Macro1 Name="MustangpeakCompilerOptions" Value="True"/>
+    </MacroValues>
+    <BuildModes Count="1">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+        <LaunchingApplication PathPlusParams="\usr\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="SynEdit"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="9">
+      <Unit0>
+        <Filename Value="OLCB_Commander.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="OLCB_Commander"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="form_main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormOLCB_Commander"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_main"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\Library\olcb_app_common_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_app_common_settings"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\Library\file_utilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="file_utilities"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="form_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormSettings"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_settings"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="form_about.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormAbout"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_about"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="form_messagelog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMessageLog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_messagelog"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\Library\common_utilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="common_utilities"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\Library\snii.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="snii"/>
+      </Unit8>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\$(LCLWidgetType)\OlcbCommander"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Conditionals Value="if MustangpeakCompilerOptions = 'True' then
+begin
+  if TargetOS = 'darwin' then
+  begin
+    CustomOption += '-k-macosx_version_min -k10.5';
+    CustomOption += '-XR/Developer/SDKs/MacOSX10.5.sdk/';
+  end;
+end;"/>
+    <BuildMacros>
+      <Count Value="1"/>
+      <Item1>
+        <Identifier Value="MustangpeakCompilerOptions"/>
+        <Description Value="Compiler Options for Platforms"/>
+        <Values Count="2">
+          <Item1 Value="True"/>
+          <Item2 Value="False"/>
+        </Values>
+        <ValueDescriptions Count="2"/>
+      </Item1>
+    </BuildMacros>
+    <CodeGeneration>
+      <Optimizations>
+        <OptimizationLevel Value="3"/>
+      </Optimizations>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <GenerateDebugInfo Value="False"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerMessages>
+        <MsgFileName Value=""/>
+      </CompilerMessages>
+      <CustomOptions Value="-dUseCThreads"/>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>
