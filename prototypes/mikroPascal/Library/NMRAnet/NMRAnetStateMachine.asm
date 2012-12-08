@@ -2652,16 +2652,16 @@ L_NMRAnetStateMachine_ProcessNode713:
 	CLR	W0
 	MOV.B	W0, [W14+13]
 ;NMRAnetStateMachine.mpas,843 :: 		DecodeMemoryConfigurationReadWrite(Node, @DatagramBuffer^.DataBytes, MemorySpace, MemorySpaceAddress, MemorySpaceCount);
-	ADD	W8, #11, W2
-	ADD	W14, #13, W1
-	ADD	W14, #16, W0
+	ADD	W8, #11, W3
+	ADD	W14, #13, W2
+	ADD	W14, #16, W1
+	ADD	W14, #12, W0
 	PUSH	W8
 	PUSH.D	W10
-	MOV	W0, W13
-	ADD	W14, #12, W0
+	MOV	W1, W13
 	MOV	W0, W12
-	MOV	W2, W11
-	PUSH	W1
+	MOV	W3, W11
+	PUSH	W2
 	CALL	NMRAnetStateMachine_DecodeMemoryConfigurationReadWrite
 	SUB	#2, W15
 	POP.D	W10
@@ -2718,52 +2718,52 @@ L_NMRAnetStateMachine_ProcessNode716:
 	MOV	W0, [W14+8]
 ; DatagramAddress end address is: 6 (W3)
 ; DatagramBuffer end address is: 16 (W8)
-	MOV	W8, W6
-	MOV.B	W3, W5
+	MOV	W8, W5
+	MOV.B	W3, W4
 L_NMRAnetStateMachine_ProcessNode365:
-; DatagramAddress start address is: 10 (W5)
-; DatagramAddress start address is: 10 (W5)
-; DatagramAddress end address is: 10 (W5)
-; DatagramBuffer start address is: 12 (W6)
+; DatagramAddress start address is: 8 (W4)
+; DatagramAddress start address is: 8 (W4)
+; DatagramAddress end address is: 8 (W4)
+; DatagramBuffer start address is: 10 (W5)
 	ADD	W14, #13, W0
 	SE	[W0], W0
-	SUB	W0, #1, W4
+	SUB	W0, #1, W3
 	ADD	W14, #8, W0
-	CP	W4, [W0]
+	CP	W3, [W0]
 	BRA GE	L_NMRAnetStateMachine_ProcessNode717
 	GOTO	L_NMRAnetStateMachine_ProcessNode369
 L_NMRAnetStateMachine_ProcessNode717:
-; DatagramAddress end address is: 10 (W5)
+; DatagramAddress end address is: 8 (W4)
 ;NMRAnetStateMachine.mpas,860 :: 		DatagramBuffer^.DataBytes[i+DatagramAddress] := CDI_ARRAY_VNODE[i+MemorySpaceAddress]
-; DatagramAddress start address is: 10 (W5)
-	ADD	W6, #11, W2
-	ZE	W5, W1
+; DatagramAddress start address is: 8 (W4)
+	ADD	W5, #11, W2
+	ZE	W4, W1
 	ADD	W14, #8, W0
 	ADD	W1, [W0], W0
-	ADD	W2, W0, W3
-	MOV	[W14+8], W2
+	ADD	W2, W0, W2
+	MOV	[W14+8], W1
 	ADD	W14, #16, W0
-	ADD	W2, [W0], W1
+	ADD	W1, [W0], W1
 	MOV	#lo_addr(_CDI_ARRAY_VNODE), W0
 	ADD	W0, W1, W1
 	MOV	#___Lib_System_DefaultPage, W0
 	MOV	WREG, 50
 	MOV.B	[W1], W0
-	MOV.B	W0, [W3]
+	MOV.B	W0, [W2]
 	ADD	W14, #8, W0
-	CP	W4, [W0]
+	CP	W3, [W0]
 	BRA NZ	L_NMRAnetStateMachine_ProcessNode718
 	GOTO	L_NMRAnetStateMachine_ProcessNode369
 L_NMRAnetStateMachine_ProcessNode718:
 	MOV	[W14+8], W1
 	ADD	W14, #8, W0
 	ADD	W1, #1, [W0]
-; DatagramAddress end address is: 10 (W5)
+; DatagramAddress end address is: 8 (W4)
 	GOTO	L_NMRAnetStateMachine_ProcessNode365
 L_NMRAnetStateMachine_ProcessNode369:
 ;NMRAnetStateMachine.mpas,861 :: 		end else {$ENDIF}
-	MOV	W6, W3
-; DatagramBuffer end address is: 12 (W6)
+	MOV	W5, W3
+; DatagramBuffer end address is: 10 (W5)
 	GOTO	L_NMRAnetStateMachine_ProcessNode364
 L_NMRAnetStateMachine_ProcessNode363:
 ;NMRAnetStateMachine.mpas,863 :: 		for i := 0 to MemorySpaceCount - 1 do
@@ -2773,53 +2773,53 @@ L_NMRAnetStateMachine_ProcessNode363:
 	MOV	W0, [W14+8]
 ; DatagramAddress end address is: 6 (W3)
 ; DatagramBuffer end address is: 16 (W8)
-	MOV	W8, W6
-	MOV.B	W3, W5
+	MOV	W8, W5
+	MOV.B	W3, W4
 L_NMRAnetStateMachine_ProcessNode370:
-; DatagramAddress start address is: 10 (W5)
-; DatagramAddress start address is: 10 (W5)
-; DatagramAddress end address is: 10 (W5)
-; DatagramBuffer start address is: 12 (W6)
+; DatagramAddress start address is: 8 (W4)
+; DatagramAddress start address is: 8 (W4)
+; DatagramAddress end address is: 8 (W4)
+; DatagramBuffer start address is: 10 (W5)
 	ADD	W14, #13, W0
 	SE	[W0], W0
-	SUB	W0, #1, W4
+	SUB	W0, #1, W3
 	ADD	W14, #8, W0
-	CP	W4, [W0]
+	CP	W3, [W0]
 	BRA GE	L_NMRAnetStateMachine_ProcessNode719
 	GOTO	L_NMRAnetStateMachine_ProcessNode374
 L_NMRAnetStateMachine_ProcessNode719:
-; DatagramAddress end address is: 10 (W5)
+; DatagramAddress end address is: 8 (W4)
 ;NMRAnetStateMachine.mpas,864 :: 		DatagramBuffer^.DataBytes[i+DatagramAddress] := CDI_ARRAY[i+MemorySpaceAddress]
-; DatagramAddress start address is: 10 (W5)
-	ADD	W6, #11, W2
-	ZE	W5, W1
+; DatagramAddress start address is: 8 (W4)
+	ADD	W5, #11, W2
+	ZE	W4, W1
 	ADD	W14, #8, W0
 	ADD	W1, [W0], W0
-	ADD	W2, W0, W3
-	MOV	[W14+8], W2
+	ADD	W2, W0, W2
+	MOV	[W14+8], W1
 	ADD	W14, #16, W0
-	ADD	W2, [W0], W1
+	ADD	W1, [W0], W1
 	MOV	#lo_addr(_CDI_ARRAY), W0
 	ADD	W0, W1, W1
 	MOV	#___Lib_System_DefaultPage, W0
 	MOV	WREG, 50
 	MOV.B	[W1], W0
-	MOV.B	W0, [W3]
+	MOV.B	W0, [W2]
 	ADD	W14, #8, W0
-	CP	W4, [W0]
+	CP	W3, [W0]
 	BRA NZ	L_NMRAnetStateMachine_ProcessNode720
 	GOTO	L_NMRAnetStateMachine_ProcessNode374
 L_NMRAnetStateMachine_ProcessNode720:
 	MOV	[W14+8], W1
 	ADD	W14, #8, W0
 	ADD	W1, #1, [W0]
-; DatagramAddress end address is: 10 (W5)
+; DatagramAddress end address is: 8 (W4)
 	GOTO	L_NMRAnetStateMachine_ProcessNode370
 L_NMRAnetStateMachine_ProcessNode374:
 ;NMRAnetStateMachine.mpas,865 :: 		end;
-	MOV	W6, W3
+	MOV	W5, W3
 L_NMRAnetStateMachine_ProcessNode364:
-; DatagramBuffer end address is: 12 (W6)
+; DatagramBuffer end address is: 10 (W5)
 ;NMRAnetStateMachine.mpas,866 :: 		DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
 ; DatagramBuffer start address is: 6 (W3)
 	ADD	W3, #10, W2
@@ -2843,55 +2843,55 @@ L_NMRAnetStateMachine_ProcessNode361:
 	GOTO	L_NMRAnetStateMachine_ProcessNode377
 L_NMRAnetStateMachine_ProcessNode721:
 ;NMRAnetStateMachine.mpas,869 :: 		ByteArray := PByteArray( ALL_MAP.LowMem);
-; ByteArray start address is: 14 (W7)
-	MOV	#0, W7
+; ByteArray start address is: 12 (W6)
+	MOV	#0, W6
 ;NMRAnetStateMachine.mpas,870 :: 		for i := 0 to MemorySpaceCount - 1 do
 	CLR	W0
 	MOV	W0, [W14+8]
 ; DatagramAddress end address is: 6 (W3)
 ; DatagramBuffer end address is: 16 (W8)
-	MOV.B	W3, W9
+	MOV.B	W3, W7
 L_NMRAnetStateMachine_ProcessNode378:
-; DatagramAddress start address is: 18 (W9)
-; ByteArray start address is: 14 (W7)
-; ByteArray end address is: 14 (W7)
-; DatagramAddress start address is: 18 (W9)
-; DatagramAddress end address is: 18 (W9)
+; DatagramAddress start address is: 14 (W7)
+; ByteArray start address is: 12 (W6)
+; ByteArray end address is: 12 (W6)
+; DatagramAddress start address is: 14 (W7)
+; DatagramAddress end address is: 14 (W7)
 ; DatagramBuffer start address is: 16 (W8)
 	ADD	W14, #13, W0
 	SE	[W0], W0
-	SUB	W0, #1, W6
+	SUB	W0, #1, W5
 	ADD	W14, #8, W0
-	CP	W6, [W0]
+	CP	W5, [W0]
 	BRA GE	L_NMRAnetStateMachine_ProcessNode722
 	GOTO	L_NMRAnetStateMachine_ProcessNode382
 L_NMRAnetStateMachine_ProcessNode722:
-; ByteArray end address is: 14 (W7)
-; DatagramAddress end address is: 18 (W9)
+; ByteArray end address is: 12 (W6)
+; DatagramAddress end address is: 14 (W7)
 ;NMRAnetStateMachine.mpas,871 :: 		DatagramBuffer^.DataBytes[i+DatagramAddress] := ByteArray^[i+MemorySpaceAddress];
-; DatagramAddress start address is: 18 (W9)
-; ByteArray start address is: 14 (W7)
+; DatagramAddress start address is: 14 (W7)
+; ByteArray start address is: 12 (W6)
 	ADD	W8, #11, W2
-	ZE	W9, W1
+	ZE	W7, W1
 	ADD	W14, #8, W0
 	ADD	W1, [W0], W0
-	ADD	W2, W0, W5
-	MOV	[W14+8], W3
-	ASR	W3, #15, W4
-	ADD	W14, #16, W2
-	ADD	W3, [W2], W0
-	ADD	W7, W0, W0
-	MOV.B	[W0], [W5]
+	ADD	W2, W0, W4
+	MOV	[W14+8], W2
+	ASR	W2, #15, W3
+	ADD	W14, #16, W0
+	ADD	W2, [W0], W0
+	ADD	W6, W0, W0
+	MOV.B	[W0], [W4]
 	ADD	W14, #8, W0
-	CP	W6, [W0]
+	CP	W5, [W0]
 	BRA NZ	L_NMRAnetStateMachine_ProcessNode723
 	GOTO	L_NMRAnetStateMachine_ProcessNode382
 L_NMRAnetStateMachine_ProcessNode723:
 	MOV	[W14+8], W1
 	ADD	W14, #8, W0
 	ADD	W1, #1, [W0]
-; ByteArray end address is: 14 (W7)
-; DatagramAddress end address is: 18 (W9)
+; ByteArray end address is: 12 (W6)
+; DatagramAddress end address is: 14 (W7)
 	GOTO	L_NMRAnetStateMachine_ProcessNode378
 L_NMRAnetStateMachine_ProcessNode382:
 ;NMRAnetStateMachine.mpas,872 :: 		DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
@@ -2979,7 +2979,7 @@ L_NMRAnetStateMachine_ProcessNode726:
 	INC	W0
 	MOV.B	W0, [W1]
 ;NMRAnetStateMachine.mpas,884 :: 		end else
-	MOV.B	W2, W7
+	MOV.B	W2, W5
 ; DatagramAddress end address is: 4 (W2)
 	GOTO	L_NMRAnetStateMachine_ProcessNode391
 L_NMRAnetStateMachine_ProcessNode390:
@@ -2990,11 +2990,11 @@ L_NMRAnetStateMachine_ProcessNode390:
 	ADD	W14, #16, W0
 	SUBR	W1, [W0], [W0++]
 	SUBBR	W2, [W0], [W0--]
-	MOV.B	W3, W7
+	MOV.B	W3, W5
 ; DatagramAddress end address is: 6 (W3)
 L_NMRAnetStateMachine_ProcessNode391:
 ;NMRAnetStateMachine.mpas,888 :: 		if Node^.State and NS_VIRTUAL <> 0 then
-; DatagramAddress start address is: 14 (W7)
+; DatagramAddress start address is: 10 (W5)
 	MOV.B	[W10], W0
 	ZE	W0, W0
 	AND	W0, #8, W0
@@ -3006,101 +3006,105 @@ L_NMRAnetStateMachine_ProcessNode727:
 	CLR	W0
 	MOV	W0, [W14+8]
 ; DatagramBuffer end address is: 16 (W8)
+	MOV	W8, W6
 L_NMRAnetStateMachine_ProcessNode395:
-; DatagramAddress start address is: 14 (W7)
-; DatagramAddress end address is: 14 (W7)
-; DatagramBuffer start address is: 16 (W8)
+; DatagramAddress start address is: 10 (W5)
+; DatagramAddress end address is: 10 (W5)
+; DatagramBuffer start address is: 12 (W6)
 	ADD	W14, #13, W0
 	SE	[W0], W0
-	SUB	W0, #1, W6
+	SUB	W0, #1, W4
 	ADD	W14, #8, W0
-	CP	W6, [W0]
+	CP	W4, [W0]
 	BRA GE	L_NMRAnetStateMachine_ProcessNode728
 	GOTO	L_NMRAnetStateMachine_ProcessNode399
 L_NMRAnetStateMachine_ProcessNode728:
-; DatagramAddress end address is: 14 (W7)
+; DatagramAddress end address is: 10 (W5)
 ;NMRAnetStateMachine.mpas,891 :: 		DatagramBuffer^.DataBytes[i+DatagramAddress] := ACDI_MFG_STRINGS_VNODE[i+MemorySpaceAddress]
-; DatagramAddress start address is: 14 (W7)
-	ADD	W8, #11, W2
-	ZE	W7, W1
+; DatagramAddress start address is: 10 (W5)
+	ADD	W6, #11, W2
+	ZE	W5, W1
 	ADD	W14, #8, W0
 	ADD	W1, [W0], W0
-	ADD	W2, W0, W5
-	MOV	[W14+8], W3
-	ASR	W3, #15, W4
+	ADD	W2, W0, W3
+	MOV	[W14+8], W1
+	ASR	W1, #15, W2
 	ADD	W14, #16, W0
-	ADD	W3, [W0], W1
+	ADD	W1, [W0], W1
 	MOV	#lo_addr(_ACDI_MFG_STRINGS_VNODE), W0
 	ADD	W0, W1, W1
 	MOV	#___Lib_System_DefaultPage, W0
 	MOV	WREG, 50
 	MOV.B	[W1], W0
-	MOV.B	W0, [W5]
+	MOV.B	W0, [W3]
 	ADD	W14, #8, W0
-	CP	W6, [W0]
+	CP	W4, [W0]
 	BRA NZ	L_NMRAnetStateMachine_ProcessNode729
 	GOTO	L_NMRAnetStateMachine_ProcessNode399
 L_NMRAnetStateMachine_ProcessNode729:
 	MOV	[W14+8], W1
 	ADD	W14, #8, W0
 	ADD	W1, #1, [W0]
-; DatagramAddress end address is: 14 (W7)
+; DatagramAddress end address is: 10 (W5)
 	GOTO	L_NMRAnetStateMachine_ProcessNode395
 L_NMRAnetStateMachine_ProcessNode399:
 ;NMRAnetStateMachine.mpas,892 :: 		end else {$ENDIF}
-	MOV	W8, W3
+	MOV	W6, W3
+; DatagramBuffer end address is: 12 (W6)
 	GOTO	L_NMRAnetStateMachine_ProcessNode394
 L_NMRAnetStateMachine_ProcessNode393:
 ;NMRAnetStateMachine.mpas,894 :: 		for i := 0 to MemorySpaceCount - 1 do
-; DatagramAddress start address is: 14 (W7)
+; DatagramAddress start address is: 10 (W5)
+; DatagramBuffer start address is: 16 (W8)
 	CLR	W0
 	MOV	W0, [W14+8]
 ; DatagramBuffer end address is: 16 (W8)
+	MOV	W8, W6
 L_NMRAnetStateMachine_ProcessNode400:
-; DatagramAddress start address is: 14 (W7)
-; DatagramAddress end address is: 14 (W7)
-; DatagramBuffer start address is: 16 (W8)
+; DatagramAddress start address is: 10 (W5)
+; DatagramAddress end address is: 10 (W5)
+; DatagramBuffer start address is: 12 (W6)
 	ADD	W14, #13, W0
 	SE	[W0], W0
-	SUB	W0, #1, W6
+	SUB	W0, #1, W4
 	ADD	W14, #8, W0
-	CP	W6, [W0]
+	CP	W4, [W0]
 	BRA GE	L_NMRAnetStateMachine_ProcessNode730
 	GOTO	L_NMRAnetStateMachine_ProcessNode404
 L_NMRAnetStateMachine_ProcessNode730:
-; DatagramAddress end address is: 14 (W7)
+; DatagramAddress end address is: 10 (W5)
 ;NMRAnetStateMachine.mpas,895 :: 		DatagramBuffer^.DataBytes[i+DatagramAddress] := ACDI_MFG_STRINGS[i+MemorySpaceAddress]
-; DatagramAddress start address is: 14 (W7)
-	ADD	W8, #11, W2
-	ZE	W7, W1
+; DatagramAddress start address is: 10 (W5)
+	ADD	W6, #11, W2
+	ZE	W5, W1
 	ADD	W14, #8, W0
 	ADD	W1, [W0], W0
-	ADD	W2, W0, W5
-	MOV	[W14+8], W3
-	ASR	W3, #15, W4
+	ADD	W2, W0, W3
+	MOV	[W14+8], W1
+	ASR	W1, #15, W2
 	ADD	W14, #16, W0
-	ADD	W3, [W0], W1
+	ADD	W1, [W0], W1
 	MOV	#lo_addr(_ACDI_MFG_STRINGS), W0
 	ADD	W0, W1, W1
 	MOV	#___Lib_System_DefaultPage, W0
 	MOV	WREG, 50
 	MOV.B	[W1], W0
-	MOV.B	W0, [W5]
+	MOV.B	W0, [W3]
 	ADD	W14, #8, W0
-	CP	W6, [W0]
+	CP	W4, [W0]
 	BRA NZ	L_NMRAnetStateMachine_ProcessNode731
 	GOTO	L_NMRAnetStateMachine_ProcessNode404
 L_NMRAnetStateMachine_ProcessNode731:
 	MOV	[W14+8], W1
 	ADD	W14, #8, W0
 	ADD	W1, #1, [W0]
-; DatagramAddress end address is: 14 (W7)
+; DatagramAddress end address is: 10 (W5)
 	GOTO	L_NMRAnetStateMachine_ProcessNode400
 L_NMRAnetStateMachine_ProcessNode404:
 ;NMRAnetStateMachine.mpas,896 :: 		end;
-	MOV	W8, W3
+	MOV	W6, W3
 L_NMRAnetStateMachine_ProcessNode394:
-; DatagramBuffer end address is: 16 (W8)
+; DatagramBuffer end address is: 12 (W6)
 ;NMRAnetStateMachine.mpas,897 :: 		DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
 ; DatagramBuffer start address is: 6 (W3)
 	ADD	W3, #10, W2
@@ -3617,9 +3621,9 @@ NMRAnetStateMachine_ProcessOutgoingNode:
 	CLR	W0
 	MOV	W0, [W14+0]
 ;NMRAnetStateMachine.mpas,995 :: 		if NMRAnetUtilities_FindOutgoingDatagram(Node, DatagramBuffer, True) then
+	ADD	W14, #0, W0
 	PUSH	W11
 	MOV	#65535, W12
-	ADD	W14, #0, W0
 	MOV	W0, W11
 	CALL	_NMRAnetUtilities_FindOutgoingDatagram
 	POP	W11

@@ -43,7 +43,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=11
+Count=12
 File0=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File1=dsPIC33EP_NMRAnetCommandStation.mpas
 File2=..\Library\NMRAnet\NMRAnetNode.mpas
@@ -55,6 +55,7 @@ File7=..\Library\NMRAnet\NMRAnetUtilities.mpas
 File8=..\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\CANBuffers.mpas
 File9=MCU_Setup_dsPIC33EP64GP502.mpas
 File10=..\Library\NMRAnet\NMRAnetDefines.mpas
+File11=dsPIC33EP_NMRABusCommandStation.lst
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -64,12 +65,12 @@ Count=1
 File0=Options.inc
 [SEARCH_PATH]
 Count=31
-Path0=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
-Path1=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
-Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path5=E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path3=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path4=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path5=Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
 Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_CommandStation\
 Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
 Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\

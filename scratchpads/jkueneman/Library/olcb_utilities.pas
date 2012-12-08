@@ -338,6 +338,7 @@ begin
             (Event1^[4] = Event2^[4]) and (Event1^[5] = Event2^[5]) and (Event1^[6] = Event2^[6]) and (Event1^[7] = Event2^[7])
 end;
 
+
 { TOpenLCBMessageHelper }
 
 procedure TOpenLCBMessageHelper.SetData(AValue: TCANByteArray);

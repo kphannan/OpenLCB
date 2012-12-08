@@ -332,6 +332,8 @@ main
 					LocalSPI_Write
 					WriteAddress
 						LocalSPI_Write
+			UART1_Write_Text
+				UART1_Write
 			NMRAnetUtilities_DatagramBufferUnLink
 			NMRAnetBufferPools_ReleaseDatagramBuffer
 		ProcessOutgoingNode

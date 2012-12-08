@@ -139,10 +139,12 @@ begin
     TestSnii := FindInProcessSniiByAlias(AHelper.SourceAliasID);
     if not Assigned(TestSnii) then
     begin
-      TestSnii := TSNII.Create(SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
+      TestSnii := TSNII.Create(SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Snii object for source alias of the message to us
       Sniis.Add(TestSnii);
     end;
     Result := TestSnii.Process(AHelper);
+    if Assigned(Result) then                                        // If it is complete then it is returned AND removed from the list, it is now owned by the caller
+      Sniis.Remove(Result);
   end;
 end;
 
@@ -278,4 +280,4 @@ begin
 end;
 
 end.
-
+

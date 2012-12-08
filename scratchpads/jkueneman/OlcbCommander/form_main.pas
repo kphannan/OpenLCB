@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   Menus, ActnList, ComCtrls, ExtCtrls, Buttons, serialport_thread, datagram,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype, types,
-  olcb_utilities, olcb_defines, form_messagelog, snii;
+  olcb_utilities, olcb_defines, form_messagelog, snii, olcb_node, olcb_mem_protocol;
 
 const
   BUNDLENAME = 'OpenLCB Commander';
@@ -23,6 +23,17 @@ type
   );
 
 type
+
+  { TOlcbTreeNode }
+
+  TOlcbTreeNode = class( TTreeNode)
+  private
+    FOlcbData: TOpenLcbNode;
+  public
+    constructor Create(AnOwner: TTreeNodes);
+    destructor Destroy; override;
+    property OlcbData: TOpenLcbNode read FOlcbData write FOlcbData;
+  end;
 
   { TFormOLCB_Commander }
 
@@ -46,6 +57,12 @@ type
     LabelNetworkNodeCount: TLabel;
     LabelNetworkNodeCountValue: TLabel;
     MainMenu: TMainMenu;
+    MenuItem1: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
+    MenuItem7: TMenuItem;
     MenuItemToolsSep2: TMenuItem;
     MenuItemToolsMessageLog: TMenuItem;
     MenuItemToolsComConnect: TMenuItem;
@@ -59,6 +76,7 @@ type
     PageControlMain: TPageControl;
     PanelOLCBNetwork: TPanel;
     PanelNetwork: TPanel;
+    PopupMenuTreeNode: TPopupMenu;
     SplitterMain: TSplitter;
     TabSheetNetwork: TTabSheet;
     TabSheetTrain: TTabSheet;
@@ -76,8 +94,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure TreeViewNetworkChange(Sender: TObject; Node: TTreeNode);
-    procedure TreeViewNetworkChanging(Sender: TObject; Node: TTreeNode; var AllowChange: Boolean);
+    procedure TreeViewNetworkAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
+    procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
+    procedure TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
     procedure TreeViewNetworkSelectionChanged(Sender: TObject);
   private
     FComPortThread: TComPortThread;
@@ -95,6 +114,7 @@ type
     { private declarations }
   protected
     procedure ComDisconnect;
+    function FindTreeNodeByAlias(AnAliasID: Word): TOlcbTreeNode;
     procedure SyncReceiveMessage(MessageStr: String);
     procedure SyncSendMessage(MessageStr: String);
     procedure SyncErrorMessage(MessageStr: String);
@@ -123,6 +143,20 @@ var
   FormOLCB_Commander: TFormOLCB_Commander;
 
 implementation
+
+{ TOlcbTreeNode }
+
+constructor TOlcbTreeNode.Create(AnOwner: TTreeNodes);
+begin
+  inherited Create(AnOwner);
+  FOlcbData := TOpenLcbNode.Create;
+end;
+
+destructor TOlcbTreeNode.Destroy;
+begin
+  FreeAndNil(FOlcbData);
+  inherited Destroy;
+end;
 
 {$R *.lfm}
 
@@ -306,14 +340,27 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.TreeViewNetworkChange(Sender: TObject; Node: TTreeNode);
+procedure TFormOLCB_Commander.TreeViewNetworkAdvancedCustomDrawItem(
+  Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState;
+  Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
+var
+  R: TRect;
 begin
-
+  PaintImages := True;
+  DefaultDraw := True;
+  R := Node.DisplayRect(True);
+//  Sender.Canvas.Brush.Color := clBlue;
+//  Sender.Canvas.FillRect(R);
 end;
 
-procedure TFormOLCB_Commander.TreeViewNetworkChanging(Sender: TObject; Node: TTreeNode; var AllowChange: Boolean);
+procedure TFormOLCB_Commander.TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
 begin
+  NodeClass := TOlcbTreeNode;
+end;
 
+procedure TFormOLCB_Commander.TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
+begin
+  ATreeNode := TOlcbTreeNode.Create(Sender.Items)
 end;
 
 procedure TFormOLCB_Commander.TreeViewNetworkSelectionChanged(Sender: TObject);
@@ -328,9 +375,25 @@ begin
     ComPortThread.Terminate;
     FComPortThread := nil;
   end;
+
   FreeAndNil(FDatagramManager);
   FreeAndNil(FSniiManager);
   UpdateUI;
+end;
+
+function TFormOLCB_Commander.FindTreeNodeByAlias(AnAliasID: Word): TOlcbTreeNode;
+var
+  TreeNode: TTreeNode;
+begin
+ Result := nil;
+ TreeNode := RootNetworkNode.GetFirstChild;
+ while Assigned(TreeNode) and not Assigned(Result) do
+ begin
+   if TOlcbTreeNode( TreeNode).OlcbData.NodeIDAlias = AnAliasID then
+     Result := TOlcbTreeNode( TreeNode);
+   TreeNode := RootNetworkNode.GetNextChild(TreeNode);
+ end;
+
 end;
 
 procedure TFormOLCB_Commander.SyncReceiveMessage(MessageStr: String);
@@ -344,11 +407,11 @@ begin
     FormMessageLog.SynMemo.Lines.EndUpdate;
   end;
   case MessageHelper.MTI of
-      MTI_VERIFY_NODE_ID_NUMBER, MTI_VERIFIED_NODE_ID_NUMBER : UpdateNodeTree(MessageHelper, utr_Add);
-      MTI_AMD                                                : UpdateNodeTree(MessageHelper, utr_Add);
-      MTI_AMR                                                : UpdateNodeTree(MessageHelper, utr_Remove);
-      MTI_PROTOCOL_SUPPORT_REPLY                             : UpdateProtocolSupport(MessageHelper);
-      MTI_SIMPLE_NODE_INFO_REPLY                             : UpdateSNII(MessageHelper);
+      MTI_VERIFIED_NODE_ID_NUMBER   : UpdateNodeTree(MessageHelper, utr_Add);
+      MTI_AMD                       : UpdateNodeTree(MessageHelper, utr_Add);
+      MTI_AMR                       : UpdateNodeTree(MessageHelper, utr_Remove);
+      MTI_PROTOCOL_SUPPORT_REPLY    : UpdateProtocolSupport(MessageHelper);
+      MTI_SIMPLE_NODE_INFO_REPLY    : UpdateSNII(MessageHelper);
     end;
 end;
 
@@ -384,24 +447,28 @@ end;
 
 procedure TFormOLCB_Commander.UpdateNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
 var
-  Node: TTreeNode;
+  Node: TOlcbTreeNode;
 begin
   TreeViewNetwork.BeginUpdate;
   try
     case Reason of
       utr_Add :
         begin
-          Node := TreeViewNetwork.Items.FindNodeWithText('0x' + IntToHex(LocalHelper.SourceAliasID, 4));
+          Node := FindTreeNodeByAlias(LocalHelper.SourceAliasID);
           if not Assigned(Node) then
           begin
-            Node := TreeViewNetwork.Items.AddChild(RootNetworkNode, '0x' + IntToHex(LocalHelper.SourceAliasID, 4));
+            Node := TreeViewNetwork.Items.AddChild(RootNetworkNode, '0x' + IntToHex(LocalHelper.SourceAliasID, 4)) as TOlcbTreeNode;
+            Node.OlcbData.NodeIDAlias := LocalHelper.SourceAliasID;
+            if LocalHelper.DataCount = 8 then
+              Node.OlcbData.NodeID := LocalHelper.ExtractDataBytesAsInt(2, 8);    // Assumption this is the full ID in the databytes
+          //  Node.;
             Node.ImageIndex := 34;
             Node.SelectedIndex := 34;;
           end
         end;
       utr_Remove :
         begin
-          Node := TreeViewNetwork.Items.FindNodeWithText('0x' + IntToHex(LocalHelper.SourceAliasID, 4));
+          Node := FindTreeNodeByAlias(LocalHelper.SourceAliasID);
           if Assigned(Node) then
             TreeViewNetwork.Items.Delete(Node);
         end;
@@ -414,46 +481,65 @@ end;
 
 procedure TFormOLCB_Commander.UpdateProtocolSupport(LocalHelper: TOpenLCBMessageHelper);
 var
-  Node, ProtocolChild: TTreeNode;
+  ProtocolChild: TTreeNode;
+  Node: TOlcbTreeNode;
   Mask, Protocols: QWord;
   i: Integer;
 begin
-  Node := TreeViewNetwork.Items.FindNodeWithText('0x' + IntToHex(LocalHelper.SourceAliasID, 4));
+  Node := FindTreeNodeByAlias(LocalHelper.SourceAliasID);
   if Assigned(Node) then
   begin
-    ProtocolChild := Node.FindNode(STR_PROTOCOLSUPPORT);
-    if Assigned(ProtocolChild) then
-      ProtocolChild.DeleteChildren
-    else
-      ProtocolChild := TreeViewNetwork.Items.AddChild(Node, STR_PROTOCOLSUPPORT);
-    ProtocolChild.ImageIndex := 41;
-    ProtocolChild.SelectedIndex := 41;;
-    Protocols := LocalHelper.ExtractDataBytesAsInt(2, 7);    // First 2 are the destination alias );
-    Mask := $800000000000;
-    for i := 0 to 47 do
-    begin
-      if Protocols and Mask <> 0 then
+    TreeViewNetwork.BeginUpdate;
+    try
+      ProtocolChild := Node.FindNode(STR_PROTOCOLSUPPORT);
+      if Assigned(ProtocolChild) then
+        ProtocolChild.DeleteChildren
+      else
+        ProtocolChild := TreeViewNetwork.Items.AddChild(Node, STR_PROTOCOLSUPPORT);
+      ProtocolChild.ImageIndex := 41;
+      ProtocolChild.SelectedIndex := 41;
+      Protocols := LocalHelper.ExtractDataBytesAsInt(2, 7);    // First 2 are the destination alias
+      Node.OlcbData.ProtocolSupport := Protocols;
+      Mask := $800000000000;
+      for i := 0 to 47 do
       begin
-        Node := TreeViewNetwork.Items.AddChild(ProtocolChild, ProtocolSupportReplyToString( Mask));
-        Node.ImageIndex := 40;
-        Node.SelectedIndex := 40;
-      end;
-      Mask := Mask shr 1;
-    end
-  end;
+        if Protocols and Mask <> 0 then
+        begin
+          Node := TreeViewNetwork.Items.AddChild(ProtocolChild, ProtocolSupportReplyToString( Mask)) as TOlcbTreeNode;
+          Node.ImageIndex := 40;
+          Node.SelectedIndex := 40;
+        end;
+        Mask := Mask shr 1;
+      end
+    finally
+      TreeViewNetwork.EndUpdate;
+    end;
+  end
 end;
 
 procedure TFormOLCB_Commander.UpdateSNII(LocalHelper: TOpenLCBMessageHelper);
+
+  procedure AddSniiChild(ProtocolChild: TTreeNode; LabelStr: string);
+  var
+    Node: TTreeNode;
+  begin
+    Node := TreeViewNetwork.Items.AddChild(ProtocolChild, LabelStr);
+    Node.ImageIndex := 40;
+    Node.SelectedIndex := 40;
+  end;
+
 var
   Snii: TSnii;
-  Node, ProtocolChild: TTreeNode;
+  ProtocolChild: TTreeNode;
+  Node: TOlcbTreeNode;
 begin
   Snii := SniiManager.Process(LocalHelper);
   if Assigned(Snii) then
   begin
-    Node := TreeViewNetwork.Items.FindNodeWithText('0x' + IntToHex(LocalHelper.SourceAliasID, 4));
+    Node := FindTreeNodeByAlias(LocalHelper.SourceAliasID);
     if Assigned(Node) then
     begin
+      Node.OlcbData.Snii := Snii;                                               // Give it to the node
       ProtocolChild := Node.FindNode(STR_SNII);
       if Assigned(ProtocolChild) then
         ProtocolChild.DeleteChildren
@@ -461,31 +547,16 @@ begin
         ProtocolChild := TreeViewNetwork.Items.AddChild(Node, STR_SNII);
       ProtocolChild.ImageIndex := 41;
       ProtocolChild.SelectedIndex := 41;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'Mfg Name : ' + Snii.SniiMfgName);
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'Mfg Model : ' + Snii.SniiMfgModel);
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'Hardware Ver: ' + Snii.SniiHardwareVersion);
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'Software Ver : ' + Snii.SniiSoftwareVersion);
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'User Name : ' + Snii.SniiUserName);
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-      Node := TreeViewNetwork.Items.AddChild(ProtocolChild, 'User Desc : ' + Snii.SniiUserDescription);
-      Node.ImageIndex := 40;
-      Node.SelectedIndex := 40;
-    end;
+      AddSniiChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
+      AddSniiChild(ProtocolChild, 'Mfg Name : ' + Snii.SniiMfgName);
+      AddSniiChild(ProtocolChild, 'Mfg Model : ' + Snii.SniiMfgModel);
+      AddSniiChild(ProtocolChild, 'Hardware Ver: ' + Snii.SniiHardwareVersion);
+      AddSniiChild(ProtocolChild, 'Software Ver : ' + Snii.SniiSoftwareVersion);
+      AddSniiChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
+      AddSniiChild(ProtocolChild, 'User Name : ' + Snii.SniiUserName);
+      AddSniiChild(ProtocolChild, 'User Desc : ' + Snii.SniiUserDescription);
+    end else
+      Snii.Free;                                                                // No one to use it, throw it away
   end;
 end;
 
@@ -504,4 +575,4 @@ end;
 
 
 end.
-
+

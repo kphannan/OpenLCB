@@ -926,9 +926,9 @@ L_dsPIC33_CAN_SetFilterMaskBits332:
 L_dsPIC33_CAN_SetFilterMaskBits333:
 	MOV	#65504, W0
 	MOV	#0, W1
-	AND	W2, W0, W2
-	AND	W3, W1, W3
-	IOR	W2, [W10], W0
+	AND	W2, W0, W0
+	AND	W3, W1, W1
+	IOR	W0, [W10], W0
 	MOV	W0, [W10]
 ;dsPIC33_CAN.mpas,694 :: 		if ExtendedOnly then
 	CP0	W4

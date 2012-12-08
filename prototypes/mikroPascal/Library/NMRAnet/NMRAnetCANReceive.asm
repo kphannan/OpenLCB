@@ -172,8 +172,8 @@ L__ReceivedOnFilter0302:
 L__ReceivedOnFilter0303:
 ;NMRAnetCANReceive.mpas,144 :: 		NMRAnetUtilities_CANBufferBytesToNodeID(@CANBuffer^.DataBytes, NodeID, 0);
 	ADD	W10, #5, W1
-	CLR	W12
 	ADD	W14, #2, W0
+	CLR	W12
 	MOV	W0, W11
 	MOV	W1, W10
 	CALL	_NMRAnetUtilities_CANBufferBytesToNodeID
@@ -243,8 +243,8 @@ L__ReceivedOnFilter0307:
 L__ReceivedOnFilter0308:
 ;NMRAnetCANReceive.mpas,160 :: 		NMRAnetUtilities_CANBufferBytesToNodeID(@CANBuffer^.DataBytes, NodeID, 0);
 	ADD	W10, #5, W1
-	CLR	W12
 	ADD	W14, #2, W0
+	CLR	W12
 	MOV	W0, W11
 	MOV	W1, W10
 	CALL	_NMRAnetUtilities_CANBufferBytesToNodeID
@@ -290,9 +290,9 @@ L__ReceivedOnFilter0310:
 	SL	W5, #1, W1
 	MOV	#lo_addr(_Nodes+2990), W0
 	ADD	W0, W1, W1
+	ADD	W14, #10, W0
 	PUSH	W10
 	MOV.B	#10, W13
-	ADD	W14, #10, W0
 	MOV	W0, W12
 	MOV	W6, W11
 	MOV	[W1], W10
@@ -373,9 +373,9 @@ L__ReceivedOnFilter0314:
 	SL	W6, #1, W1
 	MOV	#lo_addr(_Nodes+2990), W0
 	ADD	W0, W1, W1
+	ADD	W14, #10, W0
 	PUSH	W10
 	MOV.B	#10, W13
-	ADD	W14, #10, W0
 	MOV	W0, W12
 	MOV	W5, W11
 	MOV	[W1], W10
@@ -717,9 +717,9 @@ L__ReceivedOnFilter1101:
 	GOTO	L__ReceivedOnFilter1107
 L__ReceivedOnFilter1332:
 ;NMRAnetCANReceive.mpas,276 :: 		if NMRAnetUtilities_FindInDatagramByState(Node, SourceAlias, DatagramBuffer, CBS_OUTGOING or CBS_TRANSFER_COMPLETE, False) then
+	ADD	W14, #12, W0
 	PUSH	W10
 	MOV.B	#12, W13
-	ADD	W14, #12, W0
 	MOV	W0, W12
 	MOV	W5, W11
 	MOV	W6, W10
@@ -758,9 +758,9 @@ L__ReceivedOnFilter1107:
 	GOTO	L__ReceivedOnFilter1113
 L__ReceivedOnFilter1334:
 ;NMRAnetCANReceive.mpas,284 :: 		if NMRAnetUtilities_FindInDatagramByState(Node, SourceAlias, DatagramBuffer, CBS_OUTGOING or CBS_TRANSFER_COMPLETE, False) then
+	ADD	W14, #12, W0
 	PUSH	W10
 	MOV.B	#12, W13
-	ADD	W14, #12, W0
 	MOV	W0, W12
 	MOV	W5, W11
 	MOV	W6, W10
@@ -1062,8 +1062,8 @@ L__ReceivedOnFilter1346:
 L__ReceivedOnFilter1137:
 ;NMRAnetCANReceive.mpas,348 :: 		NMRAnetUtilities_CANBufferBytesToNodeID(@CANBuffer^.DataBytes, NodeID, 0);
 	ADD	W10, #5, W1
-	CLR	W12
 	ADD	W14, #2, W0
+	CLR	W12
 	MOV	W0, W11
 	MOV	W1, W10
 	CALL	_NMRAnetUtilities_CANBufferBytesToNodeID
@@ -1487,11 +1487,11 @@ L__ReceivedOnFilter1369:
 	GOTO	L__ReceivedOnFilter1206
 L__ReceivedOnFilter1370:
 ;NMRAnetCANReceive.mpas,424 :: 		if NMRAnetBufferPools_AllocateDatagramBuffer(DatagramBuffer, False) then
+	ADD	W14, #12, W0
 	PUSH	W2
 	PUSH	W5
 	PUSH	W10
 	CLR	W11
-	ADD	W14, #12, W0
 	MOV	W0, W10
 	CALL	_NMRAnetBufferPools_AllocateDatagramBuffer
 	POP	W10
@@ -1722,11 +1722,11 @@ L__ReceivedOnFilter1230:
 ;NMRAnetCANReceive.mpas,466 :: 		if NMRAnetBufferPools_AllocateDatagramBuffer(DatagramBuffer, False) then
 ; SourceAlias start address is: 10 (W5)
 ; Node start address is: 2 (W1)
+	ADD	W14, #12, W0
 	PUSH	W1
 	PUSH	W5
 	PUSH	W10
 	CLR	W11
-	ADD	W14, #12, W0
 	MOV	W0, W10
 	CALL	_NMRAnetBufferPools_AllocateDatagramBuffer
 	POP	W10

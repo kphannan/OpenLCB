@@ -465,13 +465,11 @@ L__FloatToHalf148:
 L__FloatToHalf149:
 ; Src end address is: 24 (W12)
 ;Float16.mpas,132 :: 		Result := (Sign shl 15) or (Exp shl 10) or ((Mantissa + $00001000) shr 13);
-	MOV	#15, W0
-	SL	W6, W0, W2
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
-	MOV	#10, W1
-	SL	W8, W1, W0
+	SL	W8, #10, W0
 ; Exp end address is: 16 (W8)
-	IOR	W2, W0, W5
+	IOR	W1, W0, W5
 	MOV	#4096, W1
 	MOV	#0, W2
 	ADD	W14, #0, W0
@@ -580,8 +578,7 @@ L__FloatToHalf157:
 	ADDC	W3, [W1--], [W0--]
 L__FloatToHalf36:
 ;Float16.mpas,158 :: 		Result := (Sign shl 15) or (Mantissa shr 13);
-	MOV	#15, W0
-	SL	W6, W0, W4
+	SL	W6, #15, W4
 ; Sign end address is: 12 (W6)
 	MOV	#13, W3
 	ADD	W14, #0, W2
@@ -624,8 +621,7 @@ L__FloatToHalf160:
 	GOTO	L__FloatToHalf42
 L__FloatToHalf161:
 ;Float16.mpas,166 :: 		Result := (Sign shl 15) or $7C00;
-	MOV	#15, W0
-	SL	W6, W0, W1
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
 	MOV	#31744, W0
 ; Result start address is: 0 (W0)
@@ -637,8 +633,7 @@ L__FloatToHalf161:
 L__FloatToHalf42:
 ;Float16.mpas,171 :: 		Result := (Sign shl 15) or $7C00 or (Mantissa shr 13);
 ; Sign start address is: 12 (W6)
-	MOV	#15, W0
-	SL	W6, W0, W1
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
 	MOV	#31744, W0
 	IOR	W1, W0, W4
@@ -700,41 +695,37 @@ L__FloatToHalf165:
 	MOV	W0, [W14+0]
 	MOV	W1, [W14+2]
 ;Float16.mpas,185 :: 		Exp := Exp + 1;
-; Exp start address is: 0 (W0)
-	ADD	W8, #1, W0
-	ADDC	W9, #0, W1
+; Exp start address is: 4 (W2)
+	ADD	W8, #1, W2
+	ADDC	W9, #0, W3
 ; Exp end address is: 16 (W8)
-; Exp end address is: 0 (W0)
+; Exp end address is: 4 (W2)
 ;Float16.mpas,186 :: 		end;
 	GOTO	L__FloatToHalf48
 L__FloatToHalf102:
 ;Float16.mpas,182 :: 		if (Mantissa and $00800000) > 0 then
-	MOV.D	W8, W0
+	MOV.D	W8, W2
 ;Float16.mpas,186 :: 		end;
 L__FloatToHalf48:
 ;Float16.mpas,187 :: 		end;
-; Exp start address is: 0 (W0)
-	MOV	W0, W3
-	MOV	W1, W4
-; Exp end address is: 0 (W0)
+; Exp start address is: 4 (W2)
+; Exp end address is: 4 (W2)
 	GOTO	L__FloatToHalf45
 L__FloatToHalf103:
 ;Float16.mpas,179 :: 		if (Mantissa and $00001000) > 0 then
-	MOV	W8, W3
-	MOV	W9, W4
+	MOV.D	W8, W2
 ;Float16.mpas,187 :: 		end;
 L__FloatToHalf45:
 ;Float16.mpas,189 :: 		if Exp > 30 then
-; Exp start address is: 6 (W3)
-	CP	W3, #30
-	CPB	W4, #0
+; Exp start address is: 4 (W2)
+	CP	W2, #30
+	CPB	W3, #0
 	BRA GT	L__FloatToHalf166
 	GOTO	L__FloatToHalf51
 L__FloatToHalf166:
-; Exp end address is: 6 (W3)
+; Exp end address is: 4 (W2)
 ;Float16.mpas,192 :: 		Result := (Sign shl 15) or $7C00;
-	MOV	#15, W0
-	SL	W6, W0, W1
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
 	MOV	#31744, W0
 ; Result start address is: 0 (W0)
@@ -745,15 +736,13 @@ L__FloatToHalf166:
 ;Float16.mpas,194 :: 		else
 L__FloatToHalf51:
 ;Float16.mpas,196 :: 		Result := (Sign shl 15) or (Exp shl 10) or (Mantissa shr 13);
-; Exp start address is: 6 (W3)
+; Exp start address is: 4 (W2)
 ; Sign start address is: 12 (W6)
-	MOV	#15, W0
-	SL	W6, W0, W2
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
-	MOV	#10, W1
-	SL	W3, W1, W0
-; Exp end address is: 6 (W3)
-	IOR	W2, W0, W4
+	SL	W2, #10, W0
+; Exp end address is: 4 (W2)
+	IOR	W1, W0, W4
 	MOV	#13, W3
 	ADD	W14, #0, W2
 	MOV.D	[W2], W0
@@ -1206,13 +1195,11 @@ L_Float16_FloatToFloat16209:
 L_Float16_FloatToFloat16210:
 ; Src end address is: 24 (W12)
 ;Float16.mpas,269 :: 		Result := (Sign shl 15) or (Exp shl 10) or ((Mantissa + $00001000) shr 13);
-	MOV	#15, W0
-	SL	W6, W0, W2
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
-	MOV	#10, W1
-	SL	W8, W1, W0
+	SL	W8, #10, W0
 ; Exp end address is: 16 (W8)
-	IOR	W2, W0, W5
+	IOR	W1, W0, W5
 	MOV	#4096, W1
 	MOV	#0, W2
 	ADD	W14, #0, W0
@@ -1321,8 +1308,7 @@ L_Float16_FloatToFloat16218:
 	ADDC	W3, [W1--], [W0--]
 L_Float16_FloatToFloat1685:
 ;Float16.mpas,295 :: 		Result := (Sign shl 15) or (Mantissa shr 13);
-	MOV	#15, W0
-	SL	W6, W0, W4
+	SL	W6, #15, W4
 ; Sign end address is: 12 (W6)
 	MOV	#13, W3
 	ADD	W14, #0, W2
@@ -1365,8 +1351,7 @@ L_Float16_FloatToFloat16221:
 	GOTO	L_Float16_FloatToFloat1691
 L_Float16_FloatToFloat16222:
 ;Float16.mpas,303 :: 		Result := (Sign shl 15) or $7C00;
-	MOV	#15, W0
-	SL	W6, W0, W1
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
 	MOV	#31744, W0
 ; Result start address is: 0 (W0)
@@ -1378,8 +1363,7 @@ L_Float16_FloatToFloat16222:
 L_Float16_FloatToFloat1691:
 ;Float16.mpas,308 :: 		Result := (Sign shl 15) or $7C00 or (Mantissa shr 13);
 ; Sign start address is: 12 (W6)
-	MOV	#15, W0
-	SL	W6, W0, W1
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
 	MOV	#31744, W0
 	IOR	W1, W0, W4
@@ -1441,41 +1425,37 @@ L_Float16_FloatToFloat16226:
 	MOV	W0, [W14+0]
 	MOV	W1, [W14+2]
 ;Float16.mpas,322 :: 		Exp := Exp + 1;
-; Exp start address is: 0 (W0)
-	ADD	W8, #1, W0
-	ADDC	W9, #0, W1
+; Exp start address is: 4 (W2)
+	ADD	W8, #1, W2
+	ADDC	W9, #0, W3
 ; Exp end address is: 16 (W8)
-; Exp end address is: 0 (W0)
+; Exp end address is: 4 (W2)
 ;Float16.mpas,323 :: 		end;
 	GOTO	L_Float16_FloatToFloat1697
 L_Float16_FloatToFloat16104:
 ;Float16.mpas,319 :: 		if (Mantissa and $00800000) > 0 then
-	MOV.D	W8, W0
+	MOV.D	W8, W2
 ;Float16.mpas,323 :: 		end;
 L_Float16_FloatToFloat1697:
 ;Float16.mpas,324 :: 		end;
-; Exp start address is: 0 (W0)
-	MOV	W0, W3
-	MOV	W1, W4
-; Exp end address is: 0 (W0)
+; Exp start address is: 4 (W2)
+; Exp end address is: 4 (W2)
 	GOTO	L_Float16_FloatToFloat1694
 L_Float16_FloatToFloat16105:
 ;Float16.mpas,316 :: 		if (Mantissa and $00001000) > 0 then
-	MOV	W8, W3
-	MOV	W9, W4
+	MOV.D	W8, W2
 ;Float16.mpas,324 :: 		end;
 L_Float16_FloatToFloat1694:
 ;Float16.mpas,326 :: 		if Exp > 30 then
-; Exp start address is: 6 (W3)
-	CP	W3, #30
-	CPB	W4, #0
+; Exp start address is: 4 (W2)
+	CP	W2, #30
+	CPB	W3, #0
 	BRA GT	L_Float16_FloatToFloat16227
 	GOTO	L_Float16_FloatToFloat16100
 L_Float16_FloatToFloat16227:
-; Exp end address is: 6 (W3)
+; Exp end address is: 4 (W2)
 ;Float16.mpas,329 :: 		Result := (Sign shl 15) or $7C00;
-	MOV	#15, W0
-	SL	W6, W0, W1
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
 	MOV	#31744, W0
 ; Result start address is: 0 (W0)
@@ -1486,15 +1466,13 @@ L_Float16_FloatToFloat16227:
 ;Float16.mpas,331 :: 		else
 L_Float16_FloatToFloat16100:
 ;Float16.mpas,333 :: 		Result := (Sign shl 15) or (Exp shl 10) or (Mantissa shr 13);
-; Exp start address is: 6 (W3)
+; Exp start address is: 4 (W2)
 ; Sign start address is: 12 (W6)
-	MOV	#15, W0
-	SL	W6, W0, W2
+	SL	W6, #15, W1
 ; Sign end address is: 12 (W6)
-	MOV	#10, W1
-	SL	W3, W1, W0
-; Exp end address is: 6 (W3)
-	IOR	W2, W0, W4
+	SL	W2, #10, W0
+; Exp end address is: 4 (W2)
+	IOR	W1, W0, W4
 	MOV	#13, W3
 	ADD	W14, #0, W2
 	MOV.D	[W2], W0

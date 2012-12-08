@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Compiler Value="C:\lazarus\fpc\2.6.0\bin\i386-win32\fpc.exe" Date="1090351109"/>
-  <Params Value=" -MObjFPC -Scghi -O1 -g -gl -vewnhi -l -FuC:\lazarus\packager\units\i386-win32 -Fu\\psf\Home\Documents\Lazarus\synapse40\source\lib\ -FU\\psf\Home\Documents\Lazarus\synapse40\source\lib\lib\i386-win32\ laz_synapse.pas"/>
+  <Compiler Value="C:\lazarus\fpc\2.6.0\bin\i386-win32\fpc.exe" Date="1095326452"/>
+  <Params Value=" -MObjFPC -Scghi -O1 -g -gl -vewnhi -l -FuC:\lazarus\packager\units\i386-win32 -FuZ:\OpenLCB\trunk\scratchpads\jkueneman\Components\synapse40\source\lib\ -FUZ:\OpenLCB\trunk\scratchpads\jkueneman\Components\synapse40\source\lib\lib\i386-win32\ laz_synapse.pas"/>
+  <Complete Value="False"/>
 </CONFIG>
