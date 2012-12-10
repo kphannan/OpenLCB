@@ -1,131 +1,30 @@
-0	1	mPDsPic.exe -MSF -DBG -pP33EP64GP502 -Y -DL -SSA -RA -O11111114 -fo64 -N"E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRABusCommandStation.mppds" -SP"C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\" -SP"C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\" -SP"E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\" -SP"C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\" -SP"C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_CommandStation\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnetDCCSystem\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\Math\" -SP"E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\" -SP"E:\trunk\prototypes\mikroPascal\Library\CANBus\" -SP"E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\" -SP"E:\trunk\prototypes\mikroPascal\Library\NMRAnet\" -SP"E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\" -SP"E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\" -SP"E:\trunk\prototypes\mikroPascal\Library\" -SP"E:\trunk\prototypes\mikroPascal\Library\Math\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\" "__Lib_Math.mcl" "__Lib_MathDouble.mcl" "__Lib_System.mcl" "__Lib_Delays.mcl" "__Lib_String.mcl" "__Lib_Conversions.mcl" "__Lib_SPI_12.mcl" "__Lib_UART_12_p24_p33.mcl" "__Lib_PPS_33EP64GP502.mcl" "dsPIC33EP_NMRAnetCommandStation.mpas" "MCU_Setup_dsPIC33EP64GP502.mpas" "NMRAnetAppCallbacks.mpas" "NMRAnetAppDefines.mpas" "CANBuffers.mpas" "CANStorage.mpas" "_25AAxxxx.mpas" "NMRAnetBufferPools.mpas" "NMRAnetCANReceive.mpas" "NMRAnetDatagrams.mpas" "NMRAnetDefines.mpas" "NMRAnetDefinesShared.mpas" "NMRAnetNode.mpas" "NMRAnetStateMachine.mpas" "NMRAnetUtilities.mpas" "NMRAnetDCC.mpas" "dsPIC33_CAN.mpas" "dsPIC33_DMA.mpas" "NodeIDs.mpas" "Float16.mpas"	 
-warning: 0	1501	Specified search path does not exist: 'C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_CommandStation'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnetDCCSystem'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library'	 
-warning: 0	1501	Specified search path does not exist: 'C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\Math'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library'	 
-warning: 0	1501	Specified search path does not exist: 'Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\Math'	 
-diagnostics: 0	133	Compilation Started	C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\P33EP64GP502.mpas
-hint: 1	1015	Hint: Compiling unit "C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\P33EP64GP502.mpas"	P33EP64GP502.mpas
-hint: 10448	1010	Hint: Unit "P33EP64GP502.mpas" has been recompiled	P33EP64GP502.mpas
-diagnostics: 0	134	Compiled Successfully	C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\P33EP64GP502.mpas
-diagnostics: 0	133	Compilation Started	C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_Delays.mpas
-hint: 1	1015	Hint: Compiling unit "C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_Delays.mpas"	__Lib_Delays.mpas
+0	1	mPDsPic.exe -MSF -DBG -pP33EP64GP502 -Y -DL -SSA -O11111114 -fo64 -N"Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRABusCommandStation.mppds" -SP"C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\" -SP"C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\" -SP"C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\" -SP"C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\" -SP"E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_CommandStation\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnetDCCSystem\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\" -SP"C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\Math\" -SP"E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\" -SP"E:\trunk\prototypes\mikroPascal\Library\CANBus\" -SP"E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\" -SP"E:\trunk\prototypes\mikroPascal\Library\NMRAnet\" -SP"E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\" -SP"E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\" -SP"E:\trunk\prototypes\mikroPascal\Library\" -SP"E:\trunk\prototypes\mikroPascal\Library\Math\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\" -SP"Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\" "__Lib_Math.mcl" "__Lib_MathDouble.mcl" "__Lib_System.mcl" "__Lib_Delays.mcl" "__Lib_String.mcl" "__Lib_Conversions.mcl" "__Lib_SPI_12.mcl" "__Lib_UART_12_p24_p33.mcl" "__Lib_PPS_33EP64GP502.mcl" "dsPIC33EP_NMRAnetCommandStation.mpas" "MCU_Setup_dsPIC33EP64GP502.mpas" "NMRAnetAppCallbacks.mpas" "NMRAnetAppDefines.mpas" "CANBuffers.mpas" "CANStorage.mpas" "_25AAxxxx.mpas" "NMRAnetBufferPools.mpas" "NMRAnetCANReceive.mpas" "NMRAnetDatagrams.mpas" "NMRAnetDefines.mpas" "NMRAnetDefinesShared.mpas" "NMRAnetNode.mpas" "NMRAnetStateMachine.mpas" "NMRAnetUtilities.mpas" "NMRAnetDCC.mpas" "dsPIC33_CAN.mpas" "dsPIC33_DMA.mpas" "NodeIDs.mpas" "Float16.mpas"	 
+warning: 0	1501	Specified search path does not exist: 'C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs'	 
+warning: 0	1501	Specified search path does not exist: 'C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\CANBus'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\NMRAnet'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\dsPIC33F'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library'	 
+warning: 0	1501	Specified search path does not exist: 'E:\trunk\prototypes\mikroPascal\Library\Math'	 
+diagnostics: 0	133	Compilation Started	C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_Delays.mpas
+hint: 1	1015	Hint: Compiling unit "C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_Delays.mpas"	__Lib_Delays.mpas
 hint: 724	1010	Hint: Unit "__Lib_Delays.mpas" has been recompiled	__Lib_Delays.mpas
-diagnostics: 0	134	Compiled Successfully	C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_Delays.mpas
-diagnostics: 0	133	Compilation Started	E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRAnetCommandStation.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRAnetCommandStation.mpas"	dsPIC33EP_NMRAnetCommandStation.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetDefinesShared.mpas"	NMRAnetDefinesShared.mpas
-hint: 106	1010	Hint: Unit "NMRAnetDefinesShared.mpas" has been recompiled	NMRAnetDefinesShared.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\NMRAnetAppDefines.mpas"	NMRAnetAppDefines.mpas
-hint: 362	1010	Hint: Unit "NMRAnetAppDefines.mpas" has been recompiled	NMRAnetAppDefines.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetDefines.mpas"	NMRAnetDefines.mpas
-hint: 405	1010	Hint: Unit "NMRAnetDefines.mpas" has been recompiled	NMRAnetDefines.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\CANBus\CANStorage.mpas"	CANStorage.mpas
-hint: 177	1010	Hint: Unit "CANStorage.mpas" has been recompiled	CANStorage.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\CANBuffers.mpas"	CANBuffers.mpas
-hint: 32	1010	Hint: Unit "CANBuffers.mpas" has been recompiled	CANBuffers.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas"	NMRAnetUtilities.mpas
-hint: 350	1011	Hint: Variable "temp2" has been eliminated by optimizer	NMRAnetUtilities.mpas
-hint: 947	1010	Hint: Unit "NMRAnetUtilities.mpas" has been recompiled	NMRAnetUtilities.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetBufferPools.mpas"	NMRAnetBufferPools.mpas
-hint: 105	1001	Hint: Variable "DatagramBuffer" has been declared, but not used	NMRAnetBufferPools.mpas
-hint: 105	1011	Hint: Variable "DatagramBuffer" has been eliminated by optimizer	NMRAnetBufferPools.mpas
-hint: 268	1010	Hint: Unit "NMRAnetBufferPools.mpas" has been recompiled	NMRAnetBufferPools.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetNode.mpas"	NMRAnetNode.mpas
-hint: 550	1001	Hint: Variable "ByteOffset" has been declared, but not used	NMRAnetNode.mpas
-hint: 550	1001	Hint: Variable "EventOffset" has been declared, but not used	NMRAnetNode.mpas
-hint: 551	1001	Hint: Variable "Mask" has been declared, but not used	NMRAnetNode.mpas
-hint: 312	1011	Hint: Variable "Node" has been eliminated by optimizer	NMRAnetNode.mpas
-hint: 550	1011	Hint: Variable "ByteOffset" has been eliminated by optimizer	NMRAnetNode.mpas
-hint: 550	1011	Hint: Variable "EventOffset" has been eliminated by optimizer	NMRAnetNode.mpas
-hint: 551	1011	Hint: Variable "Mask" has been eliminated by optimizer	NMRAnetNode.mpas
-hint: 822	1010	Hint: Unit "NMRAnetNode.mpas" has been recompiled	NMRAnetNode.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetCANReceive.mpas"	NMRAnetCANReceive.mpas
-hint: 542	1001	Hint: Variable "Buffer" has been declared, but not used	NMRAnetCANReceive.mpas
-hint: 547	1001	Hint: Variable "Buffer" has been declared, but not used	NMRAnetCANReceive.mpas
-hint: 552	1001	Hint: Variable "Buffer" has been declared, but not used	NMRAnetCANReceive.mpas
-hint: 557	1001	Hint: Variable "Buffer" has been declared, but not used	NMRAnetCANReceive.mpas
-hint: 562	1001	Hint: Variable "Buffer" has been declared, but not used	NMRAnetCANReceive.mpas
-hint: 211	1011	Hint: Variable "ErrorCode" has been eliminated by optimizer	NMRAnetCANReceive.mpas
-hint: 216	1011	Hint: Variable "MTI_Code" has been eliminated by optimizer	NMRAnetCANReceive.mpas
-hint: 567	1010	Hint: Unit "NMRAnetCANReceive.mpas" has been recompiled	NMRAnetCANReceive.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_DMA.mpas"	dsPIC33_DMA.mpas
-hint: 347	1011	Hint: Variable "RegPtr" has been eliminated by optimizer	dsPIC33_DMA.mpas
-hint: 371	1011	Hint: Variable "RegPtr" has been eliminated by optimizer	dsPIC33_DMA.mpas
-hint: 398	1011	Hint: Variable "RegPtr" has been eliminated by optimizer	dsPIC33_DMA.mpas
-hint: 445	1011	Hint: Variable "RegPtr" has been eliminated by optimizer	dsPIC33_DMA.mpas
-hint: 733	1010	Hint: Unit "dsPIC33_DMA.mpas" has been recompiled	dsPIC33_DMA.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_CAN.mpas"	dsPIC33_CAN.mpas
-hint: 439	1021	Hint: interrupt handler (Interrupt_CAN_Event at 0x005A)	dsPIC33_CAN.mpas
-diagnostics: 742	162	variable 'RegPtr_3' might not have been initialized	dsPIC33_CAN.mpas
-hint: 761	1011	Hint: Variable "Offset" has been eliminated by optimizer	dsPIC33_CAN.mpas
-hint: 1677	1011	Hint: Variable "Offset" has been eliminated by optimizer	dsPIC33_CAN.mpas
-hint: 1834	1010	Hint: Unit "dsPIC33_CAN.mpas" has been recompiled	dsPIC33_CAN.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetDatagrams.mpas"	NMRAnetDatagrams.mpas
-hint: 95	1010	Hint: Unit "NMRAnetDatagrams.mpas" has been recompiled	NMRAnetDatagrams.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas"	NMRAnetStateMachine.mpas
-diagnostics: 735	162	variable 'State' might not have been initialized	NMRAnetStateMachine.mpas
-hint: 1210	1010	Hint: Unit "NMRAnetStateMachine.mpas" has been recompiled	NMRAnetStateMachine.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\_25AAxxxx.mpas"	_25AAxxxx.mpas
-hint: 116	1011	Hint: Variable "Dummy" has been eliminated by optimizer	_25AAxxxx.mpas
-hint: 186	1011	Hint: Variable "Dummy" has been eliminated by optimizer	_25AAxxxx.mpas
-hint: 303	1010	Hint: Unit "_25AAxxxx.mpas" has been recompiled	_25AAxxxx.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\NMRAnetDCC.mpas"	NMRAnetDCC.mpas
-hint: 663	1011	Hint: Variable "Offset" has been eliminated by optimizer	NMRAnetDCC.mpas
-hint: 700	1011	Hint: Variable "Offset" has been eliminated by optimizer	NMRAnetDCC.mpas
-hint: 791	1010	Hint: Unit "NMRAnetDCC.mpas" has been recompiled	NMRAnetDCC.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\Math\Float16.mpas"	Float16.mpas
-hint: 52	1011	Hint: Variable "Exponent" has been eliminated by optimizer	Float16.mpas
-hint: 339	1010	Hint: Unit "Float16.mpas" has been recompiled	Float16.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\NMRAnetAppCallbacks.mpas"	NMRAnetAppCallbacks.mpas
-warning: 384	1509	Warning: Implicit typecast performed from "real" to "integer"	NMRAnetAppCallbacks.mpas
-hint: 178	1001	Hint: Variable "Node" has been declared, but not used	NMRAnetAppCallbacks.mpas
-hint: 282	1001	Hint: Variable "Node" has been declared, but not used	NMRAnetAppCallbacks.mpas
-hint: 310	1001	Hint: Variable "Node" has been declared, but not used	NMRAnetAppCallbacks.mpas
-hint: 310	1001	Hint: Variable "Event" has been declared, but not used	NMRAnetAppCallbacks.mpas
-hint: 235	1011	Hint: Variable "Address" has been eliminated by optimizer	NMRAnetAppCallbacks.mpas
-hint: 369	1011	Hint: Variable "SpeedInt" has been eliminated by optimizer	NMRAnetAppCallbacks.mpas
-hint: 538	1010	Hint: Unit "NMRAnetAppCallbacks.mpas" has been recompiled	NMRAnetAppCallbacks.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\MCU_Setup_dsPIC33EP64GP502.mpas"	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 76	1518	Warning: Suspicious pointer conversion	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 76	1509	Warning: Implicit typecast performed from "pointer" to "integral type"	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 93	1518	Warning: Suspicious pointer conversion	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 93	1509	Warning: Implicit typecast performed from "pointer" to "integral type"	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 108	1518	Warning: Suspicious pointer conversion	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 108	1509	Warning: Implicit typecast performed from "pointer" to "integral type"	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 110	1518	Warning: Suspicious pointer conversion	MCU_Setup_dsPIC33EP64GP502.mpas
-warning: 110	1509	Warning: Implicit typecast performed from "pointer" to "integral type"	MCU_Setup_dsPIC33EP64GP502.mpas
-hint: 25	1001	Hint: Variable "i" has been declared, but not used	MCU_Setup_dsPIC33EP64GP502.mpas
-hint: 26	1001	Hint: Variable "WordPtr" has been declared, but not used	MCU_Setup_dsPIC33EP64GP502.mpas
-hint: 25	1011	Hint: Variable "i" has been eliminated by optimizer	MCU_Setup_dsPIC33EP64GP502.mpas
-hint: 26	1011	Hint: Variable "WordPtr" has been eliminated by optimizer	MCU_Setup_dsPIC33EP64GP502.mpas
-hint: 185	1010	Hint: Unit "MCU_Setup_dsPIC33EP64GP502.mpas" has been recompiled	MCU_Setup_dsPIC33EP64GP502.mpas
-hint: 1	1015	Hint: Compiling unit "E:\trunk\prototypes\mikroPascal\Library\NodeIDs.mpas"	NodeIDs.mpas
-hint: 46	1010	Hint: Unit "NodeIDs.mpas" has been recompiled	NodeIDs.mpas
-hint: 61	1021	Hint: interrupt handler (INTERRUPT_DCC_Timer at 0x001A)	dsPIC33EP_NMRAnetCommandStation.mpas
-hint: 93	1021	Hint: interrupt handler (INTERRUPT_1ms_Timer at 0x0022)	dsPIC33EP_NMRAnetCommandStation.mpas
-hint: 232	1010	Hint: Unit "dsPIC33EP_NMRAnetCommandStation.mpas" has been recompiled	dsPIC33EP_NMRAnetCommandStation.mpas
-diagnostics: 0	134	Compiled Successfully	E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRAnetCommandStation.mpas
-diagnostics: 0	139	All files Compiled in 4125 ms	 
-hint: 0	1144	Used RX (bytes): 32 (100%)   Free RX (bytes): 0 (0%)	Used RX (bytes): 32 (100%)   Free RX (bytes): 0 (0%)
-hint: 0	1144	Static RAM (bytes): 5693   Dynamic RAM (bytes): 2498	Static RAM (bytes): 5693   Dynamic RAM (bytes): 2498
-hint: 0	1144	Used ROM (bytes): 26666 (59%)  Free ROM (bytes): 18370 (41%)	Used ROM (bytes): 26666 (59%)  Free ROM (bytes): 18370 (41%)
-diagnostics: 0	145	Project Linked Successfully	dsPIC33EP_NMRABusCommandStation.mppds
-diagnostics: 0	140	Linked in 375 ms	 
-diagnostics: 0	141	Project 'dsPIC33EP_NMRABusCommandStation.mppds' completed: 4906 ms	 
-diagnostics: 0	103	Finished successfully: 07 Dec 2012, 07:07:44	dsPIC33EP_NMRABusCommandStation.mppds
+diagnostics: 0	134	Compiled Successfully	C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_Delays.mpas
+diagnostics: 0	133	Compilation Started	Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRAnetCommandStation.mpas
+hint: 1	1015	Hint: Compiling unit "Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\dsPIC33EP_NMRAnetCommandStation.mpas"	dsPIC33EP_NMRAnetCommandStation.mpas
+hint: 1	1015	Hint: Compiling unit "C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetDefinesShared.mpas"	NMRAnetDefinesShared.mpas
+hint: 115	1010	Hint: Unit "NMRAnetDefinesShared.mpas" has been recompiled	NMRAnetDefinesShared.mpas
+hint: 1	1015	Hint: Compiling unit "Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\NMRAnetAppDefines.mpas"	NMRAnetAppDefines.mpas
+error: 51	305	Argument is out of range "MCO_UNALIGNED_WRITES" to "byte"	NMRAnetAppDefines.mpas
+error: 51	304	Syntax error: Expected "byte" but "word" found	NMRAnetAppDefines.mpas
+warning: 52	1517	Warning: Aggregate padded with zeros (1) in order to match declared size (4)	NMRAnetAppDefines.mpas
+error: 52	304	Syntax error: Expected ")" but "MCWL_ONE_BYTE" found	NMRAnetAppDefines.mpas
+error: 52	359	Too many elements: expected 4 elements	NMRAnetAppDefines.mpas
+error: 52	304	Syntax error: Expected ";" but "or" found	NMRAnetAppDefines.mpas
+error: 52	304	Syntax error: Expected "end" but "MCWL_TWO_BYTE" found	NMRAnetAppDefines.mpas
+error: 52	304	Syntax error: Expected "." but "or" found	NMRAnetAppDefines.mpas
+error: 0	102	Finished (with errors): 09 Dec 2012, 21:39:07	dsPIC33EP_NMRABusCommandStation.mppds

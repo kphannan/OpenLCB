@@ -1601,7 +1601,7 @@ begin
         Datagram.ProcessReceive(AHelper);
         if Datagram.Full then
         begin;
-          if (Datagram.Data[0] = $20) and (Datagram.Data[1] = MCP_OP_GET_CONFIG_REPLY) then
+          if (Datagram.Data[0] = $20) and (Datagram.Data[1] and MCP_OP_GET_CONFIG_REPLY = MCP_OP_GET_CONFIG_REPLY) then
           begin;
             Cmd := Datagram.ExtractDataBytesAsInt(2, 3);
             FormMemConfig.CheckGroupMask.Checked[0] := Cmd and MCO_WRITE_UNDER_MASK <> 0;

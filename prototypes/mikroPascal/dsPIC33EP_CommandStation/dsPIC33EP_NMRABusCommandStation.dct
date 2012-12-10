@@ -7179,6 +7179,17 @@ mco_unaligned_reads
 mco_unaligned_reads
 mco_unaligned_reads
 mco_unaligned_reads
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
+mco_unaligned_writes
 mco_write_under_mask
 mco_write_under_mask
 mco_write_under_mask

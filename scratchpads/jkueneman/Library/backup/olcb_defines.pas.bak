@@ -168,6 +168,7 @@ const
 
   MCO_WRITE_UNDER_MASK               = $8000;                                   // MemoryConfigurationOptions - Write under mask supported
   MCO_UNALIGNED_READS                = $4000;                                   // MemoryConfigurationOptions - Unaligned memory Reads supported
+  MCO_UNALIGNED_WRITES               = $2000;                                   // MemoryConfigurationOptions - Unaligned memory Writes supported
   MCO_ACDI_MFG_READS                 = $0800;                                   // MemoryConfigurationOptions - Address Space 0xFC supported (ACDI Manufacturer Area) for reads
   MCO_ACDI_USER_READS                = $0400;                                   // MemoryConfigurationOptions - Address Space 0xFB supported (ACDI User Defined Area) for reads
   MCO_ACDI_USER_WRITES               = $0200;                                   // MemoryConfigurationOptions - Address Space 0xFB supported (ACDI User Defined Area) for writes
@@ -207,6 +208,15 @@ const
   DATAGRAM_REJECTED_NO_RESEND_MASK         = $1000;
   DATAGRAM_REJECTED_RESEND_MASK            = $2000;
   DATAGRAM_REJECTED_TRANSPORT_ERROR_MASK   = $4000;
+
+  DATAGRAM_PROTOCOL_LOGREQUEST             = $01;
+  DATAGRAM_PROTOCOL_LOGREPLY               = $02;
+  DATAGRAM_PROTOCOL_CONFIGURATION          = $20;
+  DATAGRAM_PROTOCOL_REMOTEBUTTON           = $21;
+  DATAGRAM_PROTOCOL_DISPLAY                = $28;
+  DATAGRAM_PROTOCOL_TRAINCONTROL           = $30;
+  DATAGRAM_PROTOCOL_TWOBYTE                = $E0;
+  DATAGRAM_PROTOCOL_SIXBYTE                = $F0;
 
 type
   TDatagramArray = array[0..DATAGRAM_LENGTH-1] of Byte;

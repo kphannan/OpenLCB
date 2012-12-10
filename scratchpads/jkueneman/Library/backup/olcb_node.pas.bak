@@ -5,7 +5,7 @@ unit olcb_node;
 interface
 
 uses
-  Classes, SysUtils, laz2_DOM, laz2_XMLRead, laz2_XMLWrite, snii;
+  Classes, SysUtils, laz2_DOM, laz2_XMLRead, laz2_XMLWrite, snii, olcb_mem_protocol;
 
 type
   { TOpenLcbNode }
@@ -22,6 +22,7 @@ type
   TOpenLcbNode = class
   private
     FCDI: TXMLDocument;
+    FConfigMemProtcol: TOlcbMemConfig;
     FNodeID: DWord;
     FNodeIDAlias: Word;
     FProtocolSupport: QWord;
@@ -36,6 +37,7 @@ type
     constructor Create;
     destructor Destroy; override;
     property CDI: TXMLDocument read FCDI write SetCDI;
+    property ConfigMemProtcol: TOlcbMemConfig read FConfigMemProtcol write FConfigMemProtcol;
     property NodeID: DWord read FNodeID write SetNodeID;
     property NodeIDAlias: Word read FNodeIDAlias write SetNodeIDAlias;
     property ProtocolSupport: QWord read FProtocolSupport write SetProtocolSupport;

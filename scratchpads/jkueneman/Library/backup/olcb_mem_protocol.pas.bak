@@ -5,7 +5,7 @@ unit olcb_mem_protocol;
 interface
 
 uses
-  Classes, SysUtils, olcb_utilities, olcb_defines, serialport_thread;
+  Classes, SysUtils, olcb_utilities, olcb_defines, serialport_thread, datagram;
 
 type
 
@@ -13,21 +13,44 @@ type
 
   TOlcbMemOptions = class
   private
-    FOperationsMask: DWord;
+    FAddressSpaceHi: Byte;
+    FAddressSpaceLo: Byte;
+    FDescription: string;
+    FOperationMask: Word;
+    FWriteLengthMask: Byte;
     function GetReadFromMfgACDI: Boolean;
     function GetReadFromUserACDI: Boolean;
     function GetUnAlignedReads: Boolean;
     function GetUnAlignedWrites: Boolean;
-    function GetWriteToUserACDI: Booolean;
+    function GetWrite64Bytes: Boolean;
+    function GetWriteArbitraryBytes: Boolean;
+    function GetWriteFourBytes: Boolean;
+    function GetWriteOneByte: Boolean;
+    function GetWriteStreamBytes: Boolean;
+    function GetWriteToUserACDI: Boolean;
+    function GetWriteTwoBytes: Boolean;
     function GetWriteUnderMask: Boolean;
+  protected
+    property OperationMask: Word read FOperationMask write FOperationMask;
+    property WriteLengthMask: Byte read FWriteLengthMask write FWriteLengthMask;
   public
-    property OperationMask: DWord read FOperationsMask write FOperationsMask;
+    constructor Create;
+    procedure LoadFromDatagram( Datagram: TDatagramReceive);
     property WriteUnderMask: Boolean read GetWriteUnderMask;
     property UnAlignedReads: Boolean read GetUnAlignedReads;
     property UnalignedWrites: Boolean read GetUnAlignedWrites;
     property ReadFromMfgACDI: Boolean read GetReadFromMfgACDI;
     property ReadFromUserACDI: Boolean read GetReadFromUserACDI;
-    property WriteToUserACDI: Booolean read GetWriteToUserACDI;
+    property WriteToUserACDI: Boolean read GetWriteToUserACDI;
+    property WriteOneByte: Boolean read GetWriteOneByte;
+    property WriteTwoBytes: Boolean read GetWriteTwoBytes;
+    property WriteFourBytes: Boolean read GetWriteFourBytes;
+    property Write64Bytes: Boolean read GetWrite64Bytes;
+    property WriteArbitraryBytes: Boolean read GetWriteArbitraryBytes;
+    property WriteStreamBytes: Boolean read GetWriteStreamBytes;
+    property AddressSpaceHi: Byte read FAddressSpaceHi;
+    property AddressSpaceLo: Byte read FAddressSpaceLo;
+    property Description: string read FDescription;
   end;
 
   { TOlcbMemAddress }
@@ -52,198 +75,171 @@ type
     property Space: Byte read FSpace write FSpace;
   end;
 
-  { TOlcbMemAddressList }
+  { TOlcbMemConfig }
 
-  TOlcbMemAddressList = class
+  TOlcbMemConfig = class
   private
-    FList: TList;
+    FAddressList: TList;
+    FOptions: TOlcbMemOptions;
     function GetAddress(Index: Integer): TOlcbMemAddress;
-    function GetCount: Integer;
+    function GetAddressCount: Integer;
     procedure SetAddress(Index: Integer; AValue: TOlcbMemAddress);
   protected
     procedure Clear;
-    property List: TList read FList write FList;
+    property AddressList: TList read FAddressList write FAddressList;
   public
     constructor Create;
     destructor Destroy; override;
-    function Process(AHelper: TOpenLCBMessageHelper): TOlcbMemAddressList;
 
     property Address[Index: Integer]: TOlcbMemAddress read GetAddress write SetAddress;
-    property Count: Integer read GetCount;
+    property AddressCount: Integer read GetAddressCount;
+    property Options: TOlcbMemOptions read FOptions;
   end;
 
-
-  { TOlcbMemAddressListReceiveManager }
-
-  TOlcbMemAddressListReceiveManager = class
-  private
-    FMemAddressLists: TList;
-    FSourceAlias: Word;
-    function GetMemAddressList(Index: Integer): TOlcbMemAddressList;
-  protected
-    function FindInProcessMemAddressListByAlias(DestinationAlias: Word): TOlcbMemAddressList;
-    property MemAddressLists: TList read FMemAddressLists write FMemAddressLists;
-    property SourceAlias: Word read FSourceAlias write FSourceAlias;            // Alias of the receiver for the datagrams
-  public
-    constructor Create(ASourceAlias: Word);
-    destructor Destroy; override;
-    procedure Clear;
-    function Process(AHelper: TOpenLCBMessageHelper): TOlcbMemAddressList;
-    property MemAddressList[Index: Integer]: TOlcbMemAddressList read GetMemeAddressList;       // Inprocess and completed Datagrams, the order they are received is preserved
-  end;
 
 implementation
+
+const
+  STATE_OPTIONS_REPLY         = 0;
+  STATE_DONE                  = 10;
 
 { TOlcbMemOptions }
 
 function TOlcbMemOptions.GetReadFromMfgACDI: Boolean;
 begin
-  Result := OperationsMask and MCO_ACDI_USER_READS <> 0
+  Result := OperationMask and MCO_ACDI_USER_READS = MCO_ACDI_USER_READS
 end;
 
 function TOlcbMemOptions.GetReadFromUserACDI: Boolean;
 begin
-  Result := OperationsMask and MCO_ACDI_MFG_READS <> 0
+  Result := OperationMask and MCO_ACDI_MFG_READS = MCO_ACDI_MFG_READS
 end;
 
 function TOlcbMemOptions.GetUnAlignedReads: Boolean;
 begin
-  Result := OperationsMask and MCO_UNALIGNED_READS <> 0
+  Result := OperationMask and MCO_UNALIGNED_READS = MCO_UNALIGNED_READS
 end;
 
 function TOlcbMemOptions.GetUnAlignedWrites: Boolean;
 begin
-  Result := OperationsMask and MCO_UNALIGNED_WRITES <> 0
+  Result := OperationMask and MCO_UNALIGNED_WRITES = MCO_UNALIGNED_WRITES
 end;
 
-function TOlcbMemOptions.GetWriteToUserACDI: Booolean;
+function TOlcbMemOptions.GetWrite64Bytes: Boolean;
 begin
-   Result := OperationsMask and MCO_ACDI_USER_WRITES <> 0
+  Result := WriteLengthMask and MCWL_64_BYTE = MCWL_64_BYTE
+end;
+
+function TOlcbMemOptions.GetWriteArbitraryBytes: Boolean;
+begin
+  Result := WriteLengthMask and MCWL_ARBITRARY_BYTE = MCWL_ARBITRARY_BYTE
+end;
+
+function TOlcbMemOptions.GetWriteFourBytes: Boolean;
+begin
+  Result := WriteLengthMask and MCWL_FOUR_BYTE = MCWL_FOUR_BYTE
+end;
+
+function TOlcbMemOptions.GetWriteOneByte: Boolean;
+begin
+  Result := WriteLengthMask and MCWL_ONE_BYTE = MCWL_ONE_BYTE
+end;
+
+function TOlcbMemOptions.GetWriteStreamBytes: Boolean;
+begin
+  Result := WriteLengthMask and MCWL_STREAM_WRITE_SUPPORTED = MCWL_STREAM_WRITE_SUPPORTED;
+end;
+
+function TOlcbMemOptions.GetWriteToUserACDI: Boolean;
+begin
+   Result := OperationMask and MCO_ACDI_USER_WRITES  = MCO_ACDI_USER_WRITES;
+end;
+
+function TOlcbMemOptions.GetWriteTwoBytes: Boolean;
+begin
+  Result := OperationMask and MCWL_TWO_BYTE = MCWL_TWO_BYTE
 end;
 
 function TOlcbMemOptions.GetWriteUnderMask: Boolean;
 begin
-  Result := OperationsMask and MCO_WRITE_UNDER_MASK <> 0
+  Result := OperationMask and MCO_WRITE_UNDER_MASK = MCO_WRITE_UNDER_MASK
 end;
 
-{ TOlcbMemAddressListReceiveManager }
-
-function TOlcbMemAddressListReceiveManager.GetMemAddressList(Index: Integer ): TOlcbMemAddressList;
+constructor TOlcbMemOptions.Create;
 begin
-  if (Index > -1) and (Index < MemAddressLists.Count) then
-    Result := TOlcbMemAddressList( MemAddressLists[Index])
-  else
-    Result := nil
+  FAddressSpaceHi := 0;
+  FAddressSpaceLo := 0;
+  FDescription := '';
+  FOperationMask := 0;
+  FWriteLengthMask := 0;
 end;
 
-function TOlcbMemAddressListReceiveManager.FindInProcessMemAddressListByAlias(DestinationAlias: Word): TOlcbMemAddressList;
+procedure TOlcbMemOptions.LoadFromDatagram(Datagram: TDatagramReceive);
 var
   i: Integer;
 begin
-  i := 0;
-  Result := nil;
-  while not Assigned(Result) and (i < MemAddressLists.Count) do
+  if (Datagram.RawDatagram[0] = DATAGRAM_PROTOCOL_CONFIGURATION) and (Datagram.RawDatagram[1] and MCP_OP_GET_CONFIG_REPLY = MCP_OP_GET_CONFIG_REPLY) then
   begin
-    if (MemAddressList[i].DestinationAlias = DestinationAlias) and not MemAddressList[i].Full then
-      Result := MemAddressList[i];
-    Inc(i)
+    FOperationMask := Datagram.ExtractDataBytesAsInt(2, 3);
+    FWriteLengthMask := Datagram.RawDatagram[4];
+    FAddressSpaceHi := Datagram.RawDatagram[5];
+    FAddressSpaceLo := Datagram.RawDatagram[6];
+    i := 7;
+    while (Chr( Datagram.RawDatagram[i]) <> #0) and (i < DATAGRAM_LENGTH) do
+    begin
+      FDescription[i - 7] := Chr( Datagram.RawDatagram[i]);
+      Inc(i)
+    end;
   end;
 end;
 
-constructor TOlcbMemAddressListReceiveManager.Create(ASourceAlias: Word);
+{ TOlcbMemConfig }
+
+function TOlcbMemConfig.GetAddress(Index: Integer): TOlcbMemAddress;
+begin
+  Result := nil;
+  if (Index > -1) and (Index < AddressList.Count) then
+    Result := TOlcbMemAddress( AddressList[Index])
+end;
+
+function TOlcbMemConfig.GetAddressCount: Integer;
+begin
+  Result := AddressList.Count
+end;
+
+procedure TOlcbMemConfig.SetAddress(Index: Integer; AValue: TOlcbMemAddress);
+begin
+  if (Index > -1) and (Index < AddressList.Count) then
+    AddressList[Index] := AValue                      // We don't free it
+end;
+
+procedure TOlcbMemConfig.Clear;
+var
+  i: Integer;
+begin
+  try
+    for i := 0 to AddressList.Count - 1 do
+      TObject( FAddressList[i]).Free;
+  finally
+    AddressList.Clear;
+  end;
+end;
+
+constructor TOlcbMemConfig.Create;
 begin
   inherited Create;
-  FSourceAlias := ASourceAlias;
-  FMemAddressLists := TList.Create;
+  FAddressList := TList.Create;
+  FOptions := TOlcbMemOptions.Create;
 end;
 
-destructor TOlcbMemAddressListReceiveManager.Destroy;
+destructor TOlcbMemConfig.Destroy;
 begin
   Clear;
-  FreeAndNil(FMemAddressLists);
+  FreeAndNil(FAddressList);
+  FreeAndNil(FOptions);
   inherited Destroy;
 end;
 
-procedure TOlcbMemAddressListReceiveManager.Clear;
-var
-  i: Integer;
-begin
-  try
-    for i := 0 to FMemAddressLists.Count - 1 do
-      TObject( MemAddressLists[i]).Free;
-  finally
-    FMemAddressLists.Clear;
-  end;
-end;
-
-function TOlcbMemAddressListReceiveManager.Process(AHelper: TOpenLCBMessageHelper): TOlcbMemAddressList;
-var
-  TestMemList: TOlcbMemAddressList;
-begin
-  if AHelper.MTI =  then
-  begin
-    TestMemList := FindInProcessMemAddressListByAlias(AHelper.SourceAliasID);
-    if not Assigned(TestMemList) then
-    begin
-      TestMemList := TOlcbMemAddressList.Create(SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Snii object for source alias of the message to us
-      MemAddressLists.Add(TestMemList);
-    end;
-    Result := TestMemList.Process(AHelper);
-    if Assigned(Result) then                                        // If it is complete then it is returned AND removed from the list, it is now owned by the caller
-      MemAddressLists.Remove(Result);
-  end;
-
-end;
-
-{ TOlcbMemAddressList }
-
-function TOlcbMemAddressList.GetAddress(Index: Integer): TOlcbMemAddress;
-begin
-  Result := nil;
-  if (Index > -1) and (Index < List.Count) then
-    Result := TOlcbMemAddress( List[Index])
-end;
-
-function TOlcbMemAddressList.GetCount: Integer;
-begin
-  Result := List.Count
-end;
-
-procedure TOlcbMemAddressList.SetAddress(Index: Integer; AValue: TOlcbMemAddress);
-begin
-  if (Index > -1) and (Index < List.Count) then
-    List[Index] := AValue                      // We don't free it
-end;
-
-procedure TOlcbMemAddressList.Clear;
-var
-  i: Integer;
-begin
-  try
-    for i := 0 to List.Count - 1 do
-      TObject( FList[i]).Free;
-  finally
-    List.Clear;
-  end;
-end;
-
-constructor TOlcbMemAddressList.Create;
-begin
-  inherited;
-  FList := TList.Create;
-end;
-
-destructor TOlcbMemAddressList.Destroy;
-begin
-  Clear;
-  FreeAndNil(FList);
-  inherited Destroy;
-end;
-
-function TOlcbMemAddressList.Process(AHelper: TOpenLCBMessageHelper): TOlcbMemAddressList;
-begin
-  Result := nil;
-end;
 
 { TOlcbMemAddress }
 

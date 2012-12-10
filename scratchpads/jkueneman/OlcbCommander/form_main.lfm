@@ -4,7 +4,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Top = 173
   Width = 683
   Caption = 'OpenLCB Commander'
-  ClientHeight = 368
+  ClientHeight = 369
   ClientWidth = 683
   Menu = MainMenu
   OnCreate = FormCreate
@@ -14,7 +14,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.2.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 368
+    Height = 369
     Top = 0
     Width = 683
     ActivePage = TabSheetNetwork
@@ -23,21 +23,21 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 342
+      ClientHeight = 343
       ClientWidth = 675
       object PanelNetwork: TPanel
         Left = 0
-        Height = 342
+        Height = 343
         Top = 0
         Width = 176
         Align = alLeft
         BevelOuter = bvNone
-        ClientHeight = 342
+        ClientHeight = 343
         ClientWidth = 176
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 283
+          Height = 284
           Top = 0
           Width = 176
           Align = alTop
@@ -61,7 +61,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
         object BitBtnNetworkRefresh: TBitBtn
           Left = 8
           Height = 22
-          Top = 315
+          Top = 316
           Width = 136
           Action = ActionOpenLCBCommandIdentifyIDGlobal
           Anchors = [akLeft, akBottom]
@@ -70,7 +70,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
         object LabelNetworkNodeCount: TLabel
           Left = 8
           Height = 14
-          Top = 294
+          Top = 295
           Width = 65
           Anchors = [akLeft, akBottom]
           Caption = 'Node Count: '
@@ -79,7 +79,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
         object LabelNetworkNodeCountValue: TLabel
           Left = 104
           Height = 14
-          Top = 294
+          Top = 295
           Width = 7
           Anchors = [akLeft, akBottom]
           Caption = '0'
@@ -88,17 +88,17 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object SplitterMain: TSplitter
         Left = 176
-        Height = 342
+        Height = 343
         Top = 0
         Width = 5
       end
       object PanelOLCBNetwork: TPanel
         Left = 181
-        Height = 342
+        Height = 343
         Top = 0
         Width = 494
         Align = alClient
-        ClientHeight = 342
+        ClientHeight = 343
         ClientWidth = 494
         DockSite = True
         TabOrder = 2
@@ -1720,6 +1720,11 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Caption = 'Run all'
       OnExecute = ActionOpenLCBCommandAllExecute
     end
+    object ActionOpenLCBCommandMemConfigOptions: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Memory Confgi Options'
+      OnExecute = ActionOpenLCBCommandMemConfigOptionsExecute
+    end
   end
   object PopupMenuTreeNode: TPopupMenu
     Images = ImageListMainSmall
@@ -1737,6 +1742,9 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object MenuItem5: TMenuItem
       Action = ActionOpenLCBCommandProtocolSupport
+    end
+    object MenuItem8: TMenuItem
+      Action = ActionOpenLCBCommandMemConfigOptions
     end
     object MenuItem4: TMenuItem
       Caption = '-'

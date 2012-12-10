@@ -8,13 +8,15 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   Menus, ActnList, ComCtrls, ExtCtrls, Buttons, serialport_thread, datagram,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype, types,
-  olcb_utilities, olcb_defines, form_messagelog, snii, olcb_node;
+  olcb_utilities, olcb_defines, form_messagelog, snii, olcb_node, olcb_mem_protocol;
 
 const
-  BUNDLENAME = 'OpenLCB Commander';
-  STR_NETWORKTREE_ROOT = 'Network Tree';
-  STR_PROTOCOLSUPPORT = 'Supported Protocols';
-  STR_SNII            = 'Simple Node Identification (SNIP/SNII)';
+  BUNDLENAME            = 'OpenLCB Commander';
+  STR_NETWORKTREE_ROOT  = 'Network Tree';
+  STR_PROTOCOLSUPPORT   = 'Supported Protocols';
+  STR_SNII              = 'Simple Node Identification (SNIP/SNII)';
+  STR_CONFIGMEM         = 'Memory Protocol';
+  STR_CONFIGMEM_OPTIONS = 'Options';
 
 type
   TUpdateTreeReason = (
@@ -38,6 +40,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionOpenLCBCommandMemConfigOptions: TAction;
     ActionOpenLCBCommandAll: TAction;
     ActionOpenLCBCommandSNII: TAction;
     ActionOpenLCBCommandProtocolSupport: TAction;
@@ -63,6 +66,7 @@ type
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
     MenuItem7: TMenuItem;
+    MenuItem8: TMenuItem;
     MenuItemToolsSep2: TMenuItem;
     MenuItemToolsMessageLog: TMenuItem;
     MenuItemToolsComConnect: TMenuItem;
@@ -84,6 +88,7 @@ type
     procedure ActionHelpAboutShowExecute(Sender: TObject);
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandIdentifyIDGlobalExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandMemConfigOptionsExecute(Sender: TObject);
     procedure ActionOpenLCBCommandProtocolSupportExecute(Sender: TObject);
     procedure ActionOpenLCBCommandSNIIExecute(Sender: TObject);
     procedure ActionToolsComConnectExecute(Sender: TObject);
@@ -100,7 +105,8 @@ type
     procedure TreeViewNetworkSelectionChanged(Sender: TObject);
   private
     FComPortThread: TComPortThread;
-    FDatagramManager: TDatagramReceiveManager;
+    FDatagramReceiveManager: TDatagramReceiveManager;
+    FDatagramSendManager: TDatagramSendManager;
     FMessageHelper: TOpenLCBMessageHelper;
     {$IFDEF DARWIN}
     FOSXMenu: TMenuItem;
@@ -119,9 +125,13 @@ type
     procedure SyncSendMessage(MessageStr: String);
     procedure SyncErrorMessage(MessageStr: String);
     procedure SyncMessageLogHide;
-    procedure UpdateNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
-    procedure UpdateProtocolSupport(LocalHelper: TOpenLCBMessageHelper);
-    procedure UpdateSNII(LocalHelper: TOpenLCBMessageHelper);
+    procedure ProcessDatagramReceive(LocalHelper: TOpenLCBMessageHelper);
+    procedure ProcessDatagramReply(LocalHelper: TOpenLCBMessageHelper);
+    procedure ProcessDatagramSend(LocalHelper: TOpenLCBMessageHelper);
+    procedure ProcessDGMemConfigOpReply(LocalDatagram: TDatagramReceive);
+    procedure ProcessNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
+    procedure ProcessProtocolSupport(LocalHelper: TOpenLCBMessageHelper);
+    procedure ProcessSNII(LocalHelper: TOpenLCBMessageHelper);
     procedure UpdateUI;
     {$IFDEF DARWIN}
     property OSXMenu: TMenuItem read FOSXMenu write FOSXMenu;
@@ -133,7 +143,8 @@ type
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property RootNetworkNode: TTreeNode read FRootNetworkNode write FRootNetworkNode;
     property ShownOnce: Boolean read FShownOnce write FShownOnce;
-    property DatagramManager: TDatagramReceiveManager read FDatagramManager write FDatagramManager;
+    property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager write FDatagramReceiveManager;
+    property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
     property SniiManager: TSniiReceiveManager read FSniiManager write FSniiManager;
   public
     { public declarations }
@@ -204,6 +215,24 @@ begin
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
+procedure TFormOLCB_Commander.ActionOpenLCBCommandMemConfigOptionsExecute(Sender: TObject);
+var
+  Node: TOlcbTreeNode;
+  i: Integer;
+  Datagram: TDatagramSend;
+begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if Node.Parent = RootNetworkNode then
+    begin;
+      Datagram := DatagramSendManager.CreateDatagram;
+      Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, ComPortThread)
+    end;
+  end;
+end;
+
 procedure TFormOLCB_Commander.ActionOpenLCBCommandProtocolSupportExecute(Sender: TObject);
 var
   Node: TTreeNode;
@@ -257,7 +286,8 @@ begin
    ComPortThread.SyncReceiveMessageFunc := @SyncReceiveMessage;
    ComPortThread.SyncSendMessageFunc := @SyncSendMessage;
    ComPortThread.SyncErrorMessageFunc := @SyncErrorMessage;
-   DatagramManager := TDatagramReceiveManager.Create(GlobalSettings.General.AliasIDAsVal);
+   DatagramSendManager := TDatagramSendManager.Create(GlobalSettings.General.AliasIDAsVal);
+   DatagramReceiveManager := TDatagramReceiveManager.Create(GlobalSettings.General.AliasIDAsVal);
    SniiManager := TSniiReceiveManager.Create(GlobalSettings.General.AliasIDAsVal);
    ComPortThread.Suspended := False;
    UpdateUI;
@@ -376,7 +406,8 @@ begin
     FComPortThread := nil;
   end;
 
-  FreeAndNil(FDatagramManager);
+  FreeAndNil(FDatagramSendManager);
+  FreeAndNil(FDatagramReceiveManager);
   FreeAndNil(FSniiManager);
   UpdateUI;
 end;
@@ -407,12 +438,18 @@ begin
     FormMessageLog.SynMemo.Lines.EndUpdate;
   end;
   case MessageHelper.MTI of
-      MTI_VERIFIED_NODE_ID_NUMBER   : UpdateNodeTree(MessageHelper, utr_Add);
-      MTI_AMD                       : UpdateNodeTree(MessageHelper, utr_Add);
-      MTI_AMR                       : UpdateNodeTree(MessageHelper, utr_Remove);
-      MTI_PROTOCOL_SUPPORT_REPLY    : UpdateProtocolSupport(MessageHelper);
-      MTI_SIMPLE_NODE_INFO_REPLY    : UpdateSNII(MessageHelper);
-    end;
+    MTI_VERIFIED_NODE_ID_NUMBER   : ProcessNodeTree(MessageHelper, utr_Add);
+    MTI_AMD                       : ProcessNodeTree(MessageHelper, utr_Add);
+    MTI_AMR                       : ProcessNodeTree(MessageHelper, utr_Remove);
+    MTI_PROTOCOL_SUPPORT_REPLY    : ProcessProtocolSupport(MessageHelper);
+    MTI_SIMPLE_NODE_INFO_REPLY    : ProcessSNII(MessageHelper);
+    MTI_DATAGRAM_OK_REPLY,
+    MTI_DATAGRAM_REJECTED_REPLY   : ProcessDatagramReply(MessageHelper);
+    MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME,
+    MTI_FRAME_TYPE_DATAGRAM_FRAME_START,
+    MTI_FRAME_TYPE_DATAGRAM_FRAME,
+    MTI_FRAME_TYPE_DATAGRAM_FRAME_END : ProcessDatagramReceive(MessageHelper);
+  end;
 end;
 
 procedure TFormOLCB_Commander.SyncSendMessage(MessageStr: String);
@@ -425,6 +462,14 @@ begin
       FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, True);
       FormMessageLog.SynMemo.CaretY := FormMessageLog.SynMemo.LineHeight * FormMessageLog.SynMemo.Lines.Count;
       FormMessageLog.SynMemo.Lines.EndUpdate;
+    end;
+    case MessageHelper.MTI of
+      MTI_DATAGRAM_OK_REPLY,
+      MTI_DATAGRAM_REJECTED_REPLY,
+      MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME,
+      MTI_FRAME_TYPE_DATAGRAM_FRAME_START,
+      MTI_FRAME_TYPE_DATAGRAM_FRAME,
+      MTI_FRAME_TYPE_DATAGRAM_FRAME_END     : ProcessDatagramSend(MessageHelper);
     end;
   end;
 end;
@@ -445,7 +490,124 @@ begin
   ActionToolsMessageLogShow.Checked := False;
 end;
 
-procedure TFormOLCB_Commander.UpdateNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
+procedure TFormOLCB_Commander.ProcessDatagramReceive(LocalHelper: TOpenLCBMessageHelper);
+var
+  DatagramReceive: TDatagramReceive;
+begin
+  DatagramReceive := DatagramReceiveManager.Process(LocalHelper, ComPortThread);
+  if Assigned(DatagramReceive) then
+  begin
+    try
+    // got a datagram need to dispatch it somewhere
+    case DatagramReceive.RawDatagram[0] of    // Destination in the header for datagrams
+      DATAGRAM_PROTOCOL_CONFIGURATION :
+        begin
+          if DatagramReceive.RawDatagram[1] and MCP_OP_GET_CONFIG_REPLY = MCP_OP_GET_CONFIG_REPLY then
+            ProcessDGMemConfigOpReply(DatagramReceive);
+        end;
+    end;
+    finally
+      DatagramReceive.Free
+    end;
+  end;
+end;
+
+procedure TFormOLCB_Commander.ProcessDatagramReply(LocalHelper: TOpenLCBMessageHelper);
+var
+   DatagramSend: TDatagramSend;
+ begin
+   DatagramSend := DatagramSendManager.ProcessReceive(LocalHelper, ComPortThread);
+   if Assigned(DatagramSend) then
+   begin
+     DatagramSend.Free
+   end;
+end;
+
+procedure TFormOLCB_Commander.ProcessDatagramSend(LocalHelper: TOpenLCBMessageHelper);
+begin
+  DatagramSendManager.ProcessSend(ComPortThread);
+end;
+
+procedure TFormOLCB_Commander.ProcessDGMemConfigOpReply(LocalDatagram: TDatagramReceive);
+
+  procedure LoadNode(ParentNode: TTreeNode; Description: string; IsTrue: Boolean);
+  var
+     DataChild: TTreeNode;
+  begin
+    if IsTrue then
+      DataChild := TreeViewNetwork.Items.AddChild(ParentNode, Description + 'True')
+    else
+      DataChild := TreeViewNetwork.Items.AddChild(ParentNode, Description + 'False');
+    DataChild.ImageIndex := 40;
+    DataChild.SelectedIndex := 40;
+  end;
+
+  procedure LoadNodeSimple(ParentNode: TTreeNode; Description: string);
+  var
+     DataChild: TTreeNode;
+  begin
+    DataChild := TreeViewNetwork.Items.AddChild(ParentNode, Description);
+    DataChild.ImageIndex := 40;
+    DataChild.SelectedIndex := 40;
+  end;
+
+var
+  Node: TOlcbTreeNode;
+  ConfigChildRoot, ConfigOptionChild: TTreeNode;
+begin
+  TreeViewNetwork.BeginUpdate;
+  try
+    Node := FindTreeNodeByAlias(LocalDatagram.DestinationAlias);
+    if Assigned(Node) then
+    begin
+      ConfigChildRoot := Node.FindNode(STR_CONFIGMEM);
+      if Assigned(ConfigChildRoot) then
+      begin
+        ConfigOptionChild := ConfigChildRoot.FindNode(STR_CONFIGMEM_OPTIONS);
+        if Assigned(ConfigOptionChild) then
+          ConfigOptionChild.DeleteChildren
+        else begin
+          ConfigOptionChild := TreeViewNetwork.Items.AddChild(ConfigChildRoot, STR_CONFIGMEM_OPTIONS);
+          ConfigOptionChild.ImageIndex := 41;
+          ConfigOptionChild.SelectedIndex := 41;
+        end
+      end else
+      begin
+        ConfigChildRoot := TreeViewNetwork.Items.AddChild(Node, STR_CONFIGMEM);
+        ConfigChildRoot.ImageIndex := 41;
+        ConfigChildRoot.SelectedIndex := 41;
+        ConfigOptionChild := TreeViewNetwork.Items.AddChild(ConfigChildRoot, STR_CONFIGMEM_OPTIONS);
+        ConfigOptionChild.ImageIndex := 41;
+        ConfigOptionChild.SelectedIndex := 41;
+      end;
+      if Node.OlcbData.ConfigMem = nil then
+        Node.OlcbData.ConfigMem := TOlcbMemConfig.Create;
+
+      Node.OlcbData.ConfigMem.Options.LoadFromDatagram(LocalDatagram);
+
+      LoadNode(ConfigOptionChild, 'Write Under Mask = ', Node.OlcbData.ConfigMem.Options.WriteUnderMask);
+
+      LoadNode(ConfigOptionChild, 'UnAligned Reads = ', Node.OlcbData.ConfigMem.Options.UnAlignedReads);
+      LoadNode(ConfigOptionChild, 'UnAligned Writes = ', Node.OlcbData.ConfigMem.Options.UnalignedWrites);
+      LoadNode(ConfigOptionChild, 'Read from Mfg ACDI = ', Node.OlcbData.ConfigMem.Options.ReadFromMfgACDI);
+      LoadNode(ConfigOptionChild, 'Read from User ACDI = ', Node.OlcbData.ConfigMem.Options.ReadFromUserACDI);
+      LoadNode(ConfigOptionChild, 'Write to User ACDI = ', Node.OlcbData.ConfigMem.Options.WriteToUserACDI);
+      LoadNode(ConfigOptionChild, 'Write 1 Byte = ', Node.OlcbData.ConfigMem.Options.WriteOneByte);
+      LoadNode(ConfigOptionChild, 'Write 2 Bytes = ', Node.OlcbData.ConfigMem.Options.WriteTwoBytes);
+      LoadNode(ConfigOptionChild, 'Write 4 Bytes = ', Node.OlcbData.ConfigMem.Options.WriteFourBytes);
+      LoadNode(ConfigOptionChild, 'Write 64 Bytes = ', Node.OlcbData.ConfigMem.Options.Write64Bytes);
+      LoadNode(ConfigOptionChild, 'Write Arbitrary Bytes = ', Node.OlcbData.ConfigMem.Options.WriteArbitraryBytes);
+      LoadNode(ConfigOptionChild, 'Write by Stream = ', Node.OlcbData.ConfigMem.Options.WriteStreamBytes);
+      LoadNodeSimple(ConfigOptionChild, 'Address Space Hi: ' + IntToStr(Node.OlcbData.ConfigMem.Options.AddressSpaceHi));
+      LoadNodeSimple(ConfigOptionChild, 'Address Space Lo: ' + IntToStr(Node.OlcbData.ConfigMem.Options.AddressSpaceLo));
+      LoadNodeSimple(ConfigOptionChild, 'Description: ' + IntToStr(Node.OlcbData.ConfigMem.Options.Description));
+    end;
+  finally
+    TreeViewNetwork.EndUpdate;
+  end;
+end;
+
+procedure TFormOLCB_Commander.ProcessNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
 var
   Node: TOlcbTreeNode;
 begin
@@ -479,7 +641,7 @@ begin
   end
 end;
 
-procedure TFormOLCB_Commander.UpdateProtocolSupport(LocalHelper: TOpenLCBMessageHelper);
+procedure TFormOLCB_Commander.ProcessProtocolSupport(LocalHelper: TOpenLCBMessageHelper);
 var
   ProtocolChild: TTreeNode;
   Node: TOlcbTreeNode;
@@ -517,7 +679,7 @@ begin
   end
 end;
 
-procedure TFormOLCB_Commander.UpdateSNII(LocalHelper: TOpenLCBMessageHelper);
+procedure TFormOLCB_Commander.ProcessSNII(LocalHelper: TOpenLCBMessageHelper);
 
   procedure AddSniiChild(ProtocolChild: TTreeNode; LabelStr: string);
   var

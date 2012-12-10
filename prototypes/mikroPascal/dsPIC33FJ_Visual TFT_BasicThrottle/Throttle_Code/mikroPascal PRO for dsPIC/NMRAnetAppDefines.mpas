@@ -45,7 +45,7 @@ const
 // **************************************************************************************************************************************************************
 const
   MEMORY_CONFIG_OPTIONS: TMemConfigurationOptions = (
-    MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES,             // MemoryConfigOptions
+    MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES or MCO_UNALIGNED_WRITES,             // MemoryConfigOptions
     MCWL_ARBITRARY_BYTE,                                                                                  // MemoryConfigWriteLength
     MSI_CDI,                                                                                              // MemoryConfigHighestSpace
     MSI_ACDI_USER                                                                                         // MemoryConfigLowestSpace

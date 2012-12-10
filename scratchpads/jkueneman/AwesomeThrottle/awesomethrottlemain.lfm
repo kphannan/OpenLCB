@@ -4,7 +4,7 @@ object Form1: TForm1
   Top = 207
   Width = 843
   Caption = 'Mustangpeak Software - Awesome Throttle v0.1'
-  ClientHeight = 554
+  ClientHeight = 553
   ClientWidth = 843
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery

@@ -150,7 +150,7 @@ const
   MCP_OP_GET_ADD_SPACE_INFO_REPLY    = $86;                                     // MemoryConfigurationProtocol Operation - Get Add Space Info Reply
   MCP_OP_LOCK                        = $88;                                     // MemoryConfigurationProtocol Operation - Lock Node
   MCP_OP_LOCK_REPLY                  = $8A;                                     // MemoryConfigurationProtocol Operation - Lock Node Reply
-  MCP_OP_GET_UNIQUEID                = $8C;                                     // MemoryConfiguratio                    nProtocol Operation - Get Unique ID Key
+  MCP_OP_GET_UNIQUEID                = $8C;                                     // MemoryConfigurationProtocol Operation - Get Unique ID Key
   MCP_OP_GET_UNIQUEID_REPLY          = $8E;                                     // MemoryConfigurationProtocol Operation - Get Unique ID Key Reply
 
   MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT = $01;
@@ -196,7 +196,7 @@ const
   DCC_FUNCTION_28                    = $00;
   DCC_FUNCTION_32k                   = $01;
 
-  DATAGRAM_LENGTH = 64;
+  DATAGRAM_LENGTH = 72;
 
   DATAGRAM_REJECTED                        = $0000;
   DATAGRAM_REJECTED_PERMANENT_ERROR        = $1000;
@@ -208,6 +208,15 @@ const
   DATAGRAM_REJECTED_NO_RESEND_MASK         = $1000;
   DATAGRAM_REJECTED_RESEND_MASK            = $2000;
   DATAGRAM_REJECTED_TRANSPORT_ERROR_MASK   = $4000;
+
+  DATAGRAM_PROTOCOL_LOGREQUEST             = $01;
+  DATAGRAM_PROTOCOL_LOGREPLY               = $02;
+  DATAGRAM_PROTOCOL_CONFIGURATION          = $20;
+  DATAGRAM_PROTOCOL_REMOTEBUTTON           = $21;
+  DATAGRAM_PROTOCOL_DISPLAY                = $28;
+  DATAGRAM_PROTOCOL_TRAINCONTROL           = $30;
+  DATAGRAM_PROTOCOL_TWOBYTE                = $E0;
+  DATAGRAM_PROTOCOL_SIXBYTE                = $F0;
 
 type
   TDatagramArray = array[0..DATAGRAM_LENGTH-1] of Byte;
