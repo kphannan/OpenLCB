@@ -1,5 +1,0 @@
-<?xml version="1.0"?>
-<CONFIG>
-  <Compiler Value="C:\lazarus\fpc\2.6.0\bin\i386-win32\fpc.exe" Date="1095326452"/>
-  <Params Value=" -MObjFPC -Scghi -g -gl -gv -Xg -WG -vewnhi -l -FiE:\trunk\scratchpads\jkueneman\OlcbCommander\lib\i386-win32 -FuE:\trunk\scratchpads\jkueneman\Library -FuE:\trunk\scratchpads\jkueneman\Components\synapse40\source\lib -FuE:\trunk\scratchpads\jkueneman\Components\kHexEditor\source -FuE:\trunk\scratchpads\jkueneman\Components\RackCtls -FuC:\lazarus\components\synedit\units\i386-win32\win32 -FuC:\lazarus\ideintf\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32 -FuC:\lazarus\components\lazutils\lib\i386-win32 -FuC:\lazarus\packager\units\i386-win32 -FuE:\trunk\scratchpads\jkueneman\OlcbCommander\ -FUE:\trunk\scratchpads\jkueneman\OlcbCommander\lib\i386-win32\ -FEE:\trunk\scratchpads\jkueneman\OlcbCommander\Compiled_Binaries\i386-win32\win32\ -oOlcbCommander.exe -dLCL -dLCLwin32 OLCB_Commander.lpr"/>
-</CONFIG>

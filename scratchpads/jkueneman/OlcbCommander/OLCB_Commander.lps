@@ -35,7 +35,7 @@
         <Filename Value="..\Library\olcb_app_common_settings.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_app_common_settings"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="117"/>
         <CursorPos X="1" Y="139"/>
@@ -46,7 +46,7 @@
         <Filename Value="..\Library\file_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="file_utilities"/>
-        <EditorIndex Value="14"/>
+        <EditorIndex Value="15"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="40" Y="14"/>
@@ -60,7 +60,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_settings"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
         <TopLine Value="126"/>
         <CursorPos X="41" Y="140"/>
@@ -87,7 +87,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_messagelog"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="23"/>
         <CursorPos X="25" Y="33"/>
@@ -98,7 +98,7 @@
         <Filename Value="..\Library\common_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_utilities"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="93" Y="31"/>
@@ -109,7 +109,7 @@
         <Filename Value="..\Library\snii.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="snii"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="4"/>
         <CursorPos X="3" Y="14"/>
@@ -120,7 +120,7 @@
         <Filename Value="..\Library\olcb_node.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_node"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="8"/>
         <CursorPos X="17" Y="27"/>
@@ -131,7 +131,7 @@
         <Filename Value="..\Library\olcb_mem_protocol.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_mem_protocol"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="140"/>
         <CursorPos X="3" Y="161"/>
@@ -170,7 +170,7 @@
       <Unit14>
         <Filename Value="..\Library\olcb_utilities.pas"/>
         <UnitName Value="olcb_utilities"/>
-        <EditorIndex Value="13"/>
+        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
         <TopLine Value="39"/>
         <CursorPos X="38" Y="60"/>
@@ -180,7 +180,6 @@
       <Unit15>
         <Filename Value="..\Library\datagram.pas"/>
         <UnitName Value="datagram"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
@@ -199,7 +198,7 @@
       <Unit17>
         <Filename Value="..\Library\olcb_defines.pas"/>
         <UnitName Value="olcb_defines"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="137"/>
         <CursorPos X="16" Y="168"/>
@@ -330,10 +329,13 @@
       <Unit33>
         <Filename Value="..\Components\synapse40\source\lib\synaser.pas"/>
         <UnitName Value="synaser"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="40" Y="14"/>
-        <UsageCount Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit33>
       <Unit34>
         <Filename Value="..\AwesomeThrottle\form_memconfig.pas"/>
@@ -539,11 +541,11 @@
       </Position28>
       <Position29>
         <Filename Value="..\Library\statemachine_engine.pas"/>
-        <Caret Line="65" Column="20" TopLine="66"/>
+        <Caret Line="84" Column="33" TopLine="52"/>
       </Position29>
       <Position30>
-        <Filename Value="..\Library\statemachine_engine.pas"/>
-        <Caret Line="84" Column="33" TopLine="52"/>
+        <Filename Value="..\Components\synapse40\source\lib\synaser.pas"/>
+        <Caret Line="14" Column="40" TopLine="1"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

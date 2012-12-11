@@ -236,7 +236,6 @@ type
     BitBtnEnumTargetNodes: TBitBtn;
     BitBtnComPortSettings: TBitBtn;
     BitBtnConnect: TBitBtn;
-    Button1: TButton;
     ButtonF0: TButton;
     ButtonF1: TButton;
     ButtonF10: TButton;
@@ -259,7 +258,6 @@ type
     GroupBoxThrottle: TGroupBox;
     GroupBox4: TGroupBox;
     ImageListSmall: TImageList;
-    Label1: TLabel;
     LabelThrottleAliasTitle: TLabel;
     LabelThrottleNodeIDTitle: TLabel;
     Label12: TLabel;
@@ -342,7 +340,6 @@ type
     procedure ActionThrottleEmergencyStopExecute(Sender: TObject);
     procedure ActionThrottleStopExecute(Sender: TObject);
     procedure ActionVerifyNodeIDExecute(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure ComboBoxNodeIDsChange(Sender: TObject);
     procedure ComboBoxNodeIDsDropDown(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -1266,20 +1263,6 @@ begin
     Helper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER, ThrottleAliasID, 0, 0, 0, 0, 0, 0, 0, 0,0 ,0);
     ComPortThread.Add(Helper.Encode);
   end;
-end;
-
-procedure TForm1.Button1Click(Sender: TObject);
-var
-  Half: Word;
-begin
-  FloatToHalf(25.0);
-  FloatToHalf(0.0);
-  FloatToHalf(-0.0);
-  HalfToFloat($3C00);
-  HalfToFloat($3C01);
-  HalfToFloat($7BFF);
-  HalfToFloat($0000);
-  HalfToFloat($8000);
 end;
 
 procedure TForm1.ComboBoxNodeIDsChange(Sender: TObject);
@@ -2227,9 +2210,6 @@ end;
 
 procedure TForm1.UpdateUI;
 begin
-
-  Label1.Caption := 'Active Space: 0x' + IntToHex(DWord( ActiveSpace), 8) ;
-
   if Assigned(ComPortThread) then
   begin
     ActionMemConfigOptions.Enabled := (ReceivedCallback = nil) and ComPortThread.Connected and (ComboBoxNodeIDs.ItemIndex > -1);

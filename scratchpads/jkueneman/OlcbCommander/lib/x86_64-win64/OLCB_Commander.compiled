@@ -1,5 +1,0 @@
-<?xml version="1.0"?>
-<CONFIG>
-  <Compiler Value="C:\lazarus\fpc\2.6.0\bin\x86_64-win64\fpc.exe" Date="1095335316"/>
-  <Params Value=" -MObjFPC -Scghi -O3 -WG -vewnhi -l -FiE:\OpenLCB\trunk\scratchpads\jkueneman\OlcbCommander\lib\x86_64-win64 -FuE:\OpenLCB\trunk\scratchpads\jkueneman\Library -FuE:\OpenLCB\trunk\scratchpads\jkueneman\Components\synapse40\source\lib -FuE:\OpenLCB\trunk\scratchpads\jkueneman\Components\kHexEditor\source -FuE:\OpenLCB\trunk\scratchpads\jkueneman\Components\RackCtls -FuC:\lazarus\components\synedit\units\x86_64-win64\win32 -FuC:\lazarus\ideintf\units\x86_64-win64\win32 -FuC:\lazarus\lcl\units\x86_64-win64\win32 -FuC:\lazarus\lcl\units\x86_64-win64 -FuC:\lazarus\components\lazutils\lib\x86_64-win64 -FuC:\lazarus\packager\units\x86_64-win64 -FuE:\OpenLCB\trunk\scratchpads\jkueneman\OlcbCommander\ -FUE:\OpenLCB\trunk\scratchpads\jkueneman\OlcbCommander\lib\x86_64-win64\ -FEE:\OpenLCB\trunk\scratchpads\jkueneman\OlcbCommander\Compiled_Binaries\x86_64-win64\win32\ -oOlcbCommander.exe -dLCL -dLCLwin32 -dUseCThreads OLCB_Commander.lpr"/>
-</CONFIG>
