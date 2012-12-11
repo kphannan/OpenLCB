@@ -43,7 +43,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=13
+Count=12
 File0=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File1=dsPIC33EP_NMRAnetCommandStation.mpas
 File2=..\Library\NMRAnet\NMRAnetNode.mpas
@@ -55,8 +55,7 @@ File7=..\Library\NMRAnet\NMRAnetUtilities.mpas
 File8=..\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\CANBuffers.mpas
 File9=MCU_Setup_dsPIC33EP64GP502.mpas
 File10=..\Library\NMRAnet\NMRAnetDefines.mpas
-File11=dsPIC33EP_NMRABusCommandStation.lst
-File12=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File11=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetDefinesShared.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
