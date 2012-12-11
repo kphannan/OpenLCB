@@ -118,7 +118,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\$(LCLWidgetType)\OlcbCommander"/>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\OlcbCommander"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
@@ -147,6 +147,7 @@ if TargetOS = 'linux' then
     </CodeGeneration>
     <Linking>
       <Debugging>
+        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
         <UseExternalDbgSyms Value="True"/>
       </Debugging>
@@ -176,4 +177,4 @@ if TargetOS = 'linux' then
       </Item3>
     </Exceptions>
   </Debugging>
-</CONFIG>
+</CONFIG>
