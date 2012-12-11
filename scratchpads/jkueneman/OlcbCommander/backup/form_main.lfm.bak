@@ -1722,8 +1722,13 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object ActionOpenLCBCommandMemConfigOptions: TAction
       Category = 'OpenLCBCommand'
-      Caption = 'Memory Confgi Options'
+      Caption = 'Memory Confg Options'
       OnExecute = ActionOpenLCBCommandMemConfigOptionsExecute
+    end
+    object ActionOpenLCBCommandMemConfigSpaces: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Mem Config Address Spaces'
+      OnExecute = ActionOpenLCBCommandMemConfigSpacesExecute
     end
   end
   object PopupMenuTreeNode: TPopupMenu
@@ -1746,11 +1751,18 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object MenuItem8: TMenuItem
       Action = ActionOpenLCBCommandMemConfigOptions
     end
+    object MenuItem9: TMenuItem
+      Action = ActionOpenLCBCommandMemConfigSpaces
+    end
     object MenuItem4: TMenuItem
       Caption = '-'
     end
     object MenuItem6: TMenuItem
       Action = ActionOpenLCBCommandAll
     end
+  end
+  object ApplicationProperties1: TApplicationProperties
+    left = 254
+    top = 195
   end
 end

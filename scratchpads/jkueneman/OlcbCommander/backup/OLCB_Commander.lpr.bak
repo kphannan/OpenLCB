@@ -8,7 +8,8 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, form_main, olcb_app_common_settings, file_utilities, form_settings,
-  form_about, form_messagelog, common_utilities, snii, olcb_node
+  form_about, form_messagelog, common_utilities, snii, olcb_node,
+olcb_mem_protocol
   { you can add units after this };
 
 {$R *.res}

@@ -39,7 +39,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="11">
+    <Units Count="12">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -107,6 +107,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_mem_protocol"/>
       </Unit10>
+      <Unit11>
+        <Filename Value="..\Library\statemachine_engine.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="statemachine_engine"/>
+      </Unit11>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

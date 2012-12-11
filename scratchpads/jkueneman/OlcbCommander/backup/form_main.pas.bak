@@ -7,8 +7,8 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   Menus, ActnList, ComCtrls, ExtCtrls, Buttons, serialport_thread, datagram,
-  olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype, types,
-  olcb_utilities, olcb_defines, form_messagelog, snii, olcb_node, olcb_mem_protocol;
+  olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
+  types, olcb_utilities, olcb_defines, form_messagelog, snii, olcb_node, olcb_mem_protocol;
 
 const
   BUNDLENAME            = 'OpenLCB Commander';
@@ -40,6 +40,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionOpenLCBCommandMemConfigSpaces: TAction;
     ActionOpenLCBCommandMemConfigOptions: TAction;
     ActionOpenLCBCommandAll: TAction;
     ActionOpenLCBCommandSNII: TAction;
@@ -52,6 +53,7 @@ type
     ActionToolsPreferenceShowMac: TAction;
     ActionToolsSettingsShowWin: TAction;
     ActionListMain: TActionList;
+    ApplicationProperties1: TApplicationProperties;
     BitBtnNetworkRefresh: TBitBtn;
     BitBtnNetworkRefresh1: TBitBtn;
     BitBtnNetworkRefresh2: TBitBtn;
@@ -67,6 +69,7 @@ type
     MenuItem6: TMenuItem;
     MenuItem7: TMenuItem;
     MenuItem8: TMenuItem;
+    MenuItem9: TMenuItem;
     MenuItemToolsSep2: TMenuItem;
     MenuItemToolsMessageLog: TMenuItem;
     MenuItemToolsComConnect: TMenuItem;
@@ -89,6 +92,7 @@ type
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandIdentifyIDGlobalExecute(Sender: TObject);
     procedure ActionOpenLCBCommandMemConfigOptionsExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandMemConfigSpacesExecute(Sender: TObject);
     procedure ActionOpenLCBCommandProtocolSupportExecute(Sender: TObject);
     procedure ActionOpenLCBCommandSNIIExecute(Sender: TObject);
     procedure ActionToolsComConnectExecute(Sender: TObject);
@@ -221,6 +225,27 @@ var
   i: Integer;
   Datagram: TDatagramSend;
 begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if Node.Parent = RootNetworkNode then
+    begin;
+      Datagram := DatagramSendManager.CreateDatagram;
+      Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, ComPortThread)
+    end;
+  end;
+end;
+
+procedure TFormOLCB_Commander.ActionOpenLCBCommandMemConfigSpacesExecute(Sender: TObject);
+var
+  Node: TOlcbTreeNode;
+  i: Integer;
+  Datagram: TDatagramSend;
+begin
+  // Need to ensure that the Options have been filled in to get list of valid Address Spaces.....
+  ActionOpenLCBCommandMemConfigOptionsExecute(Sender);  // Just force it to happen regardless if has been called before or not
+
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
@@ -600,7 +625,7 @@ begin
       LoadNode(ConfigOptionChild, 'Write by Stream = ', Node.OlcbData.ConfigMem.Options.WriteStreamBytes);
       LoadNodeSimple(ConfigOptionChild, 'Address Space Hi: ' + IntToStr(Node.OlcbData.ConfigMem.Options.AddressSpaceHi));
       LoadNodeSimple(ConfigOptionChild, 'Address Space Lo: ' + IntToStr(Node.OlcbData.ConfigMem.Options.AddressSpaceLo));
-      LoadNodeSimple(ConfigOptionChild, 'Description: ' + IntToStr(Node.OlcbData.ConfigMem.Options.Description));
+      LoadNodeSimple(ConfigOptionChild, 'Description: ' + Node.OlcbData.ConfigMem.Options.Description);
     end;
   finally
     TreeViewNetwork.EndUpdate;
