@@ -9,7 +9,7 @@ uses
   Interfaces, // this includes the LCL widgetset
   Forms, form_main, olcb_app_common_settings, file_utilities, form_settings,
   form_about, form_messagelog, common_utilities, snii, olcb_node,
-olcb_mem_protocol
+olcb_mem_protocol, statemachine_engine
   { you can add units after this };
 
 {$R *.res}
