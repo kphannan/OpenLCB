@@ -6,9 +6,9 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  Menus, ActnList, ComCtrls, ExtCtrls, Buttons, serialport_thread, datagram,
+  Menus, ActnList, ComCtrls, ExtCtrls, Buttons, olcb_threaded_stack,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
-  types, olcb_utilities, olcb_defines, form_messagelog, snii, olcb_node, olcb_mem_protocol,
+  types, olcb_utilities, olcb_defines, form_messagelog, olcb_node, olcb_mem_protocol,
   statemachine_engine;
 
 const
@@ -110,8 +110,6 @@ type
     procedure TreeViewNetworkSelectionChanged(Sender: TObject);
   private
     FComPortThread: TComPortThread;
-    FDatagramReceiveManager: TDatagramReceiveManager;
-    FDatagramSendManager: TDatagramSendManager;
     FMessageHelper: TOpenLCBMessageHelper;
     {$IFDEF DARWIN}
     FOSXMenu: TMenuItem;
@@ -121,22 +119,18 @@ type
     FAppAboutCmd: TMenuItem;
     FRootNetworkNode: TTreeNode;
     FShownOnce: Boolean;
-    FSniiManager: TSniiReceiveManager;
     { private declarations }
   protected
     procedure ComDisconnect;
     function FindTreeNodeByAlias(AnAliasID: Word): TOlcbTreeNode;
-    procedure SyncReceiveMessage(MessageStr: String);
-    procedure SyncSendMessage(MessageStr: String);
+    procedure SyncDatagramMemConfigOperationReply(Datagram: TDatagramReceive);
     procedure SyncErrorMessage(MessageStr: String);
+    procedure SyncReceiveMessage(MessageStr: String);
+    procedure SyncSniiReply(Snii: TSnii);
+    procedure SyncSendMessage(MessageStr: String);
     procedure SyncMessageLogHide;
-    procedure ProcessDatagramReceive(LocalHelper: TOpenLCBMessageHelper);
-    procedure ProcessDatagramReply(LocalHelper: TOpenLCBMessageHelper);
-    procedure ProcessDatagramSend(LocalHelper: TOpenLCBMessageHelper);
-    procedure ProcessDGMemConfigOpReply(LocalDatagram: TDatagramReceive);
     procedure ProcessNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
     procedure ProcessProtocolSupport(LocalHelper: TOpenLCBMessageHelper);
-    procedure ProcessSNII(LocalHelper: TOpenLCBMessageHelper);
     procedure UpdateUI;
     {$IFDEF DARWIN}
     property OSXMenu: TMenuItem read FOSXMenu write FOSXMenu;
@@ -148,9 +142,6 @@ type
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property RootNetworkNode: TTreeNode read FRootNetworkNode write FRootNetworkNode;
     property ShownOnce: Boolean read FShownOnce write FShownOnce;
-    property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager write FDatagramReceiveManager;
-    property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
-    property SniiManager: TSniiReceiveManager read FSniiManager write FSniiManager;
   public
     { public declarations }
   end;
@@ -191,15 +182,12 @@ end;
 procedure TFormOLCB_Commander.ActionOpenLCBCommandAllExecute(Sender: TObject);
 var
   Node: TTreeNode;
-  i: Integer;
 begin
   Node := RootNetworkNode.GetFirstChild;
   while Assigned(Node) do
   begin
-    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
     MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
     ComPortThread.Add(MessageHelper.Encode);
-    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
     MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
     ComPortThread.Add(MessageHelper.Encode);
     Node := RootNetworkNode.GetNextChild(Node);
@@ -207,8 +195,6 @@ begin
 end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandIdentifyIDGlobalExecute(Sender: TObject);
-var
-  i: Integer;
 begin
   TreeViewNetwork.BeginUpdate;
   try
@@ -228,12 +214,12 @@ var
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
-    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
     begin;
-      Datagram := DatagramSendManager.CreateDatagram;
-      Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, ComPortThread)
+      Datagram := TDatagramSend.Create;
+      Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias);
+      ComPortThread.AddDatagramToSend(Datagram);
     end;
   end;
 end;
@@ -249,12 +235,13 @@ begin
 
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
-    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
     begin;
-      Datagram := DatagramSendManager.CreateDatagram;
-      Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, ComPortThread)
+      // WRONG.....
+  //    Datagram := TDatagramSend.Create;
+  //    Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias);
+  //    ComPortThread.AddDatagramToSend(Datagram);
     end;
   end;
 end;
@@ -266,7 +253,6 @@ var
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
-    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
     Node := TreeViewNetwork.Selections[i];
     if Node.Parent = RootNetworkNode then
     begin;
@@ -283,7 +269,6 @@ var
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
-    if GlobalSettings.General.SendPacketDelay > 0 then Sleep(GlobalSettings.General.SendPacketDelay);
     Node := TreeViewNetwork.Selections[i];
     if Node.Parent = RootNetworkNode then
     begin;
@@ -312,9 +297,8 @@ begin
    ComPortThread.SyncReceiveMessageFunc := @SyncReceiveMessage;
    ComPortThread.SyncSendMessageFunc := @SyncSendMessage;
    ComPortThread.SyncErrorMessageFunc := @SyncErrorMessage;
-   DatagramSendManager := TDatagramSendManager.Create(GlobalSettings.General.AliasIDAsVal);
-   DatagramReceiveManager := TDatagramReceiveManager.Create(GlobalSettings.General.AliasIDAsVal);
-   SniiManager := TSniiReceiveManager.Create(GlobalSettings.General.AliasIDAsVal);
+   ComPortThread.SyncDatagramMemConfigOperationReplyFunc := @SyncDatagramMemConfigOperationReply;
+   ComPortThread.SyncSniiReplyFunc := @SyncSniiReply;
    ComPortThread.Suspended := False;
    UpdateUI;
  except
@@ -399,12 +383,12 @@ end;
 procedure TFormOLCB_Commander.TreeViewNetworkAdvancedCustomDrawItem(
   Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState;
   Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
-var
-  R: TRect;
+//var
+//  R: TRect;
 begin
   PaintImages := True;
   DefaultDraw := True;
-  R := Node.DisplayRect(True);
+ // R := Node.DisplayRect(True);
 //  Sender.Canvas.Brush.Color := clBlue;
 //  Sender.Canvas.FillRect(R);
 end;
@@ -431,10 +415,6 @@ begin
     ComPortThread.Terminate;
     FComPortThread := nil;
   end;
-
-  FreeAndNil(FDatagramSendManager);
-  FreeAndNil(FDatagramReceiveManager);
-  FreeAndNil(FSniiManager);
   UpdateUI;
 end;
 
@@ -453,108 +433,7 @@ begin
 
 end;
 
-procedure TFormOLCB_Commander.SyncReceiveMessage(MessageStr: String);
-begin
-  MessageHelper.Decompose(MessageStr);
-  if FormMessageLog.Visible then
-  begin
-    FormMessageLog.SynMemo.Lines.BeginUpdate;
-    FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, False);
-    FormMessageLog.SynMemo.CaretY := FormMessageLog.SynMemo.LineHeight * FormMessageLog.SynMemo.Lines.Count;
-    FormMessageLog.SynMemo.Lines.EndUpdate;
-  end;
-  case MessageHelper.MTI of
-    MTI_VERIFIED_NODE_ID_NUMBER   : ProcessNodeTree(MessageHelper, utr_Add);
-    MTI_AMD                       : ProcessNodeTree(MessageHelper, utr_Add);
-    MTI_AMR                       : ProcessNodeTree(MessageHelper, utr_Remove);
-    MTI_PROTOCOL_SUPPORT_REPLY    : ProcessProtocolSupport(MessageHelper);
-    MTI_SIMPLE_NODE_INFO_REPLY    : ProcessSNII(MessageHelper);
-    MTI_DATAGRAM_OK_REPLY,
-    MTI_DATAGRAM_REJECTED_REPLY   : ProcessDatagramReply(MessageHelper);
-    MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME,
-    MTI_FRAME_TYPE_DATAGRAM_FRAME_START,
-    MTI_FRAME_TYPE_DATAGRAM_FRAME,
-    MTI_FRAME_TYPE_DATAGRAM_FRAME_END : ProcessDatagramReceive(MessageHelper);
-  end;
-end;
-
-procedure TFormOLCB_Commander.SyncSendMessage(MessageStr: String);
-begin
-  if MessageHelper.Decompose(MessageStr) then
-  begin
-    if FormMessageLog.Visible then
-    begin
-      FormMessageLog.SynMemo.Lines.BeginUpdate;
-      FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, True);
-      FormMessageLog.SynMemo.CaretY := FormMessageLog.SynMemo.LineHeight * FormMessageLog.SynMemo.Lines.Count;
-      FormMessageLog.SynMemo.Lines.EndUpdate;
-    end;
-    case MessageHelper.MTI of
-      MTI_DATAGRAM_OK_REPLY,
-      MTI_DATAGRAM_REJECTED_REPLY,
-      MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME,
-      MTI_FRAME_TYPE_DATAGRAM_FRAME_START,
-      MTI_FRAME_TYPE_DATAGRAM_FRAME,
-      MTI_FRAME_TYPE_DATAGRAM_FRAME_END     : ProcessDatagramSend(MessageHelper);
-    end;
-  end;
-end;
-
-procedure TFormOLCB_Commander.SyncErrorMessage(MessageStr: String);
-begin
-  if Assigned(ComPortThread) then
-  begin
-    ComPortThread.Terminate;
-    ComPortThread := nil
-  end;
-  UpdateUI;
-  ShowMessage(MessageStr);
-end;
-
-procedure TFormOLCB_Commander.SyncMessageLogHide;
-begin
-  ActionToolsMessageLogShow.Checked := False;
-end;
-
-procedure TFormOLCB_Commander.ProcessDatagramReceive(LocalHelper: TOpenLCBMessageHelper);
-var
-  DatagramReceive: TDatagramReceive;
-begin
-  DatagramReceive := DatagramReceiveManager.Process(LocalHelper, ComPortThread);
-  if Assigned(DatagramReceive) then
-  begin
-    try
-    // got a datagram need to dispatch it somewhere
-    case DatagramReceive.RawDatagram[0] of    // Destination in the header for datagrams
-      DATAGRAM_PROTOCOL_CONFIGURATION :
-        begin
-          if DatagramReceive.RawDatagram[1] and MCP_OP_GET_CONFIG_REPLY = MCP_OP_GET_CONFIG_REPLY then
-            ProcessDGMemConfigOpReply(DatagramReceive);
-        end;
-    end;
-    finally
-      DatagramReceive.Free
-    end;
-  end;
-end;
-
-procedure TFormOLCB_Commander.ProcessDatagramReply(LocalHelper: TOpenLCBMessageHelper);
-var
-   DatagramSend: TDatagramSend;
- begin
-   DatagramSend := DatagramSendManager.ProcessReceive(LocalHelper, ComPortThread);
-   if Assigned(DatagramSend) then
-   begin
-     DatagramSend.Free
-   end;
-end;
-
-procedure TFormOLCB_Commander.ProcessDatagramSend(LocalHelper: TOpenLCBMessageHelper);
-begin
-  DatagramSendManager.ProcessSend(ComPortThread);
-end;
-
-procedure TFormOLCB_Commander.ProcessDGMemConfigOpReply(LocalDatagram: TDatagramReceive);
+procedure TFormOLCB_Commander.SyncDatagramMemConfigOperationReply(Datagram: TDatagramReceive);
 
   procedure LoadNode(ParentNode: TTreeNode; Description: string; IsTrue: Boolean);
   var
@@ -583,7 +462,7 @@ var
 begin
   TreeViewNetwork.BeginUpdate;
   try
-    Node := FindTreeNodeByAlias(LocalDatagram.DestinationAlias);
+    Node := FindTreeNodeByAlias(Datagram.DestinationAlias);
     if Assigned(Node) then
     begin
       ConfigChildRoot := Node.FindNode(STR_CONFIGMEM);
@@ -609,7 +488,7 @@ begin
       if Node.OlcbData.ConfigMem = nil then
         Node.OlcbData.ConfigMem := TOlcbMemConfig.Create;
 
-      Node.OlcbData.ConfigMem.Options.LoadFromDatagram(LocalDatagram);
+      Node.OlcbData.ConfigMem.Options.LoadFromDatagram(Datagram);
 
       LoadNode(ConfigOptionChild, 'Write Under Mask = ', Node.OlcbData.ConfigMem.Options.WriteUnderMask);
 
@@ -631,6 +510,94 @@ begin
   finally
     TreeViewNetwork.EndUpdate;
   end;
+end;
+
+procedure TFormOLCB_Commander.SyncReceiveMessage(MessageStr: String);
+begin
+  MessageHelper.Decompose(MessageStr);
+  if FormMessageLog.Visible then
+  begin
+    FormMessageLog.SynMemo.Lines.BeginUpdate;
+    FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, False);
+    FormMessageLog.SynMemo.CaretY := FormMessageLog.SynMemo.LineHeight * FormMessageLog.SynMemo.Lines.Count;
+    FormMessageLog.SynMemo.Lines.EndUpdate;
+  end;
+  case MessageHelper.MTI of
+    MTI_VERIFIED_NODE_ID_NUMBER   : ProcessNodeTree(MessageHelper, utr_Add);
+    MTI_AMD                       : ProcessNodeTree(MessageHelper, utr_Add);
+    MTI_AMR                       : ProcessNodeTree(MessageHelper, utr_Remove);
+    MTI_PROTOCOL_SUPPORT_REPLY    : ProcessProtocolSupport(MessageHelper);
+  end;
+end;
+
+procedure TFormOLCB_Commander.SyncSniiReply(Snii: TSnii);
+
+  procedure AddSniiChild(ProtocolChild: TTreeNode; LabelStr: string);
+  var
+    Node: TTreeNode;
+  begin
+    Node := TreeViewNetwork.Items.AddChild(ProtocolChild, LabelStr);
+    Node.ImageIndex := 40;
+    Node.SelectedIndex := 40;
+  end;
+
+var
+  ProtocolChild: TTreeNode;
+  Node: TOlcbTreeNode;
+begin
+  if Assigned(Snii) then
+  begin
+    Node := FindTreeNodeByAlias(Snii.DestinationAlias);
+    if Assigned(Node) then
+    begin
+      Node.OlcbData.Snii := Snii.Duplicate;                                     // Make a Copy for the Node
+      ProtocolChild := Node.FindNode(STR_SNII);
+      if Assigned(ProtocolChild) then
+        ProtocolChild.DeleteChildren
+      else
+        ProtocolChild := TreeViewNetwork.Items.AddChild(Node, STR_SNII);
+      ProtocolChild.ImageIndex := 41;
+      ProtocolChild.SelectedIndex := 41;
+      AddSniiChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
+      AddSniiChild(ProtocolChild, 'Mfg Name : ' + Snii.SniiMfgName);
+      AddSniiChild(ProtocolChild, 'Mfg Model : ' + Snii.SniiMfgModel);
+      AddSniiChild(ProtocolChild, 'Hardware Ver: ' + Snii.SniiHardwareVersion);
+      AddSniiChild(ProtocolChild, 'Software Ver : ' + Snii.SniiSoftwareVersion);
+      AddSniiChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
+      AddSniiChild(ProtocolChild, 'User Name : ' + Snii.SniiUserName);
+      AddSniiChild(ProtocolChild, 'User Desc : ' + Snii.SniiUserDescription);
+    end                                                               // No one to use it, throw it away
+  end
+end;
+
+procedure TFormOLCB_Commander.SyncSendMessage(MessageStr: String);
+begin
+  if MessageHelper.Decompose(MessageStr) then
+  begin
+    if FormMessageLog.Visible then
+    begin
+      FormMessageLog.SynMemo.Lines.BeginUpdate;
+      FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, True);
+      FormMessageLog.SynMemo.CaretY := FormMessageLog.SynMemo.LineHeight * FormMessageLog.SynMemo.Lines.Count;
+      FormMessageLog.SynMemo.Lines.EndUpdate;
+    end;
+  end;
+end;
+
+procedure TFormOLCB_Commander.SyncErrorMessage(MessageStr: String);
+begin
+  if Assigned(ComPortThread) then
+  begin
+    ComPortThread.Terminate;
+    ComPortThread := nil
+  end;
+  UpdateUI;
+  ShowMessage(MessageStr);
+end;
+
+procedure TFormOLCB_Commander.SyncMessageLogHide;
+begin
+  ActionToolsMessageLogShow.Checked := False;
 end;
 
 procedure TFormOLCB_Commander.ProcessNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
@@ -703,49 +670,6 @@ begin
       TreeViewNetwork.EndUpdate;
     end;
   end
-end;
-
-procedure TFormOLCB_Commander.ProcessSNII(LocalHelper: TOpenLCBMessageHelper);
-
-  procedure AddSniiChild(ProtocolChild: TTreeNode; LabelStr: string);
-  var
-    Node: TTreeNode;
-  begin
-    Node := TreeViewNetwork.Items.AddChild(ProtocolChild, LabelStr);
-    Node.ImageIndex := 40;
-    Node.SelectedIndex := 40;
-  end;
-
-var
-  Snii: TSnii;
-  ProtocolChild: TTreeNode;
-  Node: TOlcbTreeNode;
-begin
-  Snii := SniiManager.Process(LocalHelper);
-  if Assigned(Snii) then
-  begin
-    Node := FindTreeNodeByAlias(LocalHelper.SourceAliasID);
-    if Assigned(Node) then
-    begin
-      Node.OlcbData.Snii := Snii;                                               // Give it to the node
-      ProtocolChild := Node.FindNode(STR_SNII);
-      if Assigned(ProtocolChild) then
-        ProtocolChild.DeleteChildren
-      else
-        ProtocolChild := TreeViewNetwork.Items.AddChild(Node, STR_SNII);
-      ProtocolChild.ImageIndex := 41;
-      ProtocolChild.SelectedIndex := 41;
-      AddSniiChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
-      AddSniiChild(ProtocolChild, 'Mfg Name : ' + Snii.SniiMfgName);
-      AddSniiChild(ProtocolChild, 'Mfg Model : ' + Snii.SniiMfgModel);
-      AddSniiChild(ProtocolChild, 'Hardware Ver: ' + Snii.SniiHardwareVersion);
-      AddSniiChild(ProtocolChild, 'Software Ver : ' + Snii.SniiSoftwareVersion);
-      AddSniiChild(ProtocolChild, 'Content Version: ' + IntToStr(Snii.SniiMfgVersion));
-      AddSniiChild(ProtocolChild, 'User Name : ' + Snii.SniiUserName);
-      AddSniiChild(ProtocolChild, 'User Desc : ' + Snii.SniiUserDescription);
-    end else
-      Snii.Free;                                                                // No one to use it, throw it away
-  end;
 end;
 
 procedure TFormOLCB_Commander.UpdateUI;

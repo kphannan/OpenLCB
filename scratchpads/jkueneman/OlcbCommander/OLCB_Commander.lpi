@@ -39,7 +39,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="12">
+    <Units Count="13">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -112,6 +112,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="statemachine_engine"/>
       </Unit11>
+      <Unit12>
+        <Filename Value="..\Library\olcb_threaded_stack.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_threaded_stack"/>
+      </Unit12>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -147,7 +152,6 @@ if TargetOS = 'linux' then
     </CodeGeneration>
     <Linking>
       <Debugging>
-        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
         <UseExternalDbgSyms Value="True"/>
       </Debugging>
@@ -177,4 +181,4 @@ if TargetOS = 'linux' then
       </Item3>
     </Exceptions>
   </Debugging>
-</CONFIG>
+</CONFIG>

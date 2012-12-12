@@ -5,8 +5,7 @@ unit statemachine_engine;
 interface
 
 uses
-  Classes, SysUtils, ExtCtrls, serialport_thread, datagram,
-  olcb_app_common_settings, file_utilities;
+  Classes, SysUtils, ExtCtrls, serialport_thread, olcb_app_common_settings, file_utilities;
 
 type
 

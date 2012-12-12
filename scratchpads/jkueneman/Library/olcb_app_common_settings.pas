@@ -5,7 +5,10 @@ unit olcb_app_common_settings;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, IniFiles;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  Menus, ActnList, ComCtrls, ExtCtrls, Buttons, IniFiles;
+
+ // Classes, SysUtils, FileUtil, IniFiles;
 
 const
   STR_INI_COMPORT_SECTION = 'ComPort';
@@ -74,13 +77,14 @@ type
     FAliasID: string;
     FNodeID: string;
     FSendPacketDelay: Word;
+    procedure SetAliasID(AValue: string);
   public
     constructor Create;
     procedure LoadFromFile(IniFile: TIniFile);
     procedure SaveToFile(IniFile: TIniFile);
     function AliasIDAsVal: Word;
     function NodeIDAsVal: DWord;
-    property AliasID: string read FAliasID write FAliasID;
+    property AliasID: string read FAliasID write SetAliasID;
     property NodeID: string read FNodeID write FNodeID;
     property SendPacketDelay: Word read FSendPacketDelay write FSendPacketDelay;
   end;
@@ -91,10 +95,8 @@ type
 
   TOlcbCommonSettings = class
   private
-    FAliasID: Word;
     FComPort: TComPortSettings;
     FGeneral: TGeneralSettings;
-    FNodeID: DWord;
   public
     constructor Create;
     destructor Destroy; override;
@@ -107,16 +109,25 @@ type
 
 var
   GlobalSettings: TOlcbCommonSettings;
+  GlobalSettingLock: TRTLCriticalSection;
 
 implementation
 
 { TGeneralSettings }
 
+procedure TGeneralSettings.SetAliasID(AValue: string);
+begin
+  if FAliasID=AValue then Exit;
+  EnterCriticalsection(GlobalSettingLock);
+  FAliasID:=AValue;
+  LeaveCriticalsection(GlobalSettingLock);
+end;
+
 constructor TGeneralSettings.Create;
 begin
-  AliasID := '0x0AAA';
-  NodeID := '0x010203040506';
-  SendPacketDelay := 0;
+  FAliasID := '0x0AAA';
+  FNodeID := '0x010203040506';
+  FSendPacketDelay := 0;
 end;
 
 procedure TGeneralSettings.LoadFromFile(IniFile: TIniFile);
@@ -147,12 +158,12 @@ end;
 
 constructor TComPortSettings.Create;
 begin
-  BaudRate := 333333;
-  DataBits := 8;
-  Parity := cpp_None;
-  Port := 'COM2';
-  StopBits := 0;
-  FlowControl := cpf_None;
+  FBaudRate := 333333;
+  FDataBits := 8;
+  FParity := cpp_None;
+  FPort := 'COM2';
+  FStopBits := 0;
+  FFlowControl := cpf_None;
 end;
 
 procedure TComPortSettings.LoadFromFile(IniFile: TIniFile);
@@ -190,8 +201,8 @@ end;
 constructor TOlcbCommonSettings.Create;
 begin
   inherited;
-  ComPort := TComPortSettings.Create;
-  General := TGeneralSettings.Create;
+  FComPort := TComPortSettings.Create;
+  FGeneral := TGeneralSettings.Create;
 end;
 
 destructor TOlcbCommonSettings.Destroy;
@@ -229,9 +240,11 @@ end;
 
 initialization
   GlobalSettings := TOlcbCommonSettings.Create;
+  InitCriticalSection(GlobalSettingLock);
 
 finalization
-  FreeAndNil(GlobalSettings)
+  FreeAndNil(GlobalSettings);
+  DoneCriticalsection(GlobalSettingLock);
 
 end.
 

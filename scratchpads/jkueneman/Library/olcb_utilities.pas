@@ -112,7 +112,7 @@ type
   function MTI_ToString(MTI: DWord): WideString;
   function EventIDToString(EventID: PEventID): WideString;
   function EqualEvents(Event1, Event2: PEventID): Boolean;
-  function IsDatagramMTI(MTI: DWord): Boolean;
+  function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
   function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
   function ProtocolSupportReplyToString(Mask: QWord): string;
 
@@ -379,68 +379,71 @@ var
   ByteStr: AnsiString;
 begin
   Result := False;
-  MessageStr := UpperCase(MessageStr);
-
-  x := Pos('X', MessageStr);         // Find were the "X" is in the string
-  if x > 0 then
+  if MessageStr <> '' then
   begin
-    n := PosEx('N', MessageStr, x);  // Find where the "N" is in the string
-    if n > 0 then
+    MessageStr := UpperCase(MessageStr);
+
+    x := Pos('X', MessageStr);         // Find were the "X" is in the string
+    if x > 0 then
     begin
-      Result := True;           // At least it has an X and a N
-      MessageStr[n] := #0;           // Set the "N" to a null to create a null string of the MTI
-      Inc(n);                        // Move just pass where the "N" was
-      SemiColon := PosEx(';', MessageStr, n);  // Look for the terminating ";"
-      if SemiColon > 0 then
+      n := PosEx('N', MessageStr, x);  // Find where the "N" is in the string
+      if n > 0 then
       begin
-        MTI := StrToInt('$' + PAnsiChar( @MessageStr[x+1])); // Convert the string MTI into a number
-        SourceAliasID := MTI and $00000FFF;                  // Strip off the Source Alias
-        if MTI and $08000000 = $08000000 then                // Was this an OpenLCB or CAN message?
-          Layer := ol_OpenLCB
-        else
-          Layer := ol_CAN;
-
-        FForwardingBitNotSet := MTI and $10000000 = $00000000;    // Check if the Forwarding Bit was set
-        FUnimplementedBitsSet := MTI and $E0000000 <> $00000000;  // Check to see the state of the unimplemented bits
-
-        MTI := MTI and not $10000000;    // Strip off the reserved bits
-        MTI := MTI and $FFFFF000;        // Strip off the Source Alias
-
-        if Layer = ol_CAN then
+        Result := True;           // At least it has an X and a N
+        MessageStr[n] := #0;           // Set the "N" to a null to create a null string of the MTI
+        Inc(n);                        // Move just pass where the "N" was
+        SemiColon := PosEx(';', MessageStr, n);  // Look for the terminating ";"
+        if SemiColon > 0 then
         begin
-          if MTI and MTI_CID_MASK <> 0 then
-            MTI := MTI and MTI_CID_MASK;
-        end;
+          MTI := StrToInt('$' + PAnsiChar( @MessageStr[x+1])); // Convert the string MTI into a number
+          SourceAliasID := MTI and $00000FFF;                  // Strip off the Source Alias
+          if MTI and $08000000 = $08000000 then                // Was this an OpenLCB or CAN message?
+            Layer := ol_OpenLCB
+          else
+            Layer := ol_CAN;
 
-        for i := 0 to CAN_BYTE_COUNT - 1 do
-          Data[i] := 0;
+          FForwardingBitNotSet := MTI and $10000000 = $00000000;    // Check if the Forwarding Bit was set
+          FUnimplementedBitsSet := MTI and $E0000000 <> $00000000;  // Check to see the state of the unimplemented bits
 
-        // Convert the CAN payload bytes into numbers
-        FDataCount := 0;
-        i := n;
-        while i < SemiColon do
-        begin
-          ByteStr := MessageStr[i] + MessageStr[i+1];
-          Data[FDataCount] := StrToInt('$'+ByteStr);
-          Inc(i, 2);
-          Inc(FDataCount);
-        end;
+          MTI := MTI and not $10000000;    // Strip off the reserved bits
+          MTI := MTI and $FFFFF000;        // Strip off the Source Alias
 
-        // Determine if the message has a destination address and if so store it
-        HasDestinationAddress := False;
-        if Layer = ol_OpenLCB then
-        begin
-          if MTI and MTI_FRAME_TYPE_MASK > MTI_FRAME_TYPE_GENERAL then        // See if the destination Alias is in the MTI
+          if Layer = ol_CAN then
           begin
-            DestinationAliasID := (MTI and $00FFF000) shr 12;
-            MTI := MTI and $FF000FFF;
-            HasDestinationAddress := True;
-          end else
+            if MTI and MTI_CID_MASK <> 0 then
+              MTI := MTI and MTI_CID_MASK;
+          end;
+
+          for i := 0 to CAN_BYTE_COUNT - 1 do
+            Data[i] := 0;
+
+          // Convert the CAN payload bytes into numbers
+          FDataCount := 0;
+          i := n;
+          while i < SemiColon do
           begin
-            if MTI and MTI_ADDRESS_PRESENT = MTI_ADDRESS_PRESENT then
+            ByteStr := MessageStr[i] + MessageStr[i+1];
+            Data[FDataCount] := StrToInt('$'+ByteStr);
+            Inc(i, 2);
+            Inc(FDataCount);
+          end;
+
+          // Determine if the message has a destination address and if so store it
+          HasDestinationAddress := False;
+          if Layer = ol_OpenLCB then
+          begin
+            if MTI and MTI_FRAME_TYPE_MASK > MTI_FRAME_TYPE_GENERAL then        // See if the destination Alias is in the MTI
             begin
-              DestinationAliasID := Word( (Data[0] shl 8)) or (Data[1]);
+              DestinationAliasID := (MTI and $00FFF000) shr 12;
+              MTI := MTI and $FF000FFF;
               HasDestinationAddress := True;
+            end else
+            begin
+              if MTI and MTI_ADDRESS_PRESENT = MTI_ADDRESS_PRESENT then
+              begin
+                DestinationAliasID := Word( (Data[0] shl 8)) or (Data[1]);
+                HasDestinationAddress := True;
+              end
             end
           end
         end
@@ -558,9 +561,11 @@ begin
   ByteArray[7] := (Int shr 56) and $000000FF;
 end;
 
-function IsDatagramMTI(MTI: DWord): Boolean;
+function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
 begin
-  Result := (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME_END) or (MTI = MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME) or (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME) or (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME_START)
+  Result := (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME_END) or (MTI = MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME) or (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME) or (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME_START);
+  if Result and IncludeReplies then
+    Result := (MTI = MTI_DATAGRAM_OK_REPLY) or (MTI = MTI_DATAGRAM_REJECTED_REPLY)
 end;
 
 function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;

@@ -18,7 +18,7 @@ object FormMessageLog: TFormMessageLog
     Width = 819
     Align = alTop
     Anchors = [akTop, akLeft, akRight, akBottom]
-    Font.Height = 12
+    Font.Height = 16
     Font.Name = 'Courier New'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
@@ -27,7 +27,7 @@ object FormMessageLog: TFormMessageLog
     PopupMenu = PopupMenuSynMemo
     TabOrder = 0
     OnKeyDown = SynMemoKeyDown
-    Gutter.Width = 55
+    Gutter.Width = 57
     Gutter.MouseActions = <>
     Keystrokes = <    
       item
@@ -463,7 +463,7 @@ object FormMessageLog: TFormMessageLog
         MouseActions = <>
       end
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 15
+        Width = 17
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
@@ -595,4 +595,4 @@ object FormMessageLog: TFormMessageLog
       OnExecute = ActionLogSelectAllExecute
     end
   end
-end
+end

@@ -5,7 +5,7 @@ unit olcb_mem_protocol;
 interface
 
 uses
-  Classes, SysUtils, olcb_utilities, olcb_defines, serialport_thread, datagram;
+  Classes, SysUtils, olcb_utilities, olcb_defines, olcb_threaded_stack;
 
 type
 
