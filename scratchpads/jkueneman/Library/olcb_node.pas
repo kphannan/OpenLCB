@@ -5,7 +5,7 @@ unit olcb_node;
 interface
 
 uses
-  Classes, SysUtils, laz2_DOM, laz2_XMLRead, laz2_XMLWrite, olcb_threaded_stack, olcb_mem_protocol;
+  Classes, SysUtils, laz2_DOM, laz2_XMLRead, olcb_threaded_stack, olcb_mem_protocol;
 
 type
   { TOpenLcbNode }

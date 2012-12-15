@@ -1,7 +1,7 @@
 object FormMessageLog: TFormMessageLog
-  Left = 431
+  Left = 436
   Height = 252
-  Top = 215
+  Top = 219
   Width = 819
   Caption = 'Message Logger'
   ClientHeight = 252

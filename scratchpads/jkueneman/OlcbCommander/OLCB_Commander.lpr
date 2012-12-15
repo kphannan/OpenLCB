@@ -9,7 +9,7 @@ uses
   Interfaces, // this includes the LCL widgetset
   Forms, form_main, olcb_app_common_settings, file_utilities, form_settings,
   form_about, form_messagelog, common_utilities, olcb_node,
-  olcb_mem_protocol, statemachine_engine, olcb_threaded_stack
+  olcb_mem_protocol, olcb_threaded_stack, olcb_common_tasks, form_thread_debug
   { you can add units after this };
 
 {$R *.res}
@@ -21,6 +21,7 @@ begin
   Application.CreateForm(TFormSettings, FormSettings);
   Application.CreateForm(TFormAbout, FormAbout);
   Application.CreateForm(TFormMessageLog, FormMessageLog);
+  Application.CreateForm(TFormThreadDebug, FormThreadDebug);
   Application.Run;
 end.
 

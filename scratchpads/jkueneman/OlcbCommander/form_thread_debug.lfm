@@ -1,0 +1,138 @@
+object FormThreadDebug: TFormThreadDebug
+  Left = 952
+  Height = 192
+  Top = 240
+  Width = 320
+  Caption = 'Thread Debug'
+  ClientHeight = 192
+  ClientWidth = 320
+  LCLVersion = '1.0.2.0'
+  object Label1: TLabel
+    Left = 14
+    Height = 14
+    Top = 12
+    Width = 132
+    Caption = ' Datagram Receive Objects'
+    ParentColor = False
+  end
+  object LabelDatagramReceiveObjects: TLabel
+    Left = 224
+    Height = 14
+    Top = 12
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label3: TLabel
+    Left = 16
+    Height = 14
+    Top = 56
+    Width = 115
+    Caption = 'Datagram Send Objects'
+    ParentColor = False
+  end
+  object LabelDatagramSendObjects: TLabel
+    Left = 224
+    Height = 14
+    Top = 56
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 14
+    Height = 14
+    Top = 96
+    Width = 63
+    Caption = 'Task Objects'
+    ParentColor = False
+  end
+  object LabelTaskObjects: TLabel
+    Left = 224
+    Height = 14
+    Top = 96
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label4: TLabel
+    Left = 14
+    Height = 14
+    Top = 32
+    Width = 155
+    Caption = ' Datagram Receive Objects Max'
+    ParentColor = False
+  end
+  object LabelDatagramReceiveObjectsMax: TLabel
+    Left = 224
+    Height = 14
+    Top = 32
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label5: TLabel
+    Left = 16
+    Height = 14
+    Top = 72
+    Width = 138
+    Caption = 'Datagram Send Objects Max'
+    ParentColor = False
+  end
+  object LabelDatagramSendObjectsMax: TLabel
+    Left = 224
+    Height = 14
+    Top = 72
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label6: TLabel
+    Left = 14
+    Height = 14
+    Top = 112
+    Width = 86
+    Caption = 'Task Objects Max'
+    ParentColor = False
+  end
+  object LabelTaskObjectsMax: TLabel
+    Left = 224
+    Height = 14
+    Top = 112
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label7: TLabel
+    Left = 16
+    Height = 14
+    Top = 136
+    Width = 62
+    Caption = 'SNII Objects'
+    ParentColor = False
+  end
+  object LabelSNIIObjects: TLabel
+    Left = 226
+    Height = 14
+    Top = 136
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+  object Label8: TLabel
+    Left = 16
+    Height = 14
+    Top = 152
+    Width = 85
+    Caption = 'SNII Objects Max'
+    ParentColor = False
+  end
+  object LabelSNIIObjectsMax: TLabel
+    Left = 226
+    Height = 14
+    Top = 152
+    Width = 7
+    Caption = '0'
+    ParentColor = False
+  end
+end

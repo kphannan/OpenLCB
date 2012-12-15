@@ -11,9 +11,11 @@ uses
   Classes, SysUtils, Forms;
 
 const
-  PATH_UNIX_APPLICATION_PATH = 'Desktop\';
+  PATH_UNIX_APPLICATION_PATH = '/usr/share/';    // Typical place to store the application foldler
+  PATH_LINUX_DEV = '/dev/';
+  PATH_OSX_DEV = 'dev/';
 
-function GetApplicationPath: string;
+function GetApplicationPath: string;    // Returns the path to the executible (except for Linix were it returns the root folder of the Application folder) ending in the path delimiter
 
 implementation
 
@@ -45,4 +47,4 @@ begin
 end;
 
 end.
-
+

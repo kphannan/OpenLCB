@@ -39,7 +39,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="13">
+    <Units Count="14">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -117,6 +117,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_threaded_stack"/>
       </Unit12>
+      <Unit13>
+        <Filename Value="..\Library\olcb_common_tasks.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_common_tasks"/>
+      </Unit13>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

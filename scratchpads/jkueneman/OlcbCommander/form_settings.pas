@@ -16,6 +16,8 @@ type
   TFormSettings = class(TForm)
     BitBtnFTDIDefaults: TBitBtn;
     BitBtnRescanPorts: TBitBtn;
+    CheckBoxAutoConnect: TCheckBox;
+    CheckBoxAutoScanAtStart: TCheckBox;
     ComboBoxStopBits: TComboBox;
     ComboBoxParity: TComboBox;
     ComboBoxBaud: TComboBox;
@@ -45,13 +47,16 @@ type
     procedure BitBtnRescanPortsClick(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure ListViewSelectBarSelectItem(Sender: TObject; Item: TListItem;
-      Selected: boolean);
+    procedure ListViewSelectBarSelectItem(Sender: TObject; Item: TListItem; Selected: boolean);
   private
+    FSettingsFilePath: WideString;
     { private declarations }
     procedure ScanComPorts;
+  protected
+    procedure StoreSettings;
   public
     { public declarations }
+    property SettingsFilePath: WideString read FSettingsFilePath write FSettingsFilePath;
   end;
 
 var
@@ -109,27 +114,7 @@ begin
     ComboBoxComPort.ItemIndex := 0;
 end;
 
-procedure TFormSettings.FormShow(Sender: TObject);
-begin
- // GlobalSettings.LoadFromFile(UTF8ToSys( GetApplicationPath + 'settings.ini'));   Done when program starts
-  ScanComPorts;
-  ListviewSelectBar.Items[0].Selected := True;
-  ListviewSelectBar.Items[0].Focused := True;
-  // ComPort
-  ComboBoxComPort.ItemIndex := ComboBoxComPort.Items.IndexOf(GlobalSettings.ComPort.Port);
-  ComboBoxBaud.ItemIndex := ComboBoxBaud.Items.IndexOf(IntToStr(GlobalSettings.ComPort.BaudRate));
-  ComboBoxDataBits.ItemIndex := ComboBoxDataBits.Items.IndexOf(IntToStr( GlobalSettings.ComPort.DataBits));
-  ComboBoxStopBits.ItemIndex := ComboBoxStopBits.Items.IndexOf(IntToStr( GlobalSettings.ComPort.StopBits));
-  ComboBoxParity.ItemIndex := Integer( GlobalSettings.ComPort.Parity);
-  ComboBoxFlowControl.ItemIndex := Integer( GlobalSettings.ComPort.FlowControl);
-
-  // General
-  SpinEditSendPacketDelay.Value := GlobalSettings.General.SendPacketDelay;
-  EditAliasID.Caption := ValidateHex( GlobalSettings.General.AliasID);
-  EditNodeID.Caption := ValidateHex(GlobalSettings.General.NodeID);
-end;
-
-procedure TFormSettings.FormHide(Sender: TObject);
+procedure TFormSettings.StoreSettings;
 begin
   // ComPort
   GlobalSettings.ComPort.Port := ComboBoxComPort.Caption;
@@ -143,8 +128,36 @@ begin
   GlobalSettings.General.SendPacketDelay := SpinEditSendPacketDelay.Value;
   GlobalSettings.General.AliasID := ValidateHex(EditAliasID.Caption);
   GlobalSettings.General.NodeID := ValidateHex(EditNodeID.Caption);
+  GlobalSettings.General.AutoScanNetworkAtBoot := CheckBoxAutoScanAtStart.Checked;
+  GlobalSettings.ComPort.AutoConnectAtBoot := CheckBoxAutoConnect.Checked;
 
-  GlobalSettings.SaveToFile(UTF8ToSys( GetApplicationPath + 'settings.ini'));
+  GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
+end;
+
+procedure TFormSettings.FormShow(Sender: TObject);
+begin
+  ScanComPorts;
+  ListviewSelectBar.Items[0].Selected := True;
+  ListviewSelectBar.Items[0].Focused := True;
+  // ComPort
+  ComboBoxComPort.ItemIndex := ComboBoxComPort.Items.IndexOf(GlobalSettings.ComPort.Port);
+  ComboBoxBaud.ItemIndex := ComboBoxBaud.Items.IndexOf(IntToStr(GlobalSettings.ComPort.BaudRate));
+  ComboBoxDataBits.ItemIndex := ComboBoxDataBits.Items.IndexOf(IntToStr( GlobalSettings.ComPort.DataBits));
+  ComboBoxStopBits.ItemIndex := ComboBoxStopBits.Items.IndexOf(IntToStr( GlobalSettings.ComPort.StopBits));
+  ComboBoxParity.ItemIndex := Integer( GlobalSettings.ComPort.Parity);
+  ComboBoxFlowControl.ItemIndex := Integer( GlobalSettings.ComPort.FlowControl);
+  CheckBoxAutoConnect.Checked := GlobalSettings.ComPort.AutoConnectAtBoot;
+
+  // General
+  SpinEditSendPacketDelay.Value := GlobalSettings.General.SendPacketDelay;
+  EditAliasID.Caption := ValidateHex( GlobalSettings.General.AliasID);
+  EditNodeID.Caption := ValidateHex(GlobalSettings.General.NodeID);
+  CheckBoxAutoScanAtStart.Checked := GlobalSettings.General.AutoScanNetworkAtBoot;
+end;
+
+procedure TFormSettings.FormHide(Sender: TObject);
+begin
+  StoreSettings
 end;
 
 procedure TFormSettings.BitBtnRescanPortsClick(Sender: TObject);

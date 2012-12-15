@@ -53,55 +53,58 @@ type
     property Description: string read FDescription;
   end;
 
-  { TOlcbMemAddress }
+  { TOlcbMemAddressSpace }
 
-  TOlcbMemAddress = class
+  TOlcbMemAddressSpace = class
   private
     FAddressHi: DWord;
     FAddressLo: DWord;
     FAddressLoImpliedZero: Boolean;
     FDescription: string;
+    FIsPresent: Boolean;
     FIsReadOnly: Boolean;
     FSpace: Byte;
     function GetAddressSize: DWord;
+    function GetSpaceAsHex: string;
   public
     constructor Create;
+    procedure LoadByDatagram(ADatagram: TDatagramReceive);
     property AddressLo: DWord read FAddressLo write FAddressLo;
     property AddressLoImpliedZero: Boolean read FAddressLoImpliedZero write FAddressLoImpliedZero;
     property AddressHi: DWord read FAddressHi write FAddressHi;
     property AddressSize: DWord read GetAddressSize;
     property Description: string read FDescription write FDescription;
     property IsReadOnly: Boolean read FIsReadOnly write FIsReadOnly;
+    property IsPresent: Boolean read FIsPresent write FIsPresent;
     property Space: Byte read FSpace write FSpace;
+    property SpaceAsHex: string read GetSpaceAsHex;
   end;
 
   { TOlcbMemConfig }
 
   TOlcbMemConfig = class
   private
-    FAddressList: TList;
+    FAddressSpaceList: TList;
     FOptions: TOlcbMemOptions;
-    function GetAddress(Index: Integer): TOlcbMemAddress;
+    function GetAddressSpace(Index: Integer): TOlcbMemAddressSpace;
     function GetAddressCount: Integer;
-    procedure SetAddress(Index: Integer; AValue: TOlcbMemAddress);
+    procedure SetAddressSpace(Index: Integer; AValue: TOlcbMemAddressSpace);
   protected
     procedure Clear;
-    property AddressList: TList read FAddressList write FAddressList;
+    property AddressSpaceList: TList read FAddressSpaceList write FAddressSpaceList;
   public
     constructor Create;
     destructor Destroy; override;
+    function AddAddressSpace(Datagram: TDatagramReceive): TOlcbMemAddressSpace;
+    function FindAddressSpaceBySpaceID(AnAddress: Byte): TOlcbMemAddressSpace;
 
-    property Address[Index: Integer]: TOlcbMemAddress read GetAddress write SetAddress;
-    property AddressCount: Integer read GetAddressCount;
+    property AddressSpace[Index: Integer]: TOlcbMemAddressSpace read GetAddressSpace write SetAddressSpace;
+    property AddressSpaceCount: Integer read GetAddressCount;
     property Options: TOlcbMemOptions read FOptions;
   end;
 
 
 implementation
-
-const
-  STATE_OPTIONS_REPLY         = 0;
-  STATE_DONE                  = 10;
 
 { TOlcbMemOptions }
 
@@ -185,7 +188,7 @@ begin
     FAddressSpaceHi := Datagram.RawDatagram[5];
     FAddressSpaceLo := Datagram.RawDatagram[6];
     i := 7;
-    while (Chr( Datagram.RawDatagram[i]) <> #0) and (i < DATAGRAM_LENGTH) do
+    while (Chr( Datagram.RawDatagram[i]) <> #0) and (i < MAX_DATAGRAM_LENGTH) do
     begin
       FDescription[i - 7] := Chr( Datagram.RawDatagram[i]);
       Inc(i)
@@ -195,22 +198,22 @@ end;
 
 { TOlcbMemConfig }
 
-function TOlcbMemConfig.GetAddress(Index: Integer): TOlcbMemAddress;
+function TOlcbMemConfig.GetAddressSpace(Index: Integer): TOlcbMemAddressSpace;
 begin
   Result := nil;
-  if (Index > -1) and (Index < AddressList.Count) then
-    Result := TOlcbMemAddress( AddressList[Index])
+  if (Index > -1) and (Index < AddressSpaceList.Count) then
+    Result := TOlcbMemAddressSpace( AddressSpaceList[Index])
 end;
 
 function TOlcbMemConfig.GetAddressCount: Integer;
 begin
-  Result := AddressList.Count
+  Result := AddressSpaceList.Count
 end;
 
-procedure TOlcbMemConfig.SetAddress(Index: Integer; AValue: TOlcbMemAddress);
+procedure TOlcbMemConfig.SetAddressSpace(Index: Integer; AValue: TOlcbMemAddressSpace);
 begin
-  if (Index > -1) and (Index < AddressList.Count) then
-    AddressList[Index] := AValue                      // We don't free it
+  if (Index > -1) and (Index < AddressSpaceList.Count) then
+    AddressSpaceList[Index] := AValue                      // We don't free it
 end;
 
 procedure TOlcbMemConfig.Clear;
@@ -218,37 +221,64 @@ var
   i: Integer;
 begin
   try
-    for i := 0 to AddressList.Count - 1 do
-      TObject( FAddressList[i]).Free;
+    for i := 0 to AddressSpaceList.Count - 1 do
+      TObject( FAddressSpaceList[i]).Free;
   finally
-    AddressList.Clear;
+    AddressSpaceList.Clear;
   end;
 end;
 
 constructor TOlcbMemConfig.Create;
 begin
   inherited Create;
-  FAddressList := TList.Create;
+  FAddressSpaceList := TList.Create;
   FOptions := TOlcbMemOptions.Create;
 end;
 
 destructor TOlcbMemConfig.Destroy;
 begin
   Clear;
-  FreeAndNil(FAddressList);
+  FreeAndNil(FAddressSpaceList);
   FreeAndNil(FOptions);
   inherited Destroy;
 end;
 
+function TOlcbMemConfig.AddAddressSpace(Datagram: TDatagramReceive): TOlcbMemAddressSpace;
+begin
+  Result := FindAddressSpaceBySpaceID(Datagram.RawDatagram[2]);
+  if not Assigned(Result) then
+    Result := TOlcbMemAddressSpace.Create;
+  Result.LoadByDatagram(Datagram);
+end;
 
-{ TOlcbMemAddress }
+function TOlcbMemConfig.FindAddressSpaceBySpaceID(AnAddress: Byte): TOlcbMemAddressSpace;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := 0;
+  while (i < AddressSpaceList.Count) and not Assigned(Result) do
+  begin
+    if AddressSpace[i].Space = AnAddress then
+      Result := AddressSpace[i];
+    Inc(i);
+  end;
+end;
 
-function TOlcbMemAddress.GetAddressSize: DWord;
+
+{ TOlcbMemAddressSpace }
+
+function TOlcbMemAddressSpace.GetAddressSize: DWord;
 begin
   Result := AddressHi-AddressLo
 end;
 
-constructor TOlcbMemAddress.Create;
+function TOlcbMemAddressSpace.GetSpaceAsHex: string;
+begin
+  Result := IntToHex(FSpace, 2);
+end;
+
+constructor TOlcbMemAddressSpace.Create;
 begin
   FAddressHi := 0;
   FAddressLo := 0;
@@ -256,6 +286,37 @@ begin
   FDescription := '';
   FIsReadOnly := False;
   FSpace := 0;
+  FIsPresent := False;
+end;
+
+procedure TOlcbMemAddressSpace.LoadByDatagram(ADatagram: TDatagramReceive);
+var
+  DescriptionStart: Integer;
+  Done: Boolean;
+begin
+  FAddressHi := ADatagram.ExtractDataBytesAsInt(3, 6);
+  FAddressLo := 0;
+  FAddressLoImpliedZero := True;
+  FIsPresent := ADatagram.RawDatagram[1] and MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT = MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT;
+  FIsReadOnly := ADatagram.RawDatagram[7] and $01 = $01;
+  FSpace := ADatagram.RawDatagram[2];
+  if ADatagram.CurrentPos > 8 then
+  begin
+    if ADatagram.RawDatagram[7] and $02 = $02 then
+    begin
+      FAddressLo := ADatagram.ExtractDataBytesAsInt(8, 11);
+      DescriptionStart := 12;
+    end else
+      DescriptionStart := 8;
+    Done := False;
+    while not Done and (DescriptionStart < MAX_DATAGRAM_LENGTH) do
+    begin
+      FDescription := FDescription + Chr( ADatagram.RawDatagram[DescriptionStart]);
+      Done := Chr( ADatagram.RawDatagram[DescriptionStart]) = #0;
+      Inc(DescriptionStart);
+    end;
+  end;
+
 end;
 
 end.

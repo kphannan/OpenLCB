@@ -2,6 +2,8 @@ unit form_main;
 
 {$mode objfpc}{$H+}
 
+{.$DEFINE DEBUG_THREAD}
+
 interface
 
 uses
@@ -9,15 +11,24 @@ uses
   Menus, ActnList, ComCtrls, ExtCtrls, Buttons, olcb_threaded_stack,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
   types, olcb_utilities, olcb_defines, form_messagelog, olcb_node, olcb_mem_protocol,
-  statemachine_engine;
+  {$IFDEF DEBUG_THREAD}
+  form_thread_debug
+  {$ENDIF}
+  olcb_common_tasks;
 
 const
-  BUNDLENAME            = 'OpenLCB Commander';
+  BUNDLENAME             = 'OpenLCB Commander';
+  PATH_LINUX_APP_FOLDER  = 'olcbcommander/';
+  PATH_SETTINGS_FILE     = 'settings.ini';
+
   STR_NETWORKTREE_ROOT  = 'Network Tree';
   STR_PROTOCOLSUPPORT   = 'Supported Protocols';
-  STR_SNII              = 'Simple Node Identification (SNIP/SNII)';
-  STR_CONFIGMEM         = 'Memory Protocol';
+  STR_SNII              = 'Simple Node Identification Protocol (SNIP/SNII)';
+  STR_MEM_PROTOCOL      = 'Memory Protocol';
   STR_CONFIGMEM_OPTIONS = 'Options';
+  STR_CONFIGMEM_ADDRESS_SPACES = 'Address Spaces';
+  STR_CONFIGMEM_ADDRESS_SPACE = 'Address Space: ';
+
 
 type
   TUpdateTreeReason = (
@@ -41,6 +52,8 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionTreeviewNetworkExpandAll: TAction;
+    ActionTreeviewNetworkCollapseAll: TAction;
     ActionOpenLCBCommandMemConfigSpaces: TAction;
     ActionOpenLCBCommandMemConfigOptions: TAction;
     ActionOpenLCBCommandAll: TAction;
@@ -56,21 +69,26 @@ type
     ActionListMain: TActionList;
     ApplicationProperties1: TApplicationProperties;
     BitBtnNetworkRefresh: TBitBtn;
-    BitBtnNetworkRefresh1: TBitBtn;
-    BitBtnNetworkRefresh2: TBitBtn;
+    BitBtnProtocolSupport: TBitBtn;
+    BitBtnSNIP: TBitBtn;
     BitBtnNetworkRefresh3: TBitBtn;
+    BitBtnMemConfgOptions: TBitBtn;
+    BitBtnMemConfigAddressSpaces: TBitBtn;
     ImageListMainSmall: TImageList;
     LabelNetworkNodeCount: TLabel;
     LabelNetworkNodeCountValue: TLabel;
     MainMenu: TMainMenu;
-    MenuItem1: TMenuItem;
-    MenuItem3: TMenuItem;
-    MenuItem4: TMenuItem;
-    MenuItem5: TMenuItem;
+    MenuItemTVPopupIdentifyGlobal: TMenuItem;
+    MenuItemTVPopupExpandAll: TMenuItem;
+    MenuItemTVPopupCollapseAll: TMenuItem;
+    MenuItemTVPopupSep3: TMenuItem;
+    MenuItemTVPopupSNIP: TMenuItem;
+    MenuItemTVPopupSep2: TMenuItem;
+    MenuItemTVPopupProtocol: TMenuItem;
     MenuItem6: TMenuItem;
-    MenuItem7: TMenuItem;
-    MenuItem8: TMenuItem;
-    MenuItem9: TMenuItem;
+    MenuItemTVPopupSep1: TMenuItem;
+    MenuItemTVPopupMemOptions: TMenuItem;
+    MenuItemTVPopupMemAddressSpaces: TMenuItem;
     MenuItemToolsSep2: TMenuItem;
     MenuItemToolsMessageLog: TMenuItem;
     MenuItemToolsComConnect: TMenuItem;
@@ -88,6 +106,7 @@ type
     SplitterMain: TSplitter;
     TabSheetNetwork: TTabSheet;
     TabSheetTrain: TTabSheet;
+    TimerComStartup: TTimer;
     TreeViewNetwork: TTreeView;
     procedure ActionHelpAboutShowExecute(Sender: TObject);
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
@@ -101,9 +120,12 @@ type
     procedure ActionToolsMessageLogShowExecute(Sender: TObject);
     procedure ActionToolsPreferenceShowMacExecute(Sender: TObject);
     procedure ActionToolsSettingsShowWinExecute(Sender: TObject);
+    procedure ActionTreeviewNetworkCollapseAllExecute(Sender: TObject);
+    procedure ActionTreeviewNetworkExpandAllExecute(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure TimerComStartupTimer(Sender: TObject);
     procedure TreeViewNetworkAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
     procedure TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
@@ -123,6 +145,7 @@ type
   protected
     procedure ComDisconnect;
     function FindTreeNodeByAlias(AnAliasID: Word): TOlcbTreeNode;
+    procedure SyncDatagramMemConfigAddressSpaceInfoReply(Datagram: TDatagramReceive);
     procedure SyncDatagramMemConfigOperationReply(Datagram: TDatagramReceive);
     procedure SyncErrorMessage(MessageStr: String);
     procedure SyncReceiveMessage(MessageStr: String);
@@ -151,7 +174,7 @@ var
 
 implementation
 
-{ TOlcbTreeNode }
+ { TOlcbTreeNode }
 
 constructor TOlcbTreeNode.Create(AnOwner: TTreeNodes);
 begin
@@ -174,6 +197,22 @@ begin
   FormSettings.ShowModal;
 end;
 
+procedure TFormOLCB_Commander.ActionTreeviewNetworkCollapseAllExecute(Sender: TObject);
+begin
+  TreeViewNetwork.BeginUpdate;
+  try
+    TreeViewNetwork.FullCollapse;
+    RootNetworkNode.Expanded := True;
+  finally
+    TreeViewNetwork.EndUpdate;
+  end;
+end;
+
+procedure TFormOLCB_Commander.ActionTreeviewNetworkExpandAllExecute(Sender: TObject);
+begin
+  TreeViewNetwork.FullExpand;
+end;
+
 procedure TFormOLCB_Commander.ActionHelpAboutShowExecute(Sender: TObject);
 begin
   FormAbout.ShowModal
@@ -182,14 +221,20 @@ end;
 procedure TFormOLCB_Commander.ActionOpenLCBCommandAllExecute(Sender: TObject);
 var
   Node: TTreeNode;
+  Task: TQueryAllAddressSpacesInfoTask;
 begin
   Node := RootNetworkNode.GetFirstChild;
   while Assigned(Node) do
   begin
     MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
     ComPortThread.Add(MessageHelper.Encode);
+
     MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
     ComPortThread.Add(MessageHelper.Encode);
+
+    Task := TQueryAllAddressSpacesInfoTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text));
+    ComPortThread.AddTask(Task);
+
     Node := RootNetworkNode.GetNextChild(Node);
   end;
 end;
@@ -228,20 +273,15 @@ procedure TFormOLCB_Commander.ActionOpenLCBCommandMemConfigSpacesExecute(Sender:
 var
   Node: TOlcbTreeNode;
   i: Integer;
-  Datagram: TDatagramSend;
+  Task: TOlcbTaskBase;
 begin
-  // Need to ensure that the Options have been filled in to get list of valid Address Spaces.....
-  ActionOpenLCBCommandMemConfigOptionsExecute(Sender);  // Just force it to happen regardless if has been called before or not
-
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
     begin;
-      // WRONG.....
-  //    Datagram := TDatagramSend.Create;
-  //    Datagram.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias);
-  //    ComPortThread.AddDatagramToSend(Datagram);
+      Task := TQueryAllAddressSpacesInfoTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text));
+      ComPortThread.AddTask(Task);
     end;
   end;
 end;
@@ -287,9 +327,9 @@ begin
    ComPortThread.Port := GlobalSettings.ComPort.Port;
    {$ELSE}
      {$IFDEF DARWIN}
-     ComPortThread.Port := 'dev/' + GlobalSettings.ComPort.Port;
+     ComPortThread.Port := PATH_OSX_DEV + GlobalSettings.ComPort.Port;
      {$ELSE}
-     ComPortThread.Port := '/dev/' + GlobalSettings.ComPort.Port;
+     ComPortThread.Port := PATH_LINUX_DEV + GlobalSettings.ComPort.Port;
      {$ENDIF}
    {$ENDIF}
    ComPortThread.BaudRate := GlobalSettings.ComPort.BaudRate;
@@ -298,8 +338,10 @@ begin
    ComPortThread.SyncSendMessageFunc := @SyncSendMessage;
    ComPortThread.SyncErrorMessageFunc := @SyncErrorMessage;
    ComPortThread.SyncDatagramMemConfigOperationReplyFunc := @SyncDatagramMemConfigOperationReply;
+   ComPortThread.SyncDatagramMemConfigAddressSpaceInfoReplyFunc := @SyncDatagramMemConfigAddressSpaceInfoReply;
    ComPortThread.SyncSniiReplyFunc := @SyncSniiReply;
    ComPortThread.Suspended := False;
+   TimerComStartup.Enabled := True;
    UpdateUI;
  except
    if Assigned(ComPortThread) then
@@ -370,14 +412,33 @@ begin
     MenuItemHelp.Add(AppAboutCmd);
     {$ENDIF}
     FormMessageLog.HideCallback := @SyncMessageLogHide;
-    GlobalSettings.LoadFromFile(UTF8ToSys( GetApplicationPath + 'settings.ini'));
+    {$IFDEF Linux}
+    FormSettings.SettingsFilePath:= GetApplicationPath + PATH_LINUX_APP_FOLDER + PATH_SETTINGS_FILE;
+    GlobalSettings.LoadFromFile(UTF8ToSys( GetApplicationPath + PATH_LINUX_APP_FOLDER + PATH_SETTINGS_FILE));
+    {$ELSE}
+    FormSettings.SettingsFilePath := GetApplicationPath + PATH_SETTINGS_FILE;
+    GlobalSettings.LoadFromFile(UTF8ToSys( GetApplicationPath + PATH_SETTINGS_FILE));
+    {$ENDIF}
+
     RootNetworkNode := TreeViewNetwork.Items.AddChild(nil, STR_NETWORKTREE_ROOT);
     RootNetworkNode.ImageIndex := 35;
-    RootNetworkNode.SelectedIndex := 35;;
+    RootNetworkNode.SelectedIndex := 35;
     UpdateUI;
-
+    if GlobalSettings.ComPort.AutoConnectAtBoot then
+     ActionToolsComConnect.Execute;
     ShownOnce := True
   end;
+
+  {$IFDEF DEBUG_THREAD}
+  FormThreadDebug.Show;
+  {$ENDIF}
+end;
+
+procedure TFormOLCB_Commander.TimerComStartupTimer(Sender: TObject);
+begin
+  if GlobalSettings.General.AutoScanNetworkAtBoot then
+     ActionOpenLCBCommandIdentifyIDGlobal.Execute;
+  TimerComStartup.Enabled := False;
 end;
 
 procedure TFormOLCB_Commander.TreeViewNetworkAdvancedCustomDrawItem(
@@ -433,6 +494,73 @@ begin
 
 end;
 
+procedure TFormOLCB_Commander.SyncDatagramMemConfigAddressSpaceInfoReply(Datagram: TDatagramReceive);
+
+  procedure LoadNode(ParentNode: TTreeNode; Description: string; IsTrue: Boolean);
+  var
+     DataChild: TTreeNode;
+  begin
+    if IsTrue then
+      DataChild := TreeViewNetwork.Items.AddChild(ParentNode, Description + 'True')
+    else
+      DataChild := TreeViewNetwork.Items.AddChild(ParentNode, Description + 'False');
+    DataChild.ImageIndex := 40;
+    DataChild.SelectedIndex := 40;
+  end;
+
+  procedure LoadNodeSimple(ParentNode: TTreeNode; Description: string);
+  var
+     DataChild: TTreeNode;
+  begin
+    DataChild := TreeViewNetwork.Items.AddChild(ParentNode, Description);
+    DataChild.ImageIndex := 40;
+    DataChild.SelectedIndex := 40;
+  end;
+
+var
+  Node: TOlcbTreeNode;
+  MemProtocolChild, ConfigAddressSpacesChild, AddressSpaceChild: TTreeNode;
+  AddressSpace: TOlcbMemAddressSpace;
+  SpaceName: string;
+begin
+  TreeViewNetwork.BeginUpdate;
+  try
+    Node := FindTreeNodeByAlias(Datagram.DestinationAlias);
+    if Assigned(Node) then
+    begin
+      MemProtocolChild := Node.FindNode(STR_MEM_PROTOCOL);
+      if not Assigned(MemProtocolChild) then
+        MemProtocolChild := TreeViewNetwork.Items.AddChild(Node, STR_MEM_PROTOCOL);
+      MemProtocolChild.ImageIndex := 41;
+      MemProtocolChild.SelectedIndex := 41;
+
+      ConfigAddressSpacesChild := MemProtocolChild.FindNode(STR_CONFIGMEM_ADDRESS_SPACES);
+      if not Assigned(ConfigAddressSpacesChild) then
+        ConfigAddressSpacesChild := TreeViewNetwork.Items.AddChild(MemProtocolChild, STR_CONFIGMEM_ADDRESS_SPACES);
+      ConfigAddressSpacesChild.ImageIndex := 41;
+      ConfigAddressSpacesChild.SelectedIndex := 41;
+
+      AddressSpace := Node.OlcbData.ConfigMem.AddAddressSpace(Datagram);
+      SpaceName := ' 0x' + AddressSpace.SpaceAsHex + ' [' + IntToStr(AddressSpace.Space) + '] : ' + AddressSpaceToString(AddressSpace.Space);
+      AddressSpaceChild := ConfigAddressSpacesChild.FindNode(SpaceName);
+      if not Assigned(AddressSpaceChild) then
+        AddressSpaceChild := TreeViewNetwork.Items.AddChild(ConfigAddressSpacesChild, SpaceName);
+      AddressSpaceChild.ImageIndex := 41;
+      AddressSpaceChild.SelectedIndex := 41;
+      AddressSpaceChild.DeleteChildren;
+
+      LoadNodeSimple(AddressSpaceChild, 'Hi Address: 0x' + IntToHex(AddressSpace.AddressHi, 4));
+      LoadNodeSimple(AddressSpaceChild, 'Lo Address: 0x' + IntToHex(AddressSpace.AddressLo, 4));
+      LoadNode(AddressSpaceChild, 'Implied Lo Address: ', AddressSpace.AddressLoImpliedZero);
+      LoadNode(AddressSpaceChild, 'Is ReadOnly: ', AddressSpace.IsReadOnly);
+      LoadNode(AddressSpaceChild, 'Is Present: ', AddressSpace.IsPresent);
+      LoadNodeSimple(AddressSpaceChild, 'Description: ' + AddressSpace.Description);
+    end;
+  finally
+    TreeViewNetwork.EndUpdate;
+  end;
+end;
+
 procedure TFormOLCB_Commander.SyncDatagramMemConfigOperationReply(Datagram: TDatagramReceive);
 
   procedure LoadNode(ParentNode: TTreeNode; Description: string; IsTrue: Boolean);
@@ -465,7 +593,7 @@ begin
     Node := FindTreeNodeByAlias(Datagram.DestinationAlias);
     if Assigned(Node) then
     begin
-      ConfigChildRoot := Node.FindNode(STR_CONFIGMEM);
+      ConfigChildRoot := Node.FindNode(STR_MEM_PROTOCOL);
       if Assigned(ConfigChildRoot) then
       begin
         ConfigOptionChild := ConfigChildRoot.FindNode(STR_CONFIGMEM_OPTIONS);
@@ -478,7 +606,7 @@ begin
         end
       end else
       begin
-        ConfigChildRoot := TreeViewNetwork.Items.AddChild(Node, STR_CONFIGMEM);
+        ConfigChildRoot := TreeViewNetwork.Items.AddChild(Node, STR_MEM_PROTOCOL);
         ConfigChildRoot.ImageIndex := 41;
         ConfigChildRoot.SelectedIndex := 41;
         ConfigOptionChild := TreeViewNetwork.Items.AddChild(ConfigChildRoot, STR_CONFIGMEM_OPTIONS);
@@ -679,6 +807,8 @@ begin
 
   ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortThread);
   ActionOpenLCBCommandProtocolSupport.Enabled := (TreeViewNetwork.SelectionCount > 0);
+  ActionOpenLCBCommandMemConfigOptions.Enabled := (TreeViewNetwork.SelectionCount > 0);
+  ActionOpenLCBCommandMemConfigSpaces.Enabled:= (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandSNII.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandAll.Enabled := (RootNetworkNode.Count > 0);
 
@@ -687,4 +817,4 @@ end;
 
 
 end.
-
+

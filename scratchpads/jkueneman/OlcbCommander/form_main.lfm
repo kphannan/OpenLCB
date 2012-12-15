@@ -1,10 +1,10 @@
 object FormOLCB_Commander: TFormOLCB_Commander
-  Left = 523
+  Left = 526
   Height = 388
-  Top = 173
+  Top = 189
   Width = 683
   Caption = 'OpenLCB Commander'
-  ClientHeight = 369
+  ClientHeight = 388
   ClientWidth = 683
   Menu = MainMenu
   OnCreate = FormCreate
@@ -14,7 +14,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.2.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 369
+    Height = 388
     Top = 0
     Width = 683
     ActivePage = TabSheetNetwork
@@ -23,27 +23,27 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 343
-      ClientWidth = 675
+      ClientHeight = 349
+      ClientWidth = 677
       object PanelNetwork: TPanel
         Left = 0
-        Height = 343
+        Height = 349
         Top = 0
-        Width = 176
+        Width = 346
         Align = alLeft
         BevelOuter = bvNone
-        ClientHeight = 343
-        ClientWidth = 176
+        ClientHeight = 349
+        ClientWidth = 346
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 284
+          Height = 320
           Top = 0
-          Width = 176
+          Width = 346
           Align = alTop
           Anchors = [akTop, akLeft, akRight, akBottom]
           AutoExpand = True
-          DefaultItemHeight = 16
+          DefaultItemHeight = 18
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -58,73 +58,89 @@ object FormOLCB_Commander: TFormOLCB_Commander
           OnSelectionChanged = TreeViewNetworkSelectionChanged
           Options = [tvoAllowMultiselect, tvoAutoExpand, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
         end
-        object BitBtnNetworkRefresh: TBitBtn
-          Left = 8
-          Height = 22
-          Top = 316
-          Width = 136
-          Action = ActionOpenLCBCommandIdentifyIDGlobal
-          Anchors = [akLeft, akBottom]
-          TabOrder = 1
-        end
         object LabelNetworkNodeCount: TLabel
-          Left = 8
-          Height = 14
-          Top = 295
-          Width = 65
+          Left = 4
+          Height = 17
+          Top = 325
+          Width = 84
           Anchors = [akLeft, akBottom]
           Caption = 'Node Count: '
           ParentColor = False
         end
         object LabelNetworkNodeCountValue: TLabel
-          Left = 104
-          Height = 14
-          Top = 295
-          Width = 7
+          Left = 100
+          Height = 17
+          Top = 325
+          Width = 9
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
         end
       end
       object SplitterMain: TSplitter
-        Left = 176
-        Height = 343
+        Left = 346
+        Height = 349
         Top = 0
         Width = 5
       end
       object PanelOLCBNetwork: TPanel
-        Left = 181
-        Height = 343
+        Left = 351
+        Height = 349
         Top = 0
-        Width = 494
+        Width = 326
         Align = alClient
-        ClientHeight = 343
-        ClientWidth = 494
+        ClientHeight = 349
+        ClientWidth = 326
         DockSite = True
         TabOrder = 2
-        object BitBtnNetworkRefresh1: TBitBtn
-          Left = 16
+        object BitBtnProtocolSupport: TBitBtn
+          Left = 14
           Height = 22
-          Top = 12
-          Width = 264
+          Top = 58
+          Width = 298
           Action = ActionOpenLCBCommandProtocolSupport
           TabOrder = 0
         end
-        object BitBtnNetworkRefresh2: TBitBtn
-          Left = 15
+        object BitBtnSNIP: TBitBtn
+          Left = 13
           Height = 22
-          Top = 42
-          Width = 265
+          Top = 88
+          Width = 299
           Action = ActionOpenLCBCommandSNII
           TabOrder = 1
         end
         object BitBtnNetworkRefresh3: TBitBtn
-          Left = 16
+          Left = 13
           Height = 22
-          Top = 90
-          Width = 265
+          Top = 214
+          Width = 299
           Action = ActionOpenLCBCommandAll
           TabOrder = 2
+        end
+        object BitBtnMemConfgOptions: TBitBtn
+          Left = 14
+          Height = 22
+          Top = 120
+          Width = 299
+          Action = ActionOpenLCBCommandMemConfigOptions
+          TabOrder = 3
+        end
+        object BitBtnMemConfigAddressSpaces: TBitBtn
+          Left = 14
+          Height = 22
+          Top = 150
+          Width = 299
+          Action = ActionOpenLCBCommandMemConfigSpaces
+          TabOrder = 4
+        end
+        object BitBtnNetworkRefresh: TBitBtn
+          Left = 14
+          Height = 22
+          Top = 24
+          Width = 299
+          Action = ActionOpenLCBCommandIdentifyIDGlobal
+          Anchors = [akLeft, akBottom]
+          TabOrder = 5
         end
       end
     end
@@ -1697,7 +1713,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object ActionOpenLCBCommandIdentifyIDGlobal: TAction
       Category = 'OpenLCBCommand'
       AutoCheck = True
-      Caption = 'Identify ID Global'
+      Caption = 'Identify Nodes Global'
       OnExecute = ActionOpenLCBCommandIdentifyIDGlobalExecute
     end
     object ActionToolsMessageLogShow: TAction
@@ -1714,6 +1730,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object ActionOpenLCBCommandSNII: TAction
       Category = 'OpenLCBCommand'
       Caption = 'Simple Node Infomation (SNII/SNIP)'
+      OnExecute = ActionOpenLCBCommandSNIIExecute
     end
     object ActionOpenLCBCommandAll: TAction
       Category = 'OpenLCBCommand'
@@ -1727,42 +1744,68 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object ActionOpenLCBCommandMemConfigSpaces: TAction
       Category = 'OpenLCBCommand'
-      Caption = 'Mem Config Address Spaces'
+      Caption = 'Memory Configuration Address Spaces'
       OnExecute = ActionOpenLCBCommandMemConfigSpacesExecute
+    end
+    object ActionTreeviewNetworkCollapseAll: TAction
+      Category = 'TreeviewNetwork'
+      Caption = 'Collapse All'
+      OnExecute = ActionTreeviewNetworkCollapseAllExecute
+    end
+    object ActionTreeviewNetworkExpandAll: TAction
+      Category = 'TreeviewNetwork'
+      Caption = 'Expand All'
+      OnExecute = ActionTreeviewNetworkExpandAllExecute
     end
   end
   object PopupMenuTreeNode: TPopupMenu
     Images = ImageListMainSmall
     left = 56
     top = 224
-    object MenuItem1: TMenuItem
+    object MenuItemTVPopupIdentifyGlobal: TMenuItem
       Action = ActionOpenLCBCommandIdentifyIDGlobal
       AutoCheck = True
     end
-    object MenuItem7: TMenuItem
+    object MenuItemTVPopupSep1: TMenuItem
       Caption = '-'
     end
-    object MenuItem3: TMenuItem
+    object MenuItemTVPopupSNIP: TMenuItem
       Action = ActionOpenLCBCommandSNII
     end
-    object MenuItem5: TMenuItem
+    object MenuItemTVPopupProtocol: TMenuItem
       Action = ActionOpenLCBCommandProtocolSupport
     end
-    object MenuItem8: TMenuItem
+    object MenuItemTVPopupMemOptions: TMenuItem
       Action = ActionOpenLCBCommandMemConfigOptions
     end
-    object MenuItem9: TMenuItem
+    object MenuItemTVPopupMemAddressSpaces: TMenuItem
       Action = ActionOpenLCBCommandMemConfigSpaces
     end
-    object MenuItem4: TMenuItem
+    object MenuItemTVPopupSep2: TMenuItem
       Caption = '-'
     end
     object MenuItem6: TMenuItem
       Action = ActionOpenLCBCommandAll
     end
+    object MenuItemTVPopupSep3: TMenuItem
+      Caption = '-'
+    end
+    object MenuItemTVPopupExpandAll: TMenuItem
+      Action = ActionTreeviewNetworkExpandAll
+    end
+    object MenuItemTVPopupCollapseAll: TMenuItem
+      Action = ActionTreeviewNetworkCollapseAll
+    end
   end
   object ApplicationProperties1: TApplicationProperties
-    left = 254
-    top = 195
+    left = 192
+    top = 168
   end
-end
+  object TimerComStartup: TTimer
+    Enabled = False
+    Interval = 100
+    OnTimer = TimerComStartupTimer
+    left = 174
+    top = 74
+  end
+end

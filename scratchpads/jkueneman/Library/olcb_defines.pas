@@ -197,7 +197,7 @@ const
   DCC_FUNCTION_28                    = $00;
   DCC_FUNCTION_32k                   = $01;
 
-  DATAGRAM_LENGTH = 72;
+  MAX_DATAGRAM_LENGTH = 72;
 
   DATAGRAM_REJECTED                        = $0000;
   DATAGRAM_REJECTED_PERMANENT_ERROR        = $1000;
@@ -220,7 +220,7 @@ const
   DATAGRAM_PROTOCOL_SIXBYTE                = $F0;
 
 type
-  TDatagramArray = array[0..DATAGRAM_LENGTH-1] of Byte;
+  TDatagramArray = array[0..MAX_DATAGRAM_LENGTH-1] of Byte;
   PDatagramArray = ^TDatagramArray;
 
   TEventID = array[0..7] of Byte;

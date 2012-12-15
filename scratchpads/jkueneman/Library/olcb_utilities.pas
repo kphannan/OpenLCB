@@ -59,11 +59,15 @@ type
 
   TOpenLCBLayer = (ol_CAN, ol_OpenLCB);
 
-  { TOpenLCBMessage }
+  { TOlcbMessage }
+
+   TOlcbMessage = class
+     // Core base for objects that hold OpenLCB messages,
+   end;
 
   { TOpenLCBMessageHelper }
 
-  TOpenLCBMessageHelper = class
+  TOpenLCBMessageHelper = class( TOlcbMessage)
   private
     FDestinationAliasID: Word;
     FHasDestinationAddress: Boolean;
@@ -115,6 +119,7 @@ type
   function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
   function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
   function ProtocolSupportReplyToString(Mask: QWord): string;
+  function AddressSpaceToString(AddressSpace: Byte): string;
 
   function GetTickCount : DWORD;
 
@@ -564,8 +569,8 @@ end;
 function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
 begin
   Result := (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME_END) or (MTI = MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME) or (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME) or (MTI = MTI_FRAME_TYPE_DATAGRAM_FRAME_START);
-  if Result and IncludeReplies then
-    Result := (MTI = MTI_DATAGRAM_OK_REPLY) or (MTI = MTI_DATAGRAM_REJECTED_REPLY)
+  if IncludeReplies then
+    Result := Result or (MTI = MTI_DATAGRAM_OK_REPLY) or (MTI = MTI_DATAGRAM_REJECTED_REPLY)
 end;
 
 function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
@@ -716,7 +721,21 @@ begin
     PIP_FDI                    : Result := STR_PIP_FDI;
     PIP_COMMANDSTATION         : Result := STR_PIP_COMMANDSTATION
   else
-    Result := 'Unknown Protocol';
+    Result := '[Unknown Protocol]';
+  end;
+end;
+
+function AddressSpaceToString(AddressSpace: Byte): string;
+begin
+  case AddressSpace of
+    $FF : Result := 'Configuration Definition Info (CDI)';
+    $FE : Result := 'All Memory';
+    $FD : Result := 'Configruation Memory';
+    $FC : Result := 'Mfg ACDI Memory';
+    $FB : Result := 'User ACDI Memory';
+    $FA : Result := 'Function Memory';
+  else
+    Result := '[Unknown Memory]';
   end;
 end;
 

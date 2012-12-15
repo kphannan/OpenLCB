@@ -18,11 +18,13 @@ const
   STR_INI_COMPORT_PARITY_KEY = 'Parity';
   STR_INI_COMPORT_STOPBITS_KEY = 'StopBits';
   STR_INI_COMPORT_FLOWCONTROL_KEY = 'FlowControl';
+  STR_INI_COMPORT_AUTOCONNECT = 'AutoConnect';
 
   STR_INT_GENERAL_SECTION = 'General';
   STR_INI_ALIASID = 'AliasID';
   STR_INI_NODEID = 'NodeID';
   STR_INI_SENDPACKETDELAY = 'SendDelay';
+  STR_INI_AUTOSCAN = 'AutoScan';
 
 type
   TComPortParity = (
@@ -52,6 +54,7 @@ type
 
   TComPortSettings = class
   private
+    FAutoConnectAtBoot: Boolean;
     FBaudRate: DWord;
     FDataBits: Byte;
     FFlowControl: TComPortFlowControl;
@@ -62,6 +65,8 @@ type
     constructor Create;
     procedure LoadFromFile(IniFile: TIniFile);
     procedure SaveToFile(IniFile: TIniFile);
+
+    property AutoConnectAtBoot: Boolean read FAutoConnectAtBoot write FAutoConnectAtBoot;
     property BaudRate: DWord read FBaudRate write FBaudRate;
     property DataBits: Byte read FDataBits write FDataBits;
     property Parity: TComPortParity read FParity write FParity;
@@ -75,6 +80,7 @@ type
   TGeneralSettings = class
   private
     FAliasID: string;
+    FAutoScanNetworkAtBoot: Boolean;
     FNodeID: string;
     FSendPacketDelay: Word;
     procedure SetAliasID(AValue: string);
@@ -84,6 +90,7 @@ type
     procedure SaveToFile(IniFile: TIniFile);
     function AliasIDAsVal: Word;
     function NodeIDAsVal: DWord;
+    property AutoScanNetworkAtBoot: Boolean read FAutoScanNetworkAtBoot write FAutoScanNetworkAtBoot;
     property AliasID: string read FAliasID write SetAliasID;
     property NodeID: string read FNodeID write FNodeID;
     property SendPacketDelay: Word read FSendPacketDelay write FSendPacketDelay;
@@ -135,6 +142,7 @@ begin
   AliasID := IniFile.ReadString(STR_INT_GENERAL_SECTION, STR_INI_ALIASID, '0x0AAA');
   NodeID := IniFile.ReadString(STR_INT_GENERAL_SECTION, STR_INI_NODEID, '0x102030405006');
   SendPacketDelay := IniFile.ReadInteger(STR_INT_GENERAL_SECTION, STR_INI_SENDPACKETDELAY, 0);
+  AutoScanNetworkAtBoot := IniFile.ReadBool(STR_INT_GENERAL_SECTION, STR_INI_AUTOSCAN, True);
 end;
 
 procedure TGeneralSettings.SaveToFile(IniFile: TIniFile);
@@ -142,6 +150,7 @@ begin
   IniFile.WriteString(STR_INT_GENERAL_SECTION, STR_INI_ALIASID, FAliasID);
   IniFile.WriteString(STR_INT_GENERAL_SECTION, STR_INI_NODEID, FNodeID);
   IniFile.WriteInteger(STR_INT_GENERAL_SECTION, STR_INI_SENDPACKETDELAY, FSendPacketDelay);
+  IniFile.WriteBool(STR_INT_GENERAL_SECTION, STR_INI_AUTOSCAN, FAutoScanNetworkAtBoot);
 end;
 
 function TGeneralSettings.AliasIDAsVal: Word;
@@ -183,6 +192,7 @@ begin
   if Value > HI_FLOWCONTROL_TYPE then
     Value := 0;
   FlowControl := TComPortFlowControl( Value);
+  AutoConnectAtBoot := IniFile.ReadBool(STR_INI_COMPORT_SECTION, STR_INI_COMPORT_AUTOCONNECT, False);
 end;
 
 procedure TComPortSettings.SaveToFile(IniFile: TIniFile);
@@ -193,6 +203,7 @@ begin
   IniFile.WriteInteger(STR_INI_COMPORT_SECTION, STR_INI_COMPORT_STOPBITS_KEY, StopBits);
   IniFile.WriteInteger(STR_INI_COMPORT_SECTION, STR_INI_COMPORT_PARITY_KEY, Integer( Parity));
   IniFile.WriteInteger(STR_INI_COMPORT_SECTION, STR_INI_COMPORT_FLOWCONTROL_KEY, Integer( FlowControl));
+  IniFile.WriteBool(STR_INI_COMPORT_SECTION, STR_INI_COMPORT_AUTOCONNECT, FAutoConnectAtBoot);
 end;
 
 
