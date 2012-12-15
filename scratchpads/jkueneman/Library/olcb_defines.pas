@@ -137,7 +137,7 @@ const
   MCP_READ                            = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
   MCP_READ_DATAGRAM_REPLY             = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
-  MCP_READ_STREAM_REPLY               = $30;
+  MCP_READ_STREAM_REPLY               = $60;
 
   MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
   MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask
