@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynMemo, Forms, Controls, Graphics, Dialogs,
-  Buttons, Menus, LCLType, Spin, StdCtrls, ActnList, SynEditKeyCmds, SynEdit,
-  olcb_utilities, olcb_defines, SynEditMarkupHighAll, common_utilities;
+  Buttons, Menus, LCLType, StdCtrls, ActnList, SynEditKeyCmds, SynEdit,
+  olcb_utilities, SynEditMarkupHighAll, common_utilities;
 
 type
 
@@ -127,4 +127,4 @@ begin
 end;
 
 end.
-
+

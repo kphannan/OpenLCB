@@ -4,15 +4,16 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="61">
+    <Units Count="53">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="OLCB_Commander"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="22" Y="12"/>
+        <CursorPos X="61" Y="11"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -23,11 +24,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_main"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="3" Y="5"/>
+        <TopLine Value="725"/>
+        <CursorPos X="1" Y="751"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -36,10 +36,10 @@
         <Filename Value="..\Library\olcb_app_common_settings.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_app_common_settings"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="61"/>
-        <CursorPos X="1" Y="150"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="9"/>
         <UsageCount Value="203"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -47,7 +47,7 @@
         <Filename Value="..\Library\file_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="file_utilities"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
         <TopLine Value="5"/>
         <CursorPos X="184" Y="18"/>
@@ -61,7 +61,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_settings"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
         <TopLine Value="119"/>
         <CursorPos X="66" Y="136"/>
@@ -88,10 +88,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_messagelog"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="25" Y="33"/>
+        <CursorPos X="28" Y="9"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -100,10 +100,10 @@
         <Filename Value="..\Library\common_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_utilities"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="22" Y="1"/>
+        <TopLine Value="19"/>
+        <CursorPos X="1" Y="46"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit7>
@@ -120,10 +120,10 @@
         <Filename Value="..\Library\olcb_node.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_node"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="7"/>
-        <CursorPos X="14" Y="30"/>
+        <TopLine Value="17"/>
+        <CursorPos X="14" Y="34"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit9>
@@ -131,11 +131,11 @@
         <Filename Value="..\Library\olcb_mem_protocol.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_mem_protocol"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="284"/>
-        <CursorPos X="48" Y="312"/>
-        <UsageCount Value="185"/>
+        <TopLine Value="1"/>
+        <CursorPos X="6" Y="1"/>
+        <UsageCount Value="201"/>
         <Loaded Value="True"/>
       </Unit10>
       <Unit11>
@@ -145,90 +145,108 @@
         <WindowIndex Value="0"/>
         <TopLine Value="113"/>
         <CursorPos X="55" Y="115"/>
-        <UsageCount Value="101"/>
+        <UsageCount Value="171"/>
       </Unit11>
       <Unit12>
         <Filename Value="..\Library\olcb_threaded_stack.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_threaded_stack"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="92" Y="24"/>
-        <UsageCount Value="96"/>
+        <TopLine Value="1317"/>
+        <CursorPos X="1" Y="1345"/>
+        <UsageCount Value="166"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="..\Library\olcb_common_tasks.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_common_tasks"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="102"/>
-        <CursorPos X="21" Y="115"/>
-        <UsageCount Value="62"/>
+        <TopLine Value="259"/>
+        <CursorPos X="1" Y="277"/>
+        <UsageCount Value="132"/>
         <Loaded Value="True"/>
       </Unit13>
       <Unit14>
+        <Filename Value="..\Library\olcb_structure_helpers.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_structure_helpers"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="189"/>
+        <CursorPos X="5" Y="207"/>
+        <UsageCount Value="79"/>
+        <Loaded Value="True"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="form_config_mem_viewer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMemConfigViewer"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_config_mem_viewer"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="69" Y="9"/>
+        <UsageCount Value="53"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit15>
+      <Unit16>
         <Filename Value="..\Library\serialport_thread.pas"/>
         <UnitName Value="serialport_thread"/>
         <WindowIndex Value="0"/>
         <TopLine Value="149"/>
         <CursorPos X="21" Y="191"/>
-        <UsageCount Value="93"/>
-      </Unit14>
-      <Unit15>
-        <Filename Value="..\synapse40\source\lib\synaser.pas"/>
-        <UnitName Value="synaser"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="662"/>
-        <CursorPos X="133" Y="360"/>
-        <UsageCount Value="2"/>
-      </Unit15>
-      <Unit16>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <UnitName Value="olcb_utilities"/>
-        <EditorIndex Value="11"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="711"/>
-        <CursorPos X="85" Y="734"/>
-        <UsageCount Value="100"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="86"/>
       </Unit16>
       <Unit17>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <UnitName Value="olcb_utilities"/>
+        <EditorIndex Value="13"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="93"/>
+        <CursorPos X="24" Y="70"/>
+        <UsageCount Value="100"/>
+        <Loaded Value="True"/>
+      </Unit17>
+      <Unit18>
         <Filename Value="..\Library\datagram.pas"/>
         <UnitName Value="datagram"/>
         <WindowIndex Value="0"/>
         <TopLine Value="187"/>
         <CursorPos X="21" Y="198"/>
-        <UsageCount Value="93"/>
-      </Unit17>
-      <Unit18>
+        <UsageCount Value="86"/>
+      </Unit18>
+      <Unit19>
         <Filename Value="..\Library\nmra_dcc.pas"/>
         <UnitName Value="nmra_dcc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="13"/>
-      </Unit18>
-      <Unit19>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <UnitName Value="olcb_defines"/>
-        <EditorIndex Value="8"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="184"/>
-        <CursorPos X="22" Y="200"/>
-        <UsageCount Value="101"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="6"/>
       </Unit19>
       <Unit20>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\classesh.inc"/>
+        <Filename Value="..\Library\olcb_defines.pas"/>
+        <UnitName Value="olcb_defines"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="681"/>
-        <CursorPos X="15" Y="695"/>
-        <UsageCount Value="8"/>
+        <TopLine Value="138"/>
+        <CursorPos X="10" Y="163"/>
+        <UsageCount Value="101"/>
+        <Loaded Value="True"/>
       </Unit20>
       <Unit21>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\classesh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="789"/>
+        <CursorPos X="14" Y="806"/>
+        <UsageCount Value="7"/>
+      </Unit21>
+      <Unit22>
         <Filename Value="..\AwesomeThrottle\awesomethrottlemain.pas"/>
         <ComponentName Value="Form1"/>
         <HasResources Value="True"/>
@@ -237,56 +255,45 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1586"/>
         <CursorPos X="87" Y="1621"/>
-        <UsageCount Value="10"/>
-      </Unit21>
-      <Unit22>
+        <UsageCount Value="3"/>
+      </Unit22>
+      <Unit23>
         <Filename Value="C:\lazarus\examples\fontenum\mainunit.pas"/>
         <UnitName Value="mainunit"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="138" Y="161"/>
-        <UsageCount Value="1"/>
-      </Unit22>
-      <Unit23>
+        <UsageCount Value="4"/>
+      </Unit23>
+      <Unit24>
         <Filename Value="C:\lazarus\fpc\2.6.0\source\packages\fcl-base\src\inifiles.pp"/>
         <UnitName Value="IniFiles"/>
         <WindowIndex Value="0"/>
         <TopLine Value="930"/>
         <CursorPos X="31" Y="958"/>
-        <UsageCount Value="1"/>
-      </Unit23>
-      <Unit24>
-        <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1012"/>
-        <CursorPos X="1" Y="1031"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="4"/>
       </Unit24>
       <Unit25>
+        <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="2058"/>
+        <CursorPos X="3" Y="2066"/>
+        <UsageCount Value="7"/>
+      </Unit25>
+      <Unit26>
         <Filename Value="Z:\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="357"/>
         <CursorPos X="20" Y="379"/>
-        <UsageCount Value="1"/>
-      </Unit25>
-      <Unit26>
+        <UsageCount Value="4"/>
+      </Unit26>
+      <Unit27>
         <Filename Value="Z:\usr\local\share\fpcsrc\packages\univint\src\CFBase.pas"/>
         <UnitName Value="CFBase"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="12" Y="21"/>
-        <UsageCount Value="1"/>
-      </Unit26>
-      <Unit27>
-        <Filename Value="..\AwesomeThrottle\form_comportsettings.pas"/>
-        <ComponentName Value="FormComPort"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="form_comportsettings"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="37"/>
-        <CursorPos X="1" Y="49"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="4"/>
       </Unit27>
       <Unit28>
         <Filename Value="Z:\synapse40\source\lib\synaser.pas"/>
@@ -294,14 +301,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="943"/>
         <CursorPos X="3" Y="960"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit28>
       <Unit29>
         <Filename Value="W:\Developer\lazarus\lcl\include\wincontrol.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="7976"/>
         <CursorPos X="4" Y="7999"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit29>
       <Unit30>
         <Filename Value="Z:\media\psf\Home\Documents\Lazarus\OpenLCB\Library\olcb_app_common_settings.pas"/>
@@ -309,7 +316,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="124"/>
         <CursorPos X="37" Y="137"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit30>
       <Unit31>
         <Filename Value="Z:\media\psf\Home\Documents\Lazarus\synapse40\source\lib\synaser.pas"/>
@@ -317,7 +324,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="944"/>
         <CursorPos X="99" Y="947"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit31>
       <Unit32>
         <Filename Value="Z:\media\psf\Home\Documents\Lazarus\OpenLCB\Library\serialport_thread.pas"/>
@@ -325,22 +332,22 @@
         <WindowIndex Value="0"/>
         <TopLine Value="55"/>
         <CursorPos X="1" Y="90"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit32>
       <Unit33>
         <Filename Value="Z:\Developer\lazarus\lcl\include\control.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="3224"/>
         <CursorPos X="49" Y="3252"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit33>
       <Unit34>
         <Filename Value="..\Components\synapse40\source\lib\synaser.pas"/>
         <UnitName Value="synaser"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="3"/>
+        <TopLine Value="1855"/>
+        <CursorPos X="15" Y="1874"/>
+        <UsageCount Value="4"/>
       </Unit34>
       <Unit35>
         <Filename Value="..\AwesomeThrottle\form_memconfig.pas"/>
@@ -349,7 +356,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="57"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="3"/>
       </Unit35>
       <Unit36>
         <Filename Value="C:\lazarus\lcl\comctrls.pp"/>
@@ -357,313 +364,256 @@
         <WindowIndex Value="0"/>
         <TopLine Value="803"/>
         <CursorPos X="3" Y="823"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="2"/>
       </Unit36>
       <Unit37>
         <Filename Value="C:\lazarus\lcl\include\treeview.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="845"/>
         <CursorPos X="1" Y="865"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="4"/>
       </Unit37>
       <Unit38>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\lists.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="890"/>
-        <CursorPos X="5" Y="923"/>
-        <UsageCount Value="3"/>
-      </Unit38>
-      <Unit39>
         <Filename Value="E:\Developer\lazarus\lcl\comctrls.pp"/>
         <UnitName Value="ComCtrls"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2135"/>
         <CursorPos X="29" Y="2145"/>
-        <UsageCount Value="10"/>
-      </Unit39>
-      <Unit40>
+        <UsageCount Value="3"/>
+      </Unit38>
+      <Unit39>
         <Filename Value="E:\Developer\lazarus\lcl\controls.pp"/>
         <UnitName Value="Controls"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1009"/>
         <CursorPos X="29" Y="1016"/>
-        <UsageCount Value="10"/>
-      </Unit40>
-      <Unit41>
+        <UsageCount Value="3"/>
+      </Unit39>
+      <Unit40>
         <Filename Value="E:\Developer\lazarus\lcl\lclclasses.pp"/>
         <UnitName Value="LCLClasses"/>
         <WindowIndex Value="0"/>
         <TopLine Value="34"/>
         <CursorPos X="27" Y="38"/>
-        <UsageCount Value="10"/>
-      </Unit41>
-      <Unit42>
+        <UsageCount Value="3"/>
+      </Unit40>
+      <Unit41>
         <Filename Value="E:\usr\local\share\fpcsrc\rtl\objpas\classes\classesh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1590"/>
         <CursorPos X="3" Y="1590"/>
-        <UsageCount Value="10"/>
-      </Unit42>
-      <Unit43>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\inc\objpash.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="169"/>
-        <CursorPos X="23" Y="192"/>
-        <UsageCount Value="6"/>
-      </Unit43>
-      <Unit44>
+        <UsageCount Value="3"/>
+      </Unit41>
+      <Unit42>
         <Filename Value="C:\lazarus\lcl\extctrls.pp"/>
         <UnitName Value="ExtCtrls"/>
         <WindowIndex Value="0"/>
         <TopLine Value="160"/>
         <CursorPos X="14" Y="183"/>
-        <UsageCount Value="4"/>
-      </Unit44>
-      <Unit45>
+        <UsageCount Value="7"/>
+      </Unit42>
+      <Unit43>
         <Filename Value="C:\lazarus\lcl\customtimer.pas"/>
         <UnitName Value="CustomTimer"/>
         <WindowIndex Value="0"/>
         <TopLine Value="32"/>
         <CursorPos X="32" Y="56"/>
+        <UsageCount Value="7"/>
+      </Unit43>
+      <Unit44>
+        <Filename Value="..\Components\synapse40\source\lib\synautil.pas"/>
+        <UnitName Value="synautil"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="846"/>
+        <CursorPos X="15" Y="865"/>
+        <UsageCount Value="4"/>
+      </Unit44>
+      <Unit45>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\win\wininc\struct.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="5348"/>
+        <CursorPos X="6" Y="5366"/>
         <UsageCount Value="4"/>
       </Unit45>
       <Unit46>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\win\sysosh.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="10"/>
-        <CursorPos X="38" Y="38"/>
-        <UsageCount Value="3"/>
-      </Unit46>
-      <Unit47>
-        <Filename Value="C:\lazarus\lcl\interfaces\cocoa\cocoawinapi.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1197"/>
-        <CursorPos X="27" Y="1220"/>
-        <UsageCount Value="3"/>
-      </Unit47>
-      <Unit48>
-        <Filename Value="C:\lazarus\examples\multithreading\criticalsectionunit1.pas"/>
-        <UnitName Value="CriticalSectionUnit1"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="72"/>
-        <CursorPos X="3" Y="95"/>
-        <UsageCount Value="3"/>
-      </Unit48>
-      <Unit49>
-        <Filename Value="C:\lazarus\lcl\include\winapih.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="150"/>
-        <CursorPos X="36" Y="173"/>
-        <UsageCount Value="3"/>
-      </Unit49>
-      <Unit50>
-        <Filename Value="C:\lazarus\lcl\lcltype.pp"/>
-        <UnitName Value="LCLType"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="51"/>
-        <CursorPos X="3" Y="74"/>
-        <UsageCount Value="3"/>
-      </Unit50>
-      <Unit51>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\packages\fcl-extra\src\daemonapp.pp"/>
-        <UnitName Value="daemonapp"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="429"/>
-        <CursorPos X="153" Y="437"/>
-        <UsageCount Value="3"/>
-      </Unit51>
-      <Unit52>
-        <Filename Value="C:\lazarus\components\turbopower_ipro\iphtml.pas"/>
-        <UnitName Value="IpHtml"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="48"/>
-        <CursorPos X="20" Y="3924"/>
-        <UsageCount Value="3"/>
-      </Unit52>
-      <Unit53>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\packages\fv\src\w32smsg.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="81"/>
-        <CursorPos X="3" Y="104"/>
-        <UsageCount Value="3"/>
-      </Unit53>
-      <Unit54>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\packages\graph\src\win32\graph.pp"/>
-        <UnitName Value="Graph"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="13"/>
-        <CursorPos X="6" Y="1567"/>
-        <UsageCount Value="3"/>
-      </Unit54>
-      <Unit55>
         <Filename Value="C:\lazarus\lcl\forms.pp"/>
         <UnitName Value="Forms"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="378"/>
-        <CursorPos X="12" Y="1198"/>
-        <UsageCount Value="3"/>
-      </Unit55>
-      <Unit56>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\wince\wininc\redef.inc"/>
+        <TopLine Value="572"/>
+        <CursorPos X="15" Y="589"/>
+        <UsageCount Value="7"/>
+      </Unit46>
+      <Unit47>
+        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\streams.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="59" Y="232"/>
-        <UsageCount Value="3"/>
-      </Unit56>
-      <Unit57>
-        <Filename Value="C:\lazarus\components\aggpas\src\agg_lcl.pas"/>
-        <UnitName Value="Agg_LCL"/>
+        <TopLine Value="432"/>
+        <CursorPos X="5" Y="438"/>
+        <UsageCount Value="7"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="C:\lazarus\components\lazutils\laz2_dom.pas"/>
+        <UnitName Value="laz2_DOM"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="12" Y="246"/>
-        <UsageCount Value="6"/>
-      </Unit57>
-      <Unit58>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\morphos\graphics.pas"/>
-        <UnitName Value="graphics"/>
+        <TopLine Value="527"/>
+        <CursorPos X="3" Y="545"/>
+        <UsageCount Value="7"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="C:\lazarus\components\synedit\synedit.pp"/>
+        <UnitName Value="SynEdit"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2176"/>
-        <CursorPos X="40" Y="2199"/>
-        <UsageCount Value="3"/>
-      </Unit58>
-      <Unit59>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\inc\threadh.inc"/>
+        <TopLine Value="6530"/>
+        <CursorPos X="3" Y="6534"/>
+        <UsageCount Value="7"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="C:\lazarus\components\lazutils\laz2_xmlwrite.pas"/>
+        <UnitName Value="laz2_XMLWrite"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="122"/>
-        <CursorPos X="31" Y="152"/>
-        <UsageCount Value="3"/>
-      </Unit59>
-      <Unit60>
-        <Filename Value="C:\lazarus\lcl\include\containedaction.inc"/>
+        <TopLine Value="23"/>
+        <CursorPos X="11" Y="41"/>
+        <UsageCount Value="7"/>
+      </Unit50>
+      <Unit51>
+        <Filename Value="C:\lazarus\components\lazutils\laz2_xmlread.pas"/>
+        <UnitName Value="laz2_XMLRead"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="72"/>
-        <CursorPos X="1" Y="104"/>
-        <UsageCount Value="5"/>
-      </Unit60>
+        <TopLine Value="1494"/>
+        <CursorPos X="1" Y="1509"/>
+        <UsageCount Value="7"/>
+      </Unit51>
+      <Unit52>
+        <Filename Value="C:\lazarus\components\synedit\lazsynedittext.pas"/>
+        <UnitName Value="LazSynEditText"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="693"/>
+        <CursorPos X="1" Y="717"/>
+        <UsageCount Value="7"/>
+      </Unit52>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="303" Column="33" TopLine="277"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="748" Column="1" TopLine="725"/>
       </Position1>
       <Position2>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="306" Column="16" TopLine="285"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="736" Column="1" TopLine="725"/>
       </Position2>
       <Position3>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="295" Column="17" TopLine="289"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="738" Column="1" TopLine="725"/>
       </Position3>
       <Position4>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="315" Column="60" TopLine="292"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="739" Column="1" TopLine="725"/>
       </Position4>
       <Position5>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="20" Column="48" TopLine="12"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="742" Column="1" TopLine="725"/>
       </Position5>
       <Position6>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="48" Column="26" TopLine="32"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="743" Column="1" TopLine="725"/>
       </Position6>
       <Position7>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="49" Column="26" TopLine="32"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="744" Column="1" TopLine="725"/>
       </Position7>
       <Position8>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="50" Column="26" TopLine="32"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="746" Column="1" TopLine="725"/>
       </Position8>
       <Position9>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="51" Column="26" TopLine="32"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="747" Column="24" TopLine="725"/>
       </Position9>
       <Position10>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="90" Column="15" TopLine="64"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="736" Column="1" TopLine="725"/>
       </Position10>
       <Position11>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="91" Column="15" TopLine="65"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="738" Column="1" TopLine="725"/>
       </Position11>
       <Position12>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="96" Column="15" TopLine="70"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="739" Column="1" TopLine="725"/>
       </Position12>
       <Position13>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="116" Column="49" TopLine="90"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="742" Column="1" TopLine="725"/>
       </Position13>
       <Position14>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="139" Column="20" TopLine="113"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="743" Column="1" TopLine="725"/>
       </Position14>
       <Position15>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="145" Column="129" TopLine="119"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="744" Column="1" TopLine="725"/>
       </Position15>
       <Position16>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="200" Column="11" TopLine="174"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="746" Column="1" TopLine="725"/>
       </Position16>
       <Position17>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="312" Column="60" TopLine="292"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="747" Column="1" TopLine="725"/>
       </Position17>
       <Position18>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="200" Column="12" TopLine="184"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="748" Column="1" TopLine="725"/>
       </Position18>
       <Position19>
-        <Filename Value="..\Library\olcb_threaded_stack.pas"/>
-        <Caret Line="137" Column="16" TopLine="110"/>
+        <Filename Value="..\Library\olcb_structure_helpers.pas"/>
+        <Caret Line="207" Column="5" TopLine="189"/>
       </Position19>
       <Position20>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="312" Column="60" TopLine="292"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="736" Column="1" TopLine="725"/>
       </Position20>
       <Position21>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <Caret Line="191" Column="62" TopLine="174"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="738" Column="1" TopLine="725"/>
       </Position21>
       <Position22>
         <Filename Value="form_main.pas"/>
-        <Caret Line="199" Column="32" TopLine="176"/>
+        <Caret Line="739" Column="1" TopLine="725"/>
       </Position22>
       <Position23>
         <Filename Value="form_main.pas"/>
-        <Caret Line="200" Column="32" TopLine="177"/>
+        <Caret Line="742" Column="1" TopLine="725"/>
       </Position23>
       <Position24>
         <Filename Value="form_main.pas"/>
-        <Caret Line="201" Column="32" TopLine="178"/>
+        <Caret Line="743" Column="1" TopLine="725"/>
       </Position24>
       <Position25>
         <Filename Value="form_main.pas"/>
-        <Caret Line="200" Column="32" TopLine="177"/>
+        <Caret Line="744" Column="1" TopLine="725"/>
       </Position25>
       <Position26>
         <Filename Value="form_main.pas"/>
-        <Caret Line="6" Column="41" TopLine="4"/>
+        <Caret Line="746" Column="1" TopLine="725"/>
       </Position26>
       <Position27>
         <Filename Value="form_main.pas"/>
-        <Caret Line="12" Column="39" TopLine="4"/>
+        <Caret Line="747" Column="1" TopLine="725"/>
       </Position27>
       <Position28>
-        <Filename Value="..\Library\olcb_threaded_stack.pas"/>
-        <Caret Line="5" Column="16" TopLine="1"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="748" Column="1" TopLine="725"/>
       </Position28>
       <Position29>
         <Filename Value="form_main.pas"/>
-        <Caret Line="14" Column="23" TopLine="1"/>
+        <Caret Line="750" Column="1" TopLine="725"/>
       </Position29>
       <Position30>
         <Filename Value="form_main.pas"/>
-        <Caret Line="25" Column="57" TopLine="1"/>
+        <Caret Line="751" Column="1" TopLine="725"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

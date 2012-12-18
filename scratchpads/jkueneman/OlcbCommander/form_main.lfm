@@ -1,10 +1,10 @@
 object FormOLCB_Commander: TFormOLCB_Commander
-  Left = 526
+  Left = 521
   Height = 388
-  Top = 189
+  Top = 245
   Width = 683
   Caption = 'OpenLCB Commander'
-  ClientHeight = 388
+  ClientHeight = 369
   ClientWidth = 683
   Menu = MainMenu
   OnCreate = FormCreate
@@ -14,7 +14,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.2.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 388
+    Height = 369
     Top = 0
     Width = 683
     ActivePage = TabSheetNetwork
@@ -23,27 +23,27 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 349
-      ClientWidth = 677
+      ClientHeight = 343
+      ClientWidth = 675
       object PanelNetwork: TPanel
         Left = 0
-        Height = 349
+        Height = 343
         Top = 0
         Width = 346
         Align = alLeft
         BevelOuter = bvNone
-        ClientHeight = 349
+        ClientHeight = 343
         ClientWidth = 346
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 320
+          Height = 314
           Top = 0
           Width = 346
           Align = alTop
           Anchors = [akTop, akLeft, akRight, akBottom]
           AutoExpand = True
-          DefaultItemHeight = 18
+          DefaultItemHeight = 16
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -60,18 +60,18 @@ object FormOLCB_Commander: TFormOLCB_Commander
         end
         object LabelNetworkNodeCount: TLabel
           Left = 4
-          Height = 17
-          Top = 325
-          Width = 84
+          Height = 14
+          Top = 322
+          Width = 65
           Anchors = [akLeft, akBottom]
           Caption = 'Node Count: '
           ParentColor = False
         end
         object LabelNetworkNodeCountValue: TLabel
           Left = 100
-          Height = 17
-          Top = 325
-          Width = 9
+          Height = 14
+          Top = 322
+          Width = 7
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
@@ -79,18 +79,18 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object SplitterMain: TSplitter
         Left = 346
-        Height = 349
+        Height = 343
         Top = 0
         Width = 5
       end
       object PanelOLCBNetwork: TPanel
         Left = 351
-        Height = 349
+        Height = 343
         Top = 0
-        Width = 326
+        Width = 324
         Align = alClient
-        ClientHeight = 349
-        ClientWidth = 326
+        ClientHeight = 343
+        ClientWidth = 324
         DockSite = True
         TabOrder = 2
         object BitBtnProtocolSupport: TBitBtn
@@ -109,38 +109,13 @@ object FormOLCB_Commander: TFormOLCB_Commander
           Action = ActionOpenLCBCommandSNII
           TabOrder = 1
         end
-        object BitBtnNetworkRefresh3: TBitBtn
-          Left = 13
-          Height = 22
-          Top = 214
-          Width = 299
-          Action = ActionOpenLCBCommandAll
-          TabOrder = 2
-        end
-        object BitBtnMemConfgOptions: TBitBtn
-          Left = 14
-          Height = 22
-          Top = 120
-          Width = 299
-          Action = ActionOpenLCBCommandMemConfigOptions
-          TabOrder = 3
-        end
-        object BitBtnMemConfigAddressSpaces: TBitBtn
-          Left = 14
-          Height = 22
-          Top = 150
-          Width = 299
-          Action = ActionOpenLCBCommandMemConfigSpaces
-          TabOrder = 4
-        end
         object BitBtnNetworkRefresh: TBitBtn
           Left = 14
           Height = 22
-          Top = 24
+          Top = 18
           Width = 299
           Action = ActionOpenLCBCommandIdentifyIDGlobal
-          Anchors = [akLeft, akBottom]
-          TabOrder = 5
+          TabOrder = 2
         end
       end
     end
@@ -1724,12 +1699,12 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object ActionOpenLCBCommandProtocolSupport: TAction
       Category = 'OpenLCBCommand'
-      Caption = 'Protocol Support'
+      Caption = 'Query Protocols Supported'
       OnExecute = ActionOpenLCBCommandProtocolSupportExecute
     end
     object ActionOpenLCBCommandSNII: TAction
       Category = 'OpenLCBCommand'
-      Caption = 'Simple Node Infomation (SNII/SNIP)'
+      Caption = 'Query Simple Node Infomation (SNII/SNIP)'
       OnExecute = ActionOpenLCBCommandSNIIExecute
     end
     object ActionOpenLCBCommandAll: TAction
@@ -1739,12 +1714,12 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object ActionOpenLCBCommandMemConfigOptions: TAction
       Category = 'OpenLCBCommand'
-      Caption = 'Memory Confg Options'
+      Caption = 'Query Memory Confguration Options'
       OnExecute = ActionOpenLCBCommandMemConfigOptionsExecute
     end
     object ActionOpenLCBCommandMemConfigSpaces: TAction
       Category = 'OpenLCBCommand'
-      Caption = 'Memory Configuration Address Spaces'
+      Caption = 'Query All Memory Configuration Address Space Info'
       OnExecute = ActionOpenLCBCommandMemConfigSpacesExecute
     end
     object ActionTreeviewNetworkCollapseAll: TAction
@@ -1756,6 +1731,31 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Category = 'TreeviewNetwork'
       Caption = 'Expand All'
       OnExecute = ActionTreeviewNetworkExpandAllExecute
+    end
+    object ActionOpenLCBCommandReadCDI: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read CDI Memory'
+      OnExecute = ActionOpenLCBCommandReadCDIExecute
+    end
+    object ActionOpenLCBCommandReadAll: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read All Memory'
+      OnExecute = ActionOpenLCBCommandReadAllExecute
+    end
+    object ActionOpenLCBCommandReadConfiguration: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read Configuration Memory'
+      OnExecute = ActionOpenLCBCommandReadConfigurationExecute
+    end
+    object ActionOpenLCBCommandReadMfgACDI: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read Mfg ACDI Memory'
+      OnExecute = ActionOpenLCBCommandReadMfgACDIExecute
+    end
+    object ActionOpenLCBCommandReadUserACDI: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read User ACDI Memory'
+      OnExecute = ActionOpenLCBCommandReadUserACDIExecute
     end
   end
   object PopupMenuTreeNode: TPopupMenu
@@ -1769,17 +1769,38 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object MenuItemTVPopupSep1: TMenuItem
       Caption = '-'
     end
+    object MenuItem1: TMenuItem
+      Caption = 'Configuration Memory Spaces'
+      object MenuItemConfigMemSubSep1: TMenuItem
+        Action = ActionOpenLCBCommandMemConfigOptions
+      end
+      object MenuItem10: TMenuItem
+        Action = ActionOpenLCBCommandMemConfigSpaces
+      end
+      object MenuItem9: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem3: TMenuItem
+        Action = ActionOpenLCBCommandReadCDI
+      end
+      object MenuItem5: TMenuItem
+        Action = ActionOpenLCBCommandReadAll
+      end
+      object MenuItem4: TMenuItem
+        Action = ActionOpenLCBCommandReadConfiguration
+      end
+      object MenuItem7: TMenuItem
+        Action = ActionOpenLCBCommandReadMfgACDI
+      end
+      object MenuItem8: TMenuItem
+        Action = ActionOpenLCBCommandReadUserACDI
+      end
+    end
     object MenuItemTVPopupSNIP: TMenuItem
       Action = ActionOpenLCBCommandSNII
     end
     object MenuItemTVPopupProtocol: TMenuItem
       Action = ActionOpenLCBCommandProtocolSupport
-    end
-    object MenuItemTVPopupMemOptions: TMenuItem
-      Action = ActionOpenLCBCommandMemConfigOptions
-    end
-    object MenuItemTVPopupMemAddressSpaces: TMenuItem
-      Action = ActionOpenLCBCommandMemConfigSpaces
     end
     object MenuItemTVPopupSep2: TMenuItem
       Caption = '-'
@@ -1808,4 +1829,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
     left = 174
     top = 74
   end
-end
+end

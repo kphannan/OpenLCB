@@ -11,6 +11,7 @@ program dsPIC33EP_NMRABusXpressnet;
 //
 // * Revision History:
 //     2012-02-01:   Created
+//     2012-12-16    updated
 //
 // * Description:
 
@@ -22,7 +23,6 @@ uses
   NMRAnetStateMachine,
   NMRAnetDefines,
   NMRAnetAppCallbacks,
-  NMRAnetXpressnet,
   MCU_Setup_dsPIC33EP64GP502,
   _25AAxxxx,
   NMRAnetBufferPools,

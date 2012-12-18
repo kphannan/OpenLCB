@@ -16,14 +16,14 @@ uses
 const
   DATAGRAM_MAX_RETRYS = 5;
 
-  HEADER_MEMCONFIG_OPTIONS_REQUEST: TCANByteArray                     = ($20, MCP_OP_GET_CONFIG, $00, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_CDI_REQUEST: TCANByteArray              = ($20, MCP_OP_GET_ADD_SPACE_INFO, MSI_CDI, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ALL_REQUEST: TCANByteArray              = ($20, MCP_OP_GET_ADD_SPACE_INFO, MSI_ALL, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_CONFIG_REQUEST: TCANByteArray           = ($20, MCP_OP_GET_ADD_SPACE_INFO, MSI_CONFIG, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_MFG_REQUEST: TCANByteArray    = ($20, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_MFG, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_USER_REQUEST: TCANByteArray   = ($20, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_USER, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ACDI_WRITE_USER_REQUEST: TCANByteArray  = ($20, MCP_OP_GET_ADD_SPACE_INFO, MSI_FUNCTIONS, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST: TCANByteArray          = ($20, MCP_OP_GET_ADD_SPACE_INFO, $00, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_OPTIONS_REQUEST: TCANByteArray                     = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_CONFIG, $00, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_CDI_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CDI, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_ALL_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ALL, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_CONFIG_REQUEST: TCANByteArray           = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CONFIG, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_MFG_REQUEST: TCANByteArray    = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_MFG, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_USER_REQUEST: TCANByteArray   = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_USER, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_ACDI_WRITE_USER_REQUEST: TCANByteArray  = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_FUNCTIONS, $00, $00, $00, $00, $00);
+  HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST: TCANByteArray          = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, $00, $00, $00, $00, $00, $00);
 
 
 type
@@ -32,14 +32,11 @@ type
   TDatagramSendManager    = class;
   TDatagramReceive        = class;
   TDatagramSend           = class;
-  TSniiReceiveManager     = class;
-  TSnii                   = class;
   TOlcbTaskEngine         = class;
   TOlcbTaskBase           = class;
 
   TSyncRawMessageFunc = procedure(MessageStr: String) of object;
   TSyncDatagramFunc = procedure(Datagram: TDatagramReceive) of object;
-  TSyncSniiReplyFunc = procedure(Snii: TSnii) of object;
 
 
 { TComPortThread }
@@ -49,7 +46,6 @@ type
     FBaudRate: DWord;                                                           // Baud rate to connect with
     FBufferDatagramReceive: TDatagramReceive;
     FBufferRawMessage: string;                                                  // Shared data to pass string between thread and the Syncronized callbacks
-    FBufferSniiReply: TSnii;
     FConnected: Boolean;                                                        // True if connected to the port
     FDatagramReceiveManager: TDatagramReceiveManager;
     FDatagramSendManager: TDatagramSendManager;
@@ -58,36 +54,27 @@ type
     FOlcbTaskManager: TOlcbTaskEngine;
     FPort: String;                                                              // Port to connect to
     FSerial: TBlockSerial;                                                      // Serial object
-    FSniiManager: TSniiReceiveManager;
     FSyncDatagramMemConfigAddressSpaceInfoReplyFunc: TSyncDatagramFunc;
     FSyncDatagramMemConfigOperationReplyFunc: TSyncDatagramFunc;
     FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
     FSyncSendMessageFunc: TSyncRawMessageFunc;                                  // Function to callback through Syncronize if EnableSendMessages is true
-    FSyncSniiReplyFunc: TSyncSniiReplyFunc;
     FTerminatedThread: Boolean;                                                 // True if the thread has terminated
     FTerminateThread: Boolean;                                                  // Set to true to terminate the thread
     FThreadListSendStrings: TThreadList;                                        // List of strings waiting to be sent
     function GetSourceAlias: Word;
     protected
-      procedure DispatchDatagramReceive(DatagramReceive: TDatagramReceive);
-      procedure DispatchSniiReply;
       procedure Execute; override;
-      procedure SyncDatagramMemConfigAddressSpaceInfoReply;
-      procedure SyncDatagramMemConfigOperationReply;
       procedure SyncErrorMessage;
       procedure SyncReceiveMessage;
       procedure SyncSendMessage;
-      procedure SyncSniiReply;
       procedure WriteDebugInfo;
 
       property BufferDatagramReceive: TDatagramReceive read FBufferDatagramReceive write FBufferDatagramReceive;
       property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
-      property BufferSniiReply: TSnii read FBufferSniiReply write FBufferSniiReply;
       property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager;
       property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
       property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
-      property SniiManager: TSniiReceiveManager read FSniiManager write FSniiManager;
       property SourceAlias: Word read GetSourceAlias;
     public
       constructor Create(CreateSuspended: Boolean);
@@ -103,12 +90,9 @@ type
       property ThreadListSendStrings: TThreadList read FThreadListSendStrings write FThreadListSendStrings;
       property TerminateThread: Boolean read FTerminateThread write FTerminateThread;
       property TerminatedThread: Boolean read FTerminatedThread;
-      property SyncDatagramMemConfigAddressSpaceInfoReplyFunc: TSyncDatagramFunc read FSyncDatagramMemConfigAddressSpaceInfoReplyFunc write FSyncDatagramMemConfigAddressSpaceInfoReplyFunc;
-      property SyncDatagramMemConfigOperationReplyFunc: TSyncDatagramFunc read FSyncDatagramMemConfigOperationReplyFunc write FSyncDatagramMemConfigOperationReplyFunc;
       property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
       property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
       property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
-      property SyncSniiReplyFunc: TSyncSniiReplyFunc read FSyncSniiReplyFunc write FSyncSniiReplyFunc;
       property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
       property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
   end;
@@ -231,86 +215,49 @@ type
   end;
 
 
-    { TSNII }
-
-  TSNII = class( TOlcbMessage)
-  private
-    FDestinationAlias: Word;
-    FFull: Boolean;
-    FLocalHelper: TOpenLCBMessageHelper;
-    FStateMachineIndex: Byte;
-    FSniiHardwareVersion: string;
-    FSniiMfgModel: string;
-    FSniiMfgName: string;
-    FSniiMfgVersion: Byte;
-    FSniiSoftwareVersion: string;
-    FSniiUserDesciption: string;
-    FSniiUserDescription: string;
-    FSniiUserName: string;
-    FSniiUserVersion: Byte;
-    FSourceAlias: Word;
-  protected
-    property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;   // Global object to work with OLCB messages
-    property StateMachineIndex: Byte read FStateMachineIndex write FStateMachineIndex;
-  public
-    constructor Create(ASourceAlias, ADestinationAlias: Word);
-    destructor Destroy; override;
-    function Duplicate: TSNII;
-    function Process(AHelper: TOpenLCBMessageHelper): TSNII;
-
-    property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
-    property SourceAlias: Word read FSourceAlias write FSourceAlias;
-    property Full: Boolean read FFull write FFull;
-    property SniiMfgName: string read FSniiMfgName write FSniiMfgName;
-    property SniiMfgModel: string read FSniiMfgModel write FSniiMfgModel;
-    property SniiSoftwareVersion: string read FSniiSoftwareVersion write FSniiSoftwareVersion;
-    property SniiHardwareVersion: string read FSniiHardwareVersion write FSniiHardwareVersion;
-    property SniiUserName: string read FSniiUserName write FSniiUserName;
-    property SniiUserDescription: string read FSniiUserDescription write FSniiUserDesciption;
-    property SniiUserVersion: Byte read FSniiUserVersion write FSniiUserVersion;
-    property SniiMfgVersion: Byte read FSniiMfgVersion write FSniiMfgVersion;
-  end;
-
-  { TSniiReceiveManager }
-
-  TSniiReceiveManager = class
-  private
-    FMaxCount: Integer;
-    FOwner: TComPortThread;
-    FSniis: TList;
-    function GetSnii(Index: Integer): TSNII;
-  protected
-    function FindInProcessSnii(AHelper: TOpenLCBMessageHelper): TSNII;
-    property MaxCount: Integer read FMaxCount write FMaxCount;
-    property Owner: TComPortThread read FOwner write FOwner;
-    property Sniis: TList read FSniis write FSniis;
-  public
-    constructor Create(AnOwner: TComPortThread);
-    destructor Destroy; override;
-    procedure Clear;
-    function Process(AHelper: TOpenLCBMessageHelper): TSNII;
-    property Snii[Index: Integer]: TSNII read GetSnii;       // Inprocess and completed Datagrams, the order they are received is preserved
-  end;
-
+  TOlcbTaskBeforeDestroy = procedure(Sender: TOlcbTaskBase) of object;
 
   { TOlcbTaskBase }
 
   TOlcbTaskBase = class
   private
+    FErrorCode: DWord;
+    FMessageHelper: TOpenLCBMessageHelper;
+    FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
     FSending: Boolean;
+  private
+    function SpaceToCommandByteEncoding(ASpace: Byte): Byte;
   protected
     FComPortThread: TComPortThread;
     FDestinationAlias: Word;
     FDone: Boolean;
     FiState: Integer;
     FSourceAlias: Word;
+    function IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
+    function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsProtocolIdentificationProcolReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual; abstract;                 // Must override this
+    procedure SendMemoryConfigurationOptions;
+    procedure SendMemoryConfigurationSpaceInfo(Space: Byte);
+    procedure SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
+    procedure SendProtocolIdentificationProtocolMessage;
+    procedure SendSnipMessage;
+    procedure SendVerifyNodeIDGlobalMessage;
+    procedure SendVerifyNodeIDToDestinationMessage;
+    procedure SyncOnBeforeTaskDestroy;
     property iState: Integer read FiState write FiState;
     property Done: Boolean read FDone;
   public
-    constructor Create(ASourceAlias, ADestinationAlias: Word); virtual;
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); virtual;
+    destructor Destroy; override;
     property ComPortThread: TComPortThread read FComPortThread;
     property DestinationAlias: Word read FDestinationAlias;
+    property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
+    property ErrorCode: DWord read FErrorCode write FErrorCode;
+    property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
   end;
@@ -338,25 +285,228 @@ type
 
 implementation
 
-const
-  STATE_SNII_MFG_VERSION  = 0;
-  STATE_SNII_MFG_NAME     = 1;
-  STATE_SNII_MFG_MODEL    = 2;
-  STATE_SNII_HARDWARE_VER = 3;
-  STATE_SNII_SOFTWARE_VER = 4;
-  STATE_SNII_USER_VERSION = 5;
-  STATE_SNII_USER_NAME    = 6;
-  STATE_SNII_USER_DESC    = 7;
-  STATE_SNII_DONE         = 8;
-
 { TOlcbTaskBase }
 
-constructor TOlcbTaskBase.Create(ASourceAlias, ADestinationAlias: Word);
+function TOlcbTaskBase.SpaceToCommandByteEncoding(ASpace: Byte): Byte;
+begin
+  case ASpace of
+    MSI_CDI     : Result := MCP_CDI;
+    MSI_ALL     : Result := MCP_ALL;
+    MSI_CONFIG  : Result := MCP_CONFIGURATION
+  else
+    Result := MCP_NONE
+  end;
+end;
+
+function TOlcbTaskBase.IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
+var
+  DatagramSend: TDatagramSend;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TDatagramSend then                                 // Wait for the ACK from the send
+    begin
+      DatagramSend := TDatagramSend( MessageInfo);
+      if DatagramSend.Empty and
+         (DatagramSend.SourceAlias = SourceAlias) and
+         (DatagramSend.DestinationAlias = DestinationAlias) then
+      Result := True
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
+begin
+  Result := False;
+  DatagramReceive := nil;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TDatagramReceive then
+    begin
+      DatagramReceive := TDatagramReceive(MessageInfo);
+      if (DatagramReceive.RawDatagram[0] and
+          DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
+         (DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_ADD_SPACE_INFO_REPLY) and
+         (DatagramReceive.RawDatagram[2] = AnAddress) and
+         (DatagramReceive.SourceAlias = SourceAlias) and
+         (DatagramReceive.DestinationAlias = DestinationAlias) then
+      begin
+        Result := True
+      end;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+begin
+  Result := False;
+  DatagramReceive := nil;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TDatagramReceive then
+    begin
+      DatagramReceive := TDatagramReceive(MessageInfo);
+      if  (DatagramReceive.RawDatagram[0] and
+           DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
+          (DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_CONFIG_REPLY) and
+          (DatagramReceive.SourceAlias = SourceAlias) and
+          (DatagramReceive.DestinationAlias = DestinationAlias) then
+        Result := True
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+begin
+  Result := False;
+  DatagramReceive := nil;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TDatagramReceive then
+    begin
+      DatagramReceive := TDatagramReceive(MessageInfo);
+      if  (DatagramReceive.RawDatagram[0] and
+          DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
+          (DatagramReceive.RawDatagram[1] and $FC = MCP_READ_DATAGRAM_REPLY) and
+          (DatagramReceive.SourceAlias = SourceAlias) and
+          (DatagramReceive.DestinationAlias = DestinationAlias) then
+        Result := True
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsProtocolIdentificationProcolReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_PROTOCOL_SUPPORT_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_SIMPLE_NODE_INFO_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) then
+        Result := True;
+    end;
+  end;
+end;
+
+procedure TOlcbTaskBase.SendMemoryConfigurationOptions;
+var
+  DatagramSend: TDatagramSend;
+begin
+  DatagramSend := TDatagramSend.Create;
+  DatagramSend.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, SourceAlias, DestinationAlias);
+  ComPortThread.AddDatagramToSend(DatagramSend);
+end;
+
+procedure TOlcbTaskBase.SendMemoryConfigurationSpaceInfo(Space: Byte);
+var
+  DatagramSend: TDatagramSend;
+  CANByteArray: TCANByteArray;
+begin
+  DatagramSend := TDatagramSend.Create;
+  CANByteArray := HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST;
+  CANByteArray[2] := Space;                                     // Set the address
+  DatagramSend.Initialize(nil, CANByteArray, 3, SourceAlias, DestinationAlias);
+  ComPortThread.AddDatagramToSend(DatagramSend);
+end;
+
+procedure TOlcbTaskBase.SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
+var
+  DatagramSend: TDatagramSend;
+  CANByteArray: TCANByteArray;
+  ByteCount: Byte;
+begin
+  DatagramSend := TDatagramSend.Create;
+  CANByteArray[0] := DATAGRAM_PROTOCOL_CONFIGURATION;
+  if ForceUseOfSpaceByte or (Space < MSI_CONFIG) then
+  begin
+    CANByteArray[1] := MCP_READ;
+    CANByteArray[6] := Space;
+    CANByteArray[7] := Count;
+    ByteCount := 8;
+  end else
+  begin
+    CANByteArray[1] := MCP_READ or SpaceToCommandByteEncoding(Space);
+    CANByteArray[6] := Count;
+    ByteCount := 7;
+  end;
+  CANByteArray[2] := (StartAddress shr 24) and $000000FF;
+  CANByteArray[3] := (StartAddress shr 16) and $000000FF;
+  CANByteArray[4] := (StartAddress shr 8) and $000000FF;
+  CANByteArray[5] := StartAddress and $000000FF;
+
+  DatagramSend.Initialize(nil, CANByteArray, ByteCount, SourceAlias, DestinationAlias);
+  ComPortThread.AddDatagramToSend(DatagramSend);
+end;
+
+procedure TOlcbTaskBase.SendProtocolIdentificationProtocolMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendSnipMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendVerifyNodeIDGlobalMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendVerifyNodeIDToDestinationMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER, SourceAlias, DestinationAlias, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SyncOnBeforeTaskDestroy;
+begin
+  if Assigned(OnBeforeDestroy) then
+    OnBeforeDestroy(Self)
+end;
+
+constructor TOlcbTaskBase.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean);
 begin
   inherited Create;
   FDestinationAlias := ADestinationAlias;
   FSourceAlias := ASourceAlias;
+  FMessageHelper := TOpenLCBMessageHelper.Create;
   FComPortThread := nil;
+  FErrorCode := 0;
+  FSending := StartAsSending;
+end;
+
+destructor TOlcbTaskBase.Destroy;
+begin
+  FreeAndNil(FMessageHelper);
+  inherited Destroy;
 end;
 
 { TComPortThread }
@@ -369,27 +519,6 @@ begin
   finally
     LeaveCriticalsection(GlobalSettingLock)
   end;
-end;
-
-procedure TComPortThread.DispatchDatagramReceive(DatagramReceive: TDatagramReceive);
-begin
-  if Assigned(DatagramReceive) then
-  begin // Received a complete datagram need to dispatch it somewhere
-    case DatagramReceive.RawDatagram[0] of    // Destination in the header for datagrams
-      DATAGRAM_PROTOCOL_CONFIGURATION :
-        begin
-          if DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_CONFIG_REPLY then            // Bit 0 is variable
-            Synchronize( @SyncDatagramMemConfigOperationReply);
-          if DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_ADD_SPACE_INFO_REPLY then    // Bit 0 is variable
-            Synchronize( @SyncDatagramMemConfigAddressSpaceInfoReply);
-        end;
-    end;
-  end;
-end;
-
-procedure TComPortThread.DispatchSniiReply;
-begin
-  Synchronize( @SyncSniiReply);
 end;
 
 procedure TComPortThread.Execute;
@@ -490,24 +619,14 @@ begin
               BufferDatagramReceive := DatagramReceiveManager.Process(Helper);
               if Assigned(BufferDatagramReceive) then
               begin
-                DispatchDatagramReceive(BufferDatagramReceive);
                 OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);         // Give the Task subsystem a crack at knowning about the received datagram
                 FreeAndNil(FBufferDatagramReceive)
               end;
             end;
           end else                                                                // *** Test for a Datagram message that came in ***
-          begin
-            BufferSniiReply := SniiManager.Process(Helper);                       // *** Test for a SNII meesage that came in ***
-            if Assigned(BufferSniiReply) then
-            begin
-              DispatchSniiReply;
-              OlcbTaskManager.ProcessReceiving(BufferSniiReply);                  // Give the Task subsystem a crack at knowning about the full recieved SNII message
-              FreeAndNil(FBufferSniiReply);
-            end else                                                              // *** Test for a SNII meesage that came in ***
-              OlcbTaskManager.ProcessReceiving(Helper);
+            OlcbTaskManager.ProcessReceiving(Helper);
           end;
-        end
-      end;
+       end;
     end else
     begin
       BufferRawMessage := Serial.LastErrorDesc;
@@ -522,18 +641,6 @@ begin
   end;
 end;
 
-procedure TComPortThread.SyncDatagramMemConfigAddressSpaceInfoReply;
-begin
-  if Assigned(SyncDatagramMemConfigAddressSpaceInfoReplyFunc) then
-    SyncDatagramMemConfigAddressSpaceInfoReplyFunc(BufferDatagramReceive)
-end;
-
-procedure TComPortThread.SyncDatagramMemConfigOperationReply;
-begin
-  if Assigned(SyncDatagramMemConfigOperationReplyFunc) then
-    SyncDatagramMemConfigOperationReplyFunc(BufferDatagramReceive)
-end;
-
 procedure TComPortThread.SyncReceiveMessage;
 begin
   if Assigned(SyncReceiveMessageFunc) then
@@ -544,12 +651,6 @@ procedure TComPortThread.SyncSendMessage;
 begin
   if Assigned(SyncSendMessageFunc) then
     SyncSendMessageFunc(BufferRawMessage)
-end;
-
-procedure TComPortThread.SyncSniiReply;
-begin
-  if Assigned(SyncSniiReplyFunc) then
-    SyncSniiReplyFunc(BufferSniiReply);
 end;
 
 procedure TComPortThread.WriteDebugInfo;
@@ -592,7 +693,6 @@ begin
   FThreadListSendStrings := TThreadList.Create;
   FDatagramReceiveManager := TDatagramReceiveManager.Create(Self);
   FDatagramSendManager := TDatagramSendManager.Create(Self);
-  FSniiManager := TSniiReceiveManager.Create(Self);
   FOlcbTaskManager := TOlcbTaskEngine.Create(Self);
   FBaudRate := 9600;
   FPort := '';
@@ -831,7 +931,7 @@ begin
     while not Assigned(Result) and (i < List.Count) do
     begin
       Datagram := TDatagramReceive( List[i]);
-      if not Datagram.Full and (Datagram.DestinationAlias = AHelper.DestinationAliasID) and (Datagram.SourceAlias = AHelper.SourceAliasID) then
+      if not Datagram.Full and (Datagram.DestinationAlias = AHelper.SourceAliasID) and (Datagram.SourceAlias = AHelper.DestinationAliasID) then
         Result := Datagram;
       Inc(i)
     end;
@@ -1009,6 +1109,7 @@ function TDatagramSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; ComPortThr
 //
 // It is assumed that the message is actually for this object and the object is not empty, it is not checked.........
 begin
+  Result := False;
   if not Empty and WaitingForACK then   // See if we are waiting for the node to sent us and ACK
   begin
     if (AHelper.SourceAliasID = DestinationAlias) and (AHelper.DestinationAliasID = SourceAlias) then
@@ -1031,6 +1132,7 @@ begin
                Empty := True                                                    // Error; don't resend and quit with ErrorCode set
           end;
       end;
+      Result := True
     end;
   end
 end;
@@ -1182,230 +1284,6 @@ begin
   end;
 end;
 
-{ TSniiReceiveManager }
-
-function TSniiReceiveManager.GetSnii(Index: Integer): TSNII;
-begin
-  if (Index > -1) and (Index < Sniis.Count) then
-    Result := TSNII( Sniis[Index])
-  else
-    Result := nil
-end;
-
-function TSniiReceiveManager.FindInProcessSnii(AHelper: TOpenLCBMessageHelper): TSNII;
-//
-// Searches an in process SNII interaction between the nodes in the message
-//
-var
-  i: Integer;
-  LocalSnii: TSnii;
-begin
-  i := 0;
-  Result := nil;
-  while not Assigned(Result) and (i < Sniis.Count) do
-  begin
-    LocalSnii := Snii[i];
-    if not LocalSnii.Full and (LocalSnii.SourceAlias = AHelper.DestinationAliasID) and (LocalSnii.DestinationAlias = AHelper.SourceAliasID)  then
-      Result := LocalSnii;
-    Inc(i)
-  end;
-end;
-
-constructor TSniiReceiveManager.Create(AnOwner: TComPortThread);
-begin
-  inherited Create;
-  FOwner := AnOwner;
-  FSniis := TList.Create;
-  FMaxCount := 0;
-end;
-
-destructor TSniiReceiveManager.Destroy;
-begin
-  Clear;
-  FreeAndNil(FSniis);
-  inherited Destroy;
-end;
-
-procedure TSniiReceiveManager.Clear;
-var
-  i: Integer;
-begin
-  try
-    for i := 0 to Sniis.Count - 1 do
-      TObject( Sniis[i]).Free;
-  finally
-    Sniis.Clear;
-  end;
-end;
-
-function TSniiReceiveManager.Process(AHelper: TOpenLCBMessageHelper): TSNII;
-var
-  TestSnii: TSNII;
-begin
-  Result := nil;
-  if AHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
-  begin
-    TestSnii := FindInProcessSnii(AHelper);
-    if not Assigned(TestSnii) then
-    begin
-      TestSnii := TSNII.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Snii object for source alias of the message to us
-      Sniis.Add(TestSnii);
-      if Sniis.Count > MaxCount then MaxCount := Sniis.Count;
-    end;
-    Result := TestSnii.Process(AHelper);
-    if Assigned(Result) then                                               // If it is complete then it is returned AND removed from the list, it is now owned by the caller
-      Sniis.Remove(Result);
-  end;
-end;
-
-{ TSNII }
-
-constructor TSNII.Create(ASourceAlias, ADestinationAlias: Word);
-begin
-  inherited Create;
-  FLocalHelper := TOpenLCBMessageHelper.Create;
-  FDestinationAlias := ADestinationAlias;
-  FSourceAlias := ASourceAlias;
-  Full := False;
-  SniiMfgName := '';
-  SniiMfgModel := '';
-  SniiSoftwareVersion := '';
-  SniiHardwareVersion := '';
-  SniiUserName := '';
-  SniiUserDescription := '';
-  SniiUserVersion := 0;
-  SniiMfgVersion := 0;
-  StateMachineIndex := 0;
-end;
-
-destructor TSNII.Destroy;
-begin
-  FreeAndNil(FLocalHelper);
-  inherited;
-end;
-
-function TSNII.Duplicate: TSNII;
-begin
-  Result := TSNII.Create(0, 0);
-  Result.SourceAlias := SourceAlias;
-  Result.DestinationAlias := DestinationAlias;
-  Result.Full := Full;
-  Result.SniiHardwareVersion := SniiHardwareVersion;
-  Result.SniiMfgModel := SniiMfgModel;
-  Result.SniiMfgName := SniiMfgName;
-  Result.SniiMfgVersion := SniiMfgVersion;
-  Result.SniiSoftwareVersion := SniiSoftwareVersion;
-  Result.SniiUserDescription := SniiUserDescription;
-  Result.SniiUserName := SniiUserName;
-  Result.SniiUserVersion := SniiUserVersion;
-  Result.StateMachineIndex := StateMachineIndex;
-end;
-
-function TSNII.Process(AHelper: TOpenLCBMessageHelper): TSNII;
-// It is assumed that the message is actually for this object and the object is not full, it is not checked........
-var
-  i: Integer;
-begin
-  Result := nil;
-  i := 2;                                      // Strip off the destination Alias
-  while i < AHelper.DataCount do
-  begin
-    case StateMachineIndex of
-      STATE_SNII_MFG_VERSION :
-        begin
-          SniiMfgVersion := AHelper.Data[i];
-          Inc(i);
-          StateMachineIndex := STATE_SNII_MFG_NAME;
-        end;
-      STATE_SNII_MFG_NAME     :
-        begin
-          if Chr( AHelper.Data[i]) <> #0 then
-          begin
-            SniiMfgName := SniiMfgName + Chr( AHelper.Data[i]);
-            Inc(i);
-          end else
-          begin
-            Inc(i);
-            StateMachineIndex := STATE_SNII_MFG_MODEL;
-          end;
-        end;
-      STATE_SNII_MFG_MODEL     :
-        begin
-          if Chr( AHelper.Data[i]) <> #0 then
-          begin
-            SniiMfgModel := SniiMfgModel + Chr( AHelper.Data[i]);
-            Inc(i);
-          end else
-          begin
-            Inc(i);
-            StateMachineIndex := STATE_SNII_HARDWARE_VER;
-          end;
-        end;
-      STATE_SNII_HARDWARE_VER  :
-        begin
-          if Chr( AHelper.Data[i]) <> #0 then
-          begin
-            SniiHardwareVersion := SniiHardwareVersion + Chr( AHelper.Data[i]);
-            Inc(i);
-          end else
-          begin
-            Inc(i);
-            StateMachineIndex := STATE_SNII_SOFTWARE_VER;
-          end;
-        end;
-      STATE_SNII_SOFTWARE_VER  :
-        begin
-          if Chr( AHelper.Data[i]) <> #0 then
-          begin
-            SniiSoftwareVersion := SniiSoftwareVersion + Chr( AHelper.Data[i]);
-            Inc(i);
-          end else
-          begin
-            Inc(i);
-            StateMachineIndex := STATE_SNII_USER_VERSION;
-          end;
-        end;
-      STATE_SNII_USER_VERSION  :
-        begin
-          SniiUserVersion := AHelper.Data[i];
-          Inc(i);
-          StateMachineIndex := STATE_SNII_USER_NAME;
-        end;
-      STATE_SNII_USER_NAME     :
-        begin
-          if Chr( AHelper.Data[i]) <> #0 then
-          begin
-            SniiUserName := SniiUserName + Chr( AHelper.Data[i]);
-            Inc(i);
-          end else
-          begin
-            Inc(i);
-            StateMachineIndex := STATE_SNII_USER_DESC;
-          end;
-        end;
-      STATE_SNII_USER_DESC     :
-        begin
-          if Chr( AHelper.Data[i]) <> #0 then
-          begin
-            SniiUserDescription := SniiUserDescription + Chr( AHelper.Data[i]);
-            Inc(i);
-          end else
-          begin
-            FFull := True;
-            Result := Self;
-            Inc(i);
-            StateMachineIndex := STATE_SNII_DONE;
-          end;
-        end;
-      STATE_SNII_DONE          :
-        begin
-          FFull := True;
-          Result := Self;
-          Inc(i)
-        end;
-    end;
-  end;
-end;
 
 { TOlcbTaskEngine }
 
@@ -1435,6 +1313,7 @@ begin
         if Task.Done then
         begin
           List.Remove(Task);
+          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
           FreeAndNil(Task);
         end;
       end;
@@ -1462,7 +1341,8 @@ begin
         Task.Process(nil);
         if Task.Done then
         begin
-          List.Remove(Task);     // If the last state of the task was to send something we need to free the task
+          List.Remove(Task);
+          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
           FreeAndNil(Task)
         end;
       end;

@@ -129,10 +129,11 @@ INPUT(
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/form_messagelog.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/common_utilities.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_node.o"
-"/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_mem_protocol.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_threaded_stack.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_common_tasks.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/form_thread_debug.o"
+"/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_structure_helpers.o"
+"/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/form_config_mem_viewer.o"
 /usr/lib/fpc/2.6.0/units/i386-linux/rtl/baseunix.o
 /usr/lib/fpc/2.6.0/units/i386-linux/rtl/unix.o
 /usr/lib/fpc/2.6.0/units/i386-linux/rtl/unixtype.o
@@ -379,6 +380,9 @@ INPUT(
 /usr/share/lazarus/1.0.2/lcl/units/i386-linux/gtk2/gtk2listviewtreemodel.o
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_utilities.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/olcb_defines.o"
+/usr/share/lazarus/1.0.2/components/lazutils/lib/i386-linux/laz2_dom.o
+/usr/share/lazarus/1.0.2/components/lazutils/lib/i386-linux/laz2_xmlread.o
+/usr/share/lazarus/1.0.2/components/lazutils/lib/i386-linux/laz2_xmlwrite.o
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/synaser.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/synautil.o"
 "/home/jimkueneman/Desktop/Parallels Shared Folders/Home/Documents/OpenLCB/trunk/scratchpads/jkueneman/OlcbCommander/lib/i386-linux/math_float16.o"
@@ -428,9 +432,9 @@ INPUT(
 /usr/lib/fpc/2.6.0/units/i386-linux/fcl-registry/xmlreg.o
 /usr/share/lazarus/1.0.2/components/synedit/units/i386-linux/gtk2/synedithighlighterfoldbase.o
 /usr/share/lazarus/1.0.2/lcl/units/i386-linux/graphutil.o
-/usr/share/lazarus/1.0.2/components/lazutils/lib/i386-linux/laz2_dom.o
-/usr/share/lazarus/1.0.2/components/lazutils/lib/i386-linux/laz2_xmlread.o
 /usr/share/lazarus/1.0.2/components/lazutils/lib/i386-linux/laz2_xmlutils.o
+/usr/share/lazarus/1.0.2/components/synedit/units/i386-linux/gtk2/synhighlighterxml.o
+/usr/share/lazarus/1.0.2/components/synedit/units/i386-linux/gtk2/synedithighlighterxmlbase.o
 /usr/lib/fpc/2.6.0/units/i386-linux/rtl/si_c21.o
 )
 INPUT(

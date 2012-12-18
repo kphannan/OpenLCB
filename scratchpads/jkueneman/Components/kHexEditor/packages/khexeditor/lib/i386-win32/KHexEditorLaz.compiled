@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <CONFIG>
   <Compiler Value="C:\lazarus\fpc\2.6.0\bin\i386-win32\fpc.exe" Date="1095326452"/>
-  <Params Value=" -MObjFPC -Scgi -O1 -g -gl -vewni -l -FiE:\trunk\scratchpads\jkueneman\Components\kHexEditor\source -FuE:\trunk\scratchpads\jkueneman\Components\kHexEditor\source -FuC:\lazarus\components\printers\lib\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32 -FuC:\lazarus\components\lazutils\lib\i386-win32 -FuC:\lazarus\packager\units\i386-win32 -FuE:\trunk\scratchpads\jkueneman\Components\kHexEditor\packages\khexeditor\ -FUE:\trunk\scratchpads\jkueneman\Components\kHexEditor\packages\khexeditor\lib\i386-win32\ -dLCL -dLCLwin32 khexeditorlaz.pas"/>
+  <Params Value=" -MObjFPC -Scgi -O1 -g -gl -vewni -l -FiZ:\OpenLCB\trunk\scratchpads\jkueneman\Components\kHexEditor\source -FuZ:\OpenLCB\trunk\scratchpads\jkueneman\Components\kHexEditor\source -FuC:\lazarus\components\printers\lib\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32\win32 -FuC:\lazarus\lcl\units\i386-win32 -FuC:\lazarus\components\lazutils\lib\i386-win32 -FuC:\lazarus\packager\units\i386-win32 -FuZ:\OpenLCB\trunk\scratchpads\jkueneman\Components\kHexEditor\packages\khexeditor\ -FUZ:\OpenLCB\trunk\scratchpads\jkueneman\Components\kHexEditor\packages\khexeditor\lib\i386-win32\ -dLCL -dLCLwin32 khexeditorlaz.pas"/>
 </CONFIG>

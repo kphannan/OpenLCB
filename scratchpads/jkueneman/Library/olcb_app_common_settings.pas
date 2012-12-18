@@ -5,8 +5,8 @@ unit olcb_app_common_settings;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  Menus, ActnList, ComCtrls, ExtCtrls, Buttons, IniFiles;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
+  Menus, ActnList, ExtCtrls, Buttons, IniFiles;
 
  // Classes, SysUtils, FileUtil, IniFiles;
 

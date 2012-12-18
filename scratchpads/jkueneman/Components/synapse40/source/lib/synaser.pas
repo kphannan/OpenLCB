@@ -1070,6 +1070,7 @@ begin
   result := FileWrite(Fhandle, Buffer^, Length);
   serialcheck(result);
 {$ELSE}
+  Overlapped.hEvent := 0;
   FillChar(Overlapped, Sizeof(Overlapped), 0);
   SetSynaError(sOK);
   y := 0;
@@ -1087,6 +1088,7 @@ begin
   end
   else
     SetSynaError(y);
+  err := 0;
   ClearCommError(FHandle, err, nil);
   if err <> 0 then
     DecodeCommError(err);
@@ -1185,6 +1187,7 @@ begin
   if PreTestFailing then   {HGJ}
     Exit;                  {HGJ}
   LimitBandwidth(Length, FMaxRecvBandwidth, FNextRecv);
+  Overlapped.hEvent:= 0;
   FillChar(Overlapped, Sizeof(Overlapped), 0);
   SetSynaError(sOK);
   y := 0;
@@ -1202,6 +1205,7 @@ begin
   end
   else
     SetSynaError(y);
+  err := 0;
   ClearCommError(FHandle, err, nil);
   if err <> 0 then
     DecodeCommError(err);
@@ -1508,6 +1512,7 @@ var
   stat: TComStat;
   err: DWORD;
 begin
+  err := 0;
   if ClearCommError(FHandle, err, @stat) then
   begin
     SetSynaError(sOK);
@@ -1542,6 +1547,7 @@ var
   stat: TComStat;
   err: DWORD;
 begin
+  err := 0;
   SetSynaError(sOK);
   if not ClearCommError(FHandle, err, @stat) then
     serialcheck(sErr);
@@ -1855,6 +1861,7 @@ var
   y: Integer;
   Overlapped: TOverlapped;
 begin
+  Overlapped.hEvent:=0;
   FillChar(Overlapped, Sizeof(Overlapped), 0);
   Overlapped.hEvent := CreateEvent(nil, True, False, nil);
   try
@@ -1864,6 +1871,7 @@ begin
       Result := True
     else
     begin
+      ex := 0;
       y := 0;
       if not WaitCommEvent(FHandle, ex, @Overlapped) then
         y := GetLastError;

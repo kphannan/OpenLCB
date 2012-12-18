@@ -5,7 +5,7 @@ unit olcb_node;
 interface
 
 uses
-  Classes, SysUtils, laz2_DOM, laz2_XMLRead, olcb_threaded_stack, olcb_mem_protocol;
+  Classes, SysUtils, laz2_DOM, laz2_XMLRead, olcb_threaded_stack, olcb_structure_helpers;
 
 type
   { TOpenLcbNode }
@@ -17,12 +17,12 @@ type
     FNodeID: DWord;
     FNodeIDAlias: Word;
     FProtocolSupport: QWord;
-    FSnii: TSnii;
+    FSnii: TOlcbSNIP;
     procedure SetCDI(AValue: TXMLDocument);
     procedure SetNodeID(AValue: DWord);
     procedure SetNodeIDAlias(AValue: Word);
     procedure SetProtocolSupport(AValue: QWord);
-    procedure SetSnii(AValue: TSnii);
+    procedure SetSnii(AValue: TOlcbSNIP);
   public
     constructor Create;
     destructor Destroy; override;
@@ -31,7 +31,7 @@ type
     property NodeID: DWord read FNodeID write SetNodeID;
     property NodeIDAlias: Word read FNodeIDAlias write SetNodeIDAlias;
     property ProtocolSupport: QWord read FProtocolSupport write SetProtocolSupport;
-    property Snii: TSnii read FSnii write SetSnii;
+    property Snii: TOlcbSNIP read FSnii write SetSnii;
   end;
 
 implementation
@@ -59,7 +59,7 @@ begin
   FProtocolSupport:=AValue;
 end;
 
-procedure TOpenLcbNode.SetSnii(AValue: TSnii);
+procedure TOpenLcbNode.SetSnii(AValue: TOlcbSNIP);
 begin
   FreeAndNil(FSnii);
   FSnii:=AValue;

@@ -412,6 +412,7 @@ var
   zoneinfo: TTimeZoneInformation;
   bias: Integer;
 begin
+  Zoneinfo.Bias := 0;  // Shut up compiler
   case GetTimeZoneInformation(Zoneinfo) of
     2:
       bias := zoneinfo.Bias + zoneinfo.DaylightBias;
@@ -758,6 +759,7 @@ var
   st: SysUtils.TSystemTime;
   stw: Windows.TSystemTime;
 begin
+  stw.Day := 0; // shut up compiler
   GetSystemTime(stw);
   st.Year := stw.wYear;
   st.Month := stw.wMonth;
@@ -857,8 +859,10 @@ var
   x: TLargeInteger;
 {$ENDIF}
 begin
+  freq := 0; // compiler
   if Windows.QueryPerformanceFrequency(freq) then
   begin
+    tick := 0;
     Windows.QueryPerformanceCounter(tick);
 {$IFDEF VER100}
     x.QuadPart := (tick.QuadPart / freq.QuadPart) * 1000;
@@ -2063,4 +2067,4 @@ begin
     CustomMonthNames[n] := ShortMonthNames[n];
     MyMonthNames[0, n] := ShortMonthNames[n];
   end;
-end.
+end.

@@ -87,7 +87,7 @@ const
   DATAGRAM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
 
 
-  LEN_DATAGRAM       = 72;                                                      // How many Bytes in the datagram
+  MAX_DATAGRAM_LEN       = 72;                                                  // How many Bytes in the datagram
 
   // Datagram Buffer States
   DGS_EMPTY               = $00;                                                // [RX/TX] The Datagram Packet Buffer is empty
@@ -126,7 +126,7 @@ const
   DATAGRAM_TYPE_SIX_BYTE_CMD_MASK           = $F0;                              // Next six bytes are command bytes and not data
 
 type
-  TDatagram = array[0..LEN_DATAGRAM-1] of Byte;
+  TDatagram = array[0..MAX_DATAGRAM_LEN-1] of Byte;
   PDatagram = ^TDatagram;
 
   TDatagramError = record

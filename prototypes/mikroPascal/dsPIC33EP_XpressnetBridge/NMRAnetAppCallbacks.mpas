@@ -23,8 +23,13 @@ unit NMRAnetAppCallbacks;
 
 uses
   _25AAxxxx,
+  NMRAnetStateMachine,
+  CANStorage,
   NMRAnetAppDefines,
-  NMRAnetDefines;
+  NMRAnetDefines,
+  NMRAnetNode,
+  NMRAnetUtilities,
+  NMRAnetDefinesShared;
 
 type
   TDCCVolatileData = record
@@ -46,11 +51,18 @@ type
   PDCCConfigurationData = ^TDCCConfigurationData;
 
 procedure NMRAnetAppCallbacks_Initialize;
-function ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
-procedure ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
-function ConfigurationSize(Node: PNMRAnetNode): Word;
-procedure AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
-procedure AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_EventsIdentify: Boolean;
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 
 implementation
 
@@ -58,6 +70,20 @@ implementation
 // node in the AssignRAMAddress function below
 var
   VolatileData: array[0..MAX_NODE_COUNT - 1] of TDCCVolatileData;
+  
+//******************************************************************************
+//  Initialize the VolatileData structure
+//******************************************************************************
+procedure NMRAnetAppCallbacks_Initialize;
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_NODE_COUNT - 1 do
+  begin
+    VolatileData[i].Speed := 0;
+    VolatileData[i].Functions := 0;
+  end
+end;
 
 // *****************************************************************************
 // Writes the Configuration Memory from the App defined storage device
@@ -68,7 +94,7 @@ var
 //
 //  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
-procedure ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
 begin
   while _25AAxxxx_Busy(EEPROM_BANK_0) do
      Delay_us(10);
@@ -84,7 +110,7 @@ end;
 //
 //  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
-function ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 begin
    while _25AAxxxx_Busy(EEPROM_BANK_0) do
      Delay_us(10);
@@ -96,7 +122,7 @@ end;
 //******************************************************************************
 //  Returns the overall size of the Configuration Data
 //******************************************************************************
-function ConfigurationSize(Node: PNMRAnetNode): Word;
+function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
 begin
   Result := MAX_CONFIG_DATA;
 end;
@@ -104,7 +130,7 @@ end;
 //******************************************************************************
 //  Associates the offset of the EEPROM for the Configuration Data for the Node
 //******************************************************************************
-procedure AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
 begin
   Node^.ConfigurationAddress := Generic32BitPointer( iNode * MAX_DCC_CFG_DATA);
 end;
@@ -112,23 +138,46 @@ end;
 //******************************************************************************
 //  Associates the Address of the RAM for Volatile Node Data
 //******************************************************************************
-procedure AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
 begin
   Node^.RAMAddress := Generic32BitPointer( @VolatileData[iNode]);
 end;
 
-//******************************************************************************
-//  Initialize the VolatileData structure
-//******************************************************************************
-procedure NMRAnetAppCallbacks_Initialize;
-var
-  i: Integer;
+
+
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 begin
-  for i := 0 to MAX_NODE_COUNT - 1 do
-  begin
-    VolatileData[i].Speed := 0;
-    VolatileData[i].Functions := 0;
-  end
+  Result := False
+end;
+
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+begin
+  Result := False
+end;
+
+function AppCallback_EventsIdentify: Boolean;
+begin
+  Result := False
+end;
+
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+begin
+  Result := False
+end;
+
+procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+begin
+
+end;
+
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+begin
+  Result := False
+end;
+
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+begin
+
 end;
 
 end.

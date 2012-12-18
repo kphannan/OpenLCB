@@ -48,7 +48,7 @@ begin
     Buffer^.ErrorCode.SubType[0] := 0;
     Buffer^.ErrorCode.SubType[1] := 0;
     Buffer^.iRetransmit := 0;
-    for j := 0 to LEN_DATAGRAM-1 do
+    for j := 0 to MAX_DATAGRAM_LEN-1 do
       Buffer^.DataBytes[j] := 0;
   end
 end;

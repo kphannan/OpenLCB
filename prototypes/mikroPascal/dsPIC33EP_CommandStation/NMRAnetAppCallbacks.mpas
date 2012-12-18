@@ -85,7 +85,7 @@ const
   MSG_DCC_ADDRESS_ALLOCATED = $01;                                               // Need to send a Message for the DCC Address was Allocated
   
 type
-  TDccProxyData = record
+  TDccProxyData = record                                                        // Structure stored in RAM on a node and vnode basis
     State: Byte;                                                                // State of the Proxy Node
     MsgFlags: Byte;                                                             // Message Flags for messages that need to be sent in the Statemachine
     Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
@@ -120,8 +120,8 @@ procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer)
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 
+// Local to Train Nodes
 function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
-
 
 implementation
 

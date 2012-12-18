@@ -43,19 +43,12 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=12
-File0=..\Library\NMRAnet\NMRAnetStateMachine.mpas
-File1=dsPIC33EP_NMRAnetCommandStation.mpas
-File2=..\Library\NMRAnet\NMRAnetNode.mpas
-File3=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
-File4=NMRAnetAppDefines.mpas
-File5=NMRAnetAppCallbacks.mpas
-File6=..\Library\NMRAnet\NMRAnetCANReceive.mpas
-File7=..\Library\NMRAnet\NMRAnetUtilities.mpas
-File8=..\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\CANBuffers.mpas
-File9=MCU_Setup_dsPIC33EP64GP502.mpas
-File10=..\Library\NMRAnet\NMRAnetDefines.mpas
-File11=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetDefinesShared.mpas
+Count=5
+File0=dsPIC33EP_NMRAnetCommandStation.mpas
+File1=MCU_Setup_dsPIC33EP64GP502.mpas
+File2=NMRAnetAppCallbacks.mpas
+File3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetDefines.mpas
+File4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

@@ -29,7 +29,7 @@ begin
   ANSELB := 0;
 
 
-  OSCCON := OSCCON and $F8FF;                                                   // Clear COSC bits (set to FRC mode)
+  OSCCON := OSCCON and $F8FF;                                                   // Clear NOSC bits (set to FRC mode)
   OSCCON.0 := 1;                                                                // Tell it to change modes
   while OSCCON.0 = 1 do;                                                        // wait for it to take effect
 
@@ -43,7 +43,8 @@ begin
   OSCCON := OSCCON or $0300;                                                    // Set COSC to 011 = XT with PLL
   OSCCON.0 := 1;                                                                // Tell it to change modes
   while OSCCON.0 = 1 do;                                                        // wait for it to take effect
-
+  while LOCK_bit = 0 do;
+  
   Delay_ms(10);
 
   dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode

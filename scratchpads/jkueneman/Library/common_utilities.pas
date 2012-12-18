@@ -12,6 +12,7 @@ type
 
   function ValidateHex(TestHexVal: string): string;
   function IsPrintableChar(C: Char): Boolean;
+  function StreamAsString(Stream: TStream): string;
 
 implementation
 
@@ -31,5 +32,18 @@ begin
   Result := ((Ord( C) >= 32) and (Ord( C) <= 126))  or ((Ord( C) >= 128) and (Ord( C) <= 255))
 end;
 
+function StreamAsString(Stream: TStream): string;
+var
+  i: Integer;
+begin
+  Stream.Position := 0;
+ { SetLength(Result, Stream.Size);
+  for i := 0 to Stream.Size - 1 do
+    Result[i] := Chr( Stream.ReadByte); }
+  Result := '';
+  for i := 0 to Stream.Size - 1 do
+    Result := Result + Chr( Stream.ReadByte);
+end;
+
 end.
-
+
