@@ -13,7 +13,7 @@ uses
   types, olcb_utilities, olcb_defines, form_messagelog, olcb_node, olcb_structure_helpers,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead, laz2_XMLWrite, common_utilities,
   {$IFDEF DEBUG_THREAD}
-  form_thread_debug
+  form_thread_debug,
   {$ENDIF}
   olcb_common_tasks;
 
@@ -60,7 +60,7 @@ type
     ActionOpenLCBCommandReadCDI: TAction;
     ActionTreeviewNetworkExpandAll: TAction;
     ActionTreeviewNetworkCollapseAll: TAction;
-    ActionOpenLCBCommandMemConfigSpaces: TAction;
+    ActionOpenLCBCommandMemConfigAllSpacesInfo: TAction;
     ActionOpenLCBCommandMemConfigOptions: TAction;
     ActionOpenLCBCommandAll: TAction;
     ActionOpenLCBCommandSNII: TAction;
@@ -75,8 +75,7 @@ type
     ActionListMain: TActionList;
     ApplicationProperties1: TApplicationProperties;
     BitBtnNetworkRefresh: TBitBtn;
-    BitBtnProtocolSupport: TBitBtn;
-    BitBtnSNIP: TBitBtn;
+    Button1: TButton;
     ImageListMainSmall: TImageList;
     LabelNetworkNodeCount: TLabel;
     LabelNetworkNodeCountValue: TLabel;
@@ -122,7 +121,7 @@ type
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandIdentifyIDGlobalExecute(Sender: TObject);
     procedure ActionOpenLCBCommandMemConfigOptionsExecute(Sender: TObject);
-    procedure ActionOpenLCBCommandMemConfigSpacesExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandMemConfigAllSpacesInfoExecute(Sender: TObject);
     procedure ActionOpenLCBCommandProtocolSupportExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadCDIExecute(Sender: TObject);
@@ -137,6 +136,8 @@ type
     procedure ActionToolsSettingsShowWinExecute(Sender: TObject);
     procedure ActionTreeviewNetworkCollapseAllExecute(Sender: TObject);
     procedure ActionTreeviewNetworkExpandAllExecute(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -157,6 +158,10 @@ type
     FRootNetworkNode: TTreeNode;
     FShownOnce: Boolean;
     { private declarations }
+    procedure RunConfigMemoryOptionsTaskOnNode(Node: TOlcbTreeNode);
+    procedure RunMemConfigSpacesAllInfoOnNode(Node: TOlcbTreeNode);
+    procedure RunProtocolSupportOnNode(Node: TOlcbTreeNode);
+    procedure RunSNIIOnNode(Node: TOlcbTreeNode);
   protected
     procedure ComDisconnect;
     function FindTreeNodeByAlias(AnAliasID: Word): TOlcbTreeNode;
@@ -232,6 +237,33 @@ begin
   TreeViewNetwork.FullExpand;
 end;
 
+procedure TFormOLCB_Commander.Button1Click(Sender: TObject);
+var
+  Task: TConfigMemoryOptionsTask;
+  Node: TTreeNode;
+  i: Integer;
+begin
+  Node := RootNetworkNode.GetFirstChild;
+  if Assigned(Node) then
+  begin
+    ComPortThread.EnableSendMessages:=False;
+    ComPortThread.EnableReceiveMessages:=False;
+    ComPortThread.MaxLoopTime := 0;
+    for i := 0 to 100 do
+    begin
+      Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
+      ComPortThread.AddTask(Task);
+    end;
+    ComPortThread.EnableSendMessages:=True;
+    ComPortThread.EnableReceiveMessages:=True;
+  end;
+end;
+
+procedure TFormOLCB_Commander.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  ComDisconnect;
+end;
+
 procedure TFormOLCB_Commander.ActionHelpAboutShowExecute(Sender: TObject);
 begin
   FormAbout.ShowModal
@@ -239,23 +271,17 @@ end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandAllExecute(Sender: TObject);
 var
-  Node: TTreeNode;
-  Task: TEnumAllConfigMemoryAddressSpaceInfoTask;
+  i: Integer;
+  Node: TOlcbTreeNode;
 begin
-  Node := RootNetworkNode.GetFirstChild;
+  Node := RootNetworkNode.GetFirstChild as TOlcbTreeNode;
   while Assigned(Node) do
   begin
-    MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-    ComPortThread.Add(MessageHelper.Encode);
-
-    MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-    ComPortThread.Add(MessageHelper.Encode);
-
-    Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-
-    Node := RootNetworkNode.GetNextChild(Node);
+    RunConfigMemoryOptionsTaskOnNode(Node);
+    RunMemConfigSpacesAllInfoOnNode(Node);
+    RunProtocolSupportOnNode(Node);
+    RunSNIIOnNode(Node);
+    Node := RootNetworkNode.GetNextChild(Node) as TOlcbTreeNode;
   end;
 end;
 
@@ -274,53 +300,38 @@ procedure TFormOLCB_Commander.ActionOpenLCBCommandMemConfigOptionsExecute(Sender
 var
   Node: TOlcbTreeNode;
   i: Integer;
-  Task: TConfigMemoryOptionsTask;
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
-    begin
-      Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-      Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-      ComPortThread.AddTask(Task);
-    end;
+      RunConfigMemoryOptionsTaskOnNode(Node);
   end;
 end;
 
-procedure TFormOLCB_Commander.ActionOpenLCBCommandMemConfigSpacesExecute(Sender: TObject);
+procedure TFormOLCB_Commander.ActionOpenLCBCommandMemConfigAllSpacesInfoExecute(Sender: TObject);
 var
   Node: TOlcbTreeNode;
   i: Integer;
-  Task: TOlcbTaskBase;
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
-    begin;
-      Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
-      Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-      ComPortThread.AddTask(Task);
-    end;
+      RunMemConfigSpacesAllInfoOnNode(Node);
   end;
 end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandProtocolSupportExecute(Sender: TObject);
 var
-  Node: TTreeNode;
+  Node: TOlcbTreeNode;
   i: Integer;
-  Task: TProtocolSupportTask;
-begin
+ begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
-    Node := TreeViewNetwork.Selections[i];
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
-    begin;
-      Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
-      Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-      ComPortThread.AddTask(Task);
-    end;
+      RunProtocolSupportOnNode(Node);
   end;
 end;
 
@@ -351,19 +362,14 @@ end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandSNIIExecute(Sender: TObject);
 var
-  Node: TTreeNode;
+  Node: TOlcbTreeNode;
   i: Integer;
-  Task: TSimpleNodeInformationTask;
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
-    Node := TreeViewNetwork.Selections[i];
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if Node.Parent = RootNetworkNode then
-    begin;
-      Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
-      Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-      ComPortThread.AddTask(Task);
-    end;
+      RunSNIIOnNode(Node);
   end;
 end;
 
@@ -423,7 +429,6 @@ end;
 
 procedure TFormOLCB_Commander.FormDestroy(Sender: TObject);
 begin
-  ComDisconnect;
   FreeAndNil( FMessageHelper);
 end;
 
@@ -459,11 +464,11 @@ begin
     {$ENDIF}
     FormMessageLog.HideCallback := @SyncMessageLogHide;
     {$IFDEF Linux}
-    FormSettings.SettingsFilePath:= GetApplicationPath + PATH_LINUX_APP_FOLDER + PATH_SETTINGS_FILE;
-    GlobalSettings.LoadFromFile(UTF8ToSys( GetApplicationPath + PATH_LINUX_APP_FOLDER + PATH_SETTINGS_FILE));
+    FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
+    GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
     {$ELSE}
-    FormSettings.SettingsFilePath := GetApplicationPath + PATH_SETTINGS_FILE;
-    GlobalSettings.LoadFromFile(UTF8ToSys( GetApplicationPath + PATH_SETTINGS_FILE));
+    FormSettings.SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;
+    GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + PATH_SETTINGS_FILE));
     {$ENDIF}
 
     RootNetworkNode := TreeViewNetwork.Items.AddChild(nil, STR_NETWORKTREE_ROOT);
@@ -515,11 +520,49 @@ begin
   UpdateUI
 end;
 
+procedure TFormOLCB_Commander.RunConfigMemoryOptionsTaskOnNode(Node: TOlcbTreeNode);
+var
+  Task: TConfigMemoryOptionsTask;
+begin
+  Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  ComPortThread.AddTask(Task);
+end;
+
+procedure TFormOLCB_Commander.RunMemConfigSpacesAllInfoOnNode(Node: TOlcbTreeNode);
+var
+  Task: TEnumAllConfigMemoryAddressSpaceInfoTask;
+begin
+  Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  ComPortThread.AddTask(Task);
+end;
+
+procedure TFormOLCB_Commander.RunProtocolSupportOnNode(Node: TOlcbTreeNode);
+var
+  Task: TProtocolSupportTask;
+begin
+  Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  ComPortThread.AddTask(Task);
+end;
+
+procedure TFormOLCB_Commander.RunSNIIOnNode(Node: TOlcbTreeNode);
+var
+  Task: TSimpleNodeInformationTask;
+begin
+  Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, StrToInt( Node.Text), True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  ComPortThread.AddTask(Task);
+end;
+
 procedure TFormOLCB_Commander.ComDisconnect;
 begin
   if Assigned(FComPortThread) then
   begin
     ComPortThread.Terminate;
+    while not ComPortThread.TerminatedThread do
+      Sleep(100);
     FComPortThread := nil;
   end;
   UpdateUI;
@@ -792,8 +835,10 @@ procedure TFormOLCB_Commander.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
 var
   MemTask: TReadAddressSpaceMemoryTask;
   MemConfigViewer: TFormMemConfigViewer;
+  EnumAllSpaces: TEnumAllConfigMemoryAddressSpaceInfoTask;
   ADoc: TXMLDocument;
   x: string;
+  i: Integer;
 begin
   if Sender is TReadAddressSpaceMemoryTask then
   begin
@@ -835,6 +880,13 @@ begin
   else
   if Sender is TSimpleNodeInformationTask then
     RefreshAliasSnip(Sender.DestinationAlias, TSimpleNodeInformationTask( Sender).Snip)
+  else
+  if Sender is TEnumAllConfigMemoryAddressSpaceInfoTask then
+  begin
+    EnumAllSpaces := TEnumAllConfigMemoryAddressSpaceInfoTask( Sender);
+    for i := 0 to EnumAllSpaces.ConfigMemAddressInfo.AddressSpaceCount - 1 do
+      RefreshAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, EnumAllSpaces.ConfigMemAddressInfo.AddressSpace[i])
+  end;
 end;
 
 procedure TFormOLCB_Commander.ProcessNodeTree(LocalHelper: TOpenLCBMessageHelper; Reason: TUpdateTreeReason);
@@ -899,7 +951,7 @@ begin
   ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortThread);
   ActionOpenLCBCommandProtocolSupport.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandMemConfigOptions.Enabled := (TreeViewNetwork.SelectionCount > 0);
-  ActionOpenLCBCommandMemConfigSpaces.Enabled:= (TreeViewNetwork.SelectionCount > 0);
+  ActionOpenLCBCommandMemConfigAllSpacesInfo.Enabled:= (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandSNII.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandAll.Enabled := (RootNetworkNode.Count > 0);
 
@@ -908,4 +960,4 @@ end;
 
 
 end.
-
+

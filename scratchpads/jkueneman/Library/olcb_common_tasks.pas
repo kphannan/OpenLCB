@@ -87,15 +87,18 @@ type
 
   TEnumAllConfigMemoryAddressSpaceInfoTask = class(TOlcbTaskBase)
   private
+    FConfigMemAddressInfo: TOlcbMemConfig;
     FCurrentAddressSpace: Byte;
     FMaxAddressSpace: Byte;
     FMinAddressSpace: Byte;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); override;
+    destructor Destroy; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property MinAddressSpace: Byte read FMinAddressSpace write FMinAddressSpace;
     property MaxAddressSpace: Byte read FMaxAddressSpace write FMaxAddressSpace;
     property CurrentAddressSpace: Byte read FCurrentAddressSpace write FCurrentAddressSpace;
+    property ConfigMemAddressInfo: TOlcbMemConfig read FConfigMemAddressInfo write FConfigMemAddressInfo;
   end;
 
   { TReadAddressSpaceMemoryTask }
@@ -127,7 +130,6 @@ type
     property MinAddress: DWord read FMinAddress;
     property MaxAddress: DWord read FMaxAddress;
   end;
-
 
 
 implementation
@@ -328,6 +330,7 @@ begin
          end;
        end;
     2: begin
+         DatagramReceive := nil;
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
            ConfigMemoryAddressSpace.LoadByDatagram(DatagramReceive);
@@ -373,6 +376,7 @@ begin
          end;
        end;
     2: begin
+         DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
            ConfigMemoryOptions.LoadFromDatagram(DatagramReceive);
@@ -593,7 +597,7 @@ begin
               DatagramResultStart := 6;
             for i := DatagramResultStart to DatagramReceive.CurrentPos - 1 do
               DataStream.WriteByte( DatagramReceive.RawDatagram[i]);
-            CurrentAddress := CurrentAddress + (DatagramReceive.CurrentPos - DatagramResultStart);
+            CurrentAddress := CurrentAddress + DWord( (DatagramReceive.CurrentPos - DatagramResultStart));
             if CurrentAddress = MaxAddress then
             begin
               Sending := True;
@@ -620,25 +624,31 @@ begin
   FCurrentAddressSpace := 0;
   FMaxAddressSpace := 0;
   FMinAddressSpace := 0;
+  FConfigMemAddressInfo := TOlcbMemConfig.Create;
+end;
+
+destructor TEnumAllConfigMemoryAddressSpaceInfoTask.Destroy;
+begin
+  FreeAndNil(FConfigMemAddressInfo);
+  inherited Destroy;
 end;
 
 procedure TEnumAllConfigMemoryAddressSpaceInfoTask.Process(MessageInfo: TOlcbMessage);
 var
   DatagramReceive: TDatagramReceive;
-  Task: TConfigMemoryAddressSpaceInfoTask;
-  i: Integer;
+  NewSpace: TOlcbMemAddressSpace;
 begin
   case iState of
     0: begin
          SendMemoryConfigurationOptions;
-         iState := 1;
+         Inc(FiState);
          Sending := False;
        end;
     1: begin
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
-           iState := 2;
+           Inc(FiState);
          end;
        end;
     2: begin
@@ -649,21 +659,40 @@ begin
            MaxAddressSpace := DatagramReceive.RawDatagram[5];
            CurrentAddressSpace := MaxAddressSpace;
            Sending := True;
-           iState := 3;
+           Inc(FiState);
          end;
        end;
     3: begin
-         for i := MinAddressSpace to MaxAddressSpace do
-         begin
-           Task := TConfigMemoryAddressSpaceInfoTask.Create(SourceAlias, DestinationAlias, True, i);
-           Task.OnBeforeDestroy := OnBeforeDestroy;
-           ComPortThread.AddTask(Task);
-         end;
-         Sending := True;
-         iState := 4;
+         SendMemoryConfigurationSpaceInfo(CurrentAddressSpace);
+         Sending := False;
+         Inc(FiState);
        end;
-
     4: begin
+         if IsDatagramAckFromDestination(MessageInfo) then
+         begin
+           Sending := False;
+           Inc(FiState);
+         end;
+       end;
+    5: begin
+         DatagramReceive := nil;
+         if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, CurrentAddressSpace, DatagramReceive) then
+         begin
+           NewSpace := ConfigMemAddressInfo.AddAddressSpace;
+           NewSpace.LoadByDatagram(DatagramReceive);
+           Dec(FCurrentAddressSpace);
+           if CurrentAddressSpace < MinAddressSpace then
+           begin
+             Sending := True;
+             iState := 6;
+           end else
+           begin
+             Sending := True;
+             iState := 3;
+           end;
+         end;
+       end;
+    6: begin
        // Done
          FDone := True
        end;

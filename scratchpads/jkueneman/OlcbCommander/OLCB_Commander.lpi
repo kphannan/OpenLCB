@@ -39,7 +39,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="16">
+    <Units Count="17">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -135,6 +135,11 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_config_mem_viewer"/>
       </Unit15>
+      <Unit16>
+        <Filename Value="common_objects.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="common_objects"/>
+      </Unit16>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -165,13 +170,13 @@ if TargetOS = 'linux' then
     </BuildMacros>
     <CodeGeneration>
       <Optimizations>
-        <OptimizationLevel Value="0"/>
+        <OptimizationLevel Value="3"/>
       </Optimizations>
     </CodeGeneration>
     <Linking>
       <Debugging>
+        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
-        <UseExternalDbgSyms Value="True"/>
       </Debugging>
       <Options>
         <Win32>
@@ -199,4 +204,4 @@ if TargetOS = 'linux' then
       </Item3>
     </Exceptions>
   </Debugging>
-</CONFIG>
+</CONFIG>

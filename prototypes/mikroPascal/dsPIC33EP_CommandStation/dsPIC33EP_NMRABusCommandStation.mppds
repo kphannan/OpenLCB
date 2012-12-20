@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=NMRAnetAppCallbacks.mpas
+Value=..\Library\NMRAnet\NMRAnetCANReceive.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -43,12 +43,16 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=5
+Count=9
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=MCU_Setup_dsPIC33EP64GP502.mpas
 File2=NMRAnetAppCallbacks.mpas
-File3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetDefines.mpas
-File4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
+File3=..\Library\NMRAnet\NMRAnetDatagrams.mpas
+File4=..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File5=..\Library\NMRAnet\NMRAnetBufferPools.mpas
+File6=..\Library\NMRAnet\NMRAnetDefines.mpas
+File7=..\Library\dsPIC33F\dsPIC33_CAN.mpas
+File8=..\Library\CANBus\CANStorage.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -58,12 +62,12 @@ Count=1
 File0=Options.inc
 [SEARCH_PATH]
 Count=31
-Path0=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
-Path1=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
-Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path5=E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path3=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path4=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path5=Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
 Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_CommandStation\
 Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
 Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\

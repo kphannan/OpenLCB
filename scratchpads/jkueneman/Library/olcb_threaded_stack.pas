@@ -11,7 +11,7 @@ uses
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}
-  olcb_app_common_settings ;
+  olcb_app_common_settings, common_objects;
 
 const
   DATAGRAM_MAX_RETRYS = 5;
@@ -51,6 +51,8 @@ type
     FDatagramSendManager: TDatagramSendManager;
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
     FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sent
+    FLooptime: DWord;
+    FMaxLoopTime: DWord;
     FOlcbTaskManager: TOlcbTaskEngine;
     FPort: String;                                                              // Port to connect to
     FSerial: TBlockSerial;                                                      // Serial object
@@ -95,6 +97,8 @@ type
       property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
       property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
       property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
+      property LoopTime: DWord read FLoopTime write FLoopTime;
+      property MaxLoopTime: DWord read FMaxLoopTime write FMAxLoopTime;
   end;
 
 { TDatagramReceive }
@@ -527,7 +531,9 @@ var
   ReceiveStr, SendStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
   CompletedSendDatagram: TDatagramSend;
+  T: DWord;
 begin
+  T := 0;
   CompletedSendDatagram := nil;
   Helper := TOpenLCBMessageHelper.Create;
   Serial := TBlockSerial.Create;                           // Create the Serial object in the context of the thread
@@ -541,9 +547,11 @@ begin
       Serial.Config(BaudRate, 8, 'N', 0, False, False);      // FTDI Driver uses no stop bits for non-standard baud rates.
       while not Terminated do
       begin
-        ThreadSwitch;
+        {$IFDEF DEBUG_THREAD} WriteDebugInfo; {$ENDIF}
 
-      {$IFDEF DEBUG_THREAD} WriteDebugInfo; {$ENDIF}
+    //    T := GetTickCount;
+
+        ThreadSwitch;
 
         // *** Pickup the next Message to Send ***
         List := ThreadListSendStrings.LockList;
@@ -557,7 +565,7 @@ begin
             end;
           end;
         finally
-          ThreadListSendStrings.UnlockList;        // Deadlock if we don't do this here when the main thread blocks trying to add a new Test and we call Syncronize asking the main thread to run.....
+          ThreadListSendStrings.UnlockList;        // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
         end;
         // *** Pickup the next Message to Send ***
 
@@ -588,6 +596,8 @@ begin
         end;
         // *** Put the message on the wire and communicate back the raw message sent ***
 
+
+
         // *** Grab the next message from the wire ***
         if GlobalSettings.General.SendPacketDelay > 0 then
           Sleep(GlobalSettings.General.SendPacketDelay);
@@ -595,9 +605,10 @@ begin
         ReceiveStr := Trim(ReceiveStr);
         // *** Grab the next message from the wire ***
 
+
+
         if Helper.Decompose(ReceiveStr) then
         begin
-
           // Communicate back to the app the raw message string
           if EnableReceiveMessages then
           begin
@@ -605,7 +616,6 @@ begin
             Synchronize(@SyncReceiveMessage);
           end;
           // Communicate back to the app the raw message string
-
 
           if IsDatagramMTI(Helper.MTI, True) then                                 // *** Test for a Datagram message that came in ***
           begin
@@ -626,6 +636,11 @@ begin
           end else                                                                // *** Test for a Datagram message that came in ***
             OlcbTaskManager.ProcessReceiving(Helper);
           end;
+
+      //   LoopTime := GetTickCount - T;
+         if LoopTime > MaxLoopTime then
+           MaxLoopTime := LoopTime;
+
        end;
     end else
     begin
@@ -638,6 +653,7 @@ begin
     Connected := False;
     Serial.Free;
     Helper.Free;
+    FTerminatedThread := True;
   end;
 end;
 
@@ -676,8 +692,8 @@ begin
   OlcbTaskManager.TaskList.UnlockList;
   FormThreadDebug.LabelTaskObjectsMax.Caption := IntToStr( OlcbTaskManager.MaxCount);
 
-  FormThreadDebug.LabelSNIIObjects.Caption := IntToStr( SniiManager.Sniis.Count);
-  FormThreadDebug.LabelSNIIObjectsMax.Caption := IntToStr( SniiManager.MaxCount);
+  FormThreadDebug.LabelMaxTime.Caption := IntToStr(MaxLoopTime);
+  FormThreadDebug.LabelLoopTime.Caption := IntToStr(LoopTime);
   {$ENDIF}
 end;
 
@@ -704,6 +720,8 @@ begin
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
   FSyncDatagramMemConfigOperationReplyFunc := nil;
+  FLoopTime := 0;
+  FMaxLoopTime := 0;
 end;
 
 destructor TComPortThread.Destroy;
@@ -1303,10 +1321,10 @@ var
 begin
   List := TaskList.LockList;
   try
-    i := 0;
-    while i < List.Count do
+
+    if List.Count > 0 then
     begin
-      Task := TOlcbTaskBase( List[i]);
+      Task := TOlcbTaskBase( List[0]);
       if not Task.Sending then
       begin
         Task.Process(MessageInfo);
@@ -1317,8 +1335,24 @@ begin
           FreeAndNil(Task);
         end;
       end;
-      Inc(i)
     end;
+
+  {  i := 0;
+    while i < List.Count do
+    begin
+      Task := TOlcbTaskBase( List[i]);
+      if not Task.Sending then
+      begin
+        Task.Process(MessageInfo);                  // NEED TO DO THESE ONE AT A TIME OR WE CAN SEND 2 OR MORE DATAGRAMS/SNIP TO A NODE BEFORE THE FIRST ON REPLIES...........
+        if Task.Done then
+        begin
+          List.Remove(Task);
+          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
+          FreeAndNil(Task);
+        end;
+      end;
+      Inc(i)
+    end;   }
   finally
     TaskList.UnlockList;
   end;
@@ -1333,12 +1367,30 @@ begin
   List := TaskList.LockList;
   try
     i := 0;
-    while i < List.Count do
+
+
+    if List.Count > 0 then
+    begin
+      Task := TOlcbTaskBase( List[0]);
+      if Task.Sending then
+      begin
+        Task.Process(nil);
+        if Task.Done then
+        begin
+          List.Remove(Task);
+          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
+          FreeAndNil(Task);
+        end;
+      end;
+    end;
+
+
+ {   while i < List.Count do
     begin
       Task := TOlcbTaskBase( List[i]);
       if Task.Sending then
       begin
-        Task.Process(nil);
+        Task.Process(nil);                               // NEED TO DO THESE ONE AT A TIME OR WE CAN SEND 2 OR MORE DATAGRAMS/SNIP TO A NODE BEFORE THE FIRST ON REPLIES...........
         if Task.Done then
         begin
           List.Remove(Task);
@@ -1347,7 +1399,7 @@ begin
         end;
       end;
       Inc(i)
-    end;
+    end;       }
   finally
     TaskList.UnlockList;
   end;
@@ -1377,4 +1429,4 @@ end;
 
 
 end.
-
+

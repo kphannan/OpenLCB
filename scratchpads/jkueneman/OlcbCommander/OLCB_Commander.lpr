@@ -10,7 +10,7 @@ uses
   Forms, form_main, olcb_app_common_settings, file_utilities, form_settings,
   form_about, form_messagelog, common_utilities, olcb_node,
   olcb_threaded_stack, olcb_common_tasks, form_thread_debug,
-  olcb_structure_helpers, form_config_mem_viewer
+  olcb_structure_helpers, form_config_mem_viewer, common_objects
   { you can add units after this };
 
 {$R *.res}

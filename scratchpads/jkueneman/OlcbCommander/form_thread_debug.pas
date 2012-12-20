@@ -13,21 +13,21 @@ type
 
   TFormThreadDebug = class(TForm)
     Label1: TLabel;
+    Label10: TLabel;
+    LabelMaxTime: TLabel;
     Label2: TLabel;
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
-    Label7: TLabel;
-    Label8: TLabel;
+    Label9: TLabel;
     LabelDatagramReceiveObjectsMax: TLabel;
     LabelDatagramSendObjectsMax: TLabel;
+    LabelLoopTime: TLabel;
     LabelTaskObjects: TLabel;
     LabelDatagramReceiveObjects: TLabel;
     Label3: TLabel;
     LabelDatagramSendObjects: TLabel;
-    LabelSNIIObjects: TLabel;
     LabelTaskObjectsMax: TLabel;
-    LabelSNIIObjectsMax: TLabel;
   private
     { private declarations }
   public

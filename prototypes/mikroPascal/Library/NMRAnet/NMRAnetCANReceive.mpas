@@ -23,6 +23,7 @@ unit NMRAnetCANReceive;
 
 {.$DEFINE TRACE_DATAGRAM_TX}
 {.$DEFINE TRACE_DATAGRAM_RESPOSES}
+{$DEFINE TRACK_HI_PRIORITY_DG_REJECT_OVERFLOW}
 
 uses
   NMRAnetUtilities,
@@ -447,6 +448,10 @@ begin
                                                             end;
                                                         end else
                                                         begin
+                                                          {$IFDEF TRACK_HI_PRIORITY_DG_REJECT_OVERFLOW}
+                                                          if CAN_Engine.TX_DatagramRejected.State and BS_ALLOCATED = BS_ALLOCATED then
+                                                            UART1_Write_Text('Reject Overflow');
+                                                          {$ENDIF}
                                                           DataBytesPtr := PCAN_DataBytes( @DATAGRAM_RESULT_REJECTED_BUFFER_FULL);
                                                           NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr);
                                                           CAN_Engine.TX_DatagramRejected.State := CAN_Engine.TX_DatagramRejected.State or BS_ALLOCATED;
@@ -519,6 +524,10 @@ begin
                                                           end;
                                                         end else
                                                         begin
+                                                          {$IFDEF TRACK_HI_PRIORITY_DG_REJECT_OVERFLOW}
+                                                          if CAN_Engine.TX_DatagramRejected.State and BS_ALLOCATED = BS_ALLOCATED then
+                                                            UART1_Write_Text('Reject Overflow');
+                                                          {$ENDIF}
                                                           DataBytesPtr := PCAN_DataBytes( @DATAGRAM_RESULT_REJECTED_BUFFER_FULL);
                                                           NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr);
                                                           CAN_Engine.TX_DatagramRejected.State := CAN_Engine.TX_DatagramRejected.State or BS_ALLOCATED;

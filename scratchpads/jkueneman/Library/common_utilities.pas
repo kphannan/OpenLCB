@@ -5,7 +5,13 @@ unit common_utilities;
 interface
 
 uses
-  Classes, SysUtils;
+  Classes,
+  {$IFDEF MSWINDOWS}
+  Windows,
+  {$ELSE}
+  LclIntf,
+  {$ENDIF}
+  SysUtils;
 
 type
   TFormHideCallback = procedure of object;
@@ -13,8 +19,25 @@ type
   function ValidateHex(TestHexVal: string): string;
   function IsPrintableChar(C: Char): Boolean;
   function StreamAsString(Stream: TStream): string;
+  function GetTickCount : DWORD;
 
 implementation
+
+function GetTickCount : DWORD;
+ {On Windows, this is number of milliseconds since Windows was
+   started. On non-Windows platforms, LCL returns number of
+   milliseconds since Dec. 30, 1899, wrapped by size of DWORD.
+   This value can overflow LongInt variable when checks turned on,
+   so "wrap" value here so it fits within LongInt.
+  Also, since same thing could happen with Windows that has been
+   running for at least approx. 25 days, override it too.}
+begin
+{$IFDEF MSWINDOWS}
+  Result := Windows.GetTickCount mod High(LongInt);
+{$ELSE}
+  Result := LclIntf.GetTickCount mod High(LongInt);
+{$ENDIF}
+end;
 
 function ValidateHex(TestHexVal: string): string;
 var

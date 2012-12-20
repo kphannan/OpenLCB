@@ -231,7 +231,7 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
         <Filename Value="awesomethrottlemain.pas"/>
         <Caret Line="1244" Column="1" TopLine="1218"/>
@@ -346,12 +346,8 @@
       </Position28>
       <Position29>
         <Filename Value="awesomethrottlemain.pas"/>
-        <Caret Line="16" Column="51" TopLine="169"/>
-      </Position29>
-      <Position30>
-        <Filename Value="awesomethrottlemain.pas"/>
         <Caret Line="2214" Column="1" TopLine="2200"/>
-      </Position30>
+      </Position29>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
