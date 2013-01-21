@@ -193,9 +193,10 @@ const
   TRACTION_OP_FUNCTION               = $01;
   TRACTION_OP_PROXY_MGMT             = $02;
 
-  DCC_ALLOCATE_ADDRESS               = $01;
-  DCC_FUNCTION_28                    = $00;
-  DCC_FUNCTION_32k                   = $01;
+  TRACTION_DCC_ALLOCATE_ADDRESS      = $01;
+  TRACTION_DCC_DEALLOCATE_ADDRESS    = $02;
+  TRACTION_DCC_FUNCTION_28           = $00;
+  TRACTION_DCC_FUNCTION_32k          = $01;
 
   MAX_DATAGRAM_LENGTH = 72;
 
@@ -219,11 +220,13 @@ const
   DATAGRAM_PROTOCOL_TWOBYTE                = $E0;
   DATAGRAM_PROTOCOL_SIXBYTE                = $F0;
 
+  MAX_EVENT_LEN                            = 8;
+
 type
   TDatagramArray = array[0..MAX_DATAGRAM_LENGTH-1] of Byte;
   PDatagramArray = ^TDatagramArray;
 
-  TEventID = array[0..7] of Byte;
+  TEventID = array[0..MAX_EVENT_LEN-1] of Byte;
   PEventID = ^TEventID;
 
 const

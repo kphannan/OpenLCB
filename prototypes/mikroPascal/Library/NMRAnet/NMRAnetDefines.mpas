@@ -51,6 +51,14 @@ const
   {$IFDEF BOOTLOADER}
   BMC_DATAGRAM_BOOTLOADER                  = $10;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
   {$ENDIF}
+
+const
+  CAN_DATA_LEN = 8;
+
+type
+  TCAN_DataBytes = array[CAN_DATA_LEN] of Byte;
+  PCAN_DataBytes = ^TCAN_DataBytes;
+
 type
   TBaseBuffer = record                                                          // Common Buffer layout that allow overlaying of bytes with TDatagramBuffer,  etc
     State: Byte;                                                                // State of Buffer, see CBS_xxx constants
@@ -62,6 +70,22 @@ type
   end;
   PBaseBuffer = ^TBaseBuffer;
 
+// *****************************************************************************
+// CAN Message buffer (not used in the NMRAnet stack but useful for applications
+// *****************************************************************************
+type
+  TDataBuffer = record                                                          // Common Buffer layout that allow overlaying of bytes with TDatagramBuffer,  etc
+    State: Byte;                                                                // State of Buffer, see CBS_xxx constants
+    Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
+    Next: ^TBaseBuffer;                                                         // Pointer to the next Message Buffer
+    mCode: Byte;                                                                // Buffer Message Code for what the message is
+    StateMachine: Byte;                                                         // Local StateMachine Index for use
+    Tag: TBufferTag;                                                            // General Purpose useage depending on the message type
+    ByteCount: Byte;                                                            // Number of CAN bytes
+    Bytes: TCAN_DataBytes;                                                      // CAN bytes
+  end;
+  PDataBuffer = ^TDataBuffer;
+  
 // *****************************************************************************
 // Datagram and Datagram Buffer Defines
 // *****************************************************************************
@@ -329,12 +353,12 @@ type
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     BaseBuffers: PBaseBuffer;
     DatagramBuffers: PDatagramBuffer;
-    ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory
+    ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory, user assigned in the NMRAnetAppCallbacks file
     ParentAlias,                                                                // Definition depends on what kind of node.  If a Throttle then Parent should never be set, If a Train then the will be the Owner Throttle
     ChildAlias,                                                                 // Definition depends on what kind of node.  If a Throttle then Child should the Train it is controlling, if a Train then should not be set
     LeftSibling,                                                                // Definition depends on what kind of node.  If Train then may be the next in a Consist Chain
     RightSibling: ^TNMRAnetNode;                                                // Definition depends on what kind of node.  If Train then may be the previous in a Consist Chain
-    RAMAddress: Generic32BitPointer;                                            // Pointer to a DataStructure that is in RAM
+    RAMAddress: Generic32BitPointer;                                            // Pointer to a DataStructure that is in Volatile RAM defined in the user defined NMRAnetAppCallbacks file, user assigned in the NMRAnetAppCallbacks file
   end;
   PNMRAnetNode = ^TNMRAnetNode;
   

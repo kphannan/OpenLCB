@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, olcb_defines, olcb_utilities, olcb_threaded_stack,
-  olcb_structure_helpers;
+  olcb_structure_helpers, math_float16;
 
 
 const
@@ -14,6 +14,8 @@ const
   ERROR_NO_CDI_PROTOCOL           = $00000002;
   ERROR_NO_CDI_ADDRESS_SPACE      = $00000004;
   ERROR_ADDRESS_SPACE_NOT_PRESENT = $00000008;
+
+  SPEEDSTEP_DEFAULT = 28;
 
 type
 
@@ -131,8 +133,368 @@ type
     property MaxAddress: DWord read FMaxAddress;
   end;
 
+  { TIdentifyEventsTask }
+
+  TIdentifyEventsTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TIdentifyEventsAddressedTask }
+
+  TIdentifyEventsAddressedTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TIdentifyProducerTask }
+
+  TIdentifyProducerTask = class(TOlcbTaskBase)
+  private
+    FEvent: TEventID;
+  protected
+    property Event: TEventID read FEvent write FEvent;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnEvent: TEventID); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TIdentifyConsumerTask }
+
+  TIdentifyConsumerTask = class(TOlcbTaskBase)
+  private
+    FEvent: TEventID;
+  protected
+    property Event: TEventID read FEvent write FEvent;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnEvent: TEventID); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TCANLayerTask }
+  TCANLayerTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TEventTask }
+
+  TEventTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TVerifiedNodeIDTask }
+
+  TVerifiedNodeIDTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionProtocolTask }
+
+  TTractionProtocolTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TInitializationCompleteTask }
+
+  TInitializationCompleteTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionAllocateDccProxyTask }
+
+  TTractionAllocateDccProxyTask = class(TOlcbTaskBase)
+  private
+    FAddress: Word;
+    FIsShort: Boolean;
+    FSpeedStep: Byte;
+  protected
+    property Address: Word read FAddress write FAddress;
+    property IsShort: Boolean read FIsShort write FIsShort;
+    property SpeedStep: Byte read FSpeedStep write FSpeedStep;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionDeAllocateDccProxyTask }
+
+  TTractionDeAllocateDccProxyTask = class(TOlcbTaskBase)
+  public
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionQueryDccAddressProxyTask }
+
+  TTractionQueryDccAddressProxyTask = class(TOlcbTaskBase)
+  private
+    FAddress: Word;
+    FIsShort: Boolean;
+  protected
+    property Address: Word read FAddress write FAddress;
+    property IsShort: Boolean read FIsShort write FIsShort;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionSpeedTask }
+
+  TTractionSpeedTask = class(TOlcbTaskBase)
+  private
+    FEStop: Boolean;
+    FFwd: Boolean;
+    FSpeed: THalfFloat;
+    FStop: Boolean;
+  protected
+    property Speed: THalfFloat read FSpeed write FSpeed;  // Dir is wrapped up in the neg sign
+    property EStop: Boolean read FEStop write FEStop;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; ASpeed: THalfFloat; IsEStop: Boolean); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionFunctionTask }
+
+  TTractionFunctionTask = class(TOlcbTaskBase)
+  private
+    FAddress: DWord;
+    FWord: Word;
+  protected
+    property Address: DWord read FAddress write FAddress;
+    property Value: Word read FWord write FWord;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: DWord; AValue: Word); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
 
 implementation
+
+{ TIdentifyConsumerTask }
+
+constructor TIdentifyConsumerTask.Create(ASourceAlias, ADestinationAlias: Word;
+  StartAsSending: Boolean; AnEvent: TEventID);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FEvent := AnEvent;
+end;
+
+procedure TIdentifyConsumerTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendIdentifyConsumerMessage(Event);
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TIdentifyProducerTask }
+
+constructor TIdentifyProducerTask.Create(ASourceAlias, ADestinationAlias: Word;
+  StartAsSending: Boolean; AnEvent: TEventID);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FEvent := AnEvent;
+end;
+
+procedure TIdentifyProducerTask.Process(MessageInfo: TOlcbMessage);
+begin
+   case iState of
+    0: begin
+         SendIdentifyProducerMessage(Event);
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionAllocateDccProxyTask }
+
+constructor TTractionAllocateDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FSpeedStep := ASpeedStep;
+  FAddress := AnAddress;
+  FIsShort := IsShortAddress;
+end;
+
+procedure TTractionAllocateDccProxyTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendTractionAllocateDccProxyMessage(Address, IsShort, SpeedStep);
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionDeAllocateDccProxyTask }
+
+procedure TTractionDeAllocateDccProxyTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendTractionDeAllocateDccAddressProxyMessage;
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionQueryDccAddressProxyTask }
+
+constructor TTractionQueryDccAddressProxyTask.Create(ASourceAlias,
+  ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word;
+  IsShortAddress: Boolean);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FAddress := AnAddress;
+  FIsShort := IsShortAddress;
+end;
+
+procedure TTractionQueryDccAddressProxyTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendTractionQueryDccAddressProxyMessage(Address, IsShort);
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionFunctionTask }
+
+constructor TTractionFunctionTask.Create(ASourceAlias, ADestinationAlias: Word;
+  StartAsSending: Boolean; AnAddress: DWord; AValue: Word);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  Address := AnAddress;
+  Value := AValue;
+end;
+
+procedure TTractionFunctionTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendTractionFunction(Address, Value);
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionSpeedTask }
+
+constructor TTractionSpeedTask.Create(ASourceAlias, ADestinationAlias: Word;
+  StartAsSending: Boolean; ASpeed: THalfFloat; IsEStop: Boolean);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FSpeed := ASpeed;
+  FEStop := IsEStop;
+end;
+
+procedure TTractionSpeedTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         if EStop then
+           SendTractionEStopMessage(Speed)
+         else begin
+           SendTractionSpeedMessage(Speed)
+         end;
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+
+{ TIdentifyEventsAddressedTask }
+
+procedure TIdentifyEventsAddressedTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendIdentifyEventsAddressedMessage;
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TIdentifyEventsTask }
+
+procedure TIdentifyEventsTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0: begin
+         SendIdentifyEventsMessage;
+         Inc(FiState);
+       end;
+    1: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TVerifiedNodeIDTask }
+
+procedure TVerifiedNodeIDTask.Process(MessageInfo: TOlcbMessage);
+begin
+  FDone := True;  // Done before we start....
+end;
+
+{ TTractionProtocolTask }
+
+procedure TTractionProtocolTask.Process(MessageInfo: TOlcbMessage);
+begin
+  FDone := True;  // Done before we start....
+end;
+
+{ TInitializationCompleteTask }
+
+procedure TInitializationCompleteTask.Process(MessageInfo: TOlcbMessage);
+begin
+  FDone := True;  // Done before we start....
+end;
+
+{ TEventTask }
+
+procedure TEventTask.Process(MessageInfo: TOlcbMessage);
+begin
+  FDone := True;  // Done before we start....
+end;
+
+{ TCANLayerTask }
+
+procedure TCANLayerTask.Process(MessageInfo: TOlcbMessage);
+begin
+  FDone := True;  // Done before we start....
+end;
 
 { TSimpleNodeInformationTask }
 

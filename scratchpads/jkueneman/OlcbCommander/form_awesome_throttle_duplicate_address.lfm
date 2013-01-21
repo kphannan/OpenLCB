@@ -1,0 +1,81 @@
+object FormMulitipleTrains: TFormMulitipleTrains
+  Left = 587
+  Height = 249
+  Top = 232
+  Width = 497
+  BorderStyle = bsDialog
+  Caption = 'Multiple Trains Locacted'
+  ClientHeight = 249
+  ClientWidth = 497
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  LCLVersion = '1.0.2.0'
+  object ListBoxTrains: TListBox
+    Left = 8
+    Height = 149
+    Top = 56
+    Width = 168
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    ItemHeight = 0
+    TabOrder = 0
+  end
+  object Label1: TLabel
+    Left = 16
+    Height = 40
+    Top = 16
+    Width = 465
+    Align = alTop
+    Alignment = taCenter
+    AutoSize = False
+    BorderSpacing.Around = 16
+    Caption = 'More than one Train with the requested DCC address was found.  Select which Train you would like to control.'
+    ParentColor = False
+    ParentFont = False
+    WordWrap = True
+  end
+  object Label2: TLabel
+    Left = 200
+    Height = 149
+    Top = 56
+    Width = 255
+    Alignment = taCenter
+    Anchors = [akTop, akRight]
+    AutoSize = False
+    BorderSpacing.Around = 16
+    Caption = 'Pull detailed data from the database for each train as user selects it here...'
+    ParentColor = False
+    ParentFont = False
+    WordWrap = True
+  end
+  object ButtonOk: TButton
+    Left = 16
+    Height = 22
+    Top = 216
+    Width = 150
+    Anchors = [akRight, akBottom]
+    Caption = 'Select'
+    ModalResult = 1
+    TabOrder = 1
+  end
+  object ButtonCancel: TButton
+    Left = 336
+    Height = 22
+    Top = 216
+    Width = 150
+    Anchors = [akRight, akBottom]
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 2
+  end
+  object ButtonCreateNew: TButton
+    Left = 176
+    Height = 22
+    Top = 216
+    Width = 150
+    Anchors = [akRight, akBottom]
+    Caption = 'Create New'
+    ModalResult = 11
+    TabOrder = 3
+  end
+end

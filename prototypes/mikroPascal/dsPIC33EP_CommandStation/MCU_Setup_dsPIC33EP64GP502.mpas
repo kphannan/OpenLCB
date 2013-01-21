@@ -139,8 +139,8 @@ begin
 
   Unlock_IOLOCK;
   {$IFDEF UART_ENABLE}
-    PPS_Mapping_NoLock(44, _INPUT, _U1RX);                                        // Set RPI44 to the UART Receive
-    PPS_Mapping_NoLock(42, _OUTPUT, _U1TX);                                       // Set RP42 to the UART Transmit
+    PPS_Mapping_NoLock(44, _INPUT, _U1RX);                                      // Set RPI44 to the UART Receive
+    PPS_Mapping_NoLock(42, _OUTPUT, _U1TX);                                     // Set RP42 to the UART Transmit
   {$ENDIF}
   PPS_Mapping_NoLock(45, _INPUT, _C1RX);                                        // Set RPI45 to the CAN Receive
   PPS_Mapping_NoLock(43, _OUTPUT, _C1TX);                                       // Set RP43 to the CAN Transmit

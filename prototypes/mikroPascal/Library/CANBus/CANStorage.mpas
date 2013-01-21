@@ -42,13 +42,7 @@ const
   BS_EXTENDED     = $01;                                                       // CAN Buffer State constants, Buffer is extended
   BS_ALLOCATED    = $02;                                                       // Buffer Slot contains valid data to send
   
-const
-  CAN_DATA_LEN = 8;
-
 type
-  TCAN_DataBytes = array[CAN_DATA_LEN] of Byte;
-  PCAN_DataBytes = ^TCAN_DataBytes;
-
   // ***************************************************************************
   // CAN Message Buffers in raw form that can be loaded into the CAN controller
   // registers

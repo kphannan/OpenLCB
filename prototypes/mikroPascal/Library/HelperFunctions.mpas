@@ -1,0 +1,76 @@
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2011.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2010-11-24:   Created
+//
+// * Description: Implements common Helper Functions to use
+//
+// ******************************************************************************
+
+unit HelperFunctions;
+
+//uses
+ // XpressNet_Constants;
+
+type
+  TStrArray = array[0..0] of char;
+  PStrArray = ^TStrArray;
+  
+  PWord = ^Word;
+
+procedure TruncFloat(Value: PStrArray; Digits, Len: Byte);
+//procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
+
+implementation
+{
+procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
+begin
+  case Errorcode of
+    E_BUS_HUNG       : CodeStr := 'Bus Hung';
+    E_WINDOW_TIMEOUT : CodeStr := 'Window Timeout';
+    E_TRANSFER_XOR   : CodeStr := 'XOR Error';
+    E_SUCCESS        : CodeStr := 'Success'
+  else
+    CodeStr := 'Unknown Result';
+  end;
+end;}
+
+function FindPeriod(Value: PStrArray; Len: Byte): Integer;
+begin
+  Result := 0;
+  while (Value^[Result] <> #0) and (Result < Len) do
+  begin
+    if Value^[Result] = '.' then
+      Exit;
+    Inc(Result)
+  end;
+  Result := -1;
+end;
+
+procedure TruncFloat(Value: PStrArray; Digits, Len: Byte);
+var
+  i: Integer;
+  j: Byte;
+begin
+  i := FindPeriod(Value, Len);
+  if i > -1 then
+  begin
+    j := 0;
+    while (Value^[i] <> #0) and (i < Len) do
+    begin
+      if j > Digits then
+        Value^[i] := #0;
+      Inc(j);
+      Inc(i);
+    end;
+  end;
+end;
+
+end.

@@ -545,25 +545,19 @@ end;
 //
 // *****************************************************************************
 procedure NMRAnetNode_SetProducerEventFlags(Node: PNMRAnetNode; State: Byte);
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-    ByteOffset, i, EventOffset: Integer;
-    Mask: Byte;
-{$ENDIF}
+var
+  ByteOffset, i, EventOffset: Integer;
+  Mask: Byte;
 begin
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-    {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
-    if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-    begin
-      for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
-        NMRAnetNode_SetProducerEventFlag(Node, i, State);
-    end else
-    {$ENDIF}
-    begin
-      for i := 0 to MAX_SUPPORTED_EVENTS_PRODUCED - 1 do
-        NMRAnetNode_SetProducerEventFlag(Node, i, State);
-    end
- {$ENDIF}
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+  begin
+    for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
+      NMRAnetNode_SetProducerEventFlag(Node, i, State);
+  end else
+  begin
+    for i := 0 to MAX_SUPPORTED_EVENTS_PRODUCED - 1 do
+      NMRAnetNode_SetProducerEventFlag(Node, i, State);
+  end
 end;
 
 // *****************************************************************************
@@ -575,13 +569,10 @@ end;
 //
 // *****************************************************************************
 procedure NMRAnetNode_SetProducerEventFlag(Node: PNMRAnetNode; EventIndex: Integer; State: Byte);
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-    ByteOffset, EventOffset: Integer;
-    Mask: Byte;
-{$ENDIF}
+var
+  ByteOffset, EventOffset: Integer;
+  Mask: Byte;
 begin
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
   ByteOffset := EventIndex div 4;    // There are 4 Events supported in each Byte
   EventOffset := EventIndex mod 4;   // There are
   Mask := %00000011;
@@ -590,7 +581,6 @@ begin
   Node^.EventsProducedFlags[ByteOffset] := Node^.EventsProducedFlags[ByteOffset] and Mask;  // Clear it
   Mask := State shl (EventOffset * 2);
   Node^.EventsProducedFlags[ByteOffset] := Node^.EventsProducedFlags[ByteOffset] or Mask;  // Set it to the State
- {$ENDIF}
 end;
 
 // *****************************************************************************
@@ -602,15 +592,11 @@ end;
 //
 // *****************************************************************************
 procedure NMRAnetNode_ClearProducerEventFlags(Node: PNMRAnetNode);
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-    i: Integer;
-{$ENDIF}
+var
+  i: Integer;
 begin
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-    for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do                          // Shortcut to clear all
-      Node^.EventsProducedFlags[i] := 0;
-  {$ENDIF}
+  for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do                          // Shortcut to clear all
+    Node^.EventsProducedFlags[i] := 0;
 end;
 
 // *****************************************************************************
@@ -622,33 +608,29 @@ end;
 //
 // *****************************************************************************
 function NMRAnetNode_NextProducerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-    i, j: Integer;
-    Temp: Byte;
-{$ENDIF}
+var
+  i, j: Integer;
+  Temp: Byte;
 begin
   Result := -1;
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-    for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do
+  for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do
+  begin
+    if Node^.EventsProducedFlags[i] <> 0 then
     begin
-      if Node^.EventsProducedFlags[i] <> 0 then
+      Temp := Node^.EventsProducedFlags[i];
+      for j := 0 to 3 do                                                      // Find the first non zero state in the byte
       begin
-        Temp := Node^.EventsProducedFlags[i];
-        for j := 0 to 3 do                                                      // Find the first non zero state in the byte
+        State := Temp and $03;
+        if State <> 0 then
         begin
-          State := Temp and $03;
-          if State <> 0 then
-          begin
-            Result := (i*4) + j;
-            NMRAnetNode_SetProducerEventFlag(Node, Result, EVENT_STATE_CLEAR); // Clear the flag
-            Exit;
-          end else
-            Temp := Temp shr 2;
-        end
+          Result := (i*4) + j;
+          NMRAnetNode_SetProducerEventFlag(Node, Result, EVENT_STATE_CLEAR); // Clear the flag
+          Exit;
+        end else
+          Temp := Temp shr 2;
       end
     end
-  {$ENDIF}
+  end
 end;
 
 // *****************************************************************************
@@ -660,22 +642,18 @@ end;
 //
 // *****************************************************************************
 function NMRAnetNode_IsAnyProducerEventSet(Node: PNMRAnetNode): Boolean;
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-   i: Integer;
-{$ENDIF}
+var
+  i: Integer;
 begin
   Result := False;
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-    for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do                          // Shortcut to see if any bits are set in any event
+  for i := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES - 1 do                          // Shortcut to see if any bits are set in any event
+  begin
+    if Node^.EventsProducedFlags[i] <> 0 then
     begin
-      if Node^.EventsProducedFlags[i] <> 0 then
-      begin
-        Result := True;
-        Exit
-      end
+      Result := True;
+      Exit
     end
-  {$ENDIF}
+  end
 end;
 
 // *****************************************************************************
@@ -687,24 +665,18 @@ end;
 //
 // *****************************************************************************
 procedure NMRAnetNode_SetConsumerEventFlags(Node: PNMRAnetNode; State: Byte);
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-    i: Integer;
-{$ENDIF}
+var
+  i: Integer;
 begin
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-    {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
-    if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-    begin
-      for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
-        NMRAnetNode_SetConsumerEventFlag(Node, i, State);
-    end else
-    {$ENDIF}
-    begin
-      for i := 0 to MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
-        NMRAnetNode_SetConsumerEventFlag(Node, i, State);
-    end
- {$ENDIF}
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+  begin
+    for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
+      NMRAnetNode_SetConsumerEventFlag(Node, i, State);
+  end else
+  begin
+    for i := 0 to MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
+      NMRAnetNode_SetConsumerEventFlag(Node, i, State);
+  end
 end;
 
 // *****************************************************************************
@@ -716,13 +688,10 @@ end;
 //
 // *****************************************************************************
 procedure NMRAnetNode_SetConsumerEventFlag(Node: PNMRAnetNode; EventIndex: Integer; State: Byte);
-{$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-  var
-    ByteOffset, EventOffset: Integer;
-    Mask: Byte;
-{$ENDIF}
+var
+  ByteOffset, EventOffset: Integer;
+  Mask: Byte;
 begin
-  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
   ByteOffset := EventIndex div 4;    // There are 4 Events supported in each Byte
   EventOffset := EventIndex mod 4;   // There are
   Mask := %00000011;
@@ -731,7 +700,6 @@ begin
   Node^.EventsConsumedFlags[ByteOffset] := Node^.EventsConsumedFlags[ByteOffset] and Mask;
   Mask := State shl (EventOffset * 2);
   Node^.EventsConsumedFlags[ByteOffset] := Node^.EventsConsumedFlags[ByteOffset] or Mask;
- {$ENDIF}
 end;
 
 // *****************************************************************************
@@ -743,15 +711,11 @@ end;
 //
 // *****************************************************************************
 procedure NMRAnetNode_ClearConsumerEventFlags(Node: PNMRAnetNode);
-{$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-  var
-    i: Integer;
-{$ENDIF}
+var
+  i: Integer;
 begin
-  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-    for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do                          // Shortcut to clear them all
-      Node^.EventsConsumedFlags[i] := 0;
-  {$ENDIF}
+  for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do                          // Shortcut to clear them all
+    Node^.EventsConsumedFlags[i] := 0;
 end;
 
 // *****************************************************************************
@@ -763,33 +727,29 @@ end;
 //
 // *****************************************************************************
 function NMRAnetNode_NextConsumerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
-{$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
   var
     i, j: Integer;
     Temp: Byte;
-{$ENDIF}
 begin
   Result := -1;
-  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-    for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+  for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+  begin
+    if Node^.EventsConsumedFlags[i] <> 0 then
     begin
-      if Node^.EventsConsumedFlags[i] <> 0 then
+      Temp := Node^.EventsConsumedFlags[i];
+      for j := 0 to 3 do                                                      // Find the first non zero state in the byte
       begin
-        Temp := Node^.EventsConsumedFlags[i];
-        for j := 0 to 3 do                                                      // Find the first non zero state in the byte
+        State := Temp and $03;
+        if State <> 0 then
         begin
-          State := Temp and $03;
-          if State <> 0 then
-          begin
-            Result := (i*4) + j;
-            NMRAnetNode_SetConsumerEventFlag(Node, Result, EVENT_STATE_CLEAR); // Clear the flag
-            Exit;
-          end else
-            Temp := Temp shr 2;
-        end
+          Result := (i*4) + j;
+          NMRAnetNode_SetConsumerEventFlag(Node, Result, EVENT_STATE_CLEAR); // Clear the flag
+          Exit;
+        end else
+          Temp := Temp shr 2;
       end
     end
-  {$ENDIF}
+  end
 end;
 
 // *****************************************************************************
@@ -801,22 +761,18 @@ end;
 //
 // *****************************************************************************
 function NMRAnetNode_IsAnyConsumerEventSet(Node: PNMRAnetNode): Boolean;
-{$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-  var
-    i: Integer;
-{$ENDIF}
+var
+  i: Integer;
 begin
   Result := False;
-  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-    for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+  for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
+  begin
+    if Node^.EventsConsumedFlags[i] <> 0 then
     begin
-      if Node^.EventsConsumedFlags[i] <> 0 then
-      begin
-        Result := True;
-        Exit
-      end
+      Result := True;
+      Exit
     end
-  {$ENDIF}
+  end
 end;
 
 end.

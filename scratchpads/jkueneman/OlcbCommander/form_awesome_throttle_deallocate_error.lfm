@@ -1,0 +1,46 @@
+object FormDeallocationError: TFormDeallocationError
+  Left = 553
+  Height = 182
+  Top = 319
+  Width = 519
+  Caption = 'DeAllocation Error'
+  ClientHeight = 182
+  ClientWidth = 519
+  LCLVersion = '1.0.2.0'
+  object Button1: TButton
+    Left = 32
+    Height = 22
+    Top = 136
+    Width = 456
+    Caption = 'Button1'
+    TabOrder = 0
+  end
+  object Button2: TButton
+    Left = 32
+    Height = 22
+    Top = 96
+    Width = 456
+    Caption = 'Button2'
+    TabOrder = 1
+  end
+  object Button3: TButton
+    Left = 32
+    Height = 22
+    Top = 56
+    Width = 456
+    Caption = 'Reset the de-allocatoin request'
+    TabOrder = 2
+  end
+  object LabelErrorMsg: TLabel
+    Left = 16
+    Height = 27
+    Top = 16
+    Width = 487
+    Align = alTop
+    Alignment = taCenter
+    BorderSpacing.Around = 16
+    Caption = 'An errorr occured during de-allocation of the DCC address.  The expected reply was not deteced from the node.  The train may or may not be de-allocated what would you like to do?'
+    ParentColor = False
+    WordWrap = True
+  end
+end

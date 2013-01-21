@@ -8,10 +8,7 @@ interface
 
 uses
   Classes, SysUtils, synaser, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
-  {$IFDEF DEBUG_THREAD}
-  form_thread_debug,
-  {$ENDIF}
-  olcb_app_common_settings, common_objects;
+  olcb_app_common_settings, common_objects, math_float16;
 
 const
   DATAGRAM_MAX_RETRYS = 5;
@@ -35,9 +32,24 @@ type
   TOlcbTaskEngine         = class;
   TOlcbTaskBase           = class;
 
+  TOlcbTaskBeforeDestroy = procedure(Sender: TOlcbTaskBase) of object;
+
+   {$IFDEF DEBUG_THREAD}
+  TComPortThreadDebugRec = record
+    ReceiveDatagramCount: Integer;
+    MaxReceiveDatagramCount: Integer;
+    SendDatagramCount: Integer;
+    MaxSendDatagramCount: Integer;
+    TaskCount: Integer;
+    MaxTaskCount: Integer;
+    ThreadTime: DWord;
+    MaxThreadTime: DWord;
+  end;
+  {$ENDIF}
+
   TSyncRawMessageFunc = procedure(MessageStr: String) of object;
   TSyncDatagramFunc = procedure(Datagram: TDatagramReceive) of object;
-
+  {$IFDEF DEBUG_THREAD} TSyncDebugFunc = procedure(DebugInfo: TComPortThreadDebugRec) of object; {$ENDIF}
 
 { TComPortThread }
 
@@ -49,33 +61,35 @@ type
     FConnected: Boolean;                                                        // True if connected to the port
     FDatagramReceiveManager: TDatagramReceiveManager;
     FDatagramSendManager: TDatagramSendManager;
+    {$IFDEF DEBUG_THREAD} FDebugInfo: TComPortThreadDebugRec; {$ENDIF}
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
     FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sent
     FLooptime: DWord;
     FMaxLoopTime: DWord;
     FOlcbTaskManager: TOlcbTaskEngine;
+    FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
     FPort: String;                                                              // Port to connect to
     FSerial: TBlockSerial;                                                      // Serial object
-    FSyncDatagramMemConfigAddressSpaceInfoReplyFunc: TSyncDatagramFunc;
     FSyncDatagramMemConfigOperationReplyFunc: TSyncDatagramFunc;
+    {$IFDEF DEBUG_THREAD} FSyncDebugFunc: TSyncDebugFunc; {$ENDIF}
     FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
     FSyncSendMessageFunc: TSyncRawMessageFunc;                                  // Function to callback through Syncronize if EnableSendMessages is true
-    FTerminatedThread: Boolean;                                                 // True if the thread has terminated
-    FTerminateThread: Boolean;                                                  // Set to true to terminate the thread
+    FTerminateComplete: Boolean;                                                 // True if the thread has terminated
     FThreadListSendStrings: TThreadList;                                        // List of strings waiting to be sent
     function GetSourceAlias: Word;
     protected
       procedure Execute; override;
+      {$IFDEF DEBUG_THREAD} procedure SyncDebugMessage;{$ENDIF}
       procedure SyncErrorMessage;
       procedure SyncReceiveMessage;
       procedure SyncSendMessage;
-      procedure WriteDebugInfo;
 
       property BufferDatagramReceive: TDatagramReceive read FBufferDatagramReceive write FBufferDatagramReceive;
       property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
       property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager;
       property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
+      {$IFDEF DEBUG_THREAD} property DebugInfo: TComPortThreadDebugRec read FDebugInfo write FDebugInfo; {$ENDIF}
       property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
       property SourceAlias: Word read GetSourceAlias;
     public
@@ -90,15 +104,36 @@ type
       property BaudRate: DWord read FBaudRate write FBaudRate;
       property Port: String read FPort write FPort;
       property ThreadListSendStrings: TThreadList read FThreadListSendStrings write FThreadListSendStrings;
-      property TerminateThread: Boolean read FTerminateThread write FTerminateThread;
-      property TerminatedThread: Boolean read FTerminatedThread;
+      property Terminated;
+      property TerminateComplete: Boolean read FTerminateComplete;
       property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
       property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
       property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
+      {$IFDEF DEBUG_THREAD} property SyncDebugFunc: TSyncDebugFunc read FSyncDebugFunc write FSyncDebugFunc; {$ENDIF}
       property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
       property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
       property LoopTime: DWord read FLoopTime write FLoopTime;
       property MaxLoopTime: DWord read FMaxLoopTime write FMAxLoopTime;
+      property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+  end;
+
+  { TOlcbTaskEngine }
+
+  TOlcbTaskEngine = class
+  private
+    FMaxCount: Integer;
+    FOwner: TComPortThread;
+    FTaskList: TThreadList;
+  protected
+    property MaxCount: Integer read FMaxCount write FMaxCount;
+    property Owner: TComPortThread read FOwner write FOwner;
+    property TaskList: TThreadList read FTaskList write FTaskList;
+  public
+    constructor Create(AnOwner: TComPortThread);
+    procedure ProcessReceiving(MessageInfo: TOlcbMessage);
+    procedure ProcessSending;
+    destructor Destroy; override;
+    procedure Clear;
   end;
 
 { TDatagramReceive }
@@ -218,9 +253,6 @@ type
     procedure ProcessSend;
   end;
 
-
-  TOlcbTaskBeforeDestroy = procedure(Sender: TOlcbTaskBase) of object;
-
   { TOlcbTaskBase }
 
   TOlcbTaskBase = class
@@ -244,11 +276,21 @@ type
     function IsProtocolIdentificationProcolReply(MessageInfo: TOlcbMessage): Boolean;
     function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual; abstract;                 // Must override this
+    procedure SendIdentifyEventsMessage;
+    procedure SendIdentifyEventsAddressedMessage;
+    procedure SendIdentifyConsumerMessage(Event: TEventID);
+    procedure SendIdentifyProducerMessage(Event: TEventID);
     procedure SendMemoryConfigurationOptions;
     procedure SendMemoryConfigurationSpaceInfo(Space: Byte);
     procedure SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
     procedure SendProtocolIdentificationProtocolMessage;
     procedure SendSnipMessage;
+    procedure SendTractionAllocateDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
+    procedure SendTractionDeAllocateDccAddressProxyMessage;
+    procedure SendTractionEStopMessage(Speed: THalfFloat);
+    procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
+    procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+    procedure SendTractionSpeedMessage(Speed: THalfFloat);
     procedure SendVerifyNodeIDGlobalMessage;
     procedure SendVerifyNodeIDToDestinationMessage;
     procedure SyncOnBeforeTaskDestroy;
@@ -266,28 +308,11 @@ type
     property Sending: Boolean read FSending write FSending;
   end;
 
-  { TOlcbTaskEngine }
-
-  TOlcbTaskEngine = class
-  private
-    FMaxCount: Integer;
-    FOwner: TComPortThread;
-    FTaskList: TThreadList;
-  protected
-    property MaxCount: Integer read FMaxCount write FMaxCount;
-    property Owner: TComPortThread read FOwner write FOwner;
-    property TaskList: TThreadList read FTaskList write FTaskList;
-  public
-    constructor Create(AnOwner: TComPortThread);
-    procedure ProcessReceiving(MessageInfo: TOlcbMessage);
-    procedure ProcessSending;
-    destructor Destroy; override;
-    procedure Clear;
-  end;
-
-
 
 implementation
+
+uses
+  olcb_common_tasks;
 
 { TOlcbTaskBase }
 
@@ -416,6 +441,30 @@ begin
   end;
 end;
 
+procedure TOlcbTaskBase.SendIdentifyEventsMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY, SourceAlias, 0, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendIdentifyEventsAddressedMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendIdentifyConsumerMessage(Event: TEventID);
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_CONSUMER_IDENTIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendIdentifyProducerMessage(Event: TEventID);
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
 procedure TOlcbTaskBase.SendMemoryConfigurationOptions;
 var
   DatagramSend: TDatagramSend;
@@ -478,6 +527,45 @@ begin
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
+procedure TOlcbTaskBase.SendTractionAllocateDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
+begin
+  if not Short then
+    Address := Address or $C000;
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, 0, 0, TRACTION_DCC or TRACTION_OP_PROXY_MGMT, TRACTION_DCC_ALLOCATE_ADDRESS, SpeedStep, Hi(Address), Lo(Address), $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionDeAllocateDccAddressProxyMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_DCC or TRACTION_OP_PROXY_MGMT, TRACTION_DCC_DEALLOCATE_ADDRESS, $00, $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionEStopMessage(Speed: THalfFloat);
+begin
+  // Don't known how to do this yet with the dir sign
+end;
+
+procedure TOlcbTaskBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 8, $00, $00, TRACTION_OLCB or TRACTION_OP_FUNCTION, (FunctionAddress shr 16) and $000F, (FunctionAddress shr 8) and $000F, FunctionAddress and $000F, Hi(Value), Lo(Value));
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+begin
+  if not Short then
+    Address := Address or $C000;
+  MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $06, $01, $00, $00, Hi(Address), Lo(Address), $00, $01);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionSpeedMessage(Speed: THalfFloat);
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 5, $00, $00, TRACTION_OLCB or TRACTION_OP_SPEED_DIR, Hi(Speed), Lo(Speed), $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
 procedure TOlcbTaskBase.SendVerifyNodeIDGlobalMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
@@ -526,12 +614,40 @@ begin
 end;
 
 procedure TComPortThread.Execute;
+
+   {$IFDEF DEBUG_THREAD}
+  procedure LoadDebugInfo(var Info: TComPortThreadDebugRec);
+  var
+    List: TList;
+  begin
+    List := DatagramReceiveManager.Datagrams.LockList;
+    Info.ReceiveDatagramCount := List.Count;
+    DatagramReceiveManager.Datagrams.UnlockList;
+    Info.MaxReceiveDatagramCount := DatagramReceiveManager.MaxCount;
+    List := DatagramSendManager.Datagrams.LockList;
+    Info.SendDatagramCount := List.Count;
+    DatagramSendManager.Datagrams.UnlockList;
+    Info.MaxSendDatagramCount := DatagramSendManager.MaxCount;
+    List := OlcbTaskManager.TaskList.LockList;
+    Info.TaskCount := List.Count;
+    OlcbTaskManager.TaskList.UnlockList;
+    Info.MaxTaskCount := OlcbTaskManager.MaxCount;
+    Info.ThreadTime := LoopTime;
+    Info.MaxThreadTime := MaxLoopTime;
+  end;
+  {$ENDIF}
+
 var
   List: TList;
   ReceiveStr, SendStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
   CompletedSendDatagram: TDatagramSend;
   T: DWord;
+  CANLayerTask: TCANLayerTask;
+  EventTask: TEventTask;
+  VerifiedNodeIDTask: TVerifiedNodeIDTask;
+  TractionProtocolTask: TTractionProtocolTask;
+  InitializationCompleteTask: TInitializationCompleteTask;
 begin
   T := 0;
   CompletedSendDatagram := nil;
@@ -543,18 +659,19 @@ begin
   try
     if Serial.InstanceActive then
     begin
+      Serial.Config(BaudRate, 8, 'N', 0, False, False);                         // FTDI Driver uses no stop bits for non-standard baud rates.
       Connected:=True;
-      Serial.Config(BaudRate, 8, 'N', 0, False, False);      // FTDI Driver uses no stop bits for non-standard baud rates.
       while not Terminated do
       begin
-        {$IFDEF DEBUG_THREAD} WriteDebugInfo; {$ENDIF}
+        {$IFDEF DEBUG_THREAD}
+          LoadDebugInfo(fDebugInfo);
+          Synchronize(@SyncDebugMessage);
+        {$ENDIF}
 
-    //    T := GetTickCount;
-
+        T := GetTickCount;
         ThreadSwitch;
 
-        // *** Pickup the next Message to Send ***
-        List := ThreadListSendStrings.LockList;
+        List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
         try
           if List.Count > 0 then
           begin
@@ -565,20 +682,12 @@ begin
             end;
           end;
         finally
-          ThreadListSendStrings.UnlockList;        // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
+          ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
         end;
-        // *** Pickup the next Message to Send ***
 
-        // *** See if there is a datagram what will add a message to send ***
-        DatagramSendManager.ProcessSend;
-        // *** See if there is a datagram what will add a message to send ***
-
-        // *** See if there is a task what will add a message to send ***
-        OlcbTaskManager.ProcessSending;
-        // *** See if there is a task what will add a message to send ***
-
-        // *** Put the message on the wire and communicate back the raw message sent ***
-        if SendStr <> '' then
+        DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram what will add a message to send ***
+        OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
+        if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
         begin
           if Helper.Decompose(SendStr) then
           begin
@@ -591,57 +700,93 @@ begin
             end;
             Serial.SendString(SendStr + LF);
           end;
-
           SendStr := '';
         end;
-        // *** Put the message on the wire and communicate back the raw message sent ***
 
-
-
-        // *** Grab the next message from the wire ***
-        if GlobalSettings.General.SendPacketDelay > 0 then
+        if GlobalSettings.General.SendPacketDelay > 0 then                      // *** Grab the next message from the wire ***
           Sleep(GlobalSettings.General.SendPacketDelay);
         ReceiveStr := Serial.Recvstring(0);
         ReceiveStr := Trim(ReceiveStr);
-        // *** Grab the next message from the wire ***
-
-
 
         if Helper.Decompose(ReceiveStr) then
         begin
-          // Communicate back to the app the raw message string
-          if EnableReceiveMessages then
+          if EnableReceiveMessages then                                         // *** Communicate back to the app the raw message string
           begin
             BufferRawMessage := ReceiveStr;
             Synchronize(@SyncReceiveMessage);
           end;
-          // Communicate back to the app the raw message string
 
-          if IsDatagramMTI(Helper.MTI, True) then                                 // *** Test for a Datagram message that came in ***
+          if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
           begin
-            CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);  // Sending Datagrams are expecting replies from their destination Nodes
-            if Assigned(CompletedSendDatagram) then                               // Not sure if there is something interesting to do with this.....
+            CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
+            if Assigned(CompletedSendDatagram) then
             begin
-              OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);            // Give the Task subsystem a crack at knowning about the sent datagram
+              OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);          // Give the Task subsystem a crack at knowning about the sent datagram
               FreeAndNil(CompletedSendDatagram)
             end else
             begin
               BufferDatagramReceive := DatagramReceiveManager.Process(Helper);
               if Assigned(BufferDatagramReceive) then
               begin
-                OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);         // Give the Task subsystem a crack at knowning about the received datagram
+                OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);        // Give the Task subsystem a crack at knowning about the received datagram
                 FreeAndNil(FBufferDatagramReceive)
               end;
             end;
-          end else                                                                // *** Test for a Datagram message that came in ***
+          end else                                                              // *** Test for a Datagram message that came in ***
             OlcbTaskManager.ProcessReceiving(Helper);
+
+          if Helper.Layer = ol_CAN then
+          begin
+            CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+            CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
+            Helper.CopyTo(CANLayerTask.MessageHelper);
+            AddTask(CANLayerTask);
           end;
 
-      //   LoopTime := GetTickCount - T;
-         if LoopTime > MaxLoopTime then
-           MaxLoopTime := LoopTime;
+          case Helper.MTI of
+            MTI_INITIALIZATION_COMPLETE :
+              begin
+                InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                Helper.CopyTo(InitializationCompleteTask.MessageHelper);
+                AddTask(InitializationCompleteTask);
+              end;
+            MTI_VERIFIED_NODE_ID_NUMBER :
+              begin
+                VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
+                AddTask(VerifiedNodeIDTask);
+              end;
+            MTI_CONSUMER_IDENTIFIED_CLEAR,
+            MTI_CONSUMER_IDENTIFIED_SET,
+            MTI_CONSUMER_IDENTIFIED_UNKNOWN,
+            MTI_CONSUMER_IDENTIFIED_RESERVED,
+            MTI_PRODUCER_IDENTIFIED_CLEAR,
+            MTI_PRODUCER_IDENTIFIED_SET,
+            MTI_PRODUCER_IDENTIFIED_UNKNOWN,
+            MTI_PRODUCER_IDENTIFIED_RESERVED,
+            MTI_PC_EVENT_REPORT :
+              begin
+                EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                Helper.CopyTo(EventTask.MessageHelper);
+                AddTask(EventTask);
+              end;
+            MTI_TRACTION_PROTOCOL :
+              begin
+                TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                Helper.CopyTo(TractionProtocolTask.MessageHelper);
+                AddTask(TractionProtocolTask);
+              end;
+          end;
+        end;
 
-       end;
+        LoopTime := GetTickCount - T;
+        if LoopTime > MaxLoopTime then
+          MaxLoopTime := LoopTime;
+      end;
     end else
     begin
       BufferRawMessage := Serial.LastErrorDesc;
@@ -653,9 +798,17 @@ begin
     Connected := False;
     Serial.Free;
     Helper.Free;
-    FTerminatedThread := True;
+    FTerminateComplete := True;
   end;
 end;
+
+{$IFDEF DEBUG_THREAD}
+procedure TComPortThread.SyncDebugMessage;
+begin
+  if Assigned(SyncDebugFunc) then
+    SyncDebugFunc(DebugInfo);
+end;
+{$ENDIF}
 
 procedure TComPortThread.SyncReceiveMessage;
 begin
@@ -667,34 +820,6 @@ procedure TComPortThread.SyncSendMessage;
 begin
   if Assigned(SyncSendMessageFunc) then
     SyncSendMessageFunc(BufferRawMessage)
-end;
-
-procedure TComPortThread.WriteDebugInfo;
-{$IFDEF DEBUG_THREAD}
-var
-  List: TList;
-{$ENDIF}
-begin
-  {$IFDEF DEBUG_THREAD}
-  List := DatagramReceiveManager.Datagrams.LockList;
-  FormThreadDebug.LabelDatagramReceiveObjects.Caption := IntToStr( List.Count);
-  DatagramReceiveManager.Datagrams.UnlockList;
-  FormThreadDebug.LabelDatagramReceiveObjectsMax.Caption := IntToStr(DatagramReceiveManager.MaxCount);
-
-
-  List := DatagramSendManager.Datagrams.LockList;
-  FormThreadDebug.LabelDatagramSendObjects.Caption := IntToStr( List.Count);
-  DatagramSendManager.Datagrams.UnlockList;
-  FormThreadDebug.LabelDatagramSendObjectsMax.Caption := IntToStr( DatagramSendManager.MaxCount);
-
-  List := OlcbTaskManager.TaskList.LockList;
-  FormThreadDebug.LabelTaskObjects.Caption := IntToStr( List.Count);
-  OlcbTaskManager.TaskList.UnlockList;
-  FormThreadDebug.LabelTaskObjectsMax.Caption := IntToStr( OlcbTaskManager.MaxCount);
-
-  FormThreadDebug.LabelMaxTime.Caption := IntToStr(MaxLoopTime);
-  FormThreadDebug.LabelLoopTime.Caption := IntToStr(LoopTime);
-  {$ENDIF}
 end;
 
 procedure TComPortThread.SyncErrorMessage;
@@ -712,8 +837,7 @@ begin
   FOlcbTaskManager := TOlcbTaskEngine.Create(Self);
   FBaudRate := 9600;
   FPort := '';
-  FTerminateThread := False;
-  FTerminatedThread := False;
+  FTerminateComplete := False;
   FEnableReceiveMessages := True;
   FEnableSendMessages := True;
   FSyncErrorMessageFunc := nil;
@@ -722,6 +846,7 @@ begin
   FSyncDatagramMemConfigOperationReplyFunc := nil;
   FLoopTime := 0;
   FMaxLoopTime := 0;
+  OnBeforeDestroyTask := nil;
 end;
 
 destructor TComPortThread.Destroy;
@@ -770,9 +895,8 @@ begin
   List := DatagramSendManager.Datagrams.LockList;
   try
     List.Add(Datagram);
-    if List.Count > DatagramSendManager.MaxCount then DatagramSendManager.MaxCount := List.Count;
- //   if not DatagramSendManager.Timer.Enabled then
- //     DatagramSendManager.Timer.Enabled := True;
+    if List.Count > DatagramSendManager.MaxCount then
+      DatagramSendManager.MaxCount := List.Count;
   finally
     DatagramSendManager.Datagrams.UnLockList
   end;
@@ -786,11 +910,11 @@ begin
   try
     NewTask.FComPortThread := Self;
     List.Add(NewTask);
-    if List.Count > OlcbTaskManager.MaxCount then OlcbTaskManager.MaxCount := List.Count;
+    if List.Count > OlcbTaskManager.MaxCount then
+      OlcbTaskManager.MaxCount := List.Count;
   finally
     OlcbTaskManager.TaskList.UnlockList;
   end;
-
 end;
 
 { TDatagramSendManager }
@@ -1316,12 +1440,11 @@ end;
 procedure TOlcbTaskEngine.ProcessReceiving(MessageInfo: TOlcbMessage);
 var
   List: TLIst;
-  Task: TOlcbTaskBase;
-  i: Integer;
+  Task, CompletedTask: TOlcbTaskBase;
 begin
+  CompletedTask := nil;
   List := TaskList.LockList;
   try
-
     if List.Count > 0 then
     begin
       Task := TOlcbTaskBase( List[0]);
@@ -1330,45 +1453,29 @@ begin
         Task.Process(MessageInfo);
         if Task.Done then
         begin
-          List.Remove(Task);
-          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
-          FreeAndNil(Task);
+          CompletedTask := Task;
+          List.Delete(0);
         end;
       end;
     end;
-
-  {  i := 0;
-    while i < List.Count do
-    begin
-      Task := TOlcbTaskBase( List[i]);
-      if not Task.Sending then
-      begin
-        Task.Process(MessageInfo);                  // NEED TO DO THESE ONE AT A TIME OR WE CAN SEND 2 OR MORE DATAGRAMS/SNIP TO A NODE BEFORE THE FIRST ON REPLIES...........
-        if Task.Done then
-        begin
-          List.Remove(Task);
-          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
-          FreeAndNil(Task);
-        end;
-      end;
-      Inc(i)
-    end;   }
   finally
     TaskList.UnlockList;
+  end;
+
+  if Assigned(CompletedTask) then
+  begin
+    Owner.Synchronize(@CompletedTask.SyncOnBeforeTaskDestroy);
   end;
 end;
 
 procedure TOlcbTaskEngine.ProcessSending;
 var
   List: TLIst;
-  Task: TOlcbTaskBase;
-  i: Integer;
+  Task, CompletedTask: TOlcbTaskBase;
 begin
+  CompletedTask := nil;
   List := TaskList.LockList;
   try
-    i := 0;
-
-
     if List.Count > 0 then
     begin
       Task := TOlcbTaskBase( List[0]);
@@ -1377,31 +1484,20 @@ begin
         Task.Process(nil);
         if Task.Done then
         begin
-          List.Remove(Task);
-          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
-          FreeAndNil(Task);
+          CompletedTask := Task;
+          List.Delete(0);
         end;
       end;
     end;
-
-
- {   while i < List.Count do
-    begin
-      Task := TOlcbTaskBase( List[i]);
-      if Task.Sending then
-      begin
-        Task.Process(nil);                               // NEED TO DO THESE ONE AT A TIME OR WE CAN SEND 2 OR MORE DATAGRAMS/SNIP TO A NODE BEFORE THE FIRST ON REPLIES...........
-        if Task.Done then
-        begin
-          List.Remove(Task);
-          Owner.Synchronize(@Task.SyncOnBeforeTaskDestroy);
-          FreeAndNil(Task)
-        end;
-      end;
-      Inc(i)
-    end;       }
   finally
     TaskList.UnlockList;
+  end;
+
+  // Do this outside the locked list so we don't deadlock if the Syncronize tries to add a new Task to the list!
+  if Assigned(CompletedTask) then
+  begin
+    Owner.Synchronize(@CompletedTask.SyncOnBeforeTaskDestroy);
+    CompletedTask.Free;
   end;
 end;
 
@@ -1423,10 +1519,10 @@ begin
       TObject( List[i]).Free
   finally
     List.Clear;
-    TaskList.UnLockList
+    TaskList.LockList;
   end;
 end;
 
 
 end.
-
+

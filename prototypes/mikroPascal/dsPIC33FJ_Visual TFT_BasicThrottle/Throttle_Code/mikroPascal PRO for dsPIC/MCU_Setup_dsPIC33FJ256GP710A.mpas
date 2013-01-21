@@ -43,8 +43,8 @@ begin
   dsPIC33_CAN_AssociateFilterWithMask(0, 2);                                    // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
   dsPIC33_CAN_AssociateFilterWithMask(1, 2);                                    // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
   dsPIC33_CAN_EnableDisableRXFilters($0003);                                    // Enable Filters 0 and 1
-  dsPIC33_CAN_RegisterBufferWithFilter(0, CAN_RX_BUFFER);                       // Filter 0 to be sent to Buffer
-  dsPIC33_CAN_RegisterBufferWithFilter(1, CAN_RX_BUFFER);                       // Filter 1 to be sent to Buffer
+  dsPIC33_CAN_RegisterBufferWithFilter(0, CAN_RX_0_BUFFER);                     // Filter 0 to be sent to Buffer
+  dsPIC33_CAN_RegisterBufferWithFilter(1, CAN_RX_0_BUFFER);                     // Filter 1 to be sent to Buffer
   
   dsPIC33_CAN_EnterNormalMode;                                                  // Place the module in Normal Mode
 
@@ -81,19 +81,19 @@ begin
   dsPIC33_DMA_Enable(CAN_TX_1_DMA_CHANNEL, True);
 
   // Setup the CAN Receiver
-  dsPIC33_CAN_SetBufferAsTransmitter(CAN_RX_BUFFER, False);                     // Setup Buffer 0 as a Receive Buffer
+  dsPIC33_CAN_SetBufferAsTransmitter(CAN_RX_0_BUFFER, False);                     // Setup Buffer 0 as a Receive Buffer
   
   // Setup the Receive DMA
-  dsPIC33_DMA_DataSize(CAN_RX_DMA_CHANNEL, DATASIZE_WORD);                                       // DMA Data Size is a Word
-  dsPIC33_DMA_Direction(CAN_RX_DMA_CHANNEL, DIRECTION_PERIPHERAL_TO_RAM);                        // Transmit move data from the Module to RAM
-  dsPIC33_DMA_AddressMode(CAN_RX_DMA_CHANNEL, ADDRESS_MODE_REG_INDIRECT_POST_INCREMENT);         // Don't use the buggy Perpherial Addressing Mode
-  dsPIC33_DMA_OperatingMode(CAN_RX_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);                      // Continious Mode (as apposed to one shot)
-  dsPIC33_DMA_TransferCount(CAN_RX_DMA_CHANNEL, 8);                                              // Transfers 8 Words (0 counts as 1)
-  dsPIC33_DMA_ManualDMATransfer(CAN_RX_DMA_CHANNEL, False);                                      // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_RX_DMA_CHANNEL, @C1RXD);                                     // Assign the DMA Channel to the Receive Register of the CAN module
-  dsPIC33_DMA_InterruptSelect(CAN_RX_DMA_CHANNEL, IRQ_ECAN1_RX_DATA_READY);                      // Assign the DMA Channel to the ECAN 1 RX to Trigger the Transfer
-  dsPIC33_DMA_AddressOffsetA(CAN_RX_DMA_CHANNEL, @RX_Main_RawBufferArray[0]);                    // Point the Receive Buffer Offset into the CAN Layer Buffer
-  dsPIC33_DMA_Enable(CAN_RX_DMA_CHANNEL, True);                                                  // Enable DMA Channel 2
+  dsPIC33_DMA_DataSize(CAN_RX_0_DMA_CHANNEL, DATASIZE_WORD);                                       // DMA Data Size is a Word
+  dsPIC33_DMA_Direction(CAN_RX_0_DMA_CHANNEL, DIRECTION_PERIPHERAL_TO_RAM);                        // Transmit move data from the Module to RAM
+  dsPIC33_DMA_AddressMode(CAN_RX_0_DMA_CHANNEL, ADDRESS_MODE_REG_INDIRECT_POST_INCREMENT);         // Don't use the buggy Perpherial Addressing Mode
+  dsPIC33_DMA_OperatingMode(CAN_RX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);                      // Continious Mode (as apposed to one shot)
+  dsPIC33_DMA_TransferCount(CAN_RX_0_DMA_CHANNEL, 8);                                              // Transfers 8 Words (0 counts as 1)
+  dsPIC33_DMA_ManualDMATransfer(CAN_RX_0_DMA_CHANNEL, False);                                      // Automatic DMA Transfers
+  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, @C1RXD);                                     // Assign the DMA Channel to the Receive Register of the CAN module
+  dsPIC33_DMA_InterruptSelect(CAN_RX_0_DMA_CHANNEL, IRQ_ECAN1_RX_DATA_READY);                      // Assign the DMA Channel to the ECAN 1 RX to Trigger the Transfer
+  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, @RX_Main_RawBufferArray[0]);                    // Point the Receive Buffer Offset into the CAN Layer Buffer
+  dsPIC33_DMA_Enable(CAN_RX_0_DMA_CHANNEL, True);                                                  // Enable DMA Channel 2
 
   dsPIC33_CAN_TXBufferInterrupt(True);                                          // Enable the TX Done Event Interrupt
   dsPIC33_CAN_RXBufferInterrupt(True);                                          // Enable the RX Done Event Interrupt

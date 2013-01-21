@@ -75,7 +75,7 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_TX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);   // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_TX_0_DMA_CHANNEL, 8);                           // 0...7
   dsPIC33_DMA_ManualDMATransfer(CAN_TX_0_DMA_CHANNEL, False);                   // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_TX_0_DMA_CHANNEL, @C1TXD);                  // Assign the DMA Channel to the Transmit Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_TX_0_DMA_CHANNEL, Word( @C1TXD));                  // Assign the DMA Channel to the Transmit Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_TX_0_DMA_CHANNEL, IRQ_ECAN1_TX_DATA_READY);   // Assign the DMA Channel to the ECAN 1 TX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_TX_0_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_0_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_0_DMA_CHANNEL, True);
@@ -92,7 +92,7 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_TX_1_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);   // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_TX_1_DMA_CHANNEL, 8);                           // 0...7
   dsPIC33_DMA_ManualDMATransfer(CAN_TX_1_DMA_CHANNEL, False);                   // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_TX_1_DMA_CHANNEL, @C1TXD);                  // Assign the DMA Channel to the Transmit Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_TX_1_DMA_CHANNEL, Word( @C1TXD));                  // Assign the DMA Channel to the Transmit Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_TX_1_DMA_CHANNEL, IRQ_ECAN1_TX_DATA_READY);   // Assign the DMA Channel to the ECAN 1 TX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_TX_1_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_1_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_1_DMA_CHANNEL, True);
@@ -107,9 +107,9 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_RX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);                      // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_RX_0_DMA_CHANNEL, 8);                                              // Transfers 8 Words (0 counts as 1)
   dsPIC33_DMA_ManualDMATransfer(CAN_RX_0_DMA_CHANNEL, False);                                      // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, @C1RXD);                                     // Assign the DMA Channel to the Receive Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, Word( @C1RXD));                                     // Assign the DMA Channel to the Receive Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_RX_0_DMA_CHANNEL, IRQ_ECAN1_RX_DATA_READY);                      // Assign the DMA Channel to the ECAN 1 RX to Trigger the Transfer
-  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, @RX_Main_RawBufferArray[0]);                    // Point the Receive Buffer Offset into the CAN Layer Buffer
+  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, Word( @RX_Main_RawBufferArray[0]));                    // Point the Receive Buffer Offset into the CAN Layer Buffer
   dsPIC33_DMA_Enable(CAN_RX_0_DMA_CHANNEL, True);                                                  // Enable DMA Channel 2
 
   dsPIC33_CAN_InterruptFlagRXBufferOverflow(True);                              // Clear the flag
@@ -139,10 +139,10 @@ begin
   {$IFDEF UART_ENABLE}
   // Initialize UART
   
-  UART1_Init(115200);                       // Initialize UART module a
+  UART1_Init(230400);                       // Initialize UART module a
   Delay_ms(100);                            // Wait for UART module to stabilize
   {$ENDIF}
-  
+
   {$IFDEF XPRESSNET_UART_ENABLE}
   U2BRG := BRG_EXPRESSNET_62500;
   PDSEL_0_U2MODE_bit := 1;   // 11 = 9-Bit Data, no parity
@@ -180,15 +180,24 @@ begin
   TON_T2CON_bit := 1;       // Turn on
   
   TCS_T1CON_bit := 0;       // internal cycle clock
-  T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 7   (1 means off)
+  T1IP_0_bit := 0;          // Timer 1 Interrupt Priority = 2   (1 means off)
   T1IP_1_bit := 1;
-  T1IP_2_bit := 1;
+  T1IP_2_bit := 0;
   TCKPS_0_T1CON_bit := 1;   // 256 Prescaler
   TCKPS_1_T1CON_bit := 1;
-  PR1 := $FFFF;            // Clock ticks every 31.25ns * 256 * 65535 = 524.28ms interrupts
+  PR1 := $FFFF;            // Clock ticks every 31.25ns * 256 * 65535 = 524.28ms interrupts       (64Mhz = 15.625ns * 2 cycle/instruction = 31.25ns)
   T1IF_bit := 0;           // Clear T1IF
   T1IE_bit := 1;           // Enable the Interrupt
   TON_T1CON_bit := 1;       // Turn on
+  
+  TCS_T3CON_bit := 0;       // internal cycle clock
+  T3IP_0_bit := 0;          // Timer 1 Interrupt Priority = 2   (1 means off)
+  T3IP_1_bit := 1;
+  T3IP_2_bit := 0;
+  PR3 := 3840;             // Clock ticks every 31.25ns * 1 * 3840 = 120us interrupts       (64Mhz = 15.625ns * 2 cycle/instruction = 31.25ns)
+  T3IF_bit := 0;           // Clear T1IF
+  T3IE_bit := 1;           // Enable the Interrupt
+  TON_T3CON_bit := 0;       // Turn Off
 
 end;
 

@@ -44,51 +44,72 @@ const
   TRACTION_OP_PROXY_MGMT             = $02;
 
   DCC_ALLOCATE_ADDRESS               = $01;
+  DCC_DEALLOCATE_ADDRESS             = $02;
   DCC_FUNCTION_28                    = $00;
   DCC_FUNCTION_32k                   = $01;
   
-  DCC_FUNCTION_TABLE: array[0..28] of byte = (
-    %10010000,        // F0
-    %10000001,        // F1
-    %10000010,        // F2
-    %10000100,        // F3
-    %10001000,        // F4
-    %10110001,        // F5
-    %10110010,        // F6
-    %10110100,        // F7
-    %10111000,        // F8
-    %10100001,        // F9
-    %10100010,        // F10
-    %10100100,        // F11
-    %10101000,        // F12
-    %00000001,        // F13
-    %00000010,        // F14
-    %00000100,        // F15
-    %00001000,        // F16
-    %00010000,        // F17
-    %00100000,        // F18
-    %01000000,        // F19
-    %10000000,        // F20
-    %00000001,        // F21
-    %00000010,        // F22
-    %00000100,        // F23
-    %00001000,        // F24
-    %00010000,        // F25
-    %00100000,        // F26
-    %01000000,        // F27
-    %10000000         // F28
+  const
+  _28_STEP_TABLE: array[0..28] of Byte = (
+    %00000000,    // Stop
+    %00000010,    // Step 1
+    %00010010,    // Step 2
+    %00000011,    // Step 3
+    %00010011,    // Step 4
+    %00000100,    // Step 5
+    %00010100,    // Step 6
+    %00000101,    // Step 7
+    %00010101,    // Step 8
+    %00000110,    // Step 9
+    %00010110,    // Step 10
+    %00000111,    // Step 11
+    %00010111,    // Step 12
+    %00001000,    // Step 13
+    %00011000,    // Step 14
+    %00001001,    // Step 15
+    %00011001,    // Step 16
+    %00001010,    // Step 17
+    %00011010,    // Step 18
+    %00001011,    // Step 19
+    %00011011,    // Step 20
+    %00001100,    // Step 21
+    %00011100,    // Step 22
+    %00001101,    // Step 23
+    %00011101,    // Step 24
+    %00001110,    // Step 25
+    %00011110,    // Step 26
+    %00001111,    // Step 27
+    %00011111     // Step 28
+  );
+
+  _14_STEP_TABLE: array[0..14] of Byte = (
+    %00000000,    // Stop
+    %00000010,    // Step 1
+    %00000011,    // Step 3
+    %00000100,    // Step 5
+    %00000101,    // Step 7
+    %00000110,    // Step 9
+    %00000111,    // Step 11
+    %00001000,    // Step 13
+    %00001001,    // Step 15
+    %00001010,    // Step 17
+    %00001011,    // Step 19
+    %00001100,    // Step 21
+    %00001101,    // Step 23
+    %00001110,    // Step 25
+    %00001111     // Step 27
   );
   
 const
   PS_ALLOCATED             = $01;                                               // The Proxy is Allocated
   
-  MSG_DCC_ADDRESS_ALLOCATED = $01;                                               // Need to send a Message for the DCC Address was Allocated
+  MSG_SEND_DCC_ADDRESS_ALLOCATED = $01;                                               // Need to send a Message for the DCC Address was Allocated
   
 type
   TDccProxyData = record                                                        // Structure stored in RAM on a node and vnode basis
     State: Byte;                                                                // State of the Proxy Node
     MsgFlags: Byte;                                                             // Message Flags for messages that need to be sent in the Statemachine
     Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
+    SpeedSteps: Byte;                                                           // TEMPORARY - PUT IN CONFIGURATION
     Functions: DWord;                                                           // Function State (F0..F28)
     Address: Word;                                                              // DCC Address
   end;
@@ -129,7 +150,64 @@ implementation
 // node in the AssignRAMAddress function below
 var
   VolatileData: array[0..MAX_NODE_COUNT - 1] of TDccProxyData;
-  
+ 
+procedure UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, FunctionAddress, FunctionValue: Byte; var DCCPacket: TDCCPacket; ProxyData: PDccProxyData);
+var
+  WideFunctionMask: DWord;
+  FunctionMask, FunctionExtendedCode: Byte;
+begin
+  WideFunctionMask := $00000001;
+  WideFunctionMask := WideFunctionMask shl FunctionAddress;   // Set the correct Function Bit
+  ProxyData^.Functions := ProxyData^.Functions and not WideFunctionMask; // Clear the bit
+  if FunctionValue > 0 then
+  ProxyData^.Functions := ProxyData^.Functions or WideFunctionMask;      // Set the bit if needed
+
+  if FunctionAddress < 29 then
+  begin
+    if FunctionAddress < 5 then
+    begin
+      FunctionMask := (ProxyData^.Functions shr 1) and $0F;
+      FunctionMask.4 := ProxyData^.Functions.0;
+      FunctionMask := FunctionMask or %10000000;                    // Opcode bits
+    end else
+    if FunctionAddress < 9 then
+    begin
+      FunctionMask := (ProxyData^.Functions shr 5) and $0F;
+      FunctionMask := FunctionMask or %10110000;                    // Opcode bits
+    end else
+    if FunctionAddress < 13 then
+    begin
+      FunctionMask := (ProxyData^.Functions shr 9) and $0F;
+      FunctionMask := FunctionMask or %10100000;                    // Opcode bits
+    end else
+    if FunctionAddress < 21 then
+    begin
+      FunctionMask := ProxyData^.Functions shr 13;
+      FunctionExtendedCode := %11011110
+    end
+  end else
+  begin
+    FunctionMask := ProxyData^.Functions shr 21;
+    FunctionExtendedCode := %11011111
+  end;
+
+  // Now create the DCC Packet
+  if AddressHi and $C0 = $C0 then
+  begin    // UART1_Write_Text('Long Address'+LF);
+    if FunctionAddress < 13 then
+      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionMask, 0, 0, 3)
+    else
+      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionExtendedCode, FunctionMask, 0, 4)
+  end else
+  begin
+    if FunctionAddress < 13 then
+      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionMask, 0, 0, 0, 3)
+    else
+      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionExtendedCode, FunctionMask, 0, 0, 4)
+  end;
+
+  NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+end;
   
 function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
 begin
@@ -210,6 +288,7 @@ begin
     VolatileData[i].Functions := 0;
     VolatileData[i].MsgFlags := 0;
     VolatileData[i].Address := 0;
+    VolatileData[i].SpeedSteps := 28; // Default
   end
 end;
 
@@ -245,7 +324,7 @@ begin
     begin
       Address := (Event^[4] shl 8) or Event^[5];
       if ProxyData^.Address = Address then
-        ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_DCC_ADDRESS_ALLOCATED;
+        ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;
     end
   end
 end;
@@ -365,14 +444,16 @@ end;
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
   ProxyData: PDccProxyData;
-  FunctionAddress: Word;
-  SpeedInt: Integer;
+  FunctionAddress: DWord;
+  FunctionValue: Word;
+  AbsoluteSpeed: real;
+  SpeedStep: Word;
   DCCPacket: TDCCPacket;
-  AddressHi, AddressLo, FunctionMask, FunctionExtendedCode, FunctionValue: Byte;
-  WideFunctionMask: DWord;
+  AddressHi, AddressLo: Byte;
+  IsForward: Boolean;
 begin
   ProxyData := GetProxyData(Node);
-  AddressHi := (ProxyDAta^.Address shr 8) and $00FF;
+  AddressHi := (ProxyData^.Address shr 8) and $00FF;     // Split the address to make clear when loading bytes
   AddressLo := ProxyDAta^.Address and $00FF;
   case CANBuffer^.DataBytes[2] and TRACTION_PROTOCOL_MASK of
     TRACTION_OLCB :
@@ -380,12 +461,56 @@ begin
         case CANBuffer^.DataBytes[2] and TRACTION_OP_MASK of
           TRACTION_OP_SPEED_DIR :
             begin
-            
-              SpeedInt := HalfToFloat( (CANBuffer^.DataBytes[3] shl 8) or (CANBuffer^.DataBytes[4]));
-
+              ProxyData^.Speed := (CANBuffer^.DataBytes[3] shl 8) or (CANBuffer^.DataBytes[4]);
+              IsForward := ProxyData^.Speed and $8000 <> $8000;
+              AbsoluteSpeed := HalfToFloat(ProxyData^.Speed and not $8000);
+              case ProxyData^.SpeedSteps of
+                14  : begin
+                        AbsoluteSpeed := (14/100) * AbsoluteSpeed;
+                        SpeedStep := Word( AbsoluteSpeed);
+                        SpeedStep := _14_STEP_TABLE[SpeedStep];
+                        if IsForward then
+                          SpeedStep := SpeedStep or $60
+                        else
+                          SpeedStep := SpeedStep or $40;
+                        if AddressHi and $C0 = $C0 then
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
+                        else
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
+                        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                      end;
+                28  : begin
+                        AbsoluteSpeed := (28/100) * AbsoluteSpeed;
+                        SpeedStep := Word( AbsoluteSpeed);
+                        SpeedStep := _28_STEP_TABLE[SpeedStep];
+                        if IsForward then
+                          SpeedStep := SpeedStep or $60
+                        else
+                          SpeedStep := SpeedStep or $40;
+                        if AddressHi and $C0 = $C0 then
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
+                        else
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
+                        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                      end;
+                128 : begin
+                        if AddressHi and $C0 = $C0 then
+                        begin
+                          AbsoluteSpeed := (127/100) * AbsoluteSpeed;
+                          SpeedStep := Word( AbsoluteSpeed);
+                          if IsForward then
+                            SpeedStep := SpeedStep or $80;
+                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
+                          NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                        end;
+                      end;
+              end;
             end;
           TRACTION_OP_FUNCTION :
             begin
+              FunctionAddress := (DWord( CANBuffer^.DataBytes[3]) shl 16) or (DWord( CANBuffer^.DataBytes[4]) shl 8) or DWord( CANBuffer^.DataBytes[5]);
+              FunctionValue := (DWord( CANBuffer^.DataBytes[6]) shl 8) or DWord( CANBuffer^.DataBytes[7]);
+              UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, Byte( FunctionAddress), Byte( FunctionValue), DCCPacket, ProxyData);
             end;
         end;
       end;
@@ -398,26 +523,16 @@ begin
               if AddressHi and $C0 = $C0 then
               begin    // Extended Address
                 if CANBuffer^.DataBytes[4] = 128 then
-                begin
-                {  UART1_Write_Text('Extended Address; 128 Step'+LF);IntToHex(AddressHi, s1);UART1_Write_Text(s1+LF);IntToHex(AddressLo, s1);UART1_Write_Text(s1+LF);IntToHex(ProxyData^.Speed, s1);UART1_Write_Text(s1+LF);     }
-                  NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, ProxyData^.Speed, 0, 4);
-                end
+                  NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, ProxyData^.Speed, 0, 4)
                 else
-                begin
-             {   UART1_Write_Text('Extended Address; 14/28 Step'+LF); IntToHex(AddressHi, s1);UART1_Write_Text(s1+LF); IntToHex(AddressLo, s1);UART1_Write_Text(s1+LF);IntToHex(ProxyData^.Speed, s1);UART1_Write_Text(s1+LF);}
                   NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, ProxyData^.Speed, 0, 0, 3);
-                end;
                 NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
               end else
               begin    // Short Address
                 if CANBuffer^.DataBytes[4] < 128 then // Can't do short address with 128 Step
                 begin
-              {   UART1_Write_Text('Short Address; 14/28 Step'+LF); IntToHex(AddressLo, s1); UART1_Write_Text(s1+LF); IntToHex(ProxyData^.Speed, s1); UART1_Write_Text(s1+LF); }
                   NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, ProxyData^.Speed, 0, 0, 0, 2);
                   NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                end else
-                begin
-                {  UART1_Write_Text('Short Address; 128 Step: INVALID'+LF); }
                 end
               end;
             end;
@@ -425,68 +540,9 @@ begin
             begin
               FunctionAddress := (CANBuffer^.DataBytes[4] shl 8) or CANBuffer^.DataBytes[5];
               FunctionValue := CANBuffer^.DataBytes[6];
-              
               case CANBuffer^.DataBytes[3] of
-                DCC_FUNCTION_28 :
-                  begin
-                 { UART1_Write_Text('DCC_FUNCTION_28'+LF); IntToHex(CANBuffer^.DataBytes[2], s1); UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[3], s1); UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[4], s1); UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[5], s1);UART1_Write_Text(s1+LF); IntToHex(CANBuffer^.DataBytes[6], s1); UART1_Write_Text(s1+LF);}
-                    
-                    WideFunctionMask := $00000001;
-                    WideFunctionMask := WideFunctionMask shl FunctionAddress;   // Set the correct Function Bit
-                    ProxyData^.Functions := ProxyData^.Functions and not WideFunctionMask; // Clear the bit
-                    if FunctionValue > 0 then
-                      ProxyData^.Functions := ProxyData^.Functions or WideFunctionMask;      // Set the bit if needed
-
-                    if FunctionAddress < 29 then
-                    begin
-                      if FunctionAddress < 5 then
-                      begin
-                        FunctionMask := (ProxyData^.Functions shr 1) and $0F;
-                        FunctionMask.4 := ProxyData^.Functions.0;
-                        FunctionMask := FunctionMask or %10000000;                    // Opcode bits
-                      end else
-                      if FunctionAddress < 9 then
-                      begin
-                        FunctionMask := (ProxyData^.Functions shr 5) and $0F;
-                        FunctionMask := FunctionMask or %10110000;                    // Opcode bits
-                      end else
-                      if FunctionAddress < 13 then
-                      begin
-                        FunctionMask := (ProxyData^.Functions shr 9) and $0F;
-                        FunctionMask := FunctionMask or %10100000;                    // Opcode bits
-                      end else
-                      if FunctionAddress < 21 then
-                      begin
-                        FunctionMask := ProxyData^.Functions shr 13;
-                        FunctionExtendedCode := %11011110
-                      end else
-                      begin
-                        FunctionMask := ProxyData^.Functions shr 21;
-                        FunctionExtendedCode := %11011111
-                      end;
-                      
-                      // Now create the DCC Packet
-                      if AddressHi and $C0 = $C0 then
-                      begin    // UART1_Write_Text('Long Address'+LF);
-                        if FunctionAddress < 13 then
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionMask, 0, 0, 3)
-                        else
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionExtendedCode, FunctionMask, 0, 4)
-                      end else
-                      begin
-                        if FunctionAddress < 13 then
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionMask, 0, 0, 0, 3)
-                        else
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionExtendedCode, FunctionMask, 0, 0, 4)
-                      end;
-
-                      NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                    end
-                  end;
-                DCC_FUNCTION_32k :
-                  begin
-                    UART1_Write_Text('DCC_FUNCTION_32k'+LF);
-                  end;
+                DCC_FUNCTION_28 :  UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, Byte( FunctionAddress), Byte( FunctionValue), DCCPacket, ProxyData);
+                DCC_FUNCTION_32k : begin end; // UART1_Write_Text('DCC_FUNCTION_32k'+LF);
               end;
             end;
           TRACTION_OP_PROXY_MGMT :
@@ -495,10 +551,18 @@ begin
                 DCC_ALLOCATE_ADDRESS :
                   begin
                     ProxyData^.State := ProxyData^.State or PS_ALLOCATED;
-                    ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
-                    ProxyData^.Address := Word ((CANBuffer^.DataBytes[4] shl 8)) or CANBuffer^.DataBytes[5];  // This is in NMRA DCC format for short/long address
+                    ProxyData^.SpeedSteps := CANBuffer^.DataBytes[4];                         // TO DO: NEED TO WRITE TO CONFIGURATION
+                    ProxyData^.Address := Word ((CANBuffer^.DataBytes[5] shl 8)) or CANBuffer^.DataBytes[6];  // This is in NMRA DCC format for short/long address
+                  end;
+                DCC_DEALLOCATE_ADDRESS :
+                  begin
+                    ProxyData^.State := ProxyData^.State and not PS_ALLOCATED;
+                    ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
+                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
                   end;
                 end;
             end;
@@ -517,7 +581,9 @@ begin
   // We are in a CAN Lock block already
   Result := False;
   ProxyData := GetProxyData(Node);
-  if ProxyData^.MsgFlags and MSG_DCC_ADDRESS_ALLOCATED = MSG_DCC_ADDRESS_ALLOCATED then
+  
+  // Handle the oddball DCC Address Event that can come and go
+  if ProxyData^.MsgFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
   begin
     DataBytesPtr^[0] := $06;
     DataBytesPtr^[1] := $01;
@@ -529,7 +595,7 @@ begin
     DataBytesPtr^[7] := $01;
     if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False) then
     begin
-      ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_DCC_ADDRESS_ALLOCATED;
+      ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
       Result := True;
     end
   end;

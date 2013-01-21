@@ -29,6 +29,7 @@ uses
   _25AAxxxx,
   NMRAnetBufferPools,
   NMRAnetNode,
+  HelperFunctions,
   NodeIDs;
 
 {$I Options.inc}
@@ -108,6 +109,9 @@ var
   x, y: Word;
   TickTime: real;
   LastRxTime, LastStateMachineTime, LastDCCTime: Word;
+  
+  ADC_Ticker: LongInt;
+  PrevTrackCurrent, TrackCurrent: Word;
 
   ProxyData: PDccProxyData;
 begin
@@ -150,16 +154,32 @@ begin
   LastDCCTime := 0;
 
   j := 0;
+  ADC_Ticker := 0;
+  PrevTrackCurrent := 0;
   
   TON_T3CON_bit := 1;       // Turn on Timer 3 to time loops
   TON_T4CON_bit := 1;       // Turn on Timer 3 to time loops
   TON_T5CON_bit := 1;
 
+  ADC1_Read(0);  // cheating, intializes and set to Analog input
+  
   while (TRUE) do
   begin
     ActiveNode := NMRAnetNode_NextNode;
     if ActiveNode <> PNMRAnetNode( nil) then
     begin
+    
+      Inc(ADC_Ticker);
+      if ADC_Ticker > 20000 then
+      begin
+        TrackCurrent := ADC1_Get_Sample(0) - 3;
+        TrackCurrent := (TrackCurrent + PrevTrackCurrent) div 2;
+        FloatToStr( (TrackCurrent * 0.520 * 0.0032227), s1);      // .00322266 V/Bit * 0.520A/V * Bits =
+        PrevTrackCurrent := TrackCurrent;
+        TruncFloat(@s1, 3, 6);
+        UART1_Write_Text('ADC: '+ s1 + ' Amps' + LF);
+        ADC_Ticker := 0;
+      end;
     
       TMR3 := 0;
       NMRAnetStateMachine_Process(ActiveNode);

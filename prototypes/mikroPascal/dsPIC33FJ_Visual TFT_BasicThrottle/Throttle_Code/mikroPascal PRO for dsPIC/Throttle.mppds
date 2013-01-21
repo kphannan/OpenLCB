@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Throttle_driver.mpas
+Value=..\..\..\Library\CANBus\CANStorage.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -53,10 +53,10 @@ File4=MCU_Setup_dsPIC33FJ256GP710A.mpas
 File5=..\..\..\Library\CANBus\CANStorage.mpas
 File6=..\..\..\Library\dsPIC33F\dsPIC33_DMA.mpas
 File7=NMRAnetAppDefines.mpas
-File8=..\..\..\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\CANBuffers.mpas
-File9=..\..\..\Library\NMRAnet\NMRAnetNode.mpas
-File10=..\..\..\Library\NMRAnet\NMRAnetDefines.mpas
-File11=Throttle_driver.mpas
+File8=..\..\..\Library\NMRAnet\NMRAnetNode.mpas
+File9=..\..\..\Library\NMRAnet\NMRAnetDefines.mpas
+File10=Throttle_driver.mpas
+File11=NMRAnetAppCallbacks.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -65,16 +65,22 @@ Count=0
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=9
+Count=15
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
-Path4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
-Path5=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
-Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
-Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
-Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
+Path5=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
+Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
+Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
+Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
+Path9=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
+Path10=E:\trunk\prototypes\mikroPascal\Library\CANBus\
+Path11=E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
+Path12=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path13=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path14=E:\trunk\prototypes\mikroPascal\Library\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -82,7 +88,7 @@ Count=0
 [PLDS]
 Count=0
 [Useses]
-Count=11
+Count=12
 File0=TFT
 File1=TFT_Fonts
 File2=ADC
@@ -94,6 +100,7 @@ File7=Conversions
 File8=ECAN
 File9=Button
 File10=UART
+File11=TFT_Defs
 [EXPANDED NODES]
 Node1=Sources
 Node2=Other Files

@@ -71,7 +71,7 @@ uses
 // Forward declarations
 function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord; DestinationAliasID: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean): Boolean; forward;
 function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean; forward;
-function NMRABusBufferAvailable: Boolean; forward;
+function NMRABusTxBufferAvailable: Boolean; forward;
 
 implementation
 // *****************************************************************************
@@ -201,7 +201,7 @@ var
   MTI: DWord;
 begin
   Result := False;
-  if NMRABusBufferAvailable then
+  if NMRABusTxBufferAvailable then
   begin
 
     {$IFDEF TRACE_DATAGRAM_SEND}IntToStr(Datagram^.iByteCount, s1); UART1_Write_Text('ByteCount = '+s1+LF);{$ENDIF}
@@ -414,14 +414,14 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NMRABusBufferAvailable
+//  procedure NMRABusTxBufferAvailable
 //     Parameters:
 //     Returns:
 //
 //     Description:
 //
 // *****************************************************************************
-function NMRABusBufferAvailable: Boolean;
+function NMRABusTxBufferAvailable: Boolean;
 begin
   Result := CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0
 end;
@@ -564,7 +564,7 @@ begin
     end else
     if NMRAnetNode_TestMsgFlags(Node, MF_VERIFY_NODE_ID, False) then
     begin     //  UART1_Write_Text('MF_VERIFY_NODE_ID'+LF);
-      if NMRABusBufferAvailable then
+      if NMRABusTxBufferAvailable then
       begin    //  UART1_Write_Text('MF_VERIFY_NODE_ID /w Buffer'+LF);
         NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(Node, CANBuffer);
         TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_VERIFIED_NODE_ID_NUMBER, 0, 6, @CANBuffer^.DataBytes, False);
@@ -586,7 +586,7 @@ begin
       {$IFDEF TRACE_BUFFER_ADDRESSES}UART1_Write_Text('BaseBuffer Statemachine :'); WordToHex(BaseBuffer, s1); UART1_Write_Text('$'+s1+LF); {$ENDIF}
       case BaseBuffer^.mCode of
         BMC_PROTOCOL_SUPPORT_QUERY :        begin
-                                              if NMRABusBufferAvailable then
+                                              if NMRABusTxBufferAvailable then
                                               begin
                                                 NMRAnetUtilities_ZeroCANData(DataBytes);
                                                 {$IFDEF SUPPORT_VIRTUAL_NODES}
@@ -609,7 +609,7 @@ begin
                                             end;
         {$IFNDEF BOOTLOADER}
         BMC_SIMPLE_NODE_INFO_REQEUST :      begin
-                                              if NMRABusBufferAvailable then
+                                              if NMRABusTxBufferAvailable then
                                               begin
                                                 i := 0;
                                                 while (BaseBuffer^.StateMachine <> STATE_ACDI_DONE) and (i < 6) do   // All messages have the Destination Alias as the first 2 bytes so only 6 left to use
@@ -709,47 +709,66 @@ begin
     if BaseBuffer <> nil then
       Exit;              // Don't interleave Buffer Replies...
       
-    {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-      if NMRABusBufferAvailable then
+    if NMRABusTxBufferAvailable then
+    begin
+      if NMRAnetNode_IsAnyConsumerEventSet(Node) then
       begin
-        if NMRAnetNode_IsAnyConsumerEventSet(Node) then
+        EventIndex := NMRAnetNode_NextConsumerEventFlag(Node, State);
+        if EventIndex > -1 then
         begin
-          EventIndex := NMRAnetNode_NextConsumerEventFlag(Node, State);
-          if EventIndex > -1 then
+          if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
           begin
             {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
-              if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-                DataBytesPtr := PCAN_DataBytes( @SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex])
-              else
-            {$ENDIF}
-              DataBytesPtr := PCAN_DataBytes( @SUPPORTED_EVENTS_CONSUMED[EventIndex]);
+            DataBytesPtr := PCAN_DataBytes( @SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex]);
             case State of
               EVENT_STATE_UNKOWN : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_UNKNOWN, 0, 8, DataBytesPtr, False);
               EVENT_STATE_VALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False);
               EVENT_STATE_INVALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_CLEAR, 0, 8, DataBytesPtr, False);
             end;
-          end
-        end else
-        if NMRAnetNode_IsAnyProducerEventSet(Node) then
+            {$ENDIF}
+          end else
+          begin
+            {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+            DataBytesPtr := PCAN_DataBytes( @SUPPORTED_EVENTS_CONSUMED[EventIndex]);
+            case State of
+              EVENT_STATE_UNKOWN : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_UNKNOWN, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_VALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_INVALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_CONSUMER_IDENTIFIED_CLEAR, 0, 8, DataBytesPtr, False);
+            end;
+            {$ENDIF}
+          end;
+        end
+      end else
+      if NMRAnetNode_IsAnyProducerEventSet(Node) then
+      begin
+        State := 0; // Suppress warnings
+        EventIndex := NMRAnetNode_NextProducerEventFlag(Node, State);
+        if EventIndex > -1 then
         begin
-          EventIndex := NMRAnetNode_NextProducerEventFlag(Node, State);
-          if EventIndex > -1 then
+          if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
           begin
             {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
-              if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-                DataBytesPtr := PCAN_DataBytes( @SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex])
-              else
-            {$ENDIF}
-              DataBytesPtr := PCAN_DataBytes( @SUPPORTED_EVENTS_PRODUCED[EventIndex]);
+            DataBytesPtr := PCAN_DataBytes( @SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex]);
             case State of
               EVENT_STATE_UNKOWN : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_UNKNOWN, 0, 8, DataBytesPtr, False);
               EVENT_STATE_VALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False);
               EVENT_STATE_INVALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_CLEAR, 0, 8, DataBytesPtr, False);
             end;
+            {$ENDIF}
+          end else
+          begin
+            {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}     
+            DataBytesPtr := PCAN_DataBytes( @SUPPORTED_EVENTS_PRODUCED[EventIndex]);
+            case State of
+              EVENT_STATE_UNKOWN : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_UNKNOWN, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_VALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False);
+              EVENT_STATE_INVALID : TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_PRODUCER_IDENTIFIED_CLEAR, 0, 8, DataBytesPtr, False);
+            end;
+            {$ENDIF}
           end
-        end;
+        end
       end;
-    {$ENDIF}
+    end;
 
     DatagramBuffer := NMRAnetUtilities_NextDatagramBuffer(Node);                // Grab the next completed Datagram to work on
     if DatagramBuffer <> nil then
@@ -771,7 +790,7 @@ begin
                                                  STATE_MEM_CONFIG_SEND_REPLY           : begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_SEND_REPLY'+LF); {$ENDIF}
                                                                                            if DatagramBuffer^.DataBytes[1] and $C0 = MCP_OPERATION then
                                                                                            begin
-                                                                                             if NMRABusBufferAvailable then
+                                                                                             if NMRABusTxBufferAvailable then
                                                                                              begin
                                                                                                TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
                                                                                                DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_OPERATION_DATAGRAM
@@ -779,7 +798,7 @@ begin
                                                                                            end else
                                                                                            if DatagramBuffer^.DataBytes[1] and $C0 = MCP_READ then
                                                                                            begin
-                                                                                             if NMRABusBufferAvailable then
+                                                                                             if NMRABusTxBufferAvailable then
                                                                                              begin
                                                                                                TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
                                                                                                DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_READ_DATAGRAM
@@ -936,7 +955,7 @@ begin
                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM;
                                                                                           end;
                                                STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM : begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM'+LF);    {$ENDIF}
-                                                                                            if NMRABusBufferAvailable then
+                                                                                            if NMRABusTxBufferAvailable then
                                                                                             begin
                                                                                               TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
                                                                                               NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
@@ -1120,7 +1139,7 @@ begin
         if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then
           Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
         else begin
-          if NMRABusBufferAvailable then
+          if NMRABusTxBufferAvailable then
           begin
             NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(Node, @CANBuffer);
             TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_INITIALIZATION_COMPLETE, 0, 6, @CANBuffer.DataBytes, False);
@@ -1178,7 +1197,7 @@ begin
       end;
     STATE_NMRABUS_TAKE_OFFLINE :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_TAKE_OFFLINE'+LF); {$ENDIF}
-        if NMRABusBufferAvailable then
+        if NMRABusTxBufferAvailable then
         begin
           TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_PC_EVENT_REPORT, 0, 8, @EVENT_DUPLICATE_ID_DETECTED, False);
           Node^.iStateMachine := STATE_NMRABUS_OFFLINE

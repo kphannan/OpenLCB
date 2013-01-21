@@ -20,6 +20,7 @@ type
   function IsPrintableChar(C: Char): Boolean;
   function StreamAsString(Stream: TStream): string;
   function GetTickCount : DWORD;
+  function SetBooleanCaption(Caption: string; Test: Boolean): string;
 
 implementation
 
@@ -37,6 +38,14 @@ begin
 {$ELSE}
   Result := LclIntf.GetTickCount mod High(LongInt);
 {$ENDIF}
+end;
+
+function SetBooleanCaption(Caption: string; Test: Boolean): string;
+begin
+  if Test then
+    Result := Caption + 'True'
+  else
+    Result := Caption + 'False'
 end;
 
 function ValidateHex(TestHexVal: string): string;

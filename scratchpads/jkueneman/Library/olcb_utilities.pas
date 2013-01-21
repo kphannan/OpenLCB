@@ -93,6 +93,7 @@ type
 
     constructor Create;
     destructor Destroy; override;
+    procedure CopyTo(Target: TOpenLCBMessageHelper);
     function Decompose(MessageStr: AnsiString): Boolean;
     function Encode: AnsiString;
     procedure Load(ALayer: TOpenLCBLayer; AMTI: DWord; ASourceAlias: Word; ADestinationAlias: Word; ADataCount: Integer; AData0, AData1, AData2, AData3, AData4, AData5, AData6, AData7: Byte);
@@ -120,6 +121,9 @@ type
   function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
   function ProtocolSupportReplyToString(Mask: QWord): string;
   function AddressSpaceToString(AddressSpace: Byte): string;
+  function NodeIDToDotHex(NodeID: QWord): string;
+  function DotHexToNodeID(NodeID: string): QWord;
+  function EventToDoxHex(Event: TEventID): string;
 
   function GetTickCount : DWORD;
 
@@ -286,7 +290,7 @@ begin
     MTI_DATAGRAM_REJECTED_REPLY        : Result := 'Datagram Rejected Reply';
 
     MTI_TRACTION_PROTOCOL              : Result := 'Traction Protocol'
-  else
+   else
     Result := 'Unknown MTI';
   end;
 end;
@@ -327,11 +331,11 @@ begin
   else
   if (EventID^[0] = $06) and (EventID^[1] = $01) then
   begin
-    Address := ((EventID^[4] shl 8) or EventID^[5]) and $3FFF;  // Strip off the Extended bits if they are there
-    if EventID^[4] and $C0 = $C0 then
-      Result := 'EVENT_TRAIN_DCC_ADDRESS : Extended Address;  Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
+    Address := ((EventID^[4] shl 8) or EventID^[5]) and $3FFF;  // Strip off the Extended bits if there are there
+    if EventID^[5] and $C0 = $C0 then
+      Result := 'EVENT_TRAIN_QUERY_DCC_ADDRESS : Extended Address = ' + IntToStr(Address) + ', (0x' + IntToHex(Address, 4) + ')'
     else
-      Result := 'EVENT_TRAIN_DCC_ADDRESS : Short Address;     Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
+      Result := 'EVENT_TRAIN_QUERY_DCC_ADDRESS : Short Address = ' + IntToStr(Address) + ', (0x' + IntToHex(Address, 4) + ')'
   end
   else
     Result := 'Unknown Event'
@@ -376,6 +380,19 @@ end;
 destructor TOpenLCBMessageHelper.Destroy;
 begin
   inherited Destroy
+end;
+
+procedure TOpenLCBMessageHelper.CopyTo(Target: TOpenLCBMessageHelper);
+begin
+  Target.FDestinationAliasID := DestinationAliasID;
+  Target.FHasDestinationAddress := HasDestinationAddress;
+  Target.FForwardingBitNotSet := ForwardingBitNotSet;
+  Target.FSourceAliasID := SourceAliasID;
+  Target.FData := Data;
+  Target.FDataCount := DataCount;
+  Target.FLayer := Layer;
+  Target.FMTI := MTI;
+  Target.FUnimplementedBitsSet := UnimplementedBitsSet;
 end;
 
 function TOpenLCBMessageHelper.Decompose(MessageStr: AnsiString): Boolean;
@@ -584,7 +601,7 @@ begin
     Result := MessageString;
     S_Len := Length(Result);
     for j := 0 to (28-S_Len) do
-      Result := Result + ' ';
+      Result := Result + ' ' ;
 
     if Sending then
       Result := Result + '  Send:   '
@@ -592,12 +609,12 @@ begin
       Result := Result + '  Recive: ';
 
     Result := Result + 'From = 0x' + IntToHex( LocalHelper.SourceAliasID, 4);
-    Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI);
+    Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
 
     // SNII/SNIP
     if LocalHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
     begin
-      Result := Result + '  [';
+      Result := Result + ' [';
       for j := 2 to LocalHelper.DataCount - 1 do                     // Skip the Address
       begin
         if IsPrintableChar( Chr( LocalHelper.Data[j])) then
@@ -613,9 +630,9 @@ begin
       (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_UNKNOWN) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFY) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_SET) or
       (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_CLEAR) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_UNKNOWN)
     then begin
-      S_Len := Length(Result);
-      for j := 94 downto S_Len do
-        Result := Result + ' ';
+  //    S_Len := Length(Result);
+  //    for j := 94 downto S_Len do
+ //       Result := Result + ' ';
 
         Result := Result + 'EventID: ' + EventIDToString(@LocalHelper.Data);
     end;
@@ -623,9 +640,9 @@ begin
     // Traction Protocol
     if LocalHelper.MTI = MTI_TRACTION_PROTOCOL then
     begin
-      S_Len := Length(Result);
-      for j := 94 downto S_Len do
-        Result := Result + ' ';
+  //    S_Len := Length(Result);
+  //    for j := 94 downto S_Len do
+  //      Result := Result + ' ';
 
       case LocalHelper.Data[2] and TRACTION_PROTOCOL_MASK of
         TRACTION_DCC:
@@ -634,12 +651,12 @@ begin
               TRACTION_OP_SPEED_DIR :
                 begin
                   Result := Result + 'DCC Speed/Dir Operation; Speed = 0x';
-                  Result := Result + IntToHex( LocalHelper.Data[3] and %00011111, 2) + '; Direction = ';
+                  Result := Result + IntToHex( LocalHelper.Data[3] and %00011111, 2) + ', Direction = ';
                   if LocalHelper.Data[3] and %00100000 = %00100000 then
                     Result := Result + 'Fwd; Steps = '
                   else
                     Result := Result + 'Rev; Steps = ';
-                  Result := Result + IntToStr(LocalHelper.Data[4]) + '; Raw Speed Byte = 0x' + IntToHex(LocalHelper.Data[3], 2)
+                  Result := Result + IntToStr(LocalHelper.Data[4]) + ', Raw Speed Byte = 0x' + IntToHex(LocalHelper.Data[3], 2)
                 end;
               TRACTION_OP_FUNCTION :
                 begin
@@ -656,14 +673,21 @@ begin
                 end;
               TRACTION_OP_PROXY_MGMT :
                 begin
-                  Result := Result + 'DCC Proxy Allocate Operation; ';
-
-                  Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
-                  if LocalHelper.Data[4] and $C0 = $C0 then
-                    Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address;  Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
-                  else
-                    Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address;     Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
-
+                  case LocalHelper.Data[3] of
+                     TRACTION_DCC_ALLOCATE_ADDRESS :
+                       begin
+                         Result := Result + 'DCC Proxy Allocate Operation, ';
+                         Address := ((LocalHelper.Data[5] shl 8) or LocalHelper.Data[6]) and $3FFF;  // Strip off the Extended bits if they are there
+                         if LocalHelper.Data[4] and $C0 = $C0 then
+                           Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
+                         else
+                           Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
+                       end;
+                     TRACTION_DCC_DEALLOCATE_ADDRESS :
+                       begin
+                         Result := Result + 'DCC Proxy De-Allocate Operation, ';
+                       end
+                  end
                 end
               else
                 Result := Result + 'Unknown DCC Traction Operation';
@@ -688,7 +712,7 @@ begin
                 end;
               TRACTION_OP_FUNCTION :
                 begin
-                  Result := Result + 'OLCB Traction Operation; Speed = ';
+                  Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';
                 end
               else
                 Result := Result + 'Unknown OLCB Traction Operation';
@@ -736,6 +760,44 @@ begin
     $FA : Result := 'Function Memory';
   else
     Result := '[Unknown Memory]';
+  end;
+end;
+
+function NodeIDToDotHex(NodeID: QWord): string;
+var
+  Dot: string;
+begin
+  Dot := '.';
+  Result := IntToHex(NodeID, 1);
+  if Length(Result) < 12 then
+    Result := '0' + Result;
+  Insert(Dot, Result, 3);
+  Insert(Dot, Result, 6);
+  Insert(Dot, Result, 9);
+  Insert(Dot, Result, 12);
+  Insert(Dot, Result, 15);
+end;
+
+function DotHexToNodeID(NodeID: string): QWord;
+begin
+  Result := StrToInt( StringReplace(NodeID, '.', '', [rfReplaceAll, rfIgnoreCase]));
+end;
+
+function EventToDoxHex(Event: TEventID): string;
+var
+  i: Integer;
+  ByteStr: string;
+begin
+  Result := '';
+  for i := 0 to MAX_EVENT_LEN - 1 do
+  begin
+    ByteStr := IntToHex(Event[i], 2);
+    if Length(ByteStr) < 1 then
+      ByteStr := '0' + ByteStr;
+    if i < MAX_EVENT_LEN - 1 then
+      Result := Result + ByteStr + '.'
+    else
+      Result := Result + ByteStr
   end;
 end;
 

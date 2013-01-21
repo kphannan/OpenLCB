@@ -29,26 +29,23 @@ uses
   NMRAnetDefines,
   NMRAnetNode,
   NMRAnetUtilities,
+  NMRAnetXpressnetDefines,
   NMRAnetDefinesShared;
 
 type
-  TDCCVolatileData = record
-    Speed: Word;                                                                // Float 16 so negative is reverse
-    Functions: DWord;                                                           // Function State (F0..F31)
+  TXpressNetDeviceVolatileData = record
+    DeviceID: Word;
   end;
-  PDCCVolatileData = ^TDCCVolatileData;
+  PXpressNetDeviceVolatileData = ^TXpressNetDeviceVolatileData;
 
 const
-  MAX_DCC_CFG_DATA = 1024;                                                      // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TDCCConfigurationData up to 1024
+  MAX_DEVICE_CFG_DATA = 1024;                                                      // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TDeviceConfigurationData up to 1024
 
 type
-  TDCCConfigurationData = record
-    FunctionLatch: DWord;                                                       // If the Function is latching or not, F0..F31    //   4 Bytes
-    FunctionName: array[32] of string[16];                                      // Names for the Functions                        // 512 Bytes
-    ConsistNext,                                                                //                                                //   4 Bytes
-    ConsistPrev: TNodeID;                                                       //                                                //   4 Bytes
+  TDeviceConfigurationData = record
+    Dummy: Word;                                                                // Need something
   end;
-  PDCCConfigurationData = ^TDCCConfigurationData;
+  PDeviceConfigurationData = ^TDeviceConfigurationData;
 
 procedure NMRAnetAppCallbacks_Initialize;
 function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
@@ -56,6 +53,7 @@ procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; 
 function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
 procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
 procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+
 function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 function AppCallback_EventsIdentify: Boolean;
@@ -64,15 +62,27 @@ procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer)
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 
+// Extracts the Volatile Data from the passed node for the Device
+function GetDeviceData(Node: PNMRAnetNode): PXpressNetDeviceVolatileData;
+
 implementation
 
 // Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
 // node in the AssignRAMAddress function below
 var
-  VolatileData: array[0..MAX_NODE_COUNT - 1] of TDCCVolatileData;
+  VolatileData: array[0..MAX_NODE_COUNT - 1] of TXpressNetDeviceVolatileData;
+  
+  
+function GetDeviceData(Node: PNMRAnetNode): PXpressNetDeviceVolatileData;
+begin
+  Result := nil;
+  if Node <> nil then
+    Result := PXpressNetDeviceVolatileData( Node^.RAMAddress);
+end;
   
 //******************************************************************************
-//  Initialize the VolatileData structure
+//  NMRAnetStateMachine_Initialize
+//    Called from the NMRAnetStateMachine_Initialize is called during startup
 //******************************************************************************
 procedure NMRAnetAppCallbacks_Initialize;
 var
@@ -80,14 +90,13 @@ var
 begin
   for i := 0 to MAX_NODE_COUNT - 1 do
   begin
-    VolatileData[i].Speed := 0;
-    VolatileData[i].Functions := 0;
+    VolatileData[i].DeviceID := ID_NO_DEVICE;
   end
 end;
 
 // *****************************************************************************
-// Writes the Configuration Memory from the App defined storage device
-//  Node:  The Node to write the Configuration Data for
+// Writes the Configuration Memory to the App defined storage device
+//  Node        :  The Node to write the Configuration Data for
 //  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
 //  StartAddress: Offset from 0x00 in the Configuration Memory to start from
 //  MaxCount    : Maximum number of Bytes to move into the EEPROM
@@ -132,7 +141,7 @@ end;
 //******************************************************************************
 procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
 begin
-  Node^.ConfigurationAddress := Generic32BitPointer( iNode * MAX_DCC_CFG_DATA);
+  Node^.ConfigurationAddress := Generic32BitPointer( iNode * MAX_DEVICE_CFG_DATA);
 end;
 
 //******************************************************************************
@@ -143,23 +152,50 @@ begin
   Node^.RAMAddress := Generic32BitPointer( @VolatileData[iNode]);
 end;
 
-
-
+// *****************************************************************************
+// Called when an Identify Producer message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
 function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 begin
   Result := False
 end;
 
+
+// *****************************************************************************
+// Called when an Identify Conusmers message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
 function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 begin
   Result := False
 end;
 
+// *****************************************************************************
+// Called when an Identify Events message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
 function AppCallback_EventsIdentify: Boolean;
 begin
   Result := False
 end;
 
+// *****************************************************************************
+// Called when an Identify Events with a Destination Alias message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
 function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
 begin
   Result := False
@@ -170,14 +206,36 @@ begin
 
 end;
 
+// *****************************************************************************
+// Called during the main Statemachine loop.  Allows customer handling of most messages
+// currently (2/13) does not allow overriding of the login or CAN layer messages
+//   Node         :  The Node that has the timeslice to run its statemachine
+//   CANBuffer    : The raw data from the CAN receiver
+//   DataBytesPtr : Pointer to a temporary CAN Byte array that can be used for any purpose
+//
+//   Result       : False to run the default handler, True if this callback handled the 
+//                  processing and skip the default processing
+// *****************************************************************************
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 begin
   Result := False
 end;
 
+// *****************************************************************************
+// Called when a NMRAnetNode is first allocated and needs to be initialized
+//   Node:  The Node to extract the VolatileData pointer to
+//
+//   Result      : None
+// *****************************************************************************
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+var
+  DeviceData: PXpressNetDeviceVolatileData;
 begin
-
+  DeviceData := GetDeviceData(Node);
+  if DeviceData <> nil then
+  begin
+    DeviceData^.DeviceID := ID_NO_DEVICE;
+  end;
 end;
 
 end.

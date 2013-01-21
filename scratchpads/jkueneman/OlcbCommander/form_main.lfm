@@ -1,11 +1,11 @@
 object FormOLCB_Commander: TFormOLCB_Commander
   Left = 521
-  Height = 388
+  Height = 401
   Top = 245
-  Width = 683
+  Width = 364
   Caption = 'OpenLCB Commander'
-  ClientHeight = 388
-  ClientWidth = 683
+  ClientHeight = 381
+  ClientWidth = 364
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -15,106 +15,88 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.2.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 388
+    Height = 381
     Top = 0
-    Width = 683
+    Width = 364
     ActivePage = TabSheetNetwork
     Align = alClient
     TabIndex = 0
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 349
-      ClientWidth = 677
+      ClientHeight = 355
+      ClientWidth = 356
       object PanelNetwork: TPanel
         Left = 0
-        Height = 349
+        Height = 355
         Top = 0
-        Width = 346
-        Align = alLeft
+        Width = 356
+        Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 349
-        ClientWidth = 346
+        ClientHeight = 355
+        ClientWidth = 356
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 320
+          Height = 326
           Top = 0
-          Width = 346
+          Width = 356
           Align = alTop
           Anchors = [akTop, akLeft, akRight, akBottom]
-          AutoExpand = True
-          DefaultItemHeight = 18
+          DefaultItemHeight = 16
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
-          PopupMenu = PopupMenuTreeNode
           ReadOnly = True
+          RightClickSelect = True
           ScrollBars = ssAutoBoth
           SortType = stText
           TabOrder = 0
           OnAdvancedCustomDrawItem = TreeViewNetworkAdvancedCustomDrawItem
+          OnContextPopup = TreeViewNetworkContextPopup
           OnCreateNodeClass = TreeViewNetworkCreateNodeClass
           OnCustomCreateItem = TreeViewNetworkCustomCreateItem
+          OnExpanding = TreeViewNetworkExpanding
           OnSelectionChanged = TreeViewNetworkSelectionChanged
-          Options = [tvoAllowMultiselect, tvoAutoExpand, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+          Options = [tvoAllowMultiselect, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoRightClickSelect, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
         end
         object LabelNetworkNodeCount: TLabel
           Left = 4
-          Height = 17
-          Top = 325
-          Width = 84
+          Height = 14
+          Top = 335
+          Width = 65
           Anchors = [akLeft, akBottom]
           Caption = 'Node Count: '
           ParentColor = False
         end
         object LabelNetworkNodeCountValue: TLabel
-          Left = 100
-          Height = 17
-          Top = 325
-          Width = 9
+          Left = 125
+          Height = 14
+          Top = 335
+          Width = 7
+          Anchors = [akLeft, akBottom]
+          Caption = '0'
+          ParentColor = False
+        end
+        object LabelTrainCountName: TLabel
+          Left = 188
+          Height = 14
+          Top = 335
+          Width = 57
+          Anchors = [akLeft, akBottom]
+          Caption = 'Train Count'
+          ParentColor = False
+        end
+        object LabelTrainNodeCountValue: TLabel
+          Left = 309
+          Height = 14
+          Top = 335
+          Width = 7
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
         end
       end
-      object SplitterMain: TSplitter
-        Left = 346
-        Height = 349
-        Top = 0
-        Width = 5
-      end
-      object PanelOLCBNetwork: TPanel
-        Left = 351
-        Height = 349
-        Top = 0
-        Width = 326
-        Align = alClient
-        ClientHeight = 349
-        ClientWidth = 326
-        DockSite = True
-        TabOrder = 2
-        object BitBtnNetworkRefresh: TBitBtn
-          Left = 14
-          Height = 22
-          Top = 18
-          Width = 299
-          Action = ActionOpenLCBCommandIdentifyIDGlobal
-          TabOrder = 0
-        end
-        object Button1: TButton
-          Left = 49
-          Height = 25
-          Top = 168
-          Width = 75
-          Caption = 'Button1'
-          OnClick = Button1Click
-          TabOrder = 1
-        end
-      end
-    end
-    object TabSheetTrain: TTabSheet
-      Caption = 'Train Protocol'
     end
   end
   object MainMenu: TMainMenu
@@ -289,6 +271,28 @@ object FormOLCB_Commander: TFormOLCB_Commander
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00CBCBCB63C7C7C7BFC4C4C4BFBFBF
           BF63FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
         }
+      end
+    end
+    object MenuItemThrottles: TMenuItem
+      Caption = 'Throttles'
+      object MenuItemThrottlesCreate: TMenuItem
+        Action = ActionThrottlesCreate
+      end
+      object MenuItemThrottlesSep0: TMenuItem
+        Caption = '-'
+      end
+      object MenuItemThrottlesHideAll: TMenuItem
+        Action = ActionThrottlesHideAll
+      end
+      object MenuItemThrottlesShowAll: TMenuItem
+        Action = ActionThrottlesShowAll
+      end
+      object MenuItemThrottlesCloseAll: TMenuItem
+        Action = ActionThrottlesCloseAll
+      end
+      object MenuItemThrottlesSep1: TMenuItem
+        Caption = '-'
+        Visible = False
       end
     end
     object MenuItemHelp: TMenuItem
@@ -1675,19 +1679,17 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object ActionToolsComDisconnect: TAction
       Category = 'Tools'
       Caption = 'Disconnect'
-      Enabled = False
       ImageIndex = 4
       OnExecute = ActionToolsComDisconnectExecute
     end
     object ActionOpenLCBCommandIdentifyIDGlobal: TAction
       Category = 'OpenLCBCommand'
-      AutoCheck = True
       Caption = 'Identify Nodes Global'
       OnExecute = ActionOpenLCBCommandIdentifyIDGlobalExecute
     end
     object ActionToolsMessageLogShow: TAction
       Category = 'Tools'
-      Caption = 'Show Message Log'
+      Caption = 'Show Message Log...'
       ImageIndex = 19
       OnExecute = ActionToolsMessageLogShowExecute
     end
@@ -1751,6 +1753,41 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Caption = 'Read User ACDI Memory'
       OnExecute = ActionOpenLCBCommandReadUserACDIExecute
     end
+    object ActionThrottlesCreate: TAction
+      Category = 'Throttles'
+      Caption = 'New OLCB Throttle...'
+      OnExecute = ActionThrottlesCreateExecute
+    end
+    object ActionThrottlesCloseAll: TAction
+      Category = 'Throttles'
+      Caption = 'Close All'
+      OnExecute = ActionThrottlesCloseAllExecute
+    end
+    object ActionThrottlesShowAll: TAction
+      Category = 'Throttles'
+      Caption = 'Show All'
+      OnExecute = ActionThrottlesShowAllExecute
+    end
+    object ActionThrottlesHideAll: TAction
+      Category = 'Throttles'
+      Caption = 'Hide All'
+      OnExecute = ActionThrottlesHideAllExecute
+    end
+    object ActionOpenLCBCommandIdentifyEvents: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Identify Events'
+      OnExecute = ActionOpenLCBCommandIdentifyEventsExecute
+    end
+    object ActionTreeviewNetworkCollapseSelected: TAction
+      Category = 'TreeviewNetwork'
+      Caption = 'Collapse Selected'
+      OnExecute = ActionTreeviewNetworkCollapseSelectedExecute
+    end
+    object ActionTreeviewNetworkExpandSelected: TAction
+      Category = 'TreeviewNetwork'
+      Caption = 'Expand Selected'
+      OnExecute = ActionTreeviewNetworkExpandSelectedExecute
+    end
   end
   object PopupMenuTreeNode: TPopupMenu
     Images = ImageListMainSmall
@@ -1758,7 +1795,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
     top = 224
     object MenuItemTVPopupIdentifyGlobal: TMenuItem
       Action = ActionOpenLCBCommandIdentifyIDGlobal
-      AutoCheck = True
     end
     object MenuItemTVPopupSep1: TMenuItem
       Caption = '-'
@@ -1805,6 +1841,15 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object MenuItemTVPopupSep3: TMenuItem
       Caption = '-'
     end
+    object MenuItem13: TMenuItem
+      Action = ActionTreeviewNetworkExpandSelected
+    end
+    object MenuItem12: TMenuItem
+      Action = ActionTreeviewNetworkCollapseSelected
+    end
+    object MenuItemTVPopupSep4: TMenuItem
+      Caption = '-'
+    end
     object MenuItemTVPopupExpandAll: TMenuItem
       Action = ActionTreeviewNetworkExpandAll
     end
@@ -1812,15 +1857,8 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Action = ActionTreeviewNetworkCollapseAll
     end
   end
-  object ApplicationProperties1: TApplicationProperties
-    left = 192
-    top = 168
-  end
-  object TimerComStartup: TTimer
-    Enabled = False
-    Interval = 100
-    OnTimer = TimerComStartupTimer
-    left = 192
+  object ApplicationProperties: TApplicationProperties
+    left = 136
     top = 120
   end
-end
+end

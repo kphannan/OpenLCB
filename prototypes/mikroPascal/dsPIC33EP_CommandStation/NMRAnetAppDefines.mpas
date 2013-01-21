@@ -320,7 +320,7 @@ const
   {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
   SUPPORTED_EVENTS_PRODUCED: array[0..MAX_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
     ($01, $01, $00, $00, $00, $00, $04, $01),                                   // I am a Command Station
-    ($01, $10, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
+    ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
   );
   SUPPORTED_EVENTS_PRODUCED_MASKS: array[0..MAX_EVENTS_PRODUCED_BIT_BYTES-1] of Byte = (
     %00001111                                                                   // Two Events Supported (remember 2 bits for each Event)

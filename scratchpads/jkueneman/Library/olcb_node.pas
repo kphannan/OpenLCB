@@ -14,12 +14,12 @@ type
   private
     FCDI: TXMLDocument;
     FConfigMem: TOlcbMemConfig;
-    FNodeID: DWord;
+    FNodeID: QWord;
     FNodeIDAlias: Word;
     FProtocolSupport: QWord;
     FSnii: TOlcbSNIP;
     procedure SetCDI(AValue: TXMLDocument);
-    procedure SetNodeID(AValue: DWord);
+    procedure SetNodeID(AValue: QWord);
     procedure SetNodeIDAlias(AValue: Word);
     procedure SetProtocolSupport(AValue: QWord);
     procedure SetSnii(AValue: TOlcbSNIP);
@@ -28,7 +28,7 @@ type
     destructor Destroy; override;
     property CDI: TXMLDocument read FCDI write SetCDI;
     property ConfigMem: TOlcbMemConfig read FConfigMem write FConfigMem;
-    property NodeID: DWord read FNodeID write SetNodeID;
+    property NodeID: QWord read FNodeID write SetNodeID;
     property NodeIDAlias: Word read FNodeIDAlias write SetNodeIDAlias;
     property ProtocolSupport: QWord read FProtocolSupport write SetProtocolSupport;
     property Snii: TOlcbSNIP read FSnii write SetSnii;
@@ -44,7 +44,7 @@ begin
   FCDI:=AValue;
 end;
 
-procedure TOpenLcbNode.SetNodeID(AValue: DWord);
+procedure TOpenLcbNode.SetNodeID(AValue: QWord);
 begin
   FNodeID:=AValue;
 end;

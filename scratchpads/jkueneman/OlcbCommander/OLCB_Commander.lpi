@@ -39,7 +39,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="17">
+    <Units Count="20">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -140,6 +140,30 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_objects"/>
       </Unit16>
+      <Unit17>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormAwesomeThrottle"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_awesome_throttle"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="form_awesome_throttle_deallocate_error.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormDeallocationError"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_awesome_throttle_deallocate_error"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="form_awesome_throttle_duplicate_address.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMulitipleTrains"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_awesome_throttle_duplicate_address"/>
+      </Unit19>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

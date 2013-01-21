@@ -1,0 +1,420 @@
+// ******************************************************************************
+//
+// Copyright:
+//     (c) Mustangpeak, 2011.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2011-01-28:   Created
+//
+// * Description:
+//    Implements Service Mode
+//
+// ******************************************************************************
+
+unit NMRAnetServiceMode;
+
+uses
+  XpressNet_Constants;
+
+const
+  PROGRAMMING_ACK_STATE_SCAN_FOR_ACK_BIT     = 0;   // Start looking for the Acknowledge bit
+  PROGRAMMING_ACK_STATE_DETECTED_BIT         = 1;   // A valid Acknowledge was detected
+  PROGRAMMING_ACK_STATE_RESPONSE_READY_BIT   = 2;   // The Service Mode ready to respond to the device
+  PROGRAMMING_ACK_STATE_IN_SERVICEMODE_BIT   = 3;   // Service Mode is enabled as far as devices are concerned (sent the Enter Service Mode Request to the device(//s)
+  PROGRAMMING_ACK_STATE_IDLE_BIT             = 4;   // Ready for the next Service Mode Request in the Queue
+  PROGRAMMING_ACK_STATE_MACHINE_ENABLED      = 5;   // Allows the StateMachine to run (the Power On Cycle will just send "1"s when not enabled)
+  PROGRAMMING_ACK_STATE_BITMODE_AVAILABLE    = 6;   // Bit mode is available
+
+  SERVICE_MODE_RESULT_SHORTCIRCUIT           = 1;  // System had too much current draw
+  SERVICE_MODE_RESULT_DATA_NOT_FOUND         = 2;  // No Acknowledgement was detected
+  SERVICE_MODE_RESULT_STATION_BUSY           = 3;  // Not supported in XpressNet yet
+  SERVICE_MODE_RESULT_STATION_READY          = 4;  // Not supported in XpressNet yet
+  SERVICE_MODE_RESULT_RESPONSE_PAGE_MODE     = 5;  // Response was achieved in Register or Paged mode
+  SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE   = 6;  // Response was achieved in Direct CV mode
+
+  // The order here matters, Verifies must be lower than Writes
+  SERVICE_MODE_COMMMAND_VERIFY_BYTE          = $01;  // Service Mode to Read a decoder
+  SERVICE_MODE_COMMMAND_VERIFY_BIT           = $02;  // Service Mode to Read a decoder
+  SERVICE_MODE_COMMMAND_WRITE_BYTE           = $03;  // Service Mode to Write to a decoder
+  SERVICE_MODE_COMMMAND_WRITE_BIT            = $04;  // Service Mode to Write to a decoder
+  SERVICE_MODE_COMMAND_MAX_VERIFY            = SERVICE_MODE_COMMMAND_VERIFY_BIT;
+  
+  SERVICE_MODE_DIRECT                        = $10;  // Direct Service Mode
+  SERVICE_MODE_ADDRESS                       = $20;  // Address Only Service Mode
+  SERVICE_MODE_REGISTER                      = $30;  // Register Service Mode
+  SERVICE_MODE_PAGE                          = $40;  // Page Service Mode
+  
+  SERVICE_MODE_DIRECT_TEST_BIT_ZERO_MODE     = $01;  // Service Mode State testing for Bit mode sending a zero
+  SERVICE_MODE_DIRECT_TEST_BIT_ONE_MODE      = $02;  // Service Mode State testing for Bit mode sending a one
+  SERVICE_MODE_DIRECT_TEST_BYTE_MODE         = $03;  // Service Mode State testing for Byte mode
+
+  SERVICEMODE_POWER_ON_CYCLE_IDLE_COUNT      = 20;     // Per RP-9.2.3
+  SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT     = 3;      // Per RP-9.2.3
+  SERVICEMODE_RECOVER_CYCLE_RESET_COUNT      = 6;      // Per RP-9.2.3
+  
+  SERVICEMODE_INSTRUCTION_COUNT              = 5;      // Per RP-9.2.3
+  SERVICEMODE_WRITE_RECOVER_COUNT            = 6;      // Per RP-9.2.3; Write Recover packets
+  SERVICEMODE_PAGE_PRESET_COUNT              = 5;      // Per RP-9.2.3; Page-Preset-packets   Address-Only=5, Register=5, Page=5, Direct=N/A
+  SERVICEMODE_PAGE_PRESET_RECOVER            = 6;      // Per RP-9.2.3; Write Recovery after Page-Preset Write   AddressOnly=6, Register=6, Page=6, Direct=N/A
+  
+  STATE_SERVICEMODE_POWER_ON_CYCLE                                 = 01;
+  STATE_SERVICEMODE_RESET_CYCLE                                    = 02;
+  STATE_SERVICEMODE_SEND_RESET_PACKETS                             = 03;
+  STATE_SERVICEMODE_NOT_SUPPORTED                                  = 100;
+  STATE_SERVICEMODE_SEQUENCE_COMPLETE                              = 101;
+
+  // Direct Mode
+  STATE_SERVICEMODE_DIRECT_MODE_BIT_TEST                           = 10;
+  STATE_SERVICEMODE_DIRECT_MODE_BYTE_TEST                          = 11;
+  STATE_SERVICEMODE_DIRECT_RESET_CYCLE                             = 12;
+  STATE_SERVICEMODE_DIRECT_BITMODE                                 = 13;
+  STATE_SERVICEMODE_DIRECT_BYTEMODE_VERIFY                         = 14;
+  STATE_SERVICEMODE_DIRECT_BYTEMODE_WRITE                          = 15;
+  STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_RESET                  = 16;
+  STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_VERIFY                 = 17;
+  STATE_SERVICEMODE_DIRECT_WRITE_RECOVER_CYCLE                     = 19;
+
+  
+  // Address/Register/Page
+  STATE_SERVICEMODE_WRITE_PAGE_PRESET                              = 10;
+  
+  // Paged Mode
+  STATE_SERVICEMODE_PAGED_WRITE_PAGE_REG_RECOVER                   = 11;
+  STATE_SERVICEMODE_PAGED_RESETCYCLE                               = 12;
+  STATE_SERVICEMODE_PAGED_VERIFY                                   = 13;
+  STATE_SERVICEMODE_PAGED_WRITE                                    = 14;
+  STATE_SERVICEMODE_PAGED_WRITE_RECOVER_CYCLE                      = 15;
+
+
+  MAX_SERVICEMODE_QUEUE_MESSAGES                        = 2;
+  
+  HUNG_BUS_TIMEOUT                                      = 10;  // 10 * 840ms = 8.4 seconds
+
+type
+  TServiceModeRegisterCache = record
+    Address: Word;                                   // CV Address or Bit index to work on
+    Value: Byte;                                     // The value of the CV or Bit value to read/write, if it is the Bit Value it MUST BE IN NMRA FORMAT "xxxKDBBB"
+  end;
+  PServiceModeRegisterCache = ^TServiceModeRegisterCache;
+  
+  TServiceModeRegisterInfo = record
+    DeviceCache: TServiceModeRegisterCache;          // The request and the result from/to the device
+    iDevice: Integer;                                // Device that invoked Service Mode
+    Mode: Byte;                                      // High Nibble is the Service Mode type (Direct/Address/Register/Page) See SERVICE_MODE_DIRECT_XXXX and the Lo Nibble is the command type (Read/Write/ReadBit/WriteBit)  See SERVICE_MODE_COMMMAND_XXXXX constants
+    iStateMachine: Byte;                             // The StateMachine State to start from after Service Mode Initialization (Power On Cycle) has been completed
+  end;
+  PServiceModeRegisterInfo = ^TServiceModeRegisterInfo;
+  
+  TServiceModeRegisterInfoArray = array[0..MAX_SERVICEMODE_QUEUE_MESSAGES-1] of TServiceModeRegisterInfo;
+
+  TServiceModeMessageQueue = record
+    Messages: TServiceModeRegisterInfoArray;
+    Count,                         // Number of messages in the queue
+    ResultRequestCount,            // Number of times the ServiceMode Results request has been sent
+    iHead,                         // Head (next empty) buffer index
+    iTail: Byte;                   // Tail (next to use/currently being used) buffer index
+  end;
+  
+  TServiceModeInfo = record
+    Queue                   : TServiceModeMessageQueue;   // Waiting Service Mode Requests
+    Flags                   : Byte;                       // See PROGRAMMING_ACK_STATE_XXXXX constants
+    Buffer                  : TServiceModeRegisterInfo;   // Buffer of the request being worked on
+    ScratchBuffer           : TServiceModeRegisterCache;  // Buffer to use for
+    DirectSupportTest       : Byte;                       // Tracks the different tests needed to understand if Direct Mode is supported and how fully it is supported (Bit mode)
+    iStateMachine           : Byte;                       // Current State of the Service Mode State Machine
+    iInstructionCountSent   : Byte;                       // State Machine uses to count the number of Packets for different states of a Service Mode call
+    ServiceModeResult       : Byte;                       // [OUT] The result of executing the Service Mode   SEE SERVICE_MODE_RESULT_XXXXX constant
+    TotalSent               : Word;                       // Total packets sent for the call
+    HungBusTimer            : Byte;                       // Number of 840ms timer ticks have occured
+  end;
+  PServiceModeInfo = ^TServiceModeInfo;
+  
+// Call once on start up
+procedure ServiceMode_Initialize; forward;
+// Stops the Service Mode Engine
+procedure ServiceMode_End; forward;
+// Resets the Engine and prepares it to run Service Mode Commands
+procedure ServiceMode_LoadBufferFromNextInQueue(PowerOnCycle: Boolean); forward;
+// Called by a timer that ticks every 56us or so
+procedure ServiceMode_56us_TimeTick; forward;
+// Called by a timer that ticks every 5ms
+procedure ServiceMode_5ms_TimeTick; forward;
+// Called by a timer that ticks every 5ms
+procedure ServiceMode_840ms_TimeTick; forward;
+// Places the Service Mode Message in the Queue
+function ServiceMode_QueueRequest(AnAddress: Word; AValue: Byte; iDevice: Integer; Mode, iStateMachine: Byte): Boolean;
+// Clears necessary Flags and Variables to start a new Service Mode Ack run
+procedure ServiceMode_ResetForNewAck;
+// Flushes (clears) the Request Queue
+procedure ClearRequestQueue;
+
+const
+  MFG_CV_ID_BIT_7_EQUALS_ZERO: TServiceModeRegisterCache = (7, %11100111);   // CV 8 = Manufactures ID,  Set up to Verify a 0 in Bit 7 of CV 8
+  MFG_CV_ID_BIT_7_EQUALS_ONE: TServiceModeRegisterCache = (7, %11101111);    // CV 8 = Manufactures ID,  Set up to Verify a 1 in Bit 7 of CV 8
+  MFG_CV_ID: TServiceModeRegisterCache = (7, 0);                             // CV 8 = Manufactures ID,  Set up to Verify starting at a value of 1
+
+var
+  ServiceModeInfo: TServiceModeInfo;
+  
+  DCC_Programming_ACK_Pin           : sbit; sfr; external;
+  DCC_Programming_ACK_Direction     : sbit; sfr; external;
+
+implementation
+
+procedure ServiceMode_Initialize;
+var
+  i: Integer;
+  Buffer: PServiceModeRegisterInfo;
+begin
+  for i := 0 to MAX_SERVICEMODE_QUEUE_MESSAGES - 1 do
+  begin
+    Buffer := @ServiceModeInfo.Queue.Messages[i];
+    Buffer^.Mode := 0;
+    Buffer^.DeviceCache.Value := 0;
+    Buffer^.DeviceCache.Address := 0;
+    Buffer^.iStateMachine := STATE_SERVICEMODE_RESET_CYCLE;                     // Default
+    Buffer^.iDevice := ID_NO_DEVICE;
+  end;
+  ServiceModeInfo.Queue.Count := 0;
+  ServiceModeInfo.Queue.iHead := 0;
+  ServiceModeInfo.Queue.iTail := 0;
+  ServiceModeInfo.Queue.ResultRequestCount := 0;
+
+  ServiceModeInfo.Buffer.DeviceCache.Address := 0;
+  ServiceModeInfo.Buffer.DeviceCache.Value := 0;
+  ServiceModeInfo.Buffer.iDevice := ID_NO_DEVICE;
+  ServiceModeInfo.Buffer.Mode := 0;
+  
+  ServiceModeInfo.ScratchBuffer.Address := 0;
+  ServiceModeInfo.ScratchBuffer.Value := 0;
+  ServiceModeInfo.Flags := 0;
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IDLE_BIT := 1;
+  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;
+  ServiceModeInfo.iInstructionCountSent := 0;
+  ServiceModeInfo.HungBusTimer := 0;                                            // Reset the Hung Bus timer
+  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_POWER_ON_CYCLE;
+
+  ServiceModeInfo.TotalSent := 0;
+  DCC_Programming_ACK_Direction := 1;  // Input
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_QueueRequest
+//
+//  Parameters: 
+//
+//  Results:  None
+//
+//  Description:
+//      Places the Service Mode Message in the Queue, the Service Mode Pump from
+//   the main loop will remove the queued request and handle it.  Note the Value
+// must be set correctly depending on the type of access.  For Direct Mode
+// if Bit Mode is used then Value must be formated in NMRA format xxxKDBBB.  The
+// Service Mode engine will add the 111xxxxx command code.  For Byte Mode set Value
+// to where to start the searching from up to 255
+//
+// ****************************************************************************
+function ServiceMode_QueueRequest(AnAddress: Word; AValue: Byte; iDevice: Integer; Mode, iStateMachine: Byte): Boolean;
+var
+  RegisterInfo: PServiceModeRegisterInfo;
+begin
+  Result := True;
+  if ServiceModeInfo.Queue.Count < MAX_SERVICEMODE_QUEUE_MESSAGES then
+  begin
+    RegisterInfo := @ServiceModeInfo.Queue.Messages[ServiceModeInfo.Queue.iHead];
+    RegisterInfo^.DeviceCache.Address := AnAddress;
+    RegisterInfo^.DeviceCache.Value := AValue;
+    RegisterInfo^.iStateMachine := iStateMachine;
+    RegisterInfo^.iDevice := iDevice;
+    RegisterInfo^.Mode := Mode;
+    Inc(ServiceModeInfo.Queue.iHead);                                           // Move to the next (potential) empty index
+    if ServiceModeInfo.Queue.iHead >= MAX_SERVICEMODE_QUEUE_MESSAGES then
+      ServiceModeInfo.Queue.iHead := 0;
+    Inc(ServiceModeInfo.Queue.Count);                                           // Make sure everything is valid before increasing the count
+  end else
+    Result := False
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_QueueRequest
+//
+//  Parameters:
+//
+//  Results:  None
+//
+//  Description:
+//
+// ****************************************************************************
+procedure ClearRequestQueue;
+begin
+  ServiceModeInfo.Queue.Count := 0;
+  ServiceModeInfo.Queue.iHead := 0;
+  ServiceModeInfo.Queue.iTail := 0;
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_ResetForNewAck
+//
+//  Parameters:
+//
+//  Results:  None
+//
+//  Description:
+//
+// ****************************************************************************
+procedure ServiceMode_ResetForNewAck;
+begin
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_SCAN_FOR_ACK_BIT := 0;            // Not looking for the Acknowledge bit yet
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_DETECTED_BIT  := 0;               // Not valid Acknowledge detected yet
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_RESPONSE_READY_BIT := 0;          // The response is not ready yet
+  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;      // Empty ready to be filled
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_LoadBufferFromNextInQueue
+//
+//  Parameters:
+//
+//  Results:  None
+//
+//  Description:
+//     Resets the engine to begin a Service Mode sequence.  WARNING: The instant
+//     ServiceModeInfo.StateMachineFunc is set a call to the StateMachine can occur on
+//     the very next DCC clock cycle so it must be ready to go.
+//
+// ****************************************************************************
+procedure ServiceMode_LoadBufferFromNextInQueue(PowerOnCycle: Boolean);
+begin
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IDLE_BIT := 0;                              // Ready to get busy and not idling
+  ServiceMode_ResetForNewAck;
+  
+  ServiceModeInfo.Buffer := ServiceModeInfo.Queue.Messages[ServiceModeInfo.Queue.iTail];  // Copy the Register infomation, including the statemachine pointer
+  ServiceModeInfo.ScratchBuffer := ServiceModeInfo.Buffer.DeviceCache;                    // Make a local copy of the original request
+  
+  Inc(ServiceModeInfo.Queue.iTail);                                                       // Free the Queue slot
+  if ServiceModeInfo.Queue.iTail >= MAX_SERVICEMODE_QUEUE_MESSAGES then
+    ServiceModeInfo.Queue.iTail := 0;
+  Dec(ServiceModeInfo.Queue.Count);
+  
+  ServiceModeInfo.iInstructionCountSent := 0;                                             // Reset the counter for the number of each packet type to send
+  ServiceModeInfo.HungBusTimer := 0;                                                      // Reset the Hung Bus timer
+  
+  if PowerOnCycle then                                                                    // Reset the StateMachine
+    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_POWER_ON_CYCLE
+  else
+    ServiceModeInfo.iStateMachine := ServiceModeInfo.Buffer.iStateMachine;
+end;
+
+
+// ****************************************************************************
+// procedure ServiceMode_End
+//
+//  Parameters: None
+//
+//  Results:  None
+//
+//  Description:
+//
+// ****************************************************************************
+procedure ServiceMode_End;
+begin
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IN_SERVICEMODE_BIT := 0;
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IDLE_BIT := 1;
+  ClearRequestQueue;
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_StartAckTimer
+//
+//  Parameters:  None
+//
+//  Results:  None
+//
+//  Description:
+//     Initializes and starts the Service Mode timer
+//
+// ****************************************************************************
+procedure ServiceMode_StartAckTimer;
+begin
+  TON_T4CON_bit := 0;       // Turn the timer off
+  T4IE_bit := 0;            // Disable the interrupt to keep spuroius interrupts from occuring when we reset the count
+  TMR4 := 0;                // Reset the count
+  T4IF_bit := 0;            // Reset the Interrupt flag
+  T4IE_bit := 1;            // Enable the interrupt
+  TON_T4CON_bit := 1;       // Turn the timer on
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_56us_TimeTick
+//
+//  Parameters: None
+//
+//  Results:  None
+//
+//  Description:
+//     Updates internal counters that Track NMRA requirements for time between
+//  packets with legacy service mode addresses.  Expects to be called every 56us
+//  or so
+//
+// ****************************************************************************
+procedure ServiceMode_56us_TimeTick;
+begin
+  if ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_SCAN_FOR_ACK_BIT = 1 then    // Are we are scanning for an ACK?
+  begin
+    if DCC_Programming_ACK_Pin = 1 then                                       // Have we found an ACK?
+    begin                                                                     // Found the ACK, set the state then start the timer to see if it lasts 6ms +/-1ms
+      ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_SCAN_FOR_ACK_BIT := 0;
+      ServiceMode_StartAckTimer;                                              // Start the 5ms timer
+    end
+  end
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_5ms_TimeTick
+//
+//  Parameters: None
+//
+//  Results:  None
+//
+//  Description:
+//     Times out the Service mode 6ms +/-1ms requirement of the NMRA Spec
+//
+// ****************************************************************************
+procedure ServiceMode_5ms_TimeTick;
+begin
+  // This will only be called if the state machine detects the start of an Acknowledge
+  // from the decoder.
+  if DCC_Programming_ACK_Pin = 1 then
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_DETECTED_BIT := 1;
+end;
+
+// ****************************************************************************
+// procedure ServiceMode_840ms_TimeTick
+//
+//  Parameters: None
+//
+//  Results:  None
+//
+//  Description:
+//
+// ****************************************************************************
+procedure ServiceMode_840ms_TimeTick;
+begin
+  if ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IN_SERVICEMODE_BIT = 1 then
+  begin
+    if ServiceModeInfo.HungBusTimer > HUNG_BUS_TIMEOUT then
+    begin
+      // Not sure what this should look like.....
+      // Also currently this time the delta between when ServiceMode_LoadBufferFromNextInQueue is called
+      // that may not be a valid way of doing it.
+   
+    end else
+      Inc(ServiceModeInfo.HungBusTimer);
+  end
+end;
+
+end.
