@@ -224,6 +224,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure MenuItemThrottlesClick(Sender: TObject);
     procedure TreeViewNetworkAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
@@ -350,7 +351,7 @@ begin
   FormAwesomeThrottle.ComPortThread := ComPortThread;
   ThrottleList.Add(FormAwesomeThrottle);
   FormAwesomeThrottle.Show;
-  AddThrottleSubMenu(FormAwesomeThrottle);
+  UpdateUI // Update the Separator before the user tries to open the Throttle Menu
 end;
 
 procedure TFormOLCB_Commander.ActionTreeviewNetworkCollapseAllExecute(Sender: TObject);
@@ -637,7 +638,7 @@ begin
     OSXMenu.Add(OSXPrefCmd);
     ActionToolsSettingsShowWin.Visible := False;
     MenuItemToolsSep2.Visible := False;
-   // MenuItemToolsSeparatorWin.Visible := False;
+    FormMessageLog.SynMemo.Font.Height := 0;
     {$ELSE}
     AppAboutCmd := TMenuItem.Create(Self);
     AppAboutCmd.Action := ActionHelpAboutShow;
@@ -674,6 +675,21 @@ begin
   FormThreadDebug := TFormThreadDebug.Create(Application);
   FormThreadDebug.Show;
   {$ENDIF}
+end;
+
+procedure TFormOLCB_Commander.MenuItemThrottlesClick(Sender: TObject);
+var
+  Start, i: Integer;
+begin
+  Start := MenuItemThrottles.IndexOf(MenuItemThrottlesSep1);
+  i := MenuItemThrottles.Count;
+  if Start > -1 then
+  begin
+    while MenuItemThrottles.Count - 1 > Start do
+      MenuItemThrottles.Delete(MenuItemThrottles.Count - 1);
+  end;
+  for i := 0 to ThrottleList.Count - 1 do
+     AddThrottleSubMenu(ThrottleList.Throttles[i]);
 end;
 
 procedure TFormOLCB_Commander.TreeViewNetworkAdvancedCustomDrawItem(
@@ -947,7 +963,6 @@ begin
   MenuItem.Caption := Throttle.Caption;
   MenuItem.Tag := PtrInt( Throttle);
   MenuItem.OnClick := @OnThrottleMenuItemClick;
-  UpdateUI
 end;
 
 procedure TFormOLCB_Commander.ComConnect;
@@ -1365,7 +1380,6 @@ procedure TFormOLCB_Commander.RefreshTrainTreeAliasEvents(NodeAlias: Word; NodeI
 var
   EventID: TEventID;
   Node, ChildNode: TTreeNode;
-  Address: Integer;
 begin
   EventID := LocalHelper.Data;
 
@@ -1401,11 +1415,7 @@ begin
       if Assigned(ChildNode) then
       begin
         case LocalHelper.MTI of
-          MTI_PRODUCER_IDENTIFIED_CLEAR:
-            begin
-              ChildNode.Text := SetBooleanCaption(STR_ISINUSEPROXY + ': ', False);
-              UpdateDccAddressEventCaption(EventID, -1);
-            end;
+          MTI_PRODUCER_IDENTIFIED_CLEAR: ChildNode.Text := SetBooleanCaption(STR_ISINUSEPROXY + ': ', False);
           MTI_PRODUCER_IDENTIFIED_SET: ChildNode.Text := SetBooleanCaption(STR_ISINUSEPROXY + ': ', True);
           MTI_PRODUCER_IDENTIFIED_UNKNOWN: ChildNode.Text := STR_ISINUSEPROXY + ': ' + STR_UNKNOWN;
         end
@@ -1413,7 +1423,7 @@ begin
     end
   end else
   if (EventID[0] = $06) and (EventID[1] = $01) then
-    UpdateDccAddressEventCaption(EventID, Address)
+    UpdateDccAddressEventCaption(EventID, 1)
 end;
 
 procedure TFormOLCB_Commander.RefreshCommandStationTreeAliasEvents(NodeAlias: Word; NodeID: QWord; LocalHelper: TOpenLCBMessageHelper);
@@ -1692,4 +1702,4 @@ end;
 
 
 end.
-
+

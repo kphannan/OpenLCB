@@ -66,4 +66,25 @@
       </string>
     </group>
   </segment>
+  <segment origin="0" space="250">
+    <group replication="29">
+      <name>Function Definition Information (FDI)</name>
+      <description>Describes Custom Functions for the Train</description>
+      <repname>Function</repname>
+      <string size="16">
+        <name>Function Description</name>
+      </string>
+      <string size="8">
+        <name>Grouping Name</name>
+      </string>
+      <int size="1">
+        <name>Auto Toggle Time</name>
+        <description>Seconds before toggling back to the "Disabled" state</description>
+      </int>
+      <int size="2">
+        <description>Current state of the function (0 = Disabled else Enabled if Binary)</description>
+        <name>State</name>
+      </int>
+    </group>
+  </segment>
 </cdi>

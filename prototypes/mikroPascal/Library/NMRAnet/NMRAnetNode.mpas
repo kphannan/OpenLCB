@@ -235,7 +235,7 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NMRAnetNode_FindByNodeID;
+//  procedure NMRAnetNode_FindFirstVirtualNode;
 //
 //  Parameters:
 //
@@ -295,7 +295,6 @@ begin
     Dec(i);
   end;
 end;
-  
 
 // *****************************************************************************
 //  procedure NMRAnetNode_Initialize;

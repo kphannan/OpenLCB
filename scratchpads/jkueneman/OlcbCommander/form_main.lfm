@@ -4,7 +4,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Top = 245
   Width = 364
   Caption = 'OpenLCB Commander'
-  ClientHeight = 381
+  ClientHeight = 401
   ClientWidth = 364
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -15,7 +15,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.2.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 381
+    Height = 401
     Top = 0
     Width = 364
     ActivePage = TabSheetNetwork
@@ -24,26 +24,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 355
-      ClientWidth = 356
+      ClientHeight = 362
+      ClientWidth = 358
       object PanelNetwork: TPanel
         Left = 0
-        Height = 355
+        Height = 362
         Top = 0
-        Width = 356
+        Width = 358
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 355
-        ClientWidth = 356
+        ClientHeight = 362
+        ClientWidth = 358
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 326
+          Height = 336
           Top = 0
-          Width = 356
+          Width = 358
           Align = alTop
           Anchors = [akTop, akLeft, akRight, akBottom]
-          DefaultItemHeight = 16
+          DefaultItemHeight = 18
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -62,36 +62,36 @@ object FormOLCB_Commander: TFormOLCB_Commander
         end
         object LabelNetworkNodeCount: TLabel
           Left = 4
-          Height = 14
-          Top = 335
-          Width = 65
+          Height = 17
+          Top = 339
+          Width = 84
           Anchors = [akLeft, akBottom]
           Caption = 'Node Count: '
           ParentColor = False
         end
         object LabelNetworkNodeCountValue: TLabel
           Left = 125
-          Height = 14
-          Top = 335
-          Width = 7
+          Height = 17
+          Top = 339
+          Width = 9
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
         end
         object LabelTrainCountName: TLabel
           Left = 188
-          Height = 14
-          Top = 335
-          Width = 57
+          Height = 17
+          Top = 339
+          Width = 76
           Anchors = [akLeft, akBottom]
           Caption = 'Train Count'
           ParentColor = False
         end
         object LabelTrainNodeCountValue: TLabel
           Left = 309
-          Height = 14
-          Top = 335
-          Width = 7
+          Height = 17
+          Top = 339
+          Width = 9
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
@@ -275,6 +275,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object MenuItemThrottles: TMenuItem
       Caption = 'Throttles'
+      OnClick = MenuItemThrottlesClick
       object MenuItemThrottlesCreate: TMenuItem
         Action = ActionThrottlesCreate
       end
@@ -292,7 +293,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object MenuItemThrottlesSep1: TMenuItem
         Caption = '-'
-        Visible = False
       end
     end
     object MenuItemHelp: TMenuItem
@@ -1861,4 +1861,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
     left = 136
     top = 120
   end
-end
+end

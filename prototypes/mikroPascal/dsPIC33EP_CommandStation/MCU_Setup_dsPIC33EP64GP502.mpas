@@ -74,7 +74,7 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_TX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);   // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_TX_0_DMA_CHANNEL, 8);                           // 0...7
   dsPIC33_DMA_ManualDMATransfer(CAN_TX_0_DMA_CHANNEL, False);                   // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_TX_0_DMA_CHANNEL, @C1TXD);                  // Assign the DMA Channel to the Transmit Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_TX_0_DMA_CHANNEL, Word( @C1TXD));                  // Assign the DMA Channel to the Transmit Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_TX_0_DMA_CHANNEL, IRQ_ECAN1_TX_DATA_READY);   // Assign the DMA Channel to the ECAN 1 TX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_TX_0_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_0_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_0_DMA_CHANNEL, True);
@@ -91,7 +91,7 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_TX_1_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);   // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_TX_1_DMA_CHANNEL, 8);                           // 0...7
   dsPIC33_DMA_ManualDMATransfer(CAN_TX_1_DMA_CHANNEL, False);                   // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_TX_1_DMA_CHANNEL, @C1TXD);                  // Assign the DMA Channel to the Transmit Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_TX_1_DMA_CHANNEL, Word( @C1TXD));                  // Assign the DMA Channel to the Transmit Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_TX_1_DMA_CHANNEL, IRQ_ECAN1_TX_DATA_READY);   // Assign the DMA Channel to the ECAN 1 TX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_TX_1_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_1_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_1_DMA_CHANNEL, True);
@@ -106,9 +106,9 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_RX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);                      // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_RX_0_DMA_CHANNEL, 8);                                              // Transfers 8 Words (0 counts as 1)
   dsPIC33_DMA_ManualDMATransfer(CAN_RX_0_DMA_CHANNEL, False);                                      // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, @C1RXD);                                     // Assign the DMA Channel to the Receive Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, Word( @C1RXD));                                     // Assign the DMA Channel to the Receive Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_RX_0_DMA_CHANNEL, IRQ_ECAN1_RX_DATA_READY);                      // Assign the DMA Channel to the ECAN 1 RX to Trigger the Transfer
-  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, @RX_Main_RawBufferArray[0]);                    // Point the Receive Buffer Offset into the CAN Layer Buffer
+  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, Word( @RX_Main_RawBufferArray[0]));                    // Point the Receive Buffer Offset into the CAN Layer Buffer
   dsPIC33_DMA_Enable(CAN_RX_0_DMA_CHANNEL, True);                                                  // Enable DMA Channel 2
   
 (*  // Setup the CAN Receiver

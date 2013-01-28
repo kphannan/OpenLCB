@@ -332,7 +332,7 @@ begin
   if (EventID^[0] = $06) and (EventID^[1] = $01) then
   begin
     Address := ((EventID^[4] shl 8) or EventID^[5]) and $3FFF;  // Strip off the Extended bits if there are there
-    if EventID^[5] and $C0 = $C0 then
+    if EventID^[4] and $C0 = $C0 then
       Result := 'EVENT_TRAIN_QUERY_DCC_ADDRESS : Extended Address = ' + IntToStr(Address) + ', (0x' + IntToHex(Address, 4) + ')'
     else
       Result := 'EVENT_TRAIN_QUERY_DCC_ADDRESS : Short Address = ' + IntToStr(Address) + ', (0x' + IntToHex(Address, 4) + ')'
@@ -678,7 +678,7 @@ begin
                        begin
                          Result := Result + 'DCC Proxy Allocate Operation, ';
                          Address := ((LocalHelper.Data[5] shl 8) or LocalHelper.Data[6]) and $3FFF;  // Strip off the Extended bits if they are there
-                         if LocalHelper.Data[4] and $C0 = $C0 then
+                         if LocalHelper.Data[5] and $C0 = $C0 then
                            Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
                          else
                            Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'

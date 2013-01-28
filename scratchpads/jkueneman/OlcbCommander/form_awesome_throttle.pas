@@ -214,7 +214,7 @@ procedure TFormThrottleList.CloseAll;
 var
   i: Integer;
 begin
-  for i := 0 to Count - 1 do
+  for i := Count - 1 downto 0 do
     Throttles[i].Close;
   Clear;
 end;
@@ -763,6 +763,7 @@ begin
   else
     LabelAllocatedAddress.Caption := STR_UNASSIGNED;
 
+  Caption := 'Open LCB Awesome Throttle - ' + LabelAllocatedAddress.Caption;
   UpdateAddressRange;
 end;
 

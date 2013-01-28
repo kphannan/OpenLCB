@@ -100,9 +100,9 @@ const
   );
   
 const
-  PS_ALLOCATED             = $01;                                               // The Proxy is Allocated
-  
-  MSG_SEND_DCC_ADDRESS_ALLOCATED = $01;                                               // Need to send a Message for the DCC Address was Allocated
+  PS_DCC_ADDRESS_ALLOCATED        = $01;                                        // The Proxy is Allocated
+
+  MSG_SEND_DCC_ADDRESS_ALLOCATED = $01;                                         // Need to send a Message for the DCC Address was Allocated
   
 type
   TDccProxyData = record                                                        // Structure stored in RAM on a node and vnode basis
@@ -217,6 +217,39 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure NMRAnetNode_FindFirstNonAllocatedVirtualNode;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+//                READ ME:
+//                   Currently this uses a dog slow search.
+// *****************************************************************************
+function FindFirstNonDCCAllocatedNode: PNMRAnetNode;
+var
+  i: Integer;
+  DCCProxyData: PDccProxyData;
+begin
+  Result := nil;
+  i := Nodes.AllocatedCount - 1;
+  while (i > -1) do
+  begin
+    if Nodes.AllocatedList[i]^.State and NS_VIRTUAL = NS_VIRTUAL then
+    begin
+      DCCProxyData := GetProxyData(Nodes.AllocatedList[i]);
+      if DCCProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then
+      begin
+        Result := Nodes.AllocatedList[i];
+        Break;
+      end
+    end;
+    Dec(i);
+  end;
+end;
+
+// *****************************************************************************
 // Writes the Configuration Memory from the App defined storage device
 //  Node:  The Node to write the Configuration Data for
 //  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
@@ -320,7 +353,7 @@ begin
   if TestForSetFlag then
   begin
     ProxyData := GetProxyData(Node);
-    if ProxyData^.State and PS_ALLOCATED = PS_ALLOCATED then
+    if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
     begin
       Address := (Event^[4] shl 8) or Event^[5];
       if ProxyData^.Address = Address then
@@ -338,13 +371,13 @@ begin
   case EventIndex of
     EVENT_TRAIN_INDEX           : NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
     EVENT_TRAIN_DCC_IDLE_INDEX  : begin
-                                    if GetProxyData(Node)^.State and PS_ALLOCATED = PS_ALLOCATED then
+                                    if GetProxyData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID)
                                     else
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
                                   end;
     EVENT_TRAIN_DCC_INUSE_INDEX : begin
-                                    if GetProxyData(Node)^.State and PS_ALLOCATED = PS_ALLOCATED then
+                                    if GetProxyData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID)
                                     else
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID);
@@ -550,16 +583,18 @@ begin
               case CANBuffer^.DataBytes[3] of
                 DCC_ALLOCATE_ADDRESS :
                   begin
-                    ProxyData^.State := ProxyData^.State or PS_ALLOCATED;
+                    ProxyData^.State := ProxyData^.State or PS_DCC_ADDRESS_ALLOCATED;
                     ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
                     ProxyData^.SpeedSteps := CANBuffer^.DataBytes[4];                         // TO DO: NEED TO WRITE TO CONFIGURATION
                     ProxyData^.Address := Word ((CANBuffer^.DataBytes[5] shl 8)) or CANBuffer^.DataBytes[6];  // This is in NMRA DCC format for short/long address
+                //    if FindFirstNonDCCAllocatedNode = nil then
+                 //     NMRAnetNode_Allocate;                                                     // Need a proxy that is free to allocate
                   end;
                 DCC_DEALLOCATE_ADDRESS :
                   begin
-                    ProxyData^.State := ProxyData^.State and not PS_ALLOCATED;
+                    ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
                     ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
