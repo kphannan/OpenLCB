@@ -543,7 +543,8 @@ end;
 
 procedure TOlcbTaskBase.SendTractionEStopMessage(Speed: THalfFloat);
 begin
-  // Don't known how to do this yet with the dir sign
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_OLCB or TRACTION_OP_E_STOP, $00, $00, $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
@@ -1525,4 +1526,4 @@ end;
 
 
 end.
-
+

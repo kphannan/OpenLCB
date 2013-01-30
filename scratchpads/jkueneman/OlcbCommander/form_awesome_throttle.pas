@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   ComCtrls, StdCtrls, ActnList, Spin, math_float16, olcb_threaded_stack,
   olcb_common_tasks, olcb_app_common_settings, olcb_utilities, olcb_defines,
-  form_awesome_throttle_duplicate_address;
+  form_awesome_throttle_duplicate_address, form_effects_editor;
 
 const
   ANIMATION_DELTA = 50;
@@ -65,8 +65,8 @@ type
     ActionFunction8: TAction;
     ActionFunction9: TAction;
     ActionFunction0: TAction;
-    ActionAllocationEditConfiguration: TAction;
-    ActionAllocationLoadConfiguration: TAction;
+    ActionAllocationEditCustomization: TAction;
+    ActionAllocationEditEffects: TAction;
     ActionAllocationFree: TAction;
     ActionAllocationRelease: TAction;
     ActionAllocationSearchForTrain: TAction;
@@ -115,11 +115,12 @@ type
     TimerToggleAnimation: TTimer;
     TrackBarSpeed: TTrackBar;
     procedure ActionAllocationByAddressExecute(Sender: TObject);
-    procedure ActionAllocationEditConfigurationExecute(Sender: TObject);
+    procedure ActionAllocationEditCustomizationExecute(Sender: TObject);
     procedure ActionAllocationFreeExecute(Sender: TObject);
-    procedure ActionAllocationLoadConfigurationExecute(Sender: TObject);
+    procedure ActionAllocationEditEffectsExecute(Sender: TObject);
     procedure ActionAllocationReleaseExecute(Sender: TObject);
     procedure ActionAllocationSearchForTrainExecute(Sender: TObject);
+    procedure ActionControlEmergencyStopExecute(Sender: TObject);
     procedure ActionControlStopExecute(Sender: TObject);
     procedure ActionFunction0Execute(Sender: TObject);
     procedure ActionFunction10Execute(Sender: TObject);
@@ -153,6 +154,7 @@ type
     FAllocatedAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
     FComPortThread: TComPortThread;
+    FFormEffectsEditor: TFormEffectsEditor;
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
@@ -164,21 +166,24 @@ type
     procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
     procedure RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
     procedure SetAllocated(AValue: Boolean);
+    procedure SetComPortThread(AValue: TComPortThread);
   protected
     procedure HandleGeneralTimerResults;
     function IsForward: Boolean;
     function IsShortAddress: Boolean;
     procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+    procedure SyncEffectsEditorClose(EffectsEditor: TFormEffectsEditor);
     procedure ToggleTagOnComponent(Sender: TComponent);
     procedure UpdateAddressRange;
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
     property AliasList: TAliasList read FAliasList write FAliasList;
+    property FormEffectsEditor: TFormEffectsEditor read FFormEffectsEditor write FFormEffectsEditor;
     property WaitTimeTask: TGeneralWaitTimeTask read FWaitTimeTask write FWaitTimeTask;
   public
     { public declarations }
     property Allocated: Boolean read FAllocated write SetAllocated;
     property AllocatedAlias: Word read FAllocatedAlias;
-    property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
+    property ComPortThread: TComPortThread read FComPortThread write SetComPortThread;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
     procedure EventTaskReceived(EventTask: TEventTask);
@@ -262,7 +267,7 @@ begin
   RunTractionQueryDccAddress(TIME_QUERY_DCC_ADDRESS);  // We need to query looking for any nodes that are current assigned for the address
 end;
 
-procedure TFormAwesomeThrottle.ActionAllocationEditConfigurationExecute(Sender: TObject);
+procedure TFormAwesomeThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
 begin
 
 end;
@@ -273,9 +278,16 @@ begin
   RunTractionDeAllocateTrainByAddress(AllocatedAlias, TIME_DEALLOCATE_ADDRESS);
 end;
 
-procedure TFormAwesomeThrottle.ActionAllocationLoadConfigurationExecute(Sender: TObject);
+procedure TFormAwesomeThrottle.ActionAllocationEditEffectsExecute(Sender: TObject);
 begin
-
+  if not Assigned(FFormEffectsEditor) then
+  begin
+    FormEffectsEditor := TFormEffectsEditor.Create(Self);
+    FormEffectsEditor.ComPortThread := ComPortThread;
+    FormEffectsEditor.NodeAlias := AllocatedAlias;
+    FormEffectsEditor.OnEffectsEditorClose := @SyncEffectsEditorClose;
+    FormEffectsEditor.Show;
+  end;
 end;
 
 procedure TFormAwesomeThrottle.ActionAllocationReleaseExecute(Sender: TObject);
@@ -289,6 +301,14 @@ end;
 procedure TFormAwesomeThrottle.ActionAllocationSearchForTrainExecute(Sender: TObject);
 begin
 
+end;
+
+procedure TFormAwesomeThrottle.ActionControlEmergencyStopExecute(Sender: TObject);
+begin
+  TrackBarSpeed.Position := 0;
+  RunTractionSpeed(AllocatedAlias, True);
+  RunTractionSpeed(AllocatedAlias, True);
+  RunTractionSpeed(AllocatedAlias, True);
 end;
 
 procedure TFormAwesomeThrottle.ActionControlStopExecute(Sender: TObject);
@@ -546,6 +566,13 @@ begin
   FAllocated:=AValue;
 end;
 
+procedure TFormAwesomeThrottle.SetComPortThread(AValue: TComPortThread);
+begin
+  FComPortThread:=AValue;
+  if Assigned(FFormEffectsEditor) then
+    FormEffectsEditor.ComPortThread := AValue;
+end;
+
 procedure TFormAwesomeThrottle.HandleGeneralTimerResults;
 var
   FormMulitipleTrains: TFormMulitipleTrains;
@@ -644,6 +671,11 @@ begin
   begin
 
   end;
+end;
+
+procedure TFormAwesomeThrottle.SyncEffectsEditorClose(EffectsEditor: TFormEffectsEditor);
+begin
+  FormEffectsEditor := nil;
 end;
 
 procedure TFormAwesomeThrottle.ToggleTagOnComponent(Sender: TComponent);
@@ -755,7 +787,7 @@ begin
   ActionAllocationRelease.Enabled := Allocated;
   GroupBoxFunctions.Enabled := Allocated;
   GroupBoxControl.Enabled := Allocated;
-  GroupBoxConfiguration.Enabled := not Allocated;
+  GroupBoxConfiguration.Enabled := Allocated;
   RadioGroupSpeedStep.Enabled := not Allocated;
   SpinEditAddress.Enabled := not Allocated;
   if Allocated then

@@ -41,6 +41,8 @@ const
   TRACTION_OP_MASK                   = $0F;
   TRACTION_OP_SPEED_DIR              = $00;
   TRACTION_OP_FUNCTION               = $01;
+  TRACTION_OP_E_STOP                 = $02;
+  
   TRACTION_OP_PROXY_MGMT             = $02;
 
   DCC_ALLOCATE_ADDRESS               = $01;
@@ -531,6 +533,8 @@ begin
                         begin
                           AbsoluteSpeed := (127/100) * AbsoluteSpeed;
                           SpeedStep := Word( AbsoluteSpeed);
+                          if SpeedStep > 0 then
+                            Inc(SpeedStep);   // 1 = EStop
                           if IsForward then
                             SpeedStep := SpeedStep or $80;
                           NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
@@ -538,6 +542,37 @@ begin
                         end;
                       end;
               end;
+            end;
+          TRACTION_OP_E_STOP :
+            begin
+              IsForward := ProxyData^.Speed and $8000 <> $8000;
+              if IsForward then
+                ProxyData^.Speed := $0000
+              else
+                ProxyData^.Speed := $8000;
+              case ProxyData^.SpeedSteps of
+                14, 28 :
+                  begin
+                    SpeedStep := $01;
+                    if IsForward then
+                      SpeedStep := SpeedStep or $60
+                    else
+                      SpeedStep := SpeedStep or $40;
+                    if AddressHi and $C0 = $C0 then
+                      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
+                    else
+                      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
+                    NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                  end;
+                128 :
+                  begin
+                    SpeedStep := $01;
+                    if IsForward then
+                      SpeedStep := SpeedStep or $80;
+                    NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
+                    NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+                  end;
+              end
             end;
           TRACTION_OP_FUNCTION :
             begin

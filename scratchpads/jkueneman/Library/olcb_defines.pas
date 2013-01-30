@@ -191,6 +191,8 @@ const
   TRACTION_OP_MASK                   = $0F;
   TRACTION_OP_SPEED_DIR              = $00;
   TRACTION_OP_FUNCTION               = $01;
+  TRACTION_OP_E_STOP                 = $02;
+
   TRACTION_OP_PROXY_MGMT             = $02;
 
   TRACTION_DCC_ALLOCATE_ADDRESS      = $01;

@@ -710,6 +710,10 @@ begin
                   end else
                     Result := Result + IntToStr( round(f));
                 end;
+              TRACTION_OP_E_STOP :
+                begin
+                  Result := Result + 'OLCB Traction Emergency Stop';
+                end;
               TRACTION_OP_FUNCTION :
                 begin
                   Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';

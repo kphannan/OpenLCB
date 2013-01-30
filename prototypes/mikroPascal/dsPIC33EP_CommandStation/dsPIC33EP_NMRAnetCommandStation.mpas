@@ -189,7 +189,7 @@ begin
         FloatToStr( (Double( TrackCurrent) * 0.520 * 0.0032227), s1);      // .00322266 V/Bit * 0.520A/V * Bits =
         PrevTrackCurrent := TrackCurrent;
         TruncFloat(@s1, 3, 6);
-        UART1_Write_Text('ADC: '+ s1 + ' Amps' + LF);
+        UART1_Write_Text('Track Current: '+ s1 + ' Amps' + LF);
         ADC_Ticker := 0;
       end;
     

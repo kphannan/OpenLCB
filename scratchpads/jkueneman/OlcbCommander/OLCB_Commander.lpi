@@ -31,15 +31,21 @@
         <LaunchingApplication PathPlusParams="\usr\bin\xterm -T 'Lazarus Run Output' -e $(LazarusDir)\tools\runwait.sh $(TargetCmdLine)"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="4">
       <Item1>
-        <PackageName Value="SynEdit"/>
+        <PackageName Value="KHexEditorLaz"/>
       </Item1>
       <Item2>
-        <PackageName Value="LCL"/>
+        <PackageName Value="GR32_DSGN_L"/>
       </Item2>
+      <Item3>
+        <PackageName Value="SynEdit"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="LCL"/>
+      </Item4>
     </RequiredPackages>
-    <Units Count="20">
+    <Units Count="21">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -164,6 +170,14 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_duplicate_address"/>
       </Unit19>
+      <Unit20>
+        <Filename Value="form_effects_editor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormEffectsEditor"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_effects_editor"/>
+      </Unit20>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

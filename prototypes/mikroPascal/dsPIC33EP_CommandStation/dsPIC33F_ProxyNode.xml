@@ -67,23 +67,72 @@
     </group>
   </segment>
   <segment origin="0" space="250">
-    <group replication="29">
-      <name>Function Definition Information (FDI)</name>
-      <description>Describes Custom Functions for the Train</description>
-      <repname>Function</repname>
+    <group replication="9">
+      <name>Node Effects Definition Information (NEDI)</name>
+      <description>Describes Custom Effects for the Train</description>
+      <repname>Effect</repname>
       <string size="16">
-        <name>Function Description</name>
+        <name>Effect Description</name>
+        <description>Give the Effect a description to help identify it (0-16 chars)</description>
       </string>
-      <string size="8">
+      <string size="16">
         <name>Grouping Name</name>
+        <description>Group related Effects by giving them the same Grouping Name (0-16 chars)</description>
       </string>
       <int size="1">
-        <name>Auto Toggle Time</name>
-        <description>Seconds before toggling back to the "Disabled" state</description>
+        <name>Latching</name>
+        <description>The Effect remains in the enabled state for a predetermined time then toggles to the disabled state</description>
+        <map>
+          <relation>
+            <property>1</property>
+            <value>Latching is Enabled</value>
+          </relation>
+          <relation>
+            <property>0</property>
+            <value>Latching is Disabled</value>
+          </relation>
+        </map>
       </int>
-      <int size="2">
-        <description>Current state of the function (0 = Disabled else Enabled if Binary)</description>
-        <name>State</name>
+      <int size="1">
+        <name>Auto Toggle Time</name>
+        <description>Seconds before toggling back to the "Disabled" state if not Latching (1-255)</description>
+      </int>
+    </group>
+  </segment>
+  <segment origin="0" space="249">
+    <group replication="25">
+      <name>Node Customization Definition Information (NCDI)</name>
+      <description>Describes Customization for the Train and its operation</description>
+      <repname>Customization</repname>
+      <string size="16">
+        <name>Customization Description</name>
+        <description>Give the Customization a description to help identify it (0-16 chars)</description>
+      </string>
+      <string size="16">
+        <name>Grouping Name</name>
+        <description>Group related Customizations by giving them the same Grouping Name (0-16 chars)</description>
+      </string>
+      <int size="1">
+        <name>Status</name>
+        <description>The status of the Customization</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>Value may not be in sync with the hardware</value>
+          </relation>
+          <relation>
+            <property>1</property>
+            <value>Value is known to be in sync with the hardware</value>
+          </relation>
+          <relation>
+            <property>2</property>
+            <value>Value needs to be commited to the hardware</value>
+          </relation>
+        </map>
+      </int>
+      <int size="1">
+        <name>Value</name>
+        <description>The value of the Customization</description>
       </int>
     </group>
   </segment>

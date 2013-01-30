@@ -7,12 +7,12 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, form_main, olcb_app_common_settings, file_utilities, form_settings,
-  form_about, form_messagelog, common_utilities, olcb_node,
+  Forms, khexeditorlaz, form_main, olcb_app_common_settings, file_utilities,
+  form_settings, form_about, form_messagelog, common_utilities, olcb_node,
   olcb_threaded_stack, olcb_common_tasks, form_thread_debug,
   olcb_structure_helpers, form_config_mem_viewer, common_objects,
-form_awesome_throttle, form_awesome_throttle_deallocate_error,
-form_awesome_throttle_duplicate_address
+  form_awesome_throttle, form_awesome_throttle_deallocate_error,
+  form_awesome_throttle_duplicate_address, form_effects_editor
   { you can add units after this };
 
 {$R *.res}

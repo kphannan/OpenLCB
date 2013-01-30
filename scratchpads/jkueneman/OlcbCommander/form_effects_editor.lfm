@@ -1,0 +1,125 @@
+object FormEffectsEditor: TFormEffectsEditor
+  Left = 632
+  Height = 392
+  Top = 267
+  Width = 643
+  Caption = 'Effects Editor'
+  ClientHeight = 392
+  ClientWidth = 643
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  LCLVersion = '1.0.2.0'
+  object SplitterEffectsEditor: TSplitter
+    Left = 216
+    Height = 392
+    Top = 0
+    Width = 8
+  end
+  object ScrollBoxBkgnd: TScrollBox
+    Left = 240
+    Height = 360
+    Top = 16
+    Width = 387
+    HorzScrollBar.Page = 387
+    VertScrollBar.Page = 360
+    Align = alClient
+    BorderSpacing.Around = 16
+    ClientHeight = 360
+    ClientWidth = 387
+    TabOrder = 1
+    object LabelReadingConfigMem: TLabel
+      Left = 20
+      Height = 17
+      Top = 20
+      Width = 347
+      Align = alTop
+      Alignment = taCenter
+      AutoSize = False
+      BorderSpacing.Around = 20
+      Caption = 'Please wait'
+      ParentColor = False
+    end
+    object Label1: TLabel
+      Left = 0
+      Height = 17
+      Top = 57
+      Width = 387
+      Align = alTop
+      Alignment = taCenter
+      Caption = 'Reading Configuration Memory.....'
+      ParentColor = False
+    end
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 392
+    Top = 0
+    Width = 216
+    Align = alLeft
+    Caption = 'Panel1'
+    ClientHeight = 392
+    ClientWidth = 216
+    TabOrder = 2
+    object ListViewEffects: TListView
+      Left = 1
+      Height = 319
+      Top = 1
+      Width = 214
+      Align = alClient
+      Columns = <      
+        item
+          AutoSize = True
+          Width = 208
+        end>
+      ReadOnly = True
+      RowSelect = True
+      ScrollBars = ssAutoBoth
+      ShowColumnHeaders = False
+      TabOrder = 0
+      ViewStyle = vsReport
+    end
+    object PanelSave: TPanel
+      Left = 1
+      Height = 71
+      Top = 320
+      Width = 214
+      Align = alBottom
+      ClientHeight = 71
+      ClientWidth = 214
+      TabOrder = 1
+      object Button1: TButton
+        Left = 31
+        Height = 22
+        Top = 8
+        Width = 150
+        Action = ActionGlobalSaveChanges
+        TabOrder = 0
+      end
+      object Button2: TButton
+        Left = 31
+        Height = 22
+        Top = 34
+        Width = 150
+        Action = ActionGlobalClose
+        TabOrder = 1
+      end
+    end
+  end
+  object ActionListEffectsEditor: TActionList
+    Images = FormOLCB_Commander.ImageListMainSmall
+    left = 88
+    top = 56
+    object ActionGlobalSaveChanges: TAction
+      Category = 'Global'
+      Caption = 'Save Changes'
+    end
+    object ActionGlobalClose: TAction
+      Category = 'Global'
+      Caption = 'Close'
+      OnExecute = ActionGlobalCloseExecute
+    end
+  end
+end
