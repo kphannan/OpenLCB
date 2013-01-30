@@ -25,6 +25,7 @@
 		2334640D13ABEBE000166C69 /* FastClockTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2334640C13ABEBE000166C69 /* FastClockTests.m */; };
 		2334641713ABECE600166C69 /* openlcb_iphone_57.png in Resources */ = {isa = PBXBuildFile; fileRef = 2334641613ABECE600166C69 /* openlcb_iphone_57.png */; };
 		2334641913ABECEE00166C69 /* openlcb_iphone_114.png in Resources */ = {isa = PBXBuildFile; fileRef = 2334641813ABECEE00166C69 /* openlcb_iphone_114.png */; };
+		23D9248B16B8F7CC00FB85A8 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 23D9248A16B8F7CC00FB85A8 /* Default-568h@2x.png */; };
 		23F22A9C13AF072200528339 /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = 23F22A9B13AF072200528339 /* Default.png */; };
 		23F22AB213AF1ED700528339 /* libOpenLcb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23F22AB113AF1ED700528339 /* libOpenLcb.a */; };
 /* End PBXBuildFile section */
@@ -92,6 +93,7 @@
 		2334641613ABECE600166C69 /* openlcb_iphone_57.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = openlcb_iphone_57.png; sourceTree = "<group>"; };
 		2334641813ABECEE00166C69 /* openlcb_iphone_114.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = openlcb_iphone_114.png; sourceTree = "<group>"; };
 		2334644213ABEF6C00166C69 /* OpenLcbLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OpenLcbLib.xcodeproj; path = ../../ObjectiveC/OpenLcbLib/OpenLcbLib.xcodeproj; sourceTree = "<group>"; };
+		23D9248A16B8F7CC00FB85A8 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		23F22A9B13AF072200528339 /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
 		23F22AB113AF1ED700528339 /* libOpenLcb.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOpenLcb.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -124,6 +126,7 @@
 		233463CA13ABEBDF00166C69 = {
 			isa = PBXGroup;
 			children = (
+				23D9248A16B8F7CC00FB85A8 /* Default-568h@2x.png */,
 				23F22A9B13AF072200528339 /* Default.png */,
 				233463DF13ABEBE000166C69 /* FastClock */,
 				2334640313ABEBE000166C69 /* FastClockTests */,
@@ -326,6 +329,7 @@
 				2334641713ABECE600166C69 /* openlcb_iphone_57.png in Resources */,
 				2334641913ABECEE00166C69 /* openlcb_iphone_114.png in Resources */,
 				23F22A9C13AF072200528339 /* Default.png in Resources */,
+				23D9248B16B8F7CC00FB85A8 /* Default-568h@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
