@@ -19,14 +19,14 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 8
     Width = 185
     Caption = 'Train Allocation'
-    ClientHeight = 322
-    ClientWidth = 177
+    ClientHeight = 326
+    ClientWidth = 181
     TabOrder = 0
     object LabelAddress: TLabel
       Left = 10
-      Height = 17
+      Height = 14
       Top = 104
-      Width = 52
+      Width = 40
       Caption = 'Address'
       ParentColor = False
     end
@@ -69,8 +69,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 1
-      ClientHeight = 76
-      ClientWidth = 153
+      ClientHeight = 80
+      ClientWidth = 157
       ItemIndex = 1
       Items.Strings = (
         '14 Step'
@@ -90,7 +90,7 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object SpinEditAddress: TSpinEdit
       Left = 10
-      Height = 16
+      Height = 27
       Top = 124
       Width = 157
       Font.Height = -16
@@ -113,8 +113,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 2
-      ClientHeight = 22
-      ClientWidth = 147
+      ClientHeight = 26
+      ClientWidth = 151
       Columns = 2
       ItemIndex = 0
       Items.Strings = (
@@ -131,8 +131,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 80
     Width = 184
     Caption = 'Control'
-    ClientHeight = 342
-    ClientWidth = 176
+    ClientHeight = 346
+    ClientWidth = 180
     TabOrder = 1
     object TrackBarSpeed: TTrackBar
       Left = 12
@@ -148,17 +148,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object LabelMaxSpeed: TLabel
       Left = 46
-      Height = 17
+      Height = 14
       Top = 5
-      Width = 55
+      Width = 39
       Caption = '100 m/s'
       ParentColor = False
     end
     object LabelMinSpeed: TLabel
       Left = 46
-      Height = 17
+      Height = 14
       Top = 195
-      Width = 39
+      Width = 27
       Caption = '0 m/s'
       ParentColor = False
     end
@@ -177,8 +177,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 2
-      ClientHeight = 27
-      ClientWidth = 147
+      ClientHeight = 31
+      ClientWidth = 151
       Columns = 2
       ItemIndex = 0
       Items.Strings = (
@@ -219,8 +219,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 1
-      ClientHeight = 29
-      ClientWidth = 74
+      ClientHeight = 33
+      ClientWidth = 78
       ItemIndex = 0
       Items.Strings = (
         'None'
@@ -236,17 +236,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object LabelSpeedPos: TLabel
       Left = 100
-      Height = 17
+      Height = 14
       Top = 102
-      Width = 27
+      Width = 18
       Caption = 'm/s'
       ParentColor = False
     end
     object LabelPosValue: TLabel
       Left = 62
-      Height = 17
+      Height = 14
       Top = 102
-      Width = 9
+      Width = 7
       Caption = '0'
       ParentColor = False
     end
@@ -257,17 +257,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 8
     Width = 184
     Caption = 'Functions'
-    ClientHeight = 379
-    ClientWidth = 176
+    ClientHeight = 383
+    ClientWidth = 180
     TabOrder = 2
     object ScrollBoxFunctions: TScrollBox
       Left = 4
-      Height = 371
+      Height = 375
       Top = 4
-      Width = 168
-      HorzScrollBar.Page = 168
+      Width = 172
+      HorzScrollBar.Page = 172
       VertScrollBar.Increment = 37
-      VertScrollBar.Page = 371
+      VertScrollBar.Page = 375
       VertScrollBar.Smooth = True
       VertScrollBar.Tracking = True
       Align = alClient
@@ -282,8 +282,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 352
     Width = 185
     Caption = 'Configuration'
-    ClientHeight = 74
-    ClientWidth = 177
+    ClientHeight = 78
+    ClientWidth = 181
     TabOrder = 3
     object ButtonEditConfiguration: TButton
       Left = 10
@@ -316,14 +316,14 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 8
     Width = 185
     Caption = 'Address'
-    ClientHeight = 36
-    ClientWidth = 177
+    ClientHeight = 40
+    ClientWidth = 181
     TabOrder = 5
     object LabelAllocatedAddress: TLabel
       Left = 0
-      Height = 36
+      Height = 40
       Top = 0
-      Width = 177
+      Width = 181
       Align = alClient
       Alignment = taCenter
       Caption = 'Unassigned'

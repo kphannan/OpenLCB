@@ -12,7 +12,7 @@ uses
   olcb_threaded_stack, olcb_common_tasks, form_thread_debug,
   olcb_structure_helpers, form_config_mem_viewer, common_objects,
   form_awesome_throttle, form_awesome_throttle_deallocate_error,
-  form_awesome_throttle_duplicate_address, form_effects_editor
+  form_awesome_throttle_duplicate_address
   { you can add units after this };
 
 {$R *.res}
@@ -26,4 +26,4 @@ begin
   Application.CreateForm(TFormMessageLog, FormMessageLog);
   Application.Run;
 end.
-
+

@@ -32,8 +32,9 @@ type
 
   TThrottleWaitingAction = (
     wa_None,
-    wa_FDItoFunctions
-  );                      // Loading the FDI to update the Functions
+    wa_FDItoFunctions,     // Loading the FDI to update the Functions
+    wa_WritingNewFDI       // Writing new FDI to configuration memory
+  );
   TThrottleWaitingActions = set of TThrottleWaitingAction;
 
   { TFormThrottleList }
@@ -188,9 +189,10 @@ type
     FPotentialAlias: Word;
     FWaitingActions: TThrottleWaitingActions;
     FWaitTimeTask: TGeneralWaitTimeTask;
-    procedure RunLoadFdiFile(AliasID: Word; FileName: string);
+    procedure RunWriteFdiFile(AliasID: Word; FileName: string);
     procedure RunProtocolSupport(AliasID: Word; WaitTime: Cardinal);
     procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
+    procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
     procedure RunTractionAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
     procedure RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
     procedure RunTractionQueryDccAddress(WaitTime: Cardinal);
@@ -211,7 +213,7 @@ type
     procedure UpdateAddressRange;
     procedure UpdateFunctionsClearControls;
     procedure UpdateFunctionsWithDefault;
-    procedure UpdateFunctionsWithFDI(MemTask: TReadAddressSpaceMemoryTask);
+    procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
     property AliasList: TAliasList read FAliasList write FAliasList;
     property PotentialAlias: Word read FPotentialAlias write FPotentialAlias;
@@ -320,9 +322,10 @@ end;
 procedure TFormAwesomeThrottle.ActionAllocationLoadEffectsFileExecute(Sender: TObject);
 begin
   if OpenDialog.Execute then
-    RunLoadFdiFIle(AllocatedAlias, OpenDialog.FileName);
-//  Include(FWaitingActions, wa_FDItoFunctions);
-//  RunProtocolSupport(AllocatedAlias, 0);         // Kick it off
+  begin
+    Include(FWaitingActions, wa_WritingNewFDI);
+    RunProtocolSupport(AllocatedAlias, 0);
+  end;
 end;
 
 procedure TFormAwesomeThrottle.ActionAllocationReleaseExecute(Sender: TObject);
@@ -596,24 +599,58 @@ begin
   end;
 end;
 
-procedure TFormAwesomeThrottle.RunLoadFdiFile(AliasID: Word; FileName: string);
+procedure TFormAwesomeThrottle.RunWriteFdiFile(AliasID: Word; FileName: string);
 var
   FileStream: TFileStream;
-  Task: TWriteAddressSpaceMemoryTask;
+  MemStream, BufferStream: TMemoryStream;
+  Task: TWriteAddressSpaceMemoryRawTask;
   s: string;
-  i: Integer;
-
+  i, Offset: Integer;
+  b: Byte;
+  StartFDI: Integer;
 begin
   FileStream := TFileStream.Create(FileName, fmOpenRead);
   try
- //   FileStream.Position := 0;
- //   for i := 0 to FileStream.Size - 1 do
- //     s := s + Char( FileStream.ReadByte);
- //   ShowMessage(s);
-    Task := TWriteAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, FileStream);
-    ComPortThread.AddTask(Task);
+    StartFDI := -1;
+    FileStream.Position := 0;
+    i := 0;
+    b := FileStream.ReadByte;
+    while (b <> Ord ('<')) and (i < FileStream.Size) do
+    begin
+      b := FileStream.ReadByte;
+      Inc(i);
+    end;
+    StartFDI := i;
 
-    /// HOW DO I KNOW WHEN IT IS DONE??????
+    if (StartFDI > 0) then
+    begin
+      MemStream := TMemoryStream.Create;
+      BufferStream := TMemoryStream.Create;
+      try
+        FileStream.Position := StartFDI;
+        i := 0;
+        while (FileStream.Position < FileStream.Size) do
+          MemStream.WriteByte( FileStream.ReadByte);
+        MemStream.WriteByte( Ord(#0));  // Add null
+        UpdateFunctionsWithFDI(MemStream);
+        MemStream.Position := 0;
+        Offset := 0;
+        while (MemStream.Position < MemStream.Size) do
+        begin
+          BufferStream.Size := 0;
+          while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
+            BufferStream.WriteByte( MemStream.ReadByte);
+          Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, Offset, BufferStream);
+          if MemStream.Position >= MemStream.Size then
+            Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
+          ComPortThread.AddTask(Task);
+          Offset := Offset + MAX_CONFIG_MEM_READWRITE_SIZE;
+        end;
+      finally
+        MemStream.Free;
+        BufferStream.Free;
+      end;
+    end;
   finally
     FileStream.Free;
   end;
@@ -636,6 +673,16 @@ var
   Task: TReadAddressSpaceMemoryTask;
 begin
   Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace);
+  Task.ForceOptionalSpaceByte := False;
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  ComPortThread.AddTask(Task);
+end;
+
+procedure TFormAwesomeThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpace: Byte; StartAddress, ByteCount: DWord);
+var
+  Task: TReadAddressSpaceMemoryRawTask;
+begin
+  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount);
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   ComPortThread.AddTask(Task);
@@ -886,17 +933,30 @@ end;
 
 procedure TFormAwesomeThrottle.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
 begin
-  if Sender is TReadAddressSpaceMemoryTask then
+  if Sender is TWriteAddressSpaceMemoryRawTask then
   begin
-    if ((Sender as TReadAddressSpaceMemoryTask).AddressSpace = MSI_FDI) and (wa_FDItoFunctions in WaitingActions) then
-      UpdateFunctionsWithFDI(Sender as TReadAddressSpaceMemoryTask);
+    if ((Sender as TWriteAddressSpaceMemoryRawTask).AddressSpace = MSI_FDI) and (wa_WritingNewFDI in WaitingActions) then
+    begin
+      Exclude(FWaitingActions, wa_WritingNewFDI);
+    end;
+  end else
+  if Sender is TReadAddressSpaceMemoryRawTask then
+  begin
+    if ((Sender as TReadAddressSpaceMemoryRawTask).AddressSpace = MSI_FDI) and (wa_FDItoFunctions in WaitingActions) then
+    begin
+      Exclude(FWaitingActions, wa_FDItoFunctions);
+      UpdateFunctionsWithFDI((Sender as TReadAddressSpaceMemoryRawTask).Stream);
+    end;
   end else
   if Sender is TProtocolSupportTask then
   begin
     if (Sender as TProtocolSupportTask).Protocols and PIP_FDI = PIP_FDI then
     begin
       if wa_FDItoFunctions in WaitingActions then
-        RunReadMemorySpace(AllocatedAlias, MSI_FDI);
+        RunReadMemorySpaceRaw(FAllocatedAlias, MSI_FDI, 0, 2048)
+      else
+      if wa_WritingNewFDI in WaitingActions then
+        RunWriteFdiFile(AllocatedAlias, OpenDialog.FileName);
     end;
   end else
   if Sender is TTractionAllocateDccProxyTask then
@@ -952,7 +1012,10 @@ begin
   end;
 end;
 
-procedure TFormAwesomeThrottle.UpdateFunctionsWithFDI(MemTask: TReadAddressSpaceMemoryTask);
+procedure TFormAwesomeThrottle.UpdateFunctionsWithFDI(MemStream: TMemoryStream);
+//
+// REQUIRES A NULL TERMINATOR!!!!
+//
 
   procedure RunDownGroup(Parent: TDOMNode; Level: Integer);
   var
@@ -999,21 +1062,47 @@ procedure TFormAwesomeThrottle.UpdateFunctionsWithFDI(MemTask: TReadAddressSpace
   end;
 
 var
+  TrashStream: TMemoryStream;
   ADoc: TXMLDocument;
   SegNode: TDOMNode;
+  s: string;
+  i: Integer;
+  Done: Boolean;
 begin
-  Exclude(FWaitingActions, wa_FDItoFunctions);
-  MemTask.DataStream.Position := 0;
-  MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
-  ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
-  WriteXMLFile(ADoc, MemTask.DataStream);
-  SegNode := ADoc.DocumentElement.FindNode('segment');
-  ScrollBoxFunctions.BeginUpdateBounds;
+  i := 0;
+  Done := False;
+  MemStream.Position := 0;
+  TrashStream := TMemoryStream.Create;
   try
-    UpdateFunctionsClearControls;
-    RunDownGroup(SegNode, 0);
+    TrashStream.CopyFrom(MemStream, MemStream.Size);
+    TrashStream.Position := 0;
+    while (TrashStream.Position < TrashStream.Size) and not Done do
+    begin
+      if TrashStream.ReadByte = Ord( #0) then
+      begin
+        if TrashStream.Position > 0 then
+        begin
+          TrashStream.Size := TrashStream.Position - 1;   // Strip the null
+          try
+            TrashStream.Position := 0;
+            ReadXMLFile(ADoc, TrashStream);                 // This corrupts the stream from its original contents
+            WriteXMLFile(ADoc, TrashStream);
+            SegNode := ADoc.DocumentElement.FindNode('segment');
+            ScrollBoxFunctions.BeginUpdateBounds;
+            try
+              UpdateFunctionsClearControls;
+              RunDownGroup(SegNode, 0);
+            finally
+              ScrollBoxFunctions.EndUpdateBounds;
+            end;
+          except
+          end;
+        end;
+        Done := True;
+      end;
+    end;
   finally
-    ScrollBoxFunctions.EndUpdateBounds;
+    TrashStream.Free
   end;
 end;
 

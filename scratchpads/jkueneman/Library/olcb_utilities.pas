@@ -609,7 +609,20 @@ begin
       Result := Result + '  Recive: ';
 
     Result := Result + 'From = 0x' + IntToHex( LocalHelper.SourceAliasID, 4);
-    Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
+
+    if IsDatagramMTI(LocalHelper.MTI, False) then
+    begin
+      Result := Result + '[';
+      for j := 0 to LocalHelper.DataCount - 1 do
+      begin
+        if IsPrintableChar( Char( LocalHelper.Data[j])) then
+          Result := Result + Char( LocalHelper.Data[j])
+        else
+          Result := Result + '.'
+      end;
+      Result := Result + ']  MTI: ' + MTI_ToString(LocalHelper.MTI);
+    end else
+      Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
 
     // SNII/SNIP
     if LocalHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
@@ -630,20 +643,12 @@ begin
       (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_UNKNOWN) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFY) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_SET) or
       (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_CLEAR) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_UNKNOWN)
     then begin
-  //    S_Len := Length(Result);
-  //    for j := 94 downto S_Len do
- //       Result := Result + ' ';
-
         Result := Result + 'EventID: ' + EventIDToString(@LocalHelper.Data);
     end;
 
     // Traction Protocol
     if LocalHelper.MTI = MTI_TRACTION_PROTOCOL then
     begin
-  //    S_Len := Length(Result);
-  //    for j := 94 downto S_Len do
-  //      Result := Result + ' ';
-
       case LocalHelper.Data[2] and TRACTION_PROTOCOL_MASK of
         TRACTION_DCC:
           begin

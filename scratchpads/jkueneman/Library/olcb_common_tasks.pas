@@ -144,6 +144,51 @@ type
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream); reintroduce;
   end;
 
+  { TWriteAddressSpaceMemoryRawTask }
+
+  TWriteAddressSpaceMemoryRawTask = class(TOlcbTaskBase)
+  private
+    FAddressSpace: Byte;
+    FForceOptionalSpaceByte: Boolean;
+    FStream: TMemoryStream;
+    FWriteAddress: DWord;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AWriteAddress: DWord; AStream: TStream); reintroduce;
+    destructor Destroy; override;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property AddressSpace: Byte read FAddressSpace;
+    property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
+    property Stream: TMemoryStream read FStream;
+    property WriteAddress: DWord read FWriteAddress write FWriteAddress;
+  end;
+
+  { TReadAddressSpaceMemoryRawTask }
+
+  TReadAddressSpaceMemoryRawTask = class(TOlcbTaskBase)
+  private
+    FAddressSpace: Byte;
+    FCurrentOffset: DWord;
+    FForceOptionalSpaceByte: Boolean;
+    FReadByteCount: DWord;
+    FStream: TMemoryStream;
+    FReadAddress: DWord;
+    function GetPayloadSize: Integer;
+  protected
+    property CurrentOffset: DWord read FCurrentOffset write FCurrentOffset;
+    property PayloadSize: Integer read GetPayloadSize;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord); reintroduce;
+    destructor Destroy; override;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property AddressSpace: Byte read FAddressSpace;
+    property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
+    property Stream: TMemoryStream read FStream;
+    property ReadAddress: DWord read FReadAddress;
+    property ReadByteCount: DWord read FReadByteCount;
+  end;
+
   { TIdentifyEventsTask }
 
   TIdentifyEventsTask = class(TOlcbTaskBase)
@@ -284,6 +329,126 @@ type
   end;
 
 implementation
+
+{ TReadAddressSpaceMemoryRawTask }
+
+function TReadAddressSpaceMemoryRawTask.GetPayloadSize: Integer;
+begin
+  if ReadByteCount - Stream.Size < MAX_CONFIG_MEM_READWRITE_SIZE then
+    Result := ReadByteCount - Stream.Size
+  else
+    Result := MAX_CONFIG_MEM_READWRITE_SIZE;
+end;
+
+constructor TReadAddressSpaceMemoryRawTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FStream := TMemoryStream.Create;
+  FAddressSpace := AnAddressSpace;
+  FForceOptionalSpaceByte := False;
+  FReadAddress := AReadAddress;
+  FReadByteCount := AReadByteCount;
+  FCurrentOffset := 0;
+end;
+
+destructor TReadAddressSpaceMemoryRawTask.Destroy;
+begin
+  FreeAndNil(FStream);
+  inherited Destroy;
+end;
+
+procedure TReadAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
+var
+  DatagramReceive: TDatagramReceive;
+  PIP: TOlcbProtocolIdentification;
+  Space: TOlcbMemAddressSpace;
+  Options: TOlcbMemOptions;
+  DatagramResultStart: Byte;
+  i: Integer;
+begin
+  case iState of
+    0: begin
+        // Ask for a read from the node
+         SendMemoryConfigurationRead(AddressSpace, CurrentOffset, PayloadSize, ForceOptionalSpaceByte);
+         Sending := False;
+         Inc(FiState);
+       end;
+    1: begin
+         // Node received the datagram
+         if IsDatagramAckFromDestination(MessageInfo) then
+         begin
+           Sending := False;
+           Inc(FiState);
+         end;
+       end;
+    2: begin
+          // Node sending frame of data
+          DatagramReceive := nil;
+          if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
+          begin
+            if ForceOptionalSpaceByte or (DatagramReceive.RawDatagram[1] and $03 = 0) then    // If using the {Space} byte need to skip over it
+              DatagramResultStart := 7
+            else
+              DatagramResultStart := 6;
+            for i := DatagramResultStart to DatagramReceive.CurrentPos - 1 do
+              Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+
+            if PayloadSize = 0 then
+            begin
+              Sending := True;
+              iState := 3;
+            end else
+            begin
+              CurrentOffset := CurrentOffset + MAX_CONFIG_MEM_READWRITE_SIZE;
+              Sending := True;
+              iState := 0;
+            end;
+          end
+        end;
+    3 : begin
+       // Done
+         FDone := True
+       end;
+  end;
+
+end;
+
+{ TWriteAddressSpaceMemoryRawTask }
+
+constructor TWriteAddressSpaceMemoryRawTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AWriteAddress: DWord; AStream: TStream);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FStream := TMemoryStream.Create;
+  if Assigned(AStream) then
+  begin
+    AStream.Position := 0;
+    Stream.CopyFrom(AStream, AStream.Size);
+    Stream.Position := 0;
+  end;
+  FAddressSpace := AnAddressSpace;
+  FForceOptionalSpaceByte := False;
+  FWriteAddress := AWriteAddress;
+end;
+
+destructor TWriteAddressSpaceMemoryRawTask.Destroy;
+begin
+  FreeAndNil(FStream);
+  inherited Destroy;
+end;
+
+procedure TWriteAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
+begin
+  case iState of
+    0 : begin
+          SendMemoryConfigurationWrite(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
+          iState := 1
+        end;
+    1 : begin
+       // Done
+         FDone := True
+       end;
+  end;
+end;
 
 { TWriteAddressSpaceMemoryTask }
 
@@ -806,10 +971,7 @@ end;
 
 function TBaseAddressSpaceMemoryTask.GetMaxPayloadSize: Byte;
 begin
-  if ForceOptionalSpaceByte then
-    Result := MAX_DATAGRAM_LENGTH - 7
-  else
-    Result := MAX_DATAGRAM_LENGTH - 6;
+  Result := MAX_CONFIG_MEM_READWRITE_SIZE;
 end;
 
 constructor TBaseAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte);
