@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type='text/xsl' href='http://openlcb.org/trunk/prototypes/xml/xslt/fdi.xsl'?>
+<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi.xsd">
+  <segment origin="0" space="250">
+    <group>
+      <name>Train Sounds</name>
+      <function kind="binary" latch="true">
+        <name>Headlights</name>
+        <number>0</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Dimmer</name>
+        <number>7</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Bell</name>
+        <number>1</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Whistle</name>
+        <number>2</number>
+      </function>
+      <function kind="binary" latch="false">
+        <name>Short Whistle</name>
+        <number>3</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Hiss</name>
+        <number>4</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Water Stop</name>
+        <number>5</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Coupler</name>
+        <number>6</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Brake Squeal</name>
+        <number>11</number>
+      </function>
+      <function kind="binary" latch="true">
+        <name>Injectors</name>
+        <number>12</number>
+      </function>
+    </group>
+    <group>
+      <name>Misc Functions</name>
+      <function kind="binary" latch="true">
+        <name>Mute</name>
+        <number>8</number>
+      </function>
+    </group>
+  </segment>
+</fdi>

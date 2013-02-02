@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type='text/xsl' href='http://openlcb.org/trunk/prototypes/xml/xslt/fdi.xsl'?>
+<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi.xsd">
+  <segment origin="0" space="250">
+    <group replication="29">
+      <name>Functions F0-F28</name>
+      <description>Generic Function Definition Information</description>
+      <function size="1" kind="binary" latch="false">
+        <name>F0</name>
+        <number>0</number>
+      </function>
+    </group>
+  </segment>
+</fdi>
