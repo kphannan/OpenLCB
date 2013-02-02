@@ -26,6 +26,9 @@ const
   STR_INI_SENDPACKETDELAY = 'SendDelay';
   STR_INI_AUTOSCAN = 'AutoScan';
 
+  STR_INI_THROTTLE_SECTION = 'Throttle';
+  STR_INI_THROTTLE_AUTOLOADFDI = 'AutoLoadFDI';
+
 type
   TComPortParity = (
     cpp_None,
@@ -96,6 +99,18 @@ type
     property SendPacketDelay: Word read FSendPacketDelay write FSendPacketDelay;
   end;
 
+  { TThrottleSettings }
+
+  TThrottleSettings = class
+  private
+    FAutoLoadFDI: Boolean;
+  public
+    constructor Create;
+    procedure LoadFromFile(IniFile: TIniFile);
+    procedure SaveToFile(IniFile: TIniFile);
+    property AutoLoadFDI: Boolean read FAutoLoadFDI write FAutoLoadFDI;
+  end;
+
   // Settings that all OLCB Applications will have in common
 
   { TOlcbCommonSettings }
@@ -104,6 +119,7 @@ type
   private
     FComPort: TComPortSettings;
     FGeneral: TGeneralSettings;
+    FThrottle: TThrottleSettings;
   public
     constructor Create;
     destructor Destroy; override;
@@ -111,7 +127,7 @@ type
     procedure SaveToFile(FileName: string);
     property ComPort: TComPortSettings read FComPort write FComPort;
     property General: TGeneralSettings read FGeneral write FGeneral;
-
+    property Throttle: TThrottleSettings read FThrottle write FThrottle;
   end;
 
 var
@@ -119,6 +135,23 @@ var
   GlobalSettingLock: TRTLCriticalSection;
 
 implementation
+
+{ TThrottleSettings }
+
+constructor TThrottleSettings.Create;
+begin
+  FAutoLoadFDI := True;
+end;
+
+procedure TThrottleSettings.LoadFromFile(IniFile: TIniFile);
+begin
+  AutoLoadFDI := IniFile.ReadBool(STR_INI_THROTTLE_SECTION, STR_INI_THROTTLE_AUTOLOADFDI, True);
+end;
+
+procedure TThrottleSettings.SaveToFile(IniFile: TIniFile);
+begin
+  IniFile.WriteBool(STR_INI_THROTTLE_SECTION, STR_INI_THROTTLE_AUTOLOADFDI, FAutoLoadFDI);
+end;
 
 { TGeneralSettings }
 
@@ -214,12 +247,14 @@ begin
   inherited;
   FComPort := TComPortSettings.Create;
   FGeneral := TGeneralSettings.Create;
+  FThrottle := TThrottleSettings.Create;
 end;
 
 destructor TOlcbCommonSettings.Destroy;
 begin
   FreeAndNil(FComPort);
   FreeAndNil(FGeneral);
+  FreeAndNil(FThrottle);
   inherited Destroy;
 end;
 
@@ -231,6 +266,7 @@ begin
   try
    ComPort.LoadFromFile(IniFile);
    General.LoadFromFile(IniFile);
+   Throttle.LoadFromFile(IniFile);
   finally
     IniFile.Free;
   end;
@@ -244,6 +280,7 @@ begin
   try
     ComPort.SaveToFile(IniFile);
     General.SaveToFile(IniFile);
+    Throttle.SaveToFile(IniFile);
   finally
     IniFile.Free;
   end;

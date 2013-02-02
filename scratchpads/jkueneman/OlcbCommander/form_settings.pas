@@ -16,6 +16,7 @@ type
   TFormSettings = class(TForm)
     BitBtnFTDIDefaults: TBitBtn;
     BitBtnRescanPorts: TBitBtn;
+    CheckBoxAutoLoadFDI: TCheckBox;
     CheckBoxAutoConnect: TCheckBox;
     CheckBoxAutoScanAtStart: TCheckBox;
     ComboBoxStopBits: TComboBox;
@@ -48,6 +49,7 @@ type
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ListViewSelectBarSelectItem(Sender: TObject; Item: TListItem; Selected: boolean);
+    procedure PanelThrottleClick(Sender: TObject);
   private
     FSettingsFilePath: WideString;
     { private declarations }
@@ -105,6 +107,11 @@ begin
   end;
 end;
 
+procedure TFormSettings.PanelThrottleClick(Sender: TObject);
+begin
+
+end;
+
 procedure TFormSettings.ScanComPorts;
 begin
   ComboBoxComPort.Items.Delimiter := ';';
@@ -131,7 +138,11 @@ begin
   GlobalSettings.General.AutoScanNetworkAtBoot := CheckBoxAutoScanAtStart.Checked;
   GlobalSettings.ComPort.AutoConnectAtBoot := CheckBoxAutoConnect.Checked;
 
+  // Throttle
+  GlobalSettings.Throttle.AutoLoadFDI := CheckBoxAutoLoadFDI.Checked;
+
   GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
+
 end;
 
 procedure TFormSettings.FormShow(Sender: TObject);
@@ -153,6 +164,9 @@ begin
   EditAliasID.Caption := ValidateHex( GlobalSettings.General.AliasID);
   EditNodeID.Caption := ValidateHex(GlobalSettings.General.NodeID);
   CheckBoxAutoScanAtStart.Checked := GlobalSettings.General.AutoScanNetworkAtBoot;
+
+  // Throttle
+  CheckBoxAutoLoadFDI.Checked := GlobalSettings.Throttle.AutoLoadFDI;
 end;
 
 procedure TFormSettings.FormHide(Sender: TObject);
@@ -180,4 +194,4 @@ begin
   ComboBoxFlowControl.ItemIndex := ComboBoxFlowControl.Items.IndexOf('XON/XOFF');
 end;
 
-end.
+end.

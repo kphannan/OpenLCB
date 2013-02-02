@@ -14,12 +14,12 @@ const
   DATAGRAM_MAX_RETRYS = 5;
 
   HEADER_MEMCONFIG_OPTIONS_REQUEST: TCANByteArray                     = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_CONFIG, $00, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_CDI_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CDI, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ALL_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ALL, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_CONFIG_REQUEST: TCANByteArray           = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CONFIG, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_MFG_REQUEST: TCANByteArray    = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_MFG, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_USER_REQUEST: TCANByteArray   = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_USER, $00, $00, $00, $00, $00);
-  HEADER_MEMCONFIG_SPACE_INFO_ACDI_WRITE_USER_REQUEST: TCANByteArray  = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_FUNCTIONS, $00, $00, $00, $00, $00);
+//  HEADER_MEMCONFIG_SPACE_INFO_CDI_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CDI, $00, $00, $00, $00, $00);
+ // HEADER_MEMCONFIG_SPACE_INFO_ALL_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ALL, $00, $00, $00, $00, $00);
+//  HEADER_MEMCONFIG_SPACE_INFO_CONFIG_REQUEST: TCANByteArray           = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CONFIG, $00, $00, $00, $00, $00);
+//  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_MFG_REQUEST: TCANByteArray    = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_MFG, $00, $00, $00, $00, $00);
+//  HEADER_MEMCONFIG_SPACE_INFO_ACDI_READ_USER_REQUEST: TCANByteArray   = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_ACDI_USER, $00, $00, $00, $00, $00);
+ // HEADER_MEMCONFIG_SPACE_INFO_ACDI_WRITE_USER_REQUEST: TCANByteArray  = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_FUNCTIONS, $00, $00, $00, $00, $00);
   HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST: TCANByteArray          = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, $00, $00, $00, $00, $00, $00);
 
 
@@ -189,7 +189,7 @@ type
   TDatagramSend = class( TOlcbMessage)
   private
     FAbandonTime: Cardinal;
-    FCurrentPos: Byte;
+    FBlockStartPos: Integer;
     FDataBytesSent: TCANByteArray;
     FDataBytesSentLen: Byte;
     FDestinationAlias: Word;
@@ -197,24 +197,27 @@ type
     FErrorCode: Word;
     FLocalHelper: TOpenLCBMessageHelper;
     FMTI: DWord;
+    FNewStartFrame: Boolean;
     FProtocolHeader: TCANByteArray;
     FProtocolHeaderLen: Byte;
     FRetryCount: Byte;
+    FBlockByteCount: Integer;
     FSourceAlias: Word;
     FStream: TMemoryStream;
     FWaitingForACK: Boolean;
   protected
     procedure StreamBytesToByteArray(Offset: Byte; var ByteArray: TCANByteArray; var Count: Byte);
     property AbandonTime: Cardinal read FAbandonTime write FAbandonTime;
-    property CurrentPos: Byte read FCurrentPos write FCurrentPos;
+    property BlockByteCount: Integer read FBlockByteCount write FBlockByteCount;   // Bytes sent counter for each datagram
+    property BlockStartPos: Integer read FBlockStartPos write FBlockStartPos;
     property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;
     property ProtocolHeader: TCANByteArray read FProtocolHeader write FProtocolHeader;
     property ProtocolHeaderLen: Byte read FProtocolHeaderLen write FProtocolHeaderLen;
     property DataBytesSent: TCANByteArray read FDataBytesSent write FDataBytesSent;
     property DataBytesSentLen: Byte read FDataBytesSentLen write FDataBytesSentLen;
     property MTI: DWord read FMTI write FMTI;
+    property NewStartFrame: Boolean read FNewStartFrame write FNewStartFrame;
     property RetryCount: Byte read FRetryCount write FRetryCount;
-    property Stream: TMemoryStream read FStream write FStream;
     property WaitingForACK: Boolean read FWaitingForACK write FWaitingForACK;             // After a frame is sent need to wait
   public
     constructor Create;
@@ -226,6 +229,7 @@ type
     property Empty: Boolean read FEmpty write FEmpty;
     property ErrorCode: Word read FErrorCode write FErrorCode;    // One of the DATAGRAM_REJECTED_xxx constants, if $0000 then no error
     property SourceAlias: Word read FSourceAlias write FSourceAlias;
+    property Stream: TMemoryStream read FStream write FStream;
   end;
 
   { TDatagramSendManager }
@@ -273,7 +277,7 @@ type
     function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
     function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
     function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
-    function IsProtocolIdentificationProcolReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
     function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual; abstract;                 // Must override this
     procedure SendIdentifyEventsMessage;
@@ -283,6 +287,7 @@ type
     procedure SendMemoryConfigurationOptions;
     procedure SendMemoryConfigurationSpaceInfo(Space: Byte);
     procedure SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
+    procedure SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
     procedure SendProtocolIdentificationProtocolMessage;
     procedure SendSnipMessage;
     procedure SendTractionAllocateDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
@@ -405,7 +410,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsProtocolIdentificationProcolReply(MessageInfo: TOlcbMessage): Boolean;
+function TOlcbTaskBase.IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -490,7 +495,7 @@ procedure TOlcbTaskBase.SendMemoryConfigurationRead(Space: Byte; StartAddress: D
 var
   DatagramSend: TDatagramSend;
   CANByteArray: TCANByteArray;
-  ByteCount: Byte;
+  HeaderByteCount: Byte;
 begin
   DatagramSend := TDatagramSend.Create;
   CANByteArray[0] := DATAGRAM_PROTOCOL_CONFIGURATION;
@@ -499,19 +504,48 @@ begin
     CANByteArray[1] := MCP_READ;
     CANByteArray[6] := Space;
     CANByteArray[7] := Count;
-    ByteCount := 8;
+    HeaderByteCount := 8;
   end else
   begin
     CANByteArray[1] := MCP_READ or SpaceToCommandByteEncoding(Space);
     CANByteArray[6] := Count;
-    ByteCount := 7;
+    HeaderByteCount := 7;
   end;
   CANByteArray[2] := (StartAddress shr 24) and $000000FF;
   CANByteArray[3] := (StartAddress shr 16) and $000000FF;
   CANByteArray[4] := (StartAddress shr 8) and $000000FF;
   CANByteArray[5] := StartAddress and $000000FF;
 
-  DatagramSend.Initialize(nil, CANByteArray, ByteCount, SourceAlias, DestinationAlias);
+  DatagramSend.Initialize(nil, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
+  ComPortThread.AddDatagramToSend(DatagramSend);
+end;
+
+procedure TOlcbTaskBase.SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
+var
+  DatagramSend: TDatagramSend;
+  CANByteArray: TCANByteArray;
+  HeaderByteCount: Byte;
+begin
+  DatagramSend := TDatagramSend.Create;
+  CANByteArray[0] := DATAGRAM_PROTOCOL_CONFIGURATION;
+  if ForceUseOfSpaceByte or (Space < MSI_CONFIG) then
+  begin
+    CANByteArray[1] := MCP_WRITE;
+    CANByteArray[6] := Space;
+    HeaderByteCount := 7;
+  end else
+  begin
+    CANByteArray[1] := MCP_READ or SpaceToCommandByteEncoding(Space);
+    HeaderByteCount := 6;
+  end;
+  CANByteArray[2] := (StartAddress shr 24) and $000000FF;
+  CANByteArray[3] := (StartAddress shr 16) and $000000FF;
+  CANByteArray[4] := (StartAddress shr 8) and $000000FF;
+  CANByteArray[5] := StartAddress and $000000FF;
+
+  if AStream.Size > MaxAddressSize then
+    AStream.Size := MaxAddressSize;
+  DatagramSend.Initialize(AStream, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
   ComPortThread.AddDatagramToSend(DatagramSend);
 end;
 
@@ -1154,12 +1188,13 @@ begin
   // Tests for breaking out of loop:
   //   The Byte Array has 8 valid bytes (A)
   //   Finished moving all of the Stream Bytes (B)
-  while (Offset < 8) {A} and (Stream.Position < Stream.Size) {B} do
+  //   Sent a full 64 byte datagram, need to send another one (C)
+  while (Offset < 8) {A} and (Stream.Position < Stream.Size) {B} and (BlockByteCount < MAX_DATAGRAM_LENGTH) do
   begin
     ByteArray[Offset] := Stream.ReadByte;
     Inc(Count);
-    Inc(FCurrentPos);
     Inc(Offset);
+    Inc(FBlockByteCount);
   end;
 end;
 
@@ -1191,19 +1226,23 @@ begin
   Stream.Position := 0;
   if Assigned(AStream) then
   begin
+    Assert(AStream.Size > 64 - AProtocolHeaderLen, 'Stream in Datagram Send too long, 64 bytes max');
     AStream.Position := 0;
     Stream.CopyFrom(AStream, AStream.Size);
+    Stream.Position := 0;
   end;
   FProtocolHeader := AProtocolHeader;
   FProtocolHeaderLen := AProtocolHeaderLen;
   FSourceAlias := ASourceAlias;
   FDestinationAlias := ADestinationAlias;
-  FCurrentPos := 0;
+  FBlockStartPos := 0;
   FEmpty := False;
   FWaitingForACK := False;
   FErrorCode := $0000;
   FRetryCount := 0;
   FAbandonTime := 0;
+  FNewStartFrame := True;
+  FBlockByteCount := 0;
 end;
 
 // *****************************************************************************
@@ -1218,7 +1257,7 @@ begin
   Count := 0;
   if not Empty and not WaitingForACK then
   begin
-    if CurrentPos = 0 then
+    if NewStartFrame then
     begin
       // Starting a new packet, need to decide if it fits in a single frame
       if Stream.Size + ProtocolHeaderLen <= 8 then
@@ -1227,14 +1266,17 @@ begin
         WaitingForACK := True;
       end else
         MTI := MTI_FRAME_TYPE_DATAGRAM_FRAME_START;
+      NewStartFrame := False;
+      BlockStartPos := Stream.Position;
       DataBytesSent := ProtocolHeader;
+      BlockByteCount := DataBytesSentLen;
       StreamBytesToByteArray(ProtocolHeaderLen, FDataBytesSent, Count);
       DataBytesSentLen := Count + ProtocolHeaderLen;
       LocalHelper.Load(ol_OpenLCB, MTI, SourceAlias, DestinationAlias, DataBytesSentLen, DataBytesSent[0], DataBytesSent[1], DataBytesSent[2], DataBytesSent[3], DataBytesSent[4], DataBytesSent[5], DataBytesSent[6], DataBytesSent[7]);
       ComPortThread.Add(LocalHelper.Encode);
     end else
     begin
-      if (Stream.Size - Stream.Position <= 8) then
+      if (Stream.Size - Stream.Position <= 8) or (MAX_DATAGRAM_LENGTH - BlockByteCount <= 8) then
       begin
         MTI := MTI_FRAME_TYPE_DATAGRAM_FRAME_END;
         WaitingForACK := True;
@@ -1243,6 +1285,7 @@ begin
       StreamBytesToByteArray(0, FDataBytesSent, Count);
       DataBytesSentLen := Count;
       LocalHelper.Load(ol_OpenLCB, MTI, SourceAlias, DestinationAlias, DataBytesSentLen, DataBytesSent[0], DataBytesSent[1], DataBytesSent[2], DataBytesSent[3], DataBytesSent[4], DataBytesSent[5], DataBytesSent[6], DataBytesSent[7]);
+      ComPortThread.Add(LocalHelper.Encode);
     end;
     Result := True;
   end;
@@ -1258,15 +1301,23 @@ begin
     if (AHelper.SourceAliasID = DestinationAlias) and (AHelper.DestinationAliasID = SourceAlias) then
     begin
       case AHelper.MTI of
-        MTI_DATAGRAM_OK_REPLY : Empty := True;
+        MTI_DATAGRAM_OK_REPLY :
+          begin
+            if Stream.Position < Stream.Size then
+            begin
+              NewStartFrame := True;
+              WaitingForACK := False;
+            end else
+              Empty := True
+          end;
         MTI_DATAGRAM_REJECTED_REPLY :
           begin
              ErrorCode := AHelper.ExtractDataBytesAsInt(2, 3);
              if (ErrorCode and DATAGRAM_REJECTED_RESEND_MASK <> 0) and (RetryCount < DATAGRAM_MAX_RETRYS) then
              begin
-               CurrentPos := 0;                                                 // Reset the statemachine to send it all over again
+               NewStartFrame := True;
                if Assigned(Stream) then
-                 Stream.Position := 0;
+                 Stream.Position := BlockStartPos;
                ErrorCode := $0000;
                WaitingForACK := False;
                Empty := False;
@@ -1526,4 +1577,4 @@ end;
 
 
 end.
-
+

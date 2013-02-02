@@ -14,7 +14,8 @@ const
   ERROR_NO_CDI_PROTOCOL           = $00000002;
   ERROR_NO_CDI_ADDRESS_SPACE      = $00000004;
   ERROR_ADDRESS_SPACE_NOT_PRESENT = $00000008;
-
+  ERROR_ADDRESS_SPACE_READ_ONLY   = $00000010;  // Trying to write to a read only space
+  ERROR_ADDRESS_SPACE_WRITE_LARGER_THAN_SPACE = $00000020;
   SPEEDSTEP_DEFAULT = 28;
 
 type
@@ -103,9 +104,9 @@ type
     property ConfigMemAddressInfo: TOlcbMemConfig read FConfigMemAddressInfo write FConfigMemAddressInfo;
   end;
 
-  { TReadAddressSpaceMemoryTask }
+  { TBaseAddressSpaceMemoryTask }
 
-  TReadAddressSpaceMemoryTask = class(TOlcbTaskBase)
+  TBaseAddressSpaceMemoryTask = class(TOlcbTaskBase)
   private
     FAddressSpace: Byte;
     FCurrentAddress: DWord;
@@ -114,13 +115,13 @@ type
     FForceOptionalSpaceByte: Boolean;
     FMaxAddress: DWord;
     FMinAddress: DWord;
+    FWritingToAddress: Boolean;
     function GetMaxPayloadSize: Byte;
   protected
-    procedure CalculateCurrentSendSize;
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
     property CurrentSendSize: Byte read FCurrentSendSize write FCurrentSendSize;
     property MaxPayloadSize: Byte read GetMaxPayloadSize;
-
+    property WritingToAddress: Boolean read FWritingToAddress write FWritingToAddress;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte); reintroduce;
     destructor Destroy; override;
@@ -131,6 +132,16 @@ type
     property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
     property MinAddress: DWord read FMinAddress;
     property MaxAddress: DWord read FMaxAddress;
+  end;
+
+  TReadAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryTask)
+  end;
+
+  { TWriteAddressSpaceMemoryTask }
+
+  TWriteAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryTask)
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream); reintroduce;
   end;
 
   { TIdentifyEventsTask }
@@ -273,6 +284,15 @@ type
   end;
 
 implementation
+
+{ TWriteAddressSpaceMemoryTask }
+
+constructor TWriteAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending, AnAddressSpace);
+  DataStream.CopyFrom(AStream, AStream.Size);
+  FWritingToAddress := True;
+end;
 
 { TIdentifyConsumerTask }
 
@@ -646,7 +666,7 @@ begin
          Inc(FiState);
        end;
     1: begin
-         if IsProtocolIdentificationProcolReply(MessageInfo) then
+         if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
            FProtocols := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 7);
            Sending := True;
@@ -782,9 +802,9 @@ begin
   end;
 end;
 
-{ TReadAddressSpaceMemoryTask }
+{ TBaseAddressSpaceMemoryTask }
 
-function TReadAddressSpaceMemoryTask.GetMaxPayloadSize: Byte;
+function TBaseAddressSpaceMemoryTask.GetMaxPayloadSize: Byte;
 begin
   if ForceOptionalSpaceByte then
     Result := MAX_DATAGRAM_LENGTH - 7
@@ -792,29 +812,22 @@ begin
     Result := MAX_DATAGRAM_LENGTH - 6;
 end;
 
-procedure TReadAddressSpaceMemoryTask.CalculateCurrentSendSize;
-begin
-  if MaxAddress - CurrentAddress > MaxPayloadSize then
-    CurrentSendSize := MaxPayloadSize
-  else
-    CurrentSendSize := MaxAddress - CurrentAddress;
-end;
-
-constructor TReadAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte);
+constructor TBaseAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FAddressSpace := AnAddressSpace;
   ForceOptionalSpaceByte := False;
+  FWritingToAddress := False;
   FDataStream := TMemoryStream.Create;
 end;
 
-destructor TReadAddressSpaceMemoryTask.Destroy;
+destructor TBaseAddressSpaceMemoryTask.Destroy;
 begin
   FreeAndNil(FDataStream);
   inherited Destroy;
 end;
 
-procedure TReadAddressSpaceMemoryTask.Process(MessageInfo: TOlcbMessage);
+procedure TBaseAddressSpaceMemoryTask.Process(MessageInfo: TOlcbMessage);
 // Outline:
 //    Read Protocols to see if the Memory Protocol is supported
 //    Read Memory Protocol Options to read the Min/Max supported Spaces to see if $FF is supported
@@ -823,7 +836,9 @@ procedure TReadAddressSpaceMemoryTask.Process(MessageInfo: TOlcbMessage);
 //
 
 const
-  STATE_DONE = 12;
+  STATE_DONE = 100;
+  STATE_READ_START = 8;
+  STATE_WRITE_START = 20;
 var
   DatagramReceive: TDatagramReceive;
   PIP: TOlcbProtocolIdentification;
@@ -834,17 +849,19 @@ var
 begin
   case iState of
     0: begin
+         // Ask for the protocols the node supports
          SendProtocolIdentificationProtocolMessage;
          Inc(FiState);
          Sending := False;
        end;
     1: begin
-         if IsProtocolIdentificationProcolReply(MessageInfo) then
+         // First see if the node even supports the Memory Configuration Protocol
+         if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
            PIP := TOlcbProtocolIdentification.Create;
            try
              PIP.LoadByMessage( TOpenLCBMessageHelper( MessageInfo));   // Already know that MessageInfo is a TOpenLCBMessageHelper by this point
-             if PIP.MemoryConfigProtocol {and PIP.ConfigDescriptionInfoProtocol} then
+             if PIP.MemoryConfigProtocol then
              begin
                Sending := True;
                Inc(FiState);
@@ -852,8 +869,6 @@ begin
              begin
                if not PIP.MemoryConfigProtocol then
                  ErrorCode := ErrorCode or ERROR_NO_MEMORY_CONFIG_PROTOCOL;
-          {     if not PIP.ConfigDescriptionInfoProtocol then
-                 ErrorCode := ErrorCode or ERROR_NO_CDI_PROTOCOL; }
                Sending := True;
                iState := STATE_DONE;
              end
@@ -863,11 +878,13 @@ begin
          end
        end;
     2: begin
+         // Ask for what Address Spaces the node supports
          SendMemoryConfigurationOptions;
          Inc(FiState);
          Sending := False;
        end;
     3: begin
+         // Node received the request datagram
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -875,6 +892,7 @@ begin
          end;
        end;
     4: begin
+         // Is the address space we are asking for supported?
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -897,11 +915,13 @@ begin
          end;
        end;
     5: begin
+        // Ask for details about the address space we are interested in
          SendMemoryConfigurationSpaceInfo(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     6: begin
+        // Node received the datagram
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -916,12 +936,23 @@ begin
              Space.LoadByDatagram(DatagramReceive);
              if Space.IsPresent then
              begin
-               FMinAddress := Space.AddressLo;
-               FMaxAddress := Space.AddressHi;
-               CurrentAddress := MinAddress;
-               DataStream.Position := 0;
-               Sending := True;
-               Inc(FiState);
+               if WritingToAddress and Space.IsReadOnly then
+               begin
+                 ErrorCode := ErrorCode or ERROR_ADDRESS_SPACE_NOT_PRESENT;
+                 Sending := True;
+                 iState := STATE_DONE;
+               end else
+               begin
+                 FMinAddress := Space.AddressLo;
+                 FMaxAddress := Space.AddressHi;
+                 CurrentAddress := MinAddress;
+                 DataStream.Position := 0;
+                 Sending := True;
+                 if WritingToAddress then
+                   FiState := STATE_WRITE_START
+                 else
+                   FiState := STATE_READ_START;
+               end
              end else
              begin
                ErrorCode := ErrorCode or ERROR_ADDRESS_SPACE_NOT_PRESENT;
@@ -932,17 +963,23 @@ begin
            end
          end;
        end;
-    8: begin
-         CalculateCurrentSendSize;
+    STATE_READ_START : begin
+         // Calculate how many bytes to read in this frame (depends on if the address space is carried in the frame or if at the end of the mem space)
+         if MaxAddress - CurrentAddress > MaxPayloadSize then
+            CurrentSendSize := MaxPayloadSize
+          else
+            CurrentSendSize := MaxAddress - CurrentAddress;
          Sending := True;
          Inc(FiState);
        end;
     9: begin
+        // Ask for a read from the node
          SendMemoryConfigurationRead(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte);
          Sending := False;
          Inc(FiState);
        end;
     10: begin
+         // Node received the datagram
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -950,6 +987,7 @@ begin
          end;
        end;
     11: begin
+          // Node sending frame of data
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
@@ -967,11 +1005,20 @@ begin
             end else
             begin
               Sending := True;
-              iState := 8;
+              iState := STATE_READ_START;
             end;
           end
         end;
-    12: begin
+    STATE_WRITE_START :
+        begin
+          if DataStream.Size > Space.AddressHi - Space.AddressLo then
+            ErrorCode := ERROR_ADDRESS_SPACE_WRITE_LARGER_THAN_SPACE
+          else
+            SendMemoryConfigurationWrite(AddressSpace, CurrentAddress, Space.AddressHi - Space.AddressLo, ForceOptionalSpaceByte, DataStream);
+          iState := STATE_DONE
+        end;
+
+    STATE_DONE : begin
        // Done
          FDone := True
        end;

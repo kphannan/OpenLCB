@@ -86,6 +86,7 @@ const
   MSI_CONFIG                         = $FD;                                     // MemorySpaceIdentifer - Access basic configuration memory that feeds into the CDI
   MSI_ACDI_MFG                       = $FC;                                     // MemorySpaceIdentifer - Access the ACDI Manfacturers Info
   MSI_ACDI_USER                      = $FB;                                     // MemorySpaceIdentifer - Access the ACDI User definable Info
+  MSI_FDI                            = $FA;                                     // MemorySpaceIdentifer - Access the Function Definition Information (FDI)
 
   MCO_WRITE_UNDER_MASK               = $8000;                                   // MemoryConfigurationOptions - Write under mask supported
   MCO_UNALIGNED_READS                = $4000;                                   // MemoryConfigurationOptions - Unaligned memory Reads supported

@@ -122,13 +122,21 @@ const
 
 type
   TDCCConfigurationData = record
-    FunctionLatch: DWord;                                                       // If the Function is latching or not, F0..F31    //   4 Bytes
-    FunctionName: array[32] of string[16];                                      // Names for the Functions                        // 512 Bytes
     ConsistNext,                                                                //                                                //   4 Bytes
     ConsistPrev: TNodeID;                                                       //                                                //   4 Bytes
   end;
   PDCCConfigurationData = ^TDCCConfigurationData;
 
+const
+  MAX_FDI_FILE = 2048;
+  FDI_EEPROM_START_ADDRESS = 25600;   // 256 bit pages on the 100th page
+  
+type
+  TFDI_Data = record
+    Size: Word;                                                                 // Size of the currently loaded FDI File
+    FDI: array[0..MAX_FDI_FILE] of byte;
+  end;
+  
 procedure NMRAnetAppCallbacks_Initialize;
 function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
@@ -142,6 +150,10 @@ function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+
+function AppCallback_FDI_ConfigurationSize(Node: PNMRAnetNode): Word;
+procedure AppCallback_FDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+function AppCallback_FDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 
 // Local to Train Nodes
 function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
@@ -669,6 +681,39 @@ begin
       Result := True;
     end
   end;
+end;
+
+function AppCallback_FDI_ConfigurationSize(Node: PNMRAnetNode): Word;
+begin
+
+  Result := MAX_FDI_FILE;
+  (*
+
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
+  if Node^.State and NS_VIRTUAL <> 0 then
+    Result := MAX_FDI_ARRAY_VNODE
+  else {$ENDIF}
+    Result := MAX_FDI_ARRAY;          *)
+end;
+
+procedure AppCallback_FDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+begin
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+
+  _25AAxxxx_Write(EEPROM_BANK_0, StartAddress + FDI_EEPROM_START_ADDRESS, MaxCount, DataTarget);
+end;
+
+function AppCallback_FDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+var
+  i: Integer;
+begin
+   while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+
+   Result := MaxCount;
+  
+   _25AAxxxx_Read(EEPROM_BANK_0, StartAddress + FDI_EEPROM_START_ADDRESS, MaxCount, DataTarget);
 end;
 
 end.

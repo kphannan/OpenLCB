@@ -255,6 +255,10 @@ begin
                   NMRAnetNode_Release(TempNode);
               end;
             end;
+          'Z', 'z' :
+            begin
+              _25AAxxxx_Erase(EEPROM_BANK_0);
+            end;
         end;
       end;
     end;

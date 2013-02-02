@@ -65,6 +65,11 @@ uses
   procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);  external;
   function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;  external;
   function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean; external;
+  {$IFDEF SUPPORT_FDI} 
+  function AppCallback_FDI_ConfigurationSize(Node: PNMRAnetNode): Word; external; 
+  procedure AppCallback_FDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);  external;
+  function AppCallback_FDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;  external;
+  {$ENDIF}
   
 
 
@@ -445,6 +450,11 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
                         else {$ENDIF}
                           Result := MAX_CDI_ARRAY;
                       end;
+      {$IFDEF SUPPORT_FDI}
+      MSI_FDI       : begin
+                        Result := AppCallback_FDI_ConfigurationSize(Node);
+                      end;
+      {$ENDIF} // SUPPORT_FDI
       MSI_ALL       : Result := ALL_MAP.HighMem;
       MSI_CONFIG    : Result := AppCallback_ConfigurationSize(Node);
       MSI_ACDI_MFG  : begin
@@ -470,8 +480,6 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
 // *****************************************************************************
 {$IFNDEF BOOTLOADER}
 procedure DecodeMemoryConfigurationReadWrite(Node: PNMRAnetNode; DataBytes: PCAN_DataBytes; var MemorySpace: Byte; var MemorySpaceAddress: DWord; var MemorySpaceCount: Short);
-var
-  MemorySpaceMaxAddress : DWord;
 begin
   MemorySpaceCount := DataBytes^[6];
   case DataBytes^[1] and $03 of      // Strip off bottom two bits
@@ -484,17 +492,6 @@ begin
                          end;
   end;
   MemorySpaceAddress := DWord( DataBytes^[2] shl 24) or DWord( DataBytes^[3] shl 16) or DWord( DataBytes^[4] shl 8) or DWord( DataBytes^[5]);
-   
-  MemorySpaceMaxAddress := MaxAddressByAddressSpace(Node, MemorySpace);
-  
-  if MemorySpaceAddress >= MemorySpaceMaxAddress then
-     MemorySpaceCount := 0
-  else begin
-    if MemorySpaceAddress + MemorySpaceCount >= MemorySpaceMaxAddress then
-      MemorySpaceCount := MemorySpaceMaxAddress - MemorySpaceAddress
-  end;
-  if MemorySpaceCount > 64 then
-    MemorySpaceCount := 64;       // By the spec the requestor can NOT send a request for more than 64 Bytes
 end;
 {$ENDIF}
 
@@ -821,7 +818,7 @@ begin
                                                                                                                              DatagramBuffer^.iByteCount := 7;
                                                                                                                            end;
                                                                                                MCP_OP_GET_ADD_SPACE_INFO : begin
-                                                                                                                              DatagramBuffer^.DataBytes[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+                                                                                                                             DatagramBuffer^.DataBytes[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
                                                                                                                              DatagramBuffer^.DataBytes[1] := MCP_OP_GET_ADD_SPACE_INFO_REPLY or MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT;  // assumption is we support ALL Address Spaces
                                                                                                                              DatagramBuffer^.DataBytes[2] := DatagramBuffer^.DataBytes[2];
                                                                                                                                // I am not supporting the ability to return anything but a $0 for the lower address so we only deal with offsets from zero in these calls
@@ -831,7 +828,7 @@ begin
                                                                                                                              DatagramBuffer^.DataBytes[5] := (DWord(MemorySpaceMaxAddress) shr 8) and $000000FF;
                                                                                                                              DatagramBuffer^.DataBytes[6] := DWord(MemorySpaceMaxAddress) and $000000FF;
                                                                                                                              case DatagramBuffer^.DataBytes[2] of
-                                                                                                                               MSI_CONFIG, MSI_ACDI_USER : DatagramBuffer^.DataBytes[7] := $00          // Read/Write
+                                                                                                                               MSI_CONFIG, MSI_ACDI_USER {$IFDEF SUPPORT_FDI}, MSI_FDI{$ENDIF} : DatagramBuffer^.DataBytes[7] := $00          // Read/Write
                                                                                                                              else
                                                                                                                                DatagramBuffer^.DataBytes[7] := $01;                                     // Read Only
                                                                                                                              end;
@@ -864,13 +861,22 @@ begin
                                                                                             // Reuse the Datagram and the first 6 Bytes.  The beauty here is the defines for this allow it to be a reply and still correctly enter this statemachine!  Thanks Bob!
                                                                                             DatagramBuffer^.DataBytes[1] := MCP_READ_DATAGRAM_REPLY or DatagramBuffer^.DataBytes[1];
 
-                                                                                            // Depends on if the {Space} byte is used
+                                                                                            // The Read message includes the {Space} then 7 bytes are already used in the Datagram else only 6 bytes are used
                                                                                             if DatagramBuffer^.DataBytes[1] and $03 = 0 then
                                                                                               DatagramAddress := 7
                                                                                             else
                                                                                               DatagramAddress := 6;
-                                                                                            DatagramBuffer^.iByteCount := DatagramAddress;  // Start out with the 6 or 7 bytes for the header
+                                                                                              
+                                                                                            DatagramBuffer^.iByteCount := DatagramAddress;  // Reset the current count to not include the "Count" byte that was sent in the request
 
+                                                                                            // Make sure we don't overrun the datagram buffer with a bad request
+                                                                                            if MemorySpaceCount - DatagramAddress > MAX_DATAGRAM_LEN then
+                                                                                              MemorySpaceCount := MAX_DATAGRAM_LEN - DatagramAddress;
+                                                                                            // Make sure we don't overrun the Memory Space
+                                                                                            MemorySpaceMaxAddress := MaxAddressByAddressSpace(Node, MemorySpace);
+                                                                                            if MemorySpaceAddress+ MemorySpaceCount > MemorySpaceMaxAddress then
+                                                                                              MemorySpaceCount := MemorySpaceMaxAddress - MemorySpaceAddress;
+                                                                                            
                                                                                             case MemorySpace of
                                                                                               MSI_CDI       : begin {$IFDEF SUPPORT_VIRTUAL_NODES}
                                                                                                                 if Node^.State and NS_VIRTUAL <> 0 then
@@ -884,6 +890,11 @@ begin
                                                                                                                 end;
                                                                                                                 DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
                                                                                                               end;
+                                                                                              {$IFDEF SUPPORT_FDI}
+                                                                                              MSI_FDI       : begin
+                                                                                                                 DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + AppCallback_FDI_Read(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
+                                                                                                              end;
+                                                                                              {$ENDIF}
                                                                                               MSI_ALL       : begin
                                                                                                                 ByteArray := PByteArray( ALL_MAP.LowMem);
                                                                                                                 for i := 0 to MemorySpaceCount - 1 do
@@ -931,7 +942,6 @@ begin
                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM;
                                                                                           end;
                                                  STATE_MEM_CONFIG_WRITE_DATAGRAM :        begin   {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_CONFIG_WRITE_DATAGRAM'+LF);    {$ENDIF}
-
                                                                                             DatagramAddress := 6;
                                                                                             case DatagramBuffer^.DataBytes[1] and $03 of      // Strip off bottom two bits
                                                                                               MCP_CDI            : MemorySpace := MSI_CDI;
@@ -951,6 +961,11 @@ begin
                                                                                               MSI_ACDI_USER : begin
                                                                                                                 UART1_Write_Text('Unimplemented Configuration Mem write'+LF)
                                                                                                               end;
+                                                                                              {$IFDEF SUPPORT_FDI}
+                                                                                              MSI_FDI       : begin
+                                                                                                                AppCallback_FDI_Write(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
+                                                                                                              end;
+                                                                                              {$ENDIF}
                                                                                             end;
                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM;
                                                                                           end;
