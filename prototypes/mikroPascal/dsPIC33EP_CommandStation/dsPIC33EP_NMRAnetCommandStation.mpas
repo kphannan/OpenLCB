@@ -144,13 +144,15 @@ begin
   TRISB15_bit := 0;                                                             // Output
   TRISB14_bit := 0;                                                             // Output
 
+  UART1_Write_Text('Starting 1'+LF);
 
   {$IFNDEF DCCTIMER_DISABLE}
   TON_T1CON_bit := 1;                                                           // Start the DCC Timer
+  Delay_ms(10);
   NMRA_DCC_Packet_Init;                                                         // Send our 20 Idle Packets per the spec, note we are not on the OLCB bus yet so this will block until done.
   {$ENDIF}
 
-  UART1_Write_Text('Starting'+LF);
+  UART1_Write_Text('Starting 2'+LF);
 
   x := 0;
   y := 0;
@@ -172,7 +174,7 @@ begin
   TON_T5CON_bit := 1;
 
   ADC1_Read(0);  // cheating, intializes and set to Analog input
-  
+
  // NMRAnetNode_Allocate;    // One Proxy ready to go
   
   while (TRUE) do
@@ -192,7 +194,7 @@ begin
         UART1_Write_Text('Track Current: '+ s1 + ' Amps' + LF);
         ADC_Ticker := 0;
       end;
-    
+
       TMR3 := 0;
       NMRAnetStateMachine_Process(ActiveNode);
       if TMR3 > MaxTime_StateMachine then MaxTime_StateMachine := TMR3;
@@ -258,6 +260,20 @@ begin
           'Z', 'z' :
             begin
               _25AAxxxx_Erase(EEPROM_BANK_0);
+            end;
+          'M', 'm' :
+            begin
+                for i := 0 to MAX_NODE_COUNT - 1 do
+                begin
+                  LongWordToStr(Nodes.RawList[i].ConfigurationAddress, s1);
+                  UART1_Write_Text('Offset: ' + s1 +LF);
+                end;
+
+                for i := 0 to MAX_NODE_COUNT - 1 do
+                begin
+                  LongWordToStr(Nodes.RawList[i].RAMAddress, s1);
+                  UART1_Write_Text('RAM Offset: ' + s1 +LF);
+                end;
             end;
         end;
       end;

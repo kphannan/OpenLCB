@@ -32,6 +32,7 @@ const
   MAX_NMRA_DCC_STARTUP_IDLE = 20;
 
   PREAMBLE_BIT_COUNT_NORMAL                 = 14;      // Normal message preamble bit count
+  PREAMBLE_BIT_COUNT_SERVICEMODE            = 20;      // Service Mode message count
 
   MESSAGE_RESET_0                            = $00;       // Reset message = 20+1 = 21 ones;  24+3 = 27 zeros (48) = 8.70ms
   MESSAGE_RESET_1                            = $00;
@@ -151,6 +152,10 @@ procedure NMRA_DCC_56us_TimeTick(ABuffer: PDCCBufferInfo); forward;
 procedure NMRA_DCC_LoadPacketIntoTransmitterStateMachine(ABuffer: PDCCBufferInfo; PreambleCount: Byte);
 // Fires the 20 Idle Packets per the NMRA Spec
 procedure NMRA_DCC_Packet_Init; forward;
+
+procedure NMRA_DCC_LoadIdlePacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
+procedure NMRA_DCC_LoadResetPacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
+
 
 
 implementation
@@ -276,7 +281,12 @@ begin
   NMRA_DCC_LoadPacket(@NewDCCMessage, MESSAGE_IDLE_0, MESSAGE_IDLE_1, 0, 0, 0, 2);
 
   for i := 0 to MAX_NMRA_DCC_STARTUP_IDLE - 1 do
-    while not NMRA_DCC_QueuePacket(@Track, @NewDCCMessage, True) do;
+  begin
+    if not NMRA_DCC_QueuePacket(@Track, @NewDCCMessage, True) then
+    begin
+      Delay_us(500);
+    end;
+  end;
 end;
 
 // ****************************************************************************

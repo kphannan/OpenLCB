@@ -225,7 +225,6 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure MenuItemThrottlesClick(Sender: TObject);
-    procedure TreeViewNetworkAdvancedCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
     procedure TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
@@ -401,7 +400,6 @@ end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandAllExecute(Sender: TObject);
 var
-  i: Integer;
   Node: TOlcbTreeNode;
 begin
   Node := RootNetworkNode.GetFirstChild as TOlcbTreeNode;
@@ -414,7 +412,6 @@ end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandIdentifyEventsExecute(Sender: TObject);
 var
-  i: Integer;
   Node: TOlcbTreeNode;
 begin
   Node := RootNetworkNode.GetFirstChild as TOlcbTreeNode;
@@ -692,19 +689,6 @@ begin
      AddThrottleSubMenu(ThrottleList.Throttles[i]);
 end;
 
-procedure TFormOLCB_Commander.TreeViewNetworkAdvancedCustomDrawItem(
-  Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState;
-  Stage: TCustomDrawStage; var PaintImages, DefaultDraw: Boolean);
-//var
-//  R: TRect;
-begin
-  PaintImages := True;
-  DefaultDraw := True;
- // R := Node.DisplayRect(True);
-//  Sender.Canvas.Brush.Color := clBlue;
-//  Sender.Canvas.FillRect(R);
-end;
-
 procedure TFormOLCB_Commander.TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
 var
   ScreenPos: TPoint;
@@ -829,8 +813,6 @@ begin
 end;
 
 function TFormOLCB_Commander.AddNetworkCommandStationAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
-var
-  ChildNode : TTreeNode;
 begin
   Result := FindTreeNodeByAlias(RootCommandStationNode, NodeAlias);
   if not Assigned(Result) then
@@ -859,8 +841,6 @@ begin
 end;
 
 function TFormOLCB_Commander.AddNetworkTrainAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
-var
-  ChildNode : TTreeNode;
 begin
   Result := FindTreeNodeByAlias(RootTrainNode, NodeAlias);
   if not Assigned(Result) then
@@ -1233,9 +1213,8 @@ end;
 procedure TFormOLCB_Commander.RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(NodeAlias: Word; AddressSpace: TOlcbMemAddressSpace);
 var
   Node: TOlcbTreeNode;
-  MemProtocolChild, ConfigAddressSpacesChild, AddressSpaceChild: TTreeNode;
+  ConfigAddressSpacesChild, AddressSpaceChild: TTreeNode;
   LocalAddressSpace: TOlcbMemAddressSpace;
-  SpaceName: string;
 begin
   Node := FindTreeNodeByAlias(RootNetworkNode, NodeAlias);
   if Assigned(Node) then
@@ -1429,13 +1408,10 @@ end;
 procedure TFormOLCB_Commander.RefreshCommandStationTreeAliasEvents(NodeAlias: Word; NodeID: QWord; LocalHelper: TOpenLCBMessageHelper);
 var
   EventID: TEventID;
-  Node, ChildNode: TTreeNode;
 begin
   EventID := LocalHelper.Data;
   if EqualEvents(@EventID, @EVENT_COMMAND_STATION) then
-  begin
-    Node := AddNetworkCommandStationAlias(NodeAlias, NodeID);
-  end;
+    AddNetworkCommandStationAlias(NodeAlias, NodeID);
 end;
 
 procedure TFormOLCB_Commander.RefreshNetworkTreeAliasProtocolSupport(NodeAlias: Word; Protocols: QWord);
@@ -1702,4 +1678,4 @@ end;
 
 
 end.
-
+

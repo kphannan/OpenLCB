@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynEdit, SynHighlighterXML, Forms, Controls,
-  Graphics, Dialogs, ComCtrls, laz2_DOM, laz2_XMLRead, laz2_XMLWrite;
+  Graphics, Dialogs, ComCtrls, laz2_DOM, laz2_XMLRead;
 
 type
 

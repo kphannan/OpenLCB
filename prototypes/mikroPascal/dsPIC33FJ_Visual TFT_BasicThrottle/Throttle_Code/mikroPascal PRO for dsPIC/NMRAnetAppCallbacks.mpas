@@ -37,7 +37,8 @@ type
   PVolatileData = ^TVolatileData;
 
 const
-  MAX_CFG_DATA = 1024;                                                          // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TConfigurationData up to 1024
+  MAX_NODE_CFG_DATA = 256;
+  MAX_VNODE_CFG_DATA = 256;
 
 type
   TConfigurationData = record
@@ -46,13 +47,7 @@ type
   PConfigurationData = ^TConfigurationData;
 
 procedure NMRAnetAppCallbacks_Initialize;
-
-function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
-procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
-function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
-procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
 procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
-
 function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 function AppCallback_EventsIdentify: Boolean;
@@ -60,6 +55,18 @@ function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+
+// Address Space Support
+// *****************************************************************************
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+// *****************************************************************************
 
 implementation
 
@@ -77,7 +84,7 @@ var
 //
 //  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
-procedure AppCallback_ConfigurationWrite(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
 begin
 
 end;
@@ -91,7 +98,7 @@ end;
 //
 //  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
-function AppCallback_ConfigurationRead(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 begin
   Result := 0;
 end;
@@ -99,9 +106,12 @@ end;
 //******************************************************************************
 //  Returns the overall size of the Configuration Data
 //******************************************************************************
-function AppCallback_ConfigurationSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
 begin
-  Result := MAX_CONFIG_DATA;
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Result := MAX_VNODE_CFG_DATA
+  else
+    Result := MAX_NODE_CFG_DATA
 end;
 
 //******************************************************************************
@@ -109,7 +119,45 @@ end;
 //******************************************************************************
 procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
 begin
-  Node^.ConfigurationAddress := Generic32BitPointer( iNode * MAX_CFG_DATA);
+  // The first node is the Physical Node so this math works, iNode = 0 is the Physical node and al vNodes > 0 for iNode
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Node^.ConfigurationAddress := Generic32BitPointer( MAX_NODE_CFG_DATA + ((iNode - 1) * MAX_VNODE_CFG_DATA))
+  else
+    Node^.ConfigurationAddress := Generic32BitPointer( 0) ;
+end;
+
+// *****************************************************************************
+// Returns The Is Present Attribute about the Address Space
+//  Node:  The Node to write the Configuration Data for
+//  AddressSpace:  The Address Space to return the information about
+//
+//  Result      : True if Is Present else False
+// *****************************************************************************
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_ACDI_USER)
+  else
+    Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_ACDI_USER)
+end;
+
+// *****************************************************************************
+// Returns The Is ReadOnly Attribute about the Address Space
+//  Node:  The Node to write the Configuration Data for
+//  AddressSpace:  The Address Space to return the information about
+//
+//  Result      : True if Is ReadOnly else False
+// *****************************************************************************
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  case AddressSpace of
+    MSI_CDI,
+    MSI_ALL,
+    MSI_ACDI_MFG,
+    MSI_ACDI_USER : Result := True  // I am not supporting writing to this space, do it through the configuration addresss space
+  else
+      Result := False;
+  end;
 end;
 
 //******************************************************************************

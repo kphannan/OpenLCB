@@ -315,11 +315,12 @@ begin
   for i := 0 to MAX_NODE_COUNT - 1 do
   begin
     NMRAnetStateMachine_InitializeNode(@Nodes.RawList[i], PhysicalNodeID_HI, PhysicalNodeID_LO + i);  // Physical Node + i MUST FIT IN THE LOWER 3 BYTES
+    if i > 0 then
+      NMRAnetNode_SetStateFlag(@Nodes.RawList[i], NS_ALLOCATED or NS_VIRTUAL);
     AppCallback_AssignConfigurationAddress(@Nodes.RawList[i], i);
     AppCallback_AssignRAMAddress(@Nodes.RawList[i], i);
   end;
   Node := NMRAnetNode_Allocate;                                                 // Allocate the Physical Node
-  Node^.State := Node^.State and not NS_VIRTUAL;
 end;
 
 // *****************************************************************************
@@ -339,12 +340,13 @@ begin
   begin
     Result := @Nodes.RawList[Nodes.AllocatedCount];
     NMRAnetStateMachine_InitializeNode(Result, 0, 0);                           // The NodeID was already created in the initialization
-    NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);
+    if Result <> @Nodes.RawList[0] then
+      NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);
     Nodes.AllocatedList[Nodes.AllocatedCount] := Result;
     Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Info.Seed, False); // Pregenerate it so it can be sorted
     Inc(Nodes.AllocatedCount);
-    NMRAnetNode_SortNodeList(Nodes);
     AppCallback_NodeAllocate(Result);
+    NMRAnetNode_SortNodeList(Nodes);
   end;
 end;
 

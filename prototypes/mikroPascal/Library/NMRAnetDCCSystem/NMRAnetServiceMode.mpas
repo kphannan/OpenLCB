@@ -17,9 +17,6 @@
 
 unit NMRAnetServiceMode;
 
-uses
-  XpressNet_Constants;
-
 const
   PROGRAMMING_ACK_STATE_SCAN_FOR_ACK_BIT     = 0;   // Start looking for the Acknowledge bit
   PROGRAMMING_ACK_STATE_DETECTED_BIT         = 1;   // A valid Acknowledge was detected
@@ -103,7 +100,7 @@ type
   
   TServiceModeRegisterInfo = record
     DeviceCache: TServiceModeRegisterCache;          // The request and the result from/to the device
-    iDevice: Integer;                                // Device that invoked Service Mode
+//    iDevice: Integer;                                // Device that invoked Service Mode
     Mode: Byte;                                      // High Nibble is the Service Mode type (Direct/Address/Register/Page) See SERVICE_MODE_DIRECT_XXXX and the Lo Nibble is the command type (Read/Write/ReadBit/WriteBit)  See SERVICE_MODE_COMMMAND_XXXXX constants
     iStateMachine: Byte;                             // The StateMachine State to start from after Service Mode Initialization (Power On Cycle) has been completed
   end;
@@ -177,7 +174,7 @@ begin
     Buffer^.DeviceCache.Value := 0;
     Buffer^.DeviceCache.Address := 0;
     Buffer^.iStateMachine := STATE_SERVICEMODE_RESET_CYCLE;                     // Default
-    Buffer^.iDevice := ID_NO_DEVICE;
+ //   Buffer^.iDevice := ID_NO_DEVICE;
   end;
   ServiceModeInfo.Queue.Count := 0;
   ServiceModeInfo.Queue.iHead := 0;
@@ -186,7 +183,7 @@ begin
 
   ServiceModeInfo.Buffer.DeviceCache.Address := 0;
   ServiceModeInfo.Buffer.DeviceCache.Value := 0;
-  ServiceModeInfo.Buffer.iDevice := ID_NO_DEVICE;
+ // ServiceModeInfo.Buffer.iDevice := ID_NO_DEVICE;
   ServiceModeInfo.Buffer.Mode := 0;
   
   ServiceModeInfo.ScratchBuffer.Address := 0;
@@ -229,7 +226,7 @@ begin
     RegisterInfo^.DeviceCache.Address := AnAddress;
     RegisterInfo^.DeviceCache.Value := AValue;
     RegisterInfo^.iStateMachine := iStateMachine;
-    RegisterInfo^.iDevice := iDevice;
+ //   RegisterInfo^.iDevice := iDevice;
     RegisterInfo^.Mode := Mode;
     Inc(ServiceModeInfo.Queue.iHead);                                           // Move to the next (potential) empty index
     if ServiceModeInfo.Queue.iHead >= MAX_SERVICEMODE_QUEUE_MESSAGES then

@@ -190,7 +190,7 @@ type
     FWaitingActions: TThrottleWaitingActions;
     FWaitTimeTask: TGeneralWaitTimeTask;
     procedure RunWriteFdiFile(AliasID: Word; FileName: string);
-    procedure RunProtocolSupport(AliasID: Word; WaitTime: Cardinal);
+    procedure RunProtocolSupport(AliasID: Word);
     procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
     procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
     procedure RunTractionAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
@@ -324,7 +324,7 @@ begin
   if OpenDialog.Execute then
   begin
     Include(FWaitingActions, wa_WritingNewFDI);
-    RunProtocolSupport(AllocatedAlias, 0);
+    RunProtocolSupport(AllocatedAlias);
   end;
 end;
 
@@ -589,7 +589,7 @@ end;
 
 procedure TFormAwesomeThrottle.TrackBarSpeedChange(Sender: TObject);
 var
-  LastPos: Cardinal;
+  LastPos: Integer;
 begin
   LastPos := StrToInt(LabelPosValue.Caption);
   if LastPos <> TrackBarSpeed.Position then
@@ -604,7 +604,6 @@ var
   FileStream: TFileStream;
   MemStream, BufferStream: TMemoryStream;
   Task: TWriteAddressSpaceMemoryRawTask;
-  s: string;
   i, Offset: Integer;
   b: Byte;
   StartFDI: Integer;
@@ -630,7 +629,11 @@ begin
         FileStream.Position := StartFDI;
         i := 0;
         while (FileStream.Position < FileStream.Size) do
-          MemStream.WriteByte( FileStream.ReadByte);
+        begin
+          b := FileStream.ReadByte;
+          if (b <> Ord(#13)) and (b <> Ord(#10)) then
+            MemStream.WriteByte( b);
+        end;
         MemStream.WriteByte( Ord(#0));  // Add null
         UpdateFunctionsWithFDI(MemStream);
         MemStream.Position := 0;
@@ -656,7 +659,7 @@ begin
   end;
 end;
 
-procedure TFormAwesomeThrottle.RunProtocolSupport(AliasID: Word; WaitTime: Cardinal);
+procedure TFormAwesomeThrottle.RunProtocolSupport(AliasID: Word);
 var
   Task: TProtocolSupportTask;
 begin
@@ -682,7 +685,7 @@ procedure TFormAwesomeThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpac
 var
   Task: TReadAddressSpaceMemoryRawTask;
 begin
-  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount);
+  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   ComPortThread.AddTask(Task);
@@ -801,7 +804,7 @@ begin
       if GlobalSettings.Throttle.AutoLoadFDI then
       begin
         Include(FWaitingActions, wa_FDItoFunctions);
-        RunProtocolSupport(FAllocatedAlias, 0);         // Kick it off
+        RunProtocolSupport(FAllocatedAlias);         // Kick it off
       end;
       PotentialAlias := 0;
     end;
@@ -1021,8 +1024,6 @@ procedure TFormAwesomeThrottle.UpdateFunctionsWithFDI(MemStream: TMemoryStream);
   var
     Child, NameNode, NumberNode: TDOMNode;
     i: Integer;
-    FunctionButton: TButton;
-    Action: TAction;
     ActionName: string;
   begin
     if Assigned(Parent) then
@@ -1065,11 +1066,8 @@ var
   TrashStream: TMemoryStream;
   ADoc: TXMLDocument;
   SegNode: TDOMNode;
-  s: string;
-  i: Integer;
   Done: Boolean;
 begin
-  i := 0;
   Done := False;
   MemStream.Position := 0;
   TrashStream := TMemoryStream.Create;
@@ -1127,11 +1125,11 @@ procedure TFormAwesomeThrottle.EventTaskReceived(EventTask: TEventTask);
                 begin
                   if IsShortAddress then
                   begin
-                    if ((Event[4] shl 8) or Event[5]) = SpinEditAddress.Value then
+                    if Integer((Event[4] shl 8) or Event[5]) = SpinEditAddress.Value then
                       AliasList.Add( Pointer( EventTask.MessageHelper.SourceAliasID));
                   end else
                   begin
-                    if ((Event[4] shl 8) or Event[5]) = (SpinEditAddress.Value or $C000) then
+                    if Integer((Event[4] shl 8) or Event[5]) = (SpinEditAddress.Value or $C000) then
                       AliasList.Add( Pointer( EventTask.MessageHelper.SourceAliasID));
                   end;
                 end;

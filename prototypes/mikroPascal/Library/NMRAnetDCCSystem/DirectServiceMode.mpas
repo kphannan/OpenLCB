@@ -1,0 +1,419 @@
+unit DirectServiceMode;
+
+uses
+  NMRAnetDCC,
+  NMRAnetServiceMode;
+
+implementation
+
+type
+  TServiceModePowerOnFunc = procedure(BufferPtr: PDCCBufferInfo);
+  PServiceModePowerOnFunc = ^TServiceModePowerOnFunc;
+  TServiceModeResetNextStateFunc = procedure(BufferPtr: PDCCBufferInfo);
+  PServiceModeResetNextStateFunc = ^TServiceModeResetNextStateFunc;
+  TServiceModeHandleAckDetected = procedure (BufferPtr: PDCCBufferInfo);
+  PServiceModeHandleAckDetected = ^TServiceModeHandleAckDetected;
+  TServiceModeRequestNextStateFunc = procedure(BufferPtr: PDCCBufferInfo);
+  PServiceModeRequestNextStateFunc = ^TServiceModeRequestNextStateFunc;
+  TServiceModeRequestCurrentStateFunc = procedure(BufferPtr: PDCCBufferInfo; Command: Byte);
+  PServiceModeRequestCurrentStateFunc = ^TServiceModeRequestCurrentStateFunc;
+  TServiceModeWriteRecoverNextStateFunc = procedure(BufferPtr: PDCCBufferInfo);
+  PServiceModeWriteRecoverNextStateFunc = ^TServiceModeWriteRecoverNextStateFunc;
+  
+  procedure NextStateAndLoadResetPacket(NextStateMachineIndex: Byte; BufferPtr: PDCCBufferInfo); forward;
+
+// ***************************************************************************
+// procedure ServiceModePowerOn;
+//
+//   Common function that Direct CV Mode calls are started from
+//
+// Note: that this function expects that ONE RESET MESSAGE HAS ALREADY BEEN SENT before
+// this function is entered the first time.
+// ***************************************************************************
+procedure ServiceModePowerOn(BufferPtr: PDCCBufferInfo; NextStateFunc: PServiceModePowerOnFunc);
+begin
+  Inc(ServiceModeInfo.iInstructionCountSent);                                   // We are always one behind so increment first
+  if ServiceModeInfo.iInstructionCountSent < SERVICEMODE_POWER_ON_CYCLE_IDLE_COUNT then
+  begin
+    Inc(ServiceModeInfo.TotalSent);
+    NMRA_DCC_LoadIdlePacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+  end else
+    NextStateFunc(BufferPtr);
+end;
+
+// ***************************************************************************
+// procedure ServiceModeReset;
+//
+//  Common function that Direct CV Mode calls are started from.
+//
+// NOTE 1: This function expects that ONE RESET MESSAGE HAS ALREADY BEEN SENT before
+//
+// this function is entered the first time.
+// NOTE 2: The NextStateFunc must load the final ResetPacket, typically using NextStateAndLoadResetPacket
+// ***************************************************************************
+procedure ServiceModeReset(BufferPtr: PDCCBufferInfo; NextStateFunc: PServiceModeResetNextStateFunc; CycleCount: Byte; NewAck: Boolean);
+begin
+  Inc(ServiceModeInfo.iInstructionCountSent);                                   // We are always one behind so increment first
+  if ServiceModeInfo.iInstructionCountSent < CycleCount - 1 then                // The NextStateFunc is responsible for the final Reset Packet
+  begin
+    Inc(ServiceModeInfo.TotalSent);
+    NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+  end else
+  begin
+    if NewAck then
+      ServiceMode_ResetForNewAck;                                               // Get ready for an new Ack run within the sequence
+    NextStateFunc(BufferPtr);
+  end
+end;
+
+// ***************************************************************************
+// procedure ServiceModeRequest;
+//
+//   Common function that many Direct CV Mode calls are started from
+// ***************************************************************************
+procedure ServiceModeRequest(BufferPtr: PDCCBufferInfo; NextStateFunc: PServiceModeRequestNextStateFunc; CurrentStateFunc: PServiceModeRequestCurrentStateFunc; AckDetectedFunc: PServiceModeHandleAckDetected; Command: Byte; CycleCount: Byte);
+begin
+  if ServiceModeInfo.iInstructionCountSent = 2 then                             // Start looking for an ACK from the decoder after the packet sent to the decoder
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_SCAN_FOR_ACK_BIT := 1;
+
+  if ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_DETECTED_BIT = 1 then          // Break off once a ACK is detected
+    AckDetectedFunc(BufferPtr)
+  else begin
+    Inc(ServiceModeInfo.iInstructionCountSent);                                 // We are always one behind so increment first
+    if ServiceModeInfo.iInstructionCountSent >= CycleCount then
+    begin
+      NextStateFunc(BufferPtr);
+      ServiceModeInfo.iInstructionCountSent := 0
+    end else
+      CurrentStateFunc(BufferPtr, Command)                                      // What to do for the Service Mode Request
+  end;
+end;
+
+// ***************************************************************************
+// procedure ServiceModeSendResetPackets;
+//
+//  Just loops keeping the decoder in Service Mode
+// ***************************************************************************
+procedure ServiceModeSendResetPackets(BufferPtr: PDCCBufferInfo);
+begin
+  NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+end;
+
+// ***************************************************************************
+// procedure ServiceModeSequenceComplete;
+//
+//   Ready for the main loop to report back what occured during the Service Mode attempt
+// This will continue to be called until a new Service Mode commmand is moved from
+// the queue to the buffer.  It keep the decoder in service mode by sending Resets
+// ***************************************************************************
+procedure ServiceModeSequenceComplete(BufferPtr: PDCCBufferInfo);
+begin
+  ServiceModeInfo.Buffer.DeviceCache.Address := ServiceModeInfo.ScratchBuffer.Address; // Restore the raw address
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_RESPONSE_READY_BIT := 1;                 // It is ready one way or another (No Loco or the Ack Timer already set it to 1)
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_SEND_RESET_PACKETS, BufferPtr);        // Keep the decoder in Service Mode
+end;
+
+// ***************************************************************************
+// procedure ServiceModeNotSupported;
+//
+//   Direct CV Mode is not supported (or problems occured)
+// ***************************************************************************
+procedure ServiceModeNotSupported(BufferPtr: PDCCBufferInfo);
+begin
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_SEQUENCE_COMPLETE, BufferPtr);      // TEMPORARY NEED TO TRY PAGED MODE
+end;
+
+// ***************************************************************************
+//  procedure NextStateAndLoadResetPacket
+//
+//   General use function to reset variables and move to the next statemachine
+// state
+// ***************************************************************************
+procedure NextStateAndLoadResetPacket(NextStateMachineIndex: Byte; BufferPtr: PDCCBufferInfo);
+begin
+  ServiceModeInfo.iStateMachine := NextStateMachineIndex;
+  ServiceModeInfo.iInstructionCountSent := 0;
+  NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+  Inc(ServiceModeInfo.TotalSent);
+end;
+
+// ***************************************************************************
+// procedure Direct_AckDetectedFunc;
+//
+//   Called in response to a positive acknowledgement of a Direct Service Mode Request
+// PROGRAMMING_ACK_STATE_NMRA_DCC_DETECTED_BIT has been set by the 5ms timer
+// ***************************************************************************
+procedure Direct_AckDetectedFunc(BufferPtr: PDCCBufferInfo);
+var
+  State: Byte;
+begin
+  if ServiceModeInfo.Buffer.Mode and $0F > SERVICE_MODE_COMMAND_MAX_VERIFY then // Is it a Verify or Write Ack?
+    State := STATE_SERVICEMODE_DIRECT_WRITE_RECOVER_CYCLE                       // A Write needs a Recover Cycle
+  else
+    State := STATE_SERVICEMODE_SEQUENCE_COMPLETE;                               // A Verify can just end
+  NextStateAndLoadResetPacket(State, BufferPtr);
+  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE;
+end;
+
+// ***************************************************************************
+// procedure Direct_AckDetectedSupportedTestFunc;
+//
+//   Called in response to a positive acknowledgement of a Direct Service Mode availablity test
+// PROGRAMMING_ACK_STATE_NMRA_DCC_DETECTED_BIT has been set by the 5ms timer
+// ***************************************************************************
+procedure Direct_AckDetectedSupportedTestFunc(BufferPtr: PDCCBufferInfo);
+begin
+  {$IFNDEF DISABLE_BYTE_BY_BIT_DIRECT_SERVICEMODE}
+  if ServiceModeInfo.DirectSupportTest <= SERVICE_MODE_DIRECT_TEST_BIT_ONE_MODE then   // Was it a Bit Test Command?
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_BITMODE_AVAILABLE := 1;                // Bit Mode is available else Byte Mode is available
+  {$ENDIF DISABLE_BYTE_BY_BIT_DIRECT_SERVICEMODE}
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_DIRECT_RESET_CYCLE, BufferPtr);        // Reset Cycle requires this preloaded Reset Packet
+end;
+
+// ***************************************************************************
+// procedure Direct_AckDetectedByteByBitFunc;
+//
+//   Called in response to a positive acknowledgement of a Direct Service Mode
+// when using Bit Mode to quickly read a Byte when available
+// PROGRAMMING_ACK_STATE_NMRA_DCC_DETECTED_BIT has been set by the 5ms timer
+// ***************************************************************************
+procedure Direct_AckDetectedByteByBitFunc(BufferPtr: PDCCBufferInfo);
+var
+  Offset: Byte;
+begin
+  Offset := ServiceModeInfo.Buffer.DeviceCache.Value and %00000111;                          // Extract the Bit Offset that was tested
+  ServiceModeInfo.ScratchBuffer.Value.Offset := ServiceModeInfo.Buffer.DeviceCache.Value.3;  // Copy the Tested bit into the Offset in the Resulting Byte
+  if ServiceModeInfo.Buffer.DeviceCache.Value and %00000111 = 0 then                         // Have we tested all 8 Bits yet?
+  begin                                                                                      // Yes we are done
+    ServiceModeInfo.Buffer.DeviceCache.Value := ServiceModeInfo.ScratchBuffer.Value;         // Copy the Result to the output
+    ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE;           // Tell the main loop the read was successful
+    NextStateAndLoadResetPacket(STATE_SERVICEMODE_SEQUENCE_COMPLETE, BufferPtr);             // Spin until the main loop dispatches the result
+  end else
+  begin                                                                                      // No move to the next lower bit offset
+    Dec(ServiceModeInfo.Buffer.DeviceCache.Value);                                           // Move to the next Bit Index
+    ServiceModeInfo.Buffer.DeviceCache.Value.3 := 0;                                         // Start off by testing for a 0
+    NextStateAndLoadResetPacket(STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_RESET, BufferPtr); // Run a Reset Sequence before the next byte
+  end;
+end;
+
+
+// ***************************************************************************
+// procedure Direct_TestBitNextStateFunc;
+//
+//   Called in response to no acknowledgement of a Direct Service Mode test
+// for the Manufacturing ID CV Bit 7 = 0
+// ***************************************************************************
+procedure Direct_TestBitNextStateFunc(BufferPtr: PDCCBufferInfo);
+begin
+  Inc(ServiceModeInfo.DirectSupportTest);                                       // Next Test Mode
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_RESET_CYCLE, BufferPtr)         // Try again
+end;
+
+// ***************************************************************************
+// procedure Direct_TestByteNextStateFunc;
+//
+//   Called in response to no acknowledgement of a Direct Service Mode test
+// for the Manufacturing ID CV Byte.  If this fails then the decoder does not
+// support Direct Mode
+// ***************************************************************************
+procedure Direct_TestByteNextStateFunc(BufferPtr: PDCCBufferInfo);
+begin
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_NOT_SUPPORTED, BufferPtr)       // Direct Mode Failed
+end;
+
+// ***************************************************************************
+// procedure Direct_RequestNextStateFunc;
+//
+//   Called in response to no acknowledgement of a Direct Service Mode request
+// on the deocoder.  Exit the sequence, the fail flag has been set by the
+// Service Mode timer
+// ***************************************************************************
+procedure Direct_RequestNextStateFunc(BufferPtr: PDCCBufferInfo);
+begin
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_SEQUENCE_COMPLETE, BufferPtr)
+end;
+
+// ***************************************************************************
+// procedure Direct_ByteVerifyNextStateFunc;
+//
+//   Called in response to no acknowledgement of a Direct Service Mode request
+// to Verify a CV.  It will be called up to 255 time or until the decoder
+// acknowledges
+// ***************************************************************************
+procedure Direct_ByteVerifyNextStateFunc(BufferPtr: PDCCBufferInfo);
+var
+  State: Byte;
+begin
+  if ServiceModeInfo.Buffer.DeviceCache.Value = 255 then
+    State := STATE_SERVICEMODE_SEQUENCE_COMPLETE                                // Questions have run out without an acknowledgement, give up
+  else begin
+    Inc(ServiceModeInfo.Buffer.DeviceCache.Value);                              // Have not run all 255 Registers yet keep going
+    ServiceModeInfo.iInstructionCountSent := 0;
+    State := STATE_SERVICEMODE_DIRECT_RESET_CYCLE                               // Run the Rest packet sequence first then try the new Value
+  end;
+  NextStateAndLoadResetPacket(State, BufferPtr)
+end;
+
+// ***************************************************************************
+// procedure Direct_ByteByBitNextStateFunc;
+//
+//   Called in response to not receiving an Ack when using Bit Mode to read a Byte
+// ***************************************************************************
+procedure Direct_ByteByBitNextStateFunc(BufferPtr: PDCCBufferInfo);
+var
+  State: Byte;
+begin
+  if ServiceModeInfo.Buffer.DeviceCache.Value.3 = 0 then
+  begin
+    ServiceModeInfo.Buffer.DeviceCache.Value.3 := 1;                            // See if the bit is a "1"
+    State := STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_RESET                    // Run the Reset Packet Sequence before trying the next bit
+  end else
+    State := STATE_SERVICEMODE_SEQUENCE_COMPLETE;                               // Failed somewhere in the 8 bits
+  NextStateAndLoadResetPacket(State, BufferPtr);
+end;
+
+// ***************************************************************************
+// procedure Direct_PowerOnNextStateFunc;
+//
+//   Called in response to finishing the Power On Cycle
+// ***************************************************************************
+procedure Direct_PowerOnNextStateFunc(BufferPtr: PDCCBufferInfo);
+begin
+  ServiceModeInfo.DirectSupportTest := SERVICE_MODE_DIRECT_TEST_BIT_ZERO_MODE;  // Setup to track what test we are in
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_BITMODE_AVAILABLE := 0;           // Assume not available
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_RESET_CYCLE, BufferPtr);
+end;
+
+// ***************************************************************************
+// procedure Direct_ResetAndTestNextStateFunc;
+//
+//   Called in response to the Command Station placing the decoder into
+// Service Mode
+// ***************************************************************************
+procedure Direct_ResetAndTestNextStateFunc(BufferPtr: PDCCBufferInfo);
+var
+  Next: Byte;
+begin
+  if ServiceModeInfo.DirectSupportTest = SERVICE_MODE_DIRECT_TEST_BIT_ZERO_MODE then        // When the Buffer is loaded the original Address and Value are copied into the ServiceModeInfo.ScratchBuffer structure
+  begin
+    ServiceModeInfo.Buffer.DeviceCache := MFG_CV_ID_BIT_7_EQUALS_ZERO;                      // Set up to Verify a 0 in Bit 7 of CV 8
+    Next := STATE_SERVICEMODE_DIRECT_MODE_BIT_TEST;
+  end else
+  if ServiceModeInfo.DirectSupportTest = SERVICE_MODE_DIRECT_TEST_BIT_ONE_MODE then
+  begin
+    ServiceModeInfo.Buffer.DeviceCache := MFG_CV_ID_BIT_7_EQUALS_ONE;                       // Set up to Verify a 1 in Bit 7 of CV 8
+    Next := STATE_SERVICEMODE_DIRECT_MODE_BIT_TEST;
+  end else
+  begin
+     ServiceModeInfo.Buffer.DeviceCache := MFG_CV_ID;                                        // Set up to Verify CV 8
+     Next := STATE_SERVICEMODE_DIRECT_MODE_BYTE_TEST;
+  end;
+  NextStateAndLoadResetPacket(Next, BufferPtr);
+end;
+
+// ***************************************************************************
+// procedure Direct_ResetAndDispatchNextStateFunc;
+//
+//   Called in response after the decoder responded to tests to see if it implements
+// Direct Bit and/or Byte Mode.  If Bit Mode is implemented it is assumed Byte
+// Mode is also implemented.
+// ***************************************************************************
+procedure Direct_ResetAndDispatchNextStateFunc(BufferPtr: PDCCBufferInfo);
+var
+  State: Byte;
+begin
+  ServiceModeInfo.Buffer.DeviceCache := ServiceModeInfo.ScratchBuffer;          // Restore the original request
+
+  if ServiceModeInfo.Buffer.Mode and $0F = SERVICE_MODE_COMMMAND_WRITE_BYTE then
+    State := STATE_SERVICEMODE_DIRECT_BYTEMODE_WRITE
+  else
+  if ServiceModeInfo.Buffer.Mode and $0F = SERVICE_MODE_COMMMAND_VERIFY_BYTE then
+  begin
+    if ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_BITMODE_AVAILABLE = 1 then
+    begin
+      State := STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_VERIFY;
+      ServiceModeInfo.Buffer.DeviceCache.Value := %11100111;                    // Bit Verify, Bit = 0, Bit Index = 7, count backwards
+    end else
+      State :=  STATE_SERVICEMODE_DIRECT_BYTEMODE_VERIFY
+  end else
+    State := STATE_SERVICEMODE_DIRECT_BITMODE;                                  // The Buffer.Value is already in the correct format (including the Verify/Write Bit)
+  NextStateAndLoadResetPacket(State, BufferPtr);
+end;
+
+// ***************************************************************************
+// procedure Direct_ByteModeByBitsResetNextStateFunc;
+//
+//   Called when the Byte by Bit Reset runs its course, it much load the last
+// Reset Packet
+// ***************************************************************************
+procedure Direct_ByteModeByBitsResetNextStateFunc(BufferPtr: PDCCBufferInfo);
+begin
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_VERIFY, BufferPtr);
+end;
+
+// ***************************************************************************
+// procedure Direct_RequestCurrentStateFunc;
+//
+//   Called during a Direct Mode Request to send the actual request before it is
+// acknowledged
+// ***************************************************************************
+procedure Direct_RequestCurrentStateFunc(BufferPtr: PDCCBufferInfo; Command: Byte);
+var
+  i: Integer;
+begin
+  BufferPtr^.TX_TransmittingPacket.PacketBytes[0] := Command or (Hi(ServiceModeInfo.Buffer.DeviceCache.Address) and %00000011);
+  BufferPtr^.TX_TransmittingPacket.PacketBytes[1] := Lo(ServiceModeInfo.Buffer.DeviceCache.Address);
+  BufferPtr^.TX_TransmittingPacket.PacketBytes[2] := ServiceModeInfo.Buffer.DeviceCache.Value;
+  if Command and %00001100 = %00001000 then   // Is Bit Manipulation instruction?
+    BufferPtr^.TX_TransmittingPacket.PacketBytes[2] := %11100000 or BufferPtr^.TX_TransmittingPacket.PacketBytes[2];    // Buffer.Value must be in NMRA form xxxKDBBB where K = Read/Verify, D = Value to Read/Verify, BBB = the Bit Index to Read/Verify
+  BufferPtr^.TX_TransmittingPacket.Flags := 3;
+  BufferPtr^.TX_XOR_Byte := 0;
+  for i := 0 to 2 do
+    BufferPtr^.TX_XOR_Byte := BufferPtr^.TX_XOR_Byte xor BufferPtr^.TX_TransmittingPacket.PacketBytes[i];
+  BufferPtr^.TX_PreambleBitCount := PREAMBLE_BIT_COUNT_SERVICEMODE;
+  Inc(ServiceModeInfo.TotalSent);
+end;
+
+// ***************************************************************************
+// procedure Direct_WriteRecoveryNextStateFunc;
+//
+//  Called when the Write Recovery Reset Packets have completed
+// ***************************************************************************
+procedure Direct_WriteRecoveryNextStateFunc(BufferPtr: PDCCBufferInfo);
+begin
+  NextStateAndLoadResetPacket(STATE_SERVICEMODE_SEQUENCE_COMPLETE, BufferPtr);
+end;
+
+// ***************************************************************************
+//  procedure ServiceMode_Direct_Func
+//
+//  Parameters:  None
+//
+//  Result:  None
+//
+//  Description:
+//         StateMachine that handles a Direct CV Service Mode Programmming sequence
+//    per the S9.2.3 spec
+//
+// ***************************************************************************
+procedure NMRA_DCC_DirectServiceModeStateMachine(BufferPtr: PDCCBufferInfo);
+begin
+  case ServiceModeInfo.iStateMachine of
+    STATE_SERVICEMODE_POWER_ON_CYCLE                 : ServiceModePowerOn(BufferPtr, @Direct_PowerOnNextStateFunc);
+    STATE_SERVICEMODE_RESET_CYCLE                    : ServiceModeReset(BufferPtr, @Direct_ResetAndTestNextStateFunc, SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT, True);
+    STATE_SERVICEMODE_DIRECT_MODE_BIT_TEST           : ServiceModeRequest(BufferPtr, @Direct_TestBitNextStateFunc, @Direct_RequestCurrentStateFunc, @Direct_AckDetectedSupportedTestFunc, %01111000, SERVICEMODE_INSTRUCTION_COUNT);
+    STATE_SERVICEMODE_DIRECT_MODE_BYTE_TEST          : ServiceModeRequest(BufferPtr, @Direct_TestByteNextStateFunc, @Direct_RequestCurrentStateFunc, @Direct_AckDetectedSupportedTestFunc, %01110100, SERVICEMODE_INSTRUCTION_COUNT);
+    STATE_SERVICEMODE_DIRECT_RESET_CYCLE             : ServiceModeReset(BufferPtr, @Direct_ResetAndDispatchNextStateFunc, SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT, True);
+    STATE_SERVICEMODE_DIRECT_BITMODE                 : ServiceModeRequest(BufferPtr, @Direct_RequestNextStateFunc, @Direct_RequestCurrentStateFunc, @Direct_AckDetectedFunc, %01111000, SERVICEMODE_INSTRUCTION_COUNT);
+    STATE_SERVICEMODE_DIRECT_BYTEMODE_VERIFY         : ServiceModeRequest(BufferPtr, @Direct_ByteVerifyNextStateFunc, @Direct_RequestCurrentStateFunc, @Direct_AckDetectedFunc, %01110100, SERVICEMODE_INSTRUCTION_COUNT);
+    STATE_SERVICEMODE_DIRECT_BYTEMODE_WRITE          : ServiceModeRequest(BufferPtr, @Direct_RequestNextStateFunc, @Direct_RequestCurrentStateFunc, @Direct_AckDetectedFunc, %01111100, SERVICEMODE_INSTRUCTION_COUNT);
+    STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_RESET  : ServiceModeReset(BufferPtr, @Direct_ByteModeByBitsResetNextStateFunc, SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT, True);
+    STATE_SERVICEMODE_DIRECT_BYTEMODE_BY_BITS_VERIFY : ServiceModeRequest(BufferPtr, @Direct_ByteByBitNextStateFunc, @Direct_RequestCurrentStateFunc, @Direct_AckDetectedByteByBitFunc, %01111000, SERVICEMODE_INSTRUCTION_COUNT);
+    STATE_SERVICEMODE_DIRECT_WRITE_RECOVER_CYCLE     : ServiceModeReset(BufferPtr, @Direct_WriteRecoveryNextStateFunc, SERVICEMODE_WRITE_RECOVER_COUNT, False);
+    STATE_SERVICEMODE_SEQUENCE_COMPLETE              : ServiceModeSequenceComplete(BufferPtr);
+    STATE_SERVICEMODE_SEND_RESET_PACKETS             : ServiceModeSendResetPackets(BufferPtr);
+    STATE_SERVICEMODE_NOT_SUPPORTED                  : ServiceModeNotSupported(BufferPtr);
+   end;
+end;
+
+end.

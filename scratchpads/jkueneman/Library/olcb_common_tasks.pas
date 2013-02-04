@@ -170,23 +170,29 @@ type
     FAddressSpace: Byte;
     FCurrentOffset: DWord;
     FForceOptionalSpaceByte: Boolean;
+    FIncludeTerminator: Boolean;
     FReadByteCount: DWord;
     FStream: TMemoryStream;
     FReadAddress: DWord;
+    FTerminator: Char;
+    FUsingTerminator: Boolean;
     function GetPayloadSize: Integer;
   protected
     property CurrentOffset: DWord read FCurrentOffset write FCurrentOffset;
     property PayloadSize: Integer read GetPayloadSize;
+    property UsingTerminator: Boolean read FUsingTerminator write FUsingTerminator;
   public
-    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord); reintroduce;
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property AddressSpace: Byte read FAddressSpace;
     property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
+    property IncludeTerminator: Boolean read FIncludeTerminator write FIncludeTerminator;  // Include the terminator in the Stream result
     property Stream: TMemoryStream read FStream;
     property ReadAddress: DWord read FReadAddress;
     property ReadByteCount: DWord read FReadByteCount;
+    property Terminator: Char read FTerminator write FTerminator;
   end;
 
   { TIdentifyEventsTask }
@@ -303,9 +309,7 @@ type
   TTractionSpeedTask = class(TOlcbTaskBase)
   private
     FEStop: Boolean;
-    FFwd: Boolean;
     FSpeed: THalfFloat;
-    FStop: Boolean;
   protected
     property Speed: THalfFloat read FSpeed write FSpeed;  // Dir is wrapped up in the neg sign
     property EStop: Boolean read FEStop write FEStop;
@@ -340,7 +344,7 @@ begin
     Result := MAX_CONFIG_MEM_READWRITE_SIZE;
 end;
 
-constructor TReadAddressSpaceMemoryRawTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord);
+constructor TReadAddressSpaceMemoryRawTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord; UseTerminatorChar: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FStream := TMemoryStream.Create;
@@ -349,6 +353,9 @@ begin
   FReadAddress := AReadAddress;
   FReadByteCount := AReadByteCount;
   FCurrentOffset := 0;
+  FUsingTerminator := UseTerminatorChar;
+  FIncludeTerminator := True;
+  FTerminator := #0;
 end;
 
 destructor TReadAddressSpaceMemoryRawTask.Destroy;
@@ -360,11 +367,8 @@ end;
 procedure TReadAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
 var
   DatagramReceive: TDatagramReceive;
-  PIP: TOlcbProtocolIdentification;
-  Space: TOlcbMemAddressSpace;
-  Options: TOlcbMemOptions;
-  DatagramResultStart: Byte;
   i: Integer;
+  Finished: Boolean;
 begin
   case iState of
     0: begin
@@ -386,14 +390,28 @@ begin
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
+            Finished := False;
             if ForceOptionalSpaceByte or (DatagramReceive.RawDatagram[1] and $03 = 0) then    // If using the {Space} byte need to skip over it
-              DatagramResultStart := 7
+              i := 7
             else
-              DatagramResultStart := 6;
-            for i := DatagramResultStart to DatagramReceive.CurrentPos - 1 do
-              Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+              i := 6;
+            while not Finished and (i < DatagramReceive.CurrentPos) do
+            begin
+              if UsingTerminator then
+              begin
+                if DatagramReceive.RawDatagram[i] = Ord( Terminator) then
+                begin
+                  if IncludeTerminator then
+                    Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+                  Finished := True;
+                end else
+                  Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+              end else
+                Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+              Inc(i);
+            end;
 
-            if PayloadSize = 0 then
+            if Finished or (PayloadSize = 0) then
             begin
               Sending := True;
               iState := 3;
@@ -603,7 +621,7 @@ begin
   case iState of
     0: begin
          if EStop then
-           SendTractionEStopMessage(Speed)
+           SendTractionEStopMessage
          else begin
            SendTractionSpeedMessage(Speed)
          end;

@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  ExtCtrls, StdCtrls, Buttons, Spin, olcb_app_common_settings, file_utilities,
+  ExtCtrls, StdCtrls, Buttons, Spin, olcb_app_common_settings,
   synaser, common_utilities;
 
 type
@@ -194,4 +194,4 @@ begin
   ComboBoxFlowControl.ItemIndex := ComboBoxFlowControl.Items.IndexOf('XON/XOFF');
 end;
 
-end.
+end.

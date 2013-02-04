@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\..\Library\CANBus\CANStorage.mpas
+Value=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -44,7 +44,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=12
+Count=9
 File0=Throttle_main.mpas
 File1=..\..\..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File2=..\..\..\Library\NMRAnet\NMRAnetCANReceive.mpas
@@ -53,10 +53,7 @@ File4=MCU_Setup_dsPIC33FJ256GP710A.mpas
 File5=..\..\..\Library\CANBus\CANStorage.mpas
 File6=..\..\..\Library\dsPIC33F\dsPIC33_DMA.mpas
 File7=NMRAnetAppDefines.mpas
-File8=..\..\..\Library\NMRAnet\NMRAnetNode.mpas
-File9=..\..\..\Library\NMRAnet\NMRAnetDefines.mpas
-File10=Throttle_driver.mpas
-File11=NMRAnetAppCallbacks.mpas
+File8=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -65,22 +62,28 @@ Count=0
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=15
+Count=21
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\prototypes\mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path3=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
-Path5=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
-Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
-Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
-Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
-Path9=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
-Path10=E:\trunk\prototypes\mikroPascal\Library\CANBus\
-Path11=E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
-Path12=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path13=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path14=E:\trunk\prototypes\mikroPascal\Library\
+Path2=W:\openlcb\trunk\prototypes\mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path3=E:\trunk\prototypes\mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path4=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33FJ_Visual TFT_BasicThrottle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path5=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
+Path6=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
+Path7=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
+Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
+Path9=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
+Path10=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
+Path11=E:\trunk\prototypes\mikroPascal\Library\CANBus\
+Path12=E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
+Path13=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path14=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path15=E:\trunk\prototypes\mikroPascal\Library\
+Path16=W:\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\
+Path17=W:\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33FJ256GP710A\
+Path18=W:\openlcb\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path19=W:\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path20=W:\openlcb\trunk\prototypes\mikroPascal\Library\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -103,5 +106,6 @@ File10=UART
 File11=TFT_Defs
 [EXPANDED NODES]
 Node1=Sources
-Node2=Other Files
-Count=2
+Node2=Output Files
+Node3=Other Files
+Count=3

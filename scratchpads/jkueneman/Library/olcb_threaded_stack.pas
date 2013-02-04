@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils, synaser, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
-  olcb_app_common_settings, common_objects, math_float16;
+  olcb_app_common_settings, math_float16;
 
 const
   DATAGRAM_MAX_RETRYS = 5;
@@ -224,7 +224,7 @@ type
     destructor Destroy; override;
     procedure Initialize(AStream: TStream; AProtocolHeader: TCANByteArray; AProtocolHeaderLen: Byte; ASourceAlias, ADestinationAlias: Word);
     function ProcessSend(ComPortThread: TComPortThread): Boolean;
-    function ProcessReceive(AHelper: TOpenLCBMessageHelper; ComPortThread: TComPortThread): Boolean;
+    function ProcessReceive(AHelper: TOpenLCBMessageHelper): Boolean;
     property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
     property Empty: Boolean read FEmpty write FEmpty;
     property ErrorCode: Word read FErrorCode write FErrorCode;    // One of the DATAGRAM_REJECTED_xxx constants, if $0000 then no error
@@ -292,7 +292,7 @@ type
     procedure SendSnipMessage;
     procedure SendTractionAllocateDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
     procedure SendTractionDeAllocateDccAddressProxyMessage;
-    procedure SendTractionEStopMessage(Speed: THalfFloat);
+    procedure SendTractionEStopMessage;
     procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
     procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
     procedure SendTractionSpeedMessage(Speed: THalfFloat);
@@ -575,7 +575,7 @@ begin
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
-procedure TOlcbTaskBase.SendTractionEStopMessage(Speed: THalfFloat);
+procedure TOlcbTaskBase.SendTractionEStopMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_OLCB or TRACTION_OP_E_STOP, $00, $00, $00, $00, $00);
   ComPortThread.Add(MessageHelper.Encode);
@@ -1052,7 +1052,7 @@ begin
     while (i < List.Count) and not Done do
     begin
       Datagram := TDatagramSend( List[i]);
-      if Datagram.ProcessReceive(AHelper, Owner) then
+      if Datagram.ProcessReceive(AHelper) then
       begin
         Done := True;
         if Datagram.Empty then
@@ -1226,7 +1226,7 @@ begin
   Stream.Position := 0;
   if Assigned(AStream) then
   begin
-    Assert(AStream.Size > 64 - AProtocolHeaderLen, 'Stream in Datagram Send too long, 64 bytes max');
+    Assert(AStream.Size > 64 - Int64( AProtocolHeaderLen), 'Stream in Datagram Send too long, 64 bytes max');
     AStream.Position := 0;
     Stream.CopyFrom(AStream, AStream.Size);
     Stream.Position := 0;
@@ -1291,7 +1291,7 @@ begin
   end;
 end;
 
-function TDatagramSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; ComPortThread: TComPortThread): Boolean;
+function TDatagramSend.ProcessReceive(AHelper: TOpenLCBMessageHelper): Boolean;
 //
 // It is assumed that the message is actually for this object and the object is not empty, it is not checked.........
 begin
