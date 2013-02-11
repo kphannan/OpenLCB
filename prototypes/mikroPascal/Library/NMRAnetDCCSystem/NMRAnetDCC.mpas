@@ -40,11 +40,24 @@ const
   MESSAGE_IDLE_0                             = $FF;       // Idle message = 20+8+8+1 = 37 ones;  8+3 = 11 zeros (48) = 6.84ms
   MESSAGE_IDLE_1                             = $00;
   MESSAGE_IDLE_XOR                           = $FF;
+  MESSAGE_PAGE_PRESET_0                      = $7D; // %01111101;
+  MESSAGE_PAGE_PRESET_1                      = $01; // %00000001;
+  MESSAGE_PAGE_PRESET_XOR                    = $7C; // %01111100
 
   POM_MESSAGE_REPEAT_COUNT                   = $03;
 
   MAX_TRACK_BUFFER_DEPTH = 16;              // Max Number of Packets stored to send to the Track DCC Output
   MAX_TRACK_PRIORITY_BUFFER_DEPTH = 16;     // Max Number of Priority Packets stored to send to the Track DCC Output
+  
+    // DCC Bit State Machine Constants
+  STATE_NMRA_DCC_BIT_0 = 0;
+  STATE_NMRA_DCC_BIT_7 = 7;
+
+  // DCC Pin State Machine Constants
+  STATE_NMRA_DCC_PIN_0 = 0;                                                     // First 56us
+  STATE_NMRA_DCC_PIN_1 = 1;                                                     // Second 56us (for a "0")
+  STATE_NMRA_DCC_PIN_2 = 2;                                                     // First 56us
+  STATE_NMRA_DCC_PIN_3 = 3;                                                     // Second 56us (for a "0")
 
 type
   // ***************************************************************************
@@ -65,8 +78,9 @@ const
   MASK_DCC_PACKET_SPECIAL                      = $80;  // Bit 7 = Address is special ($00 = Reset; $FF = Idle; $FE = ??? but defined in S-9.2);
   MASK_DCC_PACKET_ADDRESS_BITS                 = $F8;  // Bits 3..7 All the Address Bits
   MASK_DCC_PACKET_INITIALIZE_FLAGS             = $00;  //
-  MASK_DCC_PACKET_IDLE_MESSAGE                 = $02 or MASK_DCC_PACKET_SPECIAL;
-  MASK_DCC_PACKET_RESET_MESSAGE                = $02 or MASK_DCC_PACKET_SPECIAL;
+  MASK_DCC_PACKET_IDLE_MESSAGE                 = $02 or MASK_DCC_PACKET_SPECIAL;    // 2 Bytes and it is special
+  MASK_DCC_PACKET_RESET_MESSAGE                = $02 or MASK_DCC_PACKET_SPECIAL;    // 2 Bytes and it is special
+  MASK_DCC_PACKET_PAGE_PRESET_MESSAGE          = $02 or MASK_DCC_PACKET_SPECIAL;    // 2 Bytes and it is special
 
 type
   TDCCPacket = record
@@ -74,7 +88,7 @@ type
     Flags: Byte;                               // See the QUEUE_MESSAGE_XXXXX Flags
                                                // Bit 0 1 2         = Number of Valid data bytes in the message.
                                                // Bit 3             = Address is a Multi-Function decoder with 7 bit address (short address)
-                                               // Bit 4             = Address is a Basic Accessory Decoder with 9 bit addres and Extended Accessory Decoder with 11 bit address
+                                               // Bit 4             = Address is a Basic Accessory Decoder with 9 bit address and Extended Accessory Decoder with 11 bit address
                                                // Bit 5             = Address is a Multi-Function decoder with a 14 bit address (extended address)
                                                // Bit 6             = Address is in the NMRA Reserved range
                                                // Bit 7             = Address is special ($00 = Reset; $FF = Idle; $FE = ??? but defined in S-9.2);
@@ -115,7 +129,7 @@ type
     Main: TDCCPacketList;                      // Main Queue
     Priority: TDCCPacketList;                  // Priorty Queue
 
-    TX_TransmittingPacket: TDCCPacket;  // Message that is being currently transmitted
+    TX_TransmittingPacket: TDCCPacket;         // Message that is being currently transmitted
     TX_PreambleBitCount: Byte;                 // Number of Preamble Bits to send, the value is destroyed when the state machine is run
     TX_iStateMachine: Byte;                    // Main State machine
     TX_iBit: Byte;                             // Index of the current Bit being sent
@@ -137,6 +151,7 @@ type
 
 var
   Track: TDCCBufferInfo;
+  Programming: TDCCBufferInfo;
 
 // Call once on start up
 procedure NMRA_DCC_Initialize; forward;
@@ -152,9 +167,12 @@ procedure NMRA_DCC_56us_TimeTick(ABuffer: PDCCBufferInfo); forward;
 procedure NMRA_DCC_LoadPacketIntoTransmitterStateMachine(ABuffer: PDCCBufferInfo; PreambleCount: Byte);
 // Fires the 20 Idle Packets per the NMRA Spec
 procedure NMRA_DCC_Packet_Init; forward;
+//
+procedure NMRA_DCC_ResetTransmitter(Buffer: PDCCBufferInfo);
 
 procedure NMRA_DCC_LoadIdlePacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
 procedure NMRA_DCC_LoadResetPacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
+procedure NMRA_DCC_LoadPagePresetPacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
 
 
 
@@ -177,26 +195,14 @@ const
   STATE_NMRA_DCC_XOR_BYTE    = 12;
   STATE_NMRA_DCC_STOP_BIT    = 13;
 
-  // DCC Bit State Machine Constants
-  STATE_NMRA_DCC_BIT_0 = 0;
-  STATE_NMRA_DCC_BIT_7 = 7;
-
-  // DCC Pin State Machine Constants
-  STATE_NMRA_DCC_PIN_0 = 0;                                                     // First 56us
-  STATE_NMRA_DCC_PIN_1 = 1;                                                     // Second 56us (for a "0")
-  STATE_NMRA_DCC_PIN_2 = 2;                                                     // First 56us
-  STATE_NMRA_DCC_PIN_3 = 3;                                                     // Second 56us (for a "0")
-
 type
 
   TTrackMessageQueue = array[0..MAX_TRACK_BUFFER_DEPTH-1] of TDCCPacket;
   TTrackMessageQueuePriority = array[0..MAX_TRACK_PRIORITY_BUFFER_DEPTH-1] of TDCCPacket;
 
 var
-  TrackQueueInfo: TDCCPacketList;
   TrackQueue: TTrackMessageQueue;
   TrackQueuePriority: TTrackMessageQueuePriority;
-  TrackPriorityQueueInfo: TDCCPacketList;
 
 
 procedure InitializeBuffer(ABuffer: PDCCBufferInfo; SlotQueue, PrioritySlotQueue: PDCCPacketArray; QueueSize, QueuePrioritySize: Byte); forward;
@@ -219,6 +225,7 @@ procedure NMRA_DCC_ResetTransmitter(ABuffer: PDCCBufferInfo); forward;
 procedure NMRA_DCC_Initialize;
 begin
   InitializeBuffer(@Track, @TrackQueue, @TrackQueuePriority, MAX_TRACK_BUFFER_DEPTH, MAX_TRACK_PRIORITY_BUFFER_DEPTH);
+  InitializeBuffer(@Programming, nil, nil, 0, 0);
 end;
 
 // ****************************************************************************
@@ -487,6 +494,28 @@ begin
   Buffer^.TX_TransmittingPacket.PacketBytes[1] := MESSAGE_IDLE_1;
   Buffer^.TX_XOR_Byte := MESSAGE_IDLE_XOR;
   Buffer^.TX_TransmittingPacket.Flags := MASK_DCC_PACKET_IDLE_MESSAGE;      // 2 Bytes and Address Is Special
+  Buffer^.TX_PreambleBitCount := PreambleCount;
+end;
+
+// ***************************************************************************
+//  procedure NMRA_DCC_LoadPagePresetPacketIntoTransmitter
+//
+//  Parameters:
+//                Buffer -   The buffer to load the Transmitter with
+//                PreambleCount - The number of preamble bits to send with the packet
+//
+//  Result:  None
+//
+//  Description:
+//                Local helper function
+//
+// ***************************************************************************
+procedure NMRA_DCC_LoadPagePresetPacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
+begin
+  Buffer^.TX_TransmittingPacket.PacketBytes[0] := MESSAGE_PAGE_PRESET_0;
+  Buffer^.TX_TransmittingPacket.PacketBytes[1] := MESSAGE_PAGE_PRESET_1;
+  Buffer^.TX_XOR_Byte := MESSAGE_PAGE_PRESET_XOR;
+  Buffer^.TX_TransmittingPacket.Flags := MASK_DCC_PACKET_PAGE_PRESET_MESSAGE;      // 2 Bytes and Address Is Special
   Buffer^.TX_PreambleBitCount := PreambleCount;
 end;
 
@@ -777,7 +806,10 @@ begin
         else
           ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_2             // If is a one then we jump right to the back edge of the pulse width at 56us
     end;
-  STATE_NMRA_DCC_PIN_1 : Inc(ABuffer^.TX_iDCC_Pin_StateMachine);                // Pin State 1 is the second "positive" 56us of a new "0" bit being sent on the DCC line, if the bit was a 1 in Pin State 0 then this state is skipped
+  STATE_NMRA_DCC_PIN_1 : 
+    begin
+      Inc(ABuffer^.TX_iDCC_Pin_StateMachine);                // Pin State 1 is the second "positive" 56us of a new "0" bit being sent on the DCC line, if the bit was a 1 in Pin State 0 then this state is skipped
+    end;
   STATE_NMRA_DCC_PIN_2 :                                                        // Pin State 2 is the first "negative" 56us of a new bit being sent on the DCC line
     begin
       ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 0;                     // Set the I/O Pin Low (negative half of the DCC cycle)
@@ -794,7 +826,10 @@ begin
         end
       end;
     end;
-  STATE_NMRA_DCC_PIN_3 : ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0; // Pin State 3 is the second "negative" 56us of a new "0" bit being sent on the DCC line, if the bit was a 1 in Pin State 2 then this state is skipped
+  STATE_NMRA_DCC_PIN_3 :
+    begin
+      ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0; // Pin State 3 is the second "negative" 56us of a new "0" bit being sent on the DCC line, if the bit was a 1 in Pin State 2 then this state is skipped
+    end;
  end;
 end;
 

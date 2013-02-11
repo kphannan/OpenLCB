@@ -97,6 +97,8 @@ begin
   begin
     Check_TP;
     
+    LATB2_bit := not LATB2_bit;
+    
     if xx = 10000 then
     begin
   //    UART2_Write_Text('#');

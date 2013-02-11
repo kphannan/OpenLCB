@@ -689,7 +689,7 @@ begin
     TRACTION_DCC :
       begin  // DCC Train Protocol
         case CANBuffer^.DataBytes[2] and $0F of
-          TRACTION_OP_SPEED_DIR :
+      {    TRACTION_OP_SPEED_DIR :
             begin
               ProxyData^.Speed := CANBuffer^.DataBytes[3];
               if AddressHi and $C0 = $C0 then
@@ -716,7 +716,7 @@ begin
                 DCC_FUNCTION_28 :  UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, Byte( FunctionAddress), Byte( FunctionValue), DCCPacket, ProxyData);
                 DCC_FUNCTION_32k : begin end; // UART1_Write_Text('DCC_FUNCTION_32k'+LF);
               end;
-            end;
+            end;     }
           TRACTION_OP_PROXY_MGMT :
             begin
               case CANBuffer^.DataBytes[3] of

@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=NMRAnetAppCallbacks.mpas
+Value=..\Library\NMRAnetDCCSystem\PagedServiceMode.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -16,7 +16,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [FILES]
-Count=23
+Count=26
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=MCU_Setup_dsPIC33EP64GP502.mpas
 File2=NMRAnetAppCallbacks.mpas
@@ -39,24 +39,25 @@ File18=..\Library\NodeIDs.mpas
 File19=..\Library\Math\Float16.mpas
 File20=..\Library\HelperFunctions.mpas
 File21=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
-File22=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\DirectServiceMode.mpas
+File22=..\Library\NMRAnetDCCSystem\DirectServiceMode.mpas
+File23=..\Library\NMRAnetDCCSystem\ServiceModeDefines.mpas
+File24=..\Library\NMRAnetDCCSystem\PagedServiceMode.mpas
+File25=..\Library\NMRAnetDCCSystem\RegisterServiceMode.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=10
-File0=dsPIC33EP_NMRAnetCommandStation.mpas
-File1=NMRAnetAppCallbacks.mpas
-File2=NMRAnetAppDefines.mpas
-File3=..\Library\NMRAnet\NMRAnetDefines.mpas
-File4=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetDefinesShared.mpas
-File5=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetDefines.mpas
-File6=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
-File7=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\DirectServiceMode.mpas
-File8=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
-File9=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetNode.mpas
+Count=8
+File0=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
+File1=..\Library\NMRAnetDCCSystem\PagedServiceMode.mpas
+File2=..\Library\NMRAnetDCCSystem\ServiceModeDefines.mpas
+File3=dsPIC33EP_NMRAnetCommandStation.mpas
+File4=NMRAnetAppCallbacks.mpas
+File5=NMRAnetAppDefines.mpas
+File6=..\Library\NMRAnetDCCSystem\DirectServiceMode.mpas
+File7=..\Library\NMRAnetDCCSystem\RegisterServiceMode.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -65,56 +66,36 @@ Count=0
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=49
+Count=29
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=W:\openlcb\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
-Path3=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
-Path4=E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
-Path5=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
-Path6=C:\Users\Public\Documents\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path7=Z:\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
-Path8=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\dsPIC33EP_CommandStation\
-Path9=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
-Path10=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\CANBus\
-Path11=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\InterfaceIntegratedCircuits\
-Path12=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnet\
-Path13=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\NMRAnetDCCSystem\
-Path14=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\dsPIC33F\
-Path15=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\
-Path16=C:\Documents and Settings\Jim\Desktop\NMRABus\Firmware_v2_mikroPascal\Library\Math\
-Path17=E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
-Path18=E:\trunk\prototypes\mikroPascal\Library\CANBus\
-Path19=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
-Path20=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path21=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path22=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path23=E:\trunk\prototypes\mikroPascal\Library\
-Path24=E:\trunk\prototypes\mikroPascal\Library\Math\
-Path25=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
-Path26=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\CANBus\
-Path27=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
-Path28=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path29=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path30=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path31=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\
-Path32=Z:\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
-Path33=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
-Path34=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\CANBus\
-Path35=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
-Path36=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path37=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path38=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path39=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\
-Path40=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\Math\
-Path41=W:\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
-Path42=W:\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\
-Path43=W:\openlcb\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
-Path44=W:\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path45=W:\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path46=W:\openlcb\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path47=W:\openlcb\trunk\prototypes\mikroPascal\Library\
-Path48=W:\openlcb\trunk\prototypes\mikroPascal\Library\Math\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path3=W:\openlcb\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path4=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path5=E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
+Path6=E:\trunk\prototypes\mikroPascal\Library\CANBus\
+Path7=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
+Path8=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path9=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path10=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path11=E:\trunk\prototypes\mikroPascal\Library\
+Path12=E:\trunk\prototypes\mikroPascal\Library\Math\
+Path13=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
+Path14=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\CANBus\
+Path15=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
+Path16=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path17=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path18=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path19=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\
+Path20=W:\OpenLCB_xxxx\trunk\prototypes\mikroPascal\Library\Math\
+Path21=W:\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
+Path22=W:\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\
+Path23=W:\openlcb\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
+Path24=W:\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path25=W:\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path26=W:\openlcb\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path27=W:\openlcb\trunk\prototypes\mikroPascal\Library\
+Path28=W:\openlcb\trunk\prototypes\mikroPascal\Library\Math\
 [HEADER_PATH]
 Count=0
 [HEADERS]
