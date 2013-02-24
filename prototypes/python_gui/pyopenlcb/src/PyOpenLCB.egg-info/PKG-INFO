@@ -1,0 +1,24 @@
+Metadata-Version: 1.0
+Name: PyOpenLCB
+Version: 0.3
+Summary: Implementation of the OpenLCB model train control protocol in Python
+Home-page: https://bitbucket.org/AdmiralNemo/pyopenlcb
+Author: Dustin C. Hatch
+Author-email: admiralnemo@gmail.com
+License: APACHE-2.0
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.1
+Classifier: Programming Language :: Python :: 3.2
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Hardware
+Classifier: Topic :: System :: Networking

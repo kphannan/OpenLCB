@@ -1,0 +1,3 @@
+[console_scripts]
+olcbtest = olcbtests.cli:main
+
