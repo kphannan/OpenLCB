@@ -31,7 +31,7 @@ def protocol_ident_protocol(conn, config):
         if not isinstance(msg, messages.PIPMessageRecv):
             logger.error('Received unexpected {0} message: {1}'.format(
                 msg.__class__.__name__, response))
-    logger.info('Received {0} Datagram messages'.format(len(responses)))
+    logger.info('Received {0} event messages'.format(len(responses)))
 
 
 

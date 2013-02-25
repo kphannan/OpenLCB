@@ -21,6 +21,7 @@ messages.
 #
 
 from olcbtests import util
+from openlcb import communication
 from identify_events import identify_events_global
 from identify_events import identify_events_addressed
 from identify_consumers import identify_consumers_unknown
@@ -32,7 +33,6 @@ from nodeverification import verify_node_global
 from nodeverificationaddressed import verify_node_addressed
 from test_p_c_loopback import test_p_c_loopback
 from testpcNotification import test_pc_notification
-from openlcb import communication
 from resetDatagram import reset_datagram
 from testAliasConflict import alias_conflict
 from testStartup import test_start_up
@@ -41,6 +41,12 @@ from protocolIdentProtocol import protocol_ident_protocol
 from testDatagram import test_datagram
 from unknownDatagramType import unknown_datagram_type
 from event_id_reset import mfr_clear
+from serial_connect import Serial_Connect
+from serial_connect import Serial_Discover_Nodes
+from serial_connect import Serial_Reconnection
+from ethernet_connect import Ethernet_Connect
+
+from serial_connect import Serial_Reconnection
 import serial 
 import threading
 import logging
@@ -171,152 +177,40 @@ class OpenLCB_tools_tests:
 
 
     def Find_Nodes(self, w):
-        comport_active = self.builder.get_object("serial_entry_2").get_active()
-        comport_model = self.builder.get_object("serial_entry_2").get_model()
-        comport = comport_model[comport_active][0]
-        baud = self.builder.get_object("baud_entry").get_active_text()
-        src_alias = self.builder.get_object("src_alias_entry").get_text().strip()
-        conn = communication.SerialConnection(comport, baud)
-        msg = messages.VerifyNodeIDNumberSimple(src_alias=int(src_alias, 16))
-        logger.info('Sending VerifyNode message from {src}'.format(
-        src=msg.src_alias
-        ))
-        with conn:
-            #self.config = {'src_alias':int(src_alias, 16)}
-            conn.send(msg)
-            cbo = self.builder.get_object('dst_alias_combo_box')
-            model = cbo.get_model()
-            model.clear()
-            responses = conn.receive_multi()
-            logger.info('Received response from {0} node(s)'.format(len(responses)))
-            for response in responses:
-                response = messages.parse_frame(response)
-                logger.info('Received {0} message from Node alias -- {1}'.format(
-                    response.__class__.__name__, response.src_alias))
-                model.append([response.src_alias])
-
-    def Reconnect(self, w):
-        comport_active = self.builder.get_object("serial_entry_2").get_active()
-        comport_model = self.builder.get_object("serial_entry_2").get_model()
-        comport = comport_model[comport_active][0]
-        baud = self.builder.get_object("baud_entry").get_active_text()
-        src_alias = self.builder.get_object("src_alias_entry").get_text().strip()
-        conn = communication.SerialConnection(comport, baud)
-        msg = messages.VerifyNodeIDNumberSimple(src_alias=int(src_alias, 16))
-        logger.info('Sending VerifyNode message from {src}'.format(
-        src=msg.src_alias
-        ))
-        with conn:
-            #self.config = {'src_alias':int(src_alias, 16)}
-            conn.send(msg)
-            status_cbo = self.builder.get_object('status_dst_alias_combo_box')
-            model = status_cbo.get_model()
-            model.clear()
-            responses = conn.receive_multi()
-            logger.info('Received response from {0} node(s)'.format(len(responses)))
-            for response in responses:
-                response = messages.parse_frame(response)
-                logger.info('Received {0} message from Node alias -- {1}'.format(
-                    response.__class__.__name__, response.src_alias))
-                model.append([response.src_alias])
-        self.status_connect_button.show_all()
-
+        serial_discover_nodes=Serial_Discover_Nodes(self, w)
 
     def Serial_Connect(self, w):
-
-        connect_status = self.builder.get_object("connect_status")
-        comport_active = self.builder.get_object("serial_entry_2").get_active()
-        comport_model = self.builder.get_object("serial_entry_2").get_model()
-        comport = comport_model[comport_active][0]
-        baud = self.builder.get_object("baud_entry").get_active_text()
-        src_alias = self.builder.get_object("src_alias_entry").get_text().strip()
-        dst_alias = self.builder.get_object("dst_alias_combo_box").get_active_text().strip()
-        node_id = self.builder.get_object("node_id_entry").get_text().strip()
-        self.conn = communication.SerialConnection(comport, baud)
-        msg = messages.VerifiedNodeAddressed(src_alias=int(src_alias, 16),
-            dst_alias=int(dst_alias, 16))
-        logger.info('Sending Verify Node Addressed message from {src} to {dst} '.format(
-        src=msg.src_alias,
-        dst=msg.dst_alias
-        ))
-
-        self.conn.connect()
-        self.config = {'src_alias':int(src_alias, 16),
-            'dst_alias':int(dst_alias, 16),'dst_id':int(node_id, 16)}
-        self.conn.send(msg)
-        responses = self.conn.receive_multi()
-        for response in responses:
-            msg = messages.parse_frame(response)
-        logger.info('Received Node alias {0} with Node ID {1}'.format(msg.src_alias, msg.node_id))
-        connect_status.set_text("Connected to Alias {0} via Comport {1} with Node ID {2} ".format(
-            msg.src_alias, comport, msg.node_id))
-
-        self.Show_Connected_OK(w)
-        self.close_connection.show_all()
-        self.connected_no.hide()
-        self.status_connect_button.hide()
-        self.comport_dialog.hide()
-
-    def Serial_Reconnect(self, w):
-        connect_status = self.builder.get_object("connect_status")
-        comport_active = self.builder.get_object("serial_entry_2").get_active()
-        comport_model = self.builder.get_object("serial_entry_2").get_model()
-        comport = comport_model[comport_active][0]
-        baud = self.builder.get_object("baud_entry").get_active_text()
-        src_alias = self.builder.get_object("src_alias_entry").get_text().strip()
-        dst_alias = self.builder.get_object("status_dst_alias_combo_box").get_active_text().strip()
-        node_id = self.builder.get_object("node_id_entry").get_text().strip()
-        self.conn = communication.SerialConnection(comport, baud)
-        msg = messages.VerifiedNodeAddressed(src_alias=int(src_alias, 16),
-            dst_alias=int(dst_alias, 16))
-        logger.info('Sending Verify Node Addressed message from {src} to {dst} '.format(
-        src=msg.src_alias,
-        dst=msg.dst_alias
-        ))
-        self.conn.connect()
-        self.config = {'src_alias':int(src_alias, 16),
-            'dst_alias':int(dst_alias, 16),'dst_id':int(node_id, 16)}
-        self.conn.send(msg)
-        responses = self.conn.receive_multi()
-        for response in responses:
-            msg = messages.parse_frame(response)
-        logger.info('Received Node alias {0} with Node ID {1}'.format(msg.src_alias, msg.node_id))
-
-        connect_status.set_text("Connected to Alias {0} via Comport {1} with Node ID {2} ".format(
-            msg.src_alias, comport, msg.node_id))
-
-        self.Show_Connected_OK(w)
-        self.close_connection.show_all()
-        self.connected_no.hide()
-        self.reconnect_button.hide()
-        self.status_connect_button.hide()
-        self.status_dst_alias_combo_box.hide()
+        serial_connect=Serial_Connect(self, w)
 
     def Ethernet_connect(self, ip_data):
-        #connect_status = self.builder.get_object("connect_status")
+        ethernet_connect=Ethernet_Connect(self, ip_data)
+
+    def Reconnect(self, w):
+        serial_reconnect=Serial_Reconnection(self,w)
+
+
+
+    def Discover_Nodes(self, ip_data):
         ip_address = self.builder.get_object("ip_address_entry").get_text()
-        port_data =self.builder.get_object("port_entry_2").get_text()
+        port_data = self.builder.get_object("port_entry_2").get_text()
         src_alias = self.builder.get_object("eth_src_alias_entry").get_text().strip()
-        dst_alias = self.builder.get_object("eth_dst_alias_entry").get_text().strip()
-        node_id = self.builder.get_object("eth_node_id_entry").get_text().strip()
-        self.conn = communication.EthernetConnection(ip_address, int(port_data))
-        msg = messages.VerifiedNodeAddressed(src_alias=int(src_alias, 16),
-            dst_alias=int(dst_alias, 16))
-        logger.info('Sending Verify Node Addressed message from {src} to {dst} '.format(
-        src=msg.src_alias,
-        dst=msg.dst_alias
+        conn = communication.EthernetConnection(ip_address, int(port_data))
+        msg = messages.VerifyNodeIDNumberSimple(src_alias=int(src_alias, 16))
+        logger.info('Sending VerifyNode message from {src}'.format(
+        src=msg.src_alias
         ))
-        self.conn.connect()
-        self.config = {'src_alias':int(src_alias, 16),
-            'dst_alias':int(dst_alias, 16),'node_id':int(node_id, 16)}
-        self.conn.send(msg)
-        responses = self.conn.receive_multi()
-        for response in responses:
-            msg = messages.parse_frame(response)
-        logger.info('Received Node alias {0} and Node ID {1}'.format(msg.src_alias, msg.node_id))
-        self.connect_status.set_text("Connected to Alias {0} via IP Address {1} Port {2} with Node ID {3}".format(
-            msg.src_alias, ip_address, port_data, msg.node_id))
-        self.ethernet_dialog.hide()
+        with conn:
+            conn.send(msg)
+            cbo_ = self.builder.get_object('eth_dst_alias_combo_box')
+            model = cbo_.get_model()
+            model.clear()
+            responses = conn.receive_multi()
+            logger.info('Received response from {0} node(s)'.format(len(responses)))
+            for response in responses:
+                response = messages.parse_frame(response)
+                logger.info('Received {0} message from Node alias -- {1}'.format(
+                    response.__class__.__name__, response.src_alias))
+                model.append([response.src_alias])
 
     def serial_connection(self, w):
         self.serial_ports()
@@ -357,12 +251,24 @@ class OpenLCB_tools_tests:
         self.conn.close()
         self.status_connect_button.show_all()
         self.connected_no.show_all()
-        #self.reconnect_button.show_all()
         self.status_dst_alias_combo_box.show_all()
         self.Clear_Text(w)
         self.connect_status.set_text("Disconnected")
         self.connected_ok.hide()
         self.close_connection.hide()
+        
+    def close_eth(self, w):
+
+        logger.debug('Closing connection to {hostname}:{port}'.format(
+            hostname=self.conn.hostname,
+            port=self.conn.port
+        ))
+        self.conn._socket.close()
+        self.connected_no.show_all()
+        self.Clear_Text(w)
+        self.connect_status.set_text("Disconnected")
+        self.connected_ok.hide()
+        self.eth_disconnect.hide()
 
 
     '''
@@ -561,9 +467,12 @@ class OpenLCB_tools_tests:
         
         self.status_connect_button = self.builder.get_object("status_connect_button")
         self.status_connect_button.hide()
-        
+
         self.close_connection = self.builder.get_object("close_connection")
         self.close_connection.hide()
+        
+        self.eth_disconnect = self.builder.get_object("eth_disconnect")
+        self.eth_disconnect.hide()
         
         self.status_dst_alias_combo_box = self.builder.get_object("status_dst_alias_combo_box")
         self.status_dst_alias_combo_box.hide()
@@ -576,8 +485,8 @@ class OpenLCB_tools_tests:
         self.error_serial_dialog.hide()
 
         self.pbar = self.builder.get_object("progress_bar")
-        self.pbar.hide()
         self.pbar.pulse()
+        self.pbar.hide()
 
         self.output_box = self.builder.get_object('output_box')
         self.output_box_2 = self.builder.get_object('output_box_2')
@@ -586,6 +495,7 @@ class OpenLCB_tools_tests:
         default_formatter = logging.Formatter(
             #'%(message)s'
             '[%(levelname)s] %(name)s (%(funcName)s): %(message)s'
+            #'(%(funcName)s): %(message)s'
             #'[%(asctime)s] [%(levelname)s] %(name)s (%(funcName)s): %(message)s'
         )
         default_formatter_2 = logging.Formatter()

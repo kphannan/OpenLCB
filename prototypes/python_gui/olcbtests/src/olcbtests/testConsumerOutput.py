@@ -24,7 +24,7 @@ def test_consumer_output(conn, config):
     )
     conn.send(msg)
 
-    responses = conn.receive_multi(.2)
+    responses = conn.receive_multi(.5)
     for frame in responses:
         response = messages.parse_frame(frame)
         if not isinstance(response, messages.ConsumerIdentifiedValid):
@@ -40,7 +40,7 @@ def test_consumer_output(conn, config):
         conn.send(msg)
         logger.info('Should not receive response')
 
-        response2 = conn.receive_multi(.2)
+        response2 = conn.receive_multi(.5)
         for frame in response2:
             response =  messages.parse_frame(frame)
 

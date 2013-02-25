@@ -37,7 +37,7 @@ def received_response(responses):
 def alias_conflict(conn, config):
     '''Sends the events addressed command to the whole bus'''
 
-    src_alias, dst_alias, node_id =  config['src_alias'], config['dst_alias'], config['dst_id']
+    src_alias, dst_alias, node_id =  config['src_alias'], config['dst_alias'], config['node_id']
     #conn._socket.settimeout(.7) #commented out because does not work on serial com
 
     logger.info("check no-response global message with alias conflict")
