@@ -93,6 +93,7 @@
               <object class="GtkComboBox" id="baud_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Type in baud rate or click on down arrow to select baud rate</property>
                 <property name="model">baud_list</property>
                 <property name="has_entry">True</property>
                 <property name="entry_text_column">0</property>
@@ -161,7 +162,7 @@
               <object class="GtkLabel" id="src_alias_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Soruce Alias</property>
+                <property name="label" translatable="yes">Source Alias</property>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -173,6 +174,7 @@
               <object class="GtkEntry" id="src_alias_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Type in Source Alias</property>
                 <property name="invisible_char">●</property>
                 <property name="text" translatable="yes">abc</property>
                 <property name="primary_icon_activatable">False</property>
@@ -222,6 +224,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Click to find nodes connected to the Bus</property>
                 <signal name="clicked" handler="Find_Nodes" swapped="no"/>
               </object>
               <packing>
@@ -380,6 +383,13 @@
       <action-widget response="0">error_ok</action-widget>
     </action-widgets>
   </object>
+  <object class="GtkListStore" id="eth_dst_alias_lis"/>
+  <object class="GtkListStore" id="eth_dst_alias_list">
+    <columns>
+      <!-- column-name eth_alias -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkDialog" id="ethernet_dialog">
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
@@ -454,7 +464,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="invisible_char">●</property>
-                <property name="text" translatable="yes">199.119.146.61</property>
+                <property name="text" translatable="yes">172.16.0.133</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="secondary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">True</property>
@@ -554,20 +564,33 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry" id="eth_dst_alias_entry">
+              <object class="GtkButton" id="find_nodes_eth">
+                <property name="label" translatable="yes">Discover Nodes</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="invisible_char">●</property>
-                <property name="text" translatable="yes">0x354</property>
-                <property name="primary_icon_activatable">False</property>
-                <property name="secondary_icon_activatable">False</property>
-                <property name="primary_icon_sensitive">True</property>
-                <property name="secondary_icon_sensitive">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="Discover_Nodes" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">4</property>
+                <property name="position">5</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBox" id="eth_dst_alias_combo_box">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Type node Destination Alias or use down arrow to select after clicking on Discover Nodes</property>
+                <property name="model">eth_dst_alias_list</property>
+                <property name="has_entry">True</property>
+                <property name="entry_text_column">0</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">5</property>
               </packing>
             </child>
           </object>
@@ -2868,7 +2891,7 @@ dear friends.  </property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="Serial_Reconnect" swapped="no"/>
+                <signal name="clicked" handler="Serial_Connect" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -2906,6 +2929,21 @@ dear friends.  </property>
               </packing>
             </child>
             <child>
+              <object class="GtkProgressBar" id="progress_bar">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="activity_mode">True</property>
+                <property name="show_text">True</property>
+                <property name="text" translatable="yes">Running Test</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="pack_type">end</property>
+                <property name="position">6</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkButton" id="close_connection">
                 <property name="label" translatable="yes">Disconnect</property>
                 <property name="use_action_appearance">False</property>
@@ -2924,18 +2962,22 @@ dear friends.  </property>
               </packing>
             </child>
             <child>
-              <object class="GtkProgressBar" id="progress_bar">
+              <placeholder/>
+            </child>
+            <child>
+              <object class="GtkButton" id="eth_disconnect">
+                <property name="label" translatable="yes">Disconnect</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="activity_mode">True</property>
-                <property name="show_text">True</property>
-                <property name="text" translatable="yes">Running Test</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="close_eth" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
-                <property name="fill">False</property>
+                <property name="fill">True</property>
                 <property name="pack_type">end</property>
-                <property name="position">7</property>
+                <property name="position">9</property>
               </packing>
             </child>
           </object>
