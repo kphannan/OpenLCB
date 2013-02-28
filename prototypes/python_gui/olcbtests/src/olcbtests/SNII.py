@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def simple_node_ident_info(conn, config):
     ''''''
 
-    src_alias, dst_alias , node_id =  config['src_alias'], config['dst_alias'] , config['dst_id']
+    src_alias, dst_alias , node_id =  config['src_alias'], config['dst_alias'] , config['node_id']
 
     msg = messages.SimpleNodeIdentInfo(
         src_alias=src_alias,

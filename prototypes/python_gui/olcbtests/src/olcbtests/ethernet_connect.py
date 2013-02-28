@@ -51,3 +51,5 @@ def Ethernet_Connect(self, ip_data):
     self.Show_Connected_OK(ip_data)
     self.eth_disconnect.show_all()
     self.connected_no.hide()
+    self.status_connect_button.hide()
+    self.status_dst_alias_combo_box.hide()

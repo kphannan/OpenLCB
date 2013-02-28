@@ -133,7 +133,17 @@ class OpenLCB_tools_tests:
 
     def Hide_Unknown_Datagram(self, w):
         self.unknown_datagram_box.hide()
+
+    def show_alias_conflict(self, w):
+        for box in self.test_boxes:
+            box.hide()
+        self.test_alias_conflict_box.show_all()
         
+    def hide_alias_conflict(self, w):
+        self.test_alias_conflict_box.hide()
+        
+
+
     def Show_Connected_OK(self, w):
         self.connected_ok.show_all()
     def Hide_Connected_OK(self, w):
@@ -276,7 +286,7 @@ class OpenLCB_tools_tests:
           Consumers and Producer Events Global and Addressed
           '''
     def Identify_Events_Global(self, w):
-        self.pbar.show_all()
+        #self.pbar.show_all()
         events_global = identify_events_global(self.conn, self.config)
 
 
@@ -424,6 +434,10 @@ class OpenLCB_tools_tests:
         self.test_pc_loop_box = self.builder.get_object("test_pc_loop_box")
         self.test_pc_loop_box.hide()
         self.test_boxes.append(self.test_pc_loop_box)
+        
+        self.test_alias_conflict_box = self.builder.get_object("test_alias_conflict_box")
+        self.test_alias_conflict_box.hide()
+        self.test_boxes.append(self.test_alias_conflict_box)
         #end test boxes
 
         self.comport_dialog = self.builder.get_object("comport_dialog")
