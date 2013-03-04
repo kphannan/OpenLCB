@@ -1,0 +1,10 @@
+Making CDI from JMRI decoder XML:
+
+ant tests && ./runtest.csh tools.jmri.DecoderDefnToCdi
+
+Remaining issues
+*) Indexed CV handling (lots of types)
+*) Put out short copyright notice.
+
+
+xmllint -schema ../../specs/schema/cdi.xsd 0nmraCDI.xml
