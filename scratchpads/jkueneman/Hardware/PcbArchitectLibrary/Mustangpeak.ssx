@@ -10,6 +10,7 @@
 2x14 Header||28
 6N137||8
 23K256||8
+ACS711||8
 ADM2483||16
 Amplifier||3
 DIN5 Female||7
@@ -17,6 +18,7 @@ DPST Switch||6
 dsPIC30F1010-202X||28
 dsPIC33EP512GP806||64
 dsPIC33EPxxxGP502||28
+dsPIC33EPxxxMC502||28
 HIP4082||16
 Inverter||2
 ISO-0-4||16
@@ -36,6 +38,7 @@ MCP3208||16
 microSD Card||8
 mikroE mikroBUS||16
 OC_Opto||6
+OC_Opto_No_Bias||4
 PESD1CAN||3
 Power Barrel Connector||4
 PowerBlock||2
@@ -56,7 +59,9 @@ Spiral Count 28 Pin||28
 SPST Dual Contact||6
 SPST Single Contact||6
 Terminal Block 2 Wire||2
+Terminal Block 3 Wire||3
 Terminal Block 4 Wire||4
 TestPoint||1
 TL317-SO8 Regulator||8
+TortoiseBoardEdge||8
 USB-B||4

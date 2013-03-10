@@ -20,6 +20,7 @@ DIN5 Female Socket||7
 DO-201||2
 EVUFA2 Panasonic Pot||5
 FODM80x1||6
+HCPL817||4
 mikroBUS||16
 Molex 8-8-RJ45-SMT||10
 Molex microSD||10
@@ -28,8 +29,12 @@ Power Barrel 2.1mmX5.5mm||6
 RJ45 Amphinol Dual SMT||20
 Series 27L Encoder||7
 SMC||2
+SOD80C-Diode||2
+Terminal Block 3 Wire - 100mil||3
 Termnial Block 2 Wire||2
 Termnial Block 2 Wire - 100mil||2
 Termnial Block 4 Wire||4
 TestPoint 63mil||1
+TortoiseBoardEdge||8
 USB-B||6
+VOM452||6
