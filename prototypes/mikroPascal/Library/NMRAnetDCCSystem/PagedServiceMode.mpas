@@ -116,7 +116,7 @@ begin
   begin
     ServiceModeInfo.iInstructionCountSent := 1;
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
-    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER_RECOVER;
+    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_INSTRUCTION_RESET;
   end
 end;
 

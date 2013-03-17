@@ -47,7 +47,7 @@ begin
   OSCCON.0 := 1;                                                                // Tell it to change modes
   while OSCCON.0 = 1 do;                                                        // wait for it to take effect
   while LOCK_bit = 0 do;
-  
+
   Delay_ms(10);
 
   dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode

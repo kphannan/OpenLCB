@@ -4848,7 +4848,7 @@ SCREEN_SECTION_END
 
 PROJECT_INFO_START
 
-VERSION       = 3
+VERSION       = 4
 BOARD         = MikroMMB_for_dsPIC33_hw_rev_1.05
 COMPILER      = mikroPascal PRO for dsPIC
 CONTROLLER    = HX8347-D

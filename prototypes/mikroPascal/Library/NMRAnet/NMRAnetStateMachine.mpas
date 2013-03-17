@@ -77,11 +77,6 @@ uses
   procedure AppCallback_FDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);  external;
   function AppCallback_FDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;  external;
   {$ENDIF}
-  {$IFDEF SUPPORT_CvDI}
-  function AppCallback_CvDI_AddressSpaceSize(Node: PNMRAnetNode): Word; external;
-  procedure AppCallback_CvDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);  external;
-  function AppCallback_CvDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;  external;
-  {$ENDIF}
   // Address Space Support
 
 
@@ -458,9 +453,6 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
       {$IFDEF SUPPORT_FDI}
       MSI_FDI       :  Result := AppCallback_FDI_AddressSpaceSize(Node);
       {$ENDIF} // SUPPORT_FDI
-      {$IFDEF SUPPORT_FDI}
-      MSI_CvDI      :  Result := AppCallback_CvDI_AddressSpaceSize(Node);
-      {$ENDIF} // SUPPORT_CvDI
       MSI_CDI       : begin
                         {$IFDEF SUPPORT_VIRTUAL_NODES}
                         if Node^.State and NS_VIRTUAL <> 0 then

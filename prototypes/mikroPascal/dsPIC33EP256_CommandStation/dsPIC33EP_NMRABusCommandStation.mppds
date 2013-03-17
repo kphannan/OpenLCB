@@ -1,12 +1,12 @@
 [DEVICE]
-Name=P33EP64GP502
+Name=P33EP256GP502
 Clock=64000000
 [MEMORY_MODEL]
 Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
+Value=dsPIC33EP_NMRAnetCommandStation.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -49,7 +49,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=14
+Count=15
 File0=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
 File1=..\Library\NMRAnetDCCSystem\PagedServiceMode.mpas
 File2=..\Library\NMRAnetDCCSystem\ServiceModeDefines.mpas
@@ -64,6 +64,7 @@ File10=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
 File11=..\Library\NMRAnetDCCSystem\NMRAnetDCC.mpas
 File12=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\NMRAnetDCC.mpas
 File13=MCU_Setup_dsPIC33EP64GP502.mpas
+File14=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\_25AAxxxx.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -75,7 +76,7 @@ File0=Options.inc
 Count=11
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Uses\
-Path2=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\dsPIC33EP_CommandStation\
+Path2=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation\
 Path3=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
 Path4=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\
 Path5=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\

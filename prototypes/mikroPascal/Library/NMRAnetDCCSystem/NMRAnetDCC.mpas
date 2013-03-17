@@ -30,6 +30,8 @@ const
 
   MAX_NMRA_DCC_DATA = 5;     // Number of Bytes in a valid NMRA DCC Message
   MAX_NMRA_DCC_STARTUP_IDLE = 20;
+  
+  DEFAULT_RAILCOM_COUNT = 7;     // Give a 477us "Te" timing
 
   PREAMBLE_BIT_COUNT_NORMAL                 = 14;      // Normal message preamble bit count
   PREAMBLE_BIT_COUNT_SERVICEMODE            = 20;      // Service Mode message count
@@ -58,6 +60,8 @@ const
   STATE_NMRA_DCC_PIN_1 = 1;                                                     // Second 56us (for a "0")
   STATE_NMRA_DCC_PIN_2 = 2;                                                     // First 56us
   STATE_NMRA_DCC_PIN_3 = 3;                                                     // Second 56us (for a "0")
+  STATE_NMRA_DCC_PIN_0_RAILCOM = 4;
+  STATE_NMRA_DCC_PIN_1_RAILCOM = 5;
 
 type
   // ***************************************************************************
@@ -120,9 +124,11 @@ type
   //  (if not nil) and the transmitter state
   // ***************************************************************************
 const
-  TRANSMITTING_FLAG_CURRENT_BIT       = 0;           // Bit 0 = Current bit being transmitted
-  TRANSMITTING_FLAG_STOP_BIT          = 1;           // Bit 1 = Transmitting the last bit ("1" stop)
-  TRANSMITTING_FLAG_DCC_PIN_BIT       = 2;           // Bit 2 = State of the I/O Pin
+  TRANSMITTING_FLAG_CURRENT_BIT         = 0;           // Bit 0 = Current bit being transmitted
+  TRANSMITTING_FLAG_STOP_BIT            = 1;           // Bit 1 = Transmitting the last bit ("1" stop)
+  TRANSMITTING_FLAG_DCC_PIN_BIT         = 2;           // Bit 2 = State of the I/O Pin
+  TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 3;           // Bit 3 = RailCom Cutout Time
+  TRANSMITTING_FLAG_RAIL_COM_ENABLED    = 4;           // Bit 4 = Enable/Disable RailCom cutout
 
 type
   TDCCBufferInfo = record
@@ -131,6 +137,7 @@ type
 
     TX_TransmittingPacket: TDCCPacket;         // Message that is being currently transmitted
     TX_PreambleBitCount: Byte;                 // Number of Preamble Bits to send, the value is destroyed when the state machine is run
+    TX_RailComBitCount: Word;                  //
     TX_iStateMachine: Byte;                    // Main State machine
     TX_iBit: Byte;                             // Index of the current Bit being sent
     TX_iDCC_Pin_StateMachine: Byte;            // Index of the running the I/O Pin state
@@ -152,6 +159,7 @@ type
 var
   Track: TDCCBufferInfo;
   Programming: TDCCBufferInfo;
+  RailComCount: Word;
 
 // Call once on start up
 procedure NMRA_DCC_Initialize; forward;
@@ -226,6 +234,7 @@ procedure NMRA_DCC_Initialize;
 begin
   InitializeBuffer(@Track, @TrackQueue, @TrackQueuePriority, MAX_TRACK_BUFFER_DEPTH, MAX_TRACK_PRIORITY_BUFFER_DEPTH);
   InitializeBuffer(@Programming, nil, nil, 0, 0);
+  RailComCount := DEFAULT_RAILCOM_COUNT;
 end;
 
 // ****************************************************************************
@@ -754,6 +763,9 @@ end;
 // ****************************************************************************
 procedure NMRA_DCC_TransmitterStateMachineHandleStopBit(ABuffer: PDCCBufferInfo);
 begin
+
+LATA4_bit := 1;
+
   ABuffer^.TX_iBit := STATE_NMRA_DCC_BIT_7;                                     // Reset Bit index for the next Byte
   ABuffer^.TX_Flags.TRANSMITTING_FLAG_CURRENT_BIT := 1;                         // Current Bit = 1 (stop bit)
   ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT := 1;                            // Flag we are transmitting the Stop Bit
@@ -821,14 +833,45 @@ begin
 
         if ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT = 1 then                // If transmitting the second half of the stop bit then reset everything and get ready for the next message
         begin
+        
+          LATA4_bit := 1;
+        
+          ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 0;
           ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT := 0;
           ABuffer^.TX_iStateMachine := STATE_NMRA_DCC_PREAMBLE;                 // New message starting
+          
+          if ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_ENABLED = 1 then
+            ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0_RAILCOM
+          else begin
+            ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 0;
+            ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;
+          end;
+          
+          LATA4_bit := 0;
         end
       end;
     end;
   STATE_NMRA_DCC_PIN_3 :
     begin
       ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0; // Pin State 3 is the second "negative" 56us of a new "0" bit being sent on the DCC line, if the bit was a 1 in Pin State 2 then this state is skipped
+    end;
+  STATE_NMRA_DCC_PIN_0_RAILCOM :
+    begin
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 1;
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 1;
+      ABuffer^.TX_RailComBitCount := RailComCount;
+      ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_1_RAILCOM
+    end;
+  STATE_NMRA_DCC_PIN_1_RAILCOM :
+    begin
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 0;
+      // Need to reset the timer interrupt for the normal 58us bit, see the spec
+      Dec(ABuffer^.TX_RailComBitCount);
+      if ABuffer^.TX_RailComBitCount = 0 then
+      begin
+        ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 0;
+        ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;
+      end;
     end;
  end;
 end;
