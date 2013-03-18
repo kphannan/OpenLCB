@@ -26,7 +26,7 @@ def test_p_c_loopback(conn, config):
     )
     conn.send(msg)
 
-    responses = conn.receive_multi(.2)
+    responses = conn.receive_multi(1)
     logger.info('Received {0} event messages'.format(len(responses)))
     for frame in responses:
         response = messages.parse_frame(frame)

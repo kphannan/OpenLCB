@@ -38,7 +38,6 @@ def alias_conflict(conn, config):
     '''Sends the events addressed command to the whole bus'''
 
     src_alias, dst_alias, node_id =  config['src_alias'], config['dst_alias'], config['node_id']
-    #conn._socket.settimeout(.7) #commented out because does not work on serial com
 
     logger.info("check no-response global message with alias conflict")
 
@@ -52,9 +51,8 @@ def alias_conflict(conn, config):
     ))
     conn.send(msg)
 
-    responses = conn.receive_multi()
+    responses = conn.receive_multi(.5)
     received_response(responses)
-    #conn._socket.settimeout(.9) #commented out because does not work on serial com
 
     logger.info('Received {0} messages'.format(len(responses)))
     logger.info("check response-inducing global message with alias conflict")
@@ -64,9 +62,8 @@ def alias_conflict(conn, config):
     )
     conn.send(msg)
 
-    responses = conn.receive_multi()
+    responses = conn.receive_multi(.5)
     received_response(responses)
-   # conn._socket.settimeout(1.0) #commented out because does not work on serial com
 
     logger.info("check addressed message with alias conflict")
     response = messages.parse_frame(responses[-1])
@@ -79,7 +76,7 @@ def alias_conflict(conn, config):
     ))
     conn.send(msg)
 
-    responses = conn.receive_multi()
+    responses = conn.receive_multi(.5)
     received_response(responses)
     logger.info('Received {0} messages'.format(len(responses)))
 
@@ -95,7 +92,7 @@ def alias_conflict(conn, config):
     ))
     conn.send(msg)
 
-    responses = conn.receive_multi()
+    responses = conn.receive_multi(.5)
     received_response(responses)
     logger.info('Received {0} messages'.format(len(responses)))
     
@@ -111,10 +108,10 @@ def alias_conflict(conn, config):
     ))
     conn.send(msg)
 
-    responses = conn.receive_multi()
+    responses = conn.receive_multi(.5)
     received_response(responses)
     logger.info('Received {0} messages'.format(len(responses)))
 
     
-    #conn._socket.settimeout(1.0) #commented out because does not work on serial com
+
 

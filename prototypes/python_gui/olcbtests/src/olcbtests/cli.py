@@ -95,7 +95,7 @@ def main():
     tests = util.get_tests()
     with conn:
         # Run the tests!
-        config['dst_alias'], config['dst_id'] = util.discover_node(
+        config['dst_alias'], config['node_id'] = util.discover_node(
             conn, args.src_alias)
 
         for test in tests:
