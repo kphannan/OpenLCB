@@ -149,9 +149,7 @@ function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
 function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
 
-function AppCallback_FDI_AddressSpaceSize(Node: PNMRAnetNode): Word;
-procedure AppCallback_FDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
-function AppCallback_FDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure AppCallback_Configuration_Zeroize(Force: Boolean);
 
 // *****************************************************************************
 
@@ -272,10 +270,7 @@ end;
 // *****************************************************************************
 function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 begin
-  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-    Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_FDI)
-  else
-    Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_ACDI_USER)
+  Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_ACDI_USER)
 end;
 
 // *****************************************************************************
@@ -324,6 +319,53 @@ end;
 // *****************************************************************************
 // Writes the Configuration Memory from the App defined storage device
 //  Node:  The Node to write the Configuration Data for
+//  Force  : Reloads the configuration memory with default as delivered data
+
+// *****************************************************************************
+procedure AppCallback_Configuration_Zeroize(Force: Boolean);
+const
+  NullArray: array[0..63] of byte = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+var
+  LocalBuffer: array[0..7] of Byte;
+  i: Integer;
+begin
+  if not Force then
+  begin
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+    _25AAxxxx_Read(EEPROM_BANK_0, 0, 1, @LocalBuffer);
+    Force := LocalBuffer[0] = $FF;
+  end;
+  
+  if Force then
+  begin
+    for i := 0 to 2047 do
+    begin
+      while _25AAxxxx_Busy(EEPROM_BANK_0) do
+        Delay_us(10);
+     _25AAxxxx_Write(EEPROM_BANK_0, i * 64, 64, @NullArray);
+    end;
+    
+    LocalBuffer[1] := Lo(Word( 470));     // 470us Cutout Time
+    LocalBuffer[0] := Hi(Word( 470));
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, 65, 2, @LocalBuffer);   // RailCom Time
+   
+   LocalBuffer[0] := 1;   // Repeat Speed/Dir Packets
+   LocalBuffer[1] := 1;   // Repeat F0 Packets
+   LocalBuffer[2] := 1;   // Repeat F1 Packets
+   LocalBuffer[3] := 1;   // Repeat F2 Packets
+   LocalBuffer[4] := 1;   // Repeat F3 Packets
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, 67, 5, @LocalBuffer);
+  end
+end;
+
+// *****************************************************************************
+// Writes the Configuration Memory from the App defined storage device
+//  Node:  The Node to write the Configuration Data for
 //  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
 //  StartAddress: Offset from 0x00 in the Configuration Memory to start from
 //  MaxCount    : Maximum number of Bytes to move into the EEPROM
@@ -331,10 +373,29 @@ end;
 //  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+var
+  SpaceCode: Word;
 begin
-  while _25AAxxxx_Busy(EEPROM_BANK_0) do
-     Delay_us(10);
-  _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+  SpaceCode := StartAddress shr 30;
+  case SpaceCode of
+    0 : begin
+          while _25AAxxxx_Busy(EEPROM_BANK_0) do
+            Delay_us(10);
+          _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+        end;
+    1: begin
+         // Double Indexed CV
+         UART_Write_Text('Double Indexed CV Write');
+       end;
+    2: begin
+         // Single Indexed CV
+         UART_Write_Text('Single Indexed CV Write');
+       end;
+    3: begin
+         // Basic CV
+         UART_Write_Text('Basic CV Write');
+       end;
+  end; // case
 end;
 
 // *****************************************************************************
@@ -347,37 +408,30 @@ end;
 //  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
 function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
-begin
-   while _25AAxxxx_Busy(EEPROM_BANK_0) do
-     Delay_us(10);
-
-   Result := MaxCount;
-   _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
-end;
-
-function AppCallback_FDI_AddressSpaceSize(Node: PNMRAnetNode): Word;
-begin
-  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-    Result := MAX_FDI_ADDRESS_SPACE_SIZE
-  else
-    Result := 0;
-end;
-
-procedure AppCallback_FDI_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
-begin
-  while _25AAxxxx_Busy(EEPROM_BANK_0) do
-     Delay_us(10);
-  _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress + OFFSET_FDI_DATA, MaxCount, DataTarget);
-end;
-
-function AppCallback_FDI_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 var
-  i: Integer;
+  SpaceCode: Word;
 begin
-   while _25AAxxxx_Busy(EEPROM_BANK_0) do
-     Delay_us(10);
-   Result := MaxCount;
-   _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress + OFFSET_FDI_DATA, MaxCount, DataTarget);
+  SpaceCode := StartAddress shr 30;
+  case SpaceCode of
+    0 : begin
+          while _25AAxxxx_Busy(EEPROM_BANK_0) do
+            Delay_us(10);
+          Result := MaxCount;
+          _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+        end;
+    1: begin
+         // Double Indexed CV
+         UART_Write_Text('Double Indexed CV Read');
+       end;
+    2: begin
+         // Single Indexed CV
+         UART_Write_Text('Single Indexed CV Read');
+       end;
+    3: begin
+         // Basic CV
+         UART_Write_Text('Basic CV Read');
+       end;
+  end; // case
 end;
 
 //******************************************************************************

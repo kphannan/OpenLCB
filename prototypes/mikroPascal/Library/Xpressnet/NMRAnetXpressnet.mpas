@@ -239,7 +239,6 @@ var
   Error: Byte;
   i: Integer;
 begin
-
   case XpressNetBuffer^.RS485.XpressnetData.StateMachineIndex of
     STATE_RS485_READ_HEADER_BYTE :
       begin

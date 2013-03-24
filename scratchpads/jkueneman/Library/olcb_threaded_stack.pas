@@ -69,6 +69,7 @@ type
     FOlcbTaskManager: TOlcbTaskEngine;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
     FPort: String;                                                              // Port to connect to
+    FRunning: Boolean;
     FSerial: TBlockSerial;                                                      // Serial object
     FSyncDatagramMemConfigOperationReplyFunc: TSyncDatagramFunc;
     {$IFDEF DEBUG_THREAD} FSyncDebugFunc: TSyncDebugFunc; {$ENDIF}
@@ -78,6 +79,7 @@ type
     FTerminateComplete: Boolean;                                                 // True if the thread has terminated
     FThreadListSendStrings: TThreadList;                                        // List of strings waiting to be sent
     function GetSourceAlias: Word;
+    procedure SetOnBeforeDestroyTask(AValue: TOlcbTaskBeforeDestroy);
     protected
       procedure Execute; override;
       {$IFDEF DEBUG_THREAD} procedure SyncDebugMessage;{$ENDIF}
@@ -114,7 +116,8 @@ type
       property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
       property LoopTime: DWord read FLoopTime write FLoopTime;
       property MaxLoopTime: DWord read FMaxLoopTime write FMAxLoopTime;
-      property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+      property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write SetOnBeforeDestroyTask;
+      property Running: Boolean read FRunning;
   end;
 
   { TOlcbTaskEngine }
@@ -266,6 +269,7 @@ type
     FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
     FSending: Boolean;
   private
+    FTag: Integer;
     function SpaceToCommandByteEncoding(ASpace: Byte): Byte;
   protected
     FComPortThread: TComPortThread;
@@ -311,6 +315,7 @@ type
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
+    property Tag: Integer read FTag write FTag;
   end;
 
 
@@ -628,6 +633,7 @@ begin
   FComPortThread := nil;
   FErrorCode := 0;
   FSending := StartAsSending;
+  FTag := 0;
 end;
 
 destructor TOlcbTaskBase.Destroy;
@@ -646,6 +652,12 @@ begin
   finally
     LeaveCriticalsection(GlobalSettingLock)
   end;
+end;
+
+procedure TComPortThread.SetOnBeforeDestroyTask(AValue: TOlcbTaskBeforeDestroy);
+begin
+  if FOnBeforeDestroyTask=AValue then Exit;
+  FOnBeforeDestroyTask:=AValue;
 end;
 
 procedure TComPortThread.Execute;
@@ -685,6 +697,7 @@ var
   InitializationCompleteTask: TInitializationCompleteTask;
 begin
   T := 0;
+  FRunning := True;
   CompletedSendDatagram := nil;
   Helper := TOpenLCBMessageHelper.Create;
   Serial := TBlockSerial.Create;                           // Create the Serial object in the context of the thread
@@ -831,6 +844,7 @@ begin
     if Connected then
       Serial.CloseSocket;
     Connected := False;
+    FRunning := False;
     Serial.Free;
     Helper.Free;
     FTerminateComplete := True;
@@ -1514,9 +1528,11 @@ begin
     TaskList.UnlockList;
   end;
 
+  // Do this outside of the List Locking so we don't deadlock with the main thread
   if Assigned(CompletedTask) then
   begin
     Owner.Synchronize(@CompletedTask.SyncOnBeforeTaskDestroy);
+    CompletedTask.Free;
   end;
 end;
 
@@ -1577,4 +1593,4 @@ end;
 
 
 end.
-
+

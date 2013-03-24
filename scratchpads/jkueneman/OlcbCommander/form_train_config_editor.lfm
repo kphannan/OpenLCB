@@ -1,0 +1,31 @@
+object FormTrainConfigEditor: TFormTrainConfigEditor
+  Left = 602
+  Height = 449
+  Top = 201
+  Width = 623
+  Caption = 'Train Configuration Editor'
+  ClientHeight = 449
+  ClientWidth = 623
+  OnCreate = FormCreate
+  OnShow = FormShow
+  LCLVersion = '1.0.2.0'
+  object ButtonReadCVs: TButton
+    Left = 24
+    Height = 22
+    Top = 406
+    Width = 168
+    Anchors = [akLeft, akBottom]
+    Caption = 'Read All CVs'
+    TabOrder = 0
+  end
+  object PanelBkGnd: TPanel
+    Left = 0
+    Height = 393
+    Top = 0
+    Width = 623
+    Align = alTop
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Caption = 'Loading CDI File...'
+    TabOrder = 1
+  end
+end

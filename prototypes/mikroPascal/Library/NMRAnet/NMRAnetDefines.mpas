@@ -405,13 +405,14 @@ const
 
   MCP_OP_FREEZE                      = $A0;                                     // MemoryConfigurationProtocol Operation - Freeze Node
   MCP_OP_INDICATE                    = $A4;                                     // MemoryConfigurationProtocol Operation - Indicate
-  MCP_OP_RESETS                      = $A8;                                     // MemoryConfigurationProtocol Operation - Resets
+  MCP_OP_UPDATE_COMPLETE             = $A8;                                     // MemoryConfigurationProtocol Operation - Update Complete
+  MCP_OP_RESETS                      = $A9;                                     // MemoryConfigurationProtocol Operation - Resets
 
   STATE_MEM_CONFIG_SEND_REPLY            = $00;
   STATE_MEM_CONFIG_OPERATION_DATAGRAM    = $01;
   STATE_MEM_CONFIG_READ_DATAGRAM         = $02;
   STATE_MEM_CONFIG_WRITE_DATAGRAM        = $03;
-  STATE_MEM_CONFIG_REPLY_TO_WRITE_DATAGRAM = $04;
+  STATE_MEM_CONFIG_REPLY_TO_DATAGRAM     = $04;
   STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM = $05;
   STATE_MEM_CONFIG_WAITFOR_REPLY         = $06;
 

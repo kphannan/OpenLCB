@@ -227,6 +227,7 @@ begin
   MCU_Setup_Initialize;                                                         // Start the timers and perpherials last
   NMRA_DCC_Initialize;
   ServiceMode_Initialize;
+  AppCallback_Configuration_Zeroize(False);
 
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
@@ -366,11 +367,11 @@ begin
             end;
           'V' :
             begin
-              DumpEEProm(True);
+              DumpEEProm(True);   // Print in ASCII
             end;
           'v' :
             begin
-              DumpEEProm(False);
+              DumpEEProm(False);     // Print in Hex
             end;
           'M', 'm' :
             begin

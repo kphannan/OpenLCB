@@ -134,6 +134,8 @@ type
     property MaxAddress: DWord read FMaxAddress;
   end;
 
+  { TReadAddressSpaceMemoryTask }
+
   TReadAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryTask)
   end;
 
@@ -1116,7 +1118,7 @@ begin
              Space.LoadByDatagram(DatagramReceive);
              if Space.IsPresent then
              begin
-               if WritingToAddress and Space.IsReadOnly then
+               if (WritingToAddress and Space.IsReadOnly) then
                begin
                  ErrorCode := ErrorCode or ERROR_ADDRESS_SPACE_NOT_PRESENT;
                  Sending := True;
@@ -1136,6 +1138,7 @@ begin
              end else
              begin
                ErrorCode := ErrorCode or ERROR_ADDRESS_SPACE_NOT_PRESENT;
+               Sending := True;
                iState := STATE_DONE;
              end
            finally
@@ -1197,7 +1200,6 @@ begin
             SendMemoryConfigurationWrite(AddressSpace, CurrentAddress, Space.AddressHi - Space.AddressLo, ForceOptionalSpaceByte, DataStream);
           iState := STATE_DONE
         end;
-
     STATE_DONE : begin
        // Done
          FDone := True

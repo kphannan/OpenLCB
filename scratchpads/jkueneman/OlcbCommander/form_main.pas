@@ -117,6 +117,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionOpenLCBCommandReadFDI: TAction;
     ActionTreeviewNetworkCollapseSelected: TAction;
     ActionTreeviewNetworkExpandSelected: TAction;
     ActionOpenLCBCommandIdentifyEvents: TAction;
@@ -152,7 +153,6 @@ type
     LabelTrainCountName: TLabel;
     MainMenu: TMainMenu;
     MenuItem1: TMenuItem;
-    MenuItem10: TMenuItem;
     MenuItemTVPopupSep4: TMenuItem;
     MenuItem12: TMenuItem;
     MenuItem13: TMenuItem;
@@ -163,21 +163,17 @@ type
     MenuItemThrottlesShowAll: TMenuItem;
     MenuItemThrottlesHideAll: TMenuItem;
     MenuItemThrottles: TMenuItem;
-    MenuItemConfigMemSubSep1: TMenuItem;
-    MenuItem3: TMenuItem;
-    MenuItem4: TMenuItem;
-    MenuItem5: TMenuItem;
-    MenuItem7: TMenuItem;
-    MenuItem8: TMenuItem;
-    MenuItem9: TMenuItem;
+    MenuItemReadCDI: TMenuItem;
+    MenuItemReadConfigMem: TMenuItem;
+    MenuItemReadAllMemory: TMenuItem;
+    MenuItemReadMfgACDI: TMenuItem;
+    MenuItemReadUserACDI: TMenuItem;
     MenuItemTVPopupIdentifyGlobal: TMenuItem;
     MenuItemTVPopupExpandAll: TMenuItem;
     MenuItemTVPopupCollapseAll: TMenuItem;
     MenuItemTVPopupSep3: TMenuItem;
-    MenuItemTVPopupSNIP: TMenuItem;
     MenuItemTVPopupSep2: TMenuItem;
-    MenuItemTVPopupProtocol: TMenuItem;
-    MenuItem6: TMenuItem;
+    MenuItemReadFDI: TMenuItem;
     MenuItemTVPopupSep1: TMenuItem;
     MenuItemToolsSep2: TMenuItem;
     MenuItemToolsMessageLog: TMenuItem;
@@ -204,6 +200,7 @@ type
     procedure ActionOpenLCBCommandReadAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadCDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadConfigurationExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandReadFDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadMfgACDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadUserACDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandSNIIExecute(Sender: TObject);
@@ -224,6 +221,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure MenuItemReadFDIClick(Sender: TObject);
+    procedure MenuItemReadMfgACDIClick(Sender: TObject);
+    procedure MenuItemReadUserACDIClick(Sender: TObject);
     procedure MenuItemThrottlesClick(Sender: TObject);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
@@ -519,6 +519,19 @@ var
   end;
 end;
 
+procedure TFormOLCB_Commander.ActionOpenLCBCommandReadFDIExecute(Sender: TObject);
+var
+  Node: TOlcbTreeNode;
+  i: Integer;
+ begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if Node.Parent = RootNetworkNode then
+      RunReadMemorySpaceOnNode(Node, MSI_FDI);
+  end;
+end;
+
 procedure TFormOLCB_Commander.ActionOpenLCBCommandReadMfgACDIExecute(Sender: TObject);
 var
   Node: TOlcbTreeNode;
@@ -672,6 +685,33 @@ begin
   FormThreadDebug := TFormThreadDebug.Create(Application);
   FormThreadDebug.Show;
   {$ENDIF}
+end;
+
+procedure TFormOLCB_Commander.MenuItemReadFDIClick(Sender: TObject);
+begin
+
+end;
+
+procedure TFormOLCB_Commander.MenuItemReadMfgACDIClick(Sender: TObject);
+begin
+
+end;
+
+
+
+procedure TFormOLCB_Commander.MenuItemReadUserACDIClick(Sender: TObject);
+var
+  Start, i: Integer;
+begin
+  Start := MenuItemThrottles.IndexOf(MenuItemThrottlesSep1);
+  i := MenuItemThrottles.Count;
+  if Start > -1 then
+  begin
+    while MenuItemThrottles.Count - 1 > Start do
+      MenuItemThrottles.Delete(MenuItemThrottles.Count - 1);
+  end;
+  for i := 0 to ThrottleList.Count - 1 do
+     AddThrottleSubMenu(ThrottleList.Throttles[i]);
 end;
 
 procedure TFormOLCB_Commander.MenuItemThrottlesClick(Sender: TObject);
@@ -1576,25 +1616,41 @@ begin
   begin
     MemTask := TReadAddressSpaceMemoryTask( Sender);
     MemConfigViewer := TFormMemConfigViewer.Create(Application);
-    try
-      MemConfigViewer.Caption := MemConfigViewer.Caption + ' - Alias:  0x' + IntToHex(MemTask.DestinationAlias, 4);
-      MemConfigViewer.SynEditCDI.BeginUpdate;
-      MemConfigViewer.SynEditCDI.ClearAll;
-      MemConfigViewer.SynEditCDI.EndUpdate;
-      MemTask.DataStream.Position := 0;
-      MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
-      ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
-      WriteXMLFile(ADoc, MemTask.DataStream);
-      MemConfigViewer.XmlDoc := ADoc;
-      x := StreamAsString(MemTask.DataStream);
-      MemConfigViewer.SynEditCDI.Text := x ;
-    except
-      MemConfigViewer.SynEditCDI.Lines.Add('************************');
-      MemConfigViewer.SynEditCDI.Lines.Add('ERROR');
-      MemConfigViewer.SynEditCDI.Lines.Add('************************');
-      MemConfigViewer.SynEditCDI.Lines.Add('FAILED TO PARSE XML FILE');
-      MemConfigViewer.SynEditCDI.Lines.Add('************************');
-      FreeAndNil(ADoc);
+    MemConfigViewer.Caption := MemConfigViewer.Caption + ' - Alias:  0x' + IntToHex(MemTask.DestinationAlias, 4) + '  Address Space: ' + IntToStr(MemTask.AddressSpace);
+    case MemTask.AddressSpace of
+      MSI_CDI{, MSI_FDI}:
+        begin
+          try
+            MemConfigViewer.KHexEditor.Visible := False;
+            MemConfigViewer.SynEditCDI.Visible := True;
+            MemConfigViewer.SynEditCDI.BeginUpdate;
+            MemConfigViewer.SynEditCDI.ClearAll;
+            MemConfigViewer.SynEditCDI.EndUpdate;
+            MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
+            if MemTask.DataStream.ReadByte = Ord( #0) then
+              MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
+            MemTask.DataStream.Position := 0;
+            ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
+            WriteXMLFile(ADoc, MemTask.DataStream);
+            MemConfigViewer.XmlDoc := ADoc;
+            x := StreamAsString(MemTask.DataStream);
+            MemConfigViewer.SynEditCDI.Text := x ;
+          except
+            MemConfigViewer.SynEditCDI.Lines.Add('************************');
+            MemConfigViewer.SynEditCDI.Lines.Add('ERROR');
+            MemConfigViewer.SynEditCDI.Lines.Add('************************');
+            MemConfigViewer.SynEditCDI.Lines.Add('FAILED TO PARSE XML FILE');
+            MemConfigViewer.SynEditCDI.Lines.Add('************************');
+            FreeAndNil(ADoc);
+          end;
+        end
+     else
+        begin
+          MemConfigViewer.SynEditCDI.Visible := False;
+          MemConfigViewer.KHexEditor.Visible := True;
+          MemTask.DataStream.Position := 0;
+          MemConfigViewer.KHexEditor.LoadFromStream(MemTask.DataStream);
+        end;
     end;
     MemConfigViewer.Show;
   end else
@@ -1678,4 +1734,4 @@ end;
 
 
 end.
-
+

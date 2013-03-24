@@ -9,7 +9,8 @@ uses
   ComCtrls, StdCtrls, ActnList, Spin, Buttons, math_float16,
   olcb_threaded_stack, olcb_common_tasks, olcb_app_common_settings,
   olcb_utilities, olcb_defines, form_awesome_throttle_duplicate_address,
-  laz2_DOM, laz2_XMLRead, laz2_XMLWrite;
+  form_config_mem_viewer, laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
+  form_train_config_editor;
 
 const
   ANIMATION_DELTA = 50;
@@ -31,9 +32,7 @@ type
   );
 
   TThrottleWaitingAction = (
-    wa_None,
-    wa_FDItoFunctions,     // Loading the FDI to update the Functions
-    wa_WritingNewFDI       // Writing new FDI to configuration memory
+    wa_None
   );
   TThrottleWaitingActions = set of TThrottleWaitingAction;
 
@@ -102,7 +101,6 @@ type
     ButtonEditConfiguration: TButton;
     ButtonSearchForTrain: TButton;
     ButtonReleaseTrain: TButton;
-    ButtonLoadConfiguration: TButton;
     ButtonFreeTrain: TButton;
     ButtonStop: TButton;
     ButtonEStop: TButton;
@@ -130,7 +128,6 @@ type
     procedure ActionAllocationByAddressExecute(Sender: TObject);
     procedure ActionAllocationEditCustomizationExecute(Sender: TObject);
     procedure ActionAllocationFreeExecute(Sender: TObject);
-    procedure ActionAllocationLoadEffectsFileExecute(Sender: TObject);
     procedure ActionAllocationReleaseExecute(Sender: TObject);
     procedure ActionAllocationSearchForTrainExecute(Sender: TObject);
     procedure ActionControlEmergencyStopExecute(Sender: TObject);
@@ -183,6 +180,7 @@ type
     FAllocatedAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
     FComPortThread: TComPortThread;
+    FConfigurationViewer: TFormTrainConfigEditor;
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
@@ -223,6 +221,7 @@ type
     property Allocated: Boolean read FAllocated write SetAllocated;
     property AllocatedAlias: Word read FAllocatedAlias write SetAllocatedAlias;
     property ComPortThread: TComPortThread read FComPortThread write SetComPortThread;
+    property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
     property WaitingActions: TThrottleWaitingActions read FWaitingActions write FWaitingActions;
@@ -289,6 +288,7 @@ begin
   FWaitingActions := [wa_None];
   ComPortThread := nil;
   AliasList := TAliasList.Create;
+  FConfigurationViewer := nil;
 end;
 
 procedure TFormAwesomeThrottle.FormDestroy(Sender: TObject);
@@ -310,22 +310,21 @@ end;
 
 procedure TFormAwesomeThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
 begin
-
+  if not Assigned(ConfigurationViewer) then
+  begin
+    FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
+    ConfigurationViewer.ComPortThread := ComPortThread;
+    ConfigurationViewer.AliasID := AllocatedAlias;
+    ConfigurationViewer.ShowModal;
+    ConfigurationViewer.Release;
+    FConfigurationViewer := nil;
+  end;
 end;
 
 procedure TFormAwesomeThrottle.ActionAllocationFreeExecute(Sender: TObject);
 begin
   TrackBarSpeed.Position := 0;
   RunTractionDeAllocateTrainByAddress(AllocatedAlias, TIME_DEALLOCATE_ADDRESS);
-end;
-
-procedure TFormAwesomeThrottle.ActionAllocationLoadEffectsFileExecute(Sender: TObject);
-begin
-  if OpenDialog.Execute then
-  begin
-    Include(FWaitingActions, wa_WritingNewFDI);
-    RunProtocolSupport(AllocatedAlias);
-  end;
 end;
 
 procedure TFormAwesomeThrottle.ActionAllocationReleaseExecute(Sender: TObject);
@@ -608,54 +607,57 @@ var
   b: Byte;
   StartFDI: Integer;
 begin
-  FileStream := TFileStream.Create(FileName, fmOpenRead);
-  try
-    StartFDI := -1;
-    FileStream.Position := 0;
-    i := 0;
-    b := FileStream.ReadByte;
-    while (b <> Ord ('<')) and (i < FileStream.Size) do
-    begin
+  if Assigned(FComPortThread) then
+  begin
+    FileStream := TFileStream.Create(FileName, fmOpenRead);
+    try
+      StartFDI := -1;
+      FileStream.Position := 0;
+      i := 0;
       b := FileStream.ReadByte;
-      Inc(i);
-    end;
-    StartFDI := i;
-
-    if (StartFDI > 0) then
-    begin
-      MemStream := TMemoryStream.Create;
-      BufferStream := TMemoryStream.Create;
-      try
-        FileStream.Position := StartFDI;
-        i := 0;
-        while (FileStream.Position < FileStream.Size) do
-        begin
-          b := FileStream.ReadByte;
-          if (b <> Ord(#13)) and (b <> Ord(#10)) then
-            MemStream.WriteByte( b);
-        end;
-        MemStream.WriteByte( Ord(#0));  // Add null
-        UpdateFunctionsWithFDI(MemStream);
-        MemStream.Position := 0;
-        Offset := 0;
-        while (MemStream.Position < MemStream.Size) do
-        begin
-          BufferStream.Size := 0;
-          while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
-            BufferStream.WriteByte( MemStream.ReadByte);
-          Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, Offset, BufferStream);
-          if MemStream.Position >= MemStream.Size then
-            Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
-          ComPortThread.AddTask(Task);
-          Offset := Offset + MAX_CONFIG_MEM_READWRITE_SIZE;
-        end;
-      finally
-        MemStream.Free;
-        BufferStream.Free;
+      while (b <> Ord ('<')) and (i < FileStream.Size) do
+      begin
+        b := FileStream.ReadByte;
+        Inc(i);
       end;
+      StartFDI := i;
+
+      if (StartFDI > 0) then
+      begin
+        MemStream := TMemoryStream.Create;
+        BufferStream := TMemoryStream.Create;
+        try
+          FileStream.Position := StartFDI;
+          i := 0;
+          while (FileStream.Position < FileStream.Size) do
+          begin
+            b := FileStream.ReadByte;
+            if (b <> Ord(#13)) and (b <> Ord(#10)) then
+              MemStream.WriteByte( b);
+          end;
+          MemStream.WriteByte( Ord(#0));  // Add null
+          UpdateFunctionsWithFDI(MemStream);
+          MemStream.Position := 0;
+          Offset := 0;
+          while (MemStream.Position < MemStream.Size) do
+          begin
+            BufferStream.Size := 0;
+            while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
+              BufferStream.WriteByte( MemStream.ReadByte);
+            Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, Offset, BufferStream);
+            if MemStream.Position >= MemStream.Size then
+              Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
+            ComPortThread.AddTask(Task);
+            Offset := Offset + MAX_CONFIG_MEM_READWRITE_SIZE;
+          end;
+        finally
+          MemStream.Free;
+          BufferStream.Free;
+        end;
+      end;
+    finally
+      FileStream.Free;
     end;
-  finally
-    FileStream.Free;
   end;
 end;
 
@@ -675,20 +677,26 @@ procedure TFormAwesomeThrottle.RunReadMemorySpace(AliasID: Word; AddressSpace: B
 var
   Task: TReadAddressSpaceMemoryTask;
 begin
-  Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace);
-  Task.ForceOptionalSpaceByte := False;
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComPortThread) then
+  begin
+    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace);
+    Task.ForceOptionalSpaceByte := False;
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
 end;
 
 procedure TFormAwesomeThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpace: Byte; StartAddress, ByteCount: DWord);
 var
   Task: TReadAddressSpaceMemoryRawTask;
 begin
-  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
-  Task.ForceOptionalSpaceByte := False;
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComPortThread) then
+  begin
+    Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
+    Task.ForceOptionalSpaceByte := False;
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
 end;
 
 procedure TFormAwesomeThrottle.RunTractionAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
@@ -769,22 +777,28 @@ var
   Speed: single;
   CalculatedSpeed: THalfFloat;
 begin
-  Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
-  if not IsForward then
-    Speed := -Speed;
-  CalculatedSpeed := FloatToHalf( Speed);
-  Task := TTractionSpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, CalculatedSpeed, EmergencyStop);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComPortThread) then
+  begin
+    Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
+    if not IsForward then
+      Speed := -Speed;
+    CalculatedSpeed := FloatToHalf( Speed);
+    Task := TTractionSpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, CalculatedSpeed, EmergencyStop);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
 end;
 
 procedure TFormAwesomeThrottle.RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
 var
   Task: TTractionFunctionTask;
 begin
-  Task := TTractionFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address, Value);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComPortThread) then
+  begin
+    Task := TTractionFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address, Value);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
 end;
 
 procedure TFormAwesomeThrottle.SetAllocated(AValue: Boolean);
@@ -803,8 +817,8 @@ begin
     else begin
       if GlobalSettings.Throttle.AutoLoadFDI then
       begin
-        Include(FWaitingActions, wa_FDItoFunctions);
-        RunProtocolSupport(FAllocatedAlias);         // Kick it off
+   //     Include(FWaitingActions, wa_FDItoFunctions);
+   //     RunProtocolSupport(FAllocatedAlias);         // Kick it off
       end;
       PotentialAlias := 0;
     end;
@@ -813,6 +827,8 @@ end;
 
 procedure TFormAwesomeThrottle.SetComPortThread(AValue: TComPortThread);
 begin
+  if Assigned(ConfigurationViewer) then
+    ConfigurationViewer.ComPortThread := AValue;
   FComPortThread:=AValue;
 end;
 
@@ -938,29 +954,15 @@ procedure TFormAwesomeThrottle.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
 begin
   if Sender is TWriteAddressSpaceMemoryRawTask then
   begin
-    if ((Sender as TWriteAddressSpaceMemoryRawTask).AddressSpace = MSI_FDI) and (wa_WritingNewFDI in WaitingActions) then
-    begin
-      Exclude(FWaitingActions, wa_WritingNewFDI);
-    end;
+
   end else
   if Sender is TReadAddressSpaceMemoryRawTask then
   begin
-    if ((Sender as TReadAddressSpaceMemoryRawTask).AddressSpace = MSI_FDI) and (wa_FDItoFunctions in WaitingActions) then
-    begin
-      Exclude(FWaitingActions, wa_FDItoFunctions);
-      UpdateFunctionsWithFDI((Sender as TReadAddressSpaceMemoryRawTask).Stream);
-    end;
+
   end else
   if Sender is TProtocolSupportTask then
   begin
-    if (Sender as TProtocolSupportTask).Protocols and PIP_FDI = PIP_FDI then
-    begin
-      if wa_FDItoFunctions in WaitingActions then
-        RunReadMemorySpaceRaw(FAllocatedAlias, MSI_FDI, 0, 2048)
-      else
-      if wa_WritingNewFDI in WaitingActions then
-        RunWriteFdiFile(AllocatedAlias, OpenDialog.FileName);
-    end;
+
   end else
   if Sender is TTractionAllocateDccProxyTask then
   begin

@@ -1,35 +1,33 @@
 object FormMemConfigViewer: TFormMemConfigViewer
-  Left = 675
-  Height = 489
-  Top = 239
-  Width = 613
+  Left = 633
+  Height = 371
+  Top = 327
+  Width = 543
   Caption = 'Memory Configuration Viewer'
-  ClientHeight = 489
-  ClientWidth = 613
+  ClientHeight = 371
+  ClientWidth = 543
   OnClose = FormClose
+  OnCreate = FormCreate
   LCLVersion = '1.0.2.0'
   object PageControlMemConfig: TPageControl
     Left = 0
-    Height = 489
+    Height = 312
     Top = 0
-    Width = 613
-    ActivePage = TabSheetConfigTool
+    Width = 543
+    ActivePage = TabSheetRawData
     Align = alClient
     TabIndex = 0
     TabOrder = 0
-    object TabSheetConfigTool: TTabSheet
-      Caption = 'Configuration Tool'
-    end
     object TabSheetRawData: TTabSheet
       Caption = 'Raw Data'
-      ClientHeight = 463
-      ClientWidth = 605
+      ClientHeight = 273
+      ClientWidth = 537
       inline SynEditCDI: TSynEdit
         Left = 0
-        Height = 402
+        Height = 273
         Top = 0
-        Width = 605
-        Align = alTop
+        Width = 537
+        Align = alClient
         Font.Height = -13
         Font.Name = 'Courier New'
         Font.Pitch = fpFixed
@@ -514,6 +512,39 @@ object FormMemConfigViewer: TFormMemConfigViewer
           end
         end
       end
+      object KHexEditor: TKHexEditor
+        Left = 0
+        Height = 273
+        Top = 0
+        Width = 537
+        Align = alClient
+        Font.Height = -11
+        Font.Name = 'Courier'
+        Font.Pitch = fpFixed
+        Font.Style = [fsBold]
+        TabOrder = 1
+        Visible = False
+      end
+    end
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 59
+    Top = 312
+    Width = 543
+    Align = alBottom
+    ClientHeight = 59
+    ClientWidth = 543
+    TabOrder = 1
+    object ButtonClose: TButton
+      Left = 346
+      Height = 22
+      Top = 16
+      Width = 150
+      Anchors = [akRight, akBottom]
+      Caption = 'Close'
+      OnClick = ButtonCloseClick
+      TabOrder = 0
     end
   end
   object SynXMLSyn: TSynXMLSyn
@@ -533,7 +564,7 @@ object FormMemConfigViewer: TFormMemConfigViewer
     SpaceAttri.FrameEdges = sfeAround
     SymbolAttri.FrameEdges = sfeAround
     WantBracesParsed = False
-    left = 512
-    top = 112
+    left = 24
+    top = 64
   end
-end
+end

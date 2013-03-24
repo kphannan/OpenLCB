@@ -1,0 +1,2000 @@
+<cdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/specs/schema/cdi.xsd">
+  <identification>
+    <manufacturer>NMRA</manufacturer>
+    <model>NMRA standard CV definitions</model>
+    <hardwareVersion />
+    <softwareVersion />
+    <map>
+      <relation>
+        <property>Model</property>
+        <value>NMRA standard CV definitions</value>
+      </relation>
+    </map>
+  </identification>
+  <acdi />
+  <segment space="253" origin="256">
+    <name>DCC Controls</name>
+    <description>DCC-specific control items</description>
+    <int>
+      <name>Programming Mode</name>
+      <map>
+        <relation>
+          <property>Register Mode</property>
+          <value>1</value>
+        </relation>
+        <relation>
+          <property>Paged Mode</property>
+          <value>2</value>
+        </relation>
+      </map>
+    </int>
+    <int size="2">
+      <name>DCC Address</name>
+    </int>
+    <int>
+      <name>Speed Steps</name>
+    </int>
+    <int>
+      <name>Single Index CV Address</name>
+    </int>
+    <int size="2">
+      <name>Double Index CV Addresses</name>
+    </int>
+  </segment>
+  <segment origin="4278190081" space="253">
+    <group replication="256">
+      <name>CVs</name>
+      <description>Raw CV access</description>
+      <repname>CV</repname>
+      <int size="1">
+        <min>0</min>
+        <max>255</max>
+      </int>
+    </group>
+  </segment>
+  <segment space="253">
+    <int origin="4278190081">
+      <name>Primary Address</name>
+      <description>Short address</description>
+    </int>
+    <int origin="4278190097" size="2">
+      <name>Extended Address</name>
+    </int>
+    <bit size="8" mask="32" origin="4278190109">
+      <name>Address Format</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>One byte (short) address</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Two byte (extended) address</value>
+        </relation>
+      </map>
+    </bit>
+    <int origin="4278190083">
+      <name>Acceleration Rate</name>
+    </int>
+    <int origin="4278190084">
+      <name>Deceleration Rate</name>
+    </int>
+    <int origin="4278190082">
+      <name>Vstart</name>
+      <description>A value of 255 corresponds to 100%</description>
+    </int>
+    <int origin="4278190085">
+      <name>Vhigh</name>
+    </int>
+    <int origin="4278190086">
+      <name>Vmid</name>
+    </int>
+    <int origin="4278190087">
+      <name>Manufacturer Version No:</name>
+    </int>
+    <int origin="4278190088">
+      <name>Manufacturer ID:</name>
+    </int>
+    <int origin="4278190089">
+      <name>Total PWM Period</name>
+    </int>
+    <int origin="4278190090">
+      <name>EMF Feedback Cutout</name>
+    </int>
+    <int origin="4278190091">
+      <name>Packet Time-out Value</name>
+    </int>
+    <bit size="8" mask="1" origin="4278190092">
+      <name>Analog Power Conversion</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>disabled</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190092">
+      <name>Radio Power Conversion</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>disabled</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190092">
+      <name>Zero-1 Power Conversion</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>disabled</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190092">
+      <name>Trix Power Conversion</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>disabled</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190092">
+      <name>CTC/Railcommand Power Conversion</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>disabled</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190093">
+      <name>Analog Mode Function Status - F1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190093">
+      <name>Analog Mode Function Status - F2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190093">
+      <name>Analog Mode Function Status - F3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190093">
+      <name>Analog Mode Function Status - F4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190093">
+      <name>Analog Mode Function Status - F5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190093">
+      <name>Analog Mode Function Status - F6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190093">
+      <name>Analog Mode Function Status - F7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190093">
+      <name>Analog Mode Function Status - F8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Off</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>On</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="7" origin="4278190096">
+      <name>Decoder Lock ID number</name>
+    </bit>
+    <bit size="8" mask="1" origin="4278190101">
+      <name>Consist Address Active For F1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190101">
+      <name>Consist Address Active For F2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190101">
+      <name>Consist Address Active For F3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190101">
+      <name>Consist Address Active For F4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190101">
+      <name>Consist Address Active For F5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190101">
+      <name>Consist Address Active For F6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190101">
+      <name>Consist Address Active For F7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190101">
+      <name>Consist Address Active For F8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190102">
+      <name>Consist Address Active For FL in Forward</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190102">
+      <name>Consist Address Active For FL in Reverse</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Locomotive Address Only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Respond to Consist Address</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="127" origin="4278190099">
+      <name>Consist Address</name>
+    </bit>
+    <bit size="8" mask="128" origin="4278190099">
+      <name>Consist Direction</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>forward</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>reverse</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="127" origin="4278190103">
+      <name>Consist Acceleration Adjustment</name>
+    </bit>
+    <bit size="8" mask="128" origin="4278190103">
+      <name>Consist Acceleration Adjustment Sign</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Adjustment Added</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Adjustment Subtracted</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="127" origin="4278190104">
+      <name>Consist Deceleration Adjustment</name>
+    </bit>
+    <bit size="8" mask="128" origin="4278190104">
+      <name>Consist Deceleration Adjustment Sign</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Adjustment Added</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Adjustment Subtracted</value>
+        </relation>
+      </map>
+    </bit>
+    <int origin="4278190105">
+      <name>Speed Table/Mid Range Cab Speed Step</name>
+      <description>See RP 9.2.2 for more information. Values from 2 to 127 indicate preloaded speed tables. 0 or 1 means not used.  Values between 128 and 154 define the cab throttle position where the mid range decoder speed value is applied</description>
+    </int>
+    <bit size="8" mask="1" origin="4278190109">
+      <name>Locomotive Direction</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>forward</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>reverse</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190109">
+      <name>FL Location</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>14 speed step format</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>28 speed step format</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190109">
+      <name>Power Source Conversion</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>NMRA Digital only</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>DC conversion enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190109">
+      <name>Advanced Decoder Acknowledgement</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>disabled</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>enabled</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190109">
+      <name>Speed Table Definition</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Use Vstart, Vmid, Vhigh</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Use table in CVs 66 through 95</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190113">
+      <name>FL(f) controls output 1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190113">
+      <name>FL(f) controls output 2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190113">
+      <name>FL(f) controls output 3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190113">
+      <name>FL(f) controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190113">
+      <name>FL(f) controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190113">
+      <name>FL(f) controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190113">
+      <name>FL(f) controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190113">
+      <name>FL(f) controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190114">
+      <name>FL(r) controls output 1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190114">
+      <name>FL(r) controls output 2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190114">
+      <name>FL(r) controls output 3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190114">
+      <name>FL(r) controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190114">
+      <name>FL(r) controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190114">
+      <name>FL(r) controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190114">
+      <name>FL(r) controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190114">
+      <name>FL(r) controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190115">
+      <name>F1 controls output 1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190115">
+      <name>F1 controls output 2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190115">
+      <name>F1 controls output 3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190115">
+      <name>F1 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190115">
+      <name>F1 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190115">
+      <name>F1 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190115">
+      <name>F1 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190115">
+      <name>F1 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190116">
+      <name>F2 controls output 1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190116">
+      <name>F2 controls output 2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190116">
+      <name>F2 controls output 3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190116">
+      <name>F2 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190116">
+      <name>F2 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190116">
+      <name>F2 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190116">
+      <name>F2 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190116">
+      <name>F2 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190117">
+      <name>F3 controls output 1</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190117">
+      <name>F3 controls output 2</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190117">
+      <name>F3 controls output 3</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190117">
+      <name>F3 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190117">
+      <name>F3 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190117">
+      <name>F3 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190117">
+      <name>F3 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190117">
+      <name>F3 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190118">
+      <name>F4 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190118">
+      <name>F4 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190118">
+      <name>F4 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190118">
+      <name>F4 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190118">
+      <name>F4 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190118">
+      <name>F4 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190118">
+      <name>F4 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190118">
+      <name>F4 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190119">
+      <name>F5 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190119">
+      <name>F5 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190119">
+      <name>F5 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190119">
+      <name>F5 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190119">
+      <name>F5 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190119">
+      <name>F5 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190119">
+      <name>F5 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190119">
+      <name>F5 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190120">
+      <name>F6 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190120">
+      <name>F6 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190120">
+      <name>F6 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190120">
+      <name>F6 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190120">
+      <name>F6 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190120">
+      <name>F6 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190120">
+      <name>F6 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190120">
+      <name>F6 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190121">
+      <name>F7 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190121">
+      <name>F7 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190121">
+      <name>F7 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190121">
+      <name>F7 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190121">
+      <name>F7 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190121">
+      <name>F7 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190121">
+      <name>F7 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190121">
+      <name>F7 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190122">
+      <name>F8 controls output 4</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190122">
+      <name>F8 controls output 5</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190122">
+      <name>F8 controls output 6</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190122">
+      <name>F8 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190122">
+      <name>F8 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190122">
+      <name>F8 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190122">
+      <name>F8 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190122">
+      <name>F8 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190123">
+      <name>F9 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190123">
+      <name>F9 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190123">
+      <name>F9 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190123">
+      <name>F9 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190123">
+      <name>F9 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190123">
+      <name>F9 controls output 12</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190123">
+      <name>F9 controls output 13</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190123">
+      <name>F9 controls output 14</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190124">
+      <name>F10 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190124">
+      <name>F10 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190124">
+      <name>F10 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190124">
+      <name>F10 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190124">
+      <name>F10 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190124">
+      <name>F10 controls output 12</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190124">
+      <name>F10 controls output 13</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190124">
+      <name>F10 controls output 14</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190125">
+      <name>F11 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190125">
+      <name>F11 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190125">
+      <name>F11 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190125">
+      <name>F11 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190125">
+      <name>F11 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190125">
+      <name>F11 controls output 12</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190125">
+      <name>F11 controls output 13</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190125">
+      <name>F11 controls output 14</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="1" origin="4278190126">
+      <name>F12 controls output 7</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="2" origin="4278190126">
+      <name>F12 controls output 8</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="4" origin="4278190126">
+      <name>F12 controls output 9</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="8" origin="4278190126">
+      <name>F12 controls output 10</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="16" origin="4278190126">
+      <name>F12 controls output 11</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="32" origin="4278190126">
+      <name>F12 controls output 12</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="64" origin="4278190126">
+      <name>F12 controls output 13</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <bit size="8" mask="128" origin="4278190126">
+      <name>F12 controls output 14</name>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>No</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Yes</value>
+        </relation>
+      </map>
+    </bit>
+    <int origin="4278190145">
+      <name>Kick Start</name>
+    </int>
+    <int origin="4278190146">
+      <name>Forward Trim</name>
+      <description>Range 0-255</description>
+    </int>
+    <int origin="4278190175">
+      <name>Reverse Trim</name>
+      <description>Range 0-255</description>
+    </int>
+    <int origin="4278190185">
+      <name>User Id #1</name>
+    </int>
+    <int origin="4278190186">
+      <name>User Id #2</name>
+    </int>
+  </segment>
+</cdi>

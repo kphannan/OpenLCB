@@ -15,25 +15,25 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
   LCLVersion = '1.0.2.0'
   object GroupBoxAllocation: TGroupBox
     Left = 392
-    Height = 344
+    Height = 368
     Top = 8
     Width = 185
     Caption = 'Train Allocation'
-    ClientHeight = 326
-    ClientWidth = 181
+    ClientHeight = 346
+    ClientWidth = 177
     TabOrder = 0
     object LabelAddress: TLabel
       Left = 10
-      Height = 14
-      Top = 104
-      Width = 40
+      Height = 17
+      Top = 110
+      Width = 52
       Caption = 'Address'
       ParentColor = False
     end
     object ButtonAllocateTrainByAddress: TButton
       Left = 10
       Height = 22
-      Top = 200
+      Top = 214
       Width = 155
       Action = ActionAllocationByAddress
       TabOrder = 0
@@ -41,7 +41,7 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     object ButtonReleaseTrain: TButton
       Left = 10
       Height = 22
-      Top = 264
+      Top = 278
       Width = 155
       Action = ActionAllocationRelease
       TabOrder = 1
@@ -49,14 +49,14 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     object ButtonFreeTrain: TButton
       Left = 10
       Height = 22
-      Top = 292
+      Top = 310
       Width = 155
       Action = ActionAllocationFree
       TabOrder = 2
     end
     object RadioGroupSpeedStep: TRadioGroup
       Left = 10
-      Height = 98
+      Height = 100
       Top = 6
       Width = 161
       AutoFill = True
@@ -69,8 +69,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 1
-      ClientHeight = 80
-      ClientWidth = 157
+      ClientHeight = 78
+      ClientWidth = 153
       ItemIndex = 1
       Items.Strings = (
         '14 Step'
@@ -83,15 +83,15 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     object ButtonSearchForTrain: TButton
       Left = 10
       Height = 22
-      Top = 232
+      Top = 246
       Width = 155
       Action = ActionAllocationSearchForTrain
       TabOrder = 4
     end
     object SpinEditAddress: TSpinEdit
       Left = 10
-      Height = 27
-      Top = 124
+      Height = 16
+      Top = 130
       Width = 157
       Font.Height = -16
       ParentFont = False
@@ -101,7 +101,7 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     object RadioGroupShortLong: TRadioGroup
       Left = 10
       Height = 44
-      Top = 150
+      Top = 158
       Width = 155
       AutoFill = True
       Caption = 'Length'
@@ -113,8 +113,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 2
-      ClientHeight = 26
-      ClientWidth = 151
+      ClientHeight = 22
+      ClientWidth = 147
       Columns = 2
       ItemIndex = 0
       Items.Strings = (
@@ -131,8 +131,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 80
     Width = 184
     Caption = 'Control'
-    ClientHeight = 346
-    ClientWidth = 180
+    ClientHeight = 342
+    ClientWidth = 176
     TabOrder = 1
     object TrackBarSpeed: TTrackBar
       Left = 12
@@ -148,17 +148,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object LabelMaxSpeed: TLabel
       Left = 46
-      Height = 14
+      Height = 17
       Top = 5
-      Width = 39
+      Width = 55
       Caption = '100 m/s'
       ParentColor = False
     end
     object LabelMinSpeed: TLabel
       Left = 46
-      Height = 14
+      Height = 17
       Top = 195
-      Width = 27
+      Width = 39
       Caption = '0 m/s'
       ParentColor = False
     end
@@ -177,8 +177,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 2
-      ClientHeight = 31
-      ClientWidth = 151
+      ClientHeight = 27
+      ClientWidth = 147
       Columns = 2
       ItemIndex = 0
       Items.Strings = (
@@ -219,8 +219,8 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
       ChildSizing.ShrinkVertical = crsScaleChilds
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 1
-      ClientHeight = 33
-      ClientWidth = 78
+      ClientHeight = 29
+      ClientWidth = 74
       ItemIndex = 0
       Items.Strings = (
         'None'
@@ -236,17 +236,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object LabelSpeedPos: TLabel
       Left = 100
-      Height = 14
+      Height = 17
       Top = 102
-      Width = 18
+      Width = 27
       Caption = 'm/s'
       ParentColor = False
     end
     object LabelPosValue: TLabel
       Left = 62
-      Height = 14
+      Height = 17
       Top = 102
-      Width = 7
+      Width = 9
       Caption = '0'
       ParentColor = False
     end
@@ -257,17 +257,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 8
     Width = 184
     Caption = 'Functions'
-    ClientHeight = 383
-    ClientWidth = 180
+    ClientHeight = 379
+    ClientWidth = 176
     TabOrder = 2
     object ScrollBoxFunctions: TScrollBox
       Left = 4
-      Height = 375
+      Height = 371
       Top = 4
-      Width = 172
-      HorzScrollBar.Page = 172
+      Width = 168
+      HorzScrollBar.Page = 168
       VertScrollBar.Increment = 37
-      VertScrollBar.Page = 375
+      VertScrollBar.Page = 371
       VertScrollBar.Smooth = True
       VertScrollBar.Tracking = True
       Align = alClient
@@ -278,28 +278,20 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
   end
   object GroupBoxConfiguration: TGroupBox
     Left = 392
-    Height = 96
-    Top = 352
+    Height = 64
+    Top = 384
     Width = 185
     Caption = 'Configuration'
-    ClientHeight = 78
-    ClientWidth = 181
+    ClientHeight = 42
+    ClientWidth = 177
     TabOrder = 3
     object ButtonEditConfiguration: TButton
-      Left = 10
+      Left = 12
       Height = 22
-      Top = 42
+      Top = 9
       Width = 155
       Action = ActionAllocationEditCustomization
       TabOrder = 0
-    end
-    object ButtonLoadConfiguration: TButton
-      Left = 10
-      Height = 22
-      Top = 10
-      Width = 155
-      Action = ActionAllocationLoadEffectsFile
-      TabOrder = 1
     end
   end
   object ButtonShowHideAllocatePanel: TButton
@@ -316,14 +308,14 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     Top = 8
     Width = 185
     Caption = 'Address'
-    ClientHeight = 40
-    ClientWidth = 181
+    ClientHeight = 36
+    ClientWidth = 177
     TabOrder = 5
     object LabelAllocatedAddress: TLabel
       Left = 0
-      Height = 40
+      Height = 36
       Top = 0
-      Width = 181
+      Width = 177
       Align = alClient
       Alignment = taCenter
       Caption = 'Unassigned'
@@ -365,7 +357,6 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     object ActionAllocationLoadEffectsFile: TAction
       Category = 'Allocation'
       Caption = 'Load FDI File...'
-      OnExecute = ActionAllocationLoadEffectsFileExecute
     end
     object ActionAllocationEditCustomization: TAction
       Category = 'Allocation'

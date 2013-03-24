@@ -606,7 +606,7 @@ begin
     if Sending then
       Result := Result + '  Send:   '
     else
-      Result := Result + '  Recive: ';
+      Result := Result + '  Recieve: ';
 
     Result := Result + 'From = 0x' + IntToHex( LocalHelper.SourceAliasID, 4);
 

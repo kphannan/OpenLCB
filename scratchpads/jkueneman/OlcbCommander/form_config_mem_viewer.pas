@@ -6,24 +6,38 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynEdit, SynHighlighterXML, Forms, Controls,
-  Graphics, Dialogs, ComCtrls, laz2_DOM, laz2_XMLRead;
+  Graphics, Dialogs, ComCtrls, Grids, ExtCtrls, StdCtrls, Buttons, laz2_DOM,
+  olcb_threaded_stack, olcb_common_tasks,
+  olcb_app_common_settings, olcb_utilities, olcb_defines, KHexEditor,
+  laz2_XMLRead;
 
 type
 
   { TFormMemConfigViewer }
 
   TFormMemConfigViewer = class(TForm)
+    ButtonClose: TButton;
+    KHexEditor: TKHexEditor;
     PageControlMemConfig: TPageControl;
+    Panel1: TPanel;
     SynEditCDI: TSynEdit;
     SynXMLSyn: TSynXMLSyn;
-    TabSheetConfigTool: TTabSheet;
     TabSheetRawData: TTabSheet;
+    procedure ButtonCloseClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure FormCreate(Sender: TObject);
   private
+    FAliasID: Word;
+    FComPortThread: TComPortThread;
     FXmlDoc: TXMLDocument;
+    procedure SetComPortThread(AValue: TComPortThread);
     { private declarations }
+  protected
+
   public
     { public declarations }
+    property AliasID: Word read FAliasID write FAliasID;
+    property ComPortThread: TComPortThread read FComPortThread write SetComPortThread;
     property XmlDoc: TXMLDocument read FXmlDoc write FXmlDoc;
   end;
 
@@ -38,5 +52,23 @@ begin
   CloseAction := caFree;
 end;
 
-end.
+procedure TFormMemConfigViewer.ButtonCloseClick(Sender: TObject);
+begin
+  Close;
+end;
 
+procedure TFormMemConfigViewer.FormCreate(Sender: TObject);
+begin
+  FComPortThread := nil;
+  FAliasID := 0;
+end;
+
+
+procedure TFormMemConfigViewer.SetComPortThread(AValue: TComPortThread);
+begin
+  FComPortThread:=AValue;
+end;
+
+
+end.
+

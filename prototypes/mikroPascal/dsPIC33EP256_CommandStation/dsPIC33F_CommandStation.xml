@@ -32,7 +32,21 @@
     <group>
       <name>Command Station Options</name>
       <description>Configuration options for the LCBricks Command Station</description>
-      <int>
+      <int size="1">
+        <name>Output Mode</name>
+        <description>Select if this Command Station is a Main Line Node or a Programming Track Node</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>Command Station drives a Main Line</value>
+          </relation>
+          <relation>
+            <property></property>
+            <value>Command Station drives a Programming Track</value>
+          </relation>
+        </map>
+      </int>
+      <int size="1">
         <name>Programming Mode</name>
         <description>Selects the Programming Mode the Command Station will use to write CV's to the decoder</description>
         <map>
@@ -62,7 +76,7 @@
           </relation>
         </map>
       </int>
-      <int>
+      <int size="1">
         <name>DCC Bus Mode</name>
         <description>Select if this Command Station is the driver or receiver of the DCC bus signal (Damage may occur if more than one Command Station is selected to be a driver on the DCC bus)</description>
         <map>
@@ -76,20 +90,405 @@
           </relation>
         </map>
       </int>
-      <int>
-        <name>Output Mode</name>
-        <description>Select if this Command Station is a Main Line Node or a Programming Track Node</description>
+      <int size="1">
+        <name>RailCom Cutout</name>
+        <description>Enable/Disable the RailCom Cutout in the DCC Output</description>
         <map>
           <relation>
             <property>0</property>
-            <value>Command Station drives a Main Line</value>
+            <value>RailCom Cutout Disabled</value>
           </relation>
           <relation>
-            <property></property>
-            <value>Command Station drives a Programming Track</value>
+            <property>1</property>
+            <value>RailCom Cutout Enabled</value>
           </relation>
         </map>
       </int>
+      <int size="2">
+        <name>RailCom Cutout Length</name>
+        <description>Number microseconds the RailCom Cutout is enabled in a packet (454us-488us)</description>
+      </int>
+      <group>
+        <name>State Repeat Setup</name>
+        <description>When there is no new information send current state packets to account for dirty track, etc</description>
+        <int size="1">
+          <name>Repeat Speed/Dir packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Speed/Dir Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Speed/Dir Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 0 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 0 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 0 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 1 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 1 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 1 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 2 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 2 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 2 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 3 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 3 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 3 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 4 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 4 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 4 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 5 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 5 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 5 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 6 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 6 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 6 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 7 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 7 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 7 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 8 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 8 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 8 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 9 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 9 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 9 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 10 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 10 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 10 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 11 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 11 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 11 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 12 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 12 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 12 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 14 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 14 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 14 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 15 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 15 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 15 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 16 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 16 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 16 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 17 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 17 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 17 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 18 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 18 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 18 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 19 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 19 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 19 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 20 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 20 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 20 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 21 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 21 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 21 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 22 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 22 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 22 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 23 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 23 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 23 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 24 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 24 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 24 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 25 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 25 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 25 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 26 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 26 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 26 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 27 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 27 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 27 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 28 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 28 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 28 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+      </group>
     </group>
   </segment>
   <segment origin="0" space="252">
