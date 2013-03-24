@@ -1,0 +1,37 @@
+program DCC_Packet_Sniffer;
+
+{ Declarations section }
+procedure Initialize;
+begin
+  ANSELA := 0;
+  ANSELB := 0;
+
+
+  OSCCON := OSCCON and $F8FF;                                                   // Clear NOSC bits (set to FRC mode)
+  OSCCON.0 := 1;                                                                // Tell it to change modes
+  while OSCCON.0 = 1 do;                                                        // wait for it to take effect
+
+  CLKDIV := CLKDIV and 0xFFE0;                                                  // PLLPRE<4:0> = 0  ->  N1 = 2    8MHz / 2 = 4MHz   (must be within 0.8 MHz to 8 MHz range)
+  PLLFBD :=   30;                                                               // PLLDIV<8:0> = 30 ->  M = 32    4MHz * 32 = 128MHz  (must be within 100 MHz to 200 MHz range)
+  PLLPOST_1_bit := 0;
+  PLLPOST_0_bit := 0;                                                           // PLLPOST<1:0> = 0 ->  N2 = 2    128MHz / 2 = 64MHz
+
+  OSCCON := OSCCON or $0300;                                                    // Set COSC to 011 = XT with PLL
+  OSCCON.0 := 1;                                                                // Tell it to change modes
+  while OSCCON.0 = 1 do;                                                        // wait for it to take effect
+  while LOCK_bit = 0 do                                                         // wait for the PLL to lock.
+    Delay_ms(10);
+
+  Unlock_IOLOCK;
+  PPS_Mapping_NoLock(44, _INPUT, _U1RX);                                        // Set RPI44 to the UART Receive
+  PPS_Mapping_NoLock(42, _OUTPUT, _U1TX);                                       // Set RP42 to the UART Transmit
+  Lock_IOLOCK;
+
+  UART1_Init(230400);                       // Initialize UART module a
+  Delay_ms(100);                            // Wait for UART module to stabilize
+end;
+
+begin
+  { Main program }
+  Initialize;
+end.
