@@ -1,11 +1,11 @@
 object FormMessageLog: TFormMessageLog
   Left = 436
-  Height = 252
+  Height = 290
   Top = 219
-  Width = 819
+  Width = 757
   Caption = 'Message Logger'
-  ClientHeight = 252
-  ClientWidth = 819
+  ClientHeight = 290
+  ClientWidth = 757
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnHide = FormHide
@@ -13,9 +13,9 @@ object FormMessageLog: TFormMessageLog
   inline SynMemo: TSynMemo
     Cursor = crIBeam
     Left = 0
-    Height = 208
+    Height = 246
     Top = 0
-    Width = 819
+    Width = 757
     Align = alTop
     Anchors = [akTop, akLeft, akRight, akBottom]
     Font.Height = 16
@@ -492,9 +492,9 @@ object FormMessageLog: TFormMessageLog
     end
   end
   object BitBtnClear: TBitBtn
-    Left = 650
+    Left = 588
     Height = 22
-    Top = 223
+    Top = 261
     Width = 150
     Action = ActionLogClear
     Anchors = [akRight, akBottom]
@@ -537,9 +537,9 @@ object FormMessageLog: TFormMessageLog
     TabOrder = 1
   end
   object BitBtnClear1: TBitBtn
-    Left = 488
+    Left = 426
     Height = 22
-    Top = 223
+    Top = 261
     Width = 150
     Action = ActionLogPause
     Anchors = [akRight, akBottom]

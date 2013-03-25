@@ -124,6 +124,9 @@ type
   function NodeIDToDotHex(NodeID: QWord): string;
   function DotHexToNodeID(NodeID: string): QWord;
   function EventToDoxHex(Event: TEventID): string;
+  function DotHexToEvent(Event: string): TEventID;
+  function IntToHexArray(Value: Integer; var Count: Integer): THexArray;
+  function StrToHexArray(Value: string; var Count: Integer): THexArray;
 
   function GetTickCount : DWORD;
 
@@ -808,6 +811,66 @@ begin
     else
       Result := Result + ByteStr
   end;
+end;
+
+function DotHexToEvent(Event: string): TEventID;
+var
+  Str, SubStr: string;
+  i, iByteCount: Integer;
+begin
+  Result[0] := 0;
+  Result[1] := 0;
+  Result[2] := 0;
+  Result[3] := 0;
+  Result[4] := 0;
+  Result[5] := 0;
+  Result[6] := 0;
+  Result[7] := 0;
+  iByteCount := 0;
+  SubStr := '';
+  Event := Event + #0;
+  for i := 1 to Length(Event) do
+  begin
+    if (Event[i] <> '.') and (Event[i] <> #0) then
+    begin
+      SubStr := SubStr + Event[i];
+    end else
+    begin
+      Result[iByteCount] := Hex2Dec(SubStr);
+      Inc(iByteCount);
+      SubStr := '';
+    end;
+  end;
+
+end;
+
+function IntToHexArray(Value: Integer; var Count: Integer): THexArray;
+var
+  Str: string;
+  i: Integer;
+begin
+  Count := 0;
+  Str := IntToHex(Value, 16);
+  Result[0] := Hex2Dec( Str[15]+Str[16]);
+  Result[1] := Hex2Dec( Str[13]+Str[14]);
+  Result[2] := Hex2Dec( Str[11]+Str[12]);
+  Result[3] := Hex2Dec( Str[9]+Str[10]);
+  Result[4] := Hex2Dec( Str[7]+Str[8]);
+  Result[5] := Hex2Dec( Str[5]+Str[6]);
+  Result[6] := Hex2Dec( Str[3]+Str[4]);
+  Result[7] := Hex2Dec( Str[1]+Str[2]);
+  if Value = 0 then
+    Count := 1
+  else begin
+    for i := 0 to 7 do
+      if Result[i] > 0 then
+        Inc(Count)
+  end;
+end;
+
+function StrToHexArray(Value: string; var Count: Integer): THexArray;
+begin
+  Result := IntToHexArray( StrToInt(Value), Count)
 end;
 
 

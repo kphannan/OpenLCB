@@ -41,7 +41,7 @@
             <value>Command Station drives a Main Line</value>
           </relation>
           <relation>
-            <property></property>
+            <property>1</property>
             <value>Command Station drives a Programming Track</value>
           </relation>
         </map>

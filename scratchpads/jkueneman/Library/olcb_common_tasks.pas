@@ -467,7 +467,16 @@ begin
   case iState of
     0 : begin
           SendMemoryConfigurationWrite(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
-          iState := STATE_DONE;
+          Sending := False;
+          Inc(FiState);
+        end;
+    1 : begin
+          // Node received the request datagram
+           if IsDatagramAckFromDestination(MessageInfo) then
+           begin
+             Sending := True;
+             FiState := STATE_DONE;
+           end;
         end;
     STATE_DONE : begin
        // Done

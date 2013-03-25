@@ -24,9 +24,12 @@ type
     ButtonReadPage: TButton;
     ButtonWritePage: TButton;
     PanelBkGnd: TPanel;
+    StatusBar: TStatusBar;
     procedure ButtonReadAllClick(Sender: TObject);
     procedure ButtonReadPageClick(Sender: TObject);
     procedure ButtonStopReadClick(Sender: TObject);
+    procedure ButtonWriteAllClick(Sender: TObject);
+    procedure ButtonWritePageClick(Sender: TObject);
 
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
@@ -37,6 +40,8 @@ type
     FAliasID: Word;
     FCdiParser: TCdiParser;
     FComPortThread: TComPortThread;
+    FConfigWriteTaskQueue: TList;
+    FConfigWriteTaskRunning: Boolean;
     FOnConfigEditorClose: TOnConfigEditorEvent;
     FOnConfigEditorHide: TOnConfigEditorEvent;
     FPageControl: TPageControl;
@@ -47,12 +52,18 @@ type
     procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
     procedure ReadConfiguration;
     procedure ReadConfigurationPage(iPage: Integer);
+    procedure WriteConfiguration;
+    procedure WriteConfigurationPage(iPage: Integer);
+    procedure QueueConfigWriteTask(Task: TOlcbTaskBase);
 
     property CdiParser: TCdiParser read FCdiParser write FCdiParser;
     property ShownOnce: Boolean read FShownOnce write FShownOnce;
     property PageControl: TPageControl read FPageControl write FPageControl;
+    property ConfigWriteTaskQueue: TList read FConfigWriteTaskQueue write FConfigWriteTaskQueue;
+    property ConfigWriteTaskRunning: Boolean read FConfigWriteTaskRunning write FConfigWriteTaskRunning;
   public
     { public declarations }
+    procedure FlushConfigWriteTasks;
     property AliasID: Word read FAliasID write FAliasID;
     property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
     property OnConfigEditorHide: TOnConfigEditorEvent read FOnConfigEditorHide write FOnConfigEditorHide;
@@ -143,6 +154,8 @@ begin
   FShownOnce := False;
   FCdiParser := TCdiParser.Create;
   FPageControl := nil;
+  FConfigWriteTaskQueue := TList.Create;
+  ConfigWriteTaskRunning := False;
 end;
 
 procedure TFormTrainConfigEditor.FormDestroy(Sender: TObject);
@@ -152,6 +165,7 @@ end;
 
 procedure TFormTrainConfigEditor.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
+  FlushConfigWriteTasks;
   if Assigned(OnConfigEditorClose) then
     OnConfigEditorClose(Self);
   CloseAction := caFree;
@@ -170,6 +184,20 @@ procedure TFormTrainConfigEditor.ButtonStopReadClick(Sender: TObject);
 begin
   if Assigned(ComPortThread) then
     ComPortThread.RemoveTasks( PtrInt( Self));
+end;
+
+procedure TFormTrainConfigEditor.ButtonWriteAllClick(Sender: TObject);
+begin
+  WriteConfiguration;
+end;
+
+procedure TFormTrainConfigEditor.ButtonWritePageClick(Sender: TObject);
+begin
+  if Assigned(FPageControl) then
+   begin
+     if PageControl.ActivePageIndex > -1 then
+       WriteConfigurationPage(PageControl.ActivePageIndex)
+   end;
 end;
 
 procedure TFormTrainConfigEditor.ButtonReadAllClick(Sender: TObject);
@@ -272,11 +300,16 @@ begin
                   TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
                   TaskStream.Position := 0;
                   case (Control as TOlcbEdit).ConfigInfo.DataType of
-                    cdt_Int,
                     cdt_EventID : begin
                                     Str := IntToHex(TaskStream.ReadByte, 2);
                                     while (TaskStream.Position < TaskStream.Size) do
                                       Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
+                                    (Control as TOlcbEdit).Text := Str;
+                                  end;
+                    cdt_Int     : begin
+                                    Str := IntToHex(TaskStream.ReadByte, 2);
+                                    while (TaskStream.Position < TaskStream.Size) do
+                                      Str := Str + IntToHex(TaskStream.ReadByte, 2);
                                     (Control as TOlcbEdit).Text := Str;
                                   end;
                     cdt_String  : begin
@@ -338,6 +371,20 @@ begin
             end
           end;
         end;
+      end else
+      if Sender is TWriteAddressSpaceMemoryRawTask then
+      begin
+        // Writes must be serialize as the micro may not keep up as some will "freeze" when they write EEPROM
+        if ConfigWriteTaskQueue.Count > 0 then
+        begin
+          ComPortThread.AddTask( TOlcbTaskBase( ConfigWriteTaskQueue[0]));
+          ConfigWriteTaskQueue.Delete(0);
+          StatusBar.Panels[0].Text := 'Configuration writes remaining: ' + IntToStr(ConfigWriteTaskQueue.Count);
+        end else
+        begin
+          ConfigWriteTaskRunning := False;
+          StatusBar.Panels[0].Text := '';
+        end
       end;
     end;
   except
@@ -392,6 +439,182 @@ begin
         ComPortThread.AddTask( (Control as TOlcbComboBox).ConfigInfo.Task);
       end;
     end;
+  end;
+end;
+
+procedure TFormTrainConfigEditor.WriteConfiguration;
+var
+  iPage: Integer;
+begin
+  if Assigned(FPageControl) then
+  begin
+    for iPage := 0 to PageControl.PageCount - 1 do
+      WriteConfigurationPage(iPage)
+  end;
+end;
+
+procedure TFormTrainConfigEditor.WriteConfigurationPage(iPage: Integer);
+var
+  Control: TControl;
+  ScrollBox: TScrollBox;
+  iControl, i, b, iComboBox, iCount: Integer;
+  Stream: TMemoryStream;
+  Str, Hex: string;
+  Relation: TMapRelation;
+  EventID: TEventID;
+  HexArray: THexArray;
+begin
+  ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
+  if Assigned(ScrollBox) then
+  begin
+    for iControl := 0 to ScrollBox.ControlCount - 1 do
+    begin
+
+      b := ScrollBox.ControlCount;
+
+      Control := ScrollBox.Controls[iControl];
+      Str := '';
+      if Control is TOlcbEdit then
+      begin
+        Stream := TMemoryStream.Create;
+        try
+          case (Control as TOlcbEdit).ConfigInfo.DataType of
+            cdt_EventID : begin
+                            // Strip out the periods (should validate it too)
+                            EventID := DotHexToEvent((Control as TOlcbEdit).Text);
+
+                            for i := 0 to MAX_EVENT_LEN - 1 do
+                              Stream.WriteByte( EventID[i]);
+                            Stream.Position := 0;
+                          end;
+            cdt_Int     : begin
+                            iCount := 0;
+                            HexArray := StrToHexArray( (Control as TOlcbEdit).Text, iCount);
+
+                            for i := iCount - 1 downto 0  do
+                              Stream.WriteByte( HexArray[i]);
+                            Stream.Position := 0;
+                          end;
+            cdt_String  : begin
+                            for i := 1 to Length((Control as TOlcbEdit).Text) do
+                              Stream.WriteByte( Ord( (Control as TOlcbEdit).Text[i]));
+                            // Add Null
+                            Stream.WriteByte( Ord( #0));
+                            Stream.Position := 0;
+                          end;
+            cdt_Bit     : begin
+                          end;
+          end;
+          (Control as TOlcbEdit).ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbEdit).ConfigInfo.ConfigMemAddress, Stream);
+          (Control as TOlcbEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+          (Control as TOlcbEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+          (Control as TOlcbEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+          QueueConfigWriteTask((Control as TOlcbEdit).ConfigInfo.Task);
+        finally
+          Stream.Free;
+        end;
+      end;
+      if Control is TOlcbSpinEdit then
+      begin
+        Stream := TMemoryStream.Create;
+          try
+           case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
+            cdt_Int     : begin
+                            iCount := 0;
+                            HexArray := IntToHexArray( (Control as TOlcbSpinEdit).Value, iCount);
+
+                            for i := iCount - 1 downto 0  do
+                              Stream.WriteByte( HexArray[i]);
+                            Stream.Position := 0;
+                          end;
+          end;
+          (Control as TOlcbSpinEdit).ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemAddress, Stream);
+          (Control as TOlcbSpinEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+          (Control as TOlcbSpinEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+          (Control as TOlcbSpinEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+          QueueConfigWriteTask((Control as TOlcbSpinEdit).ConfigInfo.Task);
+        finally
+          Stream.Free
+        end;
+      end;
+      if Control is TOlcbComboBox then
+      begin
+        iComboBox := (Control as TOlcbComboBox).ItemIndex;
+        if iComboBox > -1 then
+        begin
+          Stream := TMemoryStream.Create;
+          try
+            case (Control as TOlcbComboBox).ConfigInfo.DataType of
+              cdt_EventID : begin
+                              Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByValue( (Control as TOlcbComboBox).Items[iComboBox]);
+                              if Assigned(Relation) then
+                              begin
+                                EventID := DotHexToEvent(Relation.Prop);
+
+                                for i := 0 to MAX_EVENT_LEN - 1 do
+                                  Stream.WriteByte( EventID[i]);
+                                Stream.Position := 0;
+                              end;
+                            end;
+              cdt_Int     : begin
+                              Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByValue( (Control as TOlcbComboBox).Items[iComboBox]);
+                              if Assigned(Relation) then
+                              begin
+                                iCount := 0;
+                                HexArray := StrToHexArray( Relation.Prop, iCount);
+
+                                for i := iCount - 1 downto 0  do
+                                 Stream.WriteByte( HexArray[i]);
+                                Stream.Position := 0;
+                              end;
+                            end;
+              cdt_String  : begin
+                              Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByValue( (Control as TOlcbComboBox).Items[iComboBox]);
+                              if Assigned(Relation) then
+                              begin
+                                for i := 1 to Length(Relation.Prop) do
+                                  Stream.WriteByte( Ord( Relation.Prop[i]));
+                                // Add Null
+                                Stream.WriteByte( Ord( #0));
+                                Stream.Position := 0;
+                              end;
+                            end;
+              cdt_Bit     : begin
+                            end;
+            end;
+            (Control as TOlcbComboBox).ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbComboBox).ConfigInfo.ConfigMemAddress, Stream);
+            (Control as TOlcbComboBox).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+            (Control as TOlcbComboBox).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+            (Control as TOlcbComboBox).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+             QueueConfigWriteTask((Control as TOlcbComboBox).ConfigInfo.Task);
+          finally
+            Stream.Free;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TFormTrainConfigEditor.QueueConfigWriteTask(Task: TOlcbTaskBase);
+begin
+  if ConfigWriteTaskRunning then
+    ConfigWriteTaskQueue.Add(Task)        // Need to allow node to finish write and send the ACK before sending next
+  else begin
+    ComPortThread.AddTask(Task);
+    ConfigWriteTaskRunning := True
+  end;
+end;
+
+procedure TFormTrainConfigEditor.FlushConfigWriteTasks;
+var
+  i: Integer;
+begin
+  try
+    for i := 0 to ConfigWriteTaskQueue.Count - 1 do
+      TOlcbTaskBase( ConfigWriteTaskQueue[i]).Free;
+  finally
+    ConfigWriteTaskQueue.Clear;
   end;
 end;
 

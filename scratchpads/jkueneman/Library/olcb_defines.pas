@@ -232,6 +232,8 @@ type
   TEventID = array[0..MAX_EVENT_LEN-1] of Byte;
   PEventID = ^TEventID;
 
+  THexArray = TEventID;
+
 const
   EVENT_EMERGENCY_STOP       : TEventID  = ($01, $01, $00, $00, $00, $00, $FF, $FF);
   EVENT_NEW_LOG_ENTRY        : TEventID  = ($01, $01, $00, $00, $00, $00, $FF, $F8);

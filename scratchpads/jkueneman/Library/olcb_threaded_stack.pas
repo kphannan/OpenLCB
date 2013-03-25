@@ -559,7 +559,7 @@ begin
     HeaderByteCount := 7;
   end else
   begin
-    CANByteArray[1] := MCP_READ or SpaceToCommandByteEncoding(Space);
+    CANByteArray[1] := MCP_WRITE or SpaceToCommandByteEncoding(Space);
     HeaderByteCount := 6;
   end;
   CANByteArray[2] := (StartAddress shr 24) and $000000FF;
@@ -755,7 +755,7 @@ begin
           ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
         end;
 
-        DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram what will add a message to send ***
+        DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
         OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
         if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
         begin
