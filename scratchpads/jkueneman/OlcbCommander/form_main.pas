@@ -65,7 +65,7 @@ uses
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
   types, olcb_utilities, olcb_defines, form_messagelog, olcb_node, olcb_structure_helpers,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead, laz2_XMLWrite, common_utilities,
-  form_awesome_throttle,
+  form_awesome_throttle, form_train_config_editor,
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}
@@ -117,6 +117,10 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionConfigEditorsHideAll: TAction;
+    ActionConfigEditorsShowAll: TAction;
+    ActionConfigEditorsCloseAll: TAction;
+    ActionConfigEditorsCreate: TAction;
     ActionOpenLCBCommandReadFDI: TAction;
     ActionTreeviewNetworkCollapseSelected: TAction;
     ActionTreeviewNetworkExpandSelected: TAction;
@@ -152,7 +156,16 @@ type
     LabelTrainNodeCountValue: TLabel;
     LabelTrainCountName: TLabel;
     MainMenu: TMainMenu;
-    MenuItem1: TMenuItem;
+    MenuItemConfigEditorsSep1: TMenuItem;
+    MenuItemConfigEditorsShowAll: TMenuItem;
+    MenuItemConfigEditorsHide: TMenuItem;
+    MenuItemConfigEditorsClose: TMenuItem;
+    MenuItemConfigEditorsSep0: TMenuItem;
+    MenuItemConfigEditorCreate: TMenuItem;
+    MenuItemConfigEditors: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItemConfigurationSubMenu: TMenuItem;
+    MenuItemConfigureNode: TMenuItem;
     MenuItemTVPopupSep4: TMenuItem;
     MenuItem12: TMenuItem;
     MenuItem13: TMenuItem;
@@ -190,6 +203,10 @@ type
     PopupMenuTreeNode: TPopupMenu;
     TabSheetNetwork: TTabSheet;
     TreeViewNetwork: TTreeView;
+    procedure ActionConfigEditorsCloseAllExecute(Sender: TObject);
+    procedure ActionConfigEditorsCreateExecute(Sender: TObject);
+    procedure ActionConfigEditorsHideAllExecute(Sender: TObject);
+    procedure ActionConfigEditorsShowAllExecute(Sender: TObject);
     procedure ActionHelpAboutShowExecute(Sender: TObject);
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandIdentifyEventsExecute(Sender: TObject);
@@ -210,6 +227,7 @@ type
     procedure ActionThrottlesShowAllExecute(Sender: TObject);
     procedure ActionToolsComConnectExecute(Sender: TObject);
     procedure ActionToolsComDisconnectExecute(Sender: TObject);
+    procedure ActionToolsConfigureNodeExecute(Sender: TObject);
     procedure ActionToolsMessageLogShowExecute(Sender: TObject);
     procedure ActionToolsPreferenceShowMacExecute(Sender: TObject);
     procedure ActionToolsSettingsShowWinExecute(Sender: TObject);
@@ -221,9 +239,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure MenuItemReadFDIClick(Sender: TObject);
-    procedure MenuItemReadMfgACDIClick(Sender: TObject);
-    procedure MenuItemReadUserACDIClick(Sender: TObject);
+    procedure MenuItemConfigEditorsClick(Sender: TObject);
     procedure MenuItemThrottlesClick(Sender: TObject);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
@@ -233,6 +249,7 @@ type
   private
     FCommandStationNode: TTreeNode;
     FComPortThread: TComPortThread;
+    FConfigEditorList: TFormConfigEditorList;
     FLazyLoadTaskList: TList;
     FMessageHelper: TOpenLCBMessageHelper;
     {$IFDEF DARWIN}
@@ -259,12 +276,14 @@ type
     function AddNetworkTrainAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
     function AddNetworkTreeAlias(NodeAlias: Word; NodeID: QWord; QueryEvents: Boolean): TOlcbTreeNode;
     function AddNetworkCommandStationAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
+    procedure AddConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
     procedure AddThrottleSubMenu(Throttle: TFormAwesomeThrottle);
     procedure ComConnect;
     procedure ComDisconnect;
     procedure CreateAndLoadNodeBoolean(ParentNode: TTreeNode; Description: string; IsTrue: Boolean);
     procedure CreateAndLoadNodeSimple(ParentNode: TTreeNode; Description: string);
     procedure DeleteNetworkTreeAlias(NodeAlias: Word);
+    procedure DeleteConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
     procedure DeleteThrottleSubMenu(Throttle: TFormAwesomeThrottle);
     function FindChildThatContainsText(ParentNode: TTreeNode; TestString: string): TTreeNode;
     function FindTreeNodeByAlias(Root: TTreeNode; AnAliasID: Word): TOlcbTreeNode;
@@ -275,6 +294,7 @@ type
     function FindProducerNode(AliasNode: TTreeNode): TTreeNode;
     function FindMemConfigOptionsNode(AliasNode: TTreeNode): TTreeNode;
     function FindMemConfigAddressSpaceNode(AliasNode: TTreeNode): TTreeNode;
+    function IsParentRootNode(Node: TOlcbTreeNode): Boolean;
     procedure RefreshNetworkTreeAliasConfigMemOptions(NodeAlias: Word; Options: TOlcbMemOptions);
     procedure RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(NodeAlias: Word; AddressSpace: TOlcbMemAddressSpace);
     procedure RefreshNetworkTreeAliasEvents(NodeAlias: Word; LocalHelper: TOpenLCBMessageHelper);
@@ -289,7 +309,10 @@ type
     procedure SyncMessageLogHide;
     procedure SyncThrottleHide(Throttle: TFormAwesomeThrottle);
     procedure SyncThrottleClose(Throttle: TFormAwesomeThrottle);
+    procedure SyncConfigEditorHide(ConfigEditor: TFormTrainConfigEditor);
+    procedure SyncConfigEditorClose(ConfigEditor: TFormTrainConfigEditor);
     procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+    procedure OnConfigEditorMenuItemClick(Sender: TObject);
     procedure OnThrottleMenuItemClick(Sender: TObject);
 
     procedure UpdateUI;
@@ -300,6 +323,7 @@ type
     {$ENDIF}
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
     property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
+    property ConfigEditorList: TFormConfigEditorList read FConfigEditorList write FConfigEditorList;
     property LazyLoadTaskList: TList read FLazyLoadTaskList write FLazyLoadTaskList;
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property RootNetworkNode: TTreeNode read FRootNetworkNode write FRootNetworkNode;
@@ -391,11 +415,55 @@ procedure TFormOLCB_Commander.FormCloseQuery(Sender: TObject; var CanClose: bool
 begin
   ComDisconnect;
   ThrottleList.Clear;
+  ConfigEditorList.Clear;
 end;
 
 procedure TFormOLCB_Commander.ActionHelpAboutShowExecute(Sender: TObject);
 begin
   FormAbout.ShowModal
+end;
+
+procedure TFormOLCB_Commander.ActionConfigEditorsCreateExecute(Sender: TObject);
+var
+  ConfigEditor: TFormTrainConfigEditor;
+  i: Integer;
+  Node: TOlcbTreeNode;
+begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if IsParentRootNode(Node) then
+    begin
+      ConfigEditor := ConfigEditorList.FindEditorByAlias(Node.OlcbData.NodeIDAlias);
+      if not Assigned(ConfigEditor) then
+      begin
+        ConfigEditor := TFormTrainConfigEditor.Create(Application);
+        ConfigEditor.ComPortThread := ComPortThread;
+        ConfigEditor.Caption := ConfigEditor.Caption + ' - 0x' + IntToHex(Node.OlcbData.NodeIDAlias, 4) + ' [' + IntToStr(Node.OlcbData.NodeIDAlias) + ']';
+        ConfigEditor.AliasID := Node.OlcbData.NodeIDAlias;
+        ConfigEditor.OnConfigEditorClose := @SyncConfigEditorClose;
+        ConfigEditor.OnConfigEditorHide := @SyncConfigEditorHide;
+        ConfigEditorList.Add(ConfigEditor);
+      end;
+      ConfigEditor.Show;
+      UpdateUI // Update the Separator before the user tries to open the Config Menu
+    end;
+  end;
+end;
+
+procedure TFormOLCB_Commander.ActionConfigEditorsCloseAllExecute(Sender: TObject);
+begin
+  ConfigEditorList.CloseAll;
+end;
+
+procedure TFormOLCB_Commander.ActionConfigEditorsHideAllExecute(Sender: TObject);
+begin
+  ConfigEditorList.HideAll;
+end;
+
+procedure TFormOLCB_Commander.ActionConfigEditorsShowAllExecute(Sender: TObject);
+begin
+  ConfigEditorList.ShowAll;
 end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandAllExecute(Sender: TObject);
@@ -449,7 +517,7 @@ begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunConfigMemoryOptionsTaskOnNode(Node);
   end;
 end;
@@ -462,7 +530,7 @@ begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunMemConfigSpacesAllInfoOnNode(Node);
   end;
 end;
@@ -475,7 +543,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunProtocolSupportOnNode(Node);
   end;
 end;
@@ -488,7 +556,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_ALL);
   end;
 end;
@@ -501,7 +569,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_CDI);
   end;
 end;
@@ -514,7 +582,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_CONFIG);
   end;
 end;
@@ -527,7 +595,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_FDI);
   end;
 end;
@@ -540,7 +608,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_ACDI_MFG);
   end;
 end;
@@ -553,7 +621,7 @@ var
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_ACDI_USER);
   end;
 end;
@@ -566,7 +634,7 @@ begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
-    if Node.Parent = RootNetworkNode then
+    if IsParentRootNode(Node) then
       RunSNIIOnNode(Node);
   end;
 end;
@@ -596,6 +664,11 @@ begin
   ComDisconnect;
 end;
 
+procedure TFormOLCB_Commander.ActionToolsConfigureNodeExecute(Sender: TObject);
+begin
+
+end;
+
 procedure TFormOLCB_Commander.ActionToolsMessageLogShowExecute(Sender: TObject);
 begin
   FormMessageLog.Show;
@@ -614,6 +687,7 @@ begin
   FShownOnce := False;
   FMessageHelper := TOpenLCBMessageHelper.Create;
   FThrottleList := TFormThrottleList.Create;
+  FConfigEditorList := TFormConfigEditorList.Create;
   FLazyLoadTaskList := TList.Create;
 end;
 
@@ -622,6 +696,7 @@ begin
   FreeAndNil( FMessageHelper);
   FreeAndNil( FThrottleList);
   FreeAndNil( FLazyLoadTaskList);
+  FreeAndNil( FConfigEditorList);
 end;
 
 procedure TFormOLCB_Commander.FormShow(Sender: TObject);
@@ -687,31 +762,19 @@ begin
   {$ENDIF}
 end;
 
-procedure TFormOLCB_Commander.MenuItemReadFDIClick(Sender: TObject);
-begin
-
-end;
-
-procedure TFormOLCB_Commander.MenuItemReadMfgACDIClick(Sender: TObject);
-begin
-
-end;
-
-
-
-procedure TFormOLCB_Commander.MenuItemReadUserACDIClick(Sender: TObject);
+procedure TFormOLCB_Commander.MenuItemConfigEditorsClick(Sender: TObject);
 var
   Start, i: Integer;
 begin
-  Start := MenuItemThrottles.IndexOf(MenuItemThrottlesSep1);
-  i := MenuItemThrottles.Count;
+  Start := MenuItemConfigEditors.IndexOf(MenuItemConfigEditorsSep1);
+  i := MenuItemConfigEditors.Count;
   if Start > -1 then
   begin
-    while MenuItemThrottles.Count - 1 > Start do
-      MenuItemThrottles.Delete(MenuItemThrottles.Count - 1);
+    while MenuItemConfigEditors.Count - 1 > Start do
+      MenuItemConfigEditors.Delete(MenuItemConfigEditors.Count - 1);
   end;
-  for i := 0 to ThrottleList.Count - 1 do
-     AddThrottleSubMenu(ThrottleList.Throttles[i]);
+  for i := 0 to ConfigEditorList.Count - 1 do
+     AddConfigEditorSubMenu(ConfigEditorList.ConfigEditors[i]);
 end;
 
 procedure TFormOLCB_Commander.MenuItemThrottlesClick(Sender: TObject);
@@ -755,7 +818,7 @@ end;
 
 procedure TFormOLCB_Commander.TreeViewNetworkExpanding(Sender: TObject; Node: TTreeNode; var AllowExpansion: Boolean);
 begin
-  if Node.Parent = RootNetworkNode then
+  if IsParentRootNode((Node as TOlcbTreeNode)) then
   begin
     if not (Node as TOlcbTreeNode).ExpandedOnce then
     begin
@@ -878,6 +941,17 @@ begin
     end;
   end;
   UpdateUI
+end;
+
+procedure TFormOLCB_Commander.AddConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
+var
+  MenuItem: TMenuItem;
+begin
+  MenuItem := TMenuItem.Create(Self);
+  MenuItemConfigEditors.Add(MenuItem);
+  MenuItem.Caption := ConfigEditor.Caption;
+  MenuItem.Tag := PtrInt( ConfigEditor);
+  MenuItem.OnClick := @OnConfigEditorMenuItemClick;
 end;
 
 function TFormOLCB_Commander.AddNetworkTrainAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
@@ -1028,6 +1102,8 @@ begin
 
     for i := 0 to ThrottleList.Count - 1 do
       ThrottleList.Throttles[i].ComPortThread := ComPortThread;
+    for i := 0 to ConfigEditorList.Count - 1 do
+      ConfigEditorList.ConfigEditors[i].ComPortThread := ComPortThread;
     UpdateUI;
   except
     if Assigned(ComPortThread) then
@@ -1045,6 +1121,8 @@ var
 begin
   for i := 0 to ThrottleList.Count - 1 do
     ThrottleList.Throttles[i].ComPortThread := nil;
+  for i := 0 to ConfigEditorList.Count - 1 do
+      ConfigEditorList.ConfigEditors[i].ComPortThread := nil;
   if Assigned(FComPortThread) then
   begin
     ComPortThread.Terminate;
@@ -1096,6 +1174,20 @@ begin
     finally
       TreeViewNetwork.EndUpdate;
       UpdateUI;
+    end;
+  end;
+end;
+
+procedure TFormOLCB_Commander.DeleteConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
+var
+  i: Integer;
+begin
+  for i := 0 to MenuItemConfigEditors.Count - 1 do
+  begin
+    if MenuItemConfigEditors.Items[i].Tag = PtrInt( ConfigEditor) then
+    begin
+      MenuItemConfigEditors.Delete(i);
+      Break
     end;
   end;
 end;
@@ -1206,6 +1298,11 @@ begin
     if Assigned(MemConfigNode) then
       Result := MemConfigNode.FindNode(STR_CONFIGMEM_ADDRESS_SPACES);
   end;
+end;
+
+function TFormOLCB_Commander.IsParentRootNode(Node: TOlcbTreeNode): Boolean;
+begin
+  Result := (Node.Parent = RootNetworkNode) or (Node.Parent = RootCommandStationNode) or (Node.Parent = RootTrainNode)
 end;
 
 procedure TFormOLCB_Commander.RefreshNetworkTreeAliasConfigMemOptions(NodeAlias: Word; Options: TOlcbMemOptions);
@@ -1603,6 +1700,24 @@ begin
   end
 end;
 
+procedure TFormOLCB_Commander.SyncConfigEditorHide(ConfigEditor: TFormTrainConfigEditor);
+begin
+
+end;
+
+procedure TFormOLCB_Commander.SyncConfigEditorClose(ConfigEditor: TFormTrainConfigEditor);
+var
+  Index: Integer;
+begin
+  Index := ConfigEditorList.IndexOf( ConfigEditor);
+  if Index > -1 then
+  begin
+    ConfigEditorList.Delete( Index);
+    DeleteConfigEditorSubMenu(ConfigEditor);
+    UpdateUI
+  end
+end;
+
 procedure TFormOLCB_Commander.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
 var
   MemTask: TReadAddressSpaceMemoryTask;
@@ -1706,12 +1821,20 @@ begin
   end;
 end;
 
+procedure TFormOLCB_Commander.OnConfigEditorMenuItemClick(Sender: TObject);
+begin
+  TFormTrainConfigEditor( TMenuItem(Sender).Tag).ShowOnTop
+end;
+
 procedure TFormOLCB_Commander.OnThrottleMenuItemClick(Sender: TObject);
 begin
   TFormAwesomeThrottle( TMenuItem(Sender).Tag).ShowOnTop
 end;
 
 procedure TFormOLCB_Commander.UpdateUI;
+var
+  ConfigEditorCreateEnabled: Boolean;
+  i: Integer;
 begin
   ActionToolsComConnect.Enabled := not Assigned(FComPortThread);
   ActionToolsComDisconnect.Enabled := Assigned(FComPortThread);
@@ -1730,6 +1853,28 @@ begin
   ActionThrottlesCloseAll.Enabled := ThrottleList.Count > 0;
   ActionThrottlesHideAll.Enabled := ThrottleList.Count > 0;
   ActionThrottlesShowAll.Enabled := ThrottleList.Count > 0;
+
+  MenuItemConfigEditorsSep1.Visible := ConfigEditorList.Count > 0;
+  ActionConfigEditorsCloseAll.Enabled := ConfigEditorList.Count > 0;
+  ActionConfigEditorsHideAll.Enabled := ConfigEditorList.Count > 0;
+  ActionConfigEditorsShowAll.Enabled := ConfigEditorList.Count > 0;
+  ConfigEditorCreateEnabled := False;
+  if TreeViewNetwork.SelectionCount > 0 then
+  begin
+    ConfigEditorCreateEnabled := True; // Think Positve
+    for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+    begin
+      if not IsParentRootNode(TreeViewNetwork.Selections[i] as TOlcbTreeNode) then
+        ConfigEditorCreateEnabled := False;
+    end;
+  end;
+  ActionConfigEditorsCreate.Enabled := ConfigEditorCreateEnabled;
+  ActionOpenLCBCommandReadCDI.Enabled := ConfigEditorCreateEnabled;
+  ActionOpenLCBCommandReadAll.Enabled := ConfigEditorCreateEnabled;
+  ActionOpenLCBCommandReadConfiguration.Enabled := ConfigEditorCreateEnabled;
+  ActionOpenLCBCommandReadMfgACDI.Enabled := ConfigEditorCreateEnabled;
+  ActionOpenLCBCommandReadUserACDI.Enabled := ConfigEditorCreateEnabled;
+  ActionOpenLCBCommandReadFDI.Enabled := ConfigEditorCreateEnabled;
 end;
 
 

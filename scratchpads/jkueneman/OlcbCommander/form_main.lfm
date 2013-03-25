@@ -1,10 +1,10 @@
 object FormOLCB_Commander: TFormOLCB_Commander
-  Left = 783
+  Left = 697
   Height = 401
-  Top = 333
+  Top = 341
   Width = 364
   Caption = 'OpenLCB Commander'
-  ClientHeight = 401
+  ClientHeight = 381
   ClientWidth = 364
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -15,7 +15,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.2.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 401
+    Height = 381
     Top = 0
     Width = 364
     ActivePage = TabSheetNetwork
@@ -24,26 +24,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 362
-      ClientWidth = 358
+      ClientHeight = 355
+      ClientWidth = 356
       object PanelNetwork: TPanel
         Left = 0
-        Height = 362
+        Height = 355
         Top = 0
-        Width = 358
+        Width = 356
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 362
-        ClientWidth = 358
+        ClientHeight = 355
+        ClientWidth = 356
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 336
+          Height = 329
           Top = 0
-          Width = 358
+          Width = 356
           Align = alTop
           Anchors = [akTop, akLeft, akRight, akBottom]
-          DefaultItemHeight = 18
+          DefaultItemHeight = 16
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -61,36 +61,36 @@ object FormOLCB_Commander: TFormOLCB_Commander
         end
         object LabelNetworkNodeCount: TLabel
           Left = 4
-          Height = 17
-          Top = 339
-          Width = 84
+          Height = 14
+          Top = 335
+          Width = 65
           Anchors = [akLeft, akBottom]
           Caption = 'Node Count: '
           ParentColor = False
         end
         object LabelNetworkNodeCountValue: TLabel
           Left = 125
-          Height = 17
-          Top = 339
-          Width = 9
+          Height = 14
+          Top = 335
+          Width = 7
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
         end
         object LabelTrainCountName: TLabel
           Left = 188
-          Height = 17
-          Top = 339
-          Width = 76
+          Height = 14
+          Top = 335
+          Width = 57
           Anchors = [akLeft, akBottom]
           Caption = 'Train Count'
           ParentColor = False
         end
         object LabelTrainNodeCountValue: TLabel
           Left = 309
-          Height = 17
-          Top = 339
-          Width = 9
+          Height = 14
+          Top = 335
+          Width = 7
           Anchors = [akLeft, akBottom]
           Caption = '0'
           ParentColor = False
@@ -189,6 +189,9 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object MenuItemToolsSep1: TMenuItem
         Caption = '-'
+      end
+      object MenuItem3: TMenuItem
+        Caption = 'Configure Node...'
       end
       object MenuItemToolsMessageLog: TMenuItem
         Action = ActionToolsMessageLogShow
@@ -291,6 +294,29 @@ object FormOLCB_Commander: TFormOLCB_Commander
         Action = ActionThrottlesCloseAll
       end
       object MenuItemThrottlesSep1: TMenuItem
+        Caption = '-'
+      end
+    end
+    object MenuItemConfigEditors: TMenuItem
+      Caption = 'Configuration'
+      OnClick = MenuItemConfigEditorsClick
+      object MenuItemConfigEditorCreate: TMenuItem
+        Action = ActionConfigEditorsCreate
+      end
+      object MenuItemConfigEditorsSep0: TMenuItem
+        Caption = '-'
+      end
+      object MenuItemConfigEditorsHide: TMenuItem
+        Action = ActionConfigEditorsHideAll
+      end
+      object MenuItemConfigEditorsClose: TMenuItem
+        Action = ActionConfigEditorsCloseAll
+        AutoCheck = True
+      end
+      object MenuItemConfigEditorsShowAll: TMenuItem
+        Action = ActionConfigEditorsShowAll
+      end
+      object MenuItemConfigEditorsSep1: TMenuItem
         Caption = '-'
       end
     end
@@ -1792,6 +1818,27 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Caption = 'Read FDI Memory'
       OnExecute = ActionOpenLCBCommandReadFDIExecute
     end
+    object ActionConfigEditorsCreate: TAction
+      Category = 'ConfigEditors'
+      Caption = 'Configure Node...'
+      OnExecute = ActionConfigEditorsCreateExecute
+    end
+    object ActionConfigEditorsHideAll: TAction
+      Category = 'ConfigEditors'
+      Caption = 'Hide All'
+      OnExecute = ActionConfigEditorsHideAllExecute
+    end
+    object ActionConfigEditorsShowAll: TAction
+      Category = 'ConfigEditors'
+      Caption = 'Show All'
+      OnExecute = ActionConfigEditorsShowAllExecute
+    end
+    object ActionConfigEditorsCloseAll: TAction
+      Category = 'ConfigEditors'
+      AutoCheck = True
+      Caption = 'Close All'
+      OnExecute = ActionConfigEditorsCloseAllExecute
+    end
   end
   object PopupMenuTreeNode: TPopupMenu
     Images = ImageListMainSmall
@@ -1803,7 +1850,10 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object MenuItemTVPopupSep1: TMenuItem
       Caption = '-'
     end
-    object MenuItem1: TMenuItem
+    object MenuItemConfigureNode: TMenuItem
+      Action = ActionConfigEditorsCreate
+    end
+    object MenuItemConfigurationSubMenu: TMenuItem
       Caption = 'Configuration Memory Spaces'
       object MenuItemReadCDI: TMenuItem
         Action = ActionOpenLCBCommandReadCDI
@@ -1847,4 +1897,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
     left = 136
     top = 120
   end
-end
+end

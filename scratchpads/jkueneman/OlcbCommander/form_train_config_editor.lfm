@@ -3,10 +3,13 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
   Height = 449
   Top = 201
   Width = 623
-  Caption = 'Train Configuration Editor'
+  Caption = 'Configuration Editor'
   ClientHeight = 449
   ClientWidth = 623
+  OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnHide = FormHide
   OnShow = FormShow
   LCLVersion = '1.0.2.0'
   object ButtonReadCVs: TButton

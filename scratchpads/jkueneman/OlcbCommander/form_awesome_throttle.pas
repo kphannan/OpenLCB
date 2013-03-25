@@ -43,6 +43,7 @@ type
     function GetThrottles(Index: Integer): TFormAwesomeThrottle;
     procedure SetThrottles(Index: Integer; AValue: TFormAwesomeThrottle);
   public
+    procedure Clear; override;
     procedure HideAll;
     procedure CloseAll;
     procedure ShowAll;
@@ -246,6 +247,15 @@ begin
   Items[Index] := AValue
 end;
 
+procedure TFormThrottleList.Clear;
+var
+  i: Integer;
+begin
+  for i := Count - 1 downto 0 do
+    Throttles[i].Close;
+  inherited Clear;
+end;
+
 procedure TFormThrottleList.HideAll;
 var
   i: Integer;
@@ -269,7 +279,6 @@ var
 begin
   for i := 0 to Count - 1 do
     Throttles[i].Show;
-  Clear;
 end;
 
 { TFormAwesomeThrottle }
