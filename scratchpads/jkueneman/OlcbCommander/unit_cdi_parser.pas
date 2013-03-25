@@ -114,7 +114,7 @@ type
     procedure AddLabel(ParentControl: TScrollBox; ACaption: string; var ControlOffset: Integer; ControlMargin, Indent: Integer; Bold: Boolean);
     procedure AddSpinEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean);
     procedure AddEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
-    procedure AddComboBoxList(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean);
+    procedure AddComboBoxList(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
     procedure ProcessElementForUI(ParentControl: TScrollBox; Element: TDOMNode; var MemOffset: DWord; var ControlOffset: Integer; Indent: Integer; SupressNameAndDescription: Boolean; PrintMemOffset: Boolean);
   public
     function Build_CDI_Interface(ParentControl: TPanel; CDI: TXMLDocument): TPageControl;
@@ -379,29 +379,43 @@ var
   TempStr: string;
 begin
   TempStr := '';
+
+  // Debug Printing
   if PrintMemOffset then
   begin
     AddLabel(ParentControl, 'Offset: ' + IntToStr(MemOffset), ControlOffset, 2, Indent, False);
     AddLabel(ParentControl, 'Size: ' + IntToStr(MemSize), ControlOffset, 2, Indent, False);
   end;
+
+  // Create the SpinEdit
   ASpinEdit := TOlcbSpinEdit.Create(ParentControl);
+  ASpinEdit.Width := 120;
+  ASpinEdit.MaxValue := MaxInt;
+
+  // Extract special modifiers
   if ExtractElementAttribute(Element, 'min', TempStr) then
     ASpinEdit.MinValue := StrToInt(TempStr);
   if ExtractElementAttribute(Element, 'max', TempStr) then
     ASpinEdit.MaxValue := StrToInt(TempStr);
   if ExtractElementAttribute(Element, 'default', TempStr) then
     ASpinEdit.Value := StrToInt(TempStr);
+
+  // Look for descripive names and descriptions to print
   if ExtractElementItem(Element, 'name', TempStr) then
     AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
   if ExtractElementItem(Element, 'description', TempStr) then
     AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
   Inc(Indent, 8);
+
+  // Create the ConfigInfo Struture
+  ASpinEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int);
+
+  // Create the Control Window
   ASpinEdit.Top := ControlOffset;
   ASpinEdit.Left := Indent;
-  ASpinEdit.Width := 120;
-  ASpinEdit.MaxValue := MaxInt;
   ASpinEdit.Parent := ParentControl;
-  ASpinEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int);
+
+  // Update the Control Offsets
   ControlOffset := ControlOffset + ASpinEdit.Height + ControlMargin;
 end;
 
@@ -415,19 +429,24 @@ var
   Size: TSize;
 begin
   TempStr := '';
+
+  // Debug Printing
   if PrintMemOffset then
   begin
     AddLabel(ParentControl, 'Offset: ' + IntToStr(MemOffset), ControlOffset, 2, Indent, False);
     AddLabel(ParentControl, 'Size: ' + IntToStr(MemSize), ControlOffset, 2, Indent, False);
   end;
+
+  // Create the Edit
   AnEdit := TOlcbEdit.Create(ParentControl);
+
+  // Look for descripive names and descriptions to print
   if ExtractElementItem(Element, 'name', TempStr) then
     AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
   if ExtractElementItem(Element, 'description', TempStr) then
     AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
-  AnEdit.Top := ControlOffset;
-  AnEdit.Left := Indent;
-  AnEdit.Parent := ParentControl;
+
+  // Calculate the Width of the control needed
   for i := 0 to MemSize - 1 do
     TempStr := TempStr + 'Y';
   Size := Application.MainForm.Canvas.TextExtent(TempStr);
@@ -437,7 +456,8 @@ begin
     AnEdit.Width := Round( Size.cx * 1.2);
   if AnEdit.Left + AnEdit.Width > ParentControl.Width then
     AnEdit.Width := ParentControl.Width - AnEdit.Left - 32;
-  // Can't set anchors here if something that forces the client width wider is created this control is "pulled" wider
+
+  // Create the ConfigInfo Struture
   if ElementType = 'eventid' then
     AnEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_EventID)
   else
@@ -445,14 +465,24 @@ begin
     AnEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int)
   else
   if ElementType = 'string' then
-    AnEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_String);
+    AnEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_String)
+  else
+  if ElementType = 'bit' then
+    AnEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_bit);
 
+  // Create the Control Window
+  AnEdit.Top := ControlOffset;
+  AnEdit.Left := Indent;
+  AnEdit.Parent := ParentControl;
+
+  // Update the Control Offsets
   ControlOffset := ControlOffset + AnEdit.Height + ControlMargin;
 end;
 
 procedure TCdiParser.AddComboBoxList(ParentControl: TScrollBox;
   Element: TDOMNode; var ControlOffset: Integer; ControlMargin,
-  Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean);
+  Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean;
+  ElementType: string);
 var
   AComboBoxList: TOlcbComboBox;
   TempStr, LongestStr, ValueStr, PropertyStr: string;
@@ -461,22 +491,33 @@ var
   Size: TSize;
 begin
   TempStr := '';
+
+  // Debug Printing
   if PrintMemOffset then
   begin
     AddLabel(ParentControl, 'Offset: ' + IntToStr(MemOffset), ControlOffset, 2, Indent, False);
     AddLabel(ParentControl, 'Size: ' + IntToStr(MemSize), ControlOffset, 2, Indent, False);
   end;
+
+  // Find the map for the element
   MapNode := Element.FindNode('map');
+
+  // A ComboBox is only used for a map element
   if MapNode <> nil then
   begin
+    // Create the ComboBox
     AComboBoxList := TOlcbComboBox.Create(ParentControl);
+    AComboBoxList.AutoSize := True;
+    AComboBoxList.Style := csDropDownList;
+
+    // Look for descripive names and descriptions to print
     if ExtractElementItem(Element, 'name', TempStr) then
       AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
     if ExtractElementItem(Element, 'description', TempStr) then
       AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
     Inc(Indent, 8);
 
-    // The map can have a name and description too
+    // The map can have a name and description too, look for them and print
     DoIndent := False;
     if ExtractElementItem(MapNode, 'name', TempStr) then
     begin
@@ -488,40 +529,65 @@ begin
       AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
       DoIndent := True
     end;
+
+    // If there were map descriptions then indent the following deeper than the descriptions
     if DoIndent then
       Inc(Indent, 8);
 
-    AComboBoxList.AutoSize := True;
-    AComboBoxList.Top := ControlOffset;
-    AComboBoxList.Left := Indent;
-    AComboBoxList.Style := csDropDownList;
+    // Create the ConfigInfo Struture
+    if ElementType = 'eventid' then
+      AComboBoxList.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_EventID)
+    else
+    if ElementType = 'int' then
+      AComboBoxList.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int)
+    else
+    if ElementType = 'string' then
+      AComboBoxList.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_String)
+    else
+    if ElementType = 'bit' then
+      AComboBoxList.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_bit);
+
+    // Run the children of the map looking for its relations
     LongestStr := '';
-    AComboBoxList.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int);
     ChildNode := MapNode.FirstChild;
     while ChildNode <> nil do
     begin
       if LowerCase( ChildNode.NodeName) = 'relation' then
       begin
+        // Found a relation
         PropertyStr := '';
         ValueStr := '';
+        // Look for the value
         if ExtractElementItem(ChildNode, 'value', ValueStr) then
         begin
+          // Found the value add it to the Listbox
           AComboBoxList.Items.Add(ValueStr);
+          // Track the longest string so the control width can be set later
           if Length(ValueStr) > Length(LongestStr) then
             LongestStr := ValueStr;
         end;
         PropertyStr := '';
+        // Look for the property
         ExtractElementItem(ChildNode, 'property', PropertyStr);
+        // Create a list of relations for later use in the ComboBox
         AComboBoxList.ConfigInfo.MapList.AddRelation(ValueStr, PropertyStr);
       end;
       ChildNode := ChildNode.NextSibling;
     end;
-    AComboBoxList.ItemIndex := 0;
 
+    // Deselect any relation so it is clear it is not a valid value yet (need to read the config memory to select the correct one)
+    AComboBoxList.ItemIndex := -1;
+
+    // Calculate the correct size to display all the text
     Size := Application.MainForm.Canvas.TextExtent(LongestStr);
     AComboBoxList.Width := Round( Size.cx + 50);
 
+    // Create the Control Window
+    AComboBoxList.Top := ControlOffset;
+    AComboBoxList.Left := Indent;
     AComboBoxList.Parent := ParentControl;
+
+    // Update the Control Offsets
     ControlOffset := ControlOffset + AComboBoxList.Height + ControlMargin;
   end;
 end;
@@ -536,24 +602,37 @@ begin
  if Element <> nil then
  begin
    TempStr := '';
-   // If it is a group then run into the group
+
+   // Test for a Group segment
    if LowerCase( Element.NodeName) = 'group' then
    begin
+     // If it is a group then run into the group
      Inc(Indent, 8);
-     UpdateMemOffsetJump(Element, MemOffset);      // Group may override the Offset
+
+     // Group may override the Offset
+     UpdateMemOffsetJump(Element, MemOffset);
+
+     // Look for descripive names and descriptions to print
      if ExtractElementItem(Element, 'name', TempStr) then
        AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, True);
      if ExtractElementItem(Element, 'description', TempStr) then
        AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
+
+     // Look for replications
      if ExtractElementAttribute(Element, 'replication', TempStr) then
        ReplicationCount := StrToInt(TempStr)
      else
        ReplicationCount := 1;
-     ExtractElementItem(Element, 'repname', TempStr);
+     ExtractElementItem(Element, 'repname', TempStr);   // Is only one repeated name allowed?  Appears to be with the XML tool.
+
+     // Run through the replicated group (if there was no replication then this is set to 1)
      for i := 1 to ReplicationCount do
      begin
+       // TempStr contains the repeated name so print it with the iteration number
        if TempStr <> '' then
          AddLabel(ParentControl, TempStr + ' ' + IntToStr(i), ControlOffset, 2, Indent + 8, False);
+
+       // Run through each of the children of the group calling this method to process them
        Group_Child := Element.FirstChild;
        while Group_Child <> nil do
        begin
@@ -564,29 +643,41 @@ begin
    end else
    begin
      // It is not a group
+
      if (LowerCase(Element.NodeName) = 'name') or (LowerCase(Element.NodeName) = 'description') then
      begin
+       // It is a descriptive block so print it
        if not SupressNameAndDescription then
          AddLabel(ParentControl, Element.TextContent, ControlOffset, 2, Indent, False);
      end else
      if LowerCase(Element.NodeName) = 'int' then
      begin
+       // It is an Integer which may have a memory modifier as well as a size
        UpdateMemOffsetJump(Element, MemOffset);
        MemSize := UpdateMemOffsetSize(Element);
+
+       // If it has a map then create a ComboListBox to handle it else use a Spin Edit
        Map_Child := Element.FindNode('map');
        if Map_Child = nil then
          AddSpinEdit(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset)
        else
-         AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset);
+         AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName);
+
+       // Update the Control Offset
        Inc(MemOffset, MemSize);
      end else
      if LowerCase(Element.NodeName) = 'bit' then
      begin
+       // It is an Bit which may have a memory modifier as well as a size
        UpdateMemOffsetJump(Element, MemOffset);
        MemSize := UpdateMemOffsetSize(Element);
-       Map_Child := Element.FindNode('map');       // Think a bit MUST have a map
+
+       // Think a bit MUST have a map
+       Map_Child := Element.FindNode('map');
        if Map_Child <> nil then
-         AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset);
+         AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName);
+
+       // Update the Control Offset
        Inc(MemOffset, MemSize);
      end else
      if (LowerCase(Element.NodeName) = 'string') or (LowerCase(Element.NodeName) = 'eventid') then
@@ -597,7 +688,9 @@ begin
        if Map_Child = nil then
          AddEdit(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName)
        else
-         AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset);
+         AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName);
+
+       // Update the Control Offset
        Inc(MemOffset, MemSize);
      end else
    end;
@@ -624,14 +717,20 @@ var
   CDI_Root := CDI.FindNode('cdi');
   if Assigned(CDI_Root) then
   begin
+
+    // Handle the Identification block
     Identification_Root := CDI_Root.FindNode('identification');
     if Assigned(Identification_Root) then
     begin
       ControlOffset := 0;
+
+      // Add a tab to place the Identification information on
       ScrollBox := AddTab(Result, 'Identification');
 
-      AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);    // Space on the Top
+      // Space on the Top
+      AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);
 
+      // Handle the manufacturer
       AddLabel(ScrollBox, 'Manufacturer: ', ControlOffset, 2, IDENTIFICATION_INDENT, True);
       Identification_Child := Identification_Root.FindNode('manufacturer');
       if Assigned(Identification_Child) then
@@ -639,6 +738,7 @@ var
       else
         AddLabel(ScrollBox, ' ', ControlOffset, 2, 0, False);
 
+      // Handle the model number
       AddLabel(ScrollBox, 'Model: ', ControlOffset, 2, IDENTIFICATION_INDENT, True);
       Identification_Child := Identification_Root.FindNode('model');
       if Assigned(Identification_Child) then
@@ -646,6 +746,7 @@ var
       else
         AddLabel(ScrollBox, ItemStr, ControlOffset, 2, 0, False);
 
+      // Handle the Hardware Version
       AddLabel(ScrollBox, 'Hardware Version: ', ControlOffset, 2, IDENTIFICATION_INDENT, True);
       Identification_Child := Identification_Root.FindNode('hardwareVersion');
       if Assigned(Identification_Child) then
@@ -653,6 +754,7 @@ var
       else
         AddLabel(ScrollBox, ItemStr, ControlOffset, 2, 0, False);
 
+      // Handle the Software Version
       AddLabel(ScrollBox, 'Software Version: ', ControlOffset, 2, IDENTIFICATION_INDENT, True);
       Identification_Child := Identification_Root.FindNode('softwareVersion');
       if Assigned(Identification_Child) then
@@ -660,6 +762,7 @@ var
       else
         AddLabel(ScrollBox, ItemStr, ControlOffset, 2, 0, False);
 
+      // Handle any map blocks that contain descriptive information
       Inc(ControlOffset, 8);
       Identification_Child := Identification_Root.FirstChild;
       while Assigned(Identification_Child) do
@@ -690,6 +793,7 @@ var
       AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);    // Space on the Bottom
     end;
 
+    // Handled the Segment blocks
     ControlOffset := 0;
     Cdi_Child := CDI_Root.FirstChild;
     while Assigned(Cdi_Child) do
@@ -703,25 +807,35 @@ var
           ControlOffset := 0;
           MemOffset := 0;
           AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);    // Space on the Top
+
           // Add a new Tabsheet for this Segment using it Name Element as the tab title
           if ExtractElementItem(Segment_Root, 'name', ItemStr) then
             ScrollBox := AddTab(Result, ItemStr)
           else
-            ScrollBox := AddTab(Result, '[Unknown]');
-          Result.ActivePageIndex := Result.PageCount - 1;     // Select it to create the window so the size of the Scrollbox is correct
-          Result.ActivePageIndex := 0;                             // Set it back to a simple tab so it builds faster
+            ScrollBox := AddTab(Result, '[Unnamed]');
+
+          // Select it to create the window so the size of the Scrollbox is correct
+          // Set it back to a simple tab so it builds faster
+          Result.ActivePageIndex := Result.PageCount - 1;
+          Result.ActivePageIndex := 0;
+
           // Add the description of this segment as the first line of the Tab Page
           if ExtractElementItem(Segment_Root, 'description', ItemStr) then
             AddLabel(ScrollBox, ItemStr, ControlOffset, 4, 4, False);
+
           // Time to build the UI for this segment
           UpdateMemOffsetJump(Segment_Root, MemOffset);      // Segment may override the Offset
+
+          // Run all children of the Segment
           Segment_Child := Segment_Root.FirstChild;
           while Segment_Child <> nil do
           begin
             ProcessElementForUI(ScrollBox, Segment_Child, MemOffset, ControlOffset, 4, True, False);
             Segment_Child := Segment_Child.NextSibling;
           end;
-          AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);    // Space on the bottom
+
+          // Space on the bottom
+          AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);
         end;
       end;
       Cdi_Child := Cdi_Child.NextSibling;

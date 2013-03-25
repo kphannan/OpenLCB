@@ -18,8 +18,16 @@ type
   { TFormTrainConfigEditor }
 
   TFormTrainConfigEditor = class(TForm)
-    ButtonReadCVs: TButton;
+    ButtonReadAll: TButton;
+    ButtonStopRead: TButton;
+    ButtonWriteAll: TButton;
+    ButtonReadPage: TButton;
+    ButtonWritePage: TButton;
     PanelBkGnd: TPanel;
+    procedure ButtonReadAllClick(Sender: TObject);
+    procedure ButtonReadPageClick(Sender: TObject);
+    procedure ButtonStopReadClick(Sender: TObject);
+
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -38,6 +46,7 @@ type
     function FindScrollBox(Page: TTabSheet): TScrollBox;
     procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
     procedure ReadConfiguration;
+    procedure ReadConfigurationPage(iPage: Integer);
 
     property CdiParser: TCdiParser read FCdiParser write FCdiParser;
     property ShownOnce: Boolean read FShownOnce write FShownOnce;
@@ -148,6 +157,26 @@ begin
   CloseAction := caFree;
 end;
 
+procedure TFormTrainConfigEditor.ButtonReadPageClick(Sender: TObject);
+begin
+ if Assigned(FPageControl) then
+  begin
+    if PageControl.ActivePageIndex > -1 then
+      ReadConfigurationPage(PageControl.ActivePageIndex)
+  end;
+end;
+
+procedure TFormTrainConfigEditor.ButtonStopReadClick(Sender: TObject);
+begin
+  if Assigned(ComPortThread) then
+    ComPortThread.RemoveTasks( PtrInt( Self));
+end;
+
+procedure TFormTrainConfigEditor.ButtonReadAllClick(Sender: TObject);
+begin
+  ReadConfiguration;
+end;
+
 procedure TFormTrainConfigEditor.FormHide(Sender: TObject);
 begin
   if Assigned(OnConfigEditorHide) then
@@ -166,6 +195,11 @@ begin
     Task.ForceOptionalSpaceByte := False;
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);
+    ButtonReadAll.Enabled := False;
+    ButtonReadPage.Enabled := False;
+    ButtonStopRead.Enabled := False;
+    ButtonWriteAll.Enabled := False;
+    ButtonWritePage.Enabled := False;
   end;
 end;
 
@@ -207,6 +241,11 @@ begin
           MemTask.DataStream.Position := 0;
           ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
           PageControl := CdiParser.Build_CDI_Interface(PanelBkGnd, ADoc);
+          ButtonReadAll.Enabled := True;
+          ButtonReadPage.Enabled := True;
+          ButtonStopRead.Enabled := True;
+          ButtonWriteAll.Enabled := True;
+          ButtonWritePage.Enabled := True;
           ReadConfiguration;
           FreeAndNil(ADoc);
         end
@@ -216,6 +255,7 @@ begin
         // This is a configuration read request
         iPage := Sender.Tag and $FFFF;
         iControl := (Sender.Tag shr 16) and $FFFF;
+
         if PageControl.PageCount > iPage then
         begin
           ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
@@ -306,45 +346,50 @@ end;
 
 procedure TFormTrainConfigEditor.ReadConfiguration;
 var
-  iPage, iControl: Integer;
-  Control: TControl;
-  ScrollBox: TScrollBox;
+  iPage: Integer;
 begin
-  if Assigned(FPageControl)  then
+  if Assigned(FPageControl) then
   begin
     for iPage := 0 to PageControl.PageCount - 1 do
+      ReadConfigurationPage(iPage)
+  end;
+end;
+
+procedure TFormTrainConfigEditor.ReadConfigurationPage(iPage: Integer);
+var
+  Control: TControl;
+  ScrollBox: TScrollBox;
+  iControl: Integer;
+begin
+  ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
+  if Assigned(ScrollBox) then
+  begin
+    for iControl := 0 to ScrollBox.ControlCount - 1 do
     begin
-      ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
-      if Assigned(ScrollBox) then
+      Control := ScrollBox.Controls[iControl];
+      if Control is TOlcbEdit then
       begin
-        for iControl := 0 to ScrollBox.ControlCount - 1 do
-        begin
-          Control := ScrollBox.Controls[iControl];
-          if Control is TOlcbEdit then
-          begin
-            (Control as TOlcbEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbEdit).ConfigInfo.ConfigMemSize, False);
-            (Control as TOlcbEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-            (Control as TOlcbEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-            (Control as TOlcbEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
-            ComPortThread.AddTask( (Control as TOlcbEdit).ConfigInfo.Task);
-          end;
-          if Control is TOlcbSpinEdit then
-          begin
-            (Control as TOlcbSpinEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemSize, False);
-            (Control as TOlcbSpinEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-            (Control as TOlcbSpinEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-            (Control as TOlcbSpinEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
-            ComPortThread.AddTask( (Control as TOlcbSpinEdit).ConfigInfo.Task);
-          end;
-          if Control is TOlcbComboBox then
-          begin
-            (Control as TOlcbComboBox).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbComboBox).ConfigInfo.ConfigMemAddress, (Control as TOlcbComboBox).ConfigInfo.ConfigMemSize, False);
-            (Control as TOlcbComboBox).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-            (Control as TOlcbComboBox).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-            (Control as TOlcbComboBox).ConfigInfo.Task.RemoveKey := PtrInt( Self);
-            ComPortThread.AddTask( (Control as TOlcbComboBox).ConfigInfo.Task);
-          end;
-        end;
+        (Control as TOlcbEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbEdit).ConfigInfo.ConfigMemSize, False);
+        (Control as TOlcbEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+        (Control as TOlcbEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+        (Control as TOlcbEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+        ComPortThread.AddTask( (Control as TOlcbEdit).ConfigInfo.Task);
+      end;
+      if Control is TOlcbSpinEdit then
+      begin
+        (Control as TOlcbSpinEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemSize, False);
+        (Control as TOlcbSpinEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+        (Control as TOlcbSpinEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+        (Control as TOlcbSpinEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+        ComPortThread.AddTask( (Control as TOlcbSpinEdit).ConfigInfo.Task);
+      end;
+      if Control is TOlcbComboBox then
+      begin
+        (Control as TOlcbComboBox).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbComboBox).ConfigInfo.ConfigMemAddress, (Control as TOlcbComboBox).ConfigInfo.ConfigMemSize, False);
+        (Control as TOlcbComboBox).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+        (Control as TOlcbComboBox).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+        (Control as TOlcbComboBox).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+        ComPortThread.AddTask( (Control as TOlcbComboBox).ConfigInfo.Task);
       end;
     end;
   end;

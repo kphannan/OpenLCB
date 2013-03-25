@@ -1,34 +1,74 @@
 object FormTrainConfigEditor: TFormTrainConfigEditor
   Left = 602
-  Height = 449
+  Height = 448
   Top = 201
-  Width = 623
+  Width = 673
+  Anchors = [akRight, akBottom]
   Caption = 'Configuration Editor'
-  ClientHeight = 449
-  ClientWidth = 623
+  ClientHeight = 448
+  ClientWidth = 673
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnHide = FormHide
   OnShow = FormShow
   LCLVersion = '1.0.2.0'
-  object ButtonReadCVs: TButton
-    Left = 24
+  object ButtonReadAll: TButton
+    Left = 290
     Height = 22
-    Top = 406
-    Width = 168
-    Anchors = [akLeft, akBottom]
-    Caption = 'Read All CVs'
+    Top = 405
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Read All'
+    OnClick = ButtonReadAllClick
     TabOrder = 0
   end
   object PanelBkGnd: TPanel
     Left = 0
-    Height = 393
+    Height = 392
     Top = 0
-    Width = 623
+    Width = 673
     Align = alTop
     Anchors = [akTop, akLeft, akRight, akBottom]
     Caption = 'Loading CDI File...'
     TabOrder = 1
+  end
+  object ButtonReadPage: TButton
+    Left = 418
+    Height = 22
+    Top = 405
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Read Page'
+    OnClick = ButtonReadPageClick
+    TabOrder = 2
+  end
+  object ButtonWritePage: TButton
+    Left = 136
+    Height = 22
+    Top = 405
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Write Page'
+    TabOrder = 3
+  end
+  object ButtonWriteAll: TButton
+    Left = 8
+    Height = 22
+    Top = 405
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Write All'
+    TabOrder = 4
+  end
+  object ButtonStopRead: TButton
+    Left = 545
+    Height = 22
+    Top = 405
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Stop Read'
+    OnClick = ButtonStopReadClick
+    TabOrder = 5
   end
 end
