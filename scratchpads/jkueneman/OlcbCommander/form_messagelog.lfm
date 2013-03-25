@@ -536,6 +536,15 @@ object FormMessageLog: TFormMessageLog
     }
     TabOrder = 1
   end
+  object BitBtnClear1: TBitBtn
+    Left = 488
+    Height = 22
+    Top = 223
+    Width = 150
+    Action = ActionLogPause
+    Anchors = [akRight, akBottom]
+    TabOrder = 2
+  end
   object PopupMenuSynMemo: TPopupMenu
     left = 192
     top = 89
@@ -593,6 +602,11 @@ object FormMessageLog: TFormMessageLog
       Category = 'LogWindow'
       Caption = 'Select All'
       OnExecute = ActionLogSelectAllExecute
+    end
+    object ActionLogPause: TAction
+      Category = 'LogWindow'
+      Caption = 'Pause'
+      OnExecute = ActionLogPauseExecute
     end
   end
 end

@@ -38,7 +38,7 @@ const
 
 const
   MAX_BASE_BUFFER_POOL             = 10;                                        // Number of Base Buffers to allocate for Messages , JMRI Interleaves all the nodes so we need a Buffer for every Node <;^(
-  MAX_DATAGRAM_BUFFER_POOL         = 1;                                         // Number of Datagram Buffers to allocate for Messages
+  MAX_DATAGRAM_BUFFER_POOL         = 10;                                         // Number of Datagram Buffers to allocate for Messages
 
 // **************************************************************************************************************************************************************
 // Memory Configuration Protocol Supported Options
@@ -143,7 +143,7 @@ type
     ManufacturerHWVersion: TCDIStringInfo;
     ManufacturerSWVersion: TCDIStringInfo;
   end;
-
+       {
 const
   CDI_MAP: TCDIStringMap = (
     (308, 11),    // Manufacturer - [String Offset, Length] into the CDI Memory Space ($FF)
@@ -151,7 +151,7 @@ const
     (371, 3),    // ManufacturerHWVersion - [String Offset, Length] into the CDI Memory Space ($FF)
     (409, 3)     // ManufacturerSWVersion - [String Offset, Length] into the CDI Memory Space ($FF)
   );
-
+     }
 // No Virtual Nodes for this implementation
 
 // **************************************************************************************************************************************************************
@@ -205,12 +205,15 @@ const
 // **************************************************************************************************************************************************************
 // Protocol Identification Protocol (PIP)
 // **************************************************************************************************************************************************************
-  PIV_SUPPORTED_PROTOCOL_COUNT = 4;    // UPDATED THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
+  PIV_SUPPORTED_PROTOCOL_COUNT = 7;    // UPDATED THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
   PIV_SUPPORTED_PROTOCOLS: array[0..PIV_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (
-    ($80, $00, $00, $00, $00, $00),                                             // PIV_PROTOCOL_ID_PROTOCOL
-    ($40, $00, $00, $00, $00, $00),                                             // PIV_PROTOCOL_ID_DATAGRAM
-    ($04, $00, $00, $00, $00, $00),                                             // PIV_PROTOCOL_ID_PRODUCER_CONSUMER
-    ($00, $40, $00, $00, $00, $00)                                              // PIV_PROTOCOL_ID_CDI
+    ($80, $00, $00, $00, $00, $00),                                             // Protocol
+    ($40, $00, $00, $00, $00, $00),                                             // Datagram Protocol
+    ($04, $00, $00, $00, $00, $00),                                             // Producer Consumer Protocol
+    ($10, $00, $00, $00, $00, $00),                                             // Memory Configruation Protocol
+    ($00, $08, $00, $00, $00, $00),                                             // CDI Protocol
+    ($00, $10, $00, $00, $00, $00),                                             // SNIP Protocol
+    ($00, $40, $00, $00, $00, $00)                                              // ACDI Protocol
     );
     
     

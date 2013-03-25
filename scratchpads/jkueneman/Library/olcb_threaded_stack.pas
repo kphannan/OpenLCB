@@ -8,10 +8,12 @@ interface
 
 uses
   Classes, SysUtils, synaser, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
-  olcb_app_common_settings, math_float16;
+  olcb_app_common_settings, math_float16, Forms;
 
 const
   DATAGRAM_MAX_RETRYS = 5;
+
+  STATE_DONE = 1000;
 
   HEADER_MEMCONFIG_OPTIONS_REQUEST: TCANByteArray                     = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_CONFIG, $00, $00, $00, $00, $00, $00);
 //  HEADER_MEMCONFIG_SPACE_INFO_CDI_REQUEST: TCANByteArray              = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_CDI, $00, $00, $00, $00, $00);
@@ -100,6 +102,7 @@ type
       procedure Add(Msg: AnsiString);
       procedure AddDatagramToSend(Datagram: TDatagramSend);
       procedure AddTask(NewTask: TOlcbTaskBase);
+      procedure RemoveTasks(RemoveKey: PtrInt);
 
       property Connected: Boolean read FConnected write FConnected;
       property Serial: TBlockSerial read FSerial write FSerial;
@@ -269,7 +272,10 @@ type
     FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
     FSending: Boolean;
   private
-    FTag: Integer;
+    FRemoveKey: PtrInt;
+    FHasStarted: Boolean;
+    FTag: PtrInt;
+    FForceTermination: Boolean;
     function SpaceToCommandByteEncoding(ASpace: Byte): Byte;
   protected
     FComPortThread: TComPortThread;
@@ -283,7 +289,7 @@ type
     function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
     function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
     function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
-    procedure Process(MessageInfo: TOlcbMessage); virtual; abstract;                 // Must override this
+    procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
     procedure SendIdentifyEventsMessage;
     procedure SendIdentifyEventsAddressedMessage;
     procedure SendIdentifyConsumerMessage(Event: TEventID);
@@ -315,7 +321,10 @@ type
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
-    property Tag: Integer read FTag write FTag;
+    property Tag: PtrInt read FTag write FTag;
+    property RemoveKey: PtrInt read FRemoveKey write FRemoveKey;
+    property HasStarted: Boolean read FHasStarted;
+    property ForceTermination: Boolean read FForceTermination write FForceTermination;
   end;
 
 
@@ -448,6 +457,16 @@ begin
          (Helper.DestinationAliasID = SourceAlias) then
         Result := True;
     end;
+  end;
+end;
+
+procedure TOlcbTaskBase.Process(MessageInfo: TOlcbMessage);
+begin
+  FHasStarted := True;
+  if ForceTermination then
+  begin
+    Sending := True;
+    iState := STATE_DONE;
   end;
 end;
 
@@ -634,6 +653,9 @@ begin
   FErrorCode := 0;
   FSending := StartAsSending;
   FTag := 0;
+  FRemoveKey := 0;
+  FForceTermination := False;
+  FHasStarted := False;
 end;
 
 destructor TOlcbTaskBase.Destroy;
@@ -964,6 +986,52 @@ begin
   finally
     OlcbTaskManager.TaskList.UnlockList;
   end;
+end;
+
+procedure TComPortThread.RemoveTasks(RemoveKey: PtrInt);
+var
+  List: TList;
+  i: Integer;
+  Wait: Boolean;
+begin
+  List := OlcbTaskManager.TaskList.LockList;
+  try
+    i := List.count;
+    for i := List.Count - 1 downto 0 do
+    begin
+      if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) then
+        TOlcbTaskBase( List[i]).ForceTermination := True;
+    end;
+  finally
+    OlcbTaskManager.TaskList.UnlockList;
+  end;
+
+  // How to make sure Tasks are freed before Config Editor is released?
+  // Deadlock if Syncronize is called in the thread if we are waiting here for the Task to complete......
+
+  repeat
+    Application.ProcessMessages;
+    ThreadSwitch;
+    List := OlcbTaskManager.TaskList.LockList;
+    try
+      i := List.count;
+      Wait := False;
+      for i := List.Count - 1 downto 0 do
+      begin
+        if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) then
+        begin
+          if TOlcbTaskBase( List[i]).Done or not TOlcbTaskBase( List[i]).HasStarted then
+          begin
+            TOlcbTaskBase( List[i]).Free;
+            List.Delete(i);
+          end else
+            Wait := True;
+        end;
+      end;
+    finally
+    OlcbTaskManager.TaskList.UnlockList;
+    end;
+  until Wait = False;
 end;
 
 { TDatagramSendManager }
@@ -1593,4 +1661,4 @@ end;
 
 
 end.
-
+

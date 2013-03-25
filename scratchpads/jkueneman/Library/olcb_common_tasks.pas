@@ -115,15 +115,18 @@ type
     FForceOptionalSpaceByte: Boolean;
     FMaxAddress: DWord;
     FMinAddress: DWord;
+    FTerminator: Char;
+    FUsingTerminator: Boolean;
     FWritingToAddress: Boolean;
     function GetMaxPayloadSize: Byte;
   protected
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
     property CurrentSendSize: Byte read FCurrentSendSize write FCurrentSendSize;
+    property UsingTerminator: Boolean read FUsingTerminator write FUsingTerminator;
     property MaxPayloadSize: Byte read GetMaxPayloadSize;
     property WritingToAddress: Boolean read FWritingToAddress write FWritingToAddress;
   public
-    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte); reintroduce;
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
@@ -132,6 +135,7 @@ type
     property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
     property MinAddress: DWord read FMinAddress;
     property MaxAddress: DWord read FMaxAddress;
+    property Terminator: Char read FTerminator write FTerminator;
   end;
 
   { TReadAddressSpaceMemoryTask }
@@ -354,7 +358,7 @@ begin
   FForceOptionalSpaceByte := False;
   FReadAddress := AReadAddress;
   FReadByteCount := AReadByteCount;
-  FCurrentOffset := 0;
+  FCurrentOffset := ReadAddress;
   FUsingTerminator := UseTerminatorChar;
   FIncludeTerminator := True;
   FTerminator := #0;
@@ -372,6 +376,7 @@ var
   i: Integer;
   Finished: Boolean;
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
         // Ask for a read from the node
@@ -416,7 +421,7 @@ begin
             if Finished or (PayloadSize = 0) then
             begin
               Sending := True;
-              iState := 3;
+              iState := STATE_DONE;
             end else
             begin
               CurrentOffset := CurrentOffset + MAX_CONFIG_MEM_READWRITE_SIZE;
@@ -425,7 +430,7 @@ begin
             end;
           end
         end;
-    3 : begin
+    STATE_DONE : begin
        // Done
          FDone := True
        end;
@@ -458,12 +463,13 @@ end;
 
 procedure TWriteAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0 : begin
           SendMemoryConfigurationWrite(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
-          iState := 1
+          iState := STATE_DONE;
         end;
-    1 : begin
+    STATE_DONE : begin
        // Done
          FDone := True
        end;
@@ -474,7 +480,7 @@ end;
 
 constructor TWriteAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream);
 begin
-  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending, AnAddressSpace);
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending, AnAddressSpace, False);
   DataStream.CopyFrom(AStream, AStream.Size);
   FWritingToAddress := True;
 end;
@@ -490,12 +496,13 @@ end;
 
 procedure TIdentifyConsumerTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendIdentifyConsumerMessage(Event);
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -512,12 +519,13 @@ end;
 
 procedure TIdentifyProducerTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
    case iState of
     0: begin
          SendIdentifyProducerMessage(Event);
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -535,12 +543,13 @@ end;
 
 procedure TTractionAllocateDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendTractionAllocateDccProxyMessage(Address, IsShort, SpeedStep);
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -550,12 +559,13 @@ end;
 
 procedure TTractionDeAllocateDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendTractionDeAllocateDccAddressProxyMessage;
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -574,12 +584,13 @@ end;
 
 procedure TTractionQueryDccAddressProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendTractionQueryDccAddressProxyMessage(Address, IsShort);
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -597,12 +608,13 @@ end;
 
 procedure TTractionFunctionTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendTractionFunction(Address, Value);
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -620,6 +632,7 @@ end;
 
 procedure TTractionSpeedTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          if EStop then
@@ -627,9 +640,9 @@ begin
          else begin
            SendTractionSpeedMessage(Speed)
          end;
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -640,12 +653,13 @@ end;
 
 procedure TIdentifyEventsAddressedTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendIdentifyEventsAddressedMessage;
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -655,12 +669,13 @@ end;
 
 procedure TIdentifyEventsTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendIdentifyEventsMessage;
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -670,6 +685,7 @@ end;
 
 procedure TVerifiedNodeIDTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
@@ -677,6 +693,7 @@ end;
 
 procedure TTractionProtocolTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
@@ -684,6 +701,7 @@ end;
 
 procedure TInitializationCompleteTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
@@ -691,6 +709,7 @@ end;
 
 procedure TEventTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
@@ -698,6 +717,7 @@ end;
 
 procedure TCANLayerTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
@@ -729,6 +749,7 @@ var
   i: Integer;
   LocalMessageHelper: TOpenLCBMessageHelper;
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendSnipMessage;
@@ -826,14 +847,14 @@ begin
                    begin
                      Inc(i);
                      Sending := True;
-                     Inc(FiState);
+                     iState := STATE_DONE;
                    end;
                  end;
              end;
            end
          end;
        end;
-    2: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -843,6 +864,7 @@ end;
 
 procedure TProtocolSupportTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendProtocolIdentificationProtocolMessage;
@@ -855,10 +877,10 @@ begin
          begin
            FProtocols := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 7);
            Sending := True;
-           Inc(FiState);
+           iState := STATE_DONE;
          end;
        end;
-    2: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -883,6 +905,7 @@ procedure TConfigMemoryAddressSpaceInfoTask.Process(MessageInfo: TOlcbMessage);
 var
   DatagramReceive: TDatagramReceive;
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendMemoryConfigurationSpaceInfo(AddressSpace);
@@ -902,10 +925,10 @@ begin
          begin
            ConfigMemoryAddressSpace.LoadByDatagram(DatagramReceive);
            Sending := True;
-           Inc(FiState);
+           iState := STATE_DONE;
          end;
        end;
-    3: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -929,6 +952,7 @@ procedure TConfigMemoryOptionsTask.Process(MessageInfo: TOlcbMessage);
 var
   DatagramReceive: TDatagramReceive;
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendMemoryConfigurationOptions;
@@ -948,10 +972,10 @@ begin
          begin
            ConfigMemoryOptions.LoadFromDatagram(DatagramReceive);
            Sending := True;
-           Inc(FiState);
+           iState := STATE_DONE;
          end;
        end;
-    3: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -961,12 +985,13 @@ end;
 
 procedure TVerifyNodeIDTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendVerifyNodeIDGlobalMessage;
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -976,12 +1001,13 @@ end;
 
 procedure TVerifyNodeIDGlobalTask.Process(MessageInfo: TOlcbMessage);
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendVerifyNodeIDToDestinationMessage;
-         Inc(FiState);
+         iState := STATE_DONE;
        end;
-    1: begin
+    STATE_DONE: begin
          FDone := True;
        end;
   end;
@@ -994,13 +1020,16 @@ begin
   Result := MAX_CONFIG_MEM_READWRITE_SIZE;
 end;
 
-constructor TBaseAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte);
+constructor TBaseAddressSpaceMemoryTask.Create(ASourceAlias,
+  ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte;
+  UseTerminatorChar: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FAddressSpace := AnAddressSpace;
   ForceOptionalSpaceByte := False;
   FWritingToAddress := False;
   FDataStream := TMemoryStream.Create;
+  FUsingTerminator := UseTerminatorChar;
 end;
 
 destructor TBaseAddressSpaceMemoryTask.Destroy;
@@ -1018,7 +1047,6 @@ procedure TBaseAddressSpaceMemoryTask.Process(MessageInfo: TOlcbMessage);
 //
 
 const
-  STATE_DONE = 100;
   STATE_READ_START = 8;
   STATE_WRITE_START = 20;
 var
@@ -1028,7 +1056,9 @@ var
   Options: TOlcbMemOptions;
   DatagramResultStart: Byte;
   i: Integer;
+  Terminated: Boolean;
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          // Ask for the protocols the node supports
@@ -1178,10 +1208,18 @@ begin
               DatagramResultStart := 7
             else
               DatagramResultStart := 6;
+            Terminated := False;
             for i := DatagramResultStart to DatagramReceive.CurrentPos - 1 do
+            begin
               DataStream.WriteByte( DatagramReceive.RawDatagram[i]);
+              if UsingTerminator then
+              begin
+                if DatagramReceive.RawDatagram[i] = Ord( Terminator) then
+                  Terminated := True;
+              end;
+            end;
             CurrentAddress := CurrentAddress + DWord( (DatagramReceive.CurrentPos - DatagramResultStart));
-            if CurrentAddress = MaxAddress then
+            if (CurrentAddress = MaxAddress) or Terminated then
             begin
               Sending := True;
               iState := STATE_DONE;
@@ -1229,6 +1267,7 @@ var
   DatagramReceive: TDatagramReceive;
   NewSpace: TOlcbMemAddressSpace;
 begin
+  inherited Process(MessageInfo);
   case iState of
     0: begin
          SendMemoryConfigurationOptions;
@@ -1275,7 +1314,7 @@ begin
            if CurrentAddressSpace < MinAddressSpace then
            begin
              Sending := True;
-             iState := 6;
+             iState := STATE_DONE;
            end else
            begin
              Sending := True;
@@ -1283,7 +1322,7 @@ begin
            end;
          end;
        end;
-    6: begin
+    STATE_DONE: begin
        // Done
          FDone := True
        end;

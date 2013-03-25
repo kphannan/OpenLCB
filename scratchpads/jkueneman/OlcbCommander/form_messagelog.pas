@@ -14,6 +14,7 @@ type
   { TFormMessageLog }
 
   TFormMessageLog = class(TForm)
+    ActionLogPause: TAction;
     ActionListMessageLog: TActionList;
     ActionLogClear: TAction;
     ActionLogCopy: TAction;
@@ -21,6 +22,7 @@ type
     ActionLogPaste: TAction;
     ActionLogSelectAll: TAction;
     BitBtnClear: TBitBtn;
+    BitBtnClear1: TBitBtn;
     Label1: TLabel;
     MenuItemClear: TMenuItem;
     MenuItemSeparator1: TMenuItem;
@@ -35,6 +37,7 @@ type
     procedure ActionLogCopyExecute(Sender: TObject);
     procedure ActionLogCutExecute(Sender: TObject);
     procedure ActionLogPasteExecute(Sender: TObject);
+    procedure ActionLogPauseExecute(Sender: TObject);
     procedure ActionLogSelectAllExecute(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -43,12 +46,14 @@ type
   private
     FHelper: TOpenLCBMessageHelper;
     FHideCallback: TFormHideCallback;
+    FPaused: Boolean;
     { private declarations }
   protected
     property Helper: TOpenLCBMessageHelper read FHelper write FHelper;
   public
     { public declarations }
     property HideCallback: TFormHideCallback read FHideCallback write FHideCallback;
+    property Paused: Boolean read FPaused write FPaused;
   end;
 
 var
@@ -93,6 +98,7 @@ begin
   Markup.Trim := True;
   Markup.FullWord := False;
   Markup.IgnoreKeywords := False;
+  FPaused := False;
 end;
 
 procedure TFormMessageLog.ActionLogClearExecute(Sender: TObject);
@@ -113,6 +119,11 @@ end;
 procedure TFormMessageLog.ActionLogPasteExecute(Sender: TObject);
 begin
   FormMessageLog.SynMemo.CommandProcessor(TSynEditorCommand(ecPaste), ' ', nil);
+end;
+
+procedure TFormMessageLog.ActionLogPauseExecute(Sender: TObject);
+begin
+  Paused := not Paused;
 end;
 
 procedure TFormMessageLog.ActionLogSelectAllExecute(Sender: TObject);

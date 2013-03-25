@@ -688,7 +688,7 @@ var
 begin
   if Assigned(ComPortThread) then
   begin
-    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace);
+    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace, False);
     Task.ForceOptionalSpaceByte := False;
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);

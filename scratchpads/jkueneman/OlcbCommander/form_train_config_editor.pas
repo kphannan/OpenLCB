@@ -44,9 +44,6 @@ type
     property PageControl: TPageControl read FPageControl write FPageControl;
   public
     { public declarations }
-
-    FLock: Boolean;
-
     property AliasID: Word read FAliasID write FAliasID;
     property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
     property OnConfigEditorHide: TOnConfigEditorEvent read FOnConfigEditorHide write FOnConfigEditorHide;
@@ -147,7 +144,8 @@ end;
 procedure TFormTrainConfigEditor.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
   if Assigned(OnConfigEditorClose) then
-    OnConfigEditorClose(Self)
+    OnConfigEditorClose(Self);
+  CloseAction := caFree;
 end;
 
 procedure TFormTrainConfigEditor.FormHide(Sender: TObject);
@@ -162,11 +160,12 @@ var
 begin
   if Assigned(ComPortThread) and not ShownOnce then
   begin
-    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CDI);
+    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CDI, True);
+    Task.RemoveKey := PtrInt( Self);
+    Task.Terminator := #0;
     Task.ForceOptionalSpaceByte := False;
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);
-    FLock := True;
   end;
 end;
 
@@ -190,110 +189,114 @@ var
   Control: TControl;
   ScrollBox: TScrollBox;
   TaskStream: TMemoryStream;
-  B: Byte;
-  Str, Str2, Hex: String;
+  Str: String;
   Relation: TMapRelation;
 begin
   try
-    if Sender is TReadAddressSpaceMemoryTask then
+    if not Sender.ForceTermination then
     begin
-      // This is the CDI read result
-      MemTask := TReadAddressSpaceMemoryTask(Sender);
-      MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
-      if MemTask.DataStream.ReadByte = Ord( #0) then
-        MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
-      MemTask.DataStream.Position := 0;
-      ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
-      PageControl := CdiParser.Build_CDI_Interface(PanelBkGnd, ADoc);
-      FLock := False;
-      ReadConfiguration;
-      FreeAndNil(ADoc);
-    end else
-    if Sender is TReadAddressSpaceMemoryRawTask then
-    begin
-      // This is a configuration read request
-      iPage := Sender.Tag and $FFFF;
-      iControl := (Sender.Tag shr 16) and $FFFF;
-      if PageControl.PageCount > iPage then
+      if Sender is TReadAddressSpaceMemoryTask then
       begin
-        ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
-        if Assigned(ScrollBox) then
+        // This is the CDI read result
+        MemTask := TReadAddressSpaceMemoryTask(Sender);
+        if MemTask.DataStream.Size > 1 then
         begin
-          if ScrollBox.ControlCount > iControl then
+          MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
+          if MemTask.DataStream.ReadByte = Ord( #0) then
+            MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
+          MemTask.DataStream.Position := 0;
+          ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
+          PageControl := CdiParser.Build_CDI_Interface(PanelBkGnd, ADoc);
+          ReadConfiguration;
+          FreeAndNil(ADoc);
+        end
+      end else
+      if Sender is TReadAddressSpaceMemoryRawTask then
+      begin
+        // This is a configuration read request
+        iPage := Sender.Tag and $FFFF;
+        iControl := (Sender.Tag shr 16) and $FFFF;
+        if PageControl.PageCount > iPage then
+        begin
+          ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
+          if Assigned(ScrollBox) then
           begin
-            Control := ScrollBox.Controls[iControl];
-            if Control is TOlcbEdit then
+            if ScrollBox.ControlCount > iControl then
             begin
-              if (Control as TOlcbEdit).ConfigInfo.Task = Sender then
+              Control := ScrollBox.Controls[iControl];
+              if Control is TOlcbEdit then
               begin
-                // Whew, success
-                TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
-                TaskStream.Position := 0;
-                case (Control as TOlcbEdit).ConfigInfo.DataType of
-                  cdt_Int,
-                  cdt_EventID : begin
-                                  Str := IntToHex(TaskStream.ReadByte, 2);
-                                  while (TaskStream.Position < TaskStream.Size) do
-                                    Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
-                                  (Control as TOlcbEdit).Text := Str;
-                                end;
-                  cdt_String  : begin
-                                  Str := Char( TaskStream.ReadByte);
-                                  while (TaskStream.Position < TaskStream.Size) do
-                                    Str := Str + Char( TaskStream.ReadByte);
-                                  (Control as TOlcbEdit).Text := Str;
-                                end;
-                end;
-              end
-            end else
-            if Control is TOlcbSpinEdit then
-            begin
-               if (Control as TOlcbSpinEdit).ConfigInfo.Task = Sender then
+                if (Control as TOlcbEdit).ConfigInfo.Task = Sender then
+                begin
+                  // Whew, success
+                  TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                  TaskStream.Position := 0;
+                  case (Control as TOlcbEdit).ConfigInfo.DataType of
+                    cdt_Int,
+                    cdt_EventID : begin
+                                    Str := IntToHex(TaskStream.ReadByte, 2);
+                                    while (TaskStream.Position < TaskStream.Size) do
+                                      Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
+                                    (Control as TOlcbEdit).Text := Str;
+                                  end;
+                    cdt_String  : begin
+                                    Str := Char( TaskStream.ReadByte);
+                                    while (TaskStream.Position < TaskStream.Size) do
+                                      Str := Str + Char( TaskStream.ReadByte);
+                                    (Control as TOlcbEdit).Text := Str;
+                                  end;
+                  end;
+                end
+              end else
+              if Control is TOlcbSpinEdit then
               begin
-                // Whew, success
-                TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
-                TaskStream.Position := 0;
-                case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
-                  cdt_Int     : begin
-                                  Str := IntToHex( TaskStream.ReadByte, 2);
-                                  while (TaskStream.Position < TaskStream.Size) do
-                                    Str := Str + IntToHex( TaskStream.ReadByte, 2);
-                                  Str := '0x' + Str;
-                                  (Control as TOlcbSpinEdit).Value := StrToInt(Str);
-                                end;
-                end;
-              end
-            end else
-            if Control is TOlcbComboBox then
-            begin
-              if (Control as TOlcbComboBox).ConfigInfo.Task = Sender then
+                 if (Control as TOlcbSpinEdit).ConfigInfo.Task = Sender then
+                begin
+                  // Whew, success
+                  TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                  TaskStream.Position := 0;
+                  case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
+                    cdt_Int     : begin
+                                    Str := IntToHex( TaskStream.ReadByte, 2);
+                                    while (TaskStream.Position < TaskStream.Size) do
+                                      Str := Str + IntToHex( TaskStream.ReadByte, 2);
+                                    Str := '0x' + Str;
+                                    (Control as TOlcbSpinEdit).Value := StrToInt(Str);
+                                  end;
+                  end;
+                end
+              end else
+              if Control is TOlcbComboBox then
               begin
-                // Whew, success
-                TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
-                TaskStream.Position := 0;
-                case (Control as TOlcbComboBox).ConfigInfo.DataType of
-                  cdt_Int,
-                  cdt_EventID : begin
-                                  Str := IntToHex( TaskStream.ReadByte, 2);
-                                  while (TaskStream.Position < TaskStream.Size) do
-                                    Str := Str + IntToHex( TaskStream.ReadByte, 2);
-                                  Str := '0x' + Str;
-                                  Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(IntToStr( StrToInt( Str)));
-                                  if Assigned(Relation) then
-                                    (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
-                                end;
-                  cdt_String  : begin
-                                  Str := Char( TaskStream.ReadByte);
-                                  while (TaskStream.Position < TaskStream.Size) do
-                                    Str := Str + Char( TaskStream.ReadByte);
-                                  Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
-                                  if Assigned(Relation) then
-                                    (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
-                                end;
+                if (Control as TOlcbComboBox).ConfigInfo.Task = Sender then
+                begin
+                  // Whew, success
+                  TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                  TaskStream.Position := 0;
+                  case (Control as TOlcbComboBox).ConfigInfo.DataType of
+                    cdt_Int,
+                    cdt_EventID : begin
+                                    Str := IntToHex( TaskStream.ReadByte, 2);
+                                    while (TaskStream.Position < TaskStream.Size) do
+                                      Str := Str + IntToHex( TaskStream.ReadByte, 2);
+                                    Str := '0x' + Str;
+                                    Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(IntToStr( StrToInt( Str)));
+                                    if Assigned(Relation) then
+                                      (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                                  end;
+                    cdt_String  : begin
+                                    Str := Char( TaskStream.ReadByte);
+                                    while (TaskStream.Position < TaskStream.Size) do
+                                      Str := Str + Char( TaskStream.ReadByte);
+                                    Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
+                                    if Assigned(Relation) then
+                                      (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                                  end;
+                  end
                 end
               end
             end
-          end
+          end;
         end;
       end;
     end;
@@ -316,39 +319,30 @@ begin
       begin
         for iControl := 0 to ScrollBox.ControlCount - 1 do
         begin
-      //    if not FLock then
+          Control := ScrollBox.Controls[iControl];
+          if Control is TOlcbEdit then
           begin
-
-
-            Control := ScrollBox.Controls[iControl];
-            if Control is TOlcbEdit then
-            begin
-              (Control as TOlcbEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbEdit).ConfigInfo.ConfigMemSize, False);
-              (Control as TOlcbEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-              (Control as TOlcbEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-              ComPortThread.AddTask( (Control as TOlcbEdit).ConfigInfo.Task);
-
-              FLock := True;
-            end;
-            if Control is TOlcbSpinEdit then
-            begin
-              (Control as TOlcbSpinEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemSize, False);
-              (Control as TOlcbSpinEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-              (Control as TOlcbSpinEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-              ComPortThread.AddTask( (Control as TOlcbSpinEdit).ConfigInfo.Task);
-
-              FLock := True;
-
-            end;
-            if Control is TOlcbComboBox then
-            begin
-              (Control as TOlcbComboBox).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbComboBox).ConfigInfo.ConfigMemAddress, (Control as TOlcbComboBox).ConfigInfo.ConfigMemSize, False);
-              (Control as TOlcbComboBox).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-              (Control as TOlcbComboBox).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-              ComPortThread.AddTask( (Control as TOlcbComboBox).ConfigInfo.Task);
-
-              FLock := True;
-            end;
+            (Control as TOlcbEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbEdit).ConfigInfo.ConfigMemSize, False);
+            (Control as TOlcbEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+            (Control as TOlcbEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+            (Control as TOlcbEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+            ComPortThread.AddTask( (Control as TOlcbEdit).ConfigInfo.Task);
+          end;
+          if Control is TOlcbSpinEdit then
+          begin
+            (Control as TOlcbSpinEdit).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemAddress, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemSize, False);
+            (Control as TOlcbSpinEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+            (Control as TOlcbSpinEdit).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+            (Control as TOlcbSpinEdit).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+            ComPortThread.AddTask( (Control as TOlcbSpinEdit).ConfigInfo.Task);
+          end;
+          if Control is TOlcbComboBox then
+          begin
+            (Control as TOlcbComboBox).ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbComboBox).ConfigInfo.ConfigMemAddress, (Control as TOlcbComboBox).ConfigInfo.ConfigMemSize, False);
+            (Control as TOlcbComboBox).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+            (Control as TOlcbComboBox).ConfigInfo.Task.Tag := iPage or (iControl shl 16);
+            (Control as TOlcbComboBox).ConfigInfo.Task.RemoveKey := PtrInt( Self);
+            ComPortThread.AddTask( (Control as TOlcbComboBox).ConfigInfo.Task);
           end;
         end;
       end;

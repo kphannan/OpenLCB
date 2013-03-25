@@ -163,7 +163,6 @@ type
     MenuItemConfigEditorsSep0: TMenuItem;
     MenuItemConfigEditorCreate: TMenuItem;
     MenuItemConfigEditors: TMenuItem;
-    MenuItem3: TMenuItem;
     MenuItemConfigurationSubMenu: TMenuItem;
     MenuItemConfigureNode: TMenuItem;
     MenuItemTVPopupSep4: TMenuItem;
@@ -191,10 +190,8 @@ type
     MenuItemToolsSep2: TMenuItem;
     MenuItemToolsMessageLog: TMenuItem;
     MenuItemToolsComConnect: TMenuItem;
-    MenuItem2: TMenuItem;
     MenuItemToolsComDisconnect: TMenuItem;
     MenuItemToolsSep1: TMenuItem;
-    MenuItemFile: TMenuItem;
     MenuItemHelp: TMenuItem;
     MenuItemToolsSettingsShow: TMenuItem;
     MenuItemTools: TMenuItem;
@@ -891,7 +888,14 @@ procedure TFormOLCB_Commander.RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; Addr
 var
   Task: TReadAddressSpaceMemoryTask;
 begin
-  Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace);
+  case AddressSpace of
+    MSI_CDI: begin
+               Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+               Task.Terminator := #0;
+             end
+    else
+      Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+  end;
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   ComPortThread.AddTask(Task);
@@ -1624,7 +1628,7 @@ end;
 procedure TFormOLCB_Commander.SyncReceiveMessage(MessageStr: String);
 begin
   MessageHelper.Decompose(MessageStr);
-  if FormMessageLog.Visible then
+  if FormMessageLog.Visible and not FormMessageLog.Paused then
   begin
     FormMessageLog.SynMemo.Lines.BeginUpdate;
     FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, False);
@@ -1637,7 +1641,7 @@ procedure TFormOLCB_Commander.SyncSendMessage(MessageStr: String);
 begin
   if MessageHelper.Decompose(MessageStr) then
   begin
-    if FormMessageLog.Visible then
+    if FormMessageLog.Visible and not FormMessageLog.Paused then
     begin
       FormMessageLog.SynMemo.Lines.BeginUpdate;
       FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, True);
@@ -1713,6 +1717,7 @@ begin
   if Index > -1 then
   begin
     ConfigEditorList.Delete( Index);
+    ComPortThread.RemoveTasks( PtrInt( ConfigEditor));
     DeleteConfigEditorSubMenu(ConfigEditor);
     UpdateUI
   end
