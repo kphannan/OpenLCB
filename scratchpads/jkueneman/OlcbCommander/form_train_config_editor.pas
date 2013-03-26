@@ -253,6 +253,7 @@ var
   TaskStream: TMemoryStream;
   Str: String;
   Relation: TMapRelation;
+  Done: Boolean;
 begin
   try
     if not Sender.ForceTermination then
@@ -263,9 +264,17 @@ begin
         MemTask := TReadAddressSpaceMemoryTask(Sender);
         if MemTask.DataStream.Size > 1 then
         begin
-          MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
-          if MemTask.DataStream.ReadByte = Ord( #0) then
-            MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
+          Done := False;
+          MemTask.DataStream.Position := 0;
+          while not Done and (MemTask.DataStream.Position < MemTask.DataStream.Size) do
+          begin
+            if Char( MemTask.DataStream.ReadByte) = #0 then
+            begin
+              // Strip the null and any trailing characters.
+              MemTask.DataStream.Size := MemTask.DataStream.Position - 1;
+              Done := True;
+            end
+          end;
           MemTask.DataStream.Position := 0;
           ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
           PageControl := CdiParser.Build_CDI_Interface(PanelBkGnd, ADoc);
@@ -407,10 +416,14 @@ var
   Control: TControl;
   ScrollBox: TScrollBox;
   iControl: Integer;
+  b: Word;
 begin
   ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
   if Assigned(ScrollBox) then
   begin
+
+    b := ScrollBox.ControlCount;
+
     for iControl := 0 to ScrollBox.ControlCount - 1 do
     begin
       Control := ScrollBox.Controls[iControl];

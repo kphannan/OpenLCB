@@ -75,8 +75,8 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 433
+    Height = 23
+    Top = 425
     Width = 673
     Panels = <    
       item

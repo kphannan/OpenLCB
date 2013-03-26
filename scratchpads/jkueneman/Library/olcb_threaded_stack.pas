@@ -1075,7 +1075,7 @@ begin
   Timer := TTimer.Create(nil);
   Timer.Interval := 500;         // Every 500m seconds
   Timer.OnTimer := @TimerTick;
-  Timer.Enabled := False;
+  Timer.Enabled := True;
   FMaxCount := 0;
 end;
 

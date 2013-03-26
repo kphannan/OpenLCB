@@ -329,6 +329,12 @@ begin
       if ExtractElementAttribute(Element, 'size', TempStr) then
       begin
         Result := StrToInt64( TempStr);
+        if Element.NodeName = 'bit' then
+        begin
+          Result := (Result div 8);
+          if Result mod 8 <> 0 then
+            Inc(Result);
+        end;
         OffsetModified := True;
       end
     end;
@@ -643,7 +649,6 @@ begin
    end else
    begin
      // It is not a group
-
      if (LowerCase(Element.NodeName) = 'name') or (LowerCase(Element.NodeName) = 'description') then
      begin
        // It is a descriptive block so print it
@@ -672,7 +677,7 @@ begin
        UpdateMemOffsetJump(Element, MemOffset);
        MemSize := UpdateMemOffsetSize(Element);
 
-       // Think a bit MUST have a map
+       // Think a bit MUST have a map, not sure what the alternative would look like
        Map_Child := Element.FindNode('map');
        if Map_Child <> nil then
          AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName);

@@ -30,7 +30,7 @@ uses
 // **************************************************************************************************************************************************************
 
 const
-  MAX_NODE_COUNT = 57;        // The number of Physical and vNodes this physical node support.  Note that these nodes are defined as the Node ID defined + 1 up to VIRTUAL_NODE_COUNT past that
+  MAX_NODE_COUNT = 64;        // The number of Physical and vNodes this physical node support.  Note that these nodes are defined as the Node ID defined + 1 up to VIRTUAL_NODE_COUNT past that
                               // If the lower bits of this node are $0300 then the first Virtual Node is $0301 and the last is $0309 if the VIRTUAL_NODE_COUNT = 9
                               // It also MUST fall within the lower 3 byte boundry (this is due to the way I have defined HI/LO as 3 byte) so the max virtual nodes is 4095 with a base
                               // physical node starting at $0000;
@@ -41,7 +41,7 @@ const
 
 const
   MAX_BASE_BUFFER_POOL             = 2*MAX_NODE_COUNT;                          // Number of Base Buffers to allocate for Messages , JMRI Interleaves all the nodes so we need a Buffer for every Node <;^(
-  MAX_DATAGRAM_BUFFER_POOL         = 2;                                         // Number of Datagram Buffers to allocate for Messages
+  MAX_DATAGRAM_BUFFER_POOL         = 10;                                        // Number of Datagram Buffers to allocate for Messages
 
 // **************************************************************************************************************************************************************
 // Memory Configuration Protocol Supported Options
@@ -58,7 +58,7 @@ const
 // CDI Memory ($FF) Space Implementation
 // **************************************************************************************************************************************************************
 const
-MAX_CDI_ARRAY = 11268;
+  MAX_CDI_ARRAY = 11268;
   CDI_ARRAY: array[0..MAX_CDI_ARRAY-1] of byte = (
     $3C, $3F, $78, $6D, $6C, $20, $76, $65, $72, $73, $69, $6F, $6E, $3D, $22, $31, $2E, $30, $22, $20, $65, $6E, $63, $6F, $64, $69, $6E, $67, $3D, $22, $75, $74, $66, $2D, $38, $22, $3F, $3E,    // <?xml version="1.0" encoding="utf-8"?>
     $3C, $3F, $78, $6D, $6C, $2D, $73, $74, $79, $6C, $65, $73, $68, $65, $65, $74, $20, $74, $79, $70, $65, $3D, $27, $74, $65, $78, $74, $2F, $78, $73, $6C, $27, $20, $68, $72, $65, $66, $3D, $27, $68, $74, $74, $70, $3A, $2F, $2F, $6F, $70, $65, $6E, $6C, $63, $62, $2E, $6F, $72, $67, $2F, $74, $72, $75, $6E, $6B, $2F, $70, $72, $6F, $74, $6F, $74, $79, $70, $65, $73, $2F, $78, $6D, $6C, $2F, $78, $73, $6C, $74, $2F, $63, $64, $69, $2E, $78, $73, $6C, $27, $3F, $3E,    // <?xml-stylesheet type='text/xsl' href='http://openlcb.org/trunk/prototypes/xml/xslt/cdi.xsl'?>

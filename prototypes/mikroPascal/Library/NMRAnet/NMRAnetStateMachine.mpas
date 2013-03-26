@@ -899,7 +899,7 @@ begin
                                                                                               MemorySpaceCount := MAX_DATAGRAM_LEN - DatagramAddress;
                                                                                             // Make sure we don't overrun the Memory Space
                                                                                             MemorySpaceMaxAddress := MaxAddressByAddressSpace(Node, MemorySpace);
-                                                                                            if MemorySpaceAddress+ MemorySpaceCount > MemorySpaceMaxAddress then
+                                                                                            if MemorySpaceAddress + MemorySpaceCount > MemorySpaceMaxAddress then
                                                                                               MemorySpaceCount := MemorySpaceMaxAddress - MemorySpaceAddress;
                                                                                             
                                                                                             case MemorySpace of

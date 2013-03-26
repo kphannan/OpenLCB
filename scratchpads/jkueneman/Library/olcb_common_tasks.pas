@@ -118,12 +118,12 @@ type
     FTerminator: Char;
     FUsingTerminator: Boolean;
     FWritingToAddress: Boolean;
-    function GetMaxPayloadSize: Byte;
+    function GetMaxPayloadSize: DWord;
   protected
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
     property CurrentSendSize: Byte read FCurrentSendSize write FCurrentSendSize;
     property UsingTerminator: Boolean read FUsingTerminator write FUsingTerminator;
-    property MaxPayloadSize: Byte read GetMaxPayloadSize;
+    property MaxPayloadSize: DWord read GetMaxPayloadSize;
     property WritingToAddress: Boolean read FWritingToAddress write FWritingToAddress;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; UseTerminatorChar: Boolean); reintroduce;
@@ -1024,7 +1024,7 @@ end;
 
 { TBaseAddressSpaceMemoryTask }
 
-function TBaseAddressSpaceMemoryTask.GetMaxPayloadSize: Byte;
+function TBaseAddressSpaceMemoryTask.GetMaxPayloadSize: DWord;
 begin
   Result := MAX_CONFIG_MEM_READWRITE_SIZE;
 end;
@@ -1063,7 +1063,7 @@ var
   PIP: TOlcbProtocolIdentification;
   Space: TOlcbMemAddressSpace;
   Options: TOlcbMemOptions;
-  DatagramResultStart: Byte;
+  DatagramResultStart: DWord;
   i: Integer;
   Terminated: Boolean;
 begin

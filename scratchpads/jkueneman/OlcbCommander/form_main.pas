@@ -669,8 +669,11 @@ end;
 procedure TFormOLCB_Commander.ActionToolsMessageLogShowExecute(Sender: TObject);
 begin
   FormMessageLog.Show;
-  ComPortThread.EnableReceiveMessages := True;
-  ComPortThread.EnableSendMessages := True;
+  if Assigned(ComPortThread) then
+  begin
+    ComPortThread.EnableReceiveMessages := True;
+    ComPortThread.EnableSendMessages := True;
+  end;
   ActionToolsMessageLogShow.Checked := True;
 end;
 
@@ -1085,8 +1088,9 @@ begin
     ComPortThread.SyncSendMessageFunc := @SyncSendMessage;
     ComPortThread.SyncErrorMessageFunc := @SyncErrorMessage;
     ComPortThread.OnBeforeDestroyTask := @OnBeforeDestroyTask;
-    ComPortThread.EnableReceiveMessages := False;
-    ComPortThread.EnableSendMessages := False;
+
+    ComPortThread.EnableReceiveMessages := ActionToolsMessageLogShow.Checked;
+    ComPortThread.EnableSendMessages := ActionToolsMessageLogShow.Checked;
     {$IFDEF DEBUG_THREAD}
     ComPortThread.SyncDebugFunc := @SyncDebugMessage;
     {$ENDIF}
@@ -1731,6 +1735,7 @@ var
   ADoc: TXMLDocument;
   x: string;
   i: Integer;
+  Done: Boolean;
 begin
   if Sender is TReadAddressSpaceMemoryTask then
   begin
@@ -1747,8 +1752,18 @@ begin
             MemConfigViewer.SynEditCDI.ClearAll;
             MemConfigViewer.SynEditCDI.EndUpdate;
             MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
-            if MemTask.DataStream.ReadByte = Ord( #0) then
-              MemTask.DataStream.Size:=MemTask.Datastream.Size - 1;  // Strip the null
+
+            Done := False;
+            MemTask.DataStream.Position := 0;
+            while not Done and (MemTask.DataStream.Position < MemTask.DataStream.Size) do
+            begin
+              if Char( MemTask.DataStream.ReadByte) = #0 then
+              begin
+                // Strip the null and any trailing characters.
+                MemTask.DataStream.Size := MemTask.DataStream.Position - 1;
+                Done := True;
+              end
+            end;
             MemTask.DataStream.Position := 0;
             ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
             WriteXMLFile(ADoc, MemTask.DataStream);
@@ -1884,4 +1899,4 @@ end;
 
 
 end.
-
+
