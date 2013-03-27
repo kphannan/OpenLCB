@@ -19,6 +19,8 @@
   </identification>
   <acdi fixed="1" var="1" />
   <segment origin="0" space="253">
+    <name>Train Info</name>
+    <description>General Information about the Train</description>
     <group offset="1">
       <name>User Data</name>
       <description>Add your own unique node info here</description>

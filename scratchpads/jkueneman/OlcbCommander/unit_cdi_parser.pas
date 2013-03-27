@@ -112,7 +112,7 @@ type
     function UpdateMemOffsetSize(Element: TDOMNode): DWord;
     function AddTab(PageControl: TPageControl; ACaption: string): TScrollBox;
     procedure AddLabel(ParentControl: TScrollBox; ACaption: string; var ControlOffset: Integer; ControlMargin, Indent: Integer; Bold: Boolean);
-    procedure AddSpinEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean);
+    procedure AddSpinEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
     procedure AddEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
     procedure AddComboBoxList(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
     procedure ProcessElementForUI(ParentControl: TScrollBox; Element: TDOMNode; var MemOffset: DWord; var ControlOffset: Integer; Indent: Integer; SupressNameAndDescription: Boolean; PrintMemOffset: Boolean);
@@ -379,7 +379,9 @@ begin
   ControlOffset := ControlOffset + ALabel.Height + ControlMargin;
 end;
 
-procedure TCdiParser.AddSpinEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean);
+procedure TCdiParser.AddSpinEdit(ParentControl: TScrollBox; Element: TDOMNode;
+  var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset,
+  MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
 var
   ASpinEdit: TOlcbSpinEdit;
   TempStr: string;
@@ -405,6 +407,7 @@ begin
     ASpinEdit.MaxValue := StrToInt(TempStr);
   if ExtractElementAttribute(Element, 'default', TempStr) then
     ASpinEdit.Value := StrToInt(TempStr);
+  ASpinEdit.Text := '';
 
   // Look for descripive names and descriptions to print
   if ExtractElementItem(Element, 'name', TempStr) then
@@ -414,7 +417,15 @@ begin
   Inc(Indent, 8);
 
   // Create the ConfigInfo Struture
-  ASpinEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int);
+  if ElementType = 'int' then
+    ASpinEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_Int)
+  else
+  if ElementType = 'bit' then
+  begin
+    ASpinEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_bit);
+    ASpinEdit.MaxValue := 1;
+    ASpinEdit.MinValue := 0;
+  end;
 
   // Create the Control Window
   ASpinEdit.Top := ControlOffset;
@@ -664,7 +675,7 @@ begin
        // If it has a map then create a ComboListBox to handle it else use a Spin Edit
        Map_Child := Element.FindNode('map');
        if Map_Child = nil then
-         AddSpinEdit(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset)
+         AddSpinEdit(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName)
        else
          AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName);
 
@@ -679,7 +690,9 @@ begin
 
        // Think a bit MUST have a map, not sure what the alternative would look like
        Map_Child := Element.FindNode('map');
-       if Map_Child <> nil then
+       if Map_Child = nil then
+         AddSpinEdit(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName)
+       else
          AddComboBoxList(ParentControl, Element, ControlOffset, 4, Indent + 4, MemOffset, MemSize, PrintMemOffset, Element.NodeName);
 
        // Update the Control Offset

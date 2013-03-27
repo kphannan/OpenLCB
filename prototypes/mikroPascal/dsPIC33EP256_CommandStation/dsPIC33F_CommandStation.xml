@@ -19,6 +19,8 @@
   </identification>
   <acdi fixed="1" var="1" />
   <segment origin="0" space="253">
+    <name>Options</name>
+    <description>Configuration options for the LCBricks Command Station</description>
     <group offset="1">
       <name>User Data</name>
       <description>Add your own unique node info here</description>
@@ -31,7 +33,7 @@
     </group>
     <group>
       <name>Command Station Options</name>
-      <description>Configuration options for the LCBricks Command Station</description>
+      <description>Configuration options</description>
       <int size="1">
         <name>Output Mode</name>
         <description>Select if this Command Station is a Main Line Node or a Programming Track Node</description>
@@ -56,23 +58,23 @@
           </relation>
           <relation>
             <property>1</property>
-            <value>Auto Programming Mode (to a Programming Track)</value>
+            <value>Auto Detect Service Mode</value>
+          </relation>
+          <relation>
+            <property>2</property>
+            <value>Direct Bit Mode</value>
           </relation>
           <relation>
             <property>3</property>
-            <value>Direct Mode (All Operations)</value>
+            <value>Direct Byte Mode</value>
           </relation>
           <relation>
             <property>4</property>
-            <value>Direct Mode (Byte Operations)</value>
+            <value>Paged Mode</value>
           </relation>
           <relation>
             <property>5</property>
-            <value>Direct Mode (Bit Operations)</value>
-          </relation>
-          <relation>
-            <property>6</property>
-            <value>Paged Mode</value>
+            <value>Register Mode</value>
           </relation>
         </map>
       </int>
@@ -82,11 +84,11 @@
         <map>
           <relation>
             <property>0</property>
-            <value>Command Station is a DCC Bus Driver</value>
+            <value>Command Station is a DCC Bus Receiver</value>
           </relation>
           <relation>
             <property>1</property>
-            <value>Command Station is a DCC Bus Receiver</value>
+            <value>Command Station is a DCC Bus Transmitter</value>
           </relation>
         </map>
       </int>
@@ -105,8 +107,8 @@
         </map>
       </int>
       <int size="2">
-        <name>RailCom Cutout Length</name>
-        <description>Number microseconds the RailCom Cutout is enabled in a packet (454us-488us)</description>
+        <name>Overcurrent Level</name>
+        <description>Level of current to trip over current protection shutdown (milliAmps)</description>
       </int>
       <group>
         <name>State Repeat Setup</name>
@@ -290,6 +292,19 @@
             <relation>
               <property>1</property>
               <value>Function 12 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 13 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 13 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 13 Packets repeated</value>
             </relation>
           </map>
         </int>

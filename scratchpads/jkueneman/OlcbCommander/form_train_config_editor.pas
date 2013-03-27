@@ -345,7 +345,10 @@ begin
                                     Str := '0x' + Str;
                                     (Control as TOlcbSpinEdit).Value := StrToInt(Str);
                                   end;
-                  end;
+                    cdt_Bit     : begin
+                                    // TODO
+                                  end;
+                  end
                 end
               end else
               if Control is TOlcbComboBox then
@@ -373,6 +376,9 @@ begin
                                     Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
                                     if Assigned(Relation) then
                                       (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                                  end;
+                    cdt_Bit     : begin
+                                    // TODO
                                   end;
                   end
                 end
@@ -540,6 +546,9 @@ begin
                               Stream.WriteByte( HexArray[i]);
                             Stream.Position := 0;
                           end;
+            cdt_Bit     : begin
+                             // TODO
+                          end;
           end;
           (Control as TOlcbSpinEdit).ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbSpinEdit).ConfigInfo.ConfigMemAddress, Stream);
           (Control as TOlcbSpinEdit).ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
@@ -593,6 +602,7 @@ begin
                               end;
                             end;
               cdt_Bit     : begin
+                              // TODO
                             end;
             end;
             (Control as TOlcbComboBox).ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, (Control as TOlcbComboBox).ConfigInfo.ConfigMemAddress, Stream);

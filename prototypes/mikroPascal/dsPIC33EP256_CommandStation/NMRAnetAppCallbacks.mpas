@@ -31,6 +31,9 @@ uses
   NMRAnetNode,
   NMRAnetUtilities,
   Float16,
+  NMRAnetDCC,
+  NMRAnetServiceMode,
+  ServiceModeDefines,
   NMRAnetDefinesShared;
 
 const
@@ -107,7 +110,7 @@ const
   MSG_SEND_DCC_ADDRESS_ALLOCATED = $01;                                         // Need to send a Message for the DCC Address was Allocated
   
 type
-  TDccProxyData = record                                                        // Structure stored in RAM on a node and vnode basis
+  TTrainProxyRamData = record                                                   // Structure stored in RAM on a node and vnode basis
     State: Byte;                                                                // State of the Proxy Node
     MsgFlags: Byte;                                                             // Message Flags for messages that need to be sent in the Statemachine
     Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
@@ -115,18 +118,40 @@ type
     Functions: DWord;                                                           // Function State (F0..F28)
     Address: Word;                                                              // DCC Address
   end;
-  PDccProxyData = ^TDccProxyData;
-
-const
-  MAX_NODE_CFG_DATA  = 128;                                                     // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TDCCConfigurationData up to 1024
-  MAX_VNODE_CFG_DATA = 2304;                                                    // This allows the EEPROM to never get out of sync and need to be erased and rebuilt, just grow TDCCConfigurationData up to 1024
+  PTrainProxyRamData = ^TTrainProxyRamData;
   
-type
-  TDCCConfigurationData = record
-    ConsistNext,                                                                //                                                //   4 Bytes
-    ConsistPrev: TNodeID;                                                       //                                                //   4 Bytes
+  TRepeatFunctionPacketArray = array[0..27] of Byte;
+
+  TCommandStationConfigurationInRam = record                                    // This mirrors the EEPROM values for fast lookup in real time
+    OutputMode: Byte;
+    ProgrammingMode: Byte;
+    DccBusMode: Byte;
+    RailComEnable: Byte;
+    OverCurrentLevel: Word;                                                     // In milliAmps
+    RepeatSpeedPacket: Byte;
+    RepeatFunctions: TRepeatFunctionPacketArray;
   end;
-  PDCCConfigurationData = ^TDCCConfigurationData;
+  
+const
+  MAX_NODE_CFG_DATA  = 600;
+  MAX_VNODE_CFG_DATA = 1700;
+  CMD_STATION_CONFIG_OFFSET = 61;                                               // Start of the Command Station Config Data
+  CMD_STATION_CONFIG_MAX_OFFSET = 96;                                           // Last Offset of the Command Station Config Data
+  
+  CONFIG_OUTPUTMODE_MAIN_TRACK    = 0;
+  CONFIG_OUTPUTMODE_SERVICE_MODE  = 1;
+  CONFIG_SERVICE_MODE_OPERATIONS_MODE  = 0;
+  CONFIG_SERVICE_MODE_AUTO_DETECT      = 1;
+  CONFIG_SERVICE_MODE_DIRECT_BIT       = 2;
+  CONFIG_SERVICE_MODE_DIRECT_BYTE      = 3;
+  CONFIG_SERVICE_MODE_PAGED            = 4;
+  CONFIG_SERVICE_MODE_REGISTER         = 5;
+  CONFIG_RAILCOM_ENABLED               = 1;
+  CONFIG_RAILCOM_DISABLED              = 0;
+  CONFIG_REPEATING_PACKET              = 1;
+  CONFIG_NONREPEATING_PACKET           = 0;
+  CONFIG_NMRA_DCC_TRANSMITTER          = 0;
+  CONFIG_NMRA_DCC_RECEIVER             = 1;
 
 procedure NMRAnetAppCallbacks_Initialize;
 procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
@@ -154,16 +179,19 @@ procedure AppCallback_Configuration_Zeroize(Force: Boolean);
 // *****************************************************************************
 
 // Local to Train Nodes
-function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
+function ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
+
+var
+  CommandStationConfigurationInRam: TCommandStationConfigurationInRam;
 
 implementation
 
 // Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
 // node in the AssignRAMAddress function below
 var
-  VolatileData: array[0..MAX_NODE_COUNT - 1] of TDccProxyData;
+  VolatileData: array[0..MAX_NODE_COUNT - 1] of TTrainProxyRamData;
  
-procedure UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, FunctionAddress, FunctionValue: Byte; var DCCPacket: TDCCPacket; ProxyData: PDccProxyData);
+procedure UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, FunctionAddress, FunctionValue: Byte; var DCCPacket: TDCCPacket; ProxyData: PTrainProxyRamData);
 var
   WideFunctionMask: DWord;
   FunctionMask, FunctionExtendedCode: Byte;
@@ -221,11 +249,11 @@ begin
   NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
 end;
   
-function GetProxyData(Node: PNMRAnetNode): PDccProxyData;
+function ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
 begin
   Result := nil;
   if Node <> nil then
-    Result := PDccProxyData( Node^.RAMAddress);
+    Result := PTrainProxyRamData( Node^.RAMAddress);
 end;
 
 // *****************************************************************************
@@ -242,7 +270,7 @@ end;
 function FindFirstNonDCCAllocatedNode: PNMRAnetNode;
 var
   i: Integer;
-  DCCProxyData: PDccProxyData;
+  TrainProxyRamData: PTrainProxyRamData;
 begin
   Result := nil;
   i := Nodes.AllocatedCount - 1;
@@ -250,8 +278,8 @@ begin
   begin
     if NMRAnetNode_TestStateFlag(Nodes.AllocatedList[i], NS_VIRTUAL) then
     begin
-      DCCProxyData := GetProxyData(Nodes.AllocatedList[i]);
-      if DCCProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then
+      TrainProxyRamData := ExtractTrainProxyRamData(Nodes.AllocatedList[i]);
+      if TrainProxyRamData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then
       begin
         Result := Nodes.AllocatedList[i];
         Break;
@@ -346,8 +374,8 @@ begin
      _25AAxxxx_Write(EEPROM_BANK_0, i * 64, 64, @NullArray);
     end;
     
-    LocalBuffer[1] := Lo(Word( 470));     // 470us Cutout Time
-    LocalBuffer[0] := Hi(Word( 470));
+    LocalBuffer[1] := Lo(Word( 2000));     // 2A shutdown
+    LocalBuffer[0] := Hi(Word( 2000));
     while _25AAxxxx_Busy(EEPROM_BANK_0) do
       Delay_us(10);
    _25AAxxxx_Write(EEPROM_BANK_0, 65, 2, @LocalBuffer);   // RailCom Time
@@ -375,6 +403,7 @@ end;
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
 var
   SpaceCode: Word;
+  i: DWord;
 begin
   SpaceCode := StartAddress shr 30;
   case SpaceCode of
@@ -382,18 +411,38 @@ begin
           while _25AAxxxx_Busy(EEPROM_BANK_0) do
             Delay_us(10);
           _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+
+          if Node^.ConfigurationAddress = 0 then                                // Update the Command Station Ram with the new configuration data
+          begin
+            if (StartAddress >= CMD_STATION_CONFIG_OFFSET) and (StartAddress <= CMD_STATION_CONFIG_MAX_OFFSET) then
+            begin
+              while _25AAxxxx_Busy(EEPROM_BANK_0) do
+                Delay_us(10);
+              _25AAxxxx_Read(EEPROM_BANK_0, CMD_STATION_CONFIG_OFFSET, CMD_STATION_CONFIG_MAX_OFFSET - CMD_STATION_CONFIG_OFFSET, @CommandStationConfigurationInRam);
+            end;
+          end;
         end;
     1: begin
          // Double Indexed CV
-         UART_Write_Text('Double Indexed CV Write');
+         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Double Indexed CV Write');
+         end
        end;
     2: begin
          // Single Indexed CV
-         UART_Write_Text('Single Indexed CV Write');
+         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Single Indexed CV Write');
+         end
        end;
     3: begin
          // Basic CV
-         UART_Write_Text('Basic CV Write');
+         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           LongWordToStr(StartAddress, s1);
+           UART_Write_Text('Basic CV Write: ' + s1 + LF);
+         end;
        end;
   end; // case
 end;
@@ -421,15 +470,81 @@ begin
         end;
     1: begin
          // Double Indexed CV
-         UART_Write_Text('Double Indexed CV Read');
+         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Double Indexed CV Read');
+           DataTarget^ := 0;
+           Result := MaxCount
+         end else
+         begin
+           DataTarget^ := 0;
+           Result := MaxCount
+         end
        end;
     2: begin
          // Single Indexed CV
-         UART_Write_Text('Single Indexed CV Read');
+         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Single Indexed CV Read');
+           Result := MaxCount
+         end else
+         begin
+           DataTarget^ := 0;
+           Result := MaxCount
+         end
        end;
     3: begin
          // Basic CV
-         UART_Write_Text('Basic CV Read');
+         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           case CommandStationConfigurationInRam.ProgrammingMode of
+             CONFIG_SERVICE_MODE_OPERATIONS_MODE  : begin end;
+             CONFIG_SERVICE_MODE_AUTO_DETECT      : begin end;
+             CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (StartAddress and $000000FF) - 1, 0);
+             CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000000FF) - 1, 0);
+             CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000000FF) - 1, 0);
+             CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000000FF) - 1, 0);
+           end;
+
+           while not ServiceMode_ReadResults do
+             Delay_ms(100);
+           case ServiceModeInfo.ServiceModeResult of
+              SERVICE_MODE_RESULT_DATA_NOT_FOUND :
+                begin
+                  UART1_Write_Text('  Data Not Received');
+                  if ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT = 1 then
+                    UART1_Write_Text(':  Ack Hi Found' + LF);
+                  if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
+                    UART1_Write_Text(':  Ack Low at 5ms');
+                  if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
+                    UART1_Write_Text(':  Ack High at 5ms');
+                  UART1_Write_Text(LF);
+                end;
+              SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_READ :
+                begin
+                  if ServiceModeInfo.ServiceModeType = SERVICE_MODE_TYPE_DIRECT_BYTE then
+                    UART1_Write_Text('  Direct Mode - Byte' + LF)
+                  else
+                    UART1_Write_Text('  Direct Mode - Bit' + LF);
+                  DataTarget^ := ServiceModeInfo.Value;
+                end;
+              SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_READ :
+                begin
+                  UART1_Write_Text('  Page Mode' + LF);
+                end;
+              SERVICE_MODE_RESULT_SHORTCIRCUIT :
+                begin
+                  UART1_Write_Text('  Short Detected' + LF);
+                end;
+           end;
+           ServiceMode_Quit;
+           UART_Write_Text('Single Indexed CV Read');
+           Result := MaxCount
+         end else
+         begin
+           DataTarget^ := 0;
+           Result := MaxCount
+         end
        end;
   end; // case
 end;
@@ -462,9 +577,9 @@ end;
 
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 var
-  ProxyData: PDccProxyData;
+  ProxyData: PTrainProxyRamData;
 begin
-  ProxyData := GetProxyData(Node);
+  ProxyData := ExtractTrainProxyRamData(Node);
   ProxyData^.State := 0;
   ProxyData^.Address := 0;
   ProxyData^.MsgFlags := 0;
@@ -478,7 +593,7 @@ end;
 procedure SetProxyNodeDccAddressFlags(Node: PNMRAnetNode; Event: PEventID);
 var
   TestForSetFlag: Boolean;
-  ProxyData: PDccProxyData;
+  ProxyData: PTrainProxyRamData;
   Address: Word;
 begin
   TestForSetFlag := True;
@@ -487,7 +602,7 @@ begin
 
   if TestForSetFlag then
   begin
-    ProxyData := GetProxyData(Node);
+    ProxyData := ExtractTrainProxyRamData(Node);
     if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
     begin
       Address := (Event^[4] shl 8) or Event^[5];
@@ -506,13 +621,13 @@ begin
   case EventIndex of
     EVENT_TRAIN_INDEX           : NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
     EVENT_TRAIN_DCC_IDLE_INDEX  : begin
-                                    if GetProxyData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+                                    if ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID)
                                     else
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
                                   end;
     EVENT_TRAIN_DCC_INUSE_INDEX : begin
-                                    if GetProxyData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+                                    if ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID)
                                     else
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID);
@@ -611,7 +726,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
-  ProxyData: PDccProxyData;
+  ProxyData: PTrainProxyRamData;
   FunctionAddress: DWord;
   FunctionValue: Word;
   AbsoluteSpeed: real;
@@ -620,7 +735,7 @@ var
   AddressHi, AddressLo: Byte;
   IsForward: Boolean;
 begin
-  ProxyData := GetProxyData(Node);
+  ProxyData := ExtractTrainProxyRamData(Node);
   AddressHi := (ProxyData^.Address shr 8) and $00FF;     // Split the address to make clear when loading bytes
   AddressLo := ProxyDAta^.Address and $00FF;
   case CANBuffer^.DataBytes[2] and TRACTION_PROTOCOL_MASK of
@@ -779,11 +894,11 @@ end;
 // *****************************************************************************
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 var
-  ProxyData: PDccProxyData;
+  ProxyData: PTrainProxyRamData;
 begin
   // We are in a CAN Lock block already
   Result := False;
-  ProxyData := GetProxyData(Node);
+  ProxyData := ExtractTrainProxyRamData(Node);
   
   // Handle the oddball DCC Address Event that can come and go
   if ProxyData^.MsgFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then

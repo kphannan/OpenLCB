@@ -54,9 +54,15 @@ var
   H_Bridge_B_Lo_Direction           : sbit at TRISB1_bit;
   H_Bridge_B_Hi_Direction           : sbit at TRISB4_bit;
   
-  DCC_Programming_ACK_Pin           : sbit at RB2_bit;            // Input so use the port and not the latch
+  DCC_Programming_ACK_Pin           : sbit at RB2_bit;                          // Input so use the port and not the latch
   DCC_Programming_ACK_Direction     : sbit at TRISB2_bit;
   
+  DCC_NMRA_Tranmitter_Lo            : sbit at LATB15_bit;                       // DCC Bus Transmitter
+  DCC_NMRA_Tranmitter_Hi            : sbit at LATB14_bit;                       // DCC Bus Transmitter
+  
+  DCC_NMRA_Tranmitter_Lo_Direction  : sbit at TRISB15_bit;                      // DCC Bus Transmitter
+  DCC_NMRA_Tranmitter_Hi_Direction  : sbit at TRISB14_bit;                      // DCC Bus Transmitter
+
   Ack_TimerEnabled_Bit              : sbit at TON_T5CON_bit;
 
 // *****************************************************************************
@@ -66,80 +72,104 @@ var
 var
   DCCTime: Word;
   
-  ServiceMode: Boolean;
-  Timer: DWord;
-  
-procedure INTERRUPT_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT;
+procedure RunServiceMode;
 begin
-  T1IF_bit := 0;                                                                // Clear the Flag
-
-  // Toggle the Bridge
+  // Toggle the Bridge off
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
   H_Bridge_B_Lo := 0;                                                           // Bridge Off
   H_Bridge_B_Hi := 0;                                                           // Bridge Off
-  
-  LATB15_bit := 0;                                                              // DCC Bus Transmitter
-  LATB14_bit := 0;                                                              // DCC Bus Transmitter
-  
-  if ServiceMode then
+
+  if ServiceModeInfo.iStateMachine < STATE_SERVICEMODE_DONE then
   begin
-    if ServiceModeInfo.iStateMachine < STATE_SERVICEMODE_DONE then
+    if Programming.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
     begin
-      if Programming.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
-      begin
-        LATB15_bit := 1;                                                            // DCC Bus Transmitter
-        H_Bridge_A_Lo := 1;
-        H_Bridge_B_Hi := 1;
-      end else
-      begin
-        LATB14_bit := 1;                                                            // DCC Bus Transmitter
-        H_Bridge_A_Hi := 1;
-        H_Bridge_B_Lo := 1;
-      end;
-      // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
-      ServiceMode_56us_TimeTick;
-      NMRA_DCC_TransmitterStateMachine(@Programming);
-      ServiceMode_StateMachine(@Programming);
-    end
-  end else
-  begin
-    if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 1 then
-    begin
-      if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
-      begin
-        LATB15_bit := 1;                                                            // DCC Bus Transmitter
-        H_Bridge_A_Lo := 1;
-        H_Bridge_B_Hi := 1;
-        PR1 := DCC_TIMER_29US;
-      end else
-      begin
-        if PR1 = DCC_TIMER_29US then
-          PR1 := DCC_TIMER_56US;
-        H_Bridge_A_Lo := 1;
-        H_Bridge_B_Lo := 1;
-      end;
+      H_Bridge_A_Lo := 1;
+      H_Bridge_B_Hi := 1;
     end else
     begin
-      if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
-      begin
-        LATB15_bit := 1;                                                            // DCC Bus Transmitter
-        H_Bridge_A_Lo := 1;
-        H_Bridge_B_Hi := 1;
-      end else
-      begin
-        LATB14_bit := 1;                                                            // DCC Bus Transmitter
-        H_Bridge_A_Hi := 1;
-        H_Bridge_B_Lo := 1;
-      end;
+      H_Bridge_A_Hi := 1;
+      H_Bridge_B_Lo := 1;
     end;
+    // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
+    ServiceMode_56us_TimeTick;
+    NMRA_DCC_TransmitterStateMachine(@Programming);
+    ServiceMode_StateMachine(@Programming);
+  end
+end;
+
+procedure RunNmraDccTranmitter;
+begin
+  DCC_NMRA_Tranmitter_Lo := 0;                                                              // DCC Bus Transmitter
+  DCC_NMRA_Tranmitter_Hi := 0;                                                              // DCC Bus Transmitter
+  if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
+    DCC_NMRA_Tranmitter_Lo := 1
+  else
+    DCC_NMRA_Tranmitter_Hi := 1;
+end;
+
+procedure RunNonRailComMode;
+begin
+
+LATA4_bit := not LATA4_bit;
+
+  H_Bridge_A_Lo := 0;                                                           // Bridge Off
+  H_Bridge_A_Hi := 0;                                                           // Bridge Off
+  H_Bridge_B_Lo := 0;                                                           // Bridge Off
+  H_Bridge_B_Hi := 0;                                                           // Bridge Off
+
+  if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
+  begin
+    H_Bridge_A_Lo := 1;
+    H_Bridge_B_Hi := 1;
+  end else
+  begin
+    H_Bridge_A_Hi := 1;
+    H_Bridge_B_Lo := 1;
+  end;
+end;
+
+procedure RunRailComMode;
+begin
+  // RailCom Mode
+  if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
+  begin
+    H_Bridge_A_Lo := 1;
+    H_Bridge_B_Hi := 1;
+    PR1 := DCC_TIMER_29US;
+  end else
+  begin
+    if PR1 = DCC_TIMER_29US then
+      PR1 := DCC_TIMER_56US;
+    H_Bridge_A_Lo := 1;
+    H_Bridge_B_Lo := 1;
+  end;
+end;
+
+procedure INTERRUPT_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT;
+begin
+  T1IF_bit := 0;                                                                // Clear the Flag
+     
+  if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+    RunServiceMode                                                              // Command Station is in Service Mode
+  else
+  begin
+    // Command Station is in Main Line Mode
+    if CommandStationConfigurationInRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
+      RunNmraDccTranmitter;
+
+                               //      Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_ENABLED := ;
+                                     
+    if CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED then
+      RunRailComMode
+    else
+      RunNonRailComMode;
+    
     // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
     NMRA_DCC_56us_TimeTick(@Track);                                                         // < 1us
     NMRA_DCC_TransmitterStateMachine(@Track);                                               // < 5us
     NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
   end;
-  
-  Inc(Timer);
 end;
 
 procedure INTERRUPT_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT;
@@ -209,15 +239,13 @@ var
   ADC_Ticker: DWord;
   PrevTrackCurrent, TrackCurrent: Word;
 
-  ProxyData: PDccProxyData;
+  ProxyData: PTrainProxyRamData;
   
   CV_Value, WriteVal: Byte;
   RunningAllCVs: Boolean;
 begin
   ANSELA := 0;
   ANSELB := 0;
-  
-  ServiceMode := False;
   
   TRISA4_bit := 0;
   LATA4_bit := 1;
@@ -228,6 +256,7 @@ begin
   NMRA_DCC_Initialize;
   ServiceMode_Initialize;
   AppCallback_Configuration_Zeroize(False);
+  _25AAxxxx_Read(EEPROM_BANK_0, CMD_STATION_CONFIG_OFFSET, CMD_STATION_CONFIG_MAX_OFFSET - CMD_STATION_CONFIG_OFFSET, @CommandStationConfigurationInRam);
 
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
@@ -238,10 +267,10 @@ begin
   H_Bridge_B_Lo_Direction := 0;                                                 // Output
   H_Bridge_B_Hi_Direction := 0;                                                 // Output
  
-  LATB15_bit := 1;
-  LATB14_bit := 0;
-  TRISB15_bit := 0;                                                             // Output
-  TRISB14_bit := 0;                                                             // Output
+  DCC_NMRA_Tranmitter_Lo := 1;
+  DCC_NMRA_Tranmitter_Hi := 0;
+  DCC_NMRA_Tranmitter_Lo_Direction := 0;                                        // Output
+  DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
 
   UART1_Write_Text('Starting 1'+LF);
 
@@ -265,7 +294,6 @@ begin
   LastDCCTime := 0;
   CV_Value := 0;
   RunningAllCVs := False;
-  Timer := 0;
   WriteVal := 0;
 
   j := 0;
@@ -283,6 +311,7 @@ begin
   
   while (TRUE) do
   begin
+    // Global updates
     ActiveNode := NMRAnetNode_NextNode;
     if ActiveNode <> PNMRAnetNode( nil) then
     begin
@@ -347,7 +376,7 @@ begin
               TempNode := NMRAnetNode_FindFirstVirtualNode;
               if TempNode <> nil then
               begin
-                ProxyData := GetProxyData( TempNode);
+                ProxyData := ExtractTrainProxyRamData( TempNode);
                 ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
               end;
             end;
@@ -389,13 +418,11 @@ begin
             end;
           'S' :
             begin
-              Timer := 0;
               ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, CV_Value, 0);
               RunningAllCVs := True;
             end;
           's' :
             begin
-              Timer := 0;
               ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, CV_Value, 0);
               RunningAllCVs := True;
             end;
@@ -421,66 +448,20 @@ begin
             begin
               Inc(RailComCount)  // Increase the number of 56us windows to black for a Cutout
             end;
-          'E' :
+          '9' :
             begin
-              Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_ENABLED := 1;     // Enabled RailCom
-            end;
-          'e' :
-            begin
-              Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_ENABLED := 0;    // Disable RailCom
+              ByteToStr(CommandStationConfigurationInRam.OutputMode, s1);
+              UART1_Write_Text('Output Mode: ' + s1 + LF);
+              ByteToStr(CommandStationConfigurationInRam.ProgrammingMode, s1);
+              UART1_Write_Text('Programming Mode: ' + s1 + LF);
+              ByteToStr(CommandStationConfigurationInRam.DccBusMode, s1);
+              UART1_Write_Text('DCC Bus Mode: ' + s1 + LF);
             end;
         end;
       end;
     end;
-    
-    if ServiceMode_ReadResults then
-    begin
-      ByteToSTr(CV_Value + 1, s1);
-      UART1_Write_Text('ServiceMode: CV = ' + s1);
-      ByteToSTr(ServiceModeInfo.Value, s1);
-      UART1_Write_Text('  Value = ' + s1);
-      case ServiceModeInfo.ServiceModeResult of
-        SERVICE_MODE_RESULT_DATA_NOT_FOUND : 
-          begin
-            UART1_Write_Text('  Data Not Received');
-            if ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT = 1 then
-              UART1_Write_Text(':  Ack Hi Found' + LF);
-            if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
-              UART1_Write_Text(':  Ack Low at 5ms');
-            if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
-              UART1_Write_Text(':  Ack High at 5ms');
-            UART1_Write_Text(LF);
-          end;
-        SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_READ :
-          begin
-            if ServiceModeInfo.ServiceModeType = SERVICE_MODE_TYPE_DIRECT_BYTE then
-              UART1_Write_Text('  Direct Mode - Bit' + LF)
-            else
-              UART1_Write_Text('  Direct Mode - Byte' + LF)
-          end;
-   //     SERVICE_MODE_RESULT_RESPONSE_PAGE_MODE : UART1_Write_Text('  Page Mode' + LF);
-        SERVICE_MODE_RESULT_SHORTCIRCUIT : UART1_Write_Text('  Short Detected' + LF);
-      end;
-      Inc(CV_Value);
-      if (CV_Value = 0) or not RunningAllCVs then
-      begin
-        ServiceMode_Quit;
-        ByteToStr(CV_Value, s1);
-        UART1_Write_Text('Time to read ' + s1);
-        FloatToStr(Timer * 56e-6, s1);
-        TruncFloat(@s1, 3, 6);
-        UART1_Write_Text(' CVs: ' + s1 + ' Seconds' + LF);
-      end else 
-      begin
-        case ServiceModeInfo.ServiceModeType of
-          SERVICE_MODE_TYPE_DIRECT_BYTE : ServiceMode_EngageServiceMode(@Programming, False, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, CV_Value, 0);
-          SERVICE_MODE_TYPE_DIRECT_BIT : ServiceMode_EngageServiceMode(@Programming, False, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, CV_Value, 0);
-        end
-      end
-    end;
 
     if C1IE_bit = 0 then
       UART1_Write_Text('CAN Disabled!');
-
   end;
 end.

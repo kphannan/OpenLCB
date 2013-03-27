@@ -63,9 +63,10 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   Menus, ActnList, ComCtrls, ExtCtrls, Buttons, olcb_threaded_stack,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
-  types, olcb_utilities, olcb_defines, form_messagelog, olcb_node, olcb_structure_helpers,
-  form_config_mem_viewer, laz2_DOM, laz2_XMLRead, laz2_XMLWrite, common_utilities,
-  form_awesome_throttle, form_train_config_editor,
+  Spin, types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
+  olcb_structure_helpers, form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
+  laz2_XMLWrite, common_utilities, form_awesome_throttle,
+  form_train_config_editor,
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}
