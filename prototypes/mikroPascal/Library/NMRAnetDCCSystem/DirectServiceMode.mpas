@@ -2,6 +2,7 @@ unit DirectServiceMode;
 
 uses
   NMRAnetDCC,
+  NMRAnetDefinesShared,
   ServiceModeDefines;
   
   
@@ -155,9 +156,13 @@ end;
 //    NOTE:  Everytime this StateMachine is entered the Transmitter MUST BE LOADED
 // ***************************************************************************
 procedure DirectServiceMode_StateMachineRead(BufferPtr: PDCCBufferInfo);
+const
+  QUICK_LOOK_COUNT = 5;
+  QUICK_LOOK_ARRAY: array[0..QUICK_LOOK_COUNT -1] of byte = (255, 128, 32, 64, 192);
 var
   BitOffset: Byte;
 begin
+  // Only update when we see the stop bit and need to update for the next packet sent
   if BufferPtr^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT = 1 then
   begin
     case ServiceModeInfo.iStateMachine of
@@ -184,17 +189,25 @@ begin
               DirectLoadTransmitter(BufferPtr, ServiceModeInfo.CV, %00000100, ServiceModeInfo.ReadIndex);
             end else
             begin
-              Inc(ServiceModeInfo.ReadIndex);                                   // Try the next Value
-              if ServiceModeInfo.Value = ServiceModeInfo.ReadIndex then         // Have we run all the way around the horn once
-              begin
-                ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;   // Run all possible values and an ACK was not found
-                ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY
-              end else
-              begin
-                ServiceModeInfo.iInstructionCountSent := 1;                     // Run the next possible Value cycle
-                ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESET_CYCLE;
-                NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
-              end
+          //    if ServicModeInfo.QuickLookIndex < QUICK_LOOK_COUNT then
+          //    begin
+          //      Inc(ServicModeInfo.QuickLookIndex);
+         //       ServiceModeInfo.iInstructionCountSent := 1;                     // Run the next possible Value cycle
+         //       NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+         //     end else
+        //      begin
+                Inc(ServiceModeInfo.ReadIndex);                                   // Try the next Value
+                if ServiceModeInfo.Value = ServiceModeInfo.ReadIndex then         // Have we run all the way around the horn once
+                begin
+                  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;   // Run all possible values and an ACK was not found
+                  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY
+                end else
+                begin
+                  ServiceModeInfo.iInstructionCountSent := 1;                     // Run the next possible Value cycle
+                  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESET_CYCLE;
+                  NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+                end
+           //   end
             end
           end
         end;

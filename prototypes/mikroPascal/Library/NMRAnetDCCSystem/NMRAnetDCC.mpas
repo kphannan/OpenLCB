@@ -62,6 +62,10 @@ const
   STATE_NMRA_DCC_PIN_3 = 3;                                                     // Second 56us (for a "0")
   STATE_NMRA_DCC_PIN_0_RAILCOM = 4;
   STATE_NMRA_DCC_PIN_1_RAILCOM = 5;
+  STATE_NMRA_DCC_PIN_2_RAILCOM = 6;
+  STATE_NMRA_DCC_PIN_3_RAILCOM = 7;
+  STATE_NMRA_DCC_PIN_4_RAILCOM = 8;
+  STATE_NMRA_DCC_PIN_5_RAILCOM = 9;
 
 type
   // ***************************************************************************
@@ -124,11 +128,13 @@ type
   //  (if not nil) and the transmitter state
   // ***************************************************************************
 const
-  TRANSMITTING_FLAG_CURRENT_BIT         = 0;           // Bit 0 = Current bit being transmitted
-  TRANSMITTING_FLAG_STOP_BIT            = 1;           // Bit 1 = Transmitting the last bit ("1" stop)
-  TRANSMITTING_FLAG_DCC_PIN_BIT         = 2;           // Bit 2 = State of the I/O Pin
-  TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 3;           // Bit 3 = RailCom Cutout Time
-  TRANSMITTING_FLAG_RAIL_COM_ENABLED    = 4;           // Bit 4 = Enable/Disable RailCom cutout
+  TRANSMITTING_FLAG_CURRENT_BIT                     = 0;           // Bit 0 = Current bit being transmitted
+  TRANSMITTING_FLAG_STOP_BIT                        = 1;           // Bit 1 = Transmitting the last bit ("1" stop)
+  TRANSMITTING_FLAG_DCC_PIN_BIT                     = 2;           // Bit 2 = State of the I/O Pin
+  TRANSMITTING_FLAG_RAIL_COM_CUTOUT_START_SLICE_BIT = 3;           // Bit 3 = RailCom Short Pulse Slice Occuring
+  TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT             = 4;           // Bit 4 = RailCom Cutout Occuring
+  TRANSMITTING_FLAG_RAIL_COM_CUTOUT_END_SLICE_BIT   = 5;           // Bit 5 = RailCom Short Pulse Slice Occuring
+  TRANSMITTING_FLAG_RAIL_COM_ENABLED                = 6;           // Bit 6 = Enable/Disable RailCom cutout
 
 type
   TDCCBufferInfo = record
@@ -159,7 +165,6 @@ type
 var
   Track: TDCCBufferInfo;
   Programming: TDCCBufferInfo;
-  RailComCount: Word;
 
 // Call once on start up
 procedure NMRA_DCC_Initialize; forward;
@@ -168,7 +173,7 @@ function NMRA_DCC_QueuePacket(ABuffer: PDCCBufferInfo; NewMessage: PDCCPacket; H
 // Loads the passed message with the raw passed data information
 procedure NMRA_DCC_LoadPacket(NewMessage: PDCCPacket; Data1, Data2, Data3, Data4, Data5, ValidDataByes: byte);
 // Increments to the next bit to transmit and returns it, keep checking IsTransmitting to see if tranmission is complete before calling expects to be called every 56us
-procedure NMRA_DCC_TransmitterStateMachine(ABuffer: PDCCBufferInfo); forward;
+procedure NMRA_DCC_TransmitterStateMachine(ABuffer: PDCCBufferInfo; ServiceMode: Boolean); forward;
 // Called by a timer that ticks every 56us or so
 procedure NMRA_DCC_56us_TimeTick(ABuffer: PDCCBufferInfo); forward;
 // Loads the next message into the transmitter
@@ -234,7 +239,6 @@ procedure NMRA_DCC_Initialize;
 begin
   InitializeBuffer(@Track, @TrackQueue, @TrackQueuePriority, MAX_TRACK_BUFFER_DEPTH, MAX_TRACK_PRIORITY_BUFFER_DEPTH);
   InitializeBuffer(@Programming, nil, nil, 0, 0);
-  RailComCount := DEFAULT_RAILCOM_COUNT;
 end;
 
 // ****************************************************************************
@@ -763,9 +767,6 @@ end;
 // ****************************************************************************
 procedure NMRA_DCC_TransmitterStateMachineHandleStopBit(ABuffer: PDCCBufferInfo);
 begin
-
-LATA4_bit := 1;
-
   ABuffer^.TX_iBit := STATE_NMRA_DCC_BIT_7;                                     // Reset Bit index for the next Byte
   ABuffer^.TX_Flags.TRANSMITTING_FLAG_CURRENT_BIT := 1;                         // Current Bit = 1 (stop bit)
   ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT := 1;                            // Flag we are transmitting the Stop Bit
@@ -789,7 +790,7 @@ end;
 //  Execution Time:    ~5.1us max
 //
 // ****************************************************************************
-procedure NMRA_DCC_TransmitterStateMachine(ABuffer: PDCCBufferInfo);
+procedure NMRA_DCC_TransmitterStateMachine(ABuffer: PDCCBufferInfo; ServiceMode: Boolean);
 begin
   case ABuffer^.TX_iDCC_Pin_StateMachine of
     STATE_NMRA_DCC_PIN_0 :     // Pin State 0 is the first "positive" 56us of a new bit being sent on the DCC line
@@ -827,27 +828,26 @@ begin
       ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 0;                     // Set the I/O Pin Low (negative half of the DCC cycle)
 
       if ABuffer^.Tx_Flags.TRANSMITTING_FLAG_CURRENT_BIT = 0 then
+      begin
+        // If it is a zero it can't be the stop bit!
         Inc(ABuffer^.TX_iDCC_Pin_StateMachine)                                  // It is a "0" so jump to the next half for a wait state to make it 112us wide
-      else begin
+      end else 
+      begin
         ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;              // It is a "1" so start the next bit from the beginning
 
         if ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT = 1 then                // If transmitting the second half of the stop bit then reset everything and get ready for the next message
-        begin
-        
-          LATA4_bit := 1;
-        
-          ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 0;
-          ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT := 0;
-          ABuffer^.TX_iStateMachine := STATE_NMRA_DCC_PREAMBLE;                 // New message starting
+        begin  
+          ABuffer^.TX_Flags.TRANSMITTING_FLAG_STOP_BIT := 0;                    // Reset the Stop Bit Flag
+          ABuffer^.TX_iStateMachine := STATE_NMRA_DCC_PREAMBLE;                 // New message starting.... eventually
           
-          if ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_ENABLED = 1 then
-            ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0_RAILCOM
-          else begin
-            ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 0;
-            ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;
-          end;
-          
-          LATA4_bit := 0;
+          // Don't do RailCom stuff in Service Mode
+          if not ServiceMode then
+          begin
+            if ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_ENABLED = 1 then
+              ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0_RAILCOM  // Jump to RailCom Statemachine
+            else
+              ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;        // Restart the Pin Statemachine
+          end
         end
       end;
     end;
@@ -857,21 +857,40 @@ begin
     end;
   STATE_NMRA_DCC_PIN_0_RAILCOM :
     begin
-      ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 1;
-      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 1;
-      ABuffer^.TX_RailComBitCount := RailComCount;
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_START_SLICE_BIT := 1;
+      ABuffer^.TX_RailComBitCount := DEFAULT_RAILCOM_COUNT;
       ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_1_RAILCOM
     end;
   STATE_NMRA_DCC_PIN_1_RAILCOM :
     begin
-      ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 0;
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_START_SLICE_BIT := 0;
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 1;
+      ABuffer^.TX_RailComBitCount := DEFAULT_RAILCOM_COUNT;
+      ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_2_RAILCOM
+    end;
+  STATE_NMRA_DCC_PIN_2_RAILCOM :
+    begin
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_START_SLICE_BIT := 0;
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 1;
+      ABuffer^.TX_RailComBitCount := DEFAULT_RAILCOM_COUNT;
+      ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_3_RAILCOM
+    end;
+  STATE_NMRA_DCC_PIN_3_RAILCOM :
+    begin
       // Need to reset the timer interrupt for the normal 58us bit, see the spec
       Dec(ABuffer^.TX_RailComBitCount);
       if ABuffer^.TX_RailComBitCount = 0 then
       begin
         ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 0;
-        ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;
+        ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_END_SLICE_BIT := 1;
+        ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_4_RAILCOM;
       end;
+    end;
+  STATE_NMRA_DCC_PIN_4_RAILCOM :
+    begin
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_END_SLICE_BIT := 0;
+      ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 1;
+      ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0
     end;
  end;
 end;

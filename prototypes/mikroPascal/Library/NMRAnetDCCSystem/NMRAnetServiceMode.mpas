@@ -37,7 +37,7 @@ procedure ServiceMode_100ms_TimeTick; forward;
 // Runs the statemachine from the Stop Bit of the DCC Transmitter Statemachine
 procedure ServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
 // Tests if the statemachine is in a mode where it is waiting to have the results of the operation read
-function ServiceMode_ReadResults: Boolean;
+function ServiceMode_ResultsReady: Boolean;
 // Ends the Statemachine (after a completed read/write cycle)
 procedure ServiceMode_Quit;
 
@@ -83,7 +83,7 @@ begin
   if AServiceModeType = SERVICE_MODE_TYPE_DIRECT_BIT then
   begin
     ServiceModeInfo.ReadIndex := 0;                                             // Redefined as the Index of bits into the Byte
-    if AServiceModeType = SERVICEMODE_READ then
+    if AReadWrite = SERVICEMODE_READ then
       ServiceModeInfo.Value := 0                                                // Ready to receive data (we only look for "1" and default to "0" if "1" does not reply
     else
       ServiceModeInfo.Value := AValue;                                          // Value to write to the decoder in Bit Mode
@@ -195,7 +195,7 @@ begin
   end;
 end;
 
-function ServiceMode_ReadResults: Boolean;
+function ServiceMode_ResultsReady: Boolean;
 begin
   Result := False;
   if ServiceModeInfo.iStateMachine = STATE_SERVICEMODE_RESULTS_READY then

@@ -93,7 +93,7 @@ begin
     end;
     // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
     ServiceMode_56us_TimeTick;
-    NMRA_DCC_TransmitterStateMachine(@Programming);
+    NMRA_DCC_TransmitterStateMachine(@Programming, True);
     ServiceMode_StateMachine(@Programming);
   end
 end;
@@ -110,9 +110,6 @@ end;
 
 procedure RunNonRailComMode;
 begin
-
-LATA4_bit := not LATA4_bit;
-
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
   H_Bridge_B_Lo := 0;                                                           // Bridge Off
@@ -131,19 +128,55 @@ end;
 
 procedure RunRailComMode;
 begin
-  // RailCom Mode
-  if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
+  if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_START_SLICE_BIT = 1 then
   begin
-    H_Bridge_A_Lo := 1;
-    H_Bridge_B_Hi := 1;
+    // RailCom Mode
+    H_Bridge_A_Lo := 0;                                                           // Bridge Off
+    H_Bridge_A_Hi := 0;                                                           // Bridge Off
+    H_Bridge_B_Lo := 0;                                                           // Bridge Off
+    H_Bridge_B_Hi := 0;                                                           // Bridge Off
+    
     PR1 := DCC_TIMER_29US;
+    
+    H_Bridge_A_Lo := 1;
+    H_Bridge_B_Hi := 1;                                                           // Send a "1"
   end else
+  if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 1 then
   begin
     if PR1 = DCC_TIMER_29US then
-      PR1 := DCC_TIMER_56US;
+      PR1 := DCC_TIMER_58US;
+      
     H_Bridge_A_Lo := 1;
     H_Bridge_B_Lo := 1;
-  end;
+  end else
+  if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_END_SLICE_BIT = 1 then
+  begin
+    // RailCom Mode
+    H_Bridge_A_Lo := 0;                                                           // Bridge Off
+    H_Bridge_A_Hi := 0;                                                           // Bridge Off
+    H_Bridge_B_Lo := 0;                                                           // Bridge Off
+    H_Bridge_B_Hi := 0;                                                           // Bridge Off
+    
+    H_Bridge_A_Hi := 1;
+    H_Bridge_B_Lo := 1;                                                           // Send a "0"
+  end else
+  begin
+    // RailCom Mode
+    H_Bridge_A_Lo := 0;                                                           // Bridge Off
+    H_Bridge_A_Hi := 0;                                                           // Bridge Off
+    H_Bridge_B_Lo := 0;                                                           // Bridge Off
+    H_Bridge_B_Hi := 0;                                                           // Bridge Off
+
+    if Track.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
+    begin
+      H_Bridge_A_Lo := 1;
+      H_Bridge_B_Hi := 1;
+    end else
+    begin
+      H_Bridge_A_Hi := 1;
+      H_Bridge_B_Lo := 1;
+    end;
+  end
 end;
 
 procedure INTERRUPT_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT;
@@ -167,7 +200,7 @@ begin
     
     // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
     NMRA_DCC_56us_TimeTick(@Track);                                                         // < 1us
-    NMRA_DCC_TransmitterStateMachine(@Track);                                               // < 5us
+    NMRA_DCC_TransmitterStateMachine(@Track, False);                                        // < 5us
     NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
   end;
 end;
@@ -439,14 +472,6 @@ begin
           'Q', 'q' :
             begin
               RunningAllCVs := False;
-            end;
-          'r' :
-            begin
-              Dec(RailComCount)       // Decrease the number of 56us windows to black for a Cutout
-            end;
-          'R' :
-            begin
-              Inc(RailComCount)  // Increase the number of 56us windows to black for a Cutout
             end;
           '9' :
             begin

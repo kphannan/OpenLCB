@@ -15,7 +15,7 @@ const
   CAN_PHASESEG_2 = 5;               //
   CAN_PROP_SEG   = 3;               //
   
-  DCC_TIMER_56US = 1792;            // Clock ticks every 31.25ns * 1792 = 56us interrupts
+  DCC_TIMER_58US = 1792;            // Clock ticks every 31.25ns * 1856 = 58us interrupts
   DCC_TIMER_29US = 928;             // Clock ticks every 31.25ns * 928 = 29us interrupts
   
 
@@ -168,7 +168,7 @@ begin
   T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 7   (1 means off)
   T1IP_1_bit := 1;
   T1IP_2_bit := 1;
-  PR1 := DCC_TIMER_56US;
+  PR1 := DCC_TIMER_58US;
   T1IF_bit := 0;           // Clear T1IF
   T1IE_bit := 1;           // Enable the Interrupt
   {$ENDIF}
