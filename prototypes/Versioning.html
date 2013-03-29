@@ -80,7 +80,7 @@ section of prototypes. A typical entry would be:</SPAN></P>
 <P STYLE="margin-left: 2cm; margin-bottom: 0cm; text-decoration: none">
 Now echoes back the messages received over TCP/IP to allow multiple
 connections.</P>
-<PRE STYLE="margin-left: 2cm; margin-bottom: 0.5cm; text-decoration: none">svn co https://openlcb.svn.sourceforge.net/svnroot/openlcb/tags/1.0.1.0/prototypes/C/CAN2EtherNetServer</PRE><P STYLE="margin-bottom: 0cm; text-decoration: none">
+<PRE STYLE="margin-left: 2cm; margin-bottom: 0.5cm; text-decoration: none">svn co http://svn.code.sf.net/p/openlcb/svn/tags/1.0.1.0/prototypes/C/CAN2EtherNetServer</PRE><P STYLE="margin-bottom: 0cm; text-decoration: none">
 As more versions are defined, their descriptions will accumulate in
 the file. By including the SVN command or commands necessary to pull
 that particular version from the repository, there's no ambiguity as
@@ -95,7 +95,7 @@ mechanism to make a copy of a specific set of files. The procedure to
 label a new version (in this case, labeled 1.0.4.0) from your
 existing code (CAN2EtherNetServer directory, all checked into SVN)
 is;:</P>
-<PRE STYLE="text-decoration: none">svn mkdir -–parents -m”comment” https://openlcb.svn.sourceforge.net/svnroot/openlcb/tags/1.0.1.0/prototypes/C/
+<PRE STYLE="text-decoration: none">svn mkdir -–parents -m”comment” http://svn.code.sf.net/p/openlcb/svn/tags/1.0.1.0/prototypes/C/
 svn copy -m”comment” CAN2EtherNetServer https://openlcb.svn.sourceforge.net/svnroot/openlcb/tags/1.0.1.0/prototypes/C/</PRE><P STYLE="text-decoration: none">
 The mkdir operation ensures that the directories exist, but may not
 be necessary depending on what versions have already been created.</P>
