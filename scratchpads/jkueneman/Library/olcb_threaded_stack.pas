@@ -24,6 +24,8 @@ const
  // HEADER_MEMCONFIG_SPACE_INFO_ACDI_WRITE_USER_REQUEST: TCANByteArray  = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, MSI_FUNCTIONS, $00, $00, $00, $00, $00);
   HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST: TCANByteArray          = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, $00, $00, $00, $00, $00, $00);
 
+var
+  TaskObjects: DWord;
 
 type
 
@@ -102,7 +104,7 @@ type
       procedure Add(Msg: AnsiString);
       procedure AddDatagramToSend(Datagram: TDatagramSend);
       procedure AddTask(NewTask: TOlcbTaskBase);
-      procedure RemoveTasks(RemoveKey: PtrInt);
+      procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
       property Connected: Boolean read FConnected write FConnected;
       property Serial: TBlockSerial read FSerial write FSerial;
@@ -646,6 +648,7 @@ end;
 constructor TOlcbTaskBase.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean);
 begin
   inherited Create;
+  Inc(TaskObjects);
   FDestinationAlias := ADestinationAlias;
   FSourceAlias := ASourceAlias;
   FMessageHelper := TOpenLCBMessageHelper.Create;
@@ -660,6 +663,7 @@ end;
 
 destructor TOlcbTaskBase.Destroy;
 begin
+  Dec(TaskObjects);
   FreeAndNil(FMessageHelper);
   inherited Destroy;
 end;
@@ -988,7 +992,7 @@ begin
   end;
 end;
 
-procedure TComPortThread.RemoveTasks(RemoveKey: PtrInt);
+procedure TComPortThread.RemoveAndFreeTasks(RemoveKey: PtrInt);
 var
   List: TList;
   i: Integer;
@@ -1000,7 +1004,11 @@ begin
     for i := List.Count - 1 downto 0 do
     begin
       if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) then
+      begin
         TOlcbTaskBase( List[i]).ForceTermination := True;
+        TOlcbTaskBase( List[i]).Free;
+        List.Delete(i);
+      end;
     end;
   finally
     OlcbTaskManager.TaskList.UnlockList;
@@ -1659,6 +1667,11 @@ begin
   end;
 end;
 
+initialization
+  TaskObjects := 0;
+
+finalization
+
 
 end.
-
+
