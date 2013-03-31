@@ -7,12 +7,16 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls, ComCtrls, Spin, laz2_DOM, laz2_XMLRead, Types, olcb_common_tasks,
-  olcb_threaded_stack;
+  olcb_threaded_stack, Buttons;
+
+const
+  CV_BUTTON_WIDTH = 80;
 
 
 type
 
   TOlcbConfigDataType = (cdt_String, cdt_Int, cdt_EventID, cdt_Bit);
+  TOlcbConfigState = (ocs_Current, ocs_Unknown);
 
   { TMapRelation }
 
@@ -52,59 +56,101 @@ type
     FConfigMemAddress: DWord;
     FConfigMemSize: DWord;
     FDataType: TOlcbConfigDataType;
-    FIsDirty: Boolean;
-    FIsUnknownState: Boolean;
     FMapList: TMap;
+    FOnChangeState: TNotifyEvent;
+    FState: TOlcbConfigState;
     FTask: TOlcbTaskBase;
+    procedure SetState(AValue: TOlcbConfigState);
   public
     constructor Create(MemOffset, MemSize: DWord; ADataType: TOlcbConfigDataType);
     destructor Destroy; override;
     property ConfigMemAddress: DWord read FConfigMemAddress write FConfigMemAddress;
     property ConfigMemSize: DWord read FConfigMemSize write FConfigMemSize;
-    property IsDirty: Boolean read FIsDirty write FIsDirty;
-    property IsUnknownState: Boolean read FIsUnknownState write FIsUnknownState;
     property Task: TOlcbTaskBase read FTask write FTask;
     property DataType: TOlcbConfigDataType read FDataType write FDataType;
     property MapList: TMap read FMapList write FMapList;
+    property State: TOlcbConfigState read FState write SetState;
+    property OnChangeState: TNotifyEvent read FOnChangeState write FOnChangeState;
   end;
 
   { TOlcbSpinEdit }
 
   TOlcbSpinEdit = class(TSpinEdit)
   private
+    FCompareCVSpeedButton: TSpeedButton;
     FConfigInfo: TConfigInfo;
+    FImageList16x16: TImageList;
+    FReadCVSpeedButton: TSpeedButton;
+    FStateImage: TImage;
+    FWriteCVSpeedButton: TSpeedButton;
+  protected
+    procedure OnDrawImageState(Sender: TObject);
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
     property ConfigInfo: TConfigInfo read FConfigInfo write FConfigInfo;
+    property ReadCVSpeedButton: TSpeedButton read FReadCVSpeedButton write FReadCVSpeedButton;
+    property WriteCVSpeedButton: TSpeedButton read FWriteCVSpeedButton write FWriteCVSpeedButton;
+    property CompareCVSpeedButton: TSpeedButton read FCompareCVSpeedButton write FCompareCVSpeedButton;
+    property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
+    property StateImage: TImage read FStateImage write FStateImage;
   end;
 
   { TOlcbEdit }
 
   TOlcbEdit = class(TEdit)
   private
+    FCompareCVSpeedButton: TSpeedButton;
     FConfigInfo: TConfigInfo;
+    FImageList16x16: TImageList;
+    FReadCVSpeedButton: TSpeedButton;
+    FStateImage: TImage;
+    FWriteCVSpeedButton: TSpeedButton;
+  protected
+    procedure OnDrawImageState(Sender: TObject);
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
     property ConfigInfo: TConfigInfo read FConfigInfo write FConfigInfo;
+    property ReadCVSpeedButton: TSpeedButton read FReadCVSpeedButton write FReadCVSpeedButton;
+    property WriteCVSpeedButton: TSpeedButton read FWriteCVSpeedButton write FWriteCVSpeedButton;
+    property CompareCVSpeedButton: TSpeedButton read FCompareCVSpeedButton write FCompareCVSpeedButton;
+    property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
+    property StateImage: TImage read FStateImage write FStateImage;
   end;
 
   { TOlcbComboBox }
 
   TOlcbComboBox = class(TComboBox)
   private
+    FCompareCVSpeedButton: TSpeedButton;
     FConfigInfo: TConfigInfo;
+    FImageList16x16: TImageList;
+    FReadCVSpeedButton: TSpeedButton;
+    FStateImage: TImage;
+    FWriteCVSpeedButton: TSpeedButton;
+  protected
+    procedure OnDrawImageState(Sender: TObject);
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
     property ConfigInfo: TConfigInfo read FConfigInfo write FConfigInfo;
+    property ReadCVSpeedButton: TSpeedButton read FReadCVSpeedButton write FReadCVSpeedButton;
+    property WriteCVSpeedButton: TSpeedButton read FWriteCVSpeedButton write FWriteCVSpeedButton;
+    property CompareCVSpeedButton: TSpeedButton read FCompareCVSpeedButton write FCompareCVSpeedButton;
+    property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
+    property StateImage: TImage read FStateImage write FStateImage;
   end;
 
   { TCdiParser }
 
   TCdiParser = class
+  private
+    FImageList16x16: TImageList;
+    FOnSpeedButtonReadConfigClickCallback: TNotifyEvent;
+    FOnSpeedButtonWriteConfigClickCallback: TNotifyEvent;
   protected
+    procedure AddSpeedButtonGlyph(SpeedButton: TSpeedButton; ImageListIndex: Integer);
     function ExtractElementItem(Element: TDOMNode; Item: string; var ItemStr: string): Boolean;
     function ExtractElementAttribute(Element: TDOMNode; AttributeName: string; var AttributeStr: string): Boolean;
     function IsMemorySpace(Segment: TDOMNode; MemorySpace: Byte): Boolean;
@@ -116,9 +162,16 @@ type
     procedure AddEdit(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
     procedure AddComboBoxList(ParentControl: TScrollBox; Element: TDOMNode; var ControlOffset: Integer; ControlMargin, Indent: Integer; MemOffset, MemSize: DWord; PrintMemOffset: Boolean; ElementType: string);
     procedure ProcessElementForUI(ParentControl: TScrollBox; Element: TDOMNode; var MemOffset: DWord; var ControlOffset: Integer; Indent: Integer; SupressNameAndDescription: Boolean; PrintMemOffset: Boolean);
+    procedure OnSpinEditChange(Sender: TObject);
+    procedure OnEditChange(Sender: TObject);
+    procedure OnComboBoxChange(Sender: TObject);
   public
+    constructor Create;
     function Build_CDI_Interface(ParentControl: TPanel; CDI: TXMLDocument): TPageControl;
     procedure Clear_CDI_Interface(ParentControl: TPanel);
+    property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
+    property OnSpeedButtonReadConfigClickCallback: TNotifyEvent read FOnSpeedButtonReadConfigClickCallback write FOnSpeedButtonReadConfigClickCallback;
+    property OnSpeedButtonWriteConfigClickCallback: TNotifyEvent read FOnSpeedButtonWriteConfigClickCallback write FOnSpeedButtonWriteConfigClickCallback;
   end;
 
 implementation
@@ -212,10 +265,39 @@ end;
 
 { TOlcbComboBox }
 
+procedure TOlcbComboBox.OnDrawImageState(Sender: TObject);
+var
+  ImageIndex: Integer;
+  Bitmap: TBitmap;
+begin
+  case ConfigInfo.State of
+    ocs_Current :
+      begin
+        ImageIndex := 6;
+        StateImage.Picture.Clear;
+      end;
+    ocs_Unknown :
+      begin
+        ImageIndex := 52;
+        Bitmap := TBitmap.Create;
+        Bitmap.Width := ImageList16x16.Width;
+        Bitmap.Height := ImageList16x16.Height;
+        ImageList16x16.GetBitmap(ImageIndex, Bitmap);
+        StateImage.Picture.Graphic := Bitmap;
+        Bitmap.Free;
+      end;
+  end;
+end;
+
 constructor TOlcbComboBox.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   FConfigInfo := nil;
+  ReadCVSpeedButton := TSpeedButton.Create(Self);
+  WriteCVSpeedButton := TSpeedButton.Create(Self);
+  CompareCVSpeedButton := TSpeedButton.Create(Self);
+  StateImage := TImage.Create(Self);
+  FImageList16x16 := nil;
 end;
 
 destructor TOlcbComboBox.Destroy;
@@ -226,10 +308,39 @@ end;
 
 { TOlcbEdit }
 
+procedure TOlcbEdit.OnDrawImageState(Sender: TObject);
+var
+  ImageIndex: Integer;
+  Bitmap: TBitmap;
+begin
+  case ConfigInfo.State of
+    ocs_Current :
+      begin
+        ImageIndex := 6;
+        StateImage.Picture.Clear;
+      end;
+    ocs_Unknown :
+      begin
+        ImageIndex := 52;
+        Bitmap := TBitmap.Create;
+        Bitmap.Width := ImageList16x16.Width;
+        Bitmap.Height := ImageList16x16.Height;
+        ImageList16x16.GetBitmap(ImageIndex, Bitmap);
+        StateImage.Picture.Graphic := Bitmap;
+        Bitmap.Free;
+      end;
+  end;
+end;
+
 constructor TOlcbEdit.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   FConfigInfo := nil;
+  ReadCVSpeedButton := TSpeedButton.Create(Self);
+  WriteCVSpeedButton := TSpeedButton.Create(Self);
+  CompareCVSpeedButton := TSpeedButton.Create(Self);
+  StateImage := TImage.Create(Self);
+  ImageList16x16 := nil;
 end;
 
 destructor TOlcbEdit.Destroy;
@@ -240,10 +351,39 @@ end;
 
 { TOlcbSpinEdit }
 
+procedure TOlcbSpinEdit.OnDrawImageState(Sender: TObject);
+var
+  ImageIndex: Integer;
+  Bitmap: TBitmap;
+begin
+  case ConfigInfo.State of
+    ocs_Current :
+      begin
+        ImageIndex := 6;
+        StateImage.Picture.Clear;
+      end;
+    ocs_Unknown :
+      begin
+        ImageIndex := 52;
+        Bitmap := TBitmap.Create;
+        Bitmap.Width := ImageList16x16.Width;
+        Bitmap.Height := ImageList16x16.Height;
+        ImageList16x16.GetBitmap(ImageIndex, Bitmap);
+        StateImage.Picture.Graphic := Bitmap;
+        Bitmap.Free;
+      end;
+  end;
+end;
+
 constructor TOlcbSpinEdit.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   FConfigInfo := nil;
+  ReadCVSpeedButton := TSpeedButton.Create(Self);
+  WriteCVSpeedButton := TSpeedButton.Create(Self);
+  CompareCVSpeedButton := TSpeedButton.Create(Self);
+  StateImage := TImage.Create(Self);
+  ImageList16x16 := nil;
 end;
 
 destructor TOlcbSpinEdit.Destroy;
@@ -253,6 +393,18 @@ begin
 end;
 
 { TCdiParser }
+
+procedure TCdiParser.AddSpeedButtonGlyph(SpeedButton: TSpeedButton; ImageListIndex: Integer);
+var
+  Bitmap: TBitmap;
+begin
+  Bitmap := TBitmap.Create;
+  Bitmap.Width := ImageList16x16.Width;
+  Bitmap.Height := ImageList16x16.Height;
+  ImageList16x16.GetBitmap(ImageListIndex, Bitmap);
+  SpeedButton.Glyph.Assign(Bitmap);
+  Bitmap.Free;
+end;
 
 function TCdiParser.ExtractElementItem(Element: TDOMNode; Item: string; var ItemStr: string): Boolean;
 var
@@ -401,11 +553,11 @@ begin
   ASpinEdit.MaxValue := MaxInt;
 
   // Extract special modifiers
-  if ExtractElementAttribute(Element, 'min', TempStr) then
+  if ExtractElementItem(Element, 'min', TempStr) then
     ASpinEdit.MinValue := StrToInt(TempStr);
-  if ExtractElementAttribute(Element, 'max', TempStr) then
+  if ExtractElementItem(Element, 'max', TempStr) then
     ASpinEdit.MaxValue := StrToInt(TempStr);
-  if ExtractElementAttribute(Element, 'default', TempStr) then
+  if ExtractElementItem(Element, 'default', TempStr) then
     ASpinEdit.Value := StrToInt(TempStr);
   ASpinEdit.Text := '';
 
@@ -426,11 +578,47 @@ begin
     ASpinEdit.MaxValue := 1;
     ASpinEdit.MinValue := 0;
   end;
+  ASpinEdit.ConfigInfo.OnChangeState := @ASpinEdit.OnDrawImageState;
 
   // Create the Control Window
+  ASpinEdit.StateImage.Left := Indent;
+  ASpinEdit.StateImage.Top := ControlOffset;
+  ASpinEdit.StateImage.Width := 20; // ImageList16x16.Width;
+  ASpinEdit.StateImage.Height := 20; //ImageList16x16.Height;
+  ASpinEdit.ImageList16x16 := ImageList16x16;
+  ASpinEdit.OnDrawImageState(ASpinEdit.ConfigInfo);
+  ASpinEdit.StateImage.Parent := ParentControl;
+
   ASpinEdit.Top := ControlOffset;
-  ASpinEdit.Left := Indent;
+  ASpinEdit.Left := ASpinEdit.StateImage.Left + ASpinEdit.StateImage.Width + 8;
+  ASpinEdit.OnChange := @OnSpinEditChange;
   ASpinEdit.Parent := ParentControl;
+
+  ASpinEdit.ReadCVSpeedButton.Left := ASpinEdit.Left + ASpinEdit.Width + 4;
+  ASpinEdit.ReadCVSpeedButton.Top := ASpinEdit.Top;
+  ASpinEdit.ReadCVSpeedButton.Height := ASpinEdit.Height;
+  ASpinEdit.ReadCVSpeedButton.Width := CV_BUTTON_WIDTH;
+  ASpinEdit.ReadCVSpeedButton.Caption := 'Read';
+  ASpinEdit.ReadCVSpeedButton.OnClick := OnSpeedButtonReadConfigClickCallback;
+  AddSpeedButtonGlyph(ASpinEdit.ReadCVSpeedButton, 55);
+  ASpinEdit.ReadCVSpeedButton.Parent := ParentControl;
+
+  ASpinEdit.WriteCVSpeedButton.Left := ASpinEdit.ReadCVSpeedButton.Left + ASpinEdit.ReadCVSpeedButton.Width + 4;
+  ASpinEdit.WriteCVSpeedButton.Top := ASpinEdit.Top;
+  ASpinEdit.WriteCVSpeedButton.Height := ASpinEdit.Height;
+  ASpinEdit.WriteCVSpeedButton.Width := CV_BUTTON_WIDTH;
+  ASpinEdit.WriteCVSpeedButton.Caption := 'Write';
+  ASpinEdit.WriteCVSpeedButton.OnClick := OnSpeedButtonWriteConfigClickCallback;
+  AddSpeedButtonGlyph(ASpinEdit.WriteCVSpeedButton, 12);
+  ASpinEdit.WriteCVSpeedButton.Parent := ParentControl;
+
+{  ASpinEdit.CompareCVSpeedButton.Left := ASpinEdit.WriteCVSpeedButton.Left + ASpinEdit.WriteCVSpeedButton.Width + 4;
+  ASpinEdit.CompareCVSpeedButton.Top := ASpinEdit.Top;
+  ASpinEdit.CompareCVSpeedButton.Height := ASpinEdit.Height;
+  ASpinEdit.CompareCVSpeedButton.Width := CV_BUTTON_WIDTH;
+  ASpinEdit.CompareCVSpeedButton.Caption := 'Compare';
+  ASpinEdit.CompareCVSpeedButton.OnClick := OnSpeedButtonReadConfigClickCallback;
+  ASpinEdit.CompareCVSpeedButton.Parent := ParentControl;    }
 
   // Update the Control Offsets
   ControlOffset := ControlOffset + ASpinEdit.Height + ControlMargin;
@@ -456,23 +644,13 @@ begin
 
   // Create the Edit
   AnEdit := TOlcbEdit.Create(ParentControl);
+  AnEdit.Left := Indent + ImageList16x16.Width + 8;    // Need valid to deal with setting the width
 
   // Look for descripive names and descriptions to print
   if ExtractElementItem(Element, 'name', TempStr) then
     AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
   if ExtractElementItem(Element, 'description', TempStr) then
     AddLabel(ParentControl, TempStr, ControlOffset, 2, Indent, False);
-
-  // Calculate the Width of the control needed
-  for i := 0 to MemSize - 1 do
-    TempStr := TempStr + 'Y';
-  Size := Application.MainForm.Canvas.TextExtent(TempStr);
-  if ElementType = 'eventid' then
-    AnEdit.Width := Round( Size.cx * 3.2)
-  else
-    AnEdit.Width := Round( Size.cx * 1.2);
-  if AnEdit.Left + AnEdit.Width > ParentControl.Width then
-    AnEdit.Width := ParentControl.Width - AnEdit.Left - 32;
 
   // Create the ConfigInfo Struture
   if ElementType = 'eventid' then
@@ -486,11 +664,60 @@ begin
   else
   if ElementType = 'bit' then
     AnEdit.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_bit);
+  AnEdit.ConfigInfo.OnChangeState := @AnEdit.OnDrawImageState;
+
+  // Calculate the Width of the control needed
+  for i := 0 to MemSize - 1 do
+    TempStr := TempStr + 'Y';
+  Size := Application.MainForm.Canvas.TextExtent(TempStr);
+  if ElementType = 'eventid' then
+    AnEdit.Width := Round( Size.cx * 3.2)
+  else
+    AnEdit.Width := Round( Size.cx * 1.2);
+  if AnEdit.Left + AnEdit.Width + (2*(CV_BUTTON_WIDTH+4)) + 32 > ParentControl.Parent.Width then      // The ScrollWindow can be wider than the view
+    AnEdit.Width := ParentControl.Parent.Width - (AnEdit.Left + (2*(CV_BUTTON_WIDTH+4) + 32));
 
   // Create the Control Window
+  AnEdit.StateImage.Left := Indent;
+  AnEdit.StateImage.Top := ControlOffset;
+  AnEdit.StateImage.Width := ImageList16x16.Width;
+  AnEdit.StateImage.Height := ImageList16x16.Height;
+  AnEdit.ImageList16x16 := ImageList16x16;
+  AnEdit.OnDrawImageState(AnEdit.ConfigInfo);
+ // AnEdit.Anchors := [akLeft, akRight, akTop];
+  AnEdit.StateImage.Parent := ParentControl;
+
   AnEdit.Top := ControlOffset;
-  AnEdit.Left := Indent;
+  AnEdit.OnChange := @OnEditChange;
   AnEdit.Parent := ParentControl;
+
+  AnEdit.ReadCVSpeedButton.Left := AnEdit.Left + AnEdit.Width + 4;
+  AnEdit.ReadCVSpeedButton.Top := AnEdit.Top;
+  AnEdit.ReadCVSpeedButton.Height := AnEdit.Height;
+  AnEdit.ReadCVSpeedButton.Width := CV_BUTTON_WIDTH;
+  AnEdit.ReadCVSpeedButton.Caption := 'Read';
+  AnEdit.ReadCVSpeedButton.OnClick := OnSpeedButtonReadConfigClickCallback;
+  AddSpeedButtonGlyph(AnEdit.ReadCVSpeedButton, 55);
+//  AnEdit.ReadCVSpeedButton.Anchors := [akRight, akTop];
+  AnEdit.ReadCVSpeedButton.Parent := ParentControl;
+
+  AnEdit.WriteCVSpeedButton.Left := AnEdit.ReadCVSpeedButton.Left + AnEdit.ReadCVSpeedButton.Width + 4;
+  AnEdit.WriteCVSpeedButton.Top := AnEdit.Top;
+  AnEdit.WriteCVSpeedButton.Height := AnEdit.Height;
+  AnEdit.WriteCVSpeedButton.Width := CV_BUTTON_WIDTH;
+  AnEdit.WriteCVSpeedButton.Caption := 'Write';
+  AnEdit.WriteCVSpeedButton.OnClick := OnSpeedButtonWriteConfigClickCallback;
+  AddSpeedButtonGlyph(AnEdit.WriteCVSpeedButton, 12);
+ // AnEdit.WriteCVSpeedButton.Anchors := [akRight, akTop];
+  AnEdit.WriteCVSpeedButton.Parent := ParentControl;
+
+{  AnEdit.CompareCVSpeedButton.Left := AnEdit.WriteCVSpeedButton.Left + AnEdit.WriteCVSpeedButton.Width + 4;
+  AnEdit.CompareCVSpeedButton.Top := AnEdit.Top;
+  AnEdit.CompareCVSpeedButton.Height := AnEdit.Height;
+  AnEdit.CompareCVSpeedButton.Width := CV_BUTTON_WIDTH;
+  AnEdit.CompareCVSpeedButton.Caption := 'Compare';
+  AnEdit.CompareCVSpeedButton.OnClick := OnSpeedButtonReadConfigClickCallback;
+  AnEdit.CompareCVSpeedButton.Parent := ParentControl; }
 
   // Update the Control Offsets
   ControlOffset := ControlOffset + AnEdit.Height + ControlMargin;
@@ -563,6 +790,7 @@ begin
     else
     if ElementType = 'bit' then
       AComboBoxList.ConfigInfo := TConfigInfo.Create(MemOffset, MemSize, cdt_bit);
+    AComboBoxList.ConfigInfo.OnChangeState := @AComboBoxList.OnDrawImageState;
 
     // Run the children of the map looking for its relations
     LongestStr := '';
@@ -600,9 +828,44 @@ begin
     AComboBoxList.Width := Round( Size.cx + 50);
 
     // Create the Control Window
+    AComboBoxList.StateImage.Left := Indent;
+    AComboBoxList.StateImage.Top := ControlOffset;
+    AComboBoxList.StateImage.Width := ImageList16x16.Width;
+    AComboBoxList.StateImage.Height := ImageList16x16.Height;
+    AComboBoxList.ImageList16x16 := ImageList16x16;
+    AComboBoxList.OnDrawImageState(AComboBoxList.ConfigInfo);
+    AComboBoxList.StateImage.Parent := ParentControl;
+
     AComboBoxList.Top := ControlOffset;
-    AComboBoxList.Left := Indent;
+    AComboBoxList.Left := AComboBoxList.StateImage.Left + AComboBoxList.StateImage.Width + 8;
+    AComboBoxList.OnChange := @OnComboBoxChange;
     AComboBoxList.Parent := ParentControl;
+
+    AComboBoxList.ReadCVSpeedButton.Left := AComboBoxList.Left + AComboBoxList.Width + 4;
+    AComboBoxList.ReadCVSpeedButton.Top := AComboBoxList.Top;
+    AComboBoxList.ReadCVSpeedButton.Height := AComboBoxList.Height;
+    AComboBoxList.ReadCVSpeedButton.Width := CV_BUTTON_WIDTH;
+    AComboBoxList.ReadCVSpeedButton.Caption := 'Read';
+    AComboBoxList.ReadCVSpeedButton.OnClick := OnSpeedButtonReadConfigClickCallback;
+    AddSpeedButtonGlyph(AComboBoxList.ReadCVSpeedButton, 55);
+    AComboBoxList.ReadCVSpeedButton.Parent := ParentControl;
+
+    AComboBoxList.WriteCVSpeedButton.Left := AComboBoxList.ReadCVSpeedButton.Left + AComboBoxList.ReadCVSpeedButton.Width + 4;
+    AComboBoxList.WriteCVSpeedButton.Top := AComboBoxList.Top;
+    AComboBoxList.WriteCVSpeedButton.Height := AComboBoxList.Height;
+    AComboBoxList.WriteCVSpeedButton.Width := CV_BUTTON_WIDTH;
+    AComboBoxList.WriteCVSpeedButton.Caption := 'Write';
+    AComboBoxList.WriteCVSpeedButton.OnClick := OnSpeedButtonWriteConfigClickCallback;
+    AddSpeedButtonGlyph(AComboBoxList.WriteCVSpeedButton, 12);
+    AComboBoxList.WriteCVSpeedButton.Parent := ParentControl;
+
+ {   AComboBoxList.CompareCVSpeedButton.Left := AComboBoxList.WriteCVSpeedButton.Left + AComboBoxList.WriteCVSpeedButton.Width + 4;
+    AComboBoxList.CompareCVSpeedButton.Top := AComboBoxList.Top;
+    AComboBoxList.CompareCVSpeedButton.Height := AComboBoxList.Height;
+    AComboBoxList.CompareCVSpeedButton.Width := CV_BUTTON_WIDTH;
+    AComboBoxList.CompareCVSpeedButton.Caption := 'Compare';
+    AComboBoxList.CompareCVSpeedButton.OnClick := OnSpeedButtonReadConfigClickCallback;
+    AComboBoxList.CompareCVSpeedButton.Parent := ParentControl;       }
 
     // Update the Control Offsets
     ControlOffset := ControlOffset + AComboBoxList.Height + ControlMargin;
@@ -713,6 +976,28 @@ begin
      end else
    end;
  end;
+end;
+
+procedure TCdiParser.OnSpinEditChange(Sender: TObject);
+begin
+  (Sender as TOlcbSpinEdit).ConfigInfo.State := ocs_Unknown;
+end;
+
+procedure TCdiParser.OnEditChange(Sender: TObject);
+begin
+  (Sender as TOlcbEdit).ConfigInfo.State := ocs_Unknown;
+end;
+
+procedure TCdiParser.OnComboBoxChange(Sender: TObject);
+begin
+ (Sender as TOlcbComboBox).ConfigInfo.State := ocs_Unknown;
+end;
+
+constructor TCdiParser.Create;
+begin
+  inherited Create;
+  ImageList16x16 := nil;
+  OnSpeedButtonReadConfigClickCallback := nil;
 end;
 
 function TCdiParser.Build_CDI_Interface(ParentControl: TPanel; CDI: TXMLDocument): TPageControl;
@@ -858,6 +1143,23 @@ var
       end;
       Cdi_Child := Cdi_Child.NextSibling;
     end;
+
+    // Allow the controls to be built so Change event are not fired the first time a tab is selected
+    Result.ActivePageIndex := Result.PageCount - 1;
+    Result.ActivePageIndex := 0;
+
+
+    // If we anchor it earlier then any control that make the client widow wider "drags" the edits boxes to the right.
+          for ControlOffset := 0 to ScrollBox.ControlCount - 1 do
+          begin
+            if ScrollBox.Controls[ControlOffset] is TOlcbEdit then
+            begin
+            //  (ScrollBox.Controls[ControlOffset] as TOlcbEdit).Visible := False;
+            //  (ScrollBox.Controls[ControlOffset] as TOlcbEdit).Anchors := [akRight, akLeft, akTop];
+           //   (ScrollBox.Controls[ControlOffset] as TOlcbEdit).Visible := True;
+         //     (ScrollBox.Controls[ControlOffset] as TOlcbEdit).Width := 50;
+            end;
+          end;
   end else
     ErrorCode := 1;   // No CDI Element
 end;
@@ -874,12 +1176,21 @@ end;
 
 { TConfigInfo }
 
+procedure TConfigInfo.SetState(AValue: TOlcbConfigState);
+begin
+  if AValue <> FState then
+  begin
+    FState:=AValue;
+    if Assigned(OnChangeState) then
+      OnChangeState(Self);
+  end;
+end;
+
 constructor TConfigInfo.Create(MemOffset, MemSize: DWord;
   ADataType: TOlcbConfigDataType);
 begin
   inherited Create;
-  FIsDirty := False;
-  FIsUnknownState := True;
+  FState := ocs_Unknown;
   FConfigMemAddress := MemOffset;
   FConfigMemSize := MemSize;
   FTask := nil;

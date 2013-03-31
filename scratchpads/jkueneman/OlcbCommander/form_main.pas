@@ -151,6 +151,8 @@ type
     ActionToolsSettingsShowWin: TAction;
     ActionListMain: TActionList;
     ApplicationProperties: TApplicationProperties;
+    ImageList24x24: TImageList;
+    ImageList16x16: TImageList;
     ImageListMainSmall: TImageList;
     LabelNetworkNodeCount: TLabel;
     LabelNetworkNodeCountValue: TLabel;
@@ -436,6 +438,7 @@ begin
       if not Assigned(ConfigEditor) then
       begin
         ConfigEditor := TFormTrainConfigEditor.Create(Application);
+        ConfigEditor.ImageList16x16 := ImageList16x16;
         ConfigEditor.ComPortThread := ComPortThread;
         ConfigEditor.Caption := ConfigEditor.Caption + ' - 0x' + IntToHex(Node.OlcbData.NodeIDAlias, 4) + ' [' + IntToStr(Node.OlcbData.NodeIDAlias) + ']';
         ConfigEditor.AliasID := Node.OlcbData.NodeIDAlias;
@@ -1722,7 +1725,7 @@ begin
   if Index > -1 then
   begin
     ConfigEditorList.Delete( Index);
-    ComPortThread.RemoveTasks( PtrInt( ConfigEditor));
+    ComPortThread.RemoveAndFreeTasks( PtrInt( ConfigEditor));
     DeleteConfigEditorSubMenu(ConfigEditor);
     UpdateUI
   end
@@ -1900,4 +1903,4 @@ end;
 
 
 end.
-
+
