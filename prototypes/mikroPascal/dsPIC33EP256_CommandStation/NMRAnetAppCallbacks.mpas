@@ -205,17 +205,6 @@ begin
           UART1_Write_Text(':  Ack High at 5ms' + LF);
         UART1_Write_Text(LF);
       end;
-    SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_READ :
-      begin
-        if ServiceModeInfo.ServiceModeType = SERVICE_MODE_TYPE_DIRECT_BYTE then
-          UART1_Write_Text('  Direct Mode - Byte' + LF)
-        else
-          UART1_Write_Text('  Direct Mode - Bit' + LF);
-      end;
-    SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_READ :
-      begin
-        UART1_Write_Text('  Page Mode' + LF);
-      end;
     SERVICE_MODE_RESULT_SHORTCIRCUIT :
       begin
         UART1_Write_Text('  Short Detected' + LF);
@@ -477,10 +466,10 @@ begin
              case CommandStationConfigurationInRam.ProgrammingMode of
                CONFIG_SERVICE_MODE_OPERATIONS_MODE  : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
                CONFIG_SERVICE_MODE_AUTO_DETECT      : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
-               CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, {SERVICE_MODE_TYPE_DIRECT_BIT} SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000000FF) - 1, DataTarget^);
-               CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000000FF) - 1, DataTarget^);
-               CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000000FF) - 1, DataTarget^);
-               CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000000FF) - 1, DataTarget^);
+               CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, {SERVICE_MODE_TYPE_DIRECT_BIT} SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), DataTarget^, 0);
+               CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), DataTarget^, 0);
+               CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000007FF), DataTarget^, 0);
+               CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000007FF), DataTarget^, 0);
              end;
 
              while not ServiceMode_ResultsReady do
@@ -492,7 +481,7 @@ begin
            else
              // Bad    }
            ServiceMode_Quit;
-           ByteToStr((StartAddress and $000000FF), s1);
+           ByteToStr((StartAddress and $000007FF), s1);
            UART_Write_Text('Single Indexed CV Write: CV' + s1 + LF);
          end;
        end;
@@ -555,24 +544,21 @@ begin
              case CommandStationConfigurationInRam.ProgrammingMode of
                CONFIG_SERVICE_MODE_OPERATIONS_MODE  : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
                CONFIG_SERVICE_MODE_AUTO_DETECT      : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
-               CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (StartAddress and $000000FF) - 1, $FF);
-               CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000000FF) - 1, $FF);
-               CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000000FF) - 1, $FF);
-               CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000000FF) - 1, $FF);
+               CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (StartAddress and $000007FF), $FF, 0);
+               CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), $FF, 0);
+               CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000007FF), $FF, 0);
+               CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000007FF), $FF, 0);
              end;
 
              while not ServiceMode_ResultsReady do
                Delay_ms(100);
-
-             PrintServiceModeResults;
-
-             if ServiceModeInfo.ServiceModeResult = SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_READ then
-               DataTarget^ := ServiceModeInfo.Value
-             else
-               DataTarget^ := 0;
              ServiceMode_Quit;
-             ByteToStr((StartAddress and $000000FF), s1);
-             UART_Write_Text('Single Indexed CV Read: CV' + s1 + LF);
+             DataTarget^ := ServiceModeInfo.Value;
+             
+             IntToStr(StartAddress and $000007FF, s1);
+             UART1_Write_Text('Read CV : ' + s1 + LF);
+             
+             PrintServiceModeResults;
              Result := MaxCount
            end else
            begin

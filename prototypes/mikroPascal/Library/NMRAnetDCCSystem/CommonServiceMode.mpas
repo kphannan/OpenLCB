@@ -1,0 +1,142 @@
+// ******************************************************************************
+//
+// Copyright:
+//     (c) Mustangpeak, 2013.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2013-03-29:   Created
+//
+// * Description:
+//    Common Service Mode functions
+//
+// ******************************************************************************
+
+unit CommonServiceMode;
+
+uses
+  NMRAnetDCC,
+  ServiceModeDefines,
+  NMRAnetDefinesShared;
+  
+type
+  TServiceModePtr = procedure(BufferPtr: PDCCBufferInfo);
+  PServiceModePtr = ^TServiceModePtr;
+
+  
+  procedure PowerOnCycle(BufferPtr: PDCCBufferInfo; InstructionCount, NextState: Word);
+  procedure ResetCycle(BufferPtr: PDCCBufferInfo; InstructionPtr: PServiceModePtr; PacketCount: Word; NextState: Word; PrepareForAck: Boolean);
+  procedure SendInstructions(BufferPtr: PDCCBufferInfo; SendInstruction, AckHandler, NoAckHandler: PServiceModePtr; InstructionCount: Word);
+  procedure ResultReady(BufferPtr: PDCCBufferInfo);
+
+implementation
+
+procedure ResetACK;
+begin
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 1;            // Start Looking
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT := 0;
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
+  ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
+end;
+
+// ***************************************************************************
+//  procedure PowerOnCycle
+//
+//  Parameters:  None
+//
+//  Result:  None
+//
+//  Description:
+// ***************************************************************************
+procedure PowerOnCycle(BufferPtr: PDCCBufferInfo; InstructionCount, NextState: Word);
+begin
+  if ServiceModeInfo.iInstructionCountSent < InstructionCount then
+  begin
+    Inc(ServiceModeInfo.iInstructionCountSent);
+    NMRA_DCC_LoadIdlePacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE)
+  end else
+  begin
+    ServiceModeInfo.iInstructionCountSent := 1;
+    NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);    // Next State is always a Reset Packet for all Modes
+    ServiceModeInfo.iStateMachine := NextState
+  end
+end;
+
+// ***************************************************************************
+//  procedure ResetCycle
+//
+//  Parameters:  None
+//
+//  Result:  None
+//
+//  Description:
+// ***************************************************************************
+procedure ResetCycle(BufferPtr: PDCCBufferInfo; InstructionPtr: PServiceModePtr; PacketCount: Word; NextState: Word; PrepareForAck: Boolean);
+begin
+  if ServiceModeInfo.iInstructionCountSent < PacketCount then
+  begin
+    Inc(ServiceModeInfo.iInstructionCountSent);
+    NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE)
+  end else
+  begin
+    ServiceModeInfo.iInstructionCountSent := 1;
+    InstructionPtr(BufferPtr);
+    ServiceModeInfo.iStateMachine := NextState;
+    if PrepareForAck then
+      ResetACK;
+  end;
+end;
+
+// ***************************************************************************
+//  procedure SendInstructions
+//
+//  Parameters:  None
+//
+//  Result:  None
+//
+//  Description:
+// ***************************************************************************
+procedure SendInstructions(BufferPtr: PDCCBufferInfo; SendInstruction, AckHandler, NoAckHandler: PServiceModePtr; InstructionCount: Word);
+begin
+  if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
+  begin                                                                 // ACK detected and we are done
+    AckHandler(BufferPtr);
+  end else
+  if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
+  begin
+    ServiceModeInfo.Value := 0;
+    ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_SHORT_ACK;
+    NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
+    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
+  end else
+  if ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT = 1 then
+    NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE)       // Ack start detected so drop into Reset Packets are either success or failure handled above after 5ms
+  else begin
+    if ServiceModeInfo.iInstructionCountSent < InstructionCount then
+    begin
+      Inc(ServiceModeInfo.iInstructionCountSent);
+      SendInstruction(BufferPtr);
+    end else
+      NoAckHandler(BufferPtr)
+  end
+end;
+
+// ***************************************************************************
+//  procedure ResultReady
+//
+//  Parameters:  None
+//
+//  Result:  None
+//
+//  Description:
+// ***************************************************************************
+procedure ResultReady(BufferPtr: PDCCBufferInfo);
+begin
+  // Spin here until the application calls ServiceMode_ReadResults to grab the Result and move to Done
+  NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3  // Don't come out of Service Mode
+end;
+
+end.

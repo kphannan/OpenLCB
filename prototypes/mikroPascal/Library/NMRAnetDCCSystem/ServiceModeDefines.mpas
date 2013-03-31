@@ -8,18 +8,15 @@ const
 
   SERVICE_MODE_RESULT_SHORTCIRCUIT                        = 1;  // System had too much current draw
   SERVICE_MODE_RESULT_DATA_NOT_FOUND                      = 2;  // No Acknowledgement was detected
- // SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE              = 3;  // Response was achieved in Register or Paged mode
-  SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE_SHORT_ACK    = 4;
- // SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE_WRITE_ACK    = 5;  // Write executed and decoder responded with an ACK
- // SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE_WRITE_NO_ACK = 6;  // Write executed and decoder did not respond with an ACK
-  SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_READ           = 7;  // Response was achieved in Direct CV mode
-  SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_SHORT_ACK      = 8;  // Response resulted in an Ack that was too short
-  SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_WRITE_ACK      = 9;  // Write executed and decoder responded with an ACK
-  SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_WRITE_NO_ACK   = 10;  // Write executed and decoder did not respond with an ACK
-  SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_READ            = 11;  // Response was achieved in Direct CV mode
-  SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_SHORT_ACK       = 12;  // Response resulted in an Ack that was too short
-  SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_WRITE_ACK       = 13;  // Write executed and decoder responded with an ACK
-  SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_WRITE_NO_ACK    = 14;  // Write executed and decoder did not respond with an ACK
+  SERVICE_MODE_RESULT_INVALID_CV                          = 3;  // CV asked for does not exist in the requested service mode
+  SERVICE_MODE_RESULT_SHORT_ACK                           = 4;  // The ACK was less than 5ms
+  SERVICE_MODE_RESULT_NO_ACK                              = 5;  // There was no ACK
+
+  SERVICE_MODE_RESULT_RESPONSE_DIRECT_BYTE_MODE           = 21;  // Response was achieved in Direct Byte Mode
+  SERVICE_MODE_RESULT_RESPONSE_DIRECT_BIT_MODE            = 22;  // Response was achieved in Direct Bit Mode
+  SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE                 = 23;  // Response was achieved in Paged mode
+  SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE              = 24;  // Response was achieved in Register mode
+  SERVICE_MODE_RESULT_RESPONSE_ADDRESS_MODE               = 25;  // Response was achieved in Address mode
 
   SERVICEMODE_POWER_ON_CYCLE_IDLE_COUNT          = 16;     // Per RP-9.2.3
   SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT         = 3;      // Per RP-9.2.3   
@@ -33,15 +30,12 @@ const
   
   SERVICEMODE_DIRECT_INSTRUCTION_COUNT           = 5;    // Per RP-9.2.3
 
-
+  STATE_SERVICEMODE_IDLE                                           = 00;
   STATE_SERVICEMODE_POWER_ON_CYCLE                                 = 01;
   STATE_SERVICEMODE_RESET_CYCLE                                    = 02;
-  STATE_SERVICEMODE_NOT_SUPPORTED                                  = 100;
+  STATE_SERVICEMODE_SEND_INSTRUCTION                               = 03;
   STATE_SERVICEMODE_RESULTS_READY                                  = 101;
-  STATE_SERVICEMODE_DONE                                           = 102;
-  
-  STATE_SERVICEMODE_DIRECT_BYTE                                    = 10;
-  STATE_SERVICEMODE_DIRECT_BIT_ONE                                 = 11;
+
   STATE_SERVICEMODE_DIRECT_WRITE_RECOVERY                          = 12;
   
   STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER                      = 10;
@@ -55,9 +49,6 @@ const
   // Address/Register/Page
   STATE_SERVICEMODE_WRITE_PAGE_PRESET                              = 10;
 
-  // Register Mode
-
-
   SERVICE_MODE_TYPE_DIRECT_BYTE                                    = 1;
   SERVICE_MODE_TYPE_DIRECT_BIT                                     = 2;
   SERVICE_MODE_TYPE_PHYSICAL_REGISTER                              = 3;
@@ -67,8 +58,10 @@ const
   SERVICEMODE_READ                                                = 1;
   SERVICEMODE_WRITE                                               = 2;
 
-
-//  MAX_SERVICEMODE_QUEUE_MESSAGES                        = 2;
+  SERVICE_MODE_DIRECT_MODE_MAX_CV                                 = 1024;
+  SERVICE_MODE_PAGED_MODE_MAX_CV                                  = 1024;
+  SERVICE_MODE_REGISTER_MODE_MAX_CV                               = 8;
+  SERVICE_MODE_ADDRESS_MODE_MAX_CV                                = 1;
 
   HUNG_BUS_TIMEOUT                                      = 10;  // 50 * 100ms = 5 seconds
 

@@ -80,7 +80,7 @@ begin
   H_Bridge_B_Lo := 0;                                                           // Bridge Off
   H_Bridge_B_Hi := 0;                                                           // Bridge Off
 
-  if ServiceModeInfo.iStateMachine < STATE_SERVICEMODE_DONE then
+  if ServiceModeInfo.iStateMachine > STATE_SERVICEMODE_IDLE then
   begin
     if Programming.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT = 1 then
     begin
@@ -449,30 +449,6 @@ begin
                   UART1_Write_Text('RAM Offset: ' + s1 +LF);
                 end;
             end;
-          'S' :
-            begin
-              ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, CV_Value, 0);
-              RunningAllCVs := True;
-            end;
-          's' :
-            begin
-              ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, CV_Value, 0);
-              RunningAllCVs := True;
-            end;
-          'T' :
-            begin
-              ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, CV_Value, WriteVal);
-              Inc(WriteVal);
-            end;
-          't' :
-            begin
-              ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BIT, CV_Value, 0);
-            end;
-          '0' : CV_Value := 0;
-          'Q', 'q' :
-            begin
-              RunningAllCVs := False;
-            end;
           '9' :
             begin
               ByteToStr(CommandStationConfigurationInRam.OutputMode, s1);
@@ -482,6 +458,30 @@ begin
               ByteToStr(CommandStationConfigurationInRam.DccBusMode, s1);
               UART1_Write_Text('DCC Bus Mode: ' + s1 + LF);
             end;
+          '1' :
+            begin
+              ByteToStr(ServiceModeInfo.ServiceModeResult, s1);
+              UART1_Write_Text('SM Result: ' + s1 + LF);
+              ByteToStr(ServiceModeInfo.Value, s1);
+              UART1_Write_Text('SM Value: ' + s1 + LF);
+              ByteToStr(ServiceModeInfo.ReadWrite, s1);
+              UART1_Write_Text('SM ReadWrite: ' + s1 + LF);
+              
+              ByteToStr(ServiceModeInfo.CV, s1);
+              UART1_Write_Text('SM CV: ' + s1 + LF);
+              ByteToStr(ServiceModeInfo.ServiceModeType, s1);
+              UART1_Write_Text('SM ServiceModeType: ' + s1 + LF);
+              ByteToStr(ServiceModeInfo.Flags, s1);
+              UART1_Write_Text('SM Flags: ' + s1 + LF);
+              ByteToStr(ServiceModeInfo.iStateMachine, s1);
+              UART1_Write_Text('SM iStateMachine: ' + s1 + LF);
+              
+              ByteToStr(ServiceModeInfo.iInstructionCountSent, s1);
+              UART1_Write_Text('SM iInstructionCountSent: ' + s1 + LF);
+              ByteToStr(ServiceModeInfo.ReadIndex, s1);
+              UART1_Write_Text('SM ReadIndex: ' + s1 + LF);
+            end;
+            
         end;
       end;
     end;

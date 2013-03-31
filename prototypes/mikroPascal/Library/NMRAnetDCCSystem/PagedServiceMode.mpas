@@ -2,14 +2,16 @@ unit PagedServiceMode;
 
 uses
   NMRAnetDCC,
+  CommonServiceMode,
+  NMRAnetDefinesShared,
   ServiceModeDefines;
   
   
-  procedure PagedServiceMode_StateMachineRead(BufferPtr: PDCCBufferInfo);
-  procedure PagedServiceMode_StateMachineWrite(BufferPtr: PDCCBufferInfo);
+ // procedure PagedServiceMode_StateMachineRead(BufferPtr: PDCCBufferInfo);
+ // procedure PagedServiceMode_StateMachineWrite(BufferPtr: PDCCBufferInfo);
 
 implementation
-
+               {
 // ***************************************************************************
 //  procedure DirectLoadTransmitter
 //
@@ -66,20 +68,29 @@ end;
 // ***************************************************************************
 procedure PowerOnResetCycle(BufferPtr: PDCCBufferInfo);
 begin
+  if ServiceModeInfo.CV < SERVICE_MODE_PAGED_MODE_MAX_CV then
+  begin
   if ServiceModeInfo.iInstructionCountSent < SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT then
   begin
     Inc(ServiceModeInfo.iInstructionCountSent);
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE)
   end else
   begin
+    // Prepare to write to the Paging Register
     ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT := 0;
     ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
     ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
-    ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 1;         // Start Looking since we are now sending the read instruction
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 1;         // Start Looking since we are now sending the write instruction
     
     ServiceModeInfo.iInstructionCountSent := 1;
-    DirectLoadTransmitter(BufferPtr, 5, %00001000, ServiceModeInfo.ReadIndex div 4);   // Page Register is Register 6 (RRR = 5)
+    DirectLoadTransmitter(BufferPtr, %00000101, %00001000, (ServiceModeInfo.CV-1) div 4);   // Page Register is Register 6 (RRR = 5)
     ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER;
+  end else
+  begin
+    ServiceModeInfo.Value := 0;
+    ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_INVALID_CV;
+    NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
+    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
   end
 end;
 
@@ -94,14 +105,18 @@ end;
 // ***************************************************************************
 procedure PageRegisterWriteCycle(BufferPtr: PDCCBufferInfo);
 begin
-  if ServiceModeInfo.iInstructionCountSent < SERVICEMODE_PAGED_PAGE_WRITE_COUNT then
+  if (ServiceModeInfo.iInstructionCountSent < SERVICEMODE_PAGED_PAGE_WRITE_COUNT) and (ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 0) then
   begin
     Inc(ServiceModeInfo.iInstructionCountSent);
-    DirectLoadTransmitter(BufferPtr, 5, %00001000, ServiceModeInfo.ReadIndex div 4);   // Page Register is Register 6 (RRR = 5)
+    DirectLoadTransmitter(BufferPtr, %00000101, %00001000, (ServiceModeInfo.CV-1) div 4); 
   end else
   begin
     ServiceModeInfo.iInstructionCountSent := 1;
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT := 0;
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 0;       
     ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER_RECOVER;
   end
 end;
@@ -128,11 +143,12 @@ begin
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
   end else
   begin
+    ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 1;         // Start Looking
     ServiceModeInfo.iInstructionCountSent := 1;
     if ServiceModeInfo.ReadWrite = SERVICEMODE_WRITE then
-      DirectLoadTransmitter(BufferPtr, ServiceModeInfo.ReadIndex mod 4, %00001000, ServiceModeInfo.ReadIndex div 4)
+      DirectLoadTransmitter(BufferPtr, (ServiceModeInfo.CV-1) mod 4, %00001000, ServiceModeInfo.ReadIndex)
     else
-      DirectLoadTransmitter(BufferPtr, ServiceModeInfo.ReadIndex mod 4, %00000000, ServiceModeInfo.ReadIndex div 4);
+      DirectLoadTransmitter(BufferPtr, (ServiceModeInfo.CV-1) mod 4, %00000000, ServiceModeInfo.ReadIndex);
     ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_REGISTER;
   end
 end;
@@ -153,7 +169,7 @@ begin
   NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
   ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
 end;
-   
+
 // ***************************************************************************
 //  procedure PagedServiceMode_StateMachineRead
 //
@@ -177,14 +193,14 @@ begin
       STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER         : PageRegisterWriteCycle(BufferPtr);
       STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER_RECOVER : PageRegisterWriteRecoverResetCycle(BufferPtr);
       STATE_SERVICEMODE_PAGED_INSTRUCTION_RESET           : InstructionResetCycle(BufferPtr);
-      STATE_SERVICEMODE_PAGED_REGISTER                    :
+      STATE_SERVICEMODE_PAGED_REGISTER                    : 
         begin
           if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
-            begin                                                                 // ACK detected and we are done
-              ServiceModeInfo.Value := ServiceModeInfo.ReadIndex;
+          begin                                                                 // ACK detected and we are done
+              ServiceModeInfo.Value := ServiceModeInfo.ReadIndex;  
               ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_READ;
               NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
-              ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
+              ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY 
             end else
             if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
               FailedToDetectCorrectAckWidth(BufferPtr)
@@ -195,7 +211,7 @@ begin
               if ServiceModeInfo.iInstructionCountSent < SERVICEMODE_PAGED_INSTRUCTION_COUNT then
               begin
                 Inc(ServiceModeInfo.iInstructionCountSent);
-                DirectLoadTransmitter(BufferPtr, ServiceModeInfo.ReadIndex mod 4, %00000000, ServiceModeInfo.ReadIndex div 4);
+               RegisterOperation(BufferPtr, (ServiceModeInfo.CV-1) mod 4, %00000000, ServiceModeInfo.ReadIndex); 
               end else
               begin
                 Inc(ServiceModeInfo.ReadIndex);                                   // Try the next Value
@@ -206,7 +222,7 @@ begin
                 end else
                 begin
                   ServiceModeInfo.iInstructionCountSent := 1;                     // Run the next possible Value cycle
-                  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_INSTRUCTION_RESET;
+                  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESET_CYCLE;    // NOTE: CAN GET 4 VALUE FROM 1 WRITE TO THE PAGE REGISTER BUT NEED TO BE  CAREFUL WITH MOD 4                       
                   NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
                 end
               end;
@@ -216,9 +232,6 @@ begin
         begin
           // Spin here until the application calls ServiceMode_ReadResults to grab the Result and move to Done
           NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3  // Don't come out of Service Mode
-        end;
-      STATE_SERVICEMODE_DONE :
-        begin
         end;
     end
   end;
@@ -247,14 +260,14 @@ begin
       STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER         : PageRegisterWriteCycle(BufferPtr);
       STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER_RECOVER : PageRegisterWriteRecoverResetCycle(BufferPtr);
       STATE_SERVICEMODE_PAGED_INSTRUCTION_RESET           : InstructionResetCycle(BufferPtr);
-      STATE_SERVICEMODE_PAGED_REGISTER                    :
-        begin
+      STATE_SERVICEMODE_PAGED_REGISTER                    : 
+      begin
           if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
-            begin                                                                 // ACK detected and we are done
-              ServiceModeInfo.Value := ServiceModeInfo.ReadIndex;
-              ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_READ;
+          begin                                                                 // ACK detected and we are done
+              ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_WRITE;
               NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
-              ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
+              ServiceModeInfo.iInstructionCountSent := 1;
+              ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_WRITE_RECOVERY;
             end else
             if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
               FailedToDetectCorrectAckWidth(BufferPtr)
@@ -265,24 +278,33 @@ begin
               if ServiceModeInfo.iInstructionCountSent < SERVICEMODE_PAGED_INSTRUCTION_COUNT then
               begin
                 Inc(ServiceModeInfo.iInstructionCountSent);
-                DirectLoadTransmitter(BufferPtr, ServiceModeInfo.ReadIndex mod 4, %00001000, ServiceModeInfo.ReadIndex div 4);
+                RegisterOperation(BufferPtr, (ServiceModeInfo.CV-1) mod 4, %00001000, ServiceModeInfo.ReadIndex); 
               end else
               begin
-                ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_WRITE_NO_ACK;
-                ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_DONE;
+               ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_WRITE_NO_ACK;
+               ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY
               end;
             end;
-        end;
+        end;    
+      STATE_SERVICEMODE_PAGED_WRITE_RECOVERY        :
+       begin
+          if ServiceModeInfo.iInstructionCountSent < SERVICEMODE_RECOVER_CYCLE_RESET_COUNT then
+          begin
+            Inc(ServiceModeInfo.iInstructionCountSent);
+            NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+          end else
+          begin
+            ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE_WRITE;
+            ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY 
+          end; 
+        end; 
       STATE_SERVICEMODE_RESULTS_READY :
         begin
           // Spin here until the application calls ServiceMode_ReadResults to grab the Result and move to Done
           NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3  // Don't come out of Service Mode
         end;
-      STATE_SERVICEMODE_DONE :
-        begin
-        end;
     end
   end;
 end;
-
+       }
 end.

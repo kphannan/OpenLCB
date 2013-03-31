@@ -1,7 +1,7 @@
 // ******************************************************************************
 //
 // Copyright:
-//     (c) Mustangpeak, 2011.
+//     (c) Mustangpeak, 2013.
 //
 //     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
 //     this file except in compliance with the License. You may obtain a copy of the
@@ -27,7 +27,7 @@ uses
 // Call once on start up
 procedure ServiceMode_Initialize; forward;
 //procedure ServiceMode_LoadBufferFromNextInQueue(PowerOnCycle: Boolean); forward;
-procedure ServiceMode_EngageServiceMode(BufferPtr: PDCCBufferInfo; PowerOnCycle: Boolean; AReadWrite, AServiceModeType: Byte; ACV: Word; Value: Byte);
+procedure ServiceMode_EngageServiceMode(BufferPtr: PDCCBufferInfo; PowerOnCycle: Boolean; AReadWrite, AServiceModeType: Byte; ACV: Word; Value, BitIndex: Byte);
 // Called by a timer that ticks every 56us or so
 procedure ServiceMode_56us_TimeTick; forward;
 // Called by a timer that ticks every 5ms
@@ -56,7 +56,7 @@ begin
   ServiceModeInfo.Flags := 0;
   ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;
   ServiceModeInfo.iInstructionCountSent := 0;
-  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_DONE;
+  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_IDLE;
   DCC_Programming_ACK_Direction := 1;  // Input
 end;
 
@@ -65,13 +65,14 @@ end;
 //
 //  Parameters:
 //               AValue:  If the state is Direct Mode Bit Write this contains the following: xxxxDBBB where BBB is the bit offset (0..7) and D is the Data to write
+//          ACV: Defined as 1..1024 per NMRA Spec
 //
 //  Results:  None
 //
 //  Description:
 //
 // ****************************************************************************
-procedure ServiceMode_EngageServiceMode(BufferPtr: PDCCBufferInfo; PowerOnCycle: Boolean; AReadWrite, AServiceModeType: Byte; ACV: Word; AValue: Byte);
+procedure ServiceMode_EngageServiceMode(BufferPtr: PDCCBufferInfo; PowerOnCycle: Boolean; AReadWrite, AServiceModeType: Byte; ACV: Word; AValue, BitIndex: Byte);
 begin
   NMRA_DCC_ResetTransmitter(@Programming);
   ServiceModeInfo.ReadWrite := AReadWrite;                                      // SERVCIE_MODE_READ or SERVCIE_MODE_WRITE
@@ -85,12 +86,14 @@ begin
     ServiceModeInfo.ReadIndex := 0;                                             // Redefined as the Index of bits into the Byte
     if AReadWrite = SERVICEMODE_READ then
       ServiceModeInfo.Value := 0                                                // Ready to receive data (we only look for "1" and default to "0" if "1" does not reply
-    else
-      ServiceModeInfo.Value := AValue;                                          // Value to write to the decoder in Bit Mode
+    else begin
+      ServiceModeInfo.ReadIndex := BitIndex;                                    // Setup the index of the Bit to write (0..7)
+      ServiceModeInfo.Value := AValue;                                          // Value to write to the decoder in Bit Mode (must be 0 or 1)
+    end
   end else
   begin      
-     ServiceModeInfo.ReadIndex := AValue;                                       // Were to start looking if Reading
-     ServiceModeInfo.Value := AValue;
+    ServiceModeInfo.ReadIndex := AValue;                                       // Were to start looking if Reading
+    ServiceModeInfo.Value := AValue;
   end;
   if PowerOnCycle then                                                          // Reset the StateMachine
   begin
@@ -171,29 +174,15 @@ end;
 
 procedure ServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
 begin
-  case ServiceModeInfo.ReadWrite of
-    SERVICEMODE_READ :
-      begin
-        case ServiceModeInfo.ServiceModeType of
-          SERVICE_MODE_TYPE_DIRECT_BYTE,
-          SERVICE_MODE_TYPE_DIRECT_BIT     : DirectServiceMode_StateMachineRead(BufferPtr);
-          SERVICE_MODE_TYPE_PHYSICAL_REGISTER,
-          SERVICE_MODE_TYPE_ADDRESS_ONLY   : RegisterServiceMode_StateMachineRead(BufferPtr);
-          SERVICE_MODE_TYPE_PAGED          : PagedServiceMode_StateMachineRead(BufferPtr);
-        end
-      end;
-    SERVICEMODE_WRITE :
-      begin
-        case ServiceModeInfo.ServiceModeType of
-          SERVICE_MODE_TYPE_DIRECT_BYTE,
-          SERVICE_MODE_TYPE_DIRECT_BIT     : DirectServiceMode_StateMachineWrite(BufferPtr);
-          SERVICE_MODE_TYPE_PHYSICAL_REGISTER,
-          SERVICE_MODE_TYPE_ADDRESS_ONLY   : RegisterServiceMode_StateMachineWrite(BufferPtr);
-          SERVICE_MODE_TYPE_PAGED          : PagedServiceMode_StateMachineRead(BufferPtr);
-        end
-      end;
-  end;
+  case ServiceModeInfo.ServiceModeType of
+    SERVICE_MODE_TYPE_DIRECT_BYTE    : DirectByteServiceMode_StateMachine(BufferPtr);
+    SERVICE_MODE_TYPE_DIRECT_BIT     : DirectBitServiceMode_StateMachine(BufferPtr);
+  //  SERVICE_MODE_TYPE_PHYSICAL_REGISTER,
+  //  SERVICE_MODE_TYPE_ADDRESS_ONLY   : RegisterServiceMode_StateMachineRead(BufferPtr);
+  //  SERVICE_MODE_TYPE_PAGED          : PagedServiceMode_StateMachineRead(BufferPtr);
+  end
 end;
+
 
 function ServiceMode_ResultsReady: Boolean;
 begin
@@ -204,7 +193,7 @@ end;
 
 procedure ServiceMode_Quit;
 begin
-  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_DONE
+  ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_IDLE
 end;
 
 end.
