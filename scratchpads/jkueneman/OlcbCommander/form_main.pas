@@ -1,5 +1,7 @@
 {
 
+TODO:  Make Node Captions More User Friendly - Bob Jacobson Mar 31, 2013
+
  - Network Tree
   |-0x0567
   |  |- NodeID: 01.02.03.04.05.06.07.00

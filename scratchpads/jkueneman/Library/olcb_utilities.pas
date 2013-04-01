@@ -272,13 +272,13 @@ begin
     MTI_CONSUMER_IDENTIFY              : Result := 'Consumer Identify';
     MTI_CONSUMER_IDENTIFY_RANGE        : Result := 'Consumer Identify Range';
     MTI_CONSUMER_IDENTIFIED_UNKNOWN    : Result := 'Consumer Identified Unknown';
-    MTI_CONSUMER_IDENTIFIED_SET        : Result := 'Consumer Identified Set';
+    MTI_CONSUMER_IDENTIFIED_SET        : Result := 'Consumer Identified Valid';
     MTI_CONSUMER_IDENTIFIED_CLEAR      : Result := 'Consumer Identified Clear';
     MTI_CONSUMER_IDENTIFIED_RESERVED   : Result := 'Consumer Identified Reserved';
     MTI_PRODUCER_IDENDIFY              : Result := 'Producer Identify';
     MTI_PRODUCER_IDENTIFY_RANGE        : Result := 'Producer Identify Range';
     MTI_PRODUCER_IDENTIFIED_UNKNOWN    : Result := 'Producer Identified Unknown';
-    MTI_PRODUCER_IDENTIFIED_SET        : Result := 'Producer Identified Set';
+    MTI_PRODUCER_IDENTIFIED_SET        : Result := 'Producer Identified Valid';
     MTI_PRODUCER_IDENTIFIED_CLEAR      : Result := 'Producer Identified Clear';
     MTI_PRODUCER_IDENTIFIED_RESERVED   : Result := 'Producer Identified Reserved';
     MTI_EVENTS_IDENTIFY_DEST           : Result := 'Events Identify with Destination Address';
@@ -341,7 +341,7 @@ begin
       Result := 'EVENT_TRAIN_QUERY_DCC_ADDRESS : Short Address = ' + IntToStr(Address) + ', (0x' + IntToHex(Address, 4) + ')'
   end
   else
-    Result := 'Unknown Event'
+    Result := 'Unique Event'
 end;
 
 function EqualEvents(Event1, Event2: PEventID): Boolean;
@@ -609,7 +609,7 @@ begin
     if Sending then
       Result := Result + '  Send:   '
     else
-      Result := Result + '  Recieve: ';
+      Result := Result + '  Receive: ';
 
     Result := Result + 'From = 0x' + IntToHex( LocalHelper.SourceAliasID, 4);
 

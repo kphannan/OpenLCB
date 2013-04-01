@@ -9,10 +9,10 @@
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="OLCB_Commander"/>
-        <EditorIndex Value="0"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="1" Y="6"/>
+        <CursorPos X="82" Y="14"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -23,10 +23,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_main"/>
-        <EditorIndex Value="1"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1718"/>
-        <CursorPos X="1" Y="1727"/>
+        <TopLine Value="1"/>
+        <CursorPos X="73" Y="3"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -35,7 +36,7 @@
         <Filename Value="..\Library\olcb_app_common_settings.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_app_common_settings"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="169"/>
         <CursorPos X="1" Y="192"/>
@@ -151,8 +152,8 @@
         <UnitName Value="olcb_common_tasks"/>
         <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1209"/>
-        <CursorPos X="82" Y="1231"/>
+        <TopLine Value="137"/>
+        <CursorPos X="67" Y="14"/>
         <UsageCount Value="205"/>
         <Loaded Value="True"/>
       </Unit13>
@@ -175,7 +176,7 @@
         <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="59" Y="31"/>
+        <CursorPos X="85" Y="18"/>
         <UsageCount Value="202"/>
         <Loaded Value="True"/>
       </Unit15>
@@ -197,8 +198,8 @@
         <UnitName Value="form_awesome_throttle"/>
         <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="183"/>
-        <CursorPos X="46" Y="24"/>
+        <TopLine Value="1"/>
+        <CursorPos X="49" Y="19"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -246,11 +247,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="403"/>
-        <CursorPos X="70" Y="423"/>
-        <UsageCount Value="125"/>
+        <TopLine Value="1"/>
+        <CursorPos X="35" Y="11"/>
+        <UsageCount Value="126"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit21>
@@ -258,21 +259,20 @@
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1130"/>
         <CursorPos X="15" Y="1158"/>
-        <UsageCount Value="124"/>
+        <UsageCount Value="125"/>
         <Loaded Value="True"/>
       </Unit22>
       <Unit23>
         <Filename Value="..\Library\olcb_utilities.pas"/>
         <UnitName Value="olcb_utilities"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="841"/>
-        <CursorPos X="39" Y="854"/>
+        <TopLine Value="327"/>
+        <CursorPos X="21" Y="344"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit23>
@@ -480,124 +480,124 @@
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="288" Column="27" TopLine="265"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="80" Column="26" TopLine="51"/>
       </Position1>
       <Position2>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="289" Column="28" TopLine="265"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="81" Column="18" TopLine="52"/>
       </Position2>
       <Position3>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="885" Column="103" TopLine="869"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="82" Column="18" TopLine="53"/>
       </Position3>
       <Position4>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="224"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="84" Column="56" TopLine="55"/>
       </Position4>
       <Position5>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="236" Column="10" TopLine="225"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="86" Column="54" TopLine="57"/>
       </Position5>
       <Position6>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="224"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="90" Column="95" TopLine="61"/>
       </Position6>
       <Position7>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="235"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="91" Column="98" TopLine="62"/>
       </Position7>
       <Position8>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="234" Column="10" TopLine="234"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="254" Column="41" TopLine="225"/>
       </Position8>
       <Position9>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="235"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="281" Column="78" TopLine="255"/>
       </Position9>
       <Position10>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="234" Column="10" TopLine="234"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="356" Column="36" TopLine="327"/>
       </Position10>
       <Position11>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="235"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="361" Column="36" TopLine="332"/>
       </Position11>
       <Position12>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="234" Column="10" TopLine="234"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="379" Column="23" TopLine="350"/>
       </Position12>
       <Position13>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="233" Column="10" TopLine="233"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="380" Column="24" TopLine="351"/>
       </Position13>
       <Position14>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="232" Column="10" TopLine="232"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="392" Column="53" TopLine="363"/>
       </Position14>
       <Position15>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="233" Column="10" TopLine="233"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="398" Column="55" TopLine="369"/>
       </Position15>
       <Position16>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="234" Column="10" TopLine="234"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="418" Column="46" TopLine="389"/>
       </Position16>
       <Position17>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="235"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="430" Column="107" TopLine="401"/>
       </Position17>
       <Position18>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="234" Column="10" TopLine="234"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="431" Column="32" TopLine="403"/>
       </Position18>
       <Position19>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="235" Column="10" TopLine="235"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="536" Column="9" TopLine="507"/>
       </Position19>
       <Position20>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="234" Column="10" TopLine="234"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="539" Column="11" TopLine="510"/>
       </Position20>
       <Position21>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1727" Column="1" TopLine="1718"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="541" Column="11" TopLine="512"/>
       </Position21>
       <Position22>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1728" Column="1" TopLine="1719"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="542" Column="16" TopLine="513"/>
       </Position22>
       <Position23>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1727" Column="1" TopLine="1718"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="543" Column="16" TopLine="514"/>
       </Position23>
       <Position24>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="457" Column="58" TopLine="432"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="9" Column="74" TopLine="1"/>
       </Position24>
       <Position25>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="72" Column="64" TopLine="54"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="770" Column="1" TopLine="770"/>
       </Position25>
       <Position26>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="73" Column="82" TopLine="44"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="242" Column="5" TopLine="224"/>
       </Position26>
       <Position27>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="581" Column="37" TopLine="553"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="116" Column="93" TopLine="100"/>
       </Position27>
       <Position28>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="667" Column="34" TopLine="639"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="274" Column="80" TopLine="258"/>
       </Position28>
       <Position29>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="793" Column="65" TopLine="765"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="280" Column="80" TopLine="258"/>
       </Position29>
       <Position30>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="63" Column="15" TopLine="45"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="297" Column="23" TopLine="269"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
