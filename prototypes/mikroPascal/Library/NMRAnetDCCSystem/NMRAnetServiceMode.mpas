@@ -54,9 +54,17 @@ var
   i: Integer;
 begin
   ServiceModeInfo.Flags := 0;
-  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;
+  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK;
   ServiceModeInfo.iInstructionCountSent := 0;
+  ServiceModeInfo.Value := 0;
+  ServiceModeInfo.ReadWrite := 0;
+  ServiceModeInfo.CV := 0;
+  ServiceModeInfo.ServiceModeType := 0;
+  ServiceModeInfo.Flags := 0;
   ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_IDLE;
+  ServiceModeInfo.iInstructionCountSent := 0;
+  ServiceModeInfo.ReadIndex := 0;
+  ServiceModeInfo.LastPagedOffset := -1;  // Invalid
   DCC_Programming_ACK_Direction := 1;  // Input
 end;
 
@@ -78,9 +86,9 @@ begin
   ServiceModeInfo.ReadWrite := AReadWrite;                                      // SERVCIE_MODE_READ or SERVCIE_MODE_WRITE
   ServiceModeInfo.CV := ACV;                                                    // The CV to write or the buffer to receive the CV read
   ServiceModeInfo.ServiceModeType := AServiceModeType;
-  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;      // Empty ready to be filled
+  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK;              // Empty ready to be filled
   ServiceModeInfo.Flags := 0;
-  TON_T5CON_bit := 0;                                                           // Turn the timer off
+  Ack_TimerEnabled_Bit := 0;                                                    // Turn the timer off
   if AServiceModeType = SERVICE_MODE_TYPE_DIRECT_BIT then
   begin
     ServiceModeInfo.ReadIndex := 0;                                             // Redefined as the Index of bits into the Byte
@@ -92,7 +100,7 @@ begin
     end
   end else
   begin      
-    ServiceModeInfo.ReadIndex := AValue;                                       // Were to start looking if Reading
+    ServiceModeInfo.ReadIndex := AValue;                                        // Were to start looking if Reading
     ServiceModeInfo.Value := AValue;
   end;
   if PowerOnCycle then                                                          // Reset the StateMachine
@@ -175,11 +183,10 @@ end;
 procedure ServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
 begin
   case ServiceModeInfo.ServiceModeType of
-    SERVICE_MODE_TYPE_DIRECT_BYTE    : DirectByteServiceMode_StateMachine(BufferPtr);
-    SERVICE_MODE_TYPE_DIRECT_BIT     : DirectBitServiceMode_StateMachine(BufferPtr);
-  //  SERVICE_MODE_TYPE_PHYSICAL_REGISTER,
-  //  SERVICE_MODE_TYPE_ADDRESS_ONLY   : RegisterServiceMode_StateMachineRead(BufferPtr);
-  //  SERVICE_MODE_TYPE_PAGED          : PagedServiceMode_StateMachineRead(BufferPtr);
+    SERVICE_MODE_TYPE_DIRECT_BYTE  : DirectByteServiceMode_StateMachine(BufferPtr);
+    SERVICE_MODE_TYPE_DIRECT_BIT   : DirectByteByBitServiceMode_StateMachine(BufferPtr);
+    SERVICE_MODE_TYPE_REGISTER     : RegisterServiceMode_StateMachine(BufferPtr);
+    SERVICE_MODE_TYPE_PAGED        : PagedServiceMode_StateMachine(BufferPtr);
   end
 end;
 

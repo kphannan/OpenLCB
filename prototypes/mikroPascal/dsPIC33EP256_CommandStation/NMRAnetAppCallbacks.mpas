@@ -142,7 +142,7 @@ const
   CONFIG_OUTPUTMODE_SERVICE_MODE  = 1;
   CONFIG_SERVICE_MODE_OPERATIONS_MODE  = 0;
   CONFIG_SERVICE_MODE_AUTO_DETECT      = 1;
-  CONFIG_SERVICE_MODE_DIRECT_BIT       = 2;
+  CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT = 2;
   CONFIG_SERVICE_MODE_DIRECT_BYTE      = 3;
   CONFIG_SERVICE_MODE_PAGED            = 4;
   CONFIG_SERVICE_MODE_REGISTER         = 5;
@@ -194,21 +194,15 @@ var
 procedure PrintServiceModeResults;
 begin
   case ServiceModeInfo.ServiceModeResult of
-    SERVICE_MODE_RESULT_DATA_NOT_FOUND :
-      begin
-        UART1_Write_Text('  Data Not Received' + LF);
-        if ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT = 1 then
-          UART1_Write_Text(':  Ack Hi Found' + LF);
-        if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
-          UART1_Write_Text(':  Ack Low at 5ms' + LF);
-        if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
-          UART1_Write_Text(':  Ack High at 5ms' + LF);
-        UART1_Write_Text(LF);
-      end;
-    SERVICE_MODE_RESULT_SHORTCIRCUIT :
-      begin
-        UART1_Write_Text('  Short Detected' + LF);
-      end;
+    SERVICE_MODE_RESULT_SHORTCIRCUIT                :  UART1_Write_Text('Short Circuit' + LF);
+    SERVICE_MODE_RESULT_INVALID_CV                  :  UART1_Write_Text('Invalid CV' + LF);
+    SERVICE_MODE_RESULT_SHORT_ACK                   :  UART1_Write_Text('Short Ack Pulse' + LF);
+    SERVICE_MODE_RESULT_NO_ACK                      :  UART1_Write_Text('No Ack Detected' + LF);
+
+    SERVICE_MODE_RESULT_RESPONSE_DIRECT_BYTE_MODE   :  UART1_Write_Text('Direct Byte' + LF);
+    SERVICE_MODE_RESULT_RESPONSE_DIRECT_BIT_MODE    :  UART1_Write_Text('Direct Bit' + LF);
+    SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE         :  UART1_Write_Text('Paged' + LF);
+    SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE      :  UART1_Write_Text('Register' + LF);
   end;
 end;
 
@@ -459,31 +453,53 @@ begin
        end;
     3: begin
          // Basic CV
-         if MaxCount = 1 then
+         if MaxCount = 1 then  // Only support 1 CV for now
          begin
            if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
            begin
-             case CommandStationConfigurationInRam.ProgrammingMode of
-               CONFIG_SERVICE_MODE_OPERATIONS_MODE  : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
-               CONFIG_SERVICE_MODE_AUTO_DETECT      : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
-               CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, {SERVICE_MODE_TYPE_DIRECT_BIT} SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), DataTarget^, 0);
-               CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), DataTarget^, 0);
-               CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000007FF), DataTarget^, 0);
-               CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000007FF), DataTarget^, 0);
+             if CommandStationConfigurationInRam.ProgrammingMode <> CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             begin
+               case CommandStationConfigurationInRam.ProgrammingMode of
+                 CONFIG_SERVICE_MODE_AUTO_DETECT        : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
+                 CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT,
+                 CONFIG_SERVICE_MODE_DIRECT_BYTE        : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), DataTarget^, 0);
+                 CONFIG_SERVICE_MODE_PAGED              : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000007FF), DataTarget^, 0);
+                 CONFIG_SERVICE_MODE_REGISTER           : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_REGISTER, (StartAddress and $000007FF), DataTarget^, 0);
+               end;
+
+               while not ServiceMode_ResultsReady do
+                 Delay_ms(100);
+               ServiceMode_Quit;
+
+               if ServiceModeInfo.ServiceModeResult and SERVICE_MODE_RESULT_ERROR_CODE_SET = SERVICE_MODE_RESULT_ERROR_CODE_SET then
+               begin end
+                 // Service Mode Error Occured = Error
+               else
+               begin
+                 // Service Mode Succeeded
+               end;
+             end else
+             begin
+               // Trying to use Ops Mode while CS is in Service Output Mode = Error
              end;
-
-             while not ServiceMode_ResultsReady do
-               Delay_ms(100);
+           end else
+           begin
+             // CS is in Main Line Output Mode
+             if CommandStationConfigurationInRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             begin
+               // Load DCC Queue
+             end else
+             begin
+               // Trying to use Service Mode while CS is in Main Line Mode = Error
+             end
            end;
-
-        {   if ServiceModeInfo.ServiceModeResult = SERVICE_MODE_RESULT_RESPONSE_DIRECT_MODE_WRITE_ACK then
-             // Good
-           else
-             // Bad    }
-           ServiceMode_Quit;
            ByteToStr((StartAddress and $000007FF), s1);
            UART_Write_Text('Single Indexed CV Write: CV' + s1 + LF);
-         end;
+           PrintServiceModeResults;
+         end else
+         begin
+           // Trying to access more than 1 CV at a time = Error for now
+         end
        end;
   end; // case
 end;
@@ -536,35 +552,55 @@ begin
        end;
     3: begin
          // Basic CV
-         
-         if MaxCount = 1 then
+         DataTarget^ := $FF;
+         Result := MaxCount;
+         if MaxCount = 1 then  // Only support 1 CV for now
          begin
            if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
            begin
-             case CommandStationConfigurationInRam.ProgrammingMode of
-               CONFIG_SERVICE_MODE_OPERATIONS_MODE  : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
-               CONFIG_SERVICE_MODE_AUTO_DETECT      : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
-               CONFIG_SERVICE_MODE_DIRECT_BIT       : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (StartAddress and $000007FF), $FF, 0);
-               CONFIG_SERVICE_MODE_DIRECT_BYTE      : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), $FF, 0);
-               CONFIG_SERVICE_MODE_PAGED            : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000007FF), $FF, 0);
-               CONFIG_SERVICE_MODE_REGISTER         : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PHYSICAL_REGISTER, (StartAddress and $000007FF), $FF, 0);
-             end;
+             if CommandStationConfigurationInRam.ProgrammingMode <> CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             begin
+               case CommandStationConfigurationInRam.ProgrammingMode of
+                 CONFIG_SERVICE_MODE_AUTO_DETECT        : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
+                 CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (StartAddress and $000007FF), $FF, 0);
+                 CONFIG_SERVICE_MODE_DIRECT_BYTE        : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (StartAddress and $000007FF), $FF, 0);
+                 CONFIG_SERVICE_MODE_PAGED              : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PAGED, (StartAddress and $000007FF), $FF, 0);
+                 CONFIG_SERVICE_MODE_REGISTER           : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_REGISTER, (StartAddress and $000007FF), $FF, 0);
+               end;
 
-             while not ServiceMode_ResultsReady do
-               Delay_ms(100);
-             ServiceMode_Quit;
-             DataTarget^ := ServiceModeInfo.Value;
-             
-             IntToStr(StartAddress and $000007FF, s1);
-             UART1_Write_Text('Read CV : ' + s1 + LF);
-             
-             PrintServiceModeResults;
-             Result := MaxCount
+               while not ServiceMode_ResultsReady do
+                 Delay_ms(100);
+               ServiceMode_Quit;
+
+               if ServiceModeInfo.ServiceModeResult and SERVICE_MODE_RESULT_ERROR_CODE_SET = SERVICE_MODE_RESULT_ERROR_CODE_SET then
+               begin
+                 // Service Mode Error Occured = Error
+               end else
+               begin
+                 // Service Mode Succeeded
+                 DataTarget^ := ServiceModeInfo.Value;
+               end;
+             end else
+             begin
+               // Trying to use Ops Mode while CS is in Service Output Mode = Error
+             end;
            end else
            begin
-             DataTarget^ := 0;
-             Result := MaxCount
-           end
+             // CS is in Main Line Output Mode
+             if CommandStationConfigurationInRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             begin
+               // Load DCC Queue
+             end else
+             begin
+               // Trying to use Service Mode while CS is in Main Line Mode = Error
+             end
+           end;
+           ByteToStr((StartAddress and $000007FF), s1);
+           UART_Write_Text('Single Indexed CV Read: CV' + s1 + LF);
+           PrintServiceModeResults;
+         end else
+         begin
+           // Trying to access more than 1 CV at a time = Error for now
          end
        end;
   end; // case

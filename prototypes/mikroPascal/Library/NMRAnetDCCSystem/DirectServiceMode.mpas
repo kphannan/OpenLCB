@@ -7,33 +7,10 @@ uses
   ServiceModeDefines;
   
   
-  procedure DirectBitServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
+  procedure DirectByteByBitServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
   procedure DirectByteServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
 
 implementation
-
-// ***************************************************************************
-//  procedure DirectLoadTransmitter
-//
-//  Parameters:  None
-//
-//  Result:  None
-//
-//  Description:
-// ***************************************************************************
-procedure DirectLoadTransmitter(BufferPtr: PDCCBufferInfo; CV_Address: Word; InstructionCode, DataByte: Byte);
-var
-  i: Integer;
-begin
-  BufferPtr^.TX_TransmittingPacket.PacketBytes[0] :=  %01110000 or InstructionCode or Hi(CV_Address);
-  BufferPtr^.TX_TransmittingPacket.PacketBytes[1] := Lo(CV_Address);
-  BufferPtr^.TX_TransmittingPacket.PacketBytes[2] := DataByte;
-  BufferPtr^.TX_TransmittingPacket.Flags := 3;
-  BufferPtr^.TX_XOR_Byte := 0;
-  for i := 0 to 2 do
-   BufferPtr^.TX_XOR_Byte := BufferPtr^.TX_XOR_Byte xor BufferPtr^.TX_TransmittingPacket.PacketBytes[i];
-  BufferPtr^.TX_PreambleBitCount := PREAMBLE_BIT_COUNT_SERVICEMODE;
-end;
 
 // ***************************************************************************
 //  procedure NextBitAndTestForCompletion
@@ -71,9 +48,9 @@ end;
 procedure InstructionSendBit(BufferPtr: PDCCBufferInfo);
 begin
   if ServiceModeInfo.ReadWrite = SERVICEMODE_WRITE then
-    DirectLoadTransmitter(BufferPtr, ServiceModeInfo.CV-1, %00001000, %11110000 or ((ServiceModeInfo.Value) shl 3) or ServiceModeInfo.ReadIndex)        // The passed value must be in the xxxxDBBB format where D = Data and BBB is the offset 0..7
+    CommonServiceMode_DirectLoadTransmitterDirectMode(BufferPtr, ServiceModeInfo.CV-1, %00001000, %11110000 or ((ServiceModeInfo.Value) shl 3) or ServiceModeInfo.ReadIndex)        // The passed value must be in the xxxxDBBB format where D = Data and BBB is the offset 0..7
   else
-    DirectLoadTransmitter(BufferPtr, ServiceModeInfo.CV-1, %00001000, %11101000 or ServiceModeInfo.ReadIndex);  // Always trying to read ones and assuming zeros if no response
+    CommonServiceMode_DirectLoadTransmitterDirectMode(BufferPtr, ServiceModeInfo.CV-1, %00001000, %11101000 or ServiceModeInfo.ReadIndex);  // Always trying to read ones and assuming zeros if no response
 end;
 
 // ***************************************************************************
@@ -105,7 +82,14 @@ end;
 // ***************************************************************************
 procedure NoAckHandlerBit(BufferPtr: PDCCBufferInfo);
 begin
-  NextBitAndTestForCompletion(BufferPtr);
+  if ServiceModeInfo.ReadWrite = SERVICEMODE_READ then
+  begin
+    NextBitAndTestForCompletion(BufferPtr);
+  end else
+  begin
+    ServiceModeInfo.iInstructionCountSent := 1;
+    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
+  end;
 end;
 
 // ***************************************************************************
@@ -120,57 +104,9 @@ end;
 procedure InstructionSendByte(BufferPtr: PDCCBufferInfo);
 begin
   if ServiceModeInfo.ReadWrite = SERVICEMODE_WRITE then
-    DirectLoadTransmitter(BufferPtr, ServiceModeInfo.CV-1, %00001100, ServiceModeInfo.ReadIndex)
+    CommonServiceMode_DirectLoadTransmitterDirectMode(BufferPtr, ServiceModeInfo.CV-1, %00001100, ServiceModeInfo.ReadIndex)
   else
-    DirectLoadTransmitter(BufferPtr, ServiceModeInfo.CV-1, %00000100, ServiceModeInfo.ReadIndex);
-end;
-
-// ***************************************************************************
-//  procedure AckHandlerByte
-//
-//  Parameters:  None
-//
-//  Result:  None
-//
-//  Description:
-// ***************************************************************************
-procedure AckHandlerByte(BufferPtr: PDCCBufferInfo);
-begin
-  ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_RESPONSE_DIRECT_BYTE_MODE;
-  NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
-  
-  if ServiceModeInfo.ReadWrite = SERVICEMODE_WRITE then
-  begin // Write
-    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_DIRECT_WRITE_RECOVERY;
-  end else 
-  begin // Read
-    ServiceModeInfo.Value := ServiceModeInfo.ReadIndex;
-    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
-  end;
-end;
-
-// ***************************************************************************
-//  procedure NoAckHandlerByte
-//
-//  Parameters:  None
-//
-//  Result:  None
-//
-//  Description:
-// ***************************************************************************
-procedure NoAckHandlerByte(BufferPtr: PDCCBufferInfo);
-begin
-  Inc(ServiceModeInfo.ReadIndex);                                   // Try the next Value
-  if ServiceModeInfo.Value = ServiceModeInfo.ReadIndex then         // Have we run all the way around the horn once
-  begin
-    ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_DATA_NOT_FOUND;   // Run all possible values and an ACK was not found
-    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY
-  end else
-  begin
-    ServiceModeInfo.iInstructionCountSent := 1;                       // Run the next possible Value cycle
-    ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESET_CYCLE;   // Rurun it
-  end;
-  NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
+    CommonServiceMode_DirectLoadTransmitterDirectMode(BufferPtr, ServiceModeInfo.CV-1, %00000100, ServiceModeInfo.ReadIndex);
 end;
 
 // ***************************************************************************
@@ -194,11 +130,11 @@ begin
     if ServiceModeInfo.CV <= SERVICE_MODE_DIRECT_MODE_MAX_CV then
     begin
       case ServiceModeInfo.iStateMachine of
-        STATE_SERVICEMODE_POWER_ON_CYCLE            : PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_IDLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
-        STATE_SERVICEMODE_RESET_CYCLE               : ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
-        STATE_SERVICEMODE_SEND_INSTRUCTION          : SendInstructions(BufferPtr, @InstructionSendByte, @AckHandlerByte, @NoAckHandlerByte, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
-        STATE_SERVICEMODE_DIRECT_WRITE_RECOVERY     : ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, True);
-        STATE_SERVICEMODE_RESULTS_READY             : ResultReady(BufferPtr);
+        STATE_SERVICEMODE_POWER_ON_CYCLE            : CommonServiceMode_PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
+        STATE_SERVICEMODE_RESET_CYCLE               : CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
+        STATE_SERVICEMODE_SEND_INSTRUCTION          : CommonServiceMode_SendInstructions(BufferPtr, @InstructionSendByte, @CommonServiceMode_AckHandlerByte, @CommonServiceMode_NoAckHandler, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
+        STATE_SERVICEMODE_WRITE_RECOVERY            : CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, True);
+        STATE_SERVICEMODE_RESULTS_READY             : CommonServiceMode_ResultReady(BufferPtr);
       end
     end else
     begin
@@ -211,7 +147,7 @@ begin
 end;
 
 // ***************************************************************************
-//  procedure DirectBitServiceMode_StateMachine
+//  procedure DirectByteByBitServiceMode_StateMachine
 //
 //  Parameters:  None
 //
@@ -223,7 +159,7 @@ end;
 //
 //    NOTE:  Everytime this StateMachine is entered the Transmitter MUST BE LOADED
 // ***************************************************************************
-procedure DirectBitServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
+procedure DirectByteByBitServiceMode_StateMachine(BufferPtr: PDCCBufferInfo);
 var
   BitOffset: Byte;
 begin
@@ -233,11 +169,11 @@ begin
     if ServiceModeInfo.CV <= SERVICE_MODE_DIRECT_MODE_MAX_CV then
     begin
       case ServiceModeInfo.iStateMachine of
-        STATE_SERVICEMODE_POWER_ON_CYCLE            : PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_IDLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
-        STATE_SERVICEMODE_RESET_CYCLE               : ResetCycle(BufferPtr, @InstructionSendBit, SERVICEMODE_POWER_ON_CYCLE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
-        STATE_SERVICEMODE_SEND_INSTRUCTION          : SendInstructions(BufferPtr, @InstructionSendBit, @AckHandlerBit, @NoAckHandlerBit, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
-        STATE_SERVICEMODE_DIRECT_WRITE_RECOVERY     : ResetCycle(BufferPtr, @InstructionSendBit, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, True);
-        STATE_SERVICEMODE_RESULTS_READY             : ResultReady(BufferPtr);
+        STATE_SERVICEMODE_POWER_ON_CYCLE            : CommonServiceMode_PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
+        STATE_SERVICEMODE_RESET_CYCLE               : CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendBit, SERVICEMODE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
+        STATE_SERVICEMODE_SEND_INSTRUCTION          : CommonServiceMode_SendInstructions(BufferPtr, @InstructionSendBit, @AckHandlerBit, @NoAckHandlerBit, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
+        STATE_SERVICEMODE_WRITE_RECOVERY            : CommonServiceMode_ResetCycle(BufferPtr, nil, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, False);
+        STATE_SERVICEMODE_RESULTS_READY             : CommonServiceMode_ResultReady(BufferPtr);
       end
     end else
     begin
