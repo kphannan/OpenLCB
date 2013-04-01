@@ -1,0 +1,291 @@
+unit NMRAnetAppCallbacks;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//
+// * Description:
+//    Implements program specific callbacks for memory configuration etc.
+//
+//   AppCallbacks for the Mustangpeak Command Station
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+uses
+  _25AAxxxx,
+  NMRAnetStateMachine,
+  CANStorage,
+  NMRAnetAppDefines,
+  NMRAnetDefines,
+  NMRAnetNode,
+  NMRAnetUtilities,
+  NMRAnetNceBridgeDefines,
+  NMRAnetDefinesShared;
+
+type
+  TNceBusDeviceVolatileData = record
+    DeviceID: Word;
+  end;
+  PNceBusDeviceVolatileData = ^TNceBusDeviceVolatileData;
+
+const
+  MAX_NODE_CFG_DATA = 256;
+  MAX_VNODE_CFG_DATA = 1024;
+
+type
+  TDeviceConfigurationData = record
+    Dummy: Word;                                                                // Need something
+  end;
+  PDeviceConfigurationData = ^TDeviceConfigurationData;
+
+procedure NMRAnetAppCallbacks_Initialize;
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_EventsIdentify: Boolean;
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+
+
+// Address Space Support
+// *****************************************************************************
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+// *****************************************************************************
+
+// Extracts the Volatile Data from the passed node for the Device
+function GetDeviceData(Node: PNMRAnetNode): PNceBusDeviceVolatileData;
+
+implementation
+
+// Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
+// node in the AssignRAMAddress function below
+var
+  VolatileData: array[0..MAX_NODE_COUNT - 1] of TNceBusDeviceVolatileData;
+  
+  
+function GetDeviceData(Node: PNMRAnetNode): PNceBusDeviceVolatileData;
+begin
+  Result := nil;
+  if Node <> nil then
+    Result := PNceBusDeviceVolatileData( Node^.RAMAddress);
+end;
+  
+//******************************************************************************
+//  NMRAnetStateMachine_Initialize
+//    Called from the NMRAnetStateMachine_Initialize is called during startup
+//******************************************************************************
+procedure NMRAnetAppCallbacks_Initialize;
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_NODE_COUNT - 1 do
+  begin
+    VolatileData[i].DeviceID := ID_NO_DEVICE;
+  end
+end;
+
+// *****************************************************************************
+// Writes the Configuration Memory to the App defined storage device
+//  Node        :  The Node to write the Configuration Data for
+//  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the EEPROM
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+begin
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+  _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+end;
+
+// *****************************************************************************
+// Reads the Configuration Memory from the App defined storage device
+//  Node:  The Node to read the Configuration Data for
+//  DataTarget  : A pointer memory space to write the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the DataTarget
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+begin
+   while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+
+   Result := MaxCount;
+   _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+end;
+
+//******************************************************************************
+//  Returns the overall size of the Configuration Data
+//******************************************************************************
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+begin
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Result := MAX_VNODE_CFG_DATA
+  else
+    Result := MAX_NODE_CFG_DATA
+end;
+
+//******************************************************************************
+//  Associates the offset of the EEPROM for the Configuration Data for the Node
+//******************************************************************************
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  // The first node is the Physical Node so this math works, iNode = 0 is the Physical node and al vNodes > 0 for iNode
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Node^.ConfigurationAddress := Generic32BitPointer( MAX_NODE_CFG_DATA + ((iNode - 1) * MAX_VNODE_CFG_DATA))
+  else
+    Node^.ConfigurationAddress := Generic32BitPointer( 0) ;
+end;
+
+// *****************************************************************************
+// Returns The Is Present Attribute about the Address Space
+//  Node:  The Node to write the Configuration Data for
+//  AddressSpace:  The Address Space to return the information about
+//
+//  Result      : True if Is Present else False
+// *****************************************************************************
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_ACDI_USER)
+  else
+    Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_ACDI_USER)
+end;
+
+// *****************************************************************************
+// Returns The Is ReadOnly Attribute about the Address Space
+//  Node:  The Node to write the Configuration Data for
+//  AddressSpace:  The Address Space to return the information about
+//
+//  Result      : True if Is ReadOnly else False
+// *****************************************************************************
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  case AddressSpace of
+    MSI_CDI,
+    MSI_ALL,
+    MSI_ACDI_MFG,
+    MSI_ACDI_USER : Result := True  // I am not supporting writing to this space, do it through the configuration addresss space
+  else
+      Result := False;
+  end;
+end;
+
+//******************************************************************************
+//  Associates the Address of the RAM for Volatile Node Data
+//******************************************************************************
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  Node^.RAMAddress := Generic32BitPointer( @VolatileData[iNode]);
+end;
+
+// *****************************************************************************
+// Called when an Identify Producer message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+begin
+  Result := False
+end;
+
+
+// *****************************************************************************
+// Called when an Identify Conusmers message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+begin
+  Result := False
+end;
+
+// *****************************************************************************
+// Called when an Identify Events message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
+function AppCallback_EventsIdentify: Boolean;
+begin
+  Result := False
+end;
+
+// *****************************************************************************
+// Called when an Identify Events with a Destination Alias message received
+//   Node         :  The Node that received the message
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+begin
+  Result := False
+end;
+
+procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+begin
+
+end;
+
+// *****************************************************************************
+// Called during the main Statemachine loop.  Allows customer handling of most messages
+// currently (2/13) does not allow overriding of the login or CAN layer messages
+//   Node         :  The Node that has the timeslice to run its statemachine
+//   CANBuffer    : The raw data from the CAN receiver
+//   DataBytesPtr : Pointer to a temporary CAN Byte array that can be used for any purpose
+//
+//   Result       : False to run the default handler, True if this callback handled the 
+//                  processing and skip the default processing
+// *****************************************************************************
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+begin
+  Result := False
+end;
+
+// *****************************************************************************
+// Called when a NMRAnetNode is first allocated and needs to be initialized
+//   Node:  The Node to extract the VolatileData pointer to
+//
+//   Result      : None
+// *****************************************************************************
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+var
+  DeviceData: PNceBusDeviceVolatileData;
+begin
+  DeviceData := GetDeviceData(Node);
+  if DeviceData <> nil then
+  begin
+    DeviceData^.DeviceID := ID_NO_DEVICE;
+  end;
+end;
+
+end.

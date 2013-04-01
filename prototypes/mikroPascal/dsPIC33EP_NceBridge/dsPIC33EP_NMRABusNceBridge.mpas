@@ -1,0 +1,128 @@
+program dsPIC33EP_NMRABusNce;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//     2012-12-16    updated
+//
+// * Description:
+
+//
+// *****************************************************************************
+
+uses
+  NMRAnetNceBridge,
+  NMRAnetStateMachine,
+  NMRAnetDefines,
+  NMRAnetAppCallbacks,
+  MCU_Setup_dsPIC33EP64GP502,
+  NMRAnetNceBridgeDefines,
+  _25AAxxxx,
+  NMRAnetBufferPools,
+  NMRAnetNode,
+  NodeIDs;
+
+{$I Options.inc}
+const
+  STATE_GATHER_COMMANDSTATIONS       = 0;
+  STATE_VERIFY_COMMANDSTATIONS       = 1;
+  STATE_GATHER_PROGRAMMERS           = 2;
+  STATE_VERIFY_PROGRAMMERS           = 3;
+  STATE_INITIALIAZE                  = 4;
+  STATE_RUN                          = 5;
+
+var
+  MainLoopState: Byte;
+  
+var
+  // EEPROM SPI PINS
+  CS_Bank_0                         : sbit at LATB6_bit;
+  CS_Bank_0_Direction               : sbit at TRISB6_bit;
+  EE_PROM_Hold                      : sbit at LATB5_bit;
+  EEPROM_Hold_Direction             : sbit at TRISB5_bit;
+  
+var
+  NceBus_RS485_Select            : sbit at LATA0_bit;
+  NceBus_RS485_Select_Direction  : sbit at TRISA0_bit;
+
+// *****************************************************************************
+//  INTERRUPTS
+// *****************************************************************************
+
+procedure INTERRUPT_Timer_525ms(); iv IVT_ADDR_T1INTERRUPT;
+begin
+  T1IF_bit := 0;
+  NceBusStateMachine_525ms_TimeTick;
+  
+  LATB4_bit := not LATB4_bit;
+  
+  
+end;
+
+procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
+// Called once every 100m
+var
+  i: Integer;
+begin
+  T2IF_bit := 0;                                                              // Clear the Flag
+  for i := 0 to Nodes.AllocatedCount - 1 do
+    NMRAnetStateMachine_100ms_Timer(Nodes.AllocatedList[i]);
+  NMRAnetBufferPools_100ms_TimeTick;
+end;
+
+procedure INTERRUPT_Timer_120us(); iv IVT_ADDR_T3INTERRUPT; ics ICS_AUTO;
+// NceBus Timeout
+begin
+  T3IF_bit := 0;
+end;
+
+{$IFDEF NceBus_UART_ENABLE}
+procedure INTERRUPT_NceBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
+begin
+  U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
+  while (URXDA_U2STA_bit = 1) and (NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex < STATE_RS485_FULL)  do
+  begin
+    NceBusStateMachine_UART_RX_StateMachine(@NceBusStateMachineInfo, U2RXREG);
+  end
+end;
+{$ENDIF}
+
+// *******************
+// MAIN LOOP
+// *******************
+var
+  Buffer: TCANBuffer;
+  ActiveNode: PNMRAnetNode;
+  j: Integer;
+begin
+  _25AAxxxx_Initialize;
+  NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_NCE_BRIDGE_NODE_ID_0_LO);
+  MCU_Setup_Initialize;
+  NceBusStateMachine_Initialize;
+
+  TRISB4_bit := 0;
+  LATB4_bit  := 0;        
+  
+  UART1_Write_Text('Starting'+LF);
+
+  MainLoopState := 0;
+
+  while (TRUE) do
+    begin
+      ActiveNode := NMRAnetNode_NextNode;
+    
+      if ActiveNode <> PNMRAnetNode( nil) then
+      begin
+        NMRAnetStateMachine_Process(ActiveNode);
+        NceBusStateMachine_Process(ActiveNode);                                            // May want this outside of Permited block, look at the statemachine
+      end
+    end;
+end.
