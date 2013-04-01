@@ -840,10 +840,7 @@ begin
           if not ServiceMode then
           begin
             if RailCom then
-            begin
-              LATA4_bit := 1;
               ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0_RAILCOM  // Jump to RailCom Statemachine
-            end
             else
               ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;        // Restart the Pin Statemachine
           end
@@ -856,7 +853,6 @@ begin
     end;
   STATE_NMRA_DCC_PIN_0_RAILCOM :
     begin
-      LATA4_bit := not LATA4_bit;
       Dcc_Timer_PR := DCC_TIMER_29US;
       ABuffer^.Tx_Flags.TRANSMITTING_FLAG_CURRENT_BIT := 1;
       ABuffer^.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT := 1;
@@ -864,14 +860,12 @@ begin
     end;
   STATE_NMRA_DCC_PIN_1_RAILCOM :
     begin
-      LATA4_bit := not LATA4_bit;
       Dcc_Timer_PR := DCC_TIMER_58US;
       ABuffer^.TX_RailComCount := 0;
       ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_2_RAILCOM
     end;
   STATE_NMRA_DCC_PIN_2_RAILCOM :
     begin
-      LATA4_bit := not LATA4_bit;
       Inc(ABuffer^.TX_RailComCount);
       if ABuffer^.TX_RailComCount > 7 then
       begin
@@ -887,14 +881,12 @@ begin
     end;
   STATE_NMRA_DCC_PIN_3_RAILCOM :
     begin
-      LATA4_bit := not LATA4_bit;
       Dcc_Timer_PR := DCC_TIMER_58US;
       ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 1;  // First Half
       ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_4_RAILCOM;
     end;
   STATE_NMRA_DCC_PIN_4_RAILCOM :
     begin
-      LATA4_bit := not LATA4_bit;
       ABuffer^.TX_Flags.TRANSMITTING_FLAG_DCC_PIN_BIT := 0;  // Second Half
       ABuffer^.TX_iDCC_Pin_StateMachine := STATE_NMRA_DCC_PIN_0;
     end;

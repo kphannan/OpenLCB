@@ -26,6 +26,7 @@ type
   PWord = ^Word;
 
 procedure TruncFloat(Value: PStrArray; Digits, Len: Byte);
+function SwapBytes(Test: Word): Word;
 //procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
 
 implementation
@@ -71,6 +72,16 @@ begin
       Inc(i);
     end;
   end;
+end;
+
+function SwapBytes(Test: Word): Word;
+var
+  B: Byte;
+begin
+  B := Hi( Test);
+  Hi( Test) := Lo( Test);
+  Lo(Test) := B;
+  Result := Test;
 end;
 
 end.

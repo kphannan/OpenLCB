@@ -23,7 +23,6 @@ program dsPIC33EP_NMRAnetCommandStation;
 //    - Packet Refresh
 //    - 128/14 Step Mode
 //    - Traction Protocol Results: implement
-//    - Over current
 //    - Implement "stupid throttle" (Lenz/NCE)
 //    - Auto Allocate vTrainNodes
 //    - When in Service Mode it is blocked and will cause issues with the node CAN if other chatter is on the bus
@@ -82,8 +81,18 @@ var
 //  INTERRUPTS
 // *****************************************************************************
 
+type
+  TOverCurrent = record
+    iSample: Word;      // Number of 56us time ticks since last check
+    SampleValue: real;  // Current filtered Value of the current
+    OverCurrent: Integer;  // OC Filtered Flag
+  end;
+  
 var
+  OverCurrent: TOverCurrent;
+  
   DCCTime: Word;
+  
   
 procedure RunServiceMode;
 begin
@@ -142,32 +151,41 @@ end;
 procedure INTERRUPT_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT;
 begin
   T1IF_bit := 0;                                                                // Clear the Flag
-
-  if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+  if CommandStationConfigurationInRam.OverloadDetected = 0 then
   begin
-    RunServiceMode                                                              // Command Station is in Service Mode
+    if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+    begin
+      RunServiceMode                                                              // Command Station is in Service Mode
+    end else
+    begin
+      // Command Station is in Main Line Mode
+      if CommandStationConfigurationInRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
+        RunNmraDccTranmitter;
+
+      if CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED then
+      begin
+        if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 1 then
+        begin
+          H_Bridge_A_Lo := 1;                                                          // Short the Rails
+          H_Bridge_B_Lo := 1;
+        end else
+          ToggleBridge
+      end else
+        ToggleBridge;
+
+      // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
+      NMRA_DCC_58us_TimeTick(@Track);                                                         // < 1us
+      NMRA_DCC_TransmitterStateMachine(@Track, False, CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED);   // < 5us
+      NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
+    end
   end else
   begin
-    // Command Station is in Main Line Mode
-    if CommandStationConfigurationInRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
-      RunNmraDccTranmitter;
-
-    if CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED then
-    begin
-      if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 1 then
-      begin
-        H_Bridge_A_Lo := 1;                                                          // Short the Rails
-        H_Bridge_B_Lo := 1;
-      end else
-        ToggleBridge
-    end else
-      ToggleBridge;
-
-    // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
-    NMRA_DCC_58us_TimeTick(@Track);                                                         // < 1us
-    NMRA_DCC_TransmitterStateMachine(@Track, False, CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED);   // < 5us
-    NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
-  end;
+   // Toggle the Bridge off
+    H_Bridge_A_Lo := 0;                                                           // Bridge Off
+    H_Bridge_A_Hi := 0;                                                           // Bridge Off
+    H_Bridge_B_Lo := 0;                                                           // Bridge Off
+    H_Bridge_B_Hi := 0;                                                           // Bridge Off
+  end
 end;
 
 procedure INTERRUPT_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT;
@@ -187,6 +205,44 @@ procedure INTERRUPT_5ms_Timer(); iv IVT_ADDR_T5INTERRUPT;
 begin
   T5IF_bit := 0;                                                                // Clear the Flag
   ServiceMode_5ms_TimeTick
+end;
+
+procedure INTERRUPT_OverCurrent_Timer(); iv IVT_ADDR_T3INTERRUPT;
+begin
+  T3IF_bit := 0;  // Clear the flag
+  OverCurrent.SampleValue := ADC1_Get_Sample(0) * 0.520 * 0.0032227;             // .00322266 V/Bit * 0.520A/V * Bits =
+  
+  if OverCurrent.SampleValue * 1000 > CommandStationConfigurationInRam.OverCurrentLevel then  // In MilliAmps
+  begin
+    Inc(OverCurrent.OverCurrent);
+    if OverCurrent.OverCurrent > 5 then
+      OverCurrent.OverCurrent := 5;
+  end else 
+  begin
+    Dec(OverCurrent.OverCurrent);
+    if OverCurrent.OverCurrent < 0 then
+      OverCurrent.OverCurrent := 0
+  end;
+  
+  if (OverCurrent.iSample + 1) * 10 > CommandStationConfigurationInRam.OverCurrentTime then  // Make sure iSample is never 0
+  begin
+    if OverCurrent.OverCurrent > 3 then
+    begin
+      while _25AAxxxx_Busy(EEPROM_BANK_0) do
+        Delay_us(10);
+      _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 1, @OverCurrent.iSample);   //
+      if OverCurrent.iSample = 0 then
+      begin
+        OverCurrent.iSample := 1;     // Reuse the structure
+        _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 1, @OverCurrent.iSample);   // Shut Down Time
+        CommandStationConfigurationInRam.OverloadDetected := 1;
+      end
+    end;
+    OverCurrent.iSample := 0;
+  end else
+    Inc(OverCurrent.iSample);
+
+  LATA4_bit := 0;
 end;
 
 
@@ -229,24 +285,18 @@ end;
 // *******************
 var
   ActiveNode, TempNode: PNMRAnetNode;
-  i, j: Integer;
-  x, y: Word;
-  TickTime: real;
-  LastRxTime, LastStateMachineTime, LastDCCTime: Word;
-  
-  ADC_Ticker: DWord;
-  PrevTrackCurrent, TrackCurrent: Word;
-
+  i: Integer;
   ProxyData: PTrainProxyRamData;
-  
-  CV_Value, WriteVal: Byte;
-  RunningAllCVs: Boolean;
 begin
   ANSELA := 0;
   ANSELB := 0;
   
   TRISA4_bit := 0;
   LATA4_bit := 1;
+  
+  OverCurrent.iSample := 0;
+  OverCurrent.SampleValue := 0.0;
+  OverCurrent.OverCurrent := 0;
                                                 // Output
   _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, {MUSTANGPEAK_SERVICETRACK_NODE_ID_0_LO} MUSTANGPEAK_COMMANDSTATION_ID_0_LO);
@@ -254,7 +304,9 @@ begin
   NMRA_DCC_Initialize;
   ServiceMode_Initialize;
   AppCallback_Configuration_Zeroize(False);
-  _25AAxxxx_Read(EEPROM_BANK_0, CMD_STATION_CONFIG_OFFSET, CMD_STATION_CONFIG_MAX_OFFSET - CMD_STATION_CONFIG_OFFSET, @CommandStationConfigurationInRam);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
+  CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
+  CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
 
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
@@ -269,41 +321,21 @@ begin
   DCC_NMRA_Tranmitter_Hi := 0;
   DCC_NMRA_Tranmitter_Lo_Direction := 0;                                        // Output
   DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
-
+  
+  ADC1_Read(0);  // cheating, intializes and set to Analog input
+  
   UART1_Write_Text('Starting 1'+LF);
 
+  TON_T3CON_bit := 1;       // Turn on current limit
+  TON_T2CON_bit := 1;       // Turn on the 100ms timer
+  MCU_Setup_Enable_CAN;
   {$IFNDEF DCCTIMER_DISABLE}
   TON_T1CON_bit := 1;                                                           // Start the DCC Timer
   Delay_ms(10);
   NMRA_DCC_Packet_Init;                                                         // Send our 20 Idle Packets per the spec, note we are not on the OLCB bus yet so this will block until done.
   {$ENDIF}
-
-  UART1_Write_Text('Starting 2'+LF);
-
-  x := 0;
-  y := 0;
-  j := 0;
-  i := 0;
-  MaxTime_RX := 0;
-  LastRxTime := 0;
-  MaxTime_StateMachine := 0;
-  LastStateMachineTime := 0;
-  DCCTime := 0;
-  LastDCCTime := 0;
-  CV_Value := 0;
-  RunningAllCVs := False;
-  WriteVal := 0;
-
-  j := 0;
-  ADC_Ticker := 0;
-  PrevTrackCurrent := 0;
   
-  // Timer 1 = DCC; Timer 2 = GP Timer; Timer 5 = Service Mode Timer
-  TON_T3CON_bit := 1;       // Turn on Timer 3 to time loops
-  TON_T4CON_bit := 1;       // Turn on Timer 3 to time loops
-
-
-  ADC1_Read(0);  // cheating, intializes and set to Analog input
+  UART1_Write_Text('Starting 2'+LF);
 
  // NMRAnetNode_Allocate;    // One Proxy ready to go
   
@@ -313,49 +345,8 @@ begin
     ActiveNode := NMRAnetNode_NextNode;
     if ActiveNode <> PNMRAnetNode( nil) then
     begin
-    {
-      Inc(ADC_Ticker);
-      if ADC_Ticker > 200000 then
-      begin
-        TrackCurrent := ADC1_Get_Sample(0) - 3;
-        TrackCurrent := (TrackCurrent + PrevTrackCurrent) div 2;
-        FloatToStr( (Double( TrackCurrent) * 0.520 * 0.0032227), s1);      // .00322266 V/Bit * 0.520A/V * Bits =
-        PrevTrackCurrent := TrackCurrent;
-        TruncFloat(@s1, 3, 6);
-        UART1_Write_Text('Track Current: '+ s1 + ' Amps' + LF);
-        ADC_Ticker := 0;
-      end;   }
-
-      TMR3 := 0;
       NMRAnetStateMachine_Process(ActiveNode);
-      if TMR3 > MaxTime_StateMachine then MaxTime_StateMachine := TMR3;
 
-  {
-      if MaxTime_StateMachine > LastStateMachineTime then
-      begin
-        LastStateMachineTime := MaxTime_StateMachine;
-        TickTime := real( LastStateMachineTime) * 16.6666666e-9;  // nano seconds
-        TickTime := TickTime*1e6;  // micro seconds (us)
-        FloatToStr(TickTime, s1) ;
-        UART1_Write_Text('StateMachineTime = ' + s1 + 'us'+LF);
-      end;
-      if MaxTime_Rx > LastRxTime then
-      begin
-        LastRxTime := MaxTime_Rx;
-        TickTime := real( LastRxTime) * 16.6666666e-9;  // nano seconds
-        TickTime := TickTime*1e6;  // micro seconds (us)
-        FloatToStr(TickTime, s1) ;
-        UART1_Write_Text('Rx Interrupt = ' + s1 + 'us'+LF);
-      end;
-      if DCCTime > LastDCCTime then
-      begin
-        LastDCCTime:= DCCTime;
-        TickTime := real( LastDCCTime) * 16.6666666e-9;  // nano seconds
-        TickTime := TickTime*1e6;  // micro seconds (us)
-        FloatToStr(TickTime, s1) ;
-        UART1_Write_Text('DCC Interrupt = ' + s1 + 'us'+LF);
-      end;
-               }
       if UART1_Data_Ready then
       begin
         case UART1_Read of
@@ -446,7 +437,22 @@ begin
               ByteToStr(ServiceModeInfo.ReadIndex, s1);
               UART1_Write_Text('SM ReadIndex: ' + s1 + LF);
             end;
-            
+            '2' :
+              begin
+                IntToStr(OverCurrent.iSample, s1);
+                UART1_Write_Text('iSample: ' + s1 + LF);
+                IntToStr(OverCurrent.OverCurrent, s1);
+                UART1_Write_Text('Over Current: ' + s1 + LF);
+                FloatToStr(OverCurrent.SampleValue, s1);
+                UART1_Write_Text('Sample: ' + s1 + LF);
+                WordToStr(CommandStationConfigurationInRam.OverCurrentLevel, s1);
+                UART1_Write_Text('I Level: ' + s1 + LF);
+                WordToStr(CommandStationConfigurationInRam.OverCurrentTime, s1);
+                UART1_Write_Text('I Time: ' + s1 + LF);
+                WordToStr(CommandStationConfigurationInRam.OverloadDetected, s1);
+                UART1_Write_Text('OverloadDetected: ' + s1 + LF);
+              end;
+
         end;
       end;
     end;

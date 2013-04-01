@@ -34,7 +34,8 @@ uses
   NMRAnetDCC,
   NMRAnetServiceMode,
   ServiceModeDefines,
-  NMRAnetDefinesShared;
+  NMRAnetDefinesShared,
+  HelperFunctions;
 
 const
   TRACTION_PROTOCOL_MASK             = $F0;
@@ -128,15 +129,21 @@ type
     DccBusMode: Byte;
     RailComEnable: Byte;
     OverCurrentLevel: Word;                                                     // In milliAmps
+    OverCurrentTime: Word;                                                      // In milliSeconds
+    OverloadDetected: Byte;                                                     // 0 = Normal; 1 = Overloaded
     RepeatSpeedPacket: Byte;
     RepeatFunctions: TRepeatFunctionPacketArray;
   end;
   
 const
-  MAX_NODE_CFG_DATA  = 600;
-  MAX_VNODE_CFG_DATA = 1700;
-  CMD_STATION_CONFIG_OFFSET = 61;                                               // Start of the Command Station Config Data
-  CMD_STATION_CONFIG_MAX_OFFSET = 96;                                           // Last Offset of the Command Station Config Data
+  MAX_NODE_CFG_DATA  = 512;
+  MAX_VNODE_CFG_DATA = 1536;
+  EEPROM_CONFIG_OFFSET = 61;                                               // Start of the Command Station Config Data
+  EEPROM_CONFIG_MAX_OFFSET = 99;                                           // Last Offset of the Command Station Config Data
+  
+  EEPROM_OVERCURRENT_LEVEL     = 65;
+  EEPROM_OVERCURRENT_TIME      = 67;
+  EEPROM_OVERCURRENT_DECTECTED = 69;
   
   CONFIG_OUTPUTMODE_MAIN_TRACK    = 0;
   CONFIG_OUTPUTMODE_SERVICE_MODE  = 1;
@@ -370,7 +377,7 @@ const
   NullArray: array[0..63] of byte = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 var
   LocalBuffer: array[0..7] of Byte;
-  i: Integer;
+  i: LongInt;
 begin
   if not Force then
   begin
@@ -393,16 +400,23 @@ begin
     LocalBuffer[0] := Hi(Word( 2000));
     while _25AAxxxx_Busy(EEPROM_BANK_0) do
       Delay_us(10);
-   _25AAxxxx_Write(EEPROM_BANK_0, 65, 2, @LocalBuffer);   // RailCom Time
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_LEVEL, 2, @LocalBuffer);   // Shut Down Time
    
-   LocalBuffer[0] := 1;   // Repeat Speed/Dir Packets
-   LocalBuffer[1] := 1;   // Repeat F0 Packets
-   LocalBuffer[2] := 1;   // Repeat F1 Packets
-   LocalBuffer[3] := 1;   // Repeat F2 Packets
-   LocalBuffer[4] := 1;   // Repeat F3 Packets
+   LocalBuffer[1] := Lo(Word( 100));     // 100ms shutdown
+   LocalBuffer[0] := Hi(Word( 100));
     while _25AAxxxx_Busy(EEPROM_BANK_0) do
       Delay_us(10);
-   _25AAxxxx_Write(EEPROM_BANK_0, 67, 5, @LocalBuffer);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_TIME, 2, @LocalBuffer);   // RailCom Time
+   
+   LocalBuffer[0] := 0;   // Overload State = No Overload
+   LocalBuffer[1] := 1;   // Repeat Speed/Dir Packets
+   LocalBuffer[2] := 1;   // Repeat F0 Packets
+   LocalBuffer[3] := 1;   // Repeat F1 Packets
+   LocalBuffer[4] := 1;   // Repeat F2 Packets
+   LocalBuffer[5] := 1;   // Repeat F3 Packets
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 6, @LocalBuffer);
   end
 end;
 
@@ -426,15 +440,14 @@ begin
           while _25AAxxxx_Busy(EEPROM_BANK_0) do
             Delay_us(10);
           _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
-
-          if Node^.ConfigurationAddress = 0 then                                // Update the Command Station Ram with the new configuration data
+          // Update the Command Station Ram with the new configuration data
+          if (Node^.ConfigurationAddress = 0) and (StartAddress >= EEPROM_CONFIG_OFFSET) and (StartAddress <= EEPROM_CONFIG_MAX_OFFSET) then
           begin
-            if (StartAddress >= CMD_STATION_CONFIG_OFFSET) and (StartAddress <= CMD_STATION_CONFIG_MAX_OFFSET) then
-            begin
-              while _25AAxxxx_Busy(EEPROM_BANK_0) do
-                Delay_us(10);
-              _25AAxxxx_Read(EEPROM_BANK_0, CMD_STATION_CONFIG_OFFSET, CMD_STATION_CONFIG_MAX_OFFSET - CMD_STATION_CONFIG_OFFSET, @CommandStationConfigurationInRam);
-            end;
+            while _25AAxxxx_Busy(EEPROM_BANK_0) do
+              Delay_us(10);
+            _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
+            CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
+            CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
           end;
         end;
     1: begin

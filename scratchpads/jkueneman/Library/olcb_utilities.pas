@@ -125,8 +125,8 @@ type
   function DotHexToNodeID(NodeID: string): QWord;
   function EventToDoxHex(Event: TEventID): string;
   function DotHexToEvent(Event: string): TEventID;
-  function IntToHexArray(Value: Integer; var Count: Integer): THexArray;
-  function StrToHexArray(Value: string; var Count: Integer): THexArray;
+  function IntToHexArray(Value: Integer): THexArray;
+  function StrToHexArray(Value: string): THexArray;
 
   function GetTickCount : DWORD;
 
@@ -844,12 +844,10 @@ begin
 
 end;
 
-function IntToHexArray(Value: Integer; var Count: Integer): THexArray;
+function IntToHexArray(Value: Integer): THexArray;
 var
   Str: string;
-  i: Integer;
 begin
-  Count := 0;
   Str := IntToHex(Value, 16);
   Result[0] := Hex2Dec( Str[15]+Str[16]);
   Result[1] := Hex2Dec( Str[13]+Str[14]);
@@ -859,18 +857,11 @@ begin
   Result[5] := Hex2Dec( Str[5]+Str[6]);
   Result[6] := Hex2Dec( Str[3]+Str[4]);
   Result[7] := Hex2Dec( Str[1]+Str[2]);
-  if Value = 0 then
-    Count := 1
-  else begin
-    for i := 0 to 7 do
-      if Result[i] > 0 then
-        Inc(Count)
-  end;
 end;
 
-function StrToHexArray(Value: string; var Count: Integer): THexArray;
+function StrToHexArray(Value: string): THexArray;
 begin
-  Result := IntToHexArray( StrToInt(Value), Count)
+  Result := IntToHexArray( StrToInt(Value))
 end;
 
 

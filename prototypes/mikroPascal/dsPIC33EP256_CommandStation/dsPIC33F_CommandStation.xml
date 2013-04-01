@@ -107,8 +107,30 @@
         </map>
       </int>
       <int size="2">
-        <name>Overcurrent Level</name>
+        <name>Overcurrent Trip Level</name>
         <description>Level of current to trip over current protection shutdown (milliAmps)</description>
+        <min>0</min>
+        <max>5000</max>
+      </int>
+      <int size="2">
+        <name>Overcurrent Shutdown Time (milliSeconds)</name>
+        <description>Time between first detected overcurrent and shutdown of the Command Station</description>
+        <min>0</min>
+        <max>1000</max>
+      </int>
+      <int size="1">
+        <name>Overloaded</name>
+        <description>The Command Station overload detection flag</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>Command Station is operating normally</value>
+          </relation>
+          <relation>
+            <property>1</property>
+            <value>Command Station is shutdown due to overcurrent</value>
+          </relation>
+        </map>
       </int>
       <group>
         <name>State Repeat Setup</name>

@@ -216,11 +216,6 @@ var
   DataBytesPtr: PCAN_DataBytes;
   MTI_Code: Word;
 begin
-
-  // UART1_Write_Text('NMRAnet'+LF);
-
-  TMR4 := 0;
-
   DoDefault := True;
   if NMRAnetLayerReceiveHook <> nil then
     NMRAnetLayerReceiveHook(CANBuffer, DoDefault);                              // Allow the program to have a crack at the message handler
@@ -561,8 +556,6 @@ begin
       end;
     end
   end;
-
-  if TMR4 > MaxTime_RX then MaxTime_RX := TMR4;
 end;
 
 procedure ReceivedOnFilter2(Buffer: PCANBuffer);

@@ -623,7 +623,7 @@ end;
 procedure TFormTrainConfigEditor.WriteConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
 var
   Stream: TMemoryStream;
-  i, iCount: Integer;
+  i: Integer;
   EventID: TEventID;
   HexArray: THexArray;
 begin
@@ -639,10 +639,9 @@ begin
                       Stream.Position := 0;
                     end;
       cdt_Int     : begin
-                      iCount := 0;
-                      HexArray := StrToHexArray(Edit.Text, iCount);
+                      HexArray := StrToHexArray(Edit.Text);
 
-                      for i := iCount - 1 downto 0  do
+                      for i := Edit.ConfigInfo.ConfigMemSize - 1 downto 0  do
                         Stream.WriteByte( HexArray[i]);
                       Stream.Position := 0;
                     end;
@@ -669,17 +668,16 @@ end;
 procedure TFormTrainConfigEditor.WriteConfigurationSpinEdit(Edit: TOlcbSpinEdit; iPage, iControl: Word);
 var
   Stream: TMemoryStream;
-  i, iCount: Integer;
+  i: Integer;
   HexArray: THexArray;
 begin
   Stream := TMemoryStream.Create;
   try
     case Edit.ConfigInfo.DataType of
       cdt_Int     : begin
-                      iCount := 0;
-                      HexArray := IntToHexArray( Edit.Value, iCount);
+                      HexArray := IntToHexArray( Edit.Value);
 
-                      for i := iCount - 1 downto 0  do
+                      for i := Edit.ConfigInfo.ConfigMemSize - 1 downto 0  do
                         Stream.WriteByte( HexArray[i]);
                       Stream.Position := 0;
                     end;
@@ -700,7 +698,7 @@ end;
 procedure TFormTrainConfigEditor.WriteConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
 var
   Stream: TMemoryStream;
-  i, iCount, iComboBox: Integer;
+  i, iComboBox: Integer;
   Relation: TMapRelation;
   EventID: TEventID;
   HexArray: THexArray;
@@ -726,10 +724,9 @@ begin
                         Relation := Edit.ConfigInfo.MapList.FindMapByValue( Edit.Items[iComboBox]);
                         if Assigned(Relation) then
                         begin
-                          iCount := 0;
-                          HexArray := StrToHexArray( Relation.Prop, iCount);
+                          HexArray := StrToHexArray( Relation.Prop);
 
-                          for i := iCount - 1 downto 0  do
+                          for i := Edit.ConfigInfo.ConfigMemSize - 1 downto 0  do
                            Stream.WriteByte( HexArray[i]);
                           Stream.Position := 0;
                         end;
