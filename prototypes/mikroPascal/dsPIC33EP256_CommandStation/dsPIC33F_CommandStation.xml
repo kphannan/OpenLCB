@@ -528,6 +528,24 @@
       </group>
     </group>
   </segment>
+  <segment origin="256" space="253">
+    <name>Debug</name>
+    <description>Debug options for developers, normal users should not change these options</description>
+    <int size="1">
+      <name>Auto allocate virtual train nodes</name>
+      <description>Allows manual allocation of Train vNode for stressing throttles with lack of resources</description>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Auto-allocate Virtual Nodes</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Manually Allocate Nodes ("a" on the UART)</value>
+        </relation>
+      </map>
+    </int>
+  </segment>
   <segment origin="0" space="252">
     <group>
       <name>Manufacturer Information</name>

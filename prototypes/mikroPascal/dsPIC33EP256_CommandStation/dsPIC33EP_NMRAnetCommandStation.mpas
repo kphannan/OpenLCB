@@ -19,14 +19,23 @@ program dsPIC33EP_NMRAnetCommandStation;
 //
 //
 //* TODO
-//    - Optimize how Service Mode looks for values (check 0, 255, 64, 192 first)
 //    - Packet Refresh
-//    - 128/14 Step Mode
 //    - Traction Protocol Results: implement
 //    - Implement "stupid throttle" (Lenz/NCE)
-//    - Auto Allocate vTrainNodes
 //    - When in Service Mode it is blocked and will cause issues with the node CAN if other chatter is on the bus
 //    - Can't detect no loco on the track in Byte by Bit mode because a lack of an ACK is interperted as it "must be a 0"
+//    - Startup can trigger an Over Current latch (seems only after EEPROM Zeroization?)
+//
+//* Open Questions
+//    - Think about do I Free the vNode completely when a throttle releases it.
+//
+// * Improvements
+//    - Current Sense can be done in an ADC interrupt speed it up.
+//    - Optimize how Service Mode looks for values (check 0, 255, 64, 192 first)
+//
+// * Fixes
+//    - 128/14 Step Mode                  4/1/13: Fixed 128 step mode not working with short address
+//    - Auto Allocate vTrainNodes         4/1/13: Added configuration option to turn this on off.
 //
 // ******************************************************************************
 
@@ -280,6 +289,18 @@ begin
   end;
 end;
 
+procedure InitializeConfigurationRam;
+begin
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
+  CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
+  CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);
+end;
+
 // *******************
 // MAIN LOOP
 // *******************
@@ -304,9 +325,7 @@ begin
   NMRA_DCC_Initialize;
   ServiceMode_Initialize;
   AppCallback_Configuration_Zeroize(False);
-  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
-  CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
-  CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
+  InitializeConfigurationRam;
 
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
@@ -337,11 +356,22 @@ begin
   
   UART1_Write_Text('Starting 2'+LF);
 
- // NMRAnetNode_Allocate;    // One Proxy ready to go
+  if CommandStationConfigurationInRam.DebugAutoAllocate = 0 then
+    NMRAnetNode_Allocate;    // One Proxy ready to go
   
   while (TRUE) do
   begin
     // Global updates
+    // Allcoate a proxy if needed
+    if (CommandStationRamData.EnableAutoAllocateProxy = 0) and (CommandStationRamData.AllocateProxy < 0) then
+    begin
+      if FindFirstNonDCCAllocatedNode = nil then
+      begin
+        NMRAnetNode_Allocate;
+        Dec(CommandStationRamData.AllocateProxy);
+      end
+    end;
+                      
     ActiveNode := NMRAnetNode_NextNode;
     if ActiveNode <> PNMRAnetNode( nil) then
     begin

@@ -121,6 +121,12 @@ type
   end;
   PTrainProxyRamData = ^TTrainProxyRamData;
   
+  TCommandStationRamData = record
+    EnableAutoAllocateProxy: Byte;                                              // For Debugging
+    AllocateProxy: Word;                                                       // Running count of how many proxies to allocate
+  end;
+  PCommandStationRamData = ^TCommandStationRamData;
+  
   TRepeatFunctionPacketArray = array[0..27] of Byte;
 
   TCommandStationConfigurationInRam = record                                    // This mirrors the EEPROM values for fast lookup in real time
@@ -133,6 +139,7 @@ type
     OverloadDetected: Byte;                                                     // 0 = Normal; 1 = Overloaded
     RepeatSpeedPacket: Byte;
     RepeatFunctions: TRepeatFunctionPacketArray;
+    DebugAutoAllocate: Byte;                                                    // Start of EEPROM_DEBUG memory space
   end;
   
 const
@@ -140,6 +147,11 @@ const
   MAX_VNODE_CFG_DATA = 1536;
   EEPROM_CONFIG_OFFSET = 61;                                               // Start of the Command Station Config Data
   EEPROM_CONFIG_MAX_OFFSET = 99;                                           // Last Offset of the Command Station Config Data
+  
+  EEPROM_DEBUG_CONFG_OFFSET = 256;
+  EEPROM_DEBUG_MAX_OFFSET = 257;
+  
+  EEPROM_AUTOALLOCATE_TRAIN_NODES = 256;
   
   EEPROM_OVERCURRENT_LEVEL     = 65;
   EEPROM_OVERCURRENT_TIME      = 67;
@@ -185,19 +197,21 @@ procedure AppCallback_Configuration_Zeroize(Force: Boolean);
 
 // *****************************************************************************
 
-// Local to Train Nodes
+
 function ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
+function FindFirstNonDCCAllocatedNode: PNMRAnetNode;
 
 var
   CommandStationConfigurationInRam: TCommandStationConfigurationInRam;
+  CommandStationRamData: TCommandStationRamData;
 
 implementation
 
 // Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
 // node in the AssignRAMAddress function below
 var
-  VolatileData: array[0..MAX_NODE_COUNT - 1] of TTrainProxyRamData;
- 
+  TrainProxyRamData: array[0..MAX_NODE_COUNT - 1] of TTrainProxyRamData;   // Easier to allocate 1 extra but not use it for the CS node
+
 procedure PrintServiceModeResults;
 begin
   case ServiceModeInfo.ServiceModeResult of
@@ -417,6 +431,7 @@ begin
     while _25AAxxxx_Busy(EEPROM_BANK_0) do
       Delay_us(10);
    _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 6, @LocalBuffer);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_AUTOALLOCATE_TRAIN_NODES, 1, @CommandStationRamData.EnableAutoAllocateProxy);
   end
 end;
 
@@ -448,6 +463,12 @@ begin
             _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
             CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
             CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
+          end;
+          if (Node^.ConfigurationAddress = 0) and (StartAddress >= EEPROM_DEBUG_CONFG_OFFSET) and (StartAddress <= EEPROM_DEBUG_MAX_OFFSET) then
+          begin
+            while _25AAxxxx_Busy(EEPROM_BANK_0) do
+              Delay_us(10);
+            _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);
           end;
         end;
     1: begin
@@ -624,7 +645,7 @@ end;
 //******************************************************************************
 procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
 begin
-  Node^.RAMAddress := Generic32BitPointer( @VolatileData[iNode]);
+  Node^.RAMAddress := Generic32BitPointer( @TrainProxyRamData[iNode])
 end;
 
 //******************************************************************************
@@ -636,13 +657,15 @@ var
 begin
   for i := 0 to MAX_NODE_COUNT - 1 do
   begin
-    VolatileData[i].State := 0;
-    VolatileData[i].Speed := 0;
-    VolatileData[i].Functions := 0;
-    VolatileData[i].MsgFlags := 0;
-    VolatileData[i].Address := 0;
-    VolatileData[i].SpeedSteps := 28; // Default
-  end
+    TrainProxyRamData[i].State := 0;
+    TrainProxyRamData[i].Speed := 0;
+    TrainProxyRamData[i].Functions := 0;
+    TrainProxyRamData[i].MsgFlags := 0;
+    TrainProxyRamData[i].Address := 0;
+    TrainProxyRamData[i].SpeedSteps := 28; // Default
+  end;
+  CommandStationRamData.AllocateProxy := 1;   // Allocate the first one
+  CommandStationRamData.EnableAutoAllocateProxy := 0;
 end;
 
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
@@ -847,17 +870,15 @@ begin
                         NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
                       end;
                 128 : begin
-                        if AddressHi and $C0 = $C0 then
-                        begin
-                          AbsoluteSpeed := (127/100) * AbsoluteSpeed;
-                          SpeedStep := Word( AbsoluteSpeed);
-                          if SpeedStep > 0 then
-                            Inc(SpeedStep);   // 1 = EStop
-                          if IsForward then
-                            SpeedStep := SpeedStep or $80;
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
-                          NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                        end;
+                        AddressHi := AddressHi or $C0;    // Allow a mistaken short address to work here by adding the $C0
+                        AbsoluteSpeed := (127/100) * AbsoluteSpeed;
+                        SpeedStep := Word( AbsoluteSpeed);
+                        if SpeedStep > 0 then
+                          Inc(SpeedStep);   // 1 = EStop
+                        if IsForward then
+                          SpeedStep := SpeedStep or $80;
+                        NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
+                        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
                       end;
               end;
             end;
@@ -942,8 +963,7 @@ begin
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
                     ProxyData^.SpeedSteps := CANBuffer^.DataBytes[4];                         // TO DO: NEED TO WRITE TO CONFIGURATION
                     ProxyData^.Address := Word ((CANBuffer^.DataBytes[5] shl 8)) or CANBuffer^.DataBytes[6];  // This is in NMRA DCC format for short/long address
-                //    if FindFirstNonDCCAllocatedNode = nil then
-                 //     NMRAnetNode_Allocate;                                                     // Need a proxy that is free to allocate
+                    Inc(CommandStationRamData.AllocateProxy);                               // Set the flag to allocate a new proxy since we used the last one
                   end;
                 DCC_DEALLOCATE_ADDRESS :
                   begin
