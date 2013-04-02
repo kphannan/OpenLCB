@@ -63,8 +63,6 @@ begin
   NceBusStateMachine_525ms_TimeTick;
   
   LATB4_bit := not LATB4_bit;
-  
-  
 end;
 
 procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
@@ -107,6 +105,11 @@ begin
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_NCE_BRIDGE_NODE_ID_0_LO);
   MCU_Setup_Initialize;
   NceBusStateMachine_Initialize;
+  
+  // Enabled perphrials
+  MCU_Enable_CAN;
+  TON_T1CON_bit := 1;       // Turn on
+  TON_T2CON_bit := 1;       // Turn on
 
   TRISB4_bit := 0;
   LATB4_bit  := 0;        

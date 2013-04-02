@@ -40,7 +40,7 @@ const
   MUSTANGPEAK_XPRESSNET_ID_0_LO          = $00010786;  // The Bottom 3 Bytes
   MUSTANGPEAK_ROSTER_NODE_ID_0_LO        = $00010787;  // The bottom 3 bytes
   MUSTANGPEAK_SERVICETRACK_NODE_ID_0_LO  = $00010788;  // The bottom 3 bytes
-  MUSTANGPEAK_NCE_BRIDGE_NODE_ID_0_LO  = $00010788;  // The bottom 3 bytes
+  MUSTANGPEAK_NCE_BRIDGE_NODE_ID_0_LO    = $00010789;  // The bottom 3 bytes
 
 implementation
 

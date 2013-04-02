@@ -19,35 +19,12 @@ const
   CAN_PROP_SEG   = 3;               //
   
   procedure MCU_Setup_Initialize;
+  procedure MCU_Enable_CAN;
 
 implementation
 
-procedure MCU_Setup_Initialize;
-var
-  i: Integer;
-  WordPtr: ^Word;
+procedure MCU_Enable_CAN;
 begin
-  ANSELA := 0x0000;                                  // configure AN pins on Port A as digital I/O
-  ANSELB := 0x0000;                                  // configure AN pins on Port B digital I/O
-
-
-  OSCCON := OSCCON and $F8FF;                                                   // Clear COSC bits (set to FRC mode)
-  OSCCON.0 := 1;                                                                // Tell it to change modes
-  while OSCCON.0 = 1 do;                                                        // wait for it to take effect
-
-  CLKDIV := CLKDIV and 0xFFE0;                                                  // PLLPRE<4:0> = 0  ->  N1 = 2    8MHz / 2 = 4MHz
-                                                                                // (must be within 0.8 MHz to 8 MHz range)
-  PLLFBD :=   30;                                                               // PLLDIV<8:0> = 30 ->  M = 32    4MHz * 32 = 128MHz
-                                                                                // (must be within 100 MHz to 200 MHz range)
-  PLLPOST_1_bit := 0;
-  PLLPOST_0_bit := 0;                                                           // PLLPOST<1:0> = 0 ->  N2 = 2    128MHz / 2 = 64MHz
-
-  OSCCON := OSCCON or $0300;                                                    // Set COSC to 011 = XT with PLL
-  OSCCON.0 := 1;                                                                // Tell it to change modes
-  while OSCCON.0 = 1 do;                                                        // wait for it to take effect
-
-  Delay_ms(10);
-
   dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode
   // Setup the CAN Baud Rate
   dsPIC33_CAN_SetBaud(CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz with a 64Mhz Clock
@@ -121,6 +98,33 @@ begin
 
   dsPIC33_CAN_GlobalInterruptCAN_EventPriority(6);                              // CAN Event Interrupt has a priority of 6 out of 7
   dsPIC33_CAN_GlobalInterruptCAN_Event(True);                                   // Enable the CAN Event Interrupt
+end;
+
+procedure MCU_Setup_Initialize;
+var
+  i: Integer;
+  WordPtr: ^Word;
+begin
+  ANSELA := 0x0000;                                  // configure AN pins on Port A as digital I/O
+  ANSELB := 0x0000;                                  // configure AN pins on Port B digital I/O
+
+
+  OSCCON := OSCCON and $F8FF;                                                   // Clear COSC bits (set to FRC mode)
+  OSCCON.0 := 1;                                                                // Tell it to change modes
+  while OSCCON.0 = 1 do;                                                        // wait for it to take effect
+
+  CLKDIV := CLKDIV and 0xFFE0;                                                  // PLLPRE<4:0> = 0  ->  N1 = 2    8MHz / 2 = 4MHz
+                                                                                // (must be within 0.8 MHz to 8 MHz range)
+  PLLFBD :=   30;                                                               // PLLDIV<8:0> = 30 ->  M = 32    4MHz * 32 = 128MHz
+                                                                                // (must be within 100 MHz to 200 MHz range)
+  PLLPOST_1_bit := 0;
+  PLLPOST_0_bit := 0;                                                           // PLLPOST<1:0> = 0 ->  N2 = 2    128MHz / 2 = 64MHz
+
+  OSCCON := OSCCON or $0300;                                                    // Set COSC to 011 = XT with PLL
+  OSCCON.0 := 1;                                                                // Tell it to change modes
+  while OSCCON.0 = 1 do;                                                        // wait for it to take effect
+
+  Delay_ms(10);
 
   Unlock_IOLOCK;
   {$IFDEF UART_ENABLE}
@@ -177,8 +181,7 @@ begin
   PR2 := 12500;             // Clock ticks every 31.25ns * 256 * 12500 = 100ms interrupts
   T2IF_bit := 0;            // Clear T2IF
   T2IE_bit := 1;            // Enable the Interrupt
-  TON_T2CON_bit := 1;       // Turn on
-  
+
   TCS_T1CON_bit := 0;       // internal cycle clock
   T1IP_0_bit := 0;          // Timer 1 Interrupt Priority = 2   (1 means off)
   T1IP_1_bit := 1;
@@ -188,8 +191,7 @@ begin
   PR1 := $FFFF;            // Clock ticks every 31.25ns * 256 * 65535 = 524.28ms interrupts       (64Mhz = 15.625ns * 2 cycle/instruction = 31.25ns)
   T1IF_bit := 0;           // Clear T1IF
   T1IE_bit := 1;           // Enable the Interrupt
-  TON_T1CON_bit := 1;       // Turn on
-  
+
   TCS_T3CON_bit := 0;       // internal cycle clock
   T3IP_0_bit := 0;          // Timer 1 Interrupt Priority = 2   (1 means off)
   T3IP_1_bit := 1;

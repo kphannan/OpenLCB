@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=dsPIC33EP_NMRAnetCommandStation.mpas
+Value=NMRAnetAppCallbacks.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]

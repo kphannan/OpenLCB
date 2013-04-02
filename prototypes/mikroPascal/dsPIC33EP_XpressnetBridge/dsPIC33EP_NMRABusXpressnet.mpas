@@ -108,6 +108,11 @@ begin
   MCU_Setup_Initialize;
   XpressnetStateMachine_Initialize;
 
+  // Enabled Perphrials
+  MCU_Enable_CAN;
+  TON_T1CON_bit := 1;       // Turn on
+  TON_T2CON_bit := 1;       // Turn on
+  
   TRISB4_bit := 0;
   LATB4_bit  := 0;        
   
