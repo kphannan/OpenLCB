@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="49">
+    <Units Count="51">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -25,8 +25,8 @@
         <UnitName Value="form_main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="73" Y="3"/>
+        <TopLine Value="1615"/>
+        <CursorPos X="75" Y="1634"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -197,8 +197,8 @@
         <UnitName Value="form_awesome_throttle"/>
         <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="49" Y="19"/>
+        <TopLine Value="292"/>
+        <CursorPos X="31" Y="290"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -246,11 +246,12 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="710"/>
-        <CursorPos X="67" Y="727"/>
-        <UsageCount Value="131"/>
+        <TopLine Value="73"/>
+        <CursorPos X="57" Y="94"/>
+        <UsageCount Value="135"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit21>
@@ -258,12 +259,11 @@
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1109"/>
         <CursorPos X="99" Y="1136"/>
-        <UsageCount Value="130"/>
+        <UsageCount Value="134"/>
         <Loaded Value="True"/>
       </Unit22>
       <Unit23>
@@ -474,130 +474,145 @@
         <CursorPos X="3" Y="409"/>
         <UsageCount Value="10"/>
       </Unit48>
+      <Unit49>
+        <Filename Value="E:\Developer\lazarus\lcl\comctrls.pp"/>
+        <UnitName Value="ComCtrls"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="2971"/>
+        <CursorPos X="14" Y="2988"/>
+        <UsageCount Value="10"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="E:\Developer\lazarus\lcl\include\treeview.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="3198"/>
+        <CursorPos X="3" Y="3200"/>
+        <UsageCount Value="10"/>
+      </Unit50>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="954" Column="38" TopLine="926"/>
+        <Filename Value="form_train_config_editor.pas"/>
+        <Caret Line="642" Column="58" TopLine="625"/>
       </Position1>
       <Position2>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="972" Column="14" TopLine="941"/>
+        <Filename Value="form_train_config_editor.pas"/>
+        <Caret Line="678" Column="60" TopLine="660"/>
       </Position2>
       <Position3>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="163" Column="20" TopLine="156"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="19" Column="49" TopLine="1"/>
       </Position3>
       <Position4>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="584" Column="52" TopLine="565"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="333" Column="52" TopLine="1"/>
       </Position4>
       <Position5>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="798" Column="45" TopLine="768"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1006" Column="27" TopLine="1001"/>
       </Position5>
       <Position6>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="165" Column="15" TopLine="147"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="262" Column="44" TopLine="261"/>
       </Position6>
       <Position7>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="472" Column="40" TopLine="443"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="292" Column="22" TopLine="275"/>
       </Position7>
       <Position8>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="946" Column="16" TopLine="924"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="305" Column="75" TopLine="277"/>
       </Position8>
       <Position9>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="164" Column="15" TopLine="145"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1051" Column="74" TopLine="1023"/>
       </Position9>
       <Position10>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="472" Column="40" TopLine="443"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1244" Column="38" TopLine="1215"/>
       </Position10>
       <Position11>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="946" Column="16" TopLine="932"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1251" Column="46" TopLine="1222"/>
       </Position11>
       <Position12>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="575" Column="44" TopLine="552"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1603" Column="91" TopLine="1574"/>
       </Position12>
       <Position13>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="66" Column="17" TopLine="48"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="23" Column="193" TopLine="17"/>
       </Position13>
       <Position14>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="69" Column="75" TopLine="48"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1603" Column="58" TopLine="1583"/>
       </Position14>
       <Position15>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="5" Column="197" TopLine="1"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="11" Column="197" TopLine="1"/>
       </Position15>
       <Position16>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="163" Column="208" TopLine="128"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="293" Column="138" TopLine="277"/>
       </Position16>
       <Position17>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="534" Column="22" TopLine="516"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1603" Column="58" TopLine="1602"/>
       </Position17>
       <Position18>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="162" Column="204" TopLine="161"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="8" Column="202" TopLine="1"/>
       </Position18>
       <Position19>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="164" Column="200" TopLine="161"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1059" Column="16" TopLine="1038"/>
       </Position19>
       <Position20>
-        <Filename Value="unit_cdi_parser.pas"/>
-        <Caret Line="582" Column="1" TopLine="565"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1812" Column="16" TopLine="1783"/>
       </Position20>
       <Position21>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="643" Column="41" TopLine="622"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="14" Column="79" TopLine="1"/>
       </Position21>
       <Position22>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="642" Column="48" TopLine="622"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="950" Column="59" TopLine="921"/>
       </Position22>
       <Position23>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="87" Column="15" TopLine="70"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="5" Column="199" TopLine="1"/>
       </Position23>
       <Position24>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="644" Column="61" TopLine="622"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="950" Column="77" TopLine="921"/>
       </Position24>
       <Position25>
-        <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="642" Column="42" TopLine="625"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="993" Column="68" TopLine="964"/>
       </Position25>
       <Position26>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="871" Column="39" TopLine="849"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1055" Column="53" TopLine="1027"/>
       </Position26>
       <Position27>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="847" Column="40" TopLine="843"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1814" Column="17" TopLine="1801"/>
       </Position27>
       <Position28>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="129" Column="39" TopLine="110"/>
+        <Filename Value="form_train_config_editor.pas"/>
+        <Caret Line="727" Column="67" TopLine="710"/>
       </Position28>
       <Position29>
         <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="642" Column="58" TopLine="625"/>
+        <Caret Line="552" Column="11" TopLine="528"/>
       </Position29>
       <Position30>
         <Filename Value="form_train_config_editor.pas"/>
-        <Caret Line="678" Column="60" TopLine="660"/>
+        <Caret Line="551" Column="19" TopLine="529"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

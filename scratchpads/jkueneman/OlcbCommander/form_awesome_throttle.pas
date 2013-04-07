@@ -287,6 +287,7 @@ procedure TFormAwesomeThrottle.FormClose(Sender: TObject; var CloseAction: TClos
 begin
   if Assigned(OnThrottleClose) then
     OnThrottleClose(Self);
+  ActionAllocationFree.Execute;
   CloseAction := caFree;
 end;
 

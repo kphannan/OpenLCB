@@ -1056,6 +1056,7 @@ begin
       TreeViewNetwork.EndUpdate;
       if QueryEvents then
         RunIdentifyEventsOnNode(Result);
+      RunSNIIOnNode(Result)
     end;
   end;
   UpdateUI
@@ -1628,6 +1629,9 @@ begin
         CreateAndLoadNodeSimple(ProtocolChild, 'Content Version: ' + IntToStr(Node.OlcbData.Snii.SniiMfgVersion));
         CreateAndLoadNodeSimple(ProtocolChild, 'User Name : ' + Node.OlcbData.Snii.SniiUserName);
         CreateAndLoadNodeSimple(ProtocolChild, 'User Desc : ' + Node.OlcbData.Snii.SniiUserDescription);
+
+        Node.Text := Node.OlcbData.Snii.SniiMfgName + '  Model: ' + Node.OlcbData.Snii.SniiMfgModel + '  User Name: ' + Node.OlcbData.Snii.SniiUserName + '  AliasID: [0x' + IntToHex(Node.OlcbData.NodeIDAlias, 4) + ']';
+        RootNetworkNode.CustomSort(@TreeViewNetwork.DefaultTreeViewSort);
       finally
         TreeViewNetwork.EndUpdate;
       end;

@@ -2,10 +2,10 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Left = 697
   Height = 401
   Top = 341
-  Width = 364
+  Width = 694
   Caption = 'OpenLCB Commander'
   ClientHeight = 401
-  ClientWidth = 364
+  ClientWidth = 694
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -17,7 +17,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
     Left = 0
     Height = 401
     Top = 0
-    Width = 364
+    Width = 694
     ActivePage = TabSheetNetwork
     Align = alClient
     TabIndex = 0
@@ -25,22 +25,22 @@ object FormOLCB_Commander: TFormOLCB_Commander
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
       ClientHeight = 362
-      ClientWidth = 358
+      ClientWidth = 688
       object PanelNetwork: TPanel
         Left = 0
         Height = 362
         Top = 0
-        Width = 358
+        Width = 688
         Align = alClient
         BevelOuter = bvNone
         ClientHeight = 362
-        ClientWidth = 358
+        ClientWidth = 688
         TabOrder = 0
         object TreeViewNetwork: TTreeView
           Left = 0
           Height = 336
           Top = 0
-          Width = 358
+          Width = 688
           Align = alTop
           Anchors = [akTop, akLeft, akRight, akBottom]
           DefaultItemHeight = 18
