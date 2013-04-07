@@ -61,8 +61,6 @@ procedure INTERRUPT_Timer_525ms(); iv IVT_ADDR_T1INTERRUPT;
 begin
   T1IF_bit := 0;
   NceBusStateMachine_525ms_TimeTick;
-  
-  LATB4_bit := not LATB4_bit;
 end;
 
 procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
@@ -82,16 +80,15 @@ begin
   T3IF_bit := 0;
 end;
 
-{$IFDEF NceBus_UART_ENABLE}
 procedure INTERRUPT_NceBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
 begin
   U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
+ // UART1_Write_Text('RX');
   while (URXDA_U2STA_bit = 1) and (NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex < STATE_RS485_FULL)  do
   begin
     NceBusStateMachine_UART_RX_StateMachine(@NceBusStateMachineInfo, U2RXREG);
   end
 end;
-{$ENDIF}
 
 // *******************
 // MAIN LOOP
@@ -100,11 +97,14 @@ var
   Buffer: TCANBuffer;
   ActiveNode: PNMRAnetNode;
   j: Integer;
+  Cmd: Char;
 begin
+  SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_NCE_BRIDGE_NODE_ID_0_LO);
   MCU_Setup_Initialize;
   NceBusStateMachine_Initialize;
+  AppCallback_Configuration_Zeroize(False);
   
   // Enabled perphrials
   MCU_Enable_CAN;
@@ -121,11 +121,21 @@ begin
   while (TRUE) do
     begin
       ActiveNode := NMRAnetNode_NextNode;
-    
       if ActiveNode <> PNMRAnetNode( nil) then
       begin
         NMRAnetStateMachine_Process(ActiveNode);
-        NceBusStateMachine_Process(ActiveNode);                                            // May want this outside of Permited block, look at the statemachine
+        NceBusStateMachine_Process(@Nodes.RawList[0]);                                             // May want this outside of Permited block, look at the statemachine
+      end;
+      
+      if UART1_Data_Ready then
+      begin
+        Cmd := UART1_Read;
+        case Cmd of
+          'Z', 'z' :
+            begin
+              _25AAxxxx_Erase(EEPROM_BANK_0);
+            end;
+        end
       end
     end;
 end.

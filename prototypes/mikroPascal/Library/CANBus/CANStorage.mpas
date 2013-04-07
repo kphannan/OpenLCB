@@ -97,6 +97,9 @@ function CANStorage_NextToSend: PCANBuffer;
 function CANStorage_NextHighPriorityToSend: PCANBuffer;
 // *****************************************************************************
 
+procedure LockCANInterrupt; external;
+procedure UnLockCANInterrupt; external;
+
 var
   CAN_Engine: TCAN_Engine;
 
@@ -126,6 +129,7 @@ end;
 
 procedure CANStorage_FlushBuffers(AliasID: Word);
 begin
+  LockCANInterrupt;
   if AliasID = 0 then
   begin
     CAN_Engine.TX_CANBuffer.State := 0;
@@ -142,7 +146,8 @@ begin
       CAN_Engine.TX_AddressedErrorBuffer.State := 0;
     if CAN_Engine.TX_DatagramRejected.ID and MASK_SOURCE_ALIAS = AliasID then
       CAN_Engine.TX_DatagramRejected.State := 0;
-  end
+  end;
+  UnLockCANInterrupt
 end;
 
 function CANStorage_NextToSend: PCANBuffer;

@@ -25,6 +25,7 @@ program dsPIC33EP_NMRAnetCommandStation;
 //    - When in Service Mode it is blocked and will cause issues with the node CAN if other chatter is on the bus
 //    - Can't detect no loco on the track in Byte by Bit mode because a lack of an ACK is interperted as it "must be a 0"
 //    - Startup can trigger an Over Current latch (seems only after EEPROM Zeroization?)
+//    - Operations Service Mode needs implementing
 //
 //* Open Questions
 //    - Think about do I Free the vNode completely when a throttle releases it.
@@ -32,6 +33,7 @@ program dsPIC33EP_NMRAnetCommandStation;
 // * Improvements
 //    - Current Sense can be done in an ADC interrupt speed it up.
 //    - Optimize how Service Mode looks for values (check 0, 255, 64, 192 first)
+//    - Removed the Binary Search because when a node is added it will have a 0 Alias for a few steps of the statemachine; could have more than one 0 alias at a time
 //
 // * Fixes
 //    - 128/14 Step Mode                  4/1/13: Fixed 128 step mode not working with short address
@@ -40,6 +42,7 @@ program dsPIC33EP_NMRAnetCommandStation;
 // ******************************************************************************
 
 uses
+  dsPIC33_Traps,
   NMRAnetStateMachine,
   NMRAnetDefines,
   NMRAnetAppCallbacks,
@@ -85,6 +88,8 @@ var
   Ack_TimerEnabled_Bit              : sbit at TON_T5CON_bit;                    // DCC Service Mode ACK Timer
   
   Dcc_Timer_PR                      : Word at PR1;                              // DCC Interrupt Rollover
+  
+  TrapFlagPin                       : sbit at LATB3_bit;                  // OVERLOADING THE NMRA DCC TRANSMITTER CURRENT SENSE
 
 // *****************************************************************************
 //  INTERRUPTS
@@ -250,8 +255,6 @@ begin
     OverCurrent.iSample := 0;
   end else
     Inc(OverCurrent.iSample);
-
-  LATA4_bit := 0;
 end;
 
 
@@ -307,8 +310,11 @@ end;
 var
   ActiveNode, TempNode: PNMRAnetNode;
   i: Integer;
+  Cmd: Char;
+  str: string[6];
   ProxyData: PTrainProxyRamData;
 begin
+  SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
   ANSELB := 0;
   
@@ -353,33 +359,35 @@ begin
   Delay_ms(10);
   NMRA_DCC_Packet_Init;                                                         // Send our 20 Idle Packets per the spec, note we are not on the OLCB bus yet so this will block until done.
   {$ENDIF}
-  
-  UART1_Write_Text('Starting 2'+LF);
 
-  if CommandStationConfigurationInRam.DebugAutoAllocate = 0 then
-    NMRAnetNode_Allocate;    // One Proxy ready to go
+  UART1_Write_Text('Starting 2'+LF);
   
   while (TRUE) do
   begin
     // Global updates
     // Allcoate a proxy if needed
-    if (CommandStationRamData.EnableAutoAllocateProxy = 0) and (CommandStationRamData.AllocateProxy < 0) then
-    begin
+    if (CommandStationRamData.EnableAutoAllocateProxy = 0) and (CommandStationRamData.AllocateProxy > 0) then
+    begin 
+      LockCANInterrupt;
+      // There may be dangling nodes that have been allocated then released
       if FindFirstNonDCCAllocatedNode = nil then
       begin
         NMRAnetNode_Allocate;
-        Dec(CommandStationRamData.AllocateProxy);
-      end
+      end;
+      Dec(CommandStationRamData.AllocateProxy);
+      UnLockCANInterrupt;
     end;
-                      
+
     ActiveNode := NMRAnetNode_NextNode;
     if ActiveNode <> PNMRAnetNode( nil) then
     begin
+
       NMRAnetStateMachine_Process(ActiveNode);
 
       if UART1_Data_Ready then
       begin
-        case UART1_Read of
+        Cmd := UART1_Read;
+        case Cmd of
           'P' : begin
                //PrintDMABuffers
              end;
@@ -388,26 +396,28 @@ begin
              end;
           'A', 'a' :
             begin
+              LockCANInterrupt;
               NMRAnetNode_Allocate;
+              UnLockCANInterrupt;
             end;
           'D', 'd' :
             begin
+              LockCANInterrupt;
               TempNode := NMRAnetNode_FindFirstVirtualNode;
               if TempNode <> nil then
               begin
                 ProxyData := ExtractTrainProxyRamData( TempNode);
                 ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
               end;
+              UnLockCANInterrupt
             end;
           'F', 'f' :
             begin
+              LockCANInterrupt;
               TempNode := NMRAnetNode_FindFirstVirtualNode;
               if TempNode <> nil then
-              begin
-                // BETTER TO SET A STATE OF THE NODE TO SPIN UNTIL IT CAN SEND THE MESSAGE
-                while not NMRAnetStateMachine_TrySendAliasMapReset(TempNode) do;
-                  NMRAnetNode_Release(TempNode);
-              end;
+        //      NMRAnetNode_SetStateFlag(TempNode, NS_MARKED_FOR_DELETE);
+              UnLockCANInterrupt
             end;
           'Z', 'z' :
             begin
@@ -482,8 +492,15 @@ begin
                 WordToStr(CommandStationConfigurationInRam.OverloadDetected, s1);
                 UART1_Write_Text('OverloadDetected: ' + s1 + LF);
               end;
-
-        end;
+            '3' :
+              begin
+              //  NMRAnetNode_PrintAllocatedNodeData
+              end;
+            '4' :
+              begin
+              //  NMRAnetNode_PrintRawNodeData
+              end;
+       end;
       end;
     end;
 

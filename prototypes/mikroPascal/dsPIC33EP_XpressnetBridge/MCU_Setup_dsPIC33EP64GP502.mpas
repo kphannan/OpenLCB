@@ -25,7 +25,7 @@ implementation
 
 procedure MCU_Enable_CAN;
 begin
-    dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode
+  dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode
   // Setup the CAN Baud Rate
   dsPIC33_CAN_SetBaud(CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz with a 64Mhz Clock
 

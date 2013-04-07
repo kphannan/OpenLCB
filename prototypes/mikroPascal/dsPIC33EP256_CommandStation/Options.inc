@@ -1,4 +1,4 @@
-
+{DEFINE PRINT_NODE}
 
 
 {.$DEFINE DCCTIMER_DISABLE}             // Does not enable the DCC 56us Timer
@@ -24,9 +24,11 @@
 
 
 
-{.$DEFINE ENABLE_TRAPS}                 // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file, dsPIC30F only
-{.$DEFINE ENABLE_TOGGLE_PIN_ON_TRAP}    // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file, dsPIC30F only
-{.$DEFINE ENABLE_LOOP_FOREVER_ON_TRAP}  // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file, dsPIC30F only
+{$DEFINE ENABLE_TRAPS}                 // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file
+{.$DEFINE ENABLE_TOGGLE_PIN_ON_TRAP}    // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file, 
+{$DEFINE ENABLE_LOOP_FOREVER_ON_TRAP}  // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file, 
+{.$DEFINE PRINT_TRAP}  // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file, 
+
 {.$DEFINE FIX_NESTED_INTERRUPT_SILICON_BUG}    // Add code to fix a silicon bug in nested Interrupts, dsPIC30F only
 {.$DEFINE PINCHANGE_INTERRUPT_ENABLE}   // Enables the Pin Change Interrupt
 {.$DEFINE SIMULATE_SPI}                 // Skips over hardware loops in the SPI Code

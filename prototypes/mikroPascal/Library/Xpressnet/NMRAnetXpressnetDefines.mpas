@@ -55,6 +55,7 @@ const
 
   ID_NO_DEVICE             = $FE;
   ID_MIN_DEVICE            = 1;
+  
   ID_MAX_DEVICE            = 31;   // 31 Devices on XpressNet bus allowed not including ID = 0
   ID_PC_DEVICE             = $FF;  // PC Device = $FF
 

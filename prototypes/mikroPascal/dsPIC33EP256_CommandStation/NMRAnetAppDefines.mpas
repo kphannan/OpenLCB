@@ -30,7 +30,7 @@ uses
 // **************************************************************************************************************************************************************
 
 const
-  MAX_NODE_COUNT = 84;        // The number of Physical and vNodes this physical node support.  Note that these nodes are defined as the Node ID defined + 1 up to VIRTUAL_NODE_COUNT past that
+  MAX_NODE_COUNT = 82;        // The number of Physical and vNodes this physical node support.  Note that these nodes are defined as the Node ID defined + 1 up to VIRTUAL_NODE_COUNT past that
                               // If the lower bits of this node are $0300 then the first Virtual Node is $0301 and the last is $0309 if the VIRTUAL_NODE_COUNT = 9
                               // It also MUST fall within the lower 3 byte boundry (this is due to the way I have defined HI/LO as 3 byte) so the max virtual nodes is 4095 with a base
                               // physical node starting at $0000;

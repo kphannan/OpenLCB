@@ -81,12 +81,13 @@ end;
 //
 //  Description:
 //         Returns the next installed Device index on the bus after the passed index.
-//           If there are no Devices installed it returns 0
+//           If there are no Devices installed it returns ID_NO_DEVICE
 //
 // *****************************************************************************
 function NextAvailableDevice(iDevice: Byte): Byte;
 var
   i: Integer;
+  Device: PDevice;
 begin
   Result := ID_NO_DEVICE;
   
@@ -98,8 +99,10 @@ begin
     Inc(i);
     if i > ID_MAX_DEVICE then
       i := ID_MIN_DEVICE;
-    if XpressnetStateMachineInfo.DeviceList[i].State and XDS_XPRESSNET_DEVICE_ACTIVE = XDS_XPRESSNET_DEVICE_ACTIVE then
- //     if not Device_InServiceMode(i) then
+
+    Device := @XpressnetStateMachineInfo.DeviceList[i];
+    if Device^.State and XDS_XPRESSNET_DEVICE_ACTIVE = XDS_XPRESSNET_DEVICE_ACTIVE then
+      if Device^.Node^.State and NS_PERMITTED = NS_PERMITTED then     // If it is active then the Node MUST be valid
       begin
         Result := i;
         Exit
@@ -276,13 +279,27 @@ begin
   end
 end;
 
+// *****************************************************************************
+//
+// procedure XpressnetStateMachine_Process
+//
+//  Parameters:
+//             Node: The physical Node of the Bridge
+//   Returns:
+//             None
+//
+// Description:
+//             There is no reason to send Device Nodes as internally the statemachine
+//             checks the Device Nodes for the Permitted state to use them.
+//
+// *****************************************************************************
 procedure XpressnetStateMachine_Process(Node: PNMRAnetNode);
 var
   Temp: Word;
   Device: PDevice;
   NodeData: PXpressNetDeviceVolatileData;
 begin
-  if NMRAnetNode_TestStateFlag(Node, NS_INITIALIZED) then
+  if NMRAnetNode_TestStateFlag(Node, NS_PERMITTED) then
   begin
     case XpressnetStateMachineInfo.iState of
       STATE_DISCOVERDEVICES :

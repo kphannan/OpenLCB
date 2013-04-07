@@ -109,7 +109,6 @@ const
 type
   TDccProxyData = record                                                        // Structure stored in RAM on a node and vnode basis
     State: Byte;                                                                // State of the Proxy Node
-    MsgFlags: Byte;                                                             // Message Flags for messages that need to be sent in the Statemachine
     Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
     SpeedSteps: Byte;                                                           // TEMPORARY - PUT IN CONFIGURATION
     Functions: DWord;                                                           // Function State (F0..F28)
@@ -136,6 +135,7 @@ function AppCallback_EventsIdentify: Boolean;
 function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 
 // Address Space Support
@@ -721,18 +721,22 @@ begin
 end;
 
 // *****************************************************************************
+// Called if the User Message field is > 0 (Node.UserMsgFlags)
+// currently (2/13) does not allow overriding of the login or CAN layer messages
+//   Node         :  The Node that has the timeslice to run its statemachine
+//   CANBuffer    : The raw data from the CAN receiver
+//   DataBytesPtr : Pointer to a temporary CAN Byte array that can be used for any purpose
 //
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
 // *****************************************************************************
-function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
-var
-  ProxyData: PDccProxyData;
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 begin
   // We are in a CAN Lock block already
   Result := False;
-  ProxyData := GetProxyData(Node);
-  
+
   // Handle the oddball DCC Address Event that can come and go
-  if ProxyData^.MsgFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
+  if Node^.MsgUserFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
   begin
     DataBytesPtr^[0] := $06;
     DataBytesPtr^[1] := $01;
@@ -744,10 +748,15 @@ begin
     DataBytesPtr^[7] := $01;
     if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False) then
     begin
-      ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
+      Node^.MsgUserFlags := Node^.MsgUserFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
       Result := True;
     end
   end;
+end;
+
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+begin
+  Result := False
 end;
 
 end.

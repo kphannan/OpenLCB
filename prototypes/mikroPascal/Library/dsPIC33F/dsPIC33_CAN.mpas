@@ -475,7 +475,8 @@ begin
         UART2_Write_Text(' 0_Word6: $'+s1);
         IntToHex(RX_Main_RawBufferArray[0].Word7, s1);
         UART2_Write_Text(' 0_Word7: $'+s1+LF);
-                                                    }
+                                                  }
+                                                  
         dsPIC33_DMA_Style_Buffer(CAN_DIRECTION_READ, @RX_Main_RawBufferArray[0].Word0, Buffer);      // Convert it into a version that matches the registers
         case Hi(RX_Main_RawBufferArray[0].Word7) of
           0: ReceivedOnFilter0(@Buffer);
@@ -489,7 +490,7 @@ begin
         dsPIC33_CAN_RX_Full(CAN_RX_0_BUFFER, True);                             // Reset the Full Flag
         
         if RBOVIF_bit = 1 then
-        begin {LATA4_bit := 1; delay_us(7); LATA4_bit := 0; delay_us(7);} RBOVIF_bit := 0; end;
+        begin  RBOVIF_bit := 0; end;
         
         dsPIC33_CAN_InterruptFlagRXBuffer(True);                                // RX Interrupt Flag Reset
 

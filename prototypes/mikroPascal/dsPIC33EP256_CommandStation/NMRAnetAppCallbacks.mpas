@@ -113,7 +113,6 @@ const
 type
   TTrainProxyRamData = record                                                   // Structure stored in RAM on a node and vnode basis
     State: Byte;                                                                // State of the Proxy Node
-    MsgFlags: Byte;                                                             // Message Flags for messages that need to be sent in the Statemachine
     Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
     SpeedSteps: Byte;                                                           // TEMPORARY - PUT IN CONFIGURATION
     Functions: DWord;                                                           // Function State (F0..F28)
@@ -178,6 +177,7 @@ function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Bool
 function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 function AppCallback_EventsIdentify: Boolean;
 function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
@@ -660,7 +660,6 @@ begin
     TrainProxyRamData[i].State := 0;
     TrainProxyRamData[i].Speed := 0;
     TrainProxyRamData[i].Functions := 0;
-    TrainProxyRamData[i].MsgFlags := 0;
     TrainProxyRamData[i].Address := 0;
     TrainProxyRamData[i].SpeedSteps := 28; // Default
   end;
@@ -675,7 +674,6 @@ begin
   ProxyData := ExtractTrainProxyRamData(Node);
   ProxyData^.State := 0;
   ProxyData^.Address := 0;
-  ProxyData^.MsgFlags := 0;
   ProxyData^.Speed := 0;
   ProxyData^.Functions := 0;
 end;
@@ -700,7 +698,7 @@ begin
     begin
       Address := (Event^[4] shl 8) or Event^[5];
       if ProxyData^.Address = Address then
-        ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;
+        Node^.MsgUserFlags := Node^.MsgUserFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;
     end
   end
 end;
@@ -958,19 +956,21 @@ begin
                 DCC_ALLOCATE_ADDRESS :
                   begin
                     ProxyData^.State := ProxyData^.State or PS_DCC_ADDRESS_ALLOCATED;
-                    ProxyData^.MsgFlags := ProxyData^.MsgFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    Node^.MsgUserFlags := Node^.MsgUserFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
                     ProxyData^.SpeedSteps := CANBuffer^.DataBytes[4];                         // TO DO: NEED TO WRITE TO CONFIGURATION
                     ProxyData^.Address := Word ((CANBuffer^.DataBytes[5] shl 8)) or CANBuffer^.DataBytes[6];  // This is in NMRA DCC format for short/long address
-                    Inc(CommandStationRamData.AllocateProxy);                               // Set the flag to allocate a new proxy since we used the last one
+                    if CommandStationRamData.EnableAutoAllocateProxy = 0 then
+                      Inc(CommandStationRamData.AllocateProxy);                               // Set the flag to allocate a new proxy since we used the last one
                   end;
                 DCC_DEALLOCATE_ADDRESS :
                   begin
                     ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
-                    ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    Node^.MsgUserFlags := Node^.MsgUserFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
+                 //  NMRAnetNode_SetStateFlag(Node, NS_MARKED_FOR_DELETE);
                   end;
                 end;
             end;
@@ -983,15 +983,23 @@ end;
 //
 // *****************************************************************************
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+begin
+  Result := False;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 var
   ProxyData: PTrainProxyRamData;
 begin
   // We are in a CAN Lock block already
   Result := False;
   ProxyData := ExtractTrainProxyRamData(Node);
-  
+
   // Handle the oddball DCC Address Event that can come and go
-  if ProxyData^.MsgFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
+  if Node^.MsgUserFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
   begin
     DataBytesPtr^[0] := $06;
     DataBytesPtr^[1] := $01;
@@ -1003,10 +1011,10 @@ begin
     DataBytesPtr^[7] := $01;
     if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False) then
     begin
-      ProxyData^.MsgFlags := ProxyData^.MsgFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
+      Node^.MsgUserFlags := Node^.MsgUserFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
       Result := True;
     end
   end;
 end;
-
+  
 end.

@@ -63,6 +63,7 @@ uses
   function NMRAnetStateMachine_TrySendDatagram(Node: PNMRAnetNode; CANBuffer: PCANBuffer; Datagram: PDatagramBuffer): Boolean;
                                                                                                                                    
   function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean; external;  
+  function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean; external;
   procedure NMRAnetAppCallbacks_Initialize; external;
   
   // Address Space Support
@@ -297,6 +298,7 @@ begin
   Node^.DatagramBuffers := nil;
   Node^.State := 0;
   Node^.MsgFlags := 0;
+  Node^.MsgUserFlags := 0;
   Node^.ParentAlias := 0;
   Node^.ChildAlias := 0;
   if (NodeID_HI <> 0) and (NodeID_LO <> 0) then
@@ -573,6 +575,10 @@ begin
     end;
     Exit;              // Don't interleave Buffer Replies...
   end else
+  if Node^.MsgUserFlags <> 0 then
+  begin
+    AppCallback_UserMessageFlags(Node, CANBuffer, @DataBytes);
+  end else
   begin
     // Callback gets first crack... for now
     if AppCallback_StateMachine(Node, CANBuffer, @DataBytes) then
@@ -647,7 +653,7 @@ begin
                                                                                 DataBytes[i] := ACDI_USER_VERSION;
                                                                                 Inc(i);
                                                                                 BaseBuffer^.StateMachine := STATE_ACDI_USER_NAME;
-                                                                                BaseBuffer^.Tag := 0;
+                                                                                BaseBuffer^.Tag := 1;  // EEPROM layout start at offset 1
                                                                               end;
                                                     STATE_ACDI_USER_NAME    : begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_NAME'+LF); {$ENDIF}
                                                                                 if BaseBuffer^.Tag < MAX_USER_NAME then
@@ -665,7 +671,7 @@ begin
                                                                                    BaseBuffer^.StateMachine := STATE_ACDI_START_DESC;
                                                                               end;
                                                     STATE_ACDI_START_DESC   : begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_START_DESC'+LF); {$ENDIF}
-                                                                                BaseBuffer^.Tag := MAX_USER_NAME;
+                                                                                BaseBuffer^.Tag := MAX_USER_NAME + 1;  // EEPROM layout start at offset 1
                                                                                 BaseBuffer^.StateMachine := STATE_ACDI_USER_DESC;
                                                                               end;
                                                     STATE_ACDI_USER_DESC    : begin     {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_DESC'+LF); {$ENDIF}
@@ -1057,6 +1063,19 @@ begin
   end;
 end;
 
+procedure ProcessMarkedForDeleteNodes(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+begin
+ // if NMRAnetNode_TestStateFlag(Node, NS_MARKED_FOR_DELETE) then
+  begin
+    // Make sure the node sends all the flag it needs to.
+    if not NMRAnetNode_IsAnyConsumerEventSet(Node) and not NMRAnetNode_IsAnyProducerEventSet(Node) and (Node^.MsgFlags = 0) and (Node^.MsgUserFlags = 0) then
+    begin
+      if TransmitCANLayerMsg(Node, CANBuffer, MTI_AMR) then
+        NMRAnetNode_Release(Node)
+    end
+  end;
+end;
+
 procedure ProcessAbandonBuffers(Node: PNMRAnetNode);
 const
   CBS_OUTGOING_COMPLETE = CBS_TRANSFER_COMPLETE or CBS_OUTGOING;
@@ -1093,155 +1112,194 @@ var
   CANBuffer: TCANBuffer;
   VariableField: DWord;
 begin
- // WordToSTr(Node, s1);
- // UART1_Write_Text(s1 +' '+LF);
-  
-  LockCANInterrupt;
   case Node^.iStateMachine of
     STATE_NMRABUS_START :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_START'+LF); {$ENDIF}
-        CANStorage_FlushBuffers(Node^.Info.AliasID);
-        while CAN_Engine.State and CES_TRANSMITTING <> 0 do;                             // Wait for the last transmited CANBuffer
+        LockCANInterrupt;
         Node^.iStateMachine := STATE_NMRABUS_GENERATE_NODE_ALIAS;
+        UnLockCANInterrupt
       end;
     STATE_NMRABUS_GENERATE_NODE_ALIAS :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_GENERATE_NODE_ALIAS'+LF); {$ENDIF}
+        LockCANInterrupt;
         Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False);
-        NMRAnetNode_SortNodeList(Nodes);
+    //    NMRAnetNode_SortNodeList(Nodes);
         Node^.Login.iCID := 0;
         Node^.iStateMachine := STATE_NMRABUS_TRANSMIT_CID;
+        UnLockCANInterrupt;
       end;
     STATE_RANDOM_NUMBER_GENERATOR :
       begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_RANDOM_NUMBER_GENERATOR'+LF); {$ENDIF}
+        LockCANInterrupt;
         NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(Node^.Info.Seed);
         Node^.iStateMachine := STATE_NMRABUS_GENERATE_NODE_ALIAS;
+        UnLockCANInterrupt
       end;
     STATE_NMRABUS_TRANSMIT_CID :
       begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_TRANSMIT_CID'+LF); {$ENDIF}
+        LockCANInterrupt;
         case Node^.Login.iCID of
           0 : VariableField := MTI_CID0;                                         // Queue up
           1 : VariableField := MTI_CID1;
           2 : VariableField := MTI_CID2;
           3 : VariableField := MTI_CID3;
         end;
+        UnLockCANInterrupt;
         if CANBusBufferAvailable then
         begin
+          LockCANInterrupt;
           TransmitCANLayerMsg(Node, @CANBuffer, VariableField);
           Node^.iStateMachine := STATE_NMRABUS_NEXT_CDI;
+          UnLockCANInterrupt
         end
       end;
     STATE_NMRABUS_NEXT_CDI :
       begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_NEXT_CDI'+LF); {$ENDIF}
+        LockCANInterrupt;
         if Node^.Login.iCID < 3 then
         begin
           Inc(Node^.Login.iCID);
           Node^.iStateMachine := STATE_NMRABUS_TRANSMIT_CID
         end else 
         begin
-          if CAN_Engine.State and CES_TRANSMITTING = 0 then                     // Wait until the transmission is complete before waiting the 200ms
-          begin
-            Node^.iStateMachine := STATE_NMRABUS_WAITSTATE;
-            Node^.Login.TimeCounter := 0;
-          end
-        end
+          Node^.iStateMachine := STATE_NMRABUS_WAITSTATE;                       // There is no way to really understand when the message will be on the CAN bus so need to have "reasonable" delay (500ms)
+          Node^.Login.TimeCounter := 0;
+        end;
+        UnLockCANInterrupt
       end;
     STATE_NMRABUS_WAITSTATE :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_WAITSTATE'+LF); {$ENDIF}
+        LockCANInterrupt;
         if Node^.Login.TimeCounter > MAX_BUS_LOGIN_TIMEOUT then
           Node^.iStateMachine := STATE_NMRABUS_SEND_LOGIN_RID;
+        UnLockCANInterrupt
       end;
     STATE_NMRABUS_SEND_LOGIN_RID :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_SEND_LOGIN_RID'+LF); {$ENDIF}
-        if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then    
-          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
-        else begin
+        LockCANInterrupt;
+        if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then 
+        begin
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
+          UnLockCANInterrupt
+        end else 
+        begin
+          UnLockCANInterrupt;
           if CANBusBufferAvailable then
           begin
+            LockCANInterrupt;
             TransmitCANLayerMsg(Node, @CANBuffer, MTI_RID);
-           Node^.iStateMachine := STATE_NMRABUS_SEND_LOGIN_AMD;
+            Node^.iStateMachine := STATE_NMRABUS_SEND_LOGIN_AMD;
+            UnLockCANInterrupt;
           end
         end
       end;
     STATE_NMRABUS_SEND_LOGIN_AMD :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_SEND_LOGIN_AMD'+LF); {$ENDIF}
+        LockCANInterrupt;
         if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then
-          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
-        else begin
+        begin
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
+          UnLockCANInterrupt;
+        end else 
+        begin
+          UnLockCANInterrupt;
           if CANBusBufferAvailable then
           begin
+            LockCANInterrupt;
             TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMD);
             NMRAnetNode_SetStateFlag(Node, NS_PERMITTED);
-            Node^.iStateMachine := STATE_NMRABUS_INITIALIZED
+            Node^.iStateMachine := STATE_NMRABUS_INITIALIZED;
+            UnLockCANInterrupt
           end
         end
       end;
     STATE_NMRABUS_INITIALIZED :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_INITIALIZED'+LF); {$ENDIF}
+        LockCANInterrupt;
         if NMRAnetNode_TestMsgFlags(Node, MF_DUPLICATE_ALIAS, True) then
-          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR
-        else begin
+        begin
+          Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
+          UnLockCANInterrupt
+        end else 
+        begin
+          UnLockCANInterrupt;
           if NMRABusTxBufferAvailable then
           begin
+            LockCANInterrupt;
             NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(Node, @CANBuffer);
             TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_INITIALIZATION_COMPLETE, 0, 6, @CANBuffer.DataBytes, False);
             Node^.iStateMachine := STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS;
             NMRAnetNode_SetStateFlag(Node, NS_INITIALIZED);
+            UnLockCANInterrupt;
           end
         end
       end;
     STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS :
       begin   {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_LOGIN_IDENTIFY_EVENTS'+LF); {$ENDIF}
-   //     LockCANInterrupt;
         // Fake an Identify Events to allow the AppCallbacks to be called
+        LockCANInterrupt;
         CANBuffer.State := CANBuffer.State or BS_EXTENDED;
         CANBuffer.ID := $10000000 or MTI_EVENTS_IDENTIFY_DEST;                  // Make Alias ID $000 so we don't trigger a duplicate Alias ID loop!
         CANBuffer.DataCount := 2;
         CANBuffer.DataBytes[0] := Hi( Node^.Info.AliasID);                      // Addressed to this node
         CANBuffer.DataBytes[1] := Lo( Node^.Info.AliasID);
+        UnLockCANInterrupt;
         ReceivedOnFilter1(@CANBuffer);
-  //      UnLockCANInterrupt;
+        LockCANInterrupt;
         Node^.iStateMachine := STATE_NMRABUS_PERMITTED;
+        UnLockCANInterrupt;
       end;
     STATE_NMRABUS_PERMITTED :
       begin  //    {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_PERMITTED'+LF); {$ENDIF}
-     //   UART1_Write_Text('inA'+LF);
+        LockCANInterrupt;
         ProcessNode(Node, @CANBuffer);                                             // Handle auto Actions to CAN/NMRAnet messages coming in
         ProcessOutgoingNode(Node, @CANBuffer);
         {$IFNDEF DISABLE_DATAGRAM_ABANDON_TIMEOUT}
         ProcessAbandonBuffers(Node);
         {$ENDIF}
-    //    UART1_Write_Text('outA'+LF);
+   //     ProcessMarkedForDeleteNodes(Node, @CANBuffer);
+        UnLockCANInterrupt
       end;
     STATE_NMRABUS_INHIBITED :
-      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_INHIBITED'+LF); {$ENDIF}  
+      begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_INHIBITED'+LF); {$ENDIF} 
+        LockCANInterrupt;
         CANStorage_FlushBuffers(Node^.Info.AliasID);
+        UnLockCANInterrupt;
         if CANBusBufferAvailable then
         begin
+          LockCANInterrupt;
           TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
           ReleaseBuffers(Node);
           NMRAnetNode_ClearStateFlag(Node, NS_PERMITTED);
           NMRAnetNode_ClearMsgFlags(Node);
           Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
-        end
+          UnLockCANInterrupt
+        end;
       end;
     STATE_NMRABUS_DUPLICATE_FULL_ID :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_DUPLICATE_FULL_ID'+LF); {$ENDIF}
+        LockCANInterrupt;
         CANStorage_FlushBuffers(Node^.Info.AliasID);
+        UnLockCANInterrupt;
         if CANBusBufferAvailable then
         begin
+          LockCANInterrupt;
           TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
           ReleaseBuffers(Node);
           NMRAnetNode_ClearStateFlag(Node, NS_PERMITTED);
           NMRAnetNode_ClearMsgFlags(Node);
-          Node^.iStateMachine := STATE_NMRABUS_TAKE_OFFLINE
-        end
+          Node^.iStateMachine := STATE_NMRABUS_TAKE_OFFLINE ;
+          UnLockCANInterrupt;
+        end;
       end;
     STATE_NMRABUS_TAKE_OFFLINE :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_TAKE_OFFLINE'+LF); {$ENDIF}
         if NMRABusTxBufferAvailable then
         begin
+          LockCANInterrupt;
           TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_PC_EVENT_REPORT, 0, 8, @EVENT_DUPLICATE_ID_DETECTED, False);
-          Node^.iStateMachine := STATE_NMRABUS_OFFLINE
+          Node^.iStateMachine := STATE_NMRABUS_OFFLINE;
+          UnLockCANInterrupt;
         end
       end;
     STATE_NMRABUS_OFFLINE :
@@ -1249,9 +1307,9 @@ begin
         // Done until reboot
       end
   else
-    Node^.iStateMachine := STATE_NMRABUS_START;
+    UART1_Write_Text('Statemachine Index Error');
   end;
-  UnLockCANInterrupt;
+  UnLockCANInterrupt
 end;
 
 // *****************************************************************************

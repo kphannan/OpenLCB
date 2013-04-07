@@ -8,14 +8,11 @@
 
 {$DEFINE SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
 {$DEFINE SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+
 {$DEFINE SUPPORT_VIRTUAL_NODES}
+
 {.$DEFINE SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
 {.$DEFINE SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
-
-
-
-
-
 {.$DEFINE ENABLE_TRAPS}                 // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file; dsPIC30 only
 {.$DEFINE ENABLE_TOGGLE_PIN_ON_TRAP}    // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file; dsPIC30 only
 {.$DEFINE ENABLE_LOOP_FOREVER_ON_TRAP}  // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file; dsPIC30 only

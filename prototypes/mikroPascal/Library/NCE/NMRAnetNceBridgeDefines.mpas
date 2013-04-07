@@ -21,97 +21,48 @@ uses
   NMRAnetDefines;
 
 const
+  NCEBUS_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a NCE message
+  
   STATE_DISCOVERDEVICES = 0;
   STATE_DISCOVERNEXTDEVICE = 1;
   STATE_SENDDEVICEINQUIRY = 2;
-  STATE_RECEIVEDEVICEMESSAGE = 3;
-  STATE_HANDLEMESSAGE = 4;
-  STATE_WAIT_FOR_NMRANET_REPLY = 5;
-  STATE_SEND_NMRANET_MESSAGE = 6;
-  STATE_SEND_INSTRUCTION_REPLY = 7;
-  STATE_SENDDEVICEERROR = 8;
-  STATE_DEVICEACKRESPONSE = 9;
-  STATE_TESTFORDISCOVERYMODE = 10;
-  STATE_ENUMERATEACTIVEDEVICES = 11;
-  STATE_WAITFORDEVICEMESSAGE = 12;
-  STATE_WAITFORACKRESPONSE = 13;
+  STATE_SENDDEVICESYNC = 3;
+  STATE_HANDLEMESSAGE = 5;
+  STATE_WAIT_FOR_NMRANET_REPLY = 6;
+  STATE_SEND_NMRANET_MESSAGE = 7;
+  STATE_SEND_INSTRUCTION_REPLY = 8;
+  STATE_DEVICEACKRESPONSE = 10;
+  STATE_TESTFORDISCOVERYMODE = 11;
+  STATE_ENUMERATEACTIVEDEVICES = 12;
+  STATE_WAITFORDEVICEMESSAGE = 13;
+  STATE_WAITFORACKRESPONSE = 14;
 
-  STATE_RS485_READ_HEADER_BYTE  = 0;  // State machine states for the RS485 receiver
-  STATE_RS485_READ_MESSAGE_BYTE = 1;
-  STATE_RS485_READ_XOR_BYTE     = 2;
-  STATE_RS485_FULL              = 3;
-
-  VERSION_SOFTWARE_PC_INERFACE = %00000001;  // Software version 1
-  VERSION_HARDWARE_PC_INERFACE = %00010000;  // Hardware version 1.0
-  VERSION_SOFTWARE_NceBus   = $36;        // Version 3.6 Compatible
-  VERSION_COMMANDSTATION_LZ100 = $00;        // LZ 100 - command station
-  VERSION_COMMANDSTATION_LH200 = $01;        // LH 200 - command station
-  VERSION_COMMANDSTATION_DPC   = $02;        // DPC - command station (Compact and COMM other)
-
-  E_PC_SUCCESS = $04;                           // Instruction was successfully sent to command or normal operations have resumed after a timeout
-  E_PC_COMMUNICATION = $01;                     // Error occurred between the interfaces and the PC (Timeout during data communication with PC)
-  E_PC_COMMANDSTATION_COMMUNICATION = $02;      // Error occurred between the interfaces and the command station (Timeout during data communication with command station)
-  E_PC_UNKNOWN = $03;                           // Unknown communications error (command station addressed LI100 with request for acknowledgement)
-  E_PC_LOSS_OF_TIMESLOT = $05;                  // The Command Station is no longer providing the LI100 a timeslot for communication
-  E_PC_BUFFER_OVERFLOW = $06;                   // Buffer overflow in the LI100
-
-  E_DH_MU_ERROR_LOCO_NOT_OWNED_BY_DEVICE        = $01;   // One of the locomotives has not been operated by the NceBus devicea assembling the Double Header/Multi Unit or locomotive 0 was selected
-  E_DH_MU_ERROR_LOCO_OPERATED_BY_ANOTHER_DEVICE = $02;   // One of the locomotives of the Double Header/Multi-Unit is being operated by another NceBus device
-  E_DH_MU_ERROR_ALREADY_IN_DH_MU                = $03;   // One of the locomotives already is in another Multi-Unit or Double Header
-  E_DH_MU_ERROR_SPEED_NOT_ZERO                  = $04;   // The speed of one of the locomotives of the Double Header/Multi-Unit is not zero
-  E_DH_MU_ERROR_LOCO_NOT_IN_MU                  = $05;   // The locomotive is not in a multi-unit
-  E_DH_MU_ERROR_LOCO_NOT_MU_BASE_ADDRESS        = $06;   // The locomotive address is not a multi-unit base address
-  E_DH_MU_ERROR_CAN_NOT_DELETE                  = $07;   // It is not possible to delete the locomotive
-  E_DH_MU_ERROR_STACK_IS_FULL                   = $08;   // The command station stack is full
-
-  ADDRESS_RETRIEVAL_NORMAL_LOCO                 = $00;   // Normal locomotive address in Data Byte 1/2
-  ADDRESS_RETRIEVAL_DOUBLE_HEADER               = $01;   // The locomotive address in Data Byte 1/2 is in a double header
-  ADDRESS_RETRIEVAL_MU_BASE                     = $02;   // The locomotive address in Data Byte 1/2 is a multi unit base address
-  ADDRESS_RETRIEVAL_MU                          = $03;   // The locomotive address in Data Byte 1/2 is in a multi unit.
-  ADDRESS_RETRIEVAL_NOT_FOUND                   = $04;   //  If Data Byte 1/2 = 0x00 then no address was found as a result of the request
+  STATE_RS485_READ_CAB_BYTE_1   = 0;  // State machine states for the RS485 receiver
+  STATE_RS485_READ_CAB_BYTE_2   = 1;
+  STATE_RS485_FULL              = 2;
 
   ID_NO_DEVICE             = $FE;
-  ID_MIN_DEVICE            = 1;
-  ID_MAX_DEVICE            = 31;   // 31 Devices on NceBus bus allowed not including ID = 0
+  ID_MIN_DEVICE            = 2;
+  ID_MAX_DEVICE            = 8;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
   ID_PC_DEVICE             = $FF;  // PC Device = $FF
+  NCEBUS_PING              = %10000000;   // P10A AAAA
 
-  // Call Byte Definitions
-  CALLBYTE_RESPONSE                = %01100000;   // P11A AAAA
-  CALLBYTE_INQUIRY                 = %01000000;   // P10A AAAA
-  CALLBYTE_REQUEST_ACK_FROM_DEVICE = %00000000;   // P00A AAAA
-  CALLBYTE_BROADCAST               = %01100000;   // P110 0000
-  CALLBYTE_TRANSFER_ERRORS         = %01100000;   // P11A AAAA
-
-  MAX_NceBus_SHORT_ADDRESS = 99;         // Per 2.1.15 definition there is a break between 0-99 and 100-9999
-
-  NceBus_SPEED_STEP_14  = $00;            // 14 Step speed defined by NceBus 2.1.14.1
-  NceBus_SPEED_STEP_27  = $01;            // 27 Step speed defined by NceBus 2.1.14.1 (Odd ball not supported)
-  NceBus_SPEED_STEP_28  = $02;            // 28 Step speed defined by NceBus 2.1.14.1
-  NceBus_SPEED_STEP_128 = $04;            // 128 Step speed defined by NceBus 2.1.14.1
-
-  NceBus_LOCO_CONTROLLED_BY_DEVICE_BIT = 3;  // Bit 3 of the Loco Info Request  2.1.14.1
-
-  NceBus_MAX_DATA_BYTE  = 15;     // Max number of data bytes in a NceBus message (exclusve of the Call Byte, Header Byte, and XOR Byte)
-  NceBus_BUS_HUNG_COUNT = 2;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
-  NceBus_PC_HUNG_COUNT  = 100;    // ~525ms counts and the PC interface is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0)
-  REDISCOVERY_TIME         = 5;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
-  NceBus_OLCB_BUS_TIMEOUT = 6;   // how long to count before giving up on a OLCB reply (~525ms steps)
+  NCEBUS_BUS_HUNG_COUNT = 2;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
+  REDISCOVERY_TIME         = 4;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
+  NCEBUS_OLCB_BUS_TIMEOUT = 6;   // how long to count before giving up on a OLCB reply (~525ms steps)
   
-  XDS_NceBus_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
-  XDS_NceBus_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
-  XDS_NceBus_DEVICE_SERVICEMODE                         = $02;  // In Service Mode on the device
+  XDS_NCEBUS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
+  XDS_NCEBUS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
 
 type
-  TNceBusDataArray = array[0..NceBus_MAX_DATA_BYTE-1] of Byte;
+  TNceBusDataArray = array[0..NCEBUS_MAX_DATA_BYTE-1] of Byte;
   PNceBusDataArray = ^TNceBusDataArray;
 
   TNceBusMessage = record
-    Bytes: TNceBusDataArray;          // [RX, TX] The NceBus data that was recieved from Data Byte 1...Data Byte 15.  Does NOT include the Header Byte or the XOR Byte
-    Instruction,                         // [RX] The ENceBus Instruction Byte that was recieved
+    Bytes: TNceBusDataArray;             // [RX, TX] The NceBus data that was recieved from Data Byte 1...Data Byte 15.  Does NOT include the Header Byte or the XOR Byte
     DataCount: Byte;                     // [RX, TX] Number of Valid Data Bytes
     MessageReadResult: Word;             // [RX] Error Message Result, see the E_SUCCESS, E_BUS_HUNG, E_WINDOW_TIMEOUT, etc constants
-    CallByte,                            // [TX] The Call Byte is the address of the Device to communicate with, sent with the 9th bit address UART protocol, Call Byte = 0 then it is not sent (for sending to the PC)
-    HeaderByte: Byte;                    // [TX] The instruction to the device that follows the CallByte
+    CabID,                               // [TX] The CabID is the address of the Device to communicate with, sent with the 9th bit address UART protocol, Call Byte = 0 then it is not sent (for sending to the PC)
     StateMachineIndex,                   // [RX] The current state of the RX state machine that is run in UART RX interrupt
     StateMachineIndexDataByte: Byte;     // [RX] The current TNceBusDataArray index the RX state machine is operating on that is run in UART RX interrupt
   end;
@@ -127,9 +78,8 @@ type
 
   // Buffer to hold the data as it comes in on the RS485 bus
   TUARTReception = record
-    NceBusData: TNceBusMessage;     // Syncronous message recieved from the command station pinging the NceBus bus begin dispatched
+    NceBusData: TNceBusMessage;           // Syncronous message recieved from the command station pinging the NceBus bus begin dispatched
     Done: Boolean;                        // True when the reception is complete
-    XORFailed: Boolean ;                  // True if the XOR check failed
   end;
 
   TNceBusBridgeInfo = record
@@ -144,12 +94,12 @@ type
 type
   TNceBusStateMachineInfo = record
     DeviceList: TDeviceList;              // List of NceBus Devices (TDevice)
-    iState: Byte;                         // Current State the StateMachine is in
+    iState: Short;                         // Current State the StateMachine is in
     Discovering: Boolean;                 // Discovering new Devices on the NceBus Bus
     iActiveDevice: Byte;                  // The Device currently being communicated with
     DiscoveryCount: Byte;                 // Counts (~525ms steps) between rediscovery intervals
     WatchdogCount: Byte;                  // Counts (~525ms steps) before the NceBus Bus is declared hung, see NceBus_BUS_HUNG_COUNT
-    Bridge: TNceBusBridgeInfo;          // Info for messages that require querying information from the OLCB bus
+    Bridge: TNceBusBridgeInfo;            // Info for messages that require querying information from the OLCB bus
     RS485: TUARTReception;                // Hold information about the UART reception on the NceBusBus
   end;
   PNceBusStateMachineInfo = ^TNceBusStateMachineInfo;

@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=NMRAnetAppDefines.mpas
+Value=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_DMA.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -44,7 +44,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=11
 File0=Throttle_main.mpas
 File1=..\..\..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File2=..\..\..\Library\NMRAnet\NMRAnetCANReceive.mpas
@@ -53,6 +53,9 @@ File4=MCU_Setup_dsPIC33FJ256GP710A.mpas
 File5=..\..\..\Library\CANBus\CANStorage.mpas
 File6=..\..\..\Library\dsPIC33F\dsPIC33_DMA.mpas
 File7=NMRAnetAppDefines.mpas
+File8=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
+File9=NMRAnetAppCallbacks.mpas
+File10=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_DMA.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

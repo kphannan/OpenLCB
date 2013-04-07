@@ -25,6 +25,7 @@ var
   i: Integer;
   WordPtr: ^Word;
 begin
+  SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   AD1PCFGH := 0xFFFF;                                                           // configure AN pins as digital I/O
   AD1PCFGL := 0xFFFF;
   AD2PCFGL := 0xFFFF;

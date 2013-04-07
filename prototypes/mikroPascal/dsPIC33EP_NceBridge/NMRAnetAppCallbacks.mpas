@@ -56,6 +56,7 @@ function AppCallback_EventsIdentify: Boolean;
 function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
 procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 
 
@@ -69,6 +70,8 @@ function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte
 function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
 function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+
+procedure AppCallback_Configuration_Zeroize(Force: Boolean);
 // *****************************************************************************
 
 // Extracts the Volatile Data from the passed node for the Device
@@ -102,6 +105,33 @@ begin
     VolatileData[i].DeviceID := ID_NO_DEVICE;
   end
 end;
+
+procedure AppCallback_Configuration_Zeroize(Force: Boolean);
+const
+  NullArray: array[0..63] of byte = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+var
+  LocalBuffer: array[0..7] of Byte;
+  i: LongInt;
+begin
+  if not Force then
+  begin
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+    _25AAxxxx_Read(EEPROM_BANK_0, 0, 1, @LocalBuffer);
+    Force := LocalBuffer[0] = $FF;                              // If address space = = $FF then we need to initialize the entire EEPROM space
+  end;
+
+  if Force then
+  begin
+    for i := 0 to 2047 do
+    begin
+      while _25AAxxxx_Busy(EEPROM_BANK_0) do
+        Delay_us(10);
+     _25AAxxxx_Write(EEPROM_BANK_0, i * 64, 64, @NullArray);
+    end;
+  end
+end;
+
 
 // *****************************************************************************
 // Writes the Configuration Memory to the App defined storage device
@@ -269,6 +299,21 @@ end;
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 begin
   Result := False
+end;
+
+// *****************************************************************************
+// Called if the User Message field is > 0 (Node.UserMsgFlags)
+// currently (2/13) does not allow overriding of the login or CAN layer messages
+//   Node         :  The Node that has the timeslice to run its statemachine
+//   CANBuffer    : The raw data from the CAN receiver
+//   DataBytesPtr : Pointer to a temporary CAN Byte array that can be used for any purpose
+//
+//   Result       : False to run the default handler, True if this callback handled the
+//                  processing and skip the default processing
+// *****************************************************************************
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+begin
+  Result := False;
 end;
 
 // *****************************************************************************

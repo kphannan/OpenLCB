@@ -28,6 +28,7 @@ uses
   _25AAxxxx,
   NMRAnetBufferPools,
   NMRAnetNode,
+ // dsPIC33_Traps,
   NodeIDs;
 
 {$I Options.inc}
@@ -52,6 +53,8 @@ var
 var
   Xpressnet_RS485_Select            : sbit at LATA0_bit;
   Xpressnet_RS485_Select_Direction  : sbit at TRISA0_bit;
+  
+ // TrapFlagPin: sbit at LATB4_bit;
 
 // *****************************************************************************
 //  INTERRUPTS
@@ -61,10 +64,6 @@ procedure INTERRUPT_Timer_525ms(); iv IVT_ADDR_T1INTERRUPT;
 begin
   T1IF_bit := 0;
   XpressnetStateMachine_525ms_TimeTick;
-  
-  LATB4_bit := not LATB4_bit;
-  
-  
 end;
 
 procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
@@ -103,31 +102,58 @@ var
   ActiveNode: PNMRAnetNode;
   j: Integer;
 begin
+  SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
+
+  TRISB4_bit := 0;
+  LATB4_bit  := 0;
+  
   _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_XPRESSNET_ID_0_LO);
   MCU_Setup_Initialize;
   XpressnetStateMachine_Initialize;
+  AppCallback_Configuration_Zeroize(False);
 
   // Enabled Perphrials
   MCU_Enable_CAN;
   TON_T1CON_bit := 1;       // Turn on
   TON_T2CON_bit := 1;       // Turn on
-  
-  TRISB4_bit := 0;
-  LATB4_bit  := 0;        
-  
+
   UART1_Write_Text('Starting'+LF);
 
   MainLoopState := 0;
-
+  
   while (TRUE) do
     begin
       ActiveNode := NMRAnetNode_NextNode;
-    
+
       if ActiveNode <> PNMRAnetNode( nil) then
       begin
+        if UART1_Data_Ready then
+        begin
+          case UART1_Read of
+            'Z', 'z' :
+            begin
+              _25AAxxxx_Erase(EEPROM_BANK_0);
+            end;
+            'a' : begin
+                    if IPL_0_bit = 0 then
+                      UART1_Write_Text('IPL_0_bit = 0' + LF)
+                    else
+                      UART1_Write_Text('IPL_0_bit = 1' + LF);
+                    if IPL_1_bit = 0 then
+                      UART1_Write_Text('IPL_1_bit = 0' + LF)
+                    else
+                      UART1_Write_Text('IPL_1_bit = 1' + LF);
+                    if IPL_2_bit = 0 then
+                      UART1_Write_Text('IPL_2_bit = 0' + LF)
+                    else
+                      UART1_Write_Text('IPL_2_bit = 1' + LF);
+  
+                  end;
+          end;
+        end;
         NMRAnetStateMachine_Process(ActiveNode);
-        XpressnetStateMachine_Process(ActiveNode);                                            // May want this outside of Permited block, look at the statemachine
+        XpressnetStateMachine_Process(@Nodes.RawList[0]);                                            // May want this outside of Permited block, look at the statemachine
       end
     end;
 end.
