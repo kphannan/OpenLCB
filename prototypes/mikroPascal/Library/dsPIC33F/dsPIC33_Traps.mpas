@@ -55,7 +55,7 @@ begin
   OSCFAIL_bit := 0;
   {$IFDEF ENABLE_LOOP_FOREVER_ON_TRAP} while True do
   begin
-    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := 1; Delay_us(100); TrapFlagPin := 0; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
+    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := not TrapFlagPin; Delay_us(100); TrapFlagPin := not TrapFlagPin; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
   end
   {$ENDIF ENABLE_LOOP_FOREVER_ON_TRAP}
 end;
@@ -86,7 +86,7 @@ begin
   
   {$IFDEF ENABLE_LOOP_FOREVER_ON_TRAP} while True do
   begin
-    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := 1; Delay_us(200); TrapFlagPin := 0; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
+    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := not TrapFlagPin; Delay_us(200); TrapFlagPin := not TrapFlagPin; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
   end
   {$ENDIF ENABLE_LOOP_FOREVER_ON_TRAP}
 end;
@@ -105,7 +105,7 @@ begin
   STKERR_bit := 0;
 {$IFDEF ENABLE_LOOP_FOREVER_ON_TRAP} while True do
   begin
-    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := 1; Delay_us(300); TrapFlagPin := 0; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
+    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := not TrapFlagPin; Delay_us(300); TrapFlagPin := not TrapFlagPin; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
   end
   {$ENDIF ENABLE_LOOP_FOREVER_ON_TRAP}
 end;
@@ -124,7 +124,7 @@ begin
   MATHERR_bit := 0;
 {$IFDEF ENABLE_LOOP_FOREVER_ON_TRAP} while True do
   begin
-    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := 1; Delay_us(400); TrapFlagPin := 0; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
+    {$IFDEF ENABLE_TOGGLE_PIN_ON_TRAP} TrapFlagPin := not TrapFlagPin; Delay_us(400); TrapFlagPin := not TrapFlagPin; {$ENDIF ENABLE_TOGGLE_PIN_ON_TRAP}
   end
   {$ENDIF ENABLE_LOOP_FOREVER_ON_TRAP}end;
 {$ENDIF}

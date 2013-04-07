@@ -28,6 +28,7 @@ uses
   _25AAxxxx,
   NMRAnetBufferPools,
   NMRAnetNode,
+ // dsPIC33_Traps,
   NodeIDs;
 
 {$I Options.inc}
@@ -40,9 +41,6 @@ const
   STATE_RUN                          = 5;
 
 var
-  MainLoopState: Byte;
-  
-var
   // EEPROM SPI PINS
   CS_Bank_0                         : sbit at LATB6_bit;
   CS_Bank_0_Direction               : sbit at TRISB6_bit;
@@ -52,6 +50,8 @@ var
 var
   NceBus_RS485_Select            : sbit at LATA0_bit;
   NceBus_RS485_Select_Direction  : sbit at TRISA0_bit;
+  
+ // TrapFlagPin : sbit at LATB4_bit;
 
 // *****************************************************************************
 //  INTERRUPTS
@@ -96,7 +96,7 @@ end;
 var
   Buffer: TCANBuffer;
   ActiveNode: PNMRAnetNode;
-  j: Integer;
+  i: Integer;
   Cmd: Char;
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
@@ -104,19 +104,19 @@ begin
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_NCE_BRIDGE_NODE_ID_0_LO);
   MCU_Setup_Initialize;
   NceBusStateMachine_Initialize;
+  UART1_Write_Text('Zeroing'+LF);
   AppCallback_Configuration_Zeroize(False);
+  UART1_Write_Text('Zeroing Done'+LF);
+  
+  TRISB4_bit := 0;
+  LATB4_bit  := 0;
   
   // Enabled perphrials
   MCU_Enable_CAN;
   TON_T1CON_bit := 1;       // Turn on
   TON_T2CON_bit := 1;       // Turn on
 
-  TRISB4_bit := 0;
-  LATB4_bit  := 0;        
-  
   UART1_Write_Text('Starting'+LF);
-
-  MainLoopState := 0;
 
   while (TRUE) do
     begin
@@ -131,9 +131,27 @@ begin
       begin
         Cmd := UART1_Read;
         case Cmd of
+          'a' :
+            begin
+              NMRAnetNode_Allocate;
+            end;
+          'f' :
+            begin
+              UART1_Write_Text('f' + LF);
+              NMRAnetNode_MarkForRelease(ActiveNode);
+            end;
           'Z', 'z' :
             begin
               _25AAxxxx_Erase(EEPROM_BANK_0);
+            end;
+
+          '1' :
+            begin
+              for i := 0 to Nodes.AllocatedCount -1 do
+              begin
+                IntToStr(Nodes.AllocatedList[i]^.State, s1);
+                UART1_Write_Text('State: ' + s1 + LF);
+              end;
             end;
         end
       end

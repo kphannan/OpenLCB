@@ -329,6 +329,7 @@ const
   NS_PERMITTED            = $02;                                                // NodeState CAN Frame Layer is permitted (Node ID's resolved with bus)
   NS_INITIALIZED          = $04;                                                // NodeState Message Layer has sent its first Initialize Complete Message
   NS_VIRTUAL              = $08;                                                // NodeState If is a virtual node
+  NS_RELEASING            = $10;                                                // Node is tagged to send and AMD and be removed from the bus (while this is set what happens??)
 
   // MsgFlags in order of precidence (= 0 highest precidence)
   MF_DUPLICATE_NODE_ID        = $01;                                            // MsgFlag, a Duplicate Node ID was detected, critical fault

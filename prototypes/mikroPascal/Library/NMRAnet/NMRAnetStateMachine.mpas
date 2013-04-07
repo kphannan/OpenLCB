@@ -1063,16 +1063,45 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure ProcessOutgoingNode
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//                  DO NOT LET AN INTERRUPT OCCUR IN THE MIDDLE OF THIS
+// *****************************************************************************
 procedure ProcessMarkedForDeleteNodes(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+var
+  i, j: Integer;
 begin
- // if NMRAnetNode_TestStateFlag(Node, NS_MARKED_FOR_DELETE) then
+  if NMRAnetNode_TestStateFlag(Node, NS_RELEASING) then
   begin
     // Make sure the node sends all the flag it needs to.
-    if not NMRAnetNode_IsAnyConsumerEventSet(Node) and not NMRAnetNode_IsAnyProducerEventSet(Node) and (Node^.MsgFlags = 0) and (Node^.MsgUserFlags = 0) then
+    if not NMRAnetNode_IsAnyConsumerEventSet(Node) and not NMRAnetNode_IsAnyProducerEventSet(Node) and (Node^.MsgFlags = 0) and (Node^.MsgUserFlags = 0) and (Node^.BaseBuffers = nil) and (Node^.DatagramBuffers = nil) then
     begin
       if TransmitCANLayerMsg(Node, CANBuffer, MTI_AMR) then
-        NMRAnetNode_Release(Node)
-    end
+      begin
+        while i < Nodes.AllocatedCount do                                       // Only search the Allocated List
+        begin
+          if Nodes.AllocatedList[i] = Node then                                 // Found the node
+          begin
+            Nodes.AllocatedList[i] := PNMRAnetNode( nil);                       // Nil it in the Allocated List
+            j := i;
+            while j < Nodes.AllocatedCount - 1 do                               // Now Pack the list, moving higher indexed Nodes down one
+            begin
+              Nodes.AllocatedList[j] := Nodes.AllocatedList[j + 1];
+              Nodes.AllocatedList[j + 1] := PNMRAnetNode( nil);
+              Inc(j);
+            end;
+            Dec(Nodes.AllocatedCount);
+            i := Nodes.AllocatedCount;                                          // Done, break out
+          end;
+          Inc(i);
+        end;
+        Node^.State := NS_EMPTY;                                                // Do this last so item is not allocated in an interrupt half way through this
+      end;
+    end;
   end;
 end;
 
@@ -1253,11 +1282,11 @@ begin
       begin  //    {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_PERMITTED'+LF); {$ENDIF}
         LockCANInterrupt;
         ProcessNode(Node, @CANBuffer);                                             // Handle auto Actions to CAN/NMRAnet messages coming in
-        ProcessOutgoingNode(Node, @CANBuffer);
+        ProcessOutgoingNode(Node, @CANBuffer);   
+        ProcessMarkedForDeleteNodes(Node, @CANBuffer);
         {$IFNDEF DISABLE_DATAGRAM_ABANDON_TIMEOUT}
         ProcessAbandonBuffers(Node);
         {$ENDIF}
-   //     ProcessMarkedForDeleteNodes(Node, @CANBuffer);
         UnLockCANInterrupt
       end;
     STATE_NMRABUS_INHIBITED :

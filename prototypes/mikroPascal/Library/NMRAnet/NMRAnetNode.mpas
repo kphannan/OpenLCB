@@ -29,7 +29,7 @@ uses
   
   procedure NMRAnetNode_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
   function NMRAnetNode_Allocate: PNMRAnetNode;
-  procedure NMRAnetNode_Release(Node: PNMRAnetNode);
+  procedure NMRAnetNode_MarkForRelease(Node: PNMRAnetNode);
   function NMRAnetNode_FindByAlias(AliasID: Word): PNMRAnetNode;
   function NMRAnetNode_FindByNodeID(var NodeID: TNodeID): PNMRAnetNode;
   function NMRAnetNode_FindFirstVirtualNode: PNMRAnetNode;
@@ -380,11 +380,43 @@ begin
     NMRAnetStateMachine_InitializeNode(@Nodes.RawList[i], PhysicalNodeID_HI, PhysicalNodeID_LO + i);  // Physical Node + i MUST FIT IN THE LOWER 3 BYTES
     Nodes.RawList[i].iIndex := i;
     if i > 0 then
-      NMRAnetNode_SetStateFlag(@Nodes.RawList[i], NS_ALLOCATED or NS_VIRTUAL);
+      NMRAnetNode_SetStateFlag(@Nodes.RawList[i], NS_VIRTUAL);
     AppCallback_AssignConfigurationAddress(@Nodes.RawList[i], i);
     AppCallback_AssignRAMAddress(@Nodes.RawList[i], i);
   end;
-  Node := NMRAnetNode_Allocate;                                                 // Allocate the Physical Node
+  Node := @Nodes.RawList[0];                                                     // Allocate the Physical Node
+  NMRAnetNode_SetStateFlag(Node, NS_ALLOCATED);                                 // Mark the Physical Node Allocated
+  Nodes.AllocatedList[Nodes.AllocatedCount] := Node;                          // Add it to the end if the Allocated List
+  Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False); // Pregenerate it so it can be sorted
+  AppCallback_NodeAllocate(Node);                                             // Allow the App layer to initialize it              
+  Inc(Nodes.AllocatedCount);                                                    // One more Allocated
+end;
+
+// *****************************************************************************
+//  procedure FindFreeNodeToAllocate;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:  The new Node will create its alias and register to the CAN bus
+//                automatically as its statemachine begins to run
+// *****************************************************************************
+function FindFreeNodeToAllocate: PNMRAnetNode;
+var
+  i: Integer;
+  Node: PNMRAnetNode;
+begin
+  Result := nil;
+  for i := 1 to MAX_NODE_COUNT - 1 do        // 0 is the Physical Node
+  begin
+    Node := @Nodes.RawList[i];
+    if Node^.State and NS_ALLOCATED = 0 then
+    begin
+      Result := Node;
+      Exit
+    end
+  end;
 end;
 
 // *****************************************************************************
@@ -396,68 +428,46 @@ end;
 //
 //  Description:  The new Node will create its alias and register to the CAN bus
 //                automatically as its statemachine begins to run
+//                DO NOT Let AN INTERRUPT OCCUR IN THE MIDDLE OF THIS
 // *****************************************************************************
 function NMRAnetNode_Allocate: PNMRAnetNode;
 begin
   Result := PNMRAnetNode( nil);
   if Nodes.AllocatedCount < MAX_NODE_COUNT then
   begin
-   // UART1_Write_Text('1');
-    Result := @Nodes.RawList[Nodes.AllocatedCount];
-    NMRAnetStateMachine_InitializeNode(Result, 0, 0);                           // The NodeID was already created in the initialization
-    if Result <> @Nodes.RawList[0] then
-      NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);
-    Nodes.AllocatedList[Nodes.AllocatedCount] := Result;
-  //  UART1_Write_Text('2');
-    Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Info.Seed, False); // Pregenerate it so it can be sorted
-    Inc(Nodes.AllocatedCount);
-   // UART1_Write_Text('3');
-    AppCallback_NodeAllocate(Result);
- //   UART1_Write_Text('4'+LF);
-  //  NMRAnetNode_SortNodeList(Nodes);
+    Result := FindFreeNodeToAllocate;
+    if Result <> nil then
+    begin
+      NMRAnetStateMachine_InitializeNode(Result, 0, 0);                         // The NodeID was already created in the initialization but we need to zeroize it
+      NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);                           // Mark it Allocated
+      Nodes.AllocatedList[Nodes.AllocatedCount] := Result;                      // Add it to the end if the Allocated List
+      Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Info.Seed, False); // Pregenerate it so it can be sorted
+      Inc(Nodes.AllocatedCount);                                                // One more Allocated
+      AppCallback_NodeAllocate(Result);                                         // Allow the App layer to initialize it
+    //  NMRAnetNode_SortNodeList(Nodes);
+    end;
   end;
 end;
 
 // *****************************************************************************
-//  procedure NMRAnetNode_Release;
+//  procedure NMRAnetNode_MarkForRelease;
 //
 //  Parameters:
 //
 //  Result:
 //
-//  Description:
+//  Description:  Released the Node form the Allcoated Node List, it DOES NOT TELL
+//                THE OLCB_BUS THE NODE IS GONE.  Need to send a AMR before this is "official"
+//                in the Statemachine ProcessMarkedForDeleteNodes
 // *****************************************************************************
-procedure NMRAnetNode_Release(Node: PNMRAnetNode);
-var
-  i, j: Word;
+procedure NMRAnetNode_MarkForRelease(Node: PNMRAnetNode);
 begin
   if Node <> nil then
   begin
-    if Node^.State and NS_VIRTUAL = NS_VIRTUAL then                                     // Only release Virtual Nodes
-    begin
-      i := 0;
-      while i < Nodes.AllocatedCount do
-      begin
-        if Nodes.AllocatedList[i] = Node then
-        begin
-          Nodes.AllocatedList[i] := PNMRAnetNode( nil);
-          j := i;
-          while j < Nodes.AllocatedCount - 1 do
-          begin
-            Nodes.AllocatedList[j] := Nodes.AllocatedList[j + 1];
-            Nodes.AllocatedList[j + 1] := PNMRAnetNode( nil);
-            Inc(j);
-          end;
-          Dec(Nodes.AllocatedCount);
-          i := Nodes.AllocatedCount;                                                     // Done, break out
-        end;
-        Inc(i);
-      end;
-      Node^.State := NS_EMPTY;                                                  // Do this last so item is not allocated in an interrupt half way through this
-    end;
-  end;
+    if Node^.State and NS_VIRTUAL = NS_VIRTUAL then                             // Only release Virtual Nodes
+      Node^.State := Node^.State or NS_RELEASING;                               // Tag it to send and AMR
+  end
 end;
-
 
 // *****************************************************************************
 //  procedure NMRAnetNode_SetMsgFlags;
