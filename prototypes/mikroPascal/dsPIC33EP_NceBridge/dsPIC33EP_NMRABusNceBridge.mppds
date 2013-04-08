@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\Library\NMRAnet\NMRAnetNode.mpas
+Value=..\Library\NCE\NMRAnetNceBridgeDefines.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -44,7 +44,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=10
+Count=11
 File0=dsPIC33EP_NMRABusNceBridge.mpas
 File1=..\Library\NCE\NMRAnetNceBridge.mpas
 File2=..\Library\NCE\NMRAnetNceBridgeDefines.mpas
@@ -55,6 +55,7 @@ File6=..\Library\NMRAnet\NMRAnetCANReceive.mpas
 File7=MCU_Setup_dsPIC33EP64GP502.mpas
 File8=..\Library\dsPIC33F\dsPIC33_Traps.mpas
 File9=..\Library\dsPIC33F\dsPIC33_CAN.mpas
+File10=..\Library\Xpressnet\NMRAnetXpressnet.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

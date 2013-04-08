@@ -54,7 +54,7 @@ var
 begin
   NceBus_RS485_Select := 0;                // Default in Receive
   NceBus_RS485_Select_Direction := 0;      // Output
-  NceBusStateMachineInfo.iState := STATE_DISCOVERDEVICES;
+  NceBusStateMachineInfo.iState := STATE_BUILD_INITIAL_CABS;
   NceBusStateMachineInfo.Discovering := False;
   NceBusStateMachineInfo.iActiveDevice := 0;
   NceBusStateMachineInfo.DiscoveryCount := 0;
@@ -63,7 +63,7 @@ begin
   // Device ID Initialization
   for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
   begin
-    NceBusStateMachineInfo.DeviceList[i].State := XDS_NceBus_DEVICE_INACTIVE;
+    NceBusStateMachineInfo.DeviceList[i].State := DS_NceBus_DEVICE_INACTIVE;
     NceBusStateMachineInfo.DeviceList[i].Node := nil;
     NceBusStateMachineInfo.DeviceList[i].MissedPingCount := 0;
   end;
@@ -102,7 +102,7 @@ begin
       i := ID_MIN_DEVICE;
       
     Device := @NceBusStateMachineInfo.DeviceList[i];
-    if Device^.State and XDS_NCEBUS_DEVICE_ACTIVE = XDS_NCEBUS_DEVICE_ACTIVE then
+    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
       if Device^.Node^.State and NS_PERMITTED = NS_PERMITTED then     // If it is active then the Node MUST be valid//     if not Device_InServiceMode(i) then
       begin
         Result := i;
@@ -135,7 +135,7 @@ begin
   for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
   begin
     Device := @NceBusStateMachineInfo.DeviceList[i];
-    if Device^.State and XDS_NceBus_DEVICE_ACTIVE = XDS_NceBus_DEVICE_ACTIVE then
+    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
       if Device^.Node^.State and NS_PERMITTED = NS_PERMITTED then
       begin
         Result := i;
@@ -190,6 +190,17 @@ begin
     Inc(NceBusStateMachineInfo.Bridge.WatchdogCount)
 end;
 
+// *****************************************************************************
+//
+// procedure DetectDeviceResponse;
+//
+//  Parameters:
+//                None
+//  Returns:
+//                None
+//  Description:
+//
+// *****************************************************************************
 procedure DetectDeviceResponse(Device: PDevice; DetectedState, NoDetectedState: Word);
 var
   NodeData: PNceBusDeviceVolatileData;
@@ -198,10 +209,12 @@ begin
   if (U2STA.RIDLE = 0) or (U2STA.URXDA = 1) or (NceBusStateMachineInfo.RS485.Done)  then  // Did we detect a Device starting to transmit on the UART?
   begin
     if Device^.Node = nil then                                                  // Does the Device have a Node assigned to it?
+    begin
       Device^.Node := NMRAnetNode_Allocate;                                     // No, allocate one and link it to the Device
-    NodeData := GetDeviceData(Device^.Node);                                    // Get the RAM struture associated with the Node
-    NodeData^.DeviceID := NceBusStateMachineInfo.iActiveDevice;                 // Link the Device to the Node
-    Device^.State := Device^.State or XDS_NCEBUS_DEVICE_ACTIVE and not XDS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Active  
+      NodeData := GetDeviceData(Device^.Node);                                    // Get the RAM struture associated with the Node
+      NodeData^.DeviceID := NceBusStateMachineInfo.iActiveDevice;                 // Link the Device to the Node
+      Device^.State := Device^.State or DS_NCEBUS_DEVICE_ACTIVE and not DS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Active
+    end;
     Device^.MissedPingCount := 0;                                               // Reset Missed Count
     NceBusStateMachineInfo.WatchdogCount := 0;                                  // Reset the Watchdog for a hung bus
     NceBusStateMachineInfo.iState := DetectedState;                             // Next State = Ping Response
@@ -209,9 +222,9 @@ begin
   begin 
     // If a Device has nothing to say we can fall into this branch it is not a signal
     // the device is has disappeared
-    if Device^.State and XDS_NCEBUS_DEVICE_ACTIVE = XDS_NCEBUS_DEVICE_ACTIVE then
+    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
     begin   
-      Inc(Device^.MissedPingCount);
+     { Inc(Device^.MissedPingCount);
       if Device^.MissedPingCount > MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS then
       begin
         Node := Device^.Node;                                                   // Copy the address of the node for later use
@@ -220,7 +233,7 @@ begin
         Device^.Node := nil;                                                    // Unlink the Node from the Device
         NMRAnetNode_MarkForRelease(Node);                                       // Unallocate the node
         Device^.State := Device^.State and not XDS_NCEBUS_DEVICE_ACTIVE or XDS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Inactive
-      end;
+      end;    }
     end;
     NceBusStateMachineInfo.iState := NoDetectedState;
   end;
@@ -286,12 +299,26 @@ end;
 procedure NceBusStateMachine_Process(Node: PNMRAnetNode);
 var
   Temp: Word;
+  i: Integer;
   Device: PDevice;
   NodeData: PNceBusDeviceVolatileData;
 begin
   if NMRAnetNode_TestStateFlag(Node, NS_PERMITTED) then
   begin
     case NceBusStateMachineInfo.iState of
+      STATE_BUILD_INITIAL_CABS :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_BUILD_INITIAL_CABS'+LF);{$ENDIF}
+          for i := ID_MIN_DEVICE to ID_MIN_DEVICE + NCE_CAB_BUS_PADDING - 1 do
+          begin
+            Device := @NceBusStateMachineInfo.DeviceList[i];
+            Device^.Node := NMRAnetNode_Allocate;                               // Allocate one and link it to the Device
+            NodeData := GetDeviceData(Device^.Node);                            // Get the RAM struture associated with the Node
+            NodeData^.DeviceID := i;                                            // Link the Device to the Node
+            Device^.State := Device^.State or DS_NCEBUS_DEVICE_ACTIVE and not DS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Active
+          end;
+          NceBusStateMachineInfo.iState := STATE_DISCOVERDEVICES;
+        end;
       STATE_DISCOVERDEVICES :
         begin
           {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_DISCOVERDEVICES'+LF);{$ENDIF}
@@ -498,7 +525,7 @@ begin
   SendNceBusMessage(NceBusMessage, Command, 0);
   for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
   begin
-    if NceBusStateMachineInfo.DeviceList[i].State and XDS_NceBus_DEVICE_ACTIVE = XDS_NceBus_DEVICE_ACTIVE then
+    if NceBusStateMachineInfo.DeviceList[i].State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
        SendNceBusMessage(NceBusMessage, Command, i);
   end
 end;
@@ -545,6 +572,21 @@ begin
   Node := NceBusStateMachineInfo.DeviceList[iDevice].Node;
   if Node <> nil then
   begin
+    if NceBusMessage^.Bytes[0] <> NCE_NO_KEY_TO_REPORT then
+    begin
+      ByteToHex(NceBusMessage^.Bytes[0], s1);
+      UART1_Write_Text('Key Press: 0x' + s1 + LF);
+    end;
+    
+    if NceBusMessage^.Bytes[1] = NCE_NO_SPEED_TO_REPORT then
+    begin
+      ByteToHex(NceBusMessage^.Bytes[0], s1);
+  //    UART1_Write_Text('No Speed: 0x' + s1 + LF);
+    end else
+    begin
+      ByteToStr(NceBusMessage^.Bytes[0] and NCE_SPEED_MASK, s1);
+      UART1_Write_Text('Speed: ' + s1 + LF);
+    end;
 
   end
 end;

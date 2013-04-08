@@ -970,7 +970,7 @@ begin
                     Node^.MsgUserFlags := Node^.MsgUserFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
                     SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
-                 //  NMRAnetNode_SetStateFlag(Node, NS_MARKED_FOR_DELETE);
+                    NMRAnetNode_MarkForRelease(Node);
                   end;
                 end;
             end;

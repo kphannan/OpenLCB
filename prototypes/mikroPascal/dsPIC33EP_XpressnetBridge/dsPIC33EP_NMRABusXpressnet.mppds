@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=dsPIC33EP_NMRABusXpressnet.mpas
+Value=E:\trunk\prototypes\mikroPascal\Library\Xpressnet\NMRAnetXpressnet.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -42,7 +42,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=14
+Count=15
 File0=dsPIC33EP_NMRABusXpressnet.mpas
 File1=NMRAnetAppCallbacks.mpas
 File2=..\Library\NMRAnet\NMRAnetStateMachine.mpas
@@ -57,6 +57,7 @@ File10=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
 File11=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
 File12=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\_25AAxxxx.mpas
 File13=dsPIC33EP_NMRABusXpressnet.lst
+File14=..\Library\NCE\NMRAnetNceBridge.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

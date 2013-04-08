@@ -205,9 +205,18 @@ begin
 end;
 
 procedure DetectDeviceResponse(Device: PDevice; DetectedState, NoDetectedState: Word);
+var
+   NodeData: PXpressNetDeviceVolatileData;
 begin
-  if (U2STA.RIDLE = 0) or (U2STA.URXDA = 1) then                                                            // Did we detect a Device starting to transmit on the UART?
+  if (U2STA.RIDLE = 0) or (U2STA.URXDA = 1) or (XpressnetStateMachineInfo.RS485.Done) then                  // Did we detect a Device starting to transmit on the UART?
   begin                                                                                                     // Yes so wait for it to be received
+    if Device^.Node = nil then        // Did we find a new Xpressnet Device?
+    begin
+      Device^.State := Device^.State or XDS_XPRESSNET_DEVICE_ACTIVE;
+      Device^.Node := NMRAnetNode_Allocate;                                  // Link the Node to the Device
+      NodeData := GetDeviceData(Device^.Node);
+      NodeData^.DeviceID := XpressnetStateMachineInfo.iActiveDevice;        // Link the Device to the Node
+    end;
     XpressnetStateMachineInfo.WatchdogCount := 0;                                                           // Reset the Watchdog for a hung bus
     XpressnetStateMachineInfo.iState := DetectedState;
   end else
@@ -297,7 +306,6 @@ procedure XpressnetStateMachine_Process(Node: PNMRAnetNode);
 var
   Temp: Word;
   Device: PDevice;
-  NodeData: PXpressNetDeviceVolatileData;
 begin
   if NMRAnetNode_TestStateFlag(Node, NS_PERMITTED) then
   begin
@@ -350,14 +358,6 @@ begin
       STATE_HANDLEMESSAGE :
         begin
           {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_HANDLEMESSAGE'+LF);{$ENDIF}
-          Device := @XpressnetStateMachineInfo.DeviceList[XpressnetStateMachineInfo.iActiveDevice];
-          if Device^.Node = nil then        // Did we find a new Xpressnet Device?
-          begin
-            Device^.State := Device^.State or XDS_XPRESSNET_DEVICE_ACTIVE;
-            Device^.Node := NMRAnetNode_Allocate;                                  // Link the Node to the Device
-            NodeData := GetDeviceData(Device^.Node);
-            NodeData^.DeviceID := XpressnetStateMachineInfo.iActiveDevice;        // Link the Device to the Node
-          end;
           XpressnetStateMachineInfo.Bridge.RequiresReply := False;           // The HandleDeviceInstruction call will set up the OlcbBridge info if needed.
           XpressnetStateMachineInfo.Bridge.ReplyRead := False;
           XpressnetStateMachineInfo.Bridge.WatchdogCount := 0;

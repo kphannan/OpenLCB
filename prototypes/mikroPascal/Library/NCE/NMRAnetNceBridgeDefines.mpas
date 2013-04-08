@@ -23,37 +23,43 @@ uses
 const
   NCEBUS_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a NCE message
   
-  STATE_DISCOVERDEVICES = 0;
-  STATE_DISCOVERNEXTDEVICE = 1;
-  STATE_SENDDEVICEINQUIRY = 2;
-  STATE_SENDDEVICESYNC = 3;
-  STATE_HANDLEMESSAGE = 5;
-  STATE_WAIT_FOR_NMRANET_REPLY = 6;
-  STATE_SEND_NMRANET_MESSAGE = 7;
-  STATE_SEND_INSTRUCTION_REPLY = 8;
-  STATE_DEVICEACKRESPONSE = 10;
-  STATE_TESTFORDISCOVERYMODE = 11;
-  STATE_ENUMERATEACTIVEDEVICES = 12;
-  STATE_WAITFORDEVICEMESSAGE = 13;
-  STATE_WAITFORACKRESPONSE = 14;
+  STATE_BUILD_INITIAL_CABS        = 0;
+  STATE_DISCOVERDEVICES           = 1;
+  STATE_DISCOVERNEXTDEVICE        = 2;
+  STATE_SENDDEVICEINQUIRY         = 3;
+  STATE_SENDDEVICESYNC            = 4;
+  STATE_HANDLEMESSAGE             = 5;
+  STATE_WAIT_FOR_NMRANET_REPLY    = 6;
+  STATE_SEND_NMRANET_MESSAGE      = 7;
+  STATE_SEND_INSTRUCTION_REPLY    = 8;
+  STATE_DEVICEACKRESPONSE         = 9;
+  STATE_TESTFORDISCOVERYMODE      = 10;
+  STATE_ENUMERATEACTIVEDEVICES    = 11;
+  STATE_WAITFORDEVICEMESSAGE      = 12;
+  STATE_WAITFORACKRESPONSE        = 13;
 
   STATE_RS485_READ_CAB_BYTE_1   = 0;  // State machine states for the RS485 receiver
   STATE_RS485_READ_CAB_BYTE_2   = 1;
   STATE_RS485_FULL              = 2;
 
-  ID_NO_DEVICE             = $FE;
-  ID_MIN_DEVICE            = 2;
-  ID_MAX_DEVICE            = 8;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
-  ID_PC_DEVICE             = $FF;  // PC Device = $FF
-  NCEBUS_PING              = %10000000;   // P10A AAAA
-  MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS = 12;
+  ID_NO_DEVICE                         = $FE;
+  ID_MIN_DEVICE                        = 2;
+  ID_MAX_DEVICE                        = 63;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
+  ID_PC_DEVICE                         = $FF;  // PC Device = $FF
+  NCEBUS_PING                          = %10000000;   // P10A AAAA
+  MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
+  NCE_CAB_BUS_PADDING                  = 1;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
 
   NCEBUS_BUS_HUNG_COUNT = 2;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
   REDISCOVERY_TIME         = 4;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
   NCEBUS_OLCB_BUS_TIMEOUT = 6;   // how long to count before giving up on a OLCB reply (~525ms steps)
   
-  XDS_NCEBUS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
-  XDS_NCEBUS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
+  DS_NCEBUS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
+  DS_NCEBUS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
+  
+  NCE_NO_SPEED_TO_REPORT    = %01111111;
+  NCE_NO_KEY_TO_REPORT      = %01111101;
+  NCE_SPEED_MASK            = %01111111;
 
 type
   TNceBusDataArray = array[0..NCEBUS_MAX_DATA_BYTE-1] of Byte;

@@ -84,7 +84,7 @@ procedure INTERRUPT_NceBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
 begin
   U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
  // UART1_Write_Text('RX');
-  while (URXDA_U2STA_bit = 1) and (NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex < STATE_RS485_FULL)  do
+  while (URXDA_U2STA_bit = 1) {and (NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex < STATE_RS485_FULL) } do
   begin
     NceBusStateMachine_UART_RX_StateMachine(@NceBusStateMachineInfo, U2RXREG);
   end
@@ -150,7 +150,15 @@ begin
               for i := 0 to Nodes.AllocatedCount -1 do
               begin
                 IntToStr(Nodes.AllocatedList[i]^.State, s1);
-                UART1_Write_Text('State: ' + s1 + LF);
+                UART1_Write_Text('Node State: ' + s1 + LF);
+              end;
+            end;
+          '2' :
+            begin
+              for i := ID_MIN_DEVICE to ID_MAX_DEVICE -1 do
+              begin
+                IntToStr(NceBusStateMachineInfo.DeviceList[i].State, s1);
+                UART1_Write_Text('Device State: ' + s1 + LF);
               end;
             end;
         end
