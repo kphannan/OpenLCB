@@ -24,20 +24,19 @@ program dsPIC33EP_NMRAnetCommandStation;
 //    - Implement "stupid throttle" (Lenz/NCE)
 //    - When in Service Mode it is blocked and will cause issues with the node CAN if other chatter is on the bus
 //    - Can't detect no loco on the track in Byte by Bit mode because a lack of an ACK is interperted as it "must be a 0"
-//    - Startup can trigger an Over Current latch (seems only after EEPROM Zeroization?)
 //    - Operations Service Mode needs implementing
 //
 //* Open Questions
 //    - Think about do I Free the vNode completely when a throttle releases it.
 //
 // * Improvements
-//    - Current Sense can be done in an ADC interrupt speed it up.
 //    - Optimize how Service Mode looks for values (check 0, 255, 64, 192 first)
-//    - Removed the Binary Search because when a node is added it will have a 0 Alias for a few steps of the statemachine; could have more than one 0 alias at a time
 //
 // * Fixes
 //    - 128/14 Step Mode                  4/1/13: Fixed 128 step mode not working with short address
 //    - Auto Allocate vTrainNodes         4/1/13: Added configuration option to turn this on off.
+//    - Reworked the Overcurrent to use ADC Interrupts.  Much faster and less overhead needed (12us every 5.5ms with 16x oversampling)  4/13/2013
+//    - Reworked statemachine to allow Binary Searching of Nodes for fast access of vNodes 4/13/2013
 //
 // ******************************************************************************
 
@@ -95,16 +94,6 @@ var
 //  INTERRUPTS
 // *****************************************************************************
 
-type
-  TOverCurrent = record
-    iSample: Word;      // Number of 56us time ticks since last check
-    SampleValue: real;  // Current filtered Value of the current
-    OverCurrent: Integer;  // OC Filtered Flag
-  end;
-  
-var
-  OverCurrent: TOverCurrent;
-  
   DCCTime: Word;
   
   
@@ -214,6 +203,8 @@ begin
   ServiceMode_100ms_TimeTick
 end;
 
+
+
 procedure INTERRUPT_5ms_Timer(); iv IVT_ADDR_T5INTERRUPT;
 // Called once every 5m during Service MOde
 begin
@@ -221,40 +212,48 @@ begin
   ServiceMode_5ms_TimeTick
 end;
 
-procedure INTERRUPT_OverCurrent_Timer(); iv IVT_ADDR_T3INTERRUPT;
+procedure INTERRUPT_ADC1(); iv IVT_ADDR_AD1INTERRUPT; ics ICS_AUTO;
+var
+  i: Integer;
+  ADCBuf: ^Word;
 begin
-  T3IF_bit := 0;  // Clear the flag
-  OverCurrent.SampleValue := ADC1_Get_Sample(0) * 0.520 * 0.0032227;             // .00322266 V/Bit * 0.520A/V * Bits =
-  
-  if OverCurrent.SampleValue * 1000 > CommandStationConfigurationInRam.OverCurrentLevel then  // In MilliAmps
-  begin
-    Inc(OverCurrent.OverCurrent);
-    if OverCurrent.OverCurrent > 5 then
-      OverCurrent.OverCurrent := 5;
-  end else 
-  begin
-    Dec(OverCurrent.OverCurrent);
-    if OverCurrent.OverCurrent < 0 then
-      OverCurrent.OverCurrent := 0
+  AD1IF_bit := 0;
+  ADCBuf := @ADC1BUF0;
+  OverCurrent.BitValue := ADCBuf^;
+  for i := 0 to 7 do                                                            // Sampling 16 times but only using 8 so speed up this call
+  begin  
+    if (ADCBuf^ > OverCurrent.OverCurrentLimit) then
+    begin 
+      if OverCurrent.OverCurrentCounter < 5 then
+        Inc(OverCurrent.OverCurrentCounter);
+    end else
+    begin
+      if OverCurrent.OverCurrentCounter > 0 then
+        Dec(OverCurrent.OverCurrentCounter);
+    end;
+    Inc(ADCBuf);
   end;
   
-  if (OverCurrent.iSample + 1) * 10 > CommandStationConfigurationInRam.OverCurrentTime then  // Make sure iSample is never 0
+  if CommandStationConfigurationInRam.OverloadDetected = 1 then                 // Never run the overcurrent test below if it is already overcurrent
+    OverCurrent.OverCurrentSampleCount := 0;
+    
+  if OverCurrent.OverCurrentSampleCount > OverCurrent.OverCurrentSampleLimit then
   begin
-    if OverCurrent.OverCurrent > 3 then
+    OverCurrent.OverCurrentSampleCount := 0;
+    if OverCurrent.OverCurrentCounter = 5 then
     begin
-      while _25AAxxxx_Busy(EEPROM_BANK_0) do
-        Delay_us(10);
-      _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 1, @OverCurrent.iSample);   //
-      if OverCurrent.iSample = 0 then
-      begin
-        OverCurrent.iSample := 1;     // Reuse the structure
-        _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 1, @OverCurrent.iSample);   // Shut Down Time
-        CommandStationConfigurationInRam.OverloadDetected := 1;
-      end
+      i := 1;
+      _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 1, @i);     // Shut Down
+      CommandStationConfigurationInRam.OverloadDetected := 1;
     end;
-    OverCurrent.iSample := 0;
   end else
-    Inc(OverCurrent.iSample);
+    Inc(OverCurrent.OverCurrentSampleCount);
+end;
+
+procedure INTERRUPT_Timer_3(); iv IVT_ADDR_T3INTERRUPT;
+begin
+  T3IF_bit := 0;  // Clear the flag
+  // Unused
 end;
 
 
@@ -292,18 +291,6 @@ begin
   end;
 end;
 
-procedure InitializeConfigurationRam;
-begin
-  while _25AAxxxx_Busy(EEPROM_BANK_0) do
-    Delay_us(10);
-  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
-  CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
-  CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
-  while _25AAxxxx_Busy(EEPROM_BANK_0) do
-    Delay_us(10);
-  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);
-end;
-
 // *******************
 // MAIN LOOP
 // *******************
@@ -320,18 +307,14 @@ begin
   
   TRISA4_bit := 0;
   LATA4_bit := 1;
-  
-  OverCurrent.iSample := 0;
-  OverCurrent.SampleValue := 0.0;
-  OverCurrent.OverCurrent := 0;
-                                                // Output
+                                               // Output
   _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, {MUSTANGPEAK_SERVICETRACK_NODE_ID_0_LO} MUSTANGPEAK_COMMANDSTATION_ID_0_LO);
   MCU_Setup_Initialize;                                                         // Start the timers and perpherials last
   NMRA_DCC_Initialize;
   ServiceMode_Initialize;
   AppCallback_Configuration_Zeroize(False);
-  InitializeConfigurationRam;
+  AppCallback_Sync_Config_Ram_with_EEPROM;
 
   H_Bridge_A_Lo := 0;                                                           // Bridge Off
   H_Bridge_A_Hi := 0;                                                           // Bridge Off
@@ -347,11 +330,12 @@ begin
   DCC_NMRA_Tranmitter_Lo_Direction := 0;                                        // Output
   DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
   
-  ADC1_Read(0);  // cheating, intializes and set to Analog input
+//  ADC1_Read(0);  // cheating, intializes and set to Analog input
   
   UART1_Write_Text('Starting 1'+LF);
 
-  TON_T3CON_bit := 1;       // Turn on current limit
+ // TON_T3CON_bit := 1;       // Turn on current limit
+  AD1IE_bit := 1;           // Turn on ADC1 interrupt
   TON_T2CON_bit := 1;       // Turn on the 100ms timer
   MCU_Setup_Enable_CAN;
   {$IFNDEF DCCTIMER_DISABLE}
@@ -479,12 +463,12 @@ begin
             end;
             '2' :
               begin
-                IntToStr(OverCurrent.iSample, s1);
-                UART1_Write_Text('iSample: ' + s1 + LF);
-                IntToStr(OverCurrent.OverCurrent, s1);
-                UART1_Write_Text('Over Current: ' + s1 + LF);
-                FloatToStr(OverCurrent.SampleValue, s1);
-                UART1_Write_Text('Sample: ' + s1 + LF);
+                IntToStr(OverCurrent.OverCurrentSampleLimit, s1);
+                UART1_Write_Text('5ms Sample Count to Trigger: ' + s1 + LF);
+                IntToStr(OverCurrent.OverCurrentCounter, s1);
+                UART1_Write_Text('Over Current Counter: ' + s1 + LF);
+                FloatToStr(OverCurrent.BitValue * 0.520 * 0.00322266, s1);       // .00322266 V/Bit * 0.520A/V * Bits =
+                UART1_Write_Text('Measured Current: ' + s1 + 'A' + LF);
                 WordToStr(CommandStationConfigurationInRam.OverCurrentLevel, s1);
                 UART1_Write_Text('I Level: ' + s1 + LF);
                 WordToStr(CommandStationConfigurationInRam.OverCurrentTime, s1);
@@ -499,6 +483,64 @@ begin
             '4' :
               begin
               //  NMRAnetNode_PrintRawNodeData
+              end;
+            '5' :
+              begin
+                IntToStr(ADC1BUF0, s1);
+                UART1_Write_Text('ADC0: ' + s1 + LF);
+                IntToStr(ADC1BUF1, s1);
+                UART1_Write_Text('ADC1: ' + s1 + LF);
+                IntToStr(ADC1BUF2, s1);
+                UART1_Write_Text('ADC2: ' + s1 + LF);
+                IntToStr(ADC1BUF3, s1);
+                UART1_Write_Text('ADC3: ' + s1 + LF);
+                IntToStr(ADC1BUF4, s1);
+                UART1_Write_Text('ADC4: ' + s1 + LF);
+                IntToStr(ADC1BUF5, s1);
+                UART1_Write_Text('ADC5: ' + s1 + LF);
+                IntToStr(ADC1BUF6, s1);
+                UART1_Write_Text('ADC6: ' + s1 + LF);
+                IntToStr(ADC1BUF7, s1);
+                UART1_Write_Text('ADC7: ' + s1 + LF);
+                IntToStr(ADC1BUF8, s1);
+                UART1_Write_Text('ADC8: ' + s1 + LF);
+                IntToStr(ADC1BUF9, s1);
+                UART1_Write_Text('ADC9: ' + s1 + LF);
+                IntToStr(ADC1BUFA, s1);
+                UART1_Write_Text('ADC10: ' + s1 + LF);
+                IntToStr(ADC1BUFB, s1);
+                UART1_Write_Text('ADC11: ' + s1 + LF);
+                IntToStr(ADC1BUFC, s1);
+                UART1_Write_Text('ADC12: ' + s1 + LF);
+                IntToStr(ADC1BUFD, s1);
+                UART1_Write_Text('ADC13: ' + s1 + LF);
+                IntToStr(ADC1BUFE, s1);
+                UART1_Write_Text('ADC14: ' + s1 + LF);
+                IntToStr(ADC1BUFF, s1);
+                UART1_Write_Text('ADC15: ' + s1 + LF);
+              end;
+            '6' :
+              begin
+                WordToHex(AD1CON1, s1);
+                UART1_Write_Text('AD1CON1: 0x' + s1 + LF);
+                WordToHex(AD1CON2, s1);
+                UART1_Write_Text('AD1CON2: 0x' + s1 + LF);
+                WordToHex(AD1CON3, s1);
+                UART1_Write_Text('AD1CON3: 0x' + s1 + LF);
+                WordToHex(AD1CON4, s1);
+                UART1_Write_Text('AD1CON4: 0x' + s1 + LF);
+                WordToHex(AD1CHS123, s1);
+                UART1_Write_Text('AD1CHS123: 0x' + s1 + LF);
+                WordToHex(AD1CHS0, s1);
+                UART1_Write_Text('AD1CHS0: 0x' + s1 + LF);
+                WordToHex(AD1CSSH, s1);
+                UART1_Write_Text('AD1CSSH: 0x' + s1 + LF);
+                WordToHex(AD1CSSL, s1);
+                UART1_Write_Text('AD1CSSL: 0x' + s1 + LF);
+                WordToHex(ANSELA, s1);
+                UART1_Write_Text('ANSELA: 0x' + s1 + LF);
+                WordToHex(ANSELB, s1);
+                UART1_Write_Text('ANSELB: 0x' + s1 + LF);
               end;
        end;
       end;

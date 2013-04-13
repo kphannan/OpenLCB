@@ -122,7 +122,7 @@ type
   
   TCommandStationRamData = record
     EnableAutoAllocateProxy: Byte;                                              // For Debugging
-    AllocateProxy: Word;                                                       // Running count of how many proxies to allocate
+    AllocateProxy: Word;                                                        // Running count of how many proxies to allocate
   end;
   PCommandStationRamData = ^TCommandStationRamData;
   
@@ -141,11 +141,20 @@ type
     DebugAutoAllocate: Byte;                                                    // Start of EEPROM_DEBUG memory space
   end;
   
+type
+  TOverCurrent = record
+    OverCurrentSampleLimit: Integer;                                            // Number of 5ms cycles to run before making an overcurrent decision
+    OverCurrentSampleCount: Word;                                               // Current 5ms Index looking for the OverCurrentSampleLimit
+    BitValue: Word;                                                             // Last ADC value of the current.
+    OverCurrentLimit: Word;                                                     // The value defined as overcurrent converted from Amps to ADC Bits
+    OverCurrentCounter: Integer;                                                // OC Filtered Flag
+  end;
+  
 const
   MAX_NODE_CFG_DATA  = 512;
   MAX_VNODE_CFG_DATA = 1536;
   EEPROM_CONFIG_OFFSET = 61;                                               // Start of the Command Station Config Data
-  EEPROM_CONFIG_MAX_OFFSET = 99;                                           // Last Offset of the Command Station Config Data
+  EEPROM_CONFIG_MAX_OFFSET = 99;                                           // Last Offset of the Command Station Config Data that is currently _implemented_, the last byte is 255.
   
   EEPROM_DEBUG_CONFG_OFFSET = 256;
   EEPROM_DEBUG_MAX_OFFSET = 257;
@@ -195,6 +204,8 @@ procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte;
 
 procedure AppCallback_Configuration_Zeroize(Force: Boolean);
 
+procedure AppCallback_Sync_Config_Ram_with_EEPROM;
+
 // *****************************************************************************
 
 
@@ -204,6 +215,7 @@ function FindFirstNonDCCAllocatedNode: PNMRAnetNode;
 var
   CommandStationConfigurationInRam: TCommandStationConfigurationInRam;
   CommandStationRamData: TCommandStationRamData;
+  OverCurrent: TOverCurrent;
 
 implementation
 
@@ -436,6 +448,29 @@ begin
 end;
 
 // *****************************************************************************
+// Reads the EEPROM and load the data into the Shadow RAM
+//  Parameters  :
+//  Result      :
+// *****************************************************************************
+procedure AppCallback_Sync_Config_Ram_with_EEPROM;
+begin
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
+  CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
+  CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
+  // Convert the users mA limit into Bit Counts
+  OverCurrent.OverCurrentLimit := Word( 310.302669 * 1.923076 *  CommandStationConfigurationInRam.OverCurrentLevel / 1000); // 310.302669 Bits/V * 1.923076 V/A * Amps = Bits
+  // Convert the users Tigger timeout to 5ms counts
+  OverCurrent.OverCurrentSampleLimit := (CommandStationConfigurationInRam.OverCurrentTime div 5) - 1;
+  if OverCurrent.OverCurrentSampleLimit <= 0 then
+    OverCurrent.OverCurrentSampleLimit := 1;
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);
+end;
+
+// *****************************************************************************
 // Writes the Configuration Memory from the App defined storage device
 //  Node:  The Node to write the Configuration Data for
 //  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
@@ -456,20 +491,8 @@ begin
             Delay_us(10);
           _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
           // Update the Command Station Ram with the new configuration data
-          if (Node^.ConfigurationAddress = 0) and (StartAddress >= EEPROM_CONFIG_OFFSET) and (StartAddress <= EEPROM_CONFIG_MAX_OFFSET) then
-          begin
-            while _25AAxxxx_Busy(EEPROM_BANK_0) do
-              Delay_us(10);
-            _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, @CommandStationConfigurationInRam);
-            CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
-            CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
-          end;
-          if (Node^.ConfigurationAddress = 0) and (StartAddress >= EEPROM_DEBUG_CONFG_OFFSET) and (StartAddress <= EEPROM_DEBUG_MAX_OFFSET) then
-          begin
-            while _25AAxxxx_Busy(EEPROM_BANK_0) do
-              Delay_us(10);
-            _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);
-          end;
+          if Node^.ConfigurationAddress = 0 then
+            AppCallback_Sync_Config_Ram_with_EEPROM
         end;
     1: begin
          // Double Indexed CV
@@ -665,6 +688,11 @@ begin
   end;
   CommandStationRamData.AllocateProxy := 1;   // Allocate the first one
   CommandStationRamData.EnableAutoAllocateProxy := 0;
+  OverCurrent.OverCurrentSampleLimit := 0;
+  OverCurrent.OverCurrentSampleCount := 0;
+  OverCurrent.BitValue := 0;
+  OverCurrent.OverCurrentLimit := 0;
+  OverCurrent.OverCurrentCounter := 0;
 end;
 
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);

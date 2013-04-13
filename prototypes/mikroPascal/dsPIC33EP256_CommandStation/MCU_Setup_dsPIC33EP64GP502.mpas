@@ -193,6 +193,28 @@ begin
   T5IF_bit := 0;            // Clear T2IF
   T5IE_bit := 1;            // Enable the Interrupt
 
+  // Setup of the ADC(s)
+  ANSA0_bit := 1;            // Pin RA0 = Analog
+
+  AD1CON3 := $1FFF;          // SAMC = 11111 = 31 * Tad; ADCS = 11111111 (ACDS + 1) = 3 * Tcy = Tad    Sample as slow as we can
+  ASAM_bit := 1;            // Automatic Sample Bit
+  SSRCG_bit := 0;           // Sample Clock Source Group Bit, something other than the PWM
+  SSRC_0_bit := 1;          // Sample Clock Source Select Bit, Internal counter ends sampling and starts conversion (auto-convert)
+  SSRC_1_bit := 1;          //
+  SSRC_2_bit := 1;          //
+  ADDMAEN_bit := 0;         // Do not use DMA, store the results in the ADCxBUF0-ADC-xBUFF registers
+  SMPI_0_bit := 1;
+  SMPI_1_bit := 1;
+  SMPI_2_bit := 1;
+  SMPI_3_bit := 1;
+  SMPI_4_bit := 0;          // Interrupt every 16 conversions
+  AD1IP_0_bit := 1;
+  AD1IP_1_bit := 1;
+  AD1IP_2_bit := 0;         // Interrupt Priority = 3;
+  AD1IF_bit := 0;
+  ADON_bit := 1;           // Enabled the ADC Module
+  Delay_us(20);
+  
 end;
 
 end.
