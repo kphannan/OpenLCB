@@ -1074,15 +1074,23 @@ end;
 procedure ProcessMarkedForDeleteNodes(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
   i, j: Integer;
+  DoDeAllocate: Boolean;
 begin
   if NMRAnetNode_TestStateFlag(Node, NS_RELEASING) then
   begin
-    // Make sure the node sends all the flag it needs to.
-    if not NMRAnetNode_IsAnyConsumerEventSet(Node) and not NMRAnetNode_IsAnyProducerEventSet(Node) and (Node^.MsgFlags = 0) and (Node^.MsgUserFlags = 0) and (Node^.BaseBuffers = nil) and (Node^.DatagramBuffers = nil) then
     begin
-      if TransmitCANLayerMsg(Node, CANBuffer, MTI_AMR) then
+      if NMRAnetNode_TestStateFlag(Node, NS_PERMITTED) then
       begin
-        while i < Nodes.AllocatedCount do                                       // Only search the Allocated List
+        // If the node is in the Permitted state than make sure the node sends all the flag it needs to.
+        DoDeallocate := False;
+        if not NMRAnetNode_IsAnyConsumerEventSet(Node) and not NMRAnetNode_IsAnyProducerEventSet(Node) and (Node^.MsgFlags = 0) and (Node^.MsgUserFlags = 0) and (Node^.BaseBuffers = nil) and (Node^.DatagramBuffers = nil) then
+          DoDeallocate := TransmitCANLayerMsg(Node, CANBuffer, MTI_AMR);
+      end else
+        DoDeallocate := True;                                                   // If it is not in the Permitted state then we are not allowed to send a AMR so just free it
+
+      if DoDeallocate then
+      begin
+        while i < Nodes.AllocatedCount do                                       // Search the Allocated List to remove it if it has made it into the list
         begin
           if Nodes.AllocatedList[i] = Node then                                 // Found the node
           begin
@@ -1099,7 +1107,7 @@ begin
           end;
           Inc(i);
         end;
-        Node^.State := NS_EMPTY;                                                // Do this last so item is not allocated in an interrupt half way through this
+        Node^.State := NS_EMPTY  // Do this last so item is not allocated in an interrupt half way through this
       end;
     end;
   end;
@@ -1145,14 +1153,15 @@ begin
     STATE_NMRABUS_START :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_START'+LF); {$ENDIF}
         LockCANInterrupt;
-        Node^.iStateMachine := STATE_NMRABUS_GENERATE_NODE_ALIAS;
+        Node^.Login.iCID := 0;
+        Node^.iStateMachine := STATE_NMRABUS_TRANSMIT_CID;
         UnLockCANInterrupt
       end;
     STATE_NMRABUS_GENERATE_NODE_ALIAS :
       begin  {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_GENERATE_NODE_ALIAS'+LF); {$ENDIF}
         LockCANInterrupt;
         Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False);
-    //    NMRAnetNode_SortNodeList(Nodes);
+        NMRAnetNode_SortNodeList(Nodes);
         Node^.Login.iCID := 0;
         Node^.iStateMachine := STATE_NMRABUS_TRANSMIT_CID;
         UnLockCANInterrupt;

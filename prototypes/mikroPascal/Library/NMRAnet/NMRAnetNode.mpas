@@ -384,12 +384,12 @@ begin
     AppCallback_AssignConfigurationAddress(@Nodes.RawList[i], i);
     AppCallback_AssignRAMAddress(@Nodes.RawList[i], i);
   end;
-  Node := @Nodes.RawList[0];                                                     // Allocate the Physical Node
+  Node := @Nodes.RawList[0]; 
+  Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False); // Pregenerate it so it can be sorted                                                   // Allocate the Physical Node
   NMRAnetNode_SetStateFlag(Node, NS_ALLOCATED);                                 // Mark the Physical Node Allocated
-  Nodes.AllocatedList[Nodes.AllocatedCount] := Node;                          // Add it to the end if the Allocated List
-  Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False); // Pregenerate it so it can be sorted
-  AppCallback_NodeAllocate(Node);                                             // Allow the App layer to initialize it              
+  Nodes.AllocatedList[Nodes.AllocatedCount] := Node;                            // Add it to the end if the Allocated List
   Inc(Nodes.AllocatedCount);                                                    // One more Allocated
+  AppCallback_NodeAllocate(Node);                                               // Allow the App layer to initialize it
 end;
 
 // *****************************************************************************
@@ -439,12 +439,12 @@ begin
     if Result <> nil then
     begin
       NMRAnetStateMachine_InitializeNode(Result, 0, 0);                         // The NodeID was already created in the initialization but we need to zeroize it
-      NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);                           // Mark it Allocated
-      Nodes.AllocatedList[Nodes.AllocatedCount] := Result;                      // Add it to the end if the Allocated List
+      NMRAnetNode_SetStateFlag(Result, NS_ALLOCATED or NS_VIRTUAL);             // Mark it Allocated
       Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Info.Seed, False); // Pregenerate it so it can be sorted
+      Nodes.AllocatedList[Nodes.AllocatedCount] := Result;                      // Add it to the end if the Allocated List
       Inc(Nodes.AllocatedCount);                                                // One more Allocated
       AppCallback_NodeAllocate(Result);                                         // Allow the App layer to initialize it
-    //  NMRAnetNode_SortNodeList(Nodes);
+      NMRAnetNode_SortNodeList(Nodes);
     end;
   end;
 end;

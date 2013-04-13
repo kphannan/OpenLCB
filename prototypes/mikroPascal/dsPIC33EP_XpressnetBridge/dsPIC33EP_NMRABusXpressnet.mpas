@@ -106,7 +106,7 @@ begin
 
   TRISB4_bit := 0;
   LATB4_bit  := 0;
-  
+
   _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, MUSTANGPEAK_XPRESSNET_ID_0_LO);
   MCU_Setup_Initialize;

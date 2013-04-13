@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=E:\trunk\prototypes\mikroPascal\Library\Xpressnet\NMRAnetXpressnet.mpas
+Value=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetNode.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -52,12 +52,12 @@ File5=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetNode.mpas
 File6=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetDefines.mpas
 File7=MCU_Setup_dsPIC33EP64GP502.mpas
 File8=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_CAN.mpas
-File9=..\Library\dsPIC33F\dsPIC33_Traps.mpas
-File10=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
-File11=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
-File12=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\_25AAxxxx.mpas
-File13=dsPIC33EP_NMRABusXpressnet.lst
-File14=..\Library\NCE\NMRAnetNceBridge.mpas
+File9=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
+File10=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
+File11=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\_25AAxxxx.mpas
+File12=dsPIC33EP_NMRABusXpressnet.lst
+File13=..\Library\NCE\NMRAnetNceBridge.mpas
+File14=..\Library\NMRAnet\NMRAnetNode.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

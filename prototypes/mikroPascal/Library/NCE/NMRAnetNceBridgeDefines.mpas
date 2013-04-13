@@ -48,7 +48,7 @@ const
   ID_PC_DEVICE                         = $FF;  // PC Device = $FF
   NCEBUS_PING                          = %10000000;   // P10A AAAA
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
-  NCE_CAB_BUS_PADDING                  = 1;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
+  NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
 
   NCEBUS_BUS_HUNG_COUNT = 2;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
   REDISCOVERY_TIME         = 4;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
@@ -60,6 +60,12 @@ const
   NCE_NO_SPEED_TO_REPORT    = %01111111;
   NCE_NO_KEY_TO_REPORT      = %01111101;
   NCE_SPEED_MASK            = %01111111;
+  
+  NCE_CAB_SELECT_LOCO       = $48;
+  NCE_CAB_ENTER             = $40;
+  
+  NCE_CMD_CURSOR_ON         = $CF;
+  NCE_CMD_CURSOR_OFF        = $CE;
 
 type
   TNceBusDataArray = array[0..NCEBUS_MAX_DATA_BYTE-1] of Byte;
