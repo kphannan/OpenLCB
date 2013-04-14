@@ -30,6 +30,34 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2311075D1709E2A60029630A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 231107561709E2A60029630A /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 23250501138A3B49003D8EE4;
+			remoteInfo = iOSBuild;
+		};
+		2311075F1709E2A60029630A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 231107561709E2A60029630A /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2325050E138A3B49003D8EE4;
+			remoteInfo = iOSBuildTests;
+		};
+		231107611709E2A60029630A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 231107561709E2A60029630A /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2304E82D13950BC400B6867C;
+			remoteInfo = MacOSXBuild;
+		};
+		231107631709E2A60029630A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 231107561709E2A60029630A /* OpenLcbLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 2304E83713950BC500B6867C;
+			remoteInfo = MacOSXBuildTests;
+		};
 		23BAA97913816F7A00BFC07B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 23BAA94413816F7900BFC07B /* Project object */;
@@ -37,37 +65,10 @@
 			remoteGlobalIDString = 23BAA94C13816F7A00BFC07B;
 			remoteInfo = Monitor;
 		};
-		23D7FA1C13AC4B2B009F773D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 23250501138A3B49003D8EE4;
-			remoteInfo = iOSBuild;
-		};
-		23D7FA1E13AC4B2B009F773D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 2325050E138A3B49003D8EE4;
-			remoteInfo = iOSBuildTests;
-		};
-		23D7FA2013AC4B2B009F773D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 2304E82D13950BC400B6867C;
-			remoteInfo = MacOSXBuild;
-		};
-		23D7FA2213AC4B2B009F773D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 2304E83713950BC500B6867C;
-			remoteInfo = MacOSXBuildTests;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		231107561709E2A60029630A /* OpenLcbLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OpenLcbLib.xcodeproj; path = ../../ObjectiveC/OpenLcbLib/OpenLcbLib.xcodeproj; sourceTree = "<group>"; };
 		232954D713897A7C009220CC /* openlcb_iphone_57.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = openlcb_iphone_57.png; sourceTree = "<group>"; };
 		232954D913897A8A009220CC /* openlcb_iphone_114.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = openlcb_iphone_114.png; sourceTree = "<group>"; };
 		232954DB138996D7009220CC /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
@@ -96,7 +97,6 @@
 		23C1838B1529F69300D9B8FD /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = "Resources-iPad/Monitor/en.lproj/MainWindow.xib"; sourceTree = "<group>"; };
 		23C1838C1529F69300D9B8FD /* MainView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = MainView.xib; path = "Resources-iPad/Monitor/MainView.xib"; sourceTree = "<group>"; };
 		23C1838D1529F69300D9B8FD /* FlipsideView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = FlipsideView.xib; path = "Resources-iPad/Monitor/FlipsideView.xib"; sourceTree = "<group>"; };
-		23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OpenLcbLib.xcodeproj; path = ../../ObjectiveC/OpenLcbLib/OpenLcbLib.xcodeproj; sourceTree = "<group>"; };
 		23D7FA3E13AC4B7E009F773D /* libOpenLcb.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libOpenLcb.a; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -125,6 +125,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		231107571709E2A60029630A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2311075E1709E2A60029630A /* libOpenLcb.a */,
+				231107601709E2A60029630A /* iOSBuildTests.octest */,
+				231107621709E2A60029630A /* MacOSXBuild.dylib */,
+				231107641709E2A60029630A /* MacOSXBuildTests.octest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		23BAA94213816F7900BFC07B = {
 			isa = PBXGroup;
 			children = (
@@ -153,7 +164,7 @@
 		23BAA95013816F7A00BFC07B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */,
+				231107561709E2A60029630A /* OpenLcbLib.xcodeproj */,
 				23BAA95113816F7A00BFC07B /* UIKit.framework */,
 				23BAA95313816F7A00BFC07B /* Foundation.framework */,
 				23BAA95513816F7A00BFC07B /* CoreGraphics.framework */,
@@ -217,17 +228,6 @@
 			name = "Resources-iPad";
 			sourceTree = "<group>";
 		};
-		23D7FA1613AC4B2B009F773D /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				23D7FA1D13AC4B2B009F773D /* libOpenLcb.a */,
-				23D7FA1F13AC4B2B009F773D /* iOSBuildTests.octest */,
-				23D7FA2113AC4B2B009F773D /* MacOSXBuild.dylib */,
-				23D7FA2313AC4B2B009F773D /* MacOSXBuildTests.octest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -284,8 +284,8 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = 23D7FA1613AC4B2B009F773D /* Products */;
-					ProjectRef = 23D7FA1513AC4B2B009F773D /* OpenLcbLib.xcodeproj */;
+					ProductGroup = 231107571709E2A60029630A /* Products */;
+					ProjectRef = 231107561709E2A60029630A /* OpenLcbLib.xcodeproj */;
 				},
 			);
 			projectRoot = "";
@@ -297,32 +297,32 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		23D7FA1D13AC4B2B009F773D /* libOpenLcb.a */ = {
+		2311075E1709E2A60029630A /* libOpenLcb.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libOpenLcb.a;
-			remoteRef = 23D7FA1C13AC4B2B009F773D /* PBXContainerItemProxy */;
+			remoteRef = 2311075D1709E2A60029630A /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		23D7FA1F13AC4B2B009F773D /* iOSBuildTests.octest */ = {
+		231107601709E2A60029630A /* iOSBuildTests.octest */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
 			path = iOSBuildTests.octest;
-			remoteRef = 23D7FA1E13AC4B2B009F773D /* PBXContainerItemProxy */;
+			remoteRef = 2311075F1709E2A60029630A /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		23D7FA2113AC4B2B009F773D /* MacOSXBuild.dylib */ = {
+		231107621709E2A60029630A /* MacOSXBuild.dylib */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.dylib";
 			path = MacOSXBuild.dylib;
-			remoteRef = 23D7FA2013AC4B2B009F773D /* PBXContainerItemProxy */;
+			remoteRef = 231107611709E2A60029630A /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		23D7FA2313AC4B2B009F773D /* MacOSXBuildTests.octest */ = {
+		231107641709E2A60029630A /* MacOSXBuildTests.octest */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
 			path = MacOSXBuildTests.octest;
-			remoteRef = 23D7FA2213AC4B2B009F773D /* PBXContainerItemProxy */;
+			remoteRef = 231107631709E2A60029630A /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
