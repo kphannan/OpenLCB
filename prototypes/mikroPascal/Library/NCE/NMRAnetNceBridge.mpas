@@ -333,7 +333,7 @@ begin
 
           PrepareUARTReceiver;
           SendInquiryMessage(0);
-          Delay_us(900);                                                          // A bit of a hack to save another timer.  Just wait for the Xpressent spec timeout then check if a UART transfer has started
+          Delay_us(900);
           NceBusStateMachineInfo.iState := STATE_SENDDEVICEINQUIRY;
 
        //   LATB4_bit := 0;
@@ -356,7 +356,7 @@ begin
           {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_SENDDEVICEINQUIRY'+LF);{$ENDIF}
           PrepareUARTReceiver;
           SendInquiryMessage(NceBusStateMachineInfo.iActiveDevice);
-          Delay_us(1800);                                                          // A bit of a hack to save another timer.  Just wait for the Xpressent spec timeout then check if a UART transfer has started
+          Delay_us(1800);    // In parallel the UART Interrupt may be called and
           Device := @NceBusStateMachineInfo.DeviceList[NceBusStateMachineInfo.iActiveDevice];
           DetectDeviceResponse(Device, STATE_WAITFORDEVICEMESSAGE, STATE_TESTFORDISCOVERYMODE);
         end;

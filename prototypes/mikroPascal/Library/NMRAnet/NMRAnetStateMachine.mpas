@@ -37,7 +37,7 @@ uses
 
 {.$DEFINE TRACE_DATAGRAM_SEND}
 {.$DEFINE TRACE_BUFFER_ADDRESSES}
-{.$DEFINE TRACE_MEM_CONFIG_STATEMACHINE}
+{$DEFINE TRACE_MEM_CONFIG_STATEMACHINE}
 {.$DEFINE TRACE_DATAGRAM_REPLY}
 {.$DEFINE TRACE_CONFIG_MEM_DECODE}
 {.$DEFINE TRACE_NODE_STATEMACHINE}
@@ -65,7 +65,7 @@ uses
   function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean; external;  
   function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean; external;
   procedure NMRAnetAppCallbacks_Initialize; external;
-  
+
   // Address Space Support
   // ***************************************************************************
   function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean; external;
@@ -448,9 +448,6 @@ end;
 function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
  begin
    case AddressSpace of
-      {$IFDEF SUPPORT_FDI}
-      MSI_FDI       :  Result := AppCallback_FDI_AddressSpaceSize(Node);
-      {$ENDIF} // SUPPORT_FDI
       MSI_CDI       : begin
                         {$IFDEF SUPPORT_VIRTUAL_NODES}
                         if Node^.State and NS_VIRTUAL <> 0 then
@@ -794,10 +791,13 @@ begin
         BMC_DATAGRAM_MEMORY_CONFIG         : begin
                                                case DatagramBuffer^.StateMachine of
                                                  STATE_MEM_CONFIG_SEND_REPLY           : begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_SEND_REPLY'+LF); {$ENDIF}
+                                                                                           // When a Datagram is received the ACK is not sent at that time.  It is packed up in a DatagramBuffer and
+                                                                                           // passed to the main statemachine, here.  It is this sub-statemachines job to send the correct ACK
                                                                                            if DatagramBuffer^.DataBytes[1] and $C0 = MCP_OPERATION then
                                                                                            begin
                                                                                              if NMRABusTxBufferAvailable then
                                                                                              begin
+                                                                                               // Send the OK now as we need to send a reply to the datagram
                                                                                                TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
                                                                                                DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_OPERATION_DATAGRAM
                                                                                              end
@@ -806,12 +806,16 @@ begin
                                                                                            begin
                                                                                              if NMRABusTxBufferAvailable then
                                                                                              begin
+                                                                                               // Send the OK now as we need to send a reply to the datagram
                                                                                                TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
                                                                                                DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_READ_DATAGRAM
                                                                                              end
                                                                                            end else
                                                                                            if DatagramBuffer^.DataBytes[1] and $C0 = MCP_WRITE then
+                                                                                           begin
+                                                                                             // Hold off and send the OK after the write
                                                                                              DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_WRITE_DATAGRAM
+                                                                                           end
                                                                                          end;
                                                  STATE_MEM_CONFIG_OPERATION_DATAGRAM   : begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE} UART1_Write_Text('STATE_MEM_OPERATION_DATAGRAM'+LF);    {$ENDIF}
                                                                                              // Reusing the Datagram for the send out
@@ -921,9 +925,6 @@ begin
                                                                                                                 end;
                                                                                                                 DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + MemorySpaceCount;
                                                                                                               end;
-                                                                                              {$IFDEF SUPPORT_FDI}
-                                                                                              MSI_FDI       :  DatagramBuffer^.iByteCount := DatagramBuffer^.iByteCount + AppCallback_FDI_Read(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
-                                                                                              {$ENDIF}
                                                                                               MSI_ALL       : begin
                                                                                                                 ByteArray := PByteArray( ALL_MAP.LowMem);
                                                                                                                 for i := 0 to MemorySpaceCount - 1 do
@@ -986,9 +987,6 @@ begin
                                                                                             case MemorySpace of
                                                                                               MSI_CONFIG    : AppCallback_Configuration_Write(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
                                                                                               MSI_ACDI_USER : UART1_Write_Text('Unimplemented Configuration Mem write'+LF);
-                                                                                              {$IFDEF SUPPORT_FDI}
-                                                                                              MSI_FDI       : AppCallback_FDI_Write(Node, @DatagramBuffer^.DataBytes[DatagramAddress], MemorySpaceAddress, MemorySpaceCount);
-                                                                                              {$ENDIF}
                                                                                             end;
                                                                                             DatagramBuffer^.Statemachine := STATE_MEM_CONFIG_REPLY_TO_DATAGRAM;
                                                                                           end;
@@ -1035,7 +1033,7 @@ end;
 
 
 // *****************************************************************************
-//  procedure ProcessOutgoingNode
+//  procedure ProcessOutgoingMessages
 //     Parameters:
 //     Returns:
 //
@@ -1044,7 +1042,7 @@ end;
 //                  Expects CAN to be disabled
 //
 // *****************************************************************************
-procedure ProcessOutgoingNode(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+procedure ProcessOutgoingMessages(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
   DatagramBuffer: PDatagramBuffer;
 begin
@@ -1060,7 +1058,7 @@ begin
       DatagramBuffer^.iWatchdog := 0;  // Reset watchdog, now that it is complete it can timout waiting for the ACK/NAK
       DatagramBuffer^.State := (DatagramBuffer^.State and not CBS_PROCESSING) or CBS_TRANSFER_COMPLETE;    // Flag as complete (this is also flagged as outgoing) so the Statemachine can wait for a response from the target
     end;
-  end;
+  end
 end;
 
 // *****************************************************************************
@@ -1290,11 +1288,11 @@ begin
     STATE_NMRABUS_PERMITTED :
       begin  //    {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_PERMITTED'+LF); {$ENDIF}
         LockCANInterrupt;
-        ProcessNode(Node, @CANBuffer);                                             // Handle auto Actions to CAN/NMRAnet messages coming in
-        ProcessOutgoingNode(Node, @CANBuffer);   
-        ProcessMarkedForDeleteNodes(Node, @CANBuffer);
+        ProcessNode(Node, @CANBuffer);                                          // Handle auto Actions to CAN/NMRAnet messages coming in
+        ProcessOutgoingMessages(Node, @CANBuffer);                              // Handle outgoing messages like Datagrams
+        ProcessMarkedForDeleteNodes(Node, @CANBuffer);                          // Handle vNodes marked to be deleted
         {$IFNDEF DISABLE_DATAGRAM_ABANDON_TIMEOUT}
-        ProcessAbandonBuffers(Node);
+        ProcessAbandonBuffers(Node);                                            // Handle (free) buffers (datagrams mainly) that appear to be abandon in midstream
         {$ENDIF}
         UnLockCANInterrupt
       end;

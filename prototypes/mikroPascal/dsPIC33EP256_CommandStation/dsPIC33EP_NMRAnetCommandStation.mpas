@@ -400,7 +400,7 @@ begin
               LockCANInterrupt;
               TempNode := NMRAnetNode_FindFirstVirtualNode;
               if TempNode <> nil then
-        //      NMRAnetNode_SetStateFlag(TempNode, NS_MARKED_FOR_DELETE);
+                NMRAnetNode_MarkForRelease(TempNode);
               UnLockCANInterrupt
             end;
           'Z', 'z' :

@@ -58,7 +58,7 @@ File2=..\Library\NMRAnetDCCSystem\NMRAnetDCC.mpas
 File3=..\Library\NMRAnet\NMRAnetNode.mpas
 File4=..\Library\NMRAnet\NMRAnetDefines.mpas
 File5=..\Library\NMRAnet\NMRAnetStateMachine.mpas
-File6=MCU_Setup_dsPIC33EP64GP502.mpas
+File6=..\Library\NMRAnet\NMRAnetCANReceive.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

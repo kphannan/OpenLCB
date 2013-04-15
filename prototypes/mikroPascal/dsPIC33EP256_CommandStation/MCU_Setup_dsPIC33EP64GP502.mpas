@@ -212,7 +212,7 @@ begin
   AD1IP_1_bit := 1;
   AD1IP_2_bit := 0;         // Interrupt Priority = 3;
   AD1IF_bit := 0;
-  ADON_bit := 1;           // Enabled the ADC Module
+  ADON_bit := 1;            // Enable the ADC Module
   Delay_us(20);
   
 end;
