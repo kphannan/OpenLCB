@@ -898,7 +898,7 @@ begin
                         NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
                       end;
                 128 : begin
-                        AddressHi := AddressHi or $C0;    // Allow a mistaken short address to work here by adding the $C0
+                        AddressHi := AddressHi or $C0;    // Allow a mistaken short address to work here by adding the $C0  Per Tim
                         AbsoluteSpeed := (127/100) * AbsoluteSpeed;
                         SpeedStep := Word( AbsoluteSpeed);
                         if SpeedStep > 0 then
