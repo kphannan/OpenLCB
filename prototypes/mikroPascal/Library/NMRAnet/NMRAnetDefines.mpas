@@ -47,7 +47,6 @@ const
   BMC_SIMPLE_NODE_INFO_REQEUST             = $05;                               // [IN] Buffer Message Code is ACDI Request                [BaseBuffer]
   BMC_DATAGRAM                             = $07;
   BMC_DATAGRAM_MEMORY_CONFIG               = $08;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
-  BMC_DATAGRAM_TRACTION_CONTROL            = $09;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
   {$IFDEF BOOTLOADER}
   BMC_DATAGRAM_BOOTLOADER                  = $10;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
   {$ENDIF}
@@ -59,6 +58,9 @@ type
   TCAN_DataBytes = array[CAN_DATA_LEN] of Byte;
   PCAN_DataBytes = ^TCAN_DataBytes;
 
+// *****************************************************************************
+// Base buffer for dynamcally allocated structures
+// *****************************************************************************
 type
   TBaseBuffer = record                                                          // Common Buffer layout that allow overlaying of bytes with TDatagramBuffer,  etc
     State: Byte;                                                                // State of Buffer, see CBS_xxx constants
@@ -71,11 +73,11 @@ type
   PBaseBuffer = ^TBaseBuffer;
 
 // *****************************************************************************
-// CAN Message buffer (not used in the NMRAnet stack but useful for applications
+// Buffer to hold data for normal MTI message responses
 // *****************************************************************************
 type
   TDataBuffer = record                                                          // Common Buffer layout that allow overlaying of bytes with TDatagramBuffer,  etc
-    State: Byte;                                                                // State of Buffer, see CBS_xxx constants
+    State: Byte;                                                                // State of Buffer, see CBS_xxx flags
     Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
     Next: ^TBaseBuffer;                                                         // Pointer to the next Message Buffer
     mCode: Byte;                                                                // Buffer Message Code for what the message is
@@ -85,6 +87,35 @@ type
     Bytes: TCAN_DataBytes;                                                      // CAN bytes
   end;
   PDataBuffer = ^TDataBuffer;
+  
+// *****************************************************************************
+// Configuration Memory Buffer to hold data while configuration memory is 
+// being accessed
+// *****************************************************************************
+const
+  CBA_WRITE             = $01;                                                  // ConfigmemBufferAction is a Write;
+  CBA_WRITE_UNDER_MASK  = $02;                                                  // ConfigmemBufferAction is a Write under Mask;
+  CBA_READ              = $03;                                                  // ConfigmemBufferAction is a Read;
+
+  MAX_CONFIG_MEM_DATA = 64;
+
+type
+  TConfigMemData = array[0..MAX_CONFIG_MEM_DATA-1] of Byte;
+
+  TConfigMemBuffer = record                                                     // This subset of a Common Buffer to hold the information from a Configuration Memory request after it decodes the Datagram and stores the information here in clear clean way
+    State: Byte;                                                                // State of Buffer, see CBS_xxx constants
+    Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
+    Next: ^TConfigMemBuffer;                                                    // Pointer to the next Message Buffer
+    StateMachine: Byte;                                                         // Local StateMachine Index for use
+    Action: Byte;                                                               // See CBA_xxx flags, One or more of the flags
+    AddressSpace: Byte;                                                         // Address Space to access
+    Address: DWord;                                                             // Configuration Memory Address into the Address Space
+    DataCount: Byte;                                                            // Number of Bytes
+    DataBytes: TConfigMemData;                                                  // Databytes for the ConfigMem access
+    DataIndex: Byte;                                                            // General use to point to the current index in the Memory Data during a statemachine run
+    AckReply: Byte;                                                             // Reply to send back to the requesting node, allows telling the node the reply is pending and an estimated time
+  end;
+  PConfigMemBuffer = ^TConfigMemBuffer;
   
 // *****************************************************************************
 // Datagram and Datagram Buffer Defines
@@ -109,6 +140,8 @@ const
   DATAGRAM_RESULT_REJECTED_NO_RESENT_MASK                 = $1000;
   DATAGRAM_RESULT_REJECTED_RESEND_MASK                    = $2000;
   DATAGRAM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
+  
+  DATAGRAM_OK_ACK_REPLY_PENDING                           = $80;
 
 
   MAX_DATAGRAM_LEN       = 72;                                                  // How many Bytes in the datagram
@@ -160,7 +193,7 @@ type
   PDatagramError = ^TDatagramError;
 
   TDatagramBuffer = record                                                      // Overlays TBaseBuffer..........
-    State: Byte;                                                                // State of Buffer, see CBS_xxx constants
+    State: Byte;                                                                // State of Buffer, see CBS_xxx flags
     Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
     Next: ^TDatagramBuffer;                                                     // Pointer to the next Message Buffer
     mCode: Byte;                                                                // Buffer Message Code for what the message is
@@ -170,7 +203,6 @@ type
     DataBytes: TDatagram;                                                       // The 72 bytes sent in the datagram
     ErrorCode: TDatagramError;                                                  // Tracks any errors that occur through the MTI/Error Codes send as the first few bytes in the datagram
     SourceNodePtr: Generic16BitPointer;                                         // Pointer to the Node that is transmitting the Datagram
-
     iWatchdog: Word;                                                            // Increments every 1ms or so to allow detecting a datagram that was abandon and never sent the End message or during transmit the Target Node never responds
     iRetransmit: Byte;                                                          // Number of times the Datagram was attempted to transmit use to test before not trying any more
   end;
@@ -354,8 +386,9 @@ type
     EventsProducedFlags: array[0..MAX_EVENTS_PRODUCED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast, each event occupies 2 bits (unknown, valid, invalid)
     EventsConsumedFlags: array[0..MAX_EVENTS_CONSUMED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast, each event occupies 2 bits (unknown, valid, invalid)
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
-    BaseBuffers: PBaseBuffer;
-    DatagramBuffers: PDatagramBuffer;
+    BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of Messages Replies to service
+    DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service
+    ConfigMemBuffers: PConfigMemBuffer;                                         // Head of a possible linked list of Configuration Memory Accesses to service
     ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory, user assigned in the NMRAnetAppCallbacks file
     ParentAlias,                                                                // Definition depends on what kind of node.  If a Throttle then Parent should never be set, If a Train then the will be the Owner Throttle
     ChildAlias,                                                                 // Definition depends on what kind of node.  If a Throttle then Child should the Train it is controlling, if a Train then should not be set
@@ -384,10 +417,15 @@ type
 // *****************************************************************************
   
 const
-  MCP_WRITE                           = $00;                                    // MemoryConfigurationProtocol - Write Memory Mask
-  MCP_READ                            = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
+  MCP_COMMAND_MASK                    = $C0;                                    // Upper 2 bits are the command type
+  MCP_COMMAND_WRITE                   = $00;                                    // MemoryConfigurationProtocol - Write Memory Mask
+  MCP_COMMAND_WRITE_UNDER_MASK        = $08;                                    // MemoryConfigurationProtocol - Write Memory under mask Mask
+  MCP_COMMAND_READ                    = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
-  MCP_READ_DATAGRAM_REPLY             = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
+  MCP_READ_DATAGRAM_REPLY_OK          = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
+  MCP_READ_DATAGRAM_REPLY_FAIL        = $58;
+  MCP_WRITE_DATAGRAM_REPLY_OK         = $10;
+  MCP_WRITE_DATAGRAM_REPLY_FAIL       = $18;
   MCP_READ_STREAM_REPLY               = $30;
 
   MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
@@ -411,19 +449,17 @@ const
   MCP_OP_UPDATE_COMPLETE             = $A8;                                     // MemoryConfigurationProtocol Operation - Update Complete
   MCP_OP_RESETS                      = $A9;                                     // MemoryConfigurationProtocol Operation - Resets
 
-  STATE_MEM_CONFIG_SEND_REPLY            = $00;
-  STATE_MEM_CONFIG_OPERATION_DATAGRAM    = $01;
-  STATE_MEM_CONFIG_READ_DATAGRAM         = $02;
-  STATE_MEM_CONFIG_WRITE_DATAGRAM        = $03;
-  STATE_MEM_CONFIG_REPLY_TO_DATAGRAM     = $04;
-  STATE_MEM_CONFIG_SEND_RESUSED_DATAGRAM = $05;
-  STATE_MEM_CONFIG_WAITFOR_REPLY         = $06;
+  STATE_DATAGRAM_MEM_CONFIG_SEND_REPLY            = $00;
+  STATE_DATAGRAM_MEM_CONFIG_SEND_RESUSED_DATAGRAM = $01;
+  STATE_DATAGRAM_MEM_CONFIG_WAITFOR_REPLY         = $02;
+
+  STATE_MEM_CONFIG_READWRITE_START           = $00;
+  STATE_MEM_CONFIG_READWRITE_READ            = $01;
+  STATE_MEM_CONFIG_READWRITE_WRITE           = $02;
+  STATE_MEM_CONFIG_READWRITE_WAIT            = $03;
 
 
 var
-  DatagramTrainControlCallbackFunc: PDatagramTaskCallbackFunc;                      // Callback to the user app from the NMRADatagrams.mpas when a Train Control datagram is received
-
-
   MaxTime_StateMachine: Word;
   MaxTime_RX: Word;
 

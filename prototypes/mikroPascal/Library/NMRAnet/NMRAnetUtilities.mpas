@@ -62,15 +62,20 @@ procedure NMRANetUtilities_LoadDatagramResultBytes(Datagram: PDatagramBuffer; Co
 
 procedure NMRAnetUtilities_BaseBufferLink(Node: PNMRAnetNode; Buffer: PBaseBuffer);
 procedure NMRAnetUtilities_BaseBufferUnLink(Node: PNMRAnetNode; Buffer: PBaseBuffer);
+function NMRAnetUtilities_NextBaseBuffer(Node: PNMRAnetNode): PBaseBuffer;
+
 procedure NMRAnetUtilities_DatagramBufferLink(Node: PNMRAnetNode; Buffer: PDatagramBuffer);
 procedure NMRAnetUtilities_DatagramBufferUnLink(Node: PNMRAnetNode; Buffer: PDatagramBuffer);
+function NMRAnetUtilities_NextDatagramBuffer(Node: PNMRAnetNode): PDatagramBuffer;
+
+procedure NMRAnetUtilities_ConfigMemBufferLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
+procedure NMRAnetUtilities_ConfigMemBufferUnLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
+function NMRAnetUtilities_NextConfigMemBuffer(Node: PNMRAnetNode): PConfigMemBuffer;
+
 function NMRAnetUtilities_FindInProcessDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
 function NMRAnetUtilities_FindCompletedDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
 function NMRAnetUtilities_FindOutgoingDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; ProcessingOnly: Boolean): Boolean;
 function NMRAnetUtilities_FindInDatagramByState(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; AState: Byte; AnyBit: Boolean): Boolean;
-
-function NMRAnetUtilities_NextBaseBuffer(Node: PNMRAnetNode): PBaseBuffer;
-function NMRAnetUtilities_NextDatagramBuffer(Node: PNMRAnetNode): PDatagramBuffer;
 
 implementation
 
@@ -750,6 +755,28 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure NMRAnetUtilities_NextBaseBuffer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// ***************************************************************************
+function NMRAnetUtilities_NextBaseBuffer(Node: PNMRAnetNode): PBaseBuffer;
+begin
+  Result := Node^.BaseBuffers;
+  if Result <> nil then
+  begin
+    while Result^.State and CBS_PROCESSING <> 0 do      // Skip over any In Process Buffers
+    begin
+      Result := Result^.Next;
+      if Result = nil then
+        Break
+    end
+  end
+end;
+
+// *****************************************************************************
 //  procedure NMRAnetUtilities_DatagramBufferLink
 //     Parameters:
 //     Returns:
@@ -799,6 +826,93 @@ begin
         Parent^.Next := Temp^.Next
     end
   end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_NextDatagramBuffer
+//     Parameters:
+//     Returns:     The next completed DataBuffer
+//
+//     Description:
+//
+// ***************************************************************************
+function NMRAnetUtilities_NextDatagramBuffer(Node: PNMRAnetNode): PDatagramBuffer;
+begin
+  Result := Node^.DatagramBuffers;
+  if Result <> nil then
+  begin
+    while Result^.State and CBS_TRANSFER_COMPLETE = 0 do    // Use only Complete Transfers
+    begin
+      Result := Result^.Next;
+      if Result = nil then
+        Break
+    end
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_ConfigMemBufferLink
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetUtilities_ConfigMemBufferLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
+var
+  Temp: PConfigMemBuffer;
+begin
+  if Node^.ConfigMemBuffers = nil then
+    Node^.ConfigMemBuffers := Buffer
+  else begin                                  // Tack it to the end of the chain
+    Temp := Node^.ConfigMemBuffers;
+    while Temp^.Next <> nil do
+      Temp := Temp^.Next;
+    Temp^.Next := Buffer
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_ConfigMemBufferUnLink
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetUtilities_ConfigMemBufferUnLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
+var
+  Temp, Parent: PConfigMemBuffer;
+begin
+  if Node^.ConfigMemBuffers <> nil then
+  begin
+    if Node^.ConfigMemBuffers = Buffer then           // Root Buffer match case is easy
+      Node^.ConfigMemBuffers := Node^.ConfigMemBuffers^.Next
+    else begin
+      Parent := Node^.ConfigMemBuffers;                // Already know it is not the root buffer so setup for the first level down
+      Temp := Node^.ConfigMemBuffers^.Next;
+      while (Temp <> nil) and (Temp <> Buffer) do
+      begin
+        Parent := Temp;
+        Temp := Temp^.Next
+      end;
+      if Temp <> nil then
+        Parent^.Next := Temp^.Next
+    end
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_NextConfigMemBuffer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_NextConfigMemBuffer(Node: PNMRAnetNode): PConfigMemBuffer;
+begin
+  Result := Node^.ConfigMemBuffers;
 end;
 
 // *****************************************************************************
@@ -898,50 +1012,6 @@ begin
     end;
     Temp := Temp^.Next
   end;
-end;
-
-// *****************************************************************************
-//  procedure NMRAnetUtilities_NextBaseBuffer
-//     Parameters:
-//     Returns:
-//
-//     Description:
-//
-// ***************************************************************************
-function NMRAnetUtilities_NextBaseBuffer(Node: PNMRAnetNode): PBaseBuffer;
-begin
-  Result := Node^.BaseBuffers;
-  if Result <> nil then
-  begin
-    while Result^.State and CBS_PROCESSING <> 0 do      // Skip over any In Process Buffers
-    begin
-      Result := Result^.Next;
-      if Result = nil then
-        Break
-    end
-  end
-end;
-
-// *****************************************************************************
-//  procedure NMRAnetUtilities_NextDatagramBuffer
-//     Parameters:
-//     Returns:     The next completed DataBuffer
-//
-//     Description:
-//
-// ***************************************************************************
-function NMRAnetUtilities_NextDatagramBuffer(Node: PNMRAnetNode): PDatagramBuffer;
-begin
-  Result := Node^.DatagramBuffers;
-  if Result <> nil then
-  begin
-    while Result^.State and CBS_TRANSFER_COMPLETE = 0 do    // Use only Complete Transfers
-    begin
-      Result := Result^.Next;
-      if Result = nil then
-        Break
-    end
-  end
 end;
 
 end.

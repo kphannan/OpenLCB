@@ -445,8 +445,7 @@ begin
                                                               {$IFDEF BOOTLOADER}
                                                               DATAGRAM_TYPE_BOOTLOADER           : DatagramBuffer^.mCode := BMC_DATAGRAM_BOOTLOADER;
                                                               {$ENDIF}
-                                                              DATAGRAM_TYPE_MEMORY_CONFIGURATION : DatagramBuffer^.mCode := BMC_DATAGRAM_MEMORY_CONFIG;
-                                                              DATAGRAM_TYPE_TRAIN_CONTROL        : DatagramBuffer^.mCode := BMC_DATAGRAM_TRACTION_CONTROL
+                                                              DATAGRAM_TYPE_MEMORY_CONFIGURATION : DatagramBuffer^.mCode := BMC_DATAGRAM_MEMORY_CONFIG
                                                             else begin
                                                                 NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
                                                                 NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);
@@ -523,8 +522,7 @@ begin
                                                             {$IFDEF BOOTLOADER}
                                                             DATAGRAM_TYPE_BOOTLOADER           : DatagramBuffer^.mCode := BMC_DATAGRAM_BOOTLOADER;
                                                             {$ENDIF}
-                                                            DATAGRAM_TYPE_MEMORY_CONFIGURATION : DatagramBuffer^.mCode := BMC_DATAGRAM_MEMORY_CONFIG;
-                                                            DATAGRAM_TYPE_TRAIN_CONTROL        : DatagramBuffer^.mCode := BMC_DATAGRAM_TRACTION_CONTROL
+                                                            DATAGRAM_TYPE_MEMORY_CONFIGURATION : DatagramBuffer^.mCode := BMC_DATAGRAM_MEMORY_CONFIG
                                                           else begin
                                                               NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
                                                               NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);
