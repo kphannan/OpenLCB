@@ -112,7 +112,7 @@ type
     Address: DWord;                                                             // Configuration Memory Address into the Address Space
     DataCount: Byte;                                                            // Number of Bytes
     DataBytes: TConfigMemData;                                                  // Databytes for the ConfigMem access
-    DataIndex: Byte;                                                            // General use to point to the current index in the Memory Data during a statemachine run
+    DataOffset: Byte;                                                           // Allows Offsets to reads/writes in to the DataBytes array
     AckReply: Byte;                                                             // Reply to send back to the requesting node, allows telling the node the reply is pending and an estimated time
   end;
   PConfigMemBuffer = ^TConfigMemBuffer;
@@ -202,7 +202,6 @@ type
     iByteCount: Byte;                                                           // The number of bytes recevied as they come in, or the number of bytes to transmit
     DataBytes: TDatagram;                                                       // The 72 bytes sent in the datagram
     ErrorCode: TDatagramError;                                                  // Tracks any errors that occur through the MTI/Error Codes send as the first few bytes in the datagram
-    SourceNodePtr: Generic16BitPointer;                                         // Pointer to the Node that is transmitting the Datagram
     iWatchdog: Word;                                                            // Increments every 1ms or so to allow detecting a datagram that was abandon and never sent the End message or during transmit the Target Node never responds
     iRetransmit: Byte;                                                          // Number of times the Datagram was attempted to transmit use to test before not trying any more
   end;

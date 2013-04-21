@@ -492,7 +492,7 @@ begin
     0 : begin
           while _25AAxxxx_Busy(EEPROM_BANK_0) do
             Delay_us(10);
-          _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes);
+          _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
           // Update the Command Station Ram with the new configuration data
           if Node^.ConfigurationAddress = 0 then
             AppCallback_Sync_Config_Ram_with_EEPROM
@@ -583,7 +583,7 @@ begin
          // Not a CV access, normal Config Memory call
           while _25AAxxxx_Busy(EEPROM_BANK_0) do
             Delay_us(10);
-          _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes);
+          _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
         end;
     1: begin
          // Double Indexed CV
@@ -674,8 +674,8 @@ begin
   begin
     if ConfigMemBuffer^.Address shr 30 <> 0 then
     begin
-      ConfigMemBuffer^.AckReply := DATAGRAM_OK_ACK_REPLY_PENDING;
-      ConfigMemBuffer^.State := ConfigMemBuffer^.State or CBS_PROCESSING;
+     // It is a CV Read/Write, need to do something special here....
+    //  ConfigMemBuffer^.State := ConfigMemBuffer^.State or CBS_PROCESSING;
     end;
   end;
 end;
@@ -690,7 +690,7 @@ begin
     if ConfigMemBuffer^.Address shr 30 <> 0 then
     begin
       // Are we done reading/writing?
-      ConfigMemBuffer^.State := ConfigMemBuffer^.State and not CBS_PROCESSING;
+  //    ConfigMemBuffer^.State := ConfigMemBuffer^.State and not CBS_PROCESSING;
     end;
   end;
 end;

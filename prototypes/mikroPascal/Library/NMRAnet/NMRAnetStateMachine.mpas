@@ -555,8 +555,11 @@ begin
   case ConfigMemBuffer^.AddressSpace of      // Strip off bottom two bits
     MSI_CDI            : DatagramBuffer^.DataBytes[1] := MCP_CDI;
     MSI_ALL            : DatagramBuffer^.DataBytes[1] := MCP_ALL;
-    MSI_CONFIG         : DatagramBuffer^.DataBytes[1] := MCP_CONFIGURATION;
-    MCP_NONE           : Inc(DataOffset);
+    MSI_CONFIG         : DatagramBuffer^.DataBytes[1] := MCP_CONFIGURATION
+  else begin
+      Inc(DataOffset);
+      DatagramBuffer^.DataBytes[6] := ConfigMemBuffer^.AddressSpace
+    end;
   end;
   
   DatagramBuffer^.DataBytes[2] := (DWord(ConfigMemBuffer^.Address) shr 24) and $000000FF;
@@ -575,7 +578,6 @@ begin
     DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_WRITE_DATAGRAM_REPLY_OK;
     
   DatagramBuffer^.Alias := ConfigMemBuffer^.Alias;
-  DatagramBuffer^.SourceNodePtr := Generic16BitPointer( Node);
 end;
 
 // *****************************************************************************
@@ -695,102 +697,100 @@ begin
         BMC_SIMPLE_NODE_INFO_REQEUST :      
             begin
               if NMRABusTxBufferAvailable then
-              begin
-                i := 0;
-                while (BaseBuffer^.StateMachine <> STATE_ACDI_DONE) and (i < 6) do   // All messages have the Destination Alias as the first 2 bytes so only 6 left to use
+                if NMRAnetBufferPools_AllocateConfigMemBuffer(ConfigMemBuffer) then
                 begin
-                  case BaseBuffer^.StateMachine of
-                    STATE_ACDI_MFG_VERSION  : 
-                        begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_MFG_VERSION'+LF); {$ENDIF}
-                          DataBytes[i] := ACDI_MFG_VERSION;
-                          Inc(i);
-                          BaseBuffer^.Tag := 0;
-                          BaseBuffer^.StateMachine := STATE_ACDI_MFG_INFO;
-                        end;
-                    STATE_ACDI_MFG_INFO :
-                        begin  {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_MFG_INFO'+LF); {$ENDIF}
-                          {$IFDEF SUPPORT_VIRTUAL_NODES}
-                          if Node^.State and NS_VIRTUAL <> 0 then
-                          begin
-                            if BaseBuffer^.Tag < MAX_ACDI_MFG_ARRAY_VNODE then
-                            begin
-                              DataBytes[i] := ACDI_MFG_STRINGS_VNODE[BaseBuffer^.Tag];
-                              Inc(BaseBuffer^.Tag);
-                              Inc(i);
-                            end else
-                              BaseBuffer^.StateMachine := STATE_ACDI_USER_VERSION;
-                          end else {$ENDIF}
-                          begin
-                            if BaseBuffer^.Tag < MAX_ACDI_MFG_ARRAY then
-                            begin
-                              DataBytes[i] := ACDI_MFG_STRINGS[BaseBuffer^.Tag];
-                              Inc(BaseBuffer^.Tag);
-                              Inc(i);
-                            end else
-                              BaseBuffer^.StateMachine := STATE_ACDI_USER_VERSION;
+                  i := 0;
+                  while (BaseBuffer^.StateMachine <> STATE_ACDI_DONE) and (i < 6) do   // All messages have the Destination Alias as the first 2 bytes so only 6 left to use
+                  begin
+                    case BaseBuffer^.StateMachine of
+                      STATE_ACDI_MFG_VERSION  :
+                          begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_MFG_VERSION'+LF); {$ENDIF}
+                            DataBytes[i] := ACDI_MFG_VERSION;
+                            Inc(i);
+                            BaseBuffer^.Tag := 0;
+                            BaseBuffer^.StateMachine := STATE_ACDI_MFG_INFO;
                           end;
-                        end;
-                    STATE_ACDI_USER_VERSION : 
-                        begin    {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_VERSION'+LF); {$ENDIF}
-                          DataBytes[i] := ACDI_USER_VERSION;
-                          Inc(i);
-                          BaseBuffer^.StateMachine := STATE_ACDI_USER_NAME;
-                          BaseBuffer^.Tag := 1;  // EEPROM layout start at offset 1
-                        end;
-                    STATE_ACDI_USER_NAME :
-                        begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_NAME'+LF); {$ENDIF}
-                          if BaseBuffer^.Tag < MAX_USER_NAME then
-                          begin
-                            // Very wasteful and slow 1 at a time but it is easy
-                            
-                            
-                            
-             //               AppCallback_Configuration_Read(Node, @DataBytes[i], BaseBuffer^.Tag, 1);
-             
-             
-             
-             
-                            if DataBytes[i] = #0 then
-                              BaseBuffer^.StateMachine := STATE_ACDI_START_DESC
-                            else
-                            if BaseBuffer^.Tag = MAX_USER_NAME - 1 then
-                              DataBytes[i] := #0;
+                      STATE_ACDI_MFG_INFO :
+                          begin  {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_MFG_INFO'+LF); {$ENDIF}
+                            {$IFDEF SUPPORT_VIRTUAL_NODES}
+                            if Node^.State and NS_VIRTUAL <> 0 then
+                            begin
+                              if BaseBuffer^.Tag < MAX_ACDI_MFG_ARRAY_VNODE then
+                              begin
+                                DataBytes[i] := ACDI_MFG_STRINGS_VNODE[BaseBuffer^.Tag];
+                                Inc(BaseBuffer^.Tag);
+                                Inc(i);
+                              end else
+                                BaseBuffer^.StateMachine := STATE_ACDI_USER_VERSION;
+                            end else {$ENDIF}
+                            begin
+                              if BaseBuffer^.Tag < MAX_ACDI_MFG_ARRAY then
+                              begin
+                                DataBytes[i] := ACDI_MFG_STRINGS[BaseBuffer^.Tag];
+                                Inc(BaseBuffer^.Tag);
+                                Inc(i);
+                              end else
+                                BaseBuffer^.StateMachine := STATE_ACDI_USER_VERSION;
+                            end;
+                          end;
+                      STATE_ACDI_USER_VERSION :
+                          begin    {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_VERSION'+LF); {$ENDIF}
+                            DataBytes[i] := ACDI_USER_VERSION;
                             Inc(i);
-                            Inc(BaseBuffer^.Tag);
-                          end else
-                             BaseBuffer^.StateMachine := STATE_ACDI_START_DESC;
-                        end;
-                    STATE_ACDI_START_DESC :
-                        begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_START_DESC'+LF); {$ENDIF}
-                          BaseBuffer^.Tag := MAX_USER_NAME + 1;  // EEPROM layout start at offset 1
-                          BaseBuffer^.StateMachine := STATE_ACDI_USER_DESC;
-                        end;
-                    STATE_ACDI_USER_DESC :
-                        begin     {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_DESC'+LF); {$ENDIF}
-                          if BaseBuffer^.Tag < MAX_USER_CONFIG_DATA then
-                          begin
-                            // Very wasteful and slow 1 at a time but it is easy
-                            
-                            
-        //                    AppCallback_Configuration_Read(Node, @DataBytes[i], BaseBuffer^.Tag, 1);
-        
-        
-        
-                            if DataBytes[i] = #0 then
-                              BaseBuffer^.StateMachine := STATE_ACDI_DONE
-                            else
-                            if BaseBuffer^.Tag = MAX_USER_CONFIG_DATA - 1 then
-                              DataBytes[i] := #0;
-                            Inc(i);
-                            Inc(BaseBuffer^.Tag);
-                          end else
-                             BaseBuffer^.StateMachine := STATE_ACDI_DONE;
-                        end;
-                    STATE_ACDI_DONE :
-                        begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_DONE'+LF); {$ENDIF}
-                        end;
+                            BaseBuffer^.StateMachine := STATE_ACDI_USER_NAME;
+                            BaseBuffer^.Tag := 1;  // EEPROM layout start at offset 1
+                          end;
+                      STATE_ACDI_USER_NAME :
+                          begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_NAME'+LF); {$ENDIF}
+                            if BaseBuffer^.Tag < MAX_USER_NAME then
+                            begin
+                              // Very wasteful and slow 1 at a time but it is easy
+                              ConfigMemBuffer^.Address := BaseBuffer^.Tag;
+                              ConfigMemBuffer^.DataCount := 1;
+                              AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                              DataBytes[i] := ConfigMemBuffer^.DataBytes[0];
+
+                              if DataBytes[i] = #0 then
+                                BaseBuffer^.StateMachine := STATE_ACDI_START_DESC
+                              else
+                              if BaseBuffer^.Tag = MAX_USER_NAME - 1 then
+                                DataBytes[i] := #0;
+                              Inc(i);
+                              Inc(BaseBuffer^.Tag);
+                            end else
+                               BaseBuffer^.StateMachine := STATE_ACDI_START_DESC;
+                          end;
+                      STATE_ACDI_START_DESC :
+                          begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_START_DESC'+LF); {$ENDIF}
+                            BaseBuffer^.Tag := MAX_USER_NAME + 1;  // EEPROM layout start at offset 1
+                            BaseBuffer^.StateMachine := STATE_ACDI_USER_DESC;
+                          end;
+                      STATE_ACDI_USER_DESC :
+                          begin     {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_USER_DESC'+LF); {$ENDIF}
+                            if BaseBuffer^.Tag < MAX_USER_CONFIG_DATA then
+                            begin
+                              // Very wasteful and slow 1 at a time but it is easy
+                              ConfigMemBuffer^.Address := BaseBuffer^.Tag;
+                              ConfigMemBuffer^.DataCount := 1;
+                              AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                              DataBytes[i] := ConfigMemBuffer^.DataBytes[0];
+
+                              if DataBytes[i] = #0 then
+                                BaseBuffer^.StateMachine := STATE_ACDI_DONE
+                              else
+                              if BaseBuffer^.Tag = MAX_USER_CONFIG_DATA - 1 then
+                                DataBytes[i] := #0;
+                              Inc(i);
+                              Inc(BaseBuffer^.Tag);
+                            end else
+                               BaseBuffer^.StateMachine := STATE_ACDI_DONE;
+                          end;
+                      STATE_ACDI_DONE :
+                          begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_DONE'+LF); {$ENDIF}
+                          end;
+                    end;
+                    NMRAnetBufferPools_ReleaseConfigMemBuffer(ConfigMemBuffer);
                   end;
-                end;
 
                 if i > 0 then
                   TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_SIMPLE_NODE_INFO_REPLY, BaseBuffer^.Alias, i, @DataBytes, False);
@@ -904,39 +904,47 @@ begin
                               end;
               MSI_CONFIG    : AppCallback_Configuration_Read(Node, ConfigMemBuffer);
               MSI_ACDI_MFG  : begin
-                                i := 0;
                                 if ConfigMemBuffer^.Address = 0 then
-                                begin
-                                  ConfigMemBuffer^.DataBytes[i] := ACDI_MFG_VERSION;
-                                  Inc(i);
+                                begin  
+                                  Dec(ConfigMemBuffer^.DataCount);
+                                  ConfigMemBuffer^.DataOffset := 1;
+                                  ConfigMemBuffer^.DataBytes[0] := ACDI_MFG_VERSION;
                                 end;
+                                  
                                 {$IFDEF SUPPORT_VIRTUAL_NODES}
                                 if Node^.State and NS_VIRTUAL <> 0 then
                                 begin
-                                  while i < ConfigMemBuffer^.DataCount do
-                                  begin
-                                    ConfigMemBuffer^.DataBytes[i] := ACDI_MFG_STRINGS_VNODE[i+ConfigMemBuffer^.Address];
-                                    Inc(i)
-                                  end
+                                  for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                                    ConfigMemBuffer^.DataBytes[i + ConfigMemBuffer^.DataOffset] := ACDI_MFG_STRINGS_VNODE[ConfigMemBuffer^.Address + i];
                                 end else {$ENDIF}
                                 begin
-                                  while i < ConfigMemBuffer^.DataCount do
-                                  begin
-                                    ConfigMemBuffer^.DataBytes[i] := ACDI_MFG_STRINGS[i+ConfigMemBuffer^.Address];
-                                    Inc(i)
-                                  end
+                                  for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                                    ConfigMemBuffer^.DataBytes[i + ConfigMemBuffer^.DataOffset] := ACDI_MFG_STRINGS[ConfigMemBuffer^.Address + i];
+                                end;
+                                
+                                if ConfigMemBuffer^.Address = 0 then
+                                begin
+                                  ConfigMemBuffer^.DataOffset := 1;
+                                  Inc(ConfigMemBuffer^.DataCount);
                                 end;
                               end;
               MSI_ACDI_USER : begin
-                                i := 0;
                                 if ConfigMemBuffer^.Address = 0 then
                                 begin
-                                  ConfigMemBuffer^.DataBytes[i] := ACDI_USER_VERSION;
-                                  Inc(i);
-                                end;
-
-                                if ConfigMemBuffer^.DataCount > 0 then
+                                  ConfigMemBuffer^.DataBytes[0] := ACDI_USER_VERSION;
+                                  Inc(ConfigMemBuffer^.Address);                // The CDI offsets the Configuration Memory by 1 so everything needs to be shifted
+                                  Dec(ConfigMemBuffer^.DataCount);
+                                  ConfigMemBuffer^.DataOffset := 1;             // Write to the array at offset 1
                                   AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                                  Inc(ConfigMemBuffer^.DataCount);              // Restore the state
+                                  ConfigMemBuffer^.DataOffset := 0;   
+                                  Dec(ConfigMemBuffer^.Address);
+                                end else
+                                begin
+                                  Inc(ConfigMemBuffer^.Address);                // The CDI offsets the Configuration Memory by 1 so everything needs to be shifted
+                                  AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                                  Dec(ConfigMemBuffer^.Address);
+                                end
                               end;
             end;
             ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT
@@ -1004,11 +1012,9 @@ begin
                                    NMRAnetUtilities_ConfigMemBufferLink(Node, ConfigMemBuffer);
                                    DecodeConfigMemReadWriteHeader(Node, DatagramBuffer, ConfigMemBuffer);
                                    AppCallback_ConfigMemReadWriteAckReply(Node, ConfigMemBuffer);         // How to handle the ACK is up to the app
-                                   DataBytes[0] := Hi( Node^.Info.AliasID);
-                                   DataBytes[1] := Lo( Node^.Info.AliasID);
                                    if ConfigMemBuffer^.AckReply <> 0 then
                                    begin
-                                     DataBytes[2] := ConfigMemBuffer^.AckReply;
+                                     DataBytes[0] := ConfigMemBuffer^.AckReply;
                                      TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 1, @DataBytes, False);
                                    end else
                                      TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False);
@@ -1110,7 +1116,6 @@ begin
                        DatagramBuffer^.State := (DatagramBuffer^.State or CBS_OUTGOING or CBS_PROCESSING) and not CBS_TRANSFER_COMPLETE;  // Turn it into an outgoing Datagram
                        DatagramBuffer^.Tag := 0;                                                          // Reset for the Transmit side
                        DatagramBuffer^.iWatchdog := 0;
-                       DatagramBuffer^.SourceNodePtr := Generic16BitPointer( Node);                       // So the Transmit Engine knows what source Node and Alias to associate the Datagram to
                        DatagramBuffer^.Statemachine := STATE_DATAGRAM_MEM_CONFIG_WAITFOR_REPLY;                    // Waiting for the target to reply it received the datagram successfully
                      end;
                 STATE_DATAGRAM_MEM_CONFIG_WAITFOR_REPLY :
@@ -1156,8 +1161,7 @@ begin
   if NMRAnetUtilities_FindOutgoingDatagram(Node, DatagramBuffer, True) then
   begin
     {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetUtilities_FindOutgoingDatagram = Found'+LF);{$ENDIF}
-    {$IFDEF TRACE_DATAGRAM_SEND}WordToHex(DatagramBuffer^.SourceNodePtr, s1); UART1_Write_Text('SourceNodePtr = '+s1+LF);{$ENDIF}
-    if NMRAnetStateMachine_TrySendDatagram(PNMRAnetNode( DatagramBuffer^.SourceNodePtr), CANBuffer, DatagramBuffer) then
+    if NMRAnetStateMachine_TrySendDatagram(Node, CANBuffer, DatagramBuffer) then
     begin
       {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetStateMachine_TrySendDatagram = Sent'+LF);{$ENDIF}   
       DatagramBuffer^.iWatchdog := 0;  // Reset watchdog, now that it is complete it can timout waiting for the ACK/NAK

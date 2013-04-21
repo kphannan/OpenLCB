@@ -68,8 +68,10 @@ function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte)
 function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 
 function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
-function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
-procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 
 procedure AppCallback_Configuration_Zeroize(Force: Boolean);
 // *****************************************************************************
@@ -136,35 +138,42 @@ end;
 // *****************************************************************************
 // Writes the Configuration Memory to the App defined storage device
 //  Node        :  The Node to write the Configuration Data for
-//  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
-//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
-//  MaxCount    : Maximum number of Bytes to move into the EEPROM
 //
-//  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
-procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte);
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 begin
   while _25AAxxxx_Busy(EEPROM_BANK_0) do
      Delay_us(10);
-  _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+  _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
 end;
 
 // *****************************************************************************
 // Reads the Configuration Memory from the App defined storage device
 //  Node:  The Node to read the Configuration Data for
-//  DataTarget  : A pointer memory space to write the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
-//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
-//  MaxCount    : Maximum number of Bytes to move into the DataTarget
 //
-//  Result      : Number of Bytes actually moved in to the DataTarget
 // *****************************************************************************
-function AppCallback_Configuration_Read(Node: PNMRAnetNode; DataTarget: ^Byte; StartAddress: DWord; MaxCount: Byte): Byte;
+procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 begin
    while _25AAxxxx_Busy(EEPROM_BANK_0) do
      Delay_us(10);
+   _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
+end;
 
-   Result := MaxCount;
-   _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + StartAddress, MaxCount, DataTarget);
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+begin
+  // Set the AckReply bottom 5 bits to tell the caller how long (2^n) the Read/Write should take.  0 = infinity
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+begin
+  // Remove the CBS_PROCESSING from the ConfigMemBuffer^.State field to hold off sending a Read/Write OK
+  // Called repeatedly until CBS_PROCESSING is included in the State field.
 end;
 
 //******************************************************************************

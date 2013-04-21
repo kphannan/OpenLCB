@@ -163,7 +163,6 @@ begin
     Buffer^.mCode := 0;
     Buffer^.StateMachine := 0;
     Buffer^.Tag := 0;
-    Buffer^.SourceNodePtr := Generic16BitPointer( nil);
 
     Buffer^.iByteCount := 0;
     Buffer^.iWatchdog := 0;
@@ -197,10 +196,10 @@ begin
   Buffer^.AddressSpace := 0;
   Buffer^.Address := 0;
   Buffer^.DataCount := 0;
+  Buffer^.DataOffset := 0;
   for i := 0 to MAX_CONFIG_MEM_DATA - 1 do
     Buffer^.DataBytes[i] := 0;
-  Buffer^.AckReply := 0;
-  Buffer^.DataIndex := 0;
+  Buffer^.AckReply := DATAGRAM_OK_ACK_REPLY_PENDING; // The Write call is no longer blocked until the write is complete so tell the caller to wait until we tell you the write is complete
 end;
 
 // *****************************************************************************
