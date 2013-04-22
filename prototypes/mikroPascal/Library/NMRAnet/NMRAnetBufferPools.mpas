@@ -200,6 +200,8 @@ begin
   for i := 0 to MAX_CONFIG_MEM_DATA - 1 do
     Buffer^.DataBytes[i] := 0;
   Buffer^.AckReply := DATAGRAM_OK_ACK_REPLY_PENDING; // The Write call is no longer blocked until the write is complete so tell the caller to wait until we tell you the write is complete
+  Buffer^.ErrorCode := 0;
+  Buffer^.ErrorString := '';
 end;
 
 // *****************************************************************************

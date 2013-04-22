@@ -97,7 +97,8 @@ const
   CBA_WRITE_UNDER_MASK  = $02;                                                  // ConfigmemBufferAction is a Write under Mask;
   CBA_READ              = $03;                                                  // ConfigmemBufferAction is a Read;
 
-  MAX_CONFIG_MEM_DATA = 64;
+  MAX_CONFIG_MEM_DATA          = 64;
+  MAX_CONFIG_MEM_ERROR_STR_LEN = 60;
 
 type
   TConfigMemData = array[0..MAX_CONFIG_MEM_DATA-1] of Byte;
@@ -114,6 +115,8 @@ type
     DataBytes: TConfigMemData;                                                  // Databytes for the ConfigMem access
     DataOffset: Byte;                                                           // Allows Offsets to reads/writes in to the DataBytes array
     AckReply: Byte;                                                             // Reply to send back to the requesting node, allows telling the node the reply is pending and an estimated time
+    ErrorCode: Word;                                                            // Error Code to reply to the requestor with
+    ErrorString: string[MAX_CONFIG_MEM_ERROR_STR_LEN];                          // Error Code String (2 byte for target Alias, 2 bytes for error code)
   end;
   PConfigMemBuffer = ^TConfigMemBuffer;
   
@@ -124,6 +127,8 @@ type
 type
   TDatagramErrorCode = array[0..1] of Byte;
   PDatagramErrorCode = ^TDatagramErrorCode;
+  TConfigMemErrorCode = array[0..1] of Byte;
+  PConfigMemErrorCode = ^TConfigMemErrorCode;
 
 const
   DATAGRAM_RESULT_OKAY                                    : TDatagramErrorCode = ($00, $00);
@@ -181,6 +186,14 @@ const
   {$ENDIF}
   DATAGRAM_TYPE_TWO_BYTE_CMD_MASK           = $E0;                              // Next two bytes are command bytes and not data
   DATAGRAM_TYPE_SIX_BYTE_CMD_MASK           = $F0;                              // Next six bytes are command bytes and not data
+  
+  
+  CONFIG_MEM_RESULT_OK                      : TConfigMemErrorCode = ($00, $00);
+  CONFIG_MEM_RESULT_TERMINATE               : TConfigMemErrorCode = ($10, $00);
+  
+  CONFIG_MEM_RESULT_REJECTED_NO_RESEND_MASK                 = $1000;
+  CONFIG_MEM_RESULT_REJECTED_RESEND_MASK                    = $2000;
+  CONFIG_MEM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
 
 type
   TDatagram = array[0..MAX_DATAGRAM_LEN-1] of Byte;

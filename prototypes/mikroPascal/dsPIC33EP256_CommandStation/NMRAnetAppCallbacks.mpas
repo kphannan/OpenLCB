@@ -55,6 +55,10 @@ const
   DCC_FUNCTION_28                    = $00;
   DCC_FUNCTION_32k                   = $01;
   
+  STR_LOCO_NOT_FOUND                 = 'Loco not detected' + #0;                     // 60 characters limit
+  STR_SHORT_CIRCUIT                  = 'Overcurrent detected' + #0;                  // 60 characters limit
+  STR_INVALID_PROGRAMMING_METHOD     = 'Programming method not compatible' + #0;     // 60 characters limit
+  
   const
   _28_STEP_TABLE: array[0..28] of Byte = (
     %00000000,    // Stop
@@ -109,8 +113,8 @@ const
 const
   PS_DCC_ADDRESS_ALLOCATED        = $01;                                        // The Proxy is Allocated
 
-  MSG_SEND_DCC_ADDRESS_ALLOCATED = $01;                                         // Need to send a Message for the DCC Address was Allocated
-  
+  MSG_SEND_DCC_ADDRESS_ALLOCATED   = $01;                                       // Need to send a Message for the DCC Address was Allocated
+
 type
   TTrainProxyRamData = record                                                   // Structure stored in RAM on a node and vnode basis
     State: Byte;                                                                // State of the Proxy Node
@@ -199,7 +203,7 @@ procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word
 function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 
-function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;
 procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
@@ -387,10 +391,10 @@ end;
 //******************************************************************************
 //  Returns the overall size of the Configuration Data
 //******************************************************************************
-function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;
 begin
   if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-    Result := MAX_VNODE_CFG_DATA
+    Result := $FFFFFFFF  // Result := MAX_VNODE_CFG_DATA        // THIS NEEDS TO BE MAX FOR CVs WITH THE HIGH BITs SET
   else
     Result := MAX_NODE_CFG_DATA
 end;
@@ -576,6 +580,7 @@ end;
 procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 var
   SpaceCode: Word;
+  i: Integer;
 begin
   SpaceCode := ConfigMemBuffer^.Address shr 30;
   case SpaceCode of
@@ -642,8 +647,20 @@ begin
              begin
                // Load DCC Queue
              end else
-             begin
+             begin  
                // Trying to use Service Mode while CS is in Main Line Mode = Error
+               
+               // CREATE A FUNCTION TO LOAD AND FORMAT THE ERROR INFORMATION::::>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+               
+               ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+               i := 0;
+               while i < MAX_CONFIG_MEM_ERROR_STR_LEN do
+               begin
+                 ConfigMemBuffer^.ErrorString[i] := STR_INVALID_PROGRAMMING_METHOD[i];
+                 if STR_INVALID_PROGRAMMING_METHOD[i] = #0 then
+                   Break;
+                 Inc(i)
+               end;
              end
            end;
            ByteToStr((ConfigMemBuffer^.Address and $000007FF), s1);

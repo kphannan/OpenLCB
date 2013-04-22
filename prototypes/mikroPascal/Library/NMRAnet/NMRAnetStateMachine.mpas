@@ -71,7 +71,7 @@ uses
   function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean; external;
   function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean; external;
   
-  function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;  external;
+  function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;  external;
   procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);  external;
   procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);  external;
   procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
@@ -526,6 +526,10 @@ begin
       ConfigMemBuffer^.DataBytes[i] := DatagramBuffer^.DataBytes[i + DataOffset]
    end;
    
+   Inttostr(ConfigMemBuffer^.DataCount, s1);
+  UART1_Write_Text('Cnt0: ' + s1 + LF);
+
+   
    // Test the size against the size of the Address Space and adjust to the Max size if necessary
    MaxSpaceSize := MaxAddressByAddressSpace(Node, ConfigMemBuffer^.AddressSpace);
    if ConfigMemBuffer^.Address >= MaxSpaceSize then                               // If the caller overruns the address we are done
@@ -534,6 +538,10 @@ begin
      if ConfigMemBuffer^.Address + ConfigMemBuffer^.DataCount > MaxSpaceSize then
        ConfigMemBuffer^.DataCount := MaxSpaceSize - ConfigMemBuffer^.Address;
    end;
+   
+   Inttostr(ConfigMemBuffer^.DataCount, s1);
+  UART1_Write_Text('Cnt: ' + s1 + LF);
+
 end;
 
  // *****************************************************************************
@@ -567,15 +575,55 @@ begin
   DatagramBuffer^.DataBytes[4] := (DWord(ConfigMemBuffer^.Address) shr 8) and $000000FF;
   DatagramBuffer^.DataBytes[5] := DWord(ConfigMemBuffer^.Address) and $000000FF;
   
-  // Need to implement a FAILURE action
+
+  if ConfigMemBuffer^.ErrorCode > 0 then
+  begin
+    // Error found need to report it
+    DatagramBuffer^.DataBytes[DataOffset] := Hi( ConfigMemBuffer^.ErrorCode);
+    DatagramBuffer^.DataBytes[DataOffset+1] := Lo( ConfigMemBuffer^.ErrorCode);
+    DatagramBuffer^.iByteCount := DataOffset + 2;
+    if ConfigMemBuffer^.ErrorString[0] <> #0 then
+    begin
+      DataOffset := DataOffset + 2;
+      i := 0;
+      while i < MAX_CONFIG_MEM_ERROR_STR_LEN do
+      begin
+        DatagramBuffer^.DataBytes[DataOffset + i] := ConfigMemBuffer^.ErrorString[i];  
+        if ConfigMemBuffer^.ErrorString[i] = #0 then
+        begin
+          DatagramBuffer^.iByteCount := DataOffset + i + 1;
+          Break;
+        end;
+        if i = MAX_CONFIG_MEM_ERROR_STR_LEN - 1 then
+        begin
+          if DatagramBuffer^.DataBytes[DataOffset + i] <> #0 then
+            DatagramBuffer^.DataBytes[DataOffset + i] := #0;      // If we don't find a null then we have to force one at the end
+        end;
+        Inc(i);
+      end;
+    end
+  end;
+      
   if ConfigMemBuffer^.Action = CBA_READ then
   begin
-    DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_READ_DATAGRAM_REPLY_OK;
-    for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-      DatagramBuffer^.DataBytes[i+DataOffset] := ConfigMemBuffer^.DataBytes[i];
-    DatagramBuffer^.iByteCount := ConfigMemBuffer^.DataCount + DataOffset;
+    if ConfigMemBuffer^.ErrorCode > 0 then
+      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_READ_DATAGRAM_REPLY_FAIL
+    else begin
+      // No Error all is good
+      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_READ_DATAGRAM_REPLY_OK;
+      for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+        DatagramBuffer^.DataBytes[i+DataOffset] := ConfigMemBuffer^.DataBytes[i];
+      DatagramBuffer^.iByteCount := ConfigMemBuffer^.DataCount + DataOffset;
+    end;
   end else
-    DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_WRITE_DATAGRAM_REPLY_OK;
+  begin
+    if ConfigMemBuffer^.ErrorCode > 0 then
+      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_WRITE_DATAGRAM_REPLY_FAIL
+    else begin
+      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_WRITE_DATAGRAM_REPLY_OK;
+      DatagramBuffer^.iByteCount := DataOffset;
+    end
+  end;
     
   DatagramBuffer^.Alias := ConfigMemBuffer^.Alias;
 end;
@@ -1185,6 +1233,8 @@ var
 begin
   if NMRAnetNode_TestStateFlag(Node, NS_RELEASING) then
   begin
+    // Make sure all NMRAnet messages are sent and we have an empty CAN buffer
+    if NMRABusTxBufferAvailable and CANBusBufferAvailable then
     begin
       if NMRAnetNode_TestStateFlag(Node, NS_PERMITTED) then
       begin

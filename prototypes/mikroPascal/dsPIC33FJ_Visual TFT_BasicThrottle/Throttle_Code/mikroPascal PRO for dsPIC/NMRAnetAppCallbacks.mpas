@@ -64,7 +64,7 @@ procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word
 function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 
-function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;
 procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
@@ -118,7 +118,7 @@ end;
 //******************************************************************************
 //  Returns the overall size of the Configuration Data
 //******************************************************************************
-function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): Word;
+function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;
 begin
   if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
     Result := MAX_VNODE_CFG_DATA
