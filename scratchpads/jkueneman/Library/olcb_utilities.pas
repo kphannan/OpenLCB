@@ -289,7 +289,17 @@ begin
     MTI_SIMPLE_NODE_INFO_REQUEST       : Result := 'Simple Node Info Request [SNIP]';
     MTI_SIMPLE_NODE_INFO_REPLY         : Result := 'Simple Node Info Reply [SNIP]';
 
-    MTI_DATAGRAM_OK_REPLY              : Result := 'Datagram Reply OK';
+    MTI_DATAGRAM_OK_REPLY              : begin
+                                           Result := 'Datagram Reply OK';
+                                           if LocalHelper.DataCount > 2 then
+                                           begin
+                                             if LocalHelper.Data[2] and DATAGRAM_OK_ACK_REPLY_PENDING = DATAGRAM_OK_ACK_REPLY_PENDING then
+                                               Result := Result + ' - Reply Is Pending - Maximum wait time = ' + IntToStr( LocalHelper.Data[2] and $0F)
+                                             else
+                                               Result := Result + ' - Reply Is Not Pending - Maximum wait time = ' + IntToStr( LocalHelper.Data[2] and $0F)
+                                           end else
+                                             Result := Result + ' - Does not include Extended Flags';
+                                         end;
     MTI_DATAGRAM_REJECTED_REPLY        : Result := 'Datagram Rejected Reply';
 
     MTI_TRACTION_PROTOCOL              : Result := 'Traction Protocol'

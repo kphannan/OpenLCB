@@ -90,6 +90,8 @@ const
   MTI_DATAGRAM_OK_REPLY              = $09A28000;                                // Databytes = Destination Alias
   MTI_DATAGRAM_REJECTED_REPLY        = $09A48000;                                // Databytes = Destination Alias, Error Code
 
+  DATAGRAM_OK_ACK_REPLY_PENDING      = $80;
+
   MASK_SOURCE_ALIAS                  = $00000FFF;                                // Masks out just the Source Alias Address
 
   PIP_PIP                            = $800000000000;
@@ -138,6 +140,11 @@ const
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
   MCP_READ_DATAGRAM_REPLY             = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
   MCP_READ_STREAM_REPLY               = $60;
+
+  MCP_READ_OK                         = $50;
+  MCP_READ_ERROR                      = $58;
+  MCP_WRITE_OK                        = $10;
+  MCP_WRITE_ERROR                     = $18;
 
   MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
   MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask

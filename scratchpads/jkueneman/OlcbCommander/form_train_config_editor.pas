@@ -360,113 +360,119 @@ begin
       end else
       if Sender is TReadAddressSpaceMemoryRawTask then
       begin
-        // This is a configuration read request
-        iPage := Sender.Tag and $FFFF;
-        iControl := (Sender.Tag shr 16) and $FFFF;
-
-        if PageControl.PageCount > iPage then
+        if TReadAddressSpaceMemoryRawTask(Sender).ErrorCode <> 0 then
         begin
-          ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
-          if Assigned(ScrollBox) then
+          ShowMessage('Error Code: ' + IntToHex(TReadAddressSpaceMemoryRawTask(Sender).ErrorCode, 4) + #13 + #10 + TReadAddressSpaceMemoryRawTask(Sender).ErrorString);
+        end else
+        begin
+          // This is a configuration read request
+          iPage := Sender.Tag and $FFFF;
+          iControl := (Sender.Tag shr 16) and $FFFF;
+
+          if PageControl.PageCount > iPage then
           begin
-            if ScrollBox.ControlCount > iControl then
+            ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
+            if Assigned(ScrollBox) then
             begin
-              Control := ScrollBox.Controls[iControl];
-              if Control is TOlcbEdit then
+              if ScrollBox.ControlCount > iControl then
               begin
-                if (Control as TOlcbEdit).ConfigInfo.Task = Sender then
+                Control := ScrollBox.Controls[iControl];
+                if Control is TOlcbEdit then
                 begin
-                  // Whew, success
-                  TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
-                  TaskStream.Position := 0;
-                  case (Control as TOlcbEdit).ConfigInfo.DataType of
-                    cdt_EventID : begin
-                                    Str := IntToHex(TaskStream.ReadByte, 2);
-                                    while (TaskStream.Position < TaskStream.Size) do
-                                      Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
-                                    (Control as TOlcbEdit).Text := Str;
-                                  end;
-                    cdt_Int     : begin
-                                    Str := IntToHex(TaskStream.ReadByte, 2);
-                                    while (TaskStream.Position < TaskStream.Size) do
-                                      Str := Str + IntToHex(TaskStream.ReadByte, 2);
-                                    (Control as TOlcbEdit).Text := Str;
-                                  end;
-                    cdt_String  : begin
-                                    Str := Char( TaskStream.ReadByte);
-                                    while (TaskStream.Position < TaskStream.Size) do
-                                      Str := Str + Char( TaskStream.ReadByte);
-                                    (Control as TOlcbEdit).Text := Str;
-                                  end;
-                  end;
-                  (Control as TOlcbEdit).ConfigInfo.State := ocs_Current;
-                end
-              end else
-              if Control is TOlcbSpinEdit then
-              begin
-                 if (Control as TOlcbSpinEdit).ConfigInfo.Task = Sender then
+                  if (Control as TOlcbEdit).ConfigInfo.Task = Sender then
+                  begin
+                    // Whew, success
+                    TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                    TaskStream.Position := 0;
+                    case (Control as TOlcbEdit).ConfigInfo.DataType of
+                      cdt_EventID : begin
+                                      Str := IntToHex(TaskStream.ReadByte, 2);
+                                      while (TaskStream.Position < TaskStream.Size) do
+                                        Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
+                                      (Control as TOlcbEdit).Text := Str;
+                                    end;
+                      cdt_Int     : begin
+                                      Str := IntToHex(TaskStream.ReadByte, 2);
+                                      while (TaskStream.Position < TaskStream.Size) do
+                                        Str := Str + IntToHex(TaskStream.ReadByte, 2);
+                                      (Control as TOlcbEdit).Text := Str;
+                                    end;
+                      cdt_String  : begin
+                                      Str := Char( TaskStream.ReadByte);
+                                      while (TaskStream.Position < TaskStream.Size) do
+                                        Str := Str + Char( TaskStream.ReadByte);
+                                      (Control as TOlcbEdit).Text := Str;
+                                    end;
+                    end;
+                    (Control as TOlcbEdit).ConfigInfo.State := ocs_Current;
+                  end
+                end else
+                if Control is TOlcbSpinEdit then
                 begin
-                  // Whew, success
-                  TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
-                  TaskStream.Position := 0;
-                  case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
-                    cdt_Int     : begin
-                                    Str := IntToHex( TaskStream.ReadByte, 2);
-                                    while (TaskStream.Position < TaskStream.Size) do
-                                      Str := Str + IntToHex( TaskStream.ReadByte, 2);
-                                    Str := '0x' + Str;
-                                    (Control as TOlcbSpinEdit).Value := StrToInt(Str);
-                                  end;
-                    cdt_Bit     : begin
-                                    // TODO
-                                  end;
-                  end;
-                  (Control as TOlcbSpinEdit).ConfigInfo.State := ocs_Current;
-                end
-              end else
-              if Control is TOlcbComboBox then
-              begin
-                if (Control as TOlcbComboBox).ConfigInfo.Task = Sender then
+                   if (Control as TOlcbSpinEdit).ConfigInfo.Task = Sender then
+                  begin
+                    // Whew, success
+                    TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                    TaskStream.Position := 0;
+                    case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
+                      cdt_Int     : begin
+                                      Str := IntToHex( TaskStream.ReadByte, 2);
+                                      while (TaskStream.Position < TaskStream.Size) do
+                                        Str := Str + IntToHex( TaskStream.ReadByte, 2);
+                                      Str := '0x' + Str;
+                                      (Control as TOlcbSpinEdit).Value := StrToInt(Str);
+                                    end;
+                      cdt_Bit     : begin
+                                      // TODO
+                                    end;
+                    end;
+                    (Control as TOlcbSpinEdit).ConfigInfo.State := ocs_Current;
+                  end
+                end else
+                if Control is TOlcbComboBox then
                 begin
-                  // Whew, success
-                  TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
-                  TaskStream.Position := 0;
-                  case (Control as TOlcbComboBox).ConfigInfo.DataType of
-                    cdt_Int,
-                    cdt_EventID : begin
-                                    Str := IntToHex( TaskStream.ReadByte, 2);
-                                    while (TaskStream.Position < TaskStream.Size) do
-                                      Str := Str + IntToHex( TaskStream.ReadByte, 2);
-                                    Str := '0x' + Str;
-                                    Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(IntToStr( StrToInt( Str)));
-                                    if Assigned(Relation) then
-                                      (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
-                                  end;
-                    cdt_String  : begin
-                                    Str := Char( TaskStream.ReadByte);
-                                    while (TaskStream.Position < TaskStream.Size) do
-                                      Str := Str + Char( TaskStream.ReadByte);
-                                    Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
-                                    if Assigned(Relation) then
-                                      (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
-                                  end;
-                    cdt_Bit     : begin
-                                    // TODO
-                                  end;
-                  end;
-                  (Control as TOlcbComboBox).ConfigInfo.State := ocs_Current;
+                  if (Control as TOlcbComboBox).ConfigInfo.Task = Sender then
+                  begin
+                    // Whew, success
+                    TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                    TaskStream.Position := 0;
+                    case (Control as TOlcbComboBox).ConfigInfo.DataType of
+                      cdt_Int,
+                      cdt_EventID : begin
+                                      Str := IntToHex( TaskStream.ReadByte, 2);
+                                      while (TaskStream.Position < TaskStream.Size) do
+                                        Str := Str + IntToHex( TaskStream.ReadByte, 2);
+                                      Str := '0x' + Str;
+                                      Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(IntToStr( StrToInt( Str)));
+                                      if Assigned(Relation) then
+                                        (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                                    end;
+                      cdt_String  : begin
+                                      Str := Char( TaskStream.ReadByte);
+                                      while (TaskStream.Position < TaskStream.Size) do
+                                        Str := Str + Char( TaskStream.ReadByte);
+                                      Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
+                                      if Assigned(Relation) then
+                                        (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                                    end;
+                      cdt_Bit     : begin
+                                      // TODO
+                                    end;
+                    end;
+                    (Control as TOlcbComboBox).ConfigInfo.State := ocs_Current;
+                  end
                 end
               end
-            end
+            end;
           end;
-        end;
-        if ConfigReadTaskQueue.Count > 0 then
-        begin
-          ComPortThread.AddTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
-          ConfigReadTaskQueue.Delete(0);
-        end else
-          ConfigReadTaskRunning := False;
-        UpdateUI
+          if ConfigReadTaskQueue.Count > 0 then
+          begin
+            ComPortThread.AddTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
+            ConfigReadTaskQueue.Delete(0);
+          end else
+            ConfigReadTaskRunning := False;
+          UpdateUI
+        end
       end else
       if Sender is TWriteAddressSpaceMemoryRawTask then
       begin

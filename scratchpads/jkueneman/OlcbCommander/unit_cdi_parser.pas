@@ -1094,6 +1094,7 @@ var
         Identification_Child := Identification_Child.NextSibling;
       end;
       AddLabel(ScrollBox, ' ', ControlOffset, 4, 0, False);    // Space on the Bottom
+      ScrollBox.AutoScroll := True;
     end;
 
     // Handled the Segment blocks

@@ -373,7 +373,7 @@ end;
 procedure TReadAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
 var
   DatagramReceive: TDatagramReceive;
-  i: Integer;
+  i, iChar: Integer;
   Finished: Boolean;
 begin
   inherited Process(MessageInfo);
@@ -397,37 +397,45 @@ begin
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
-            Finished := False;
-            if ForceOptionalSpaceByte or (DatagramReceive.RawDatagram[1] and $03 = 0) then    // If using the {Space} byte need to skip over it
-              i := 7
-            else
-              i := 6;
-            while not Finished and (i < DatagramReceive.CurrentPos) do
+            if DatagramReceive.RawDatagram[1] and MCP_READ_ERROR = MCP_READ_ERROR then
             begin
-              if UsingTerminator then
-              begin
-                if DatagramReceive.RawDatagram[i] = Ord( Terminator) then
-                begin
-                  if IncludeTerminator then
-                    Stream.WriteByte( DatagramReceive.RawDatagram[i]);
-                  Finished := True;
-                end else
-                  Stream.WriteByte( DatagramReceive.RawDatagram[i]);
-              end else
-                Stream.WriteByte( DatagramReceive.RawDatagram[i]);
-              Inc(i);
-            end;
-
-            if Finished or (PayloadSize = 0) then
-            begin
+              ExtractErrorInformation(DatagramReceive);
               Sending := True;
               iState := STATE_DONE;
             end else
             begin
-              CurrentOffset := CurrentOffset + MAX_CONFIG_MEM_READWRITE_SIZE;
-              Sending := True;
-              iState := 0;
-            end;
+              Finished := False;
+              if DatagramReceive.RawDatagram[1] and $03 = 0 then    // If using the {Space} byte need to skip over it
+                i := 7
+              else
+                i := 6;
+              while not Finished and (i < DatagramReceive.CurrentPos) do
+              begin
+                if UsingTerminator then
+                begin
+                  if DatagramReceive.RawDatagram[i] = Ord( Terminator) then
+                  begin
+                    if IncludeTerminator then
+                      Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+                    Finished := True;
+                  end else
+                    Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+                end else
+                  Stream.WriteByte( DatagramReceive.RawDatagram[i]);
+                Inc(i);
+              end;
+
+              if Finished or (PayloadSize = 0) then
+              begin
+                Sending := True;
+                iState := STATE_DONE;
+              end else
+              begin
+                CurrentOffset := CurrentOffset + MAX_CONFIG_MEM_READWRITE_SIZE;
+                Sending := True;
+                iState := 0;
+              end;
+            end
           end
         end;
     STATE_DONE : begin
@@ -1213,30 +1221,38 @@ begin
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
-            if ForceOptionalSpaceByte or (DatagramReceive.RawDatagram[1] and $03 = 0) then    // If using the {Space} byte need to skip over it
-              DatagramResultStart := 7
-            else
-              DatagramResultStart := 6;
-            Terminated := False;
-            for i := DatagramResultStart to DatagramReceive.CurrentPos - 1 do
+            if DatagramReceive.RawDatagram[1] and MCP_READ_ERROR = MCP_READ_ERROR then
             begin
-              DataStream.WriteByte( DatagramReceive.RawDatagram[i]);
-              if UsingTerminator then
-              begin
-                if DatagramReceive.RawDatagram[i] = Ord( Terminator) then
-                  Terminated := True;
-              end;
-            end;
-            CurrentAddress := CurrentAddress + DWord( (DatagramReceive.CurrentPos - DatagramResultStart));
-            if (CurrentAddress = MaxAddress) or Terminated then
-            begin
+              ExtractErrorInformation(DatagramReceive);
               Sending := True;
               iState := STATE_DONE;
             end else
             begin
-              Sending := True;
-              iState := STATE_READ_START;
-            end;
+              if DatagramReceive.RawDatagram[1] and $03 = 0 then    // If using the {Space} byte need to skip over it
+                DatagramResultStart := 7
+              else
+                DatagramResultStart := 6;
+              Terminated := False;
+              for i := DatagramResultStart to DatagramReceive.CurrentPos - 1 do
+              begin
+                DataStream.WriteByte( DatagramReceive.RawDatagram[i]);
+                if UsingTerminator then
+                begin
+                  if DatagramReceive.RawDatagram[i] = Ord( Terminator) then
+                    Terminated := True;
+                end;
+              end;
+              CurrentAddress := CurrentAddress + DWord( (DatagramReceive.CurrentPos - DatagramResultStart));
+              if (CurrentAddress = MaxAddress) or Terminated then
+              begin
+                Sending := True;
+                iState := STATE_DONE;
+              end else
+              begin
+                Sending := True;
+                iState := STATE_READ_START;
+              end;
+            end
           end
         end;
     STATE_WRITE_START :
@@ -1339,4 +1355,4 @@ begin
 end;
 
 end.
-
+

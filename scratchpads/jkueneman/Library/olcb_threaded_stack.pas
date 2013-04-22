@@ -274,6 +274,7 @@ type
     FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
     FSending: Boolean;
   private
+    FErrorString: string;
     FRemoveKey: PtrInt;
     FHasStarted: Boolean;
     FTag: PtrInt;
@@ -285,6 +286,7 @@ type
     FDone: Boolean;
     FiState: Integer;
     FSourceAlias: Word;
+    procedure ExtractErrorInformation(DatagramReceive: TDatagramReceive);
     function IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
     function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
     function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
@@ -320,6 +322,7 @@ type
     property DestinationAlias: Word read FDestinationAlias;
     property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
     property ErrorCode: DWord read FErrorCode write FErrorCode;
+    property ErrorString: string read FErrorString write FErrorString;
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
@@ -345,6 +348,28 @@ begin
     MSI_CONFIG  : Result := MCP_CONFIGURATION
   else
     Result := MCP_NONE
+  end;
+end;
+
+procedure TOlcbTaskBase.ExtractErrorInformation(DatagramReceive: TDatagramReceive);
+var
+  i, iChar: Integer;
+begin
+  if DatagramReceive.RawDatagram[1] and $03 = 0 then    // If using the {Space} byte need to skip over it
+    i := 7
+  else
+    i := 6;
+  ErrorCode := DatagramReceive.ExtractDataBytesAsInt(i, i+1);
+  Inc(i, 2);
+  if DatagramReceive.CurrentPos > i then
+  begin
+    // We have a Error String
+    ErrorString := '';
+    for iChar := i to DatagramReceive.CurrentPos - 1 do
+    begin
+      if Char( DatagramReceive.RawDatagram[iChar]) <> #0 then
+        ErrorString := ErrorString + Char( DatagramReceive.RawDatagram[iChar]);
+    end;
   end;
 end;
 
@@ -418,7 +443,7 @@ begin
       DatagramReceive := TDatagramReceive(MessageInfo);
       if  (DatagramReceive.RawDatagram[0] and
           DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
-          (DatagramReceive.RawDatagram[1] and $FC = MCP_READ_DATAGRAM_REPLY) and
+          (DatagramReceive.RawDatagram[1] and MCP_READ_DATAGRAM_REPLY = MCP_READ_DATAGRAM_REPLY) and
           (DatagramReceive.SourceAlias = SourceAlias) and
           (DatagramReceive.DestinationAlias = DestinationAlias) then
         Result := True
@@ -659,6 +684,7 @@ begin
   FRemoveKey := 0;
   FForceTermination := False;
   FHasStarted := False;
+  FErrorString := '';
 end;
 
 destructor TOlcbTaskBase.Destroy;
@@ -1674,4 +1700,4 @@ finalization
 
 
 end.
-
+

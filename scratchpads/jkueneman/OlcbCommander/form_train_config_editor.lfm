@@ -13,7 +13,7 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
   OnHide = FormHide
   OnShow = FormShow
   PopupMenu = PopupMenuMain
-  LCLVersion = '1.0.2.0'
+  LCLVersion = '1.0.8.0'
   object PanelBkGnd: TPanel
     Left = 0
     Height = 346
@@ -26,8 +26,8 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 419
+    Height = 23
+    Top = 411
     Width = 636
     Panels = <    
       item
