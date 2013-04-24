@@ -102,6 +102,8 @@ const
 
 type
   TConfigMemData = array[0..MAX_CONFIG_MEM_DATA-1] of Byte;
+  TConfigMemDataErrorStr = string[MAX_CONFIG_MEM_ERROR_STR_LEN];
+  PConfigMemDataErrorStr = ^TConfigMemDataErrorStr;
 
   TConfigMemBuffer = record                                                     // This subset of a Common Buffer to hold the information from a Configuration Memory request after it decodes the Datagram and stores the information here in clear clean way
     State: Byte;                                                                // State of Buffer, see CBS_xxx constants
@@ -116,7 +118,7 @@ type
     DataOffset: Byte;                                                           // Allows Offsets to reads/writes in to the DataBytes array
     AckReply: Byte;                                                             // Reply to send back to the requesting node, allows telling the node the reply is pending and an estimated time
     ErrorCode: Word;                                                            // Error Code to reply to the requestor with
-    ErrorString: string[MAX_CONFIG_MEM_ERROR_STR_LEN];                          // Error Code String (2 byte for target Alias, 2 bytes for error code)
+    ErrorString: PConfigMemDataErrorStr;                                        // Error Code String (2 byte for target Alias, 2 bytes for error code)
   end;
   PConfigMemBuffer = ^TConfigMemBuffer;
   
@@ -193,7 +195,6 @@ const
   
   CONFIG_MEM_RESULT_REJECTED_NO_RESEND_MASK                 = $1000;
   CONFIG_MEM_RESULT_REJECTED_RESEND_MASK                    = $2000;
-  CONFIG_MEM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
 
 type
   TDatagram = array[0..MAX_DATAGRAM_LEN-1] of Byte;
@@ -394,9 +395,10 @@ type
     Info: TNodeInfo;                                                            // Information about a Node
     Login: TNMRAnetNodeLoginInfo;                                               // Login Information
     MsgFlags: Byte;                                                             // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
-    MsgUserFlags: Byte;                                                         // Message Flags for user apps to define AND handle in App Callbacks
+    MsgFlagsUserDefined: Byte;                                                  // Message Flags for user apps to define AND handle in App Callbacks
     EventsProducedFlags: array[0..MAX_EVENTS_PRODUCED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast, each event occupies 2 bits (unknown, valid, invalid)
     EventsConsumedFlags: array[0..MAX_EVENTS_CONSUMED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast, each event occupies 2 bits (unknown, valid, invalid)
+    PCER_Flags: array[0..MAX_PCER_BIT_BYTES-1] of Byte;                         // If bit is set then the index of the bit maps to the Produced Event and it requires a PCER sent for that event
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of Messages Replies to service
     DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service

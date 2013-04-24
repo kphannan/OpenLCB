@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=NMRAnetAppCallbacks.mpas
+Value=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -50,14 +50,13 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=7
+Count=6
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=NMRAnetAppCallbacks.mpas
 File2=..\Library\NMRAnet\NMRAnetNode.mpas
 File3=..\Library\NMRAnet\NMRAnetDefines.mpas
 File4=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File5=..\Library\NMRAnet\NMRAnetBufferPools.mpas
-File6=NMRAnetAppDefines.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

@@ -836,7 +836,7 @@ const
   // **************************************************************************************************************************************************************
   MAX_EVENTS_CONSUMED_BIT_BYTES = 1;   // Set to the number of BYTES required to hold the max number of Events Consumed between Physical and Virtual MULTIPLIED by 2 (2 bits for each Event, 0=do nothing; 1=respond set; 2= respond clear; 3= respond unknown)
   MAX_EVENTS_PRODUCED_BIT_BYTES = 1;   // Set to the number of BYTES required to hold the max number of Events Produced between Physical and Virtual MULTIPLIED by 2 (2 bits for each Event, 0=do nothing; 1=respond set; 2= respond clear; 3= respond unknown)
-
+  MAX_PCER_BIT_BYTES            = 1;   // Set to the number of BYTES required to hold the max number of PCERs of Physical/Virtual Events Produced (1 bit per Produced Event, signals that the indexed Event needs a PCER set for it)
   // **************************************************************************************************************************************************************
   // Events for Physical Node (consumed and produced)
   // **************************************************************************************************************************************************************
@@ -850,17 +850,11 @@ const
   SUPPORTED_EVENTS_CONSUMED: array[0..MAX_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
     ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
   );
-  SUPPORTED_EVENTS_CONSUMED_MASKS: array[0..MAX_EVENTS_CONSUMED_BIT_BYTES-1] of Byte = (
-    %00000011                                                                   // One Event Supported (remember 2 bits for each Event)
-  );
   {$ENDIF}
   {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
   SUPPORTED_EVENTS_PRODUCED: array[0..MAX_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
     ($01, $01, $00, $00, $00, $00, $04, $01),                                   // I am a Command Station
     ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
-  );
-  SUPPORTED_EVENTS_PRODUCED_MASKS: array[0..MAX_EVENTS_PRODUCED_BIT_BYTES-1] of Byte = (
-    %00001111                                                                   // Two Events Supported (remember 2 bits for each Event)
   );
   {$ENDIF}
 
@@ -877,18 +871,12 @@ const
   SUPPORTED_VNODE_EVENTS_CONSUMED: array[0..MAX_VNODE_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
     ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
   );
-  SUPPORTED_VNODE_EVENTS_CONSUMED_MASKS: array[0..MAX_EVENTS_CONSUMED_BIT_BYTES-1] of Byte = (
-    %00000011                                                                   // One Events Supported  (remember 2 bits for each Event)
-  );
   {$ENDIF}
   {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
   SUPPORTED_VNODE_EVENTS_PRODUCED: array[0..MAX_VNODE_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
     ($01, $01, $00, $00, $00, $00, $03, $03),                                   // EVENT_TRAIN
     ($01, $01, $00, $00, $00, $00, $03, $04),                                   // EVENT_TRAIN_DCC_IDLE
     ($01, $01, $00, $00, $00, $00, $03, $05)                                    // EVENT_TRAIN_DCC_INUSE
-  );
-  SUPPORTED_VNODE_EVENTS_PRODUCED_MASKS: array[0..MAX_EVENTS_PRODUCED_BIT_BYTES-1] of Byte = (
-    %00111111                                                                   // Threee Events Supported   (remember 2 bits for each Event)
   );
   {$ENDIF}
   

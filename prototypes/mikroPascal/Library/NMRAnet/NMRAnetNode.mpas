@@ -60,6 +60,12 @@ uses
   function NMRAnetNode_NextConsumerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
   function NMRAnetNode_IsAnyConsumerEventSet(Node: PNMRAnetNode): Boolean;
   
+  procedure NMRAnetNode_SetPCER_Flags(Node: PNMRAnetNode);
+  procedure NMRAnetNode_SetPCER_Flag(Node: PNMRAnetNode; EventIndex: Integer; Clear: Boolean);
+  procedure NMRAnetNode_ClearPCER_Flags(Node: PNMRAnetNode);
+  function NMRAnetNode_NextPCER_Flag(Node: PNMRAnetNode): Integer;
+  function NMRAnetNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
+  
   {$IFDEF PRINT_NODE}
   procedure NMRAnetNode_PrintRawNodeData;
   procedure NMRAnetNode_PrintAllocatedNodeData;
@@ -808,9 +814,9 @@ end;
 //
 // *****************************************************************************
 function NMRAnetNode_NextConsumerEventFlag(Node: PNMRAnetNode; var State: Byte): Integer;
-  var
-    i, j: Integer;
-    Temp: Byte;
+var
+  i, j: Integer;
+  Temp: Byte;
 begin
   Result := -1;
   for i := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES - 1 do
@@ -852,6 +858,119 @@ begin
     begin
       Result := True;
       Exit
+    end
+  end
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_SetPCER_Flags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_SetPCER_Flags(Node: PNMRAnetNode);
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_PCER_BIT_BYTES - 1 do
+    Node^.PCER_Flags[i] := $FF
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_SetPCER_Flags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_SetPCER_Flag(Node: PNMRAnetNode; EventIndex: Integer; Clear: Boolean);
+var
+  ByteOffset, {EventOffset} NormalizedIndex: Integer;
+  Mask: Byte;
+begin
+  ByteOffset := EventIndex div 8;    // There are 8 PCERs supported in each Byte
+  Mask := $01;
+  Mask := Mask shl (EventIndex mod 8);
+  if Clear then
+  begin
+    Mask := not Mask;
+    Node^.PCER_Flags[ByteOffset] := Node^.PCER_Flags[ByteOffset] and Mask;
+  end else
+    Node^.PCER_Flags[ByteOffset] := Node^.PCER_Flags[ByteOffset] or Mask;
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_ClearPCER_Flags
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetNode_ClearPCER_Flags(Node: PNMRAnetNode);
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_PCER_BIT_BYTES - 1 do
+    Node^.PCER_Flags[i] := $00
+end;
+
+
+// *****************************************************************************
+//  function NMRAnetNode_NextPCER_Flag
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_NextPCER_Flag(Node: PNMRAnetNode): Integer;
+var
+  i, j: Integer;
+  Temp: Byte;
+begin
+  Result := -1;
+  for i := 0 to MAX_PCER_BIT_BYTES - 1 do
+  begin
+    if Node^.PCER_Flags[i] <> 0 then
+    begin
+      Temp := Node^.PCER_Flags[i];
+      for j := 0 to 7 do                                                      // Find the first non zero state in the byte
+      begin
+        if Temp and $01 <> 0 then
+        begin
+          Result := (i*8) + j;
+          NMRAnetNode_SetPCER_Flag(Node, Result, True); // Clear the flag
+          Exit;
+        end else
+          Temp := Temp shr 1;
+      end
+    end
+  end
+end;
+
+// *****************************************************************************
+//  function NMRAnetNode_IsAnyPCER_Set
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to MAX_PCER_BIT_BYTES - 1 do
+  begin
+    if Node^.PCER_Flags[i] <> 0 then
+    begin
+      Result := True;
+      Break;
     end
   end
 end;

@@ -639,6 +639,8 @@ begin
              end else
              begin
                // Trying to use Ops Mode while CS is in Service Output Mode = Error
+               ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+               ConfigMemBuffer^.ErrorString := @STR_INVALID_PROGRAMMING_METHOD;
              end;
            end else
            begin
@@ -649,18 +651,8 @@ begin
              end else
              begin  
                // Trying to use Service Mode while CS is in Main Line Mode = Error
-               
-               // CREATE A FUNCTION TO LOAD AND FORMAT THE ERROR INFORMATION::::>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-               
                ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
-               i := 0;
-               while i < MAX_CONFIG_MEM_ERROR_STR_LEN do
-               begin
-                 ConfigMemBuffer^.ErrorString[i] := STR_INVALID_PROGRAMMING_METHOD[i];
-                 if STR_INVALID_PROGRAMMING_METHOD[i] = #0 then
-                   Break;
-                 Inc(i)
-               end;
+               ConfigMemBuffer^.ErrorString := @STR_INVALID_PROGRAMMING_METHOD;
              end
            end;
            ByteToStr((ConfigMemBuffer^.Address and $000007FF), s1);
@@ -767,7 +759,7 @@ begin
     begin
       Address := (Event^[4] shl 8) or Event^[5];
       if ProxyData^.Address = Address then
-        Node^.MsgUserFlags := Node^.MsgUserFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;
+        Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined or MSG_SEND_DCC_ADDRESS_ALLOCATED;
     end
   end
 end;
@@ -997,9 +989,8 @@ begin
                 DCC_ALLOCATE_ADDRESS :
                   begin
                     ProxyData^.State := ProxyData^.State or PS_DCC_ADDRESS_ALLOCATED;
-                    Node^.MsgUserFlags := Node^.MsgUserFlags or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
-                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
-                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
+                    Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_INUSE_INDEX, False);       // Changed State so notify the system
                     ProxyData^.SpeedSteps := CANBuffer^.DataBytes[4];                         // TO DO: NEED TO WRITE TO CONFIGURATION
                     ProxyData^.Address := Word ((CANBuffer^.DataBytes[5] shl 8)) or CANBuffer^.DataBytes[6];  // This is in NMRA DCC format for short/long address
                     if CommandStationRamData.EnableAutoAllocateProxy = 0 then
@@ -1008,9 +999,8 @@ begin
                 DCC_DEALLOCATE_ADDRESS :
                   begin
                     ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
-                    Node^.MsgUserFlags := Node^.MsgUserFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
-                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_IDLE_INDEX);                 // Changed State so notify the system
-                    SetProxyNodeProducerFlags(Node, EVENT_TRAIN_DCC_INUSE_INDEX);                // Changed State so notify the system
+                    Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                    NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_IDLE_INDEX, False);       // Changed State so notify the system
                     NMRAnetNode_MarkForRelease(Node);
                   end;
                 end;
@@ -1040,7 +1030,7 @@ begin
   ProxyData := ExtractTrainProxyRamData(Node);
 
   // Handle the oddball DCC Address Event that can come and go
-  if Node^.MsgUserFlags and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
+  if Node^.MsgFlagsUserDefined and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
   begin
     DataBytesPtr^[0] := $06;
     DataBytesPtr^[1] := $01;
@@ -1052,7 +1042,7 @@ begin
     DataBytesPtr^[7] := $01;
     if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False) then
     begin
-      Node^.MsgUserFlags := Node^.MsgUserFlags and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
+      Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
       Result := True;
     end
   end;
