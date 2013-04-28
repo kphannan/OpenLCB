@@ -30,131 +30,13 @@ uses
   NMRAnetDefines,
   NMRAnetNode,
   NMRAnetUtilities,
-  Float16,
   NMRAnetDCC,
   NMRAnetServiceMode,
   ServiceModeDefines,
   NMRAnetDefinesShared,
+  TractionProtocol,
   HelperFunctions;
 
-const
-  ADC_SAMPLE_INTERRUPT_TIME          = 5.5;                                     // milliseconds between ADC interrupts
-  TRACTION_PROTOCOL_MASK             = $F0;
-  TRACTION_OLCB                      = $00;
-  TRACTION_DCC                       = $80;
-
-  TRACTION_OP_MASK                   = $0F;
-  TRACTION_OP_SPEED_DIR              = $00;
-  TRACTION_OP_FUNCTION               = $01;
-  TRACTION_OP_E_STOP                 = $02;
-  
-  TRACTION_OP_PROXY_MGMT             = $02;
-
-  DCC_ALLOCATE_ADDRESS               = $01;
-  DCC_DEALLOCATE_ADDRESS             = $02;
-  DCC_FUNCTION_28                    = $00;
-  DCC_FUNCTION_32k                   = $01;
-  
-  STR_LOCO_NOT_FOUND                 = 'Loco not detected' + #0;                     // 60 characters limit
-  STR_SHORT_CIRCUIT                  = 'Overcurrent detected' + #0;                  // 60 characters limit
-  STR_INVALID_PROGRAMMING_METHOD     = 'Programming method not compatible' + #0;     // 60 characters limit
-  
-  const
-  _28_STEP_TABLE: array[0..28] of Byte = (
-    %00000000,    // Stop
-    %00000010,    // Step 1
-    %00010010,    // Step 2
-    %00000011,    // Step 3
-    %00010011,    // Step 4
-    %00000100,    // Step 5
-    %00010100,    // Step 6
-    %00000101,    // Step 7
-    %00010101,    // Step 8
-    %00000110,    // Step 9
-    %00010110,    // Step 10
-    %00000111,    // Step 11
-    %00010111,    // Step 12
-    %00001000,    // Step 13
-    %00011000,    // Step 14
-    %00001001,    // Step 15
-    %00011001,    // Step 16
-    %00001010,    // Step 17
-    %00011010,    // Step 18
-    %00001011,    // Step 19
-    %00011011,    // Step 20
-    %00001100,    // Step 21
-    %00011100,    // Step 22
-    %00001101,    // Step 23
-    %00011101,    // Step 24
-    %00001110,    // Step 25
-    %00011110,    // Step 26
-    %00001111,    // Step 27
-    %00011111     // Step 28
-  );
-
-  _14_STEP_TABLE: array[0..14] of Byte = (
-    %00000000,    // Stop
-    %00000010,    // Step 1
-    %00000011,    // Step 3
-    %00000100,    // Step 5
-    %00000101,    // Step 7
-    %00000110,    // Step 9
-    %00000111,    // Step 11
-    %00001000,    // Step 13
-    %00001001,    // Step 15
-    %00001010,    // Step 17
-    %00001011,    // Step 19
-    %00001100,    // Step 21
-    %00001101,    // Step 23
-    %00001110,    // Step 25
-    %00001111     // Step 27
-  );
-  
-const
-  PS_DCC_ADDRESS_ALLOCATED        = $01;                                        // The Proxy is Allocated
-
-  MSG_SEND_DCC_ADDRESS_ALLOCATED   = $01;                                       // Need to send a Message for the DCC Address was Allocated
-
-type
-  TTrainProxyRamData = record                                                   // Structure stored in RAM on a node and vnode basis
-    State: Byte;                                                                // State of the Proxy Node
-    Speed: Word;                                                                // Float 16 so negative is reverse (including -0)
-    SpeedSteps: Byte;                                                           // TEMPORARY - PUT IN CONFIGURATION
-    Functions: DWord;                                                           // Function State (F0..F28)
-    Address: Word;                                                              // DCC Address
-  end;
-  PTrainProxyRamData = ^TTrainProxyRamData;
-  
-  TCommandStationRamData = record
-    EnableAutoAllocateProxy: Byte;                                              // For Debugging
-    AllocateProxy: Word;                                                        // Running count of how many proxies to allocate
-  end;
-  PCommandStationRamData = ^TCommandStationRamData;
-  
-  TRepeatFunctionPacketArray = array[0..27] of Byte;
-
-  TCommandStationConfigurationInRam = record                                    // This mirrors the EEPROM values for fast lookup in real time
-    OutputMode: Byte;
-    ProgrammingMode: Byte;
-    DccBusMode: Byte;
-    RailComEnable: Byte;
-    OverCurrentLevel: Word;                                                     // In milliAmps
-    OverCurrentTime: Word;                                                      // In milliSeconds
-    OverloadDetected: Byte;                                                     // 0 = Normal; 1 = Overloaded
-    RepeatSpeedPacket: Byte;
-    RepeatFunctions: TRepeatFunctionPacketArray;
-    DebugAutoAllocate: Byte;                                                    // Start of EEPROM_DEBUG memory space
-  end;
-  
-type
-  TOverCurrent = record
-    OverCurrentSampleLimit: Integer;                                            // Number of 5ms cycles to run before making an overcurrent decision
-    OverCurrentSampleCount: Word;                                               // Current 5ms Index looking for the OverCurrentSampleLimit
-    BitValue: Word;                                                             // Last ADC value of the current.
-    OverCurrentLimit: Word;                                                     // The value defined as overcurrent converted from Amps to ADC Bits
-    OverCurrentCounter: Integer;                                                // OC Filtered Flag
-  end;
-  
 const
   MAX_NODE_CFG_DATA  = 512;
   MAX_VNODE_CFG_DATA = 1536;
@@ -192,7 +74,6 @@ function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Bool
 function AppCallback_EventsIdentify: Boolean;
 function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
 function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
-procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 
@@ -215,21 +96,7 @@ procedure AppCallback_Sync_Config_Ram_with_EEPROM;
 
 // *****************************************************************************
 
-
-function ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
-function FindFirstNonDCCAllocatedNode: PNMRAnetNode;
-
-var
-  CommandStationConfigurationInRam: TCommandStationConfigurationInRam;
-  CommandStationRamData: TCommandStationRamData;
-  OverCurrent: TOverCurrent;
-
 implementation
-
-// Array of records that contain Volatile Data (RAM only) for each Node.  The address of the record is assigned to the
-// node in the AssignRAMAddress function below
-var
-  TrainProxyRamData: array[0..MAX_NODE_COUNT - 1] of TTrainProxyRamData;   // Easier to allocate 1 extra but not use it for the CS node
 
 procedure PrintServiceModeResults;
 begin
@@ -243,104 +110,6 @@ begin
     SERVICE_MODE_RESULT_RESPONSE_DIRECT_BIT_MODE    :  UART1_Write_Text('Direct Bit' + LF);
     SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE         :  UART1_Write_Text('Paged' + LF);
     SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE      :  UART1_Write_Text('Register' + LF);
-  end;
-end;
-
-procedure UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, FunctionAddress, FunctionValue: Byte; var DCCPacket: TDCCPacket; ProxyData: PTrainProxyRamData);
-var
-  WideFunctionMask: DWord;
-  FunctionMask, FunctionExtendedCode: Byte;
-begin
-  WideFunctionMask := $00000001;
-  WideFunctionMask := WideFunctionMask shl FunctionAddress;   // Set the correct Function Bit
-  ProxyData^.Functions := ProxyData^.Functions and not WideFunctionMask; // Clear the bit
-  if FunctionValue > 0 then
-  ProxyData^.Functions := ProxyData^.Functions or WideFunctionMask;      // Set the bit if needed
-
-  if FunctionAddress < 29 then
-  begin
-    if FunctionAddress < 5 then
-    begin
-      FunctionMask := (ProxyData^.Functions shr 1) and $0F;
-      FunctionMask.4 := ProxyData^.Functions.0;
-      FunctionMask := FunctionMask or %10000000;                    // Opcode bits
-    end else
-    if FunctionAddress < 9 then
-    begin
-      FunctionMask := (ProxyData^.Functions shr 5) and $0F;
-      FunctionMask := FunctionMask or %10110000;                    // Opcode bits
-    end else
-    if FunctionAddress < 13 then
-    begin
-      FunctionMask := (ProxyData^.Functions shr 9) and $0F;
-      FunctionMask := FunctionMask or %10100000;                    // Opcode bits
-    end else
-    if FunctionAddress < 21 then
-    begin
-      FunctionMask := ProxyData^.Functions shr 13;
-      FunctionExtendedCode := %11011110
-    end
-  end else
-  begin
-    FunctionMask := ProxyData^.Functions shr 21;
-    FunctionExtendedCode := %11011111
-  end;
-
-  // Now create the DCC Packet
-  if AddressHi and $C0 = $C0 then
-  begin    // UART1_Write_Text('Long Address'+LF);
-    if FunctionAddress < 13 then
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionMask, 0, 0, 3)
-    else
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionExtendedCode, FunctionMask, 0, 4)
-  end else
-  begin
-    if FunctionAddress < 13 then
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionMask, 0, 0, 0, 3)
-    else
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionExtendedCode, FunctionMask, 0, 0, 4)
-  end;
-
-  NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-end;
-  
-function ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
-begin
-  Result := nil;
-  if Node <> nil then
-    Result := PTrainProxyRamData( Node^.RAMAddress);
-end;
-
-// *****************************************************************************
-//  procedure NMRAnetNode_FindFirstNonAllocatedVirtualNode;
-//
-//  Parameters:
-//
-//  Result:
-//
-//  Description:
-//                READ ME:
-//                   Currently this uses a dog slow search.
-// *****************************************************************************
-function FindFirstNonDCCAllocatedNode: PNMRAnetNode;
-var
-  i: Integer;
-  TrainProxyRamData: PTrainProxyRamData;
-begin
-  Result := nil;
-  i := Nodes.AllocatedCount - 1;
-  while (i > -1) do
-  begin
-    if NMRAnetNode_TestStateFlag(Nodes.AllocatedList[i], NS_VIRTUAL) then
-    begin
-      TrainProxyRamData := ExtractTrainProxyRamData(Nodes.AllocatedList[i]);
-      if TrainProxyRamData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then
-      begin
-        Result := Nodes.AllocatedList[i];
-        Break;
-      end
-    end;
-    Dec(i);
   end;
 end;
 
@@ -728,11 +497,14 @@ begin
   OverCurrent.OverCurrentCounter := 0;
 end;
 
+// *****************************************************************************
+//
+// *****************************************************************************
 procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
 var
   ProxyData: PTrainProxyRamData;
 begin
-  ProxyData := ExtractTrainProxyRamData(Node);
+  ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
   ProxyData^.State := 0;
   ProxyData^.Address := 0;
   ProxyData^.Speed := 0;
@@ -754,7 +526,7 @@ begin
 
   if TestForSetFlag then
   begin
-    ProxyData := ExtractTrainProxyRamData(Node);
+    ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
     if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
     begin
       Address := (Event^[4] shl 8) or Event^[5];
@@ -773,13 +545,13 @@ begin
   case EventIndex of
     EVENT_TRAIN_INDEX           : NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
     EVENT_TRAIN_DCC_IDLE_INDEX  : begin
-                                    if ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+                                    if NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID)
                                     else
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
                                   end;
     EVENT_TRAIN_DCC_INUSE_INDEX : begin
-                                    if ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+                                    if NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID)
                                     else
                                       NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID);
@@ -796,23 +568,23 @@ end;
 function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
 var
   i, VNodeEventIndex, NodeEventIndex: Integer;
-  VNodeEvent, NodeEvent: Boolean;
+  VNodeEventSupported, NodeEventSupported: Boolean;
 begin
   Result := True;                                                               // We handle the message
   VNodeEventIndex := -1;
   NodeEventIndex := -1;
-  VNodeEvent := NMRAnetUtilities_SupportsVNodeEventAsProducer(Event, VNodeEventIndex);
-  NodeEvent := NMRAnetUtilities_SupportsEventAsProducer(Event, NodeEventIndex);
+  VNodeEventSupported := NMRAnetUtilities_SupportsVNodeEventAsProducer(Event, VNodeEventIndex);
+  NodeEventSupported := NMRAnetUtilities_SupportsEventAsProducer(Event, NodeEventIndex);
   for i := 0 to Nodes.AllocatedCount - 1 do
   begin
     if NMRAnetNode_TestStateFlag(Nodes.AllocatedList[i], NS_VIRTUAL) then
     begin
-      if VNodeEvent then
+      if VNodeEventSupported then
         SetProxyNodeProducerFlags(Nodes.AllocatedList[i], VNodeEventIndex);
       SetProxyNodeDccAddressFlags(Nodes.AllocatedList[i], Event);
     end else
     begin
-      if NodeEvent then
+      if NodeEventSupported then
         NMRAnetNode_SetProducerEventFlag(Nodes.AllocatedList[0], NodeEventIndex, EVENT_STATE_UNKOWN);
     end
   end;
@@ -826,6 +598,9 @@ begin
   Result := False;                                                              // Do the default
 end;
 
+// *****************************************************************************
+//
+// *****************************************************************************
 function AppCallback_EventsIdentify: Boolean;
 var
   j, ProducerIndex: Integer;
@@ -876,143 +651,6 @@ end;
 // *****************************************************************************
 //
 // *****************************************************************************
-procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
-var
-  ProxyData: PTrainProxyRamData;
-  FunctionAddress: DWord;
-  FunctionValue: Word;
-  AbsoluteSpeed: real;
-  SpeedStep: Word;
-  DCCPacket: TDCCPacket;
-  AddressHi, AddressLo: Byte;
-  IsForward: Boolean;
-begin
-  ProxyData := ExtractTrainProxyRamData(Node);
-  AddressHi := (ProxyData^.Address shr 8) and $00FF;     // Split the address to make clear when loading bytes
-  AddressLo := ProxyDAta^.Address and $00FF;
-  case CANBuffer^.DataBytes[2] and TRACTION_PROTOCOL_MASK of
-    TRACTION_OLCB :
-      begin  // OLCB Train Protocol
-        case CANBuffer^.DataBytes[2] and TRACTION_OP_MASK of
-          TRACTION_OP_SPEED_DIR :
-            begin
-              ProxyData^.Speed := (CANBuffer^.DataBytes[3] shl 8) or (CANBuffer^.DataBytes[4]);
-              IsForward := ProxyData^.Speed and $8000 <> $8000;
-              AbsoluteSpeed := HalfToFloat(ProxyData^.Speed and not $8000);
-              case ProxyData^.SpeedSteps of
-                14  : begin
-                        AbsoluteSpeed := (14/100) * AbsoluteSpeed;
-                        SpeedStep := Word( AbsoluteSpeed);
-                        SpeedStep := _14_STEP_TABLE[SpeedStep];
-                        if IsForward then
-                          SpeedStep := SpeedStep or $60
-                        else
-                          SpeedStep := SpeedStep or $40;
-                        if AddressHi and $C0 = $C0 then
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
-                        else
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
-                        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                      end;
-                28  : begin
-                        AbsoluteSpeed := (28/100) * AbsoluteSpeed;
-                        SpeedStep := Word( AbsoluteSpeed);
-                        SpeedStep := _28_STEP_TABLE[SpeedStep];
-                        if IsForward then
-                          SpeedStep := SpeedStep or $60
-                        else
-                          SpeedStep := SpeedStep or $40;
-                        if AddressHi and $C0 = $C0 then
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
-                        else
-                          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
-                        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                      end;
-                128 : begin
-                        AddressHi := AddressHi or $C0;    // Allow a mistaken short address to work here by adding the $C0  Per Tim
-                        AbsoluteSpeed := (127/100) * AbsoluteSpeed;
-                        SpeedStep := Word( AbsoluteSpeed);
-                        if SpeedStep > 0 then
-                          Inc(SpeedStep);   // 1 = EStop
-                        if IsForward then
-                          SpeedStep := SpeedStep or $80;
-                        NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
-                        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                      end;
-              end;
-            end;
-          TRACTION_OP_E_STOP :
-            begin
-              IsForward := ProxyData^.Speed and $8000 <> $8000;
-              if IsForward then
-                ProxyData^.Speed := $0000
-              else
-                ProxyData^.Speed := $8000;
-              case ProxyData^.SpeedSteps of
-                14, 28 :
-                  begin
-                    SpeedStep := $01;
-                    if IsForward then
-                      SpeedStep := SpeedStep or $60
-                    else
-                      SpeedStep := SpeedStep or $40;
-                    if AddressHi and $C0 = $C0 then
-                      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
-                    else
-                      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
-                    NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                  end;
-                128 :
-                  begin
-                    SpeedStep := $01;
-                    if IsForward then
-                      SpeedStep := SpeedStep or $80;
-                    NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
-                    NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-                  end;
-              end
-            end;
-          TRACTION_OP_FUNCTION :
-            begin
-              FunctionAddress := (DWord( CANBuffer^.DataBytes[3]) shl 16) or (DWord( CANBuffer^.DataBytes[4]) shl 8) or DWord( CANBuffer^.DataBytes[5]);
-              FunctionValue := (DWord( CANBuffer^.DataBytes[6]) shl 8) or DWord( CANBuffer^.DataBytes[7]);
-              UpdateFunctionsAndSendDCCMessage(AddressHi, AddressLo, Byte( FunctionAddress), Byte( FunctionValue), DCCPacket, ProxyData);
-            end;
-        end;
-      end;
-    TRACTION_DCC :
-      begin  // DCC Train Protocol
-        case CANBuffer^.DataBytes[2] and $0F of
-          TRACTION_OP_PROXY_MGMT :
-            begin
-              case CANBuffer^.DataBytes[3] of
-                DCC_ALLOCATE_ADDRESS :
-                  begin
-                    ProxyData^.State := ProxyData^.State or PS_DCC_ADDRESS_ALLOCATED;
-                    Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
-                    NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_INUSE_INDEX, False);       // Changed State so notify the system
-                    ProxyData^.SpeedSteps := CANBuffer^.DataBytes[4];                         // TO DO: NEED TO WRITE TO CONFIGURATION
-                    ProxyData^.Address := Word ((CANBuffer^.DataBytes[5] shl 8)) or CANBuffer^.DataBytes[6];  // This is in NMRA DCC format for short/long address
-                    if CommandStationRamData.EnableAutoAllocateProxy = 0 then
-                      Inc(CommandStationRamData.AllocateProxy);                               // Set the flag to allocate a new proxy since we used the last one
-                  end;
-                DCC_DEALLOCATE_ADDRESS :
-                  begin
-                    ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
-                    Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
-                    NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_IDLE_INDEX, False);       // Changed State so notify the system
-                    NMRAnetNode_MarkForRelease(Node);
-                  end;
-                end;
-            end;
-        end;
-      end;
-  end
-end;
-
-// *****************************************************************************
-//
-// *****************************************************************************
 function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
 begin
   Result := False;
@@ -1027,7 +665,7 @@ var
 begin
   // We are in a CAN Lock block already
   Result := False;
-  ProxyData := ExtractTrainProxyRamData(Node);
+  ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
 
   // Handle the oddball DCC Address Event that can come and go
   if Node^.MsgFlagsUserDefined and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
@@ -1040,7 +678,7 @@ begin
     DataBytesPtr^[5] := ProxyData^.Address and $00FF;
     DataBytesPtr^[6] := $00;
     DataBytesPtr^[7] := $01;
-    if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False) then
+    if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False, $00) then
     begin
       Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
       Result := True;

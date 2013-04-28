@@ -47,6 +47,7 @@ const
   BMC_SIMPLE_NODE_INFO_REQEUST             = $05;                               // [IN] Buffer Message Code is ACDI Request                [BaseBuffer]
   BMC_DATAGRAM                             = $07;
   BMC_DATAGRAM_MEMORY_CONFIG               = $08;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
+  BMC_TRACTION                             = $09;                               //
   {$IFDEF BOOTLOADER}
   BMC_DATAGRAM_BOOTLOADER                  = $10;                               // [IN/OUT] Buffer Message Code is a Datagram              [DatagramBuffer]
   {$ENDIF}
@@ -79,7 +80,7 @@ type
   TDataBuffer = record                                                          // Common Buffer layout that allow overlaying of bytes with TDatagramBuffer,  etc
     State: Byte;                                                                // State of Buffer, see CBS_xxx flags
     Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
-    Next: ^TBaseBuffer;                                                         // Pointer to the next Message Buffer
+    Next: ^TDataBuffer;                                                         // Pointer to the next Message Buffer
     mCode: Byte;                                                                // Buffer Message Code for what the message is
     StateMachine: Byte;                                                         // Local StateMachine Index for use
     Tag: TBufferTag;                                                            // General Purpose useage depending on the message type
@@ -278,7 +279,8 @@ const
   MTI_SIMPLE_PROTOCOL_MASK           = $00010000;
   MTI_EVENT_PRESENT_MASK             = $00002000;
   
-  MTI_TRACTION_PROTOCOL              = $095E8000;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
+  MTI_TRACTION_PROTOCOL              = $095EA000;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
+  MTI_TRACTION_REPLY                 = $095E8000;                                // Databytes = Reply data/information
   MTI_INITIALIZATION_COMPLETE        = $09100000;                                // Databytes = Full Node ID
   MTI_VERIFY_NODE_ID_NUMBER_DEST     = $09488000;                                // Databytes = Destination Alias
   MTI_VERIFY_NODE_ID_NUMBER          = $09490000;                                //
@@ -403,6 +405,7 @@ type
     BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of Messages Replies to service
     DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service
     ConfigMemBuffers: PConfigMemBuffer;                                         // Head of a possible linked list of Configuration Memory Accesses to service
+    DataBuffers: PDataBuffer;                                                   // Head of a possible linked list of Message Replies that need the CAN Bytes to service
     ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory, user assigned in the NMRAnetAppCallbacks file
     ParentAlias,                                                                // Definition depends on what kind of node.  If a Throttle then Parent should never be set, If a Train then the will be the Owner Throttle
     ChildAlias,                                                                 // Definition depends on what kind of node.  If a Throttle then Child should the Train it is controlling, if a Train then should not be set
@@ -471,8 +474,7 @@ const
   STATE_MEM_CONFIG_READWRITE_READ            = $01;
   STATE_MEM_CONFIG_READWRITE_WRITE           = $02;
   STATE_MEM_CONFIG_READWRITE_WAIT            = $03;
-
-
+  
 var
   MaxTime_StateMachine: Word;
   MaxTime_RX: Word;

@@ -57,7 +57,6 @@ type
   function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean; external;
   function AppCallback_EventsIdentify: Boolean; external;
   function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean; external;
-  procedure AppCallback_TractionControl(Node: PNMRAnetNode; CANBuffer: PCANBuffer); external;
 
 
 implementation
@@ -204,11 +203,12 @@ end;
 // *****************************************************************************
 procedure ReceivedOnFilter1(CANBuffer: PCANBuffer);                             // NMRAnet Layer Message
 var
-  DoDefault, VNodeEvent, NodeEvent, BaseBufferAllocFailed: Boolean;
+  DoDefault, VNodeEvent, NodeEvent, BufferAllocFailed: Boolean;
   Node: PNMRAnetNode;
   NodeID: TNodeID;
   BaseBuffer: PBaseBuffer;
   DatagramBuffer: PDatagramBuffer;
+  DataBuffer: PDataBuffer;
   SourceAlias, ErrorCode: Word;
   i, j, VNodeEventIndex, NodeEventIndex: Integer;
   Offset: Byte;
@@ -238,7 +238,7 @@ begin
                                                          begin
                                                            if NMRAnetNode_TestStateFlag(Node, NS_PERMITTED) then
                                                            begin
-                                                             BaseBufferAllocFailed := False;                // Optomistic
+                                                             BufferAllocFailed := False;                // Optomistic
                                                              case CANBuffer^.ID and MTI_MASK of             // If we get here then the message is for our Node or VNode
                                                                MTI_VERIFY_NODE_ID_NUMBER_DEST  :   begin
                                                                                                      NMRAnetNode_SetMsgFlag(Node, MF_VERIFY_NODE_ID) // All messages addressed to node get replies even if the payload is wrong!
@@ -256,7 +256,7 @@ begin
                                                                                                          BaseBuffer^.mCode := BMC_PROTOCOL_SUPPORT_QUERY;
                                                                                                          BaseBuffer^.Alias := SourceAlias
                                                                                                        end else
-                                                                                                         BaseBufferAllocFailed := True
+                                                                                                         BufferAllocFailed := True
                                                                                                      end
                                                                                                    end;
                                                              {$IFNDEF BOOTLOADER}
@@ -270,19 +270,6 @@ begin
                                                              {$ENDIF}
                                                                MTI_DATAGRAM_OK_REPLY             : begin
                                                                                                      {$IFDEF TRACE_DATAGRAM_RESPOSES} UART1_Write_Text('DG_RESPONSE_OK'+LF);{$ENDIF}
-                                                                                                 {
-                                                                                                     IntToStr(SourceAlias, s1);
-                                                                                                     UART1_Write_Text('Source Alias: ' + s1 +LF);
-                                                                                                     IntToHex(Node^.DatagramBuffers, s1);
-                                                                                                     UART1_Write_Text('DG Buffer = $' + s1+LF);
-                                                                                                     if Node^.DatagramBuffers <> nil then
-                                                                                                     begin
-                                                                                                       IntToHex(Node^.DatagramBuffers^.State, s1);
-                                                                                                       UART1_Write_Text('DG State = $' + s1+LF);
-                                                                                                       IntToHex(Node^.DatagramBuffers^.Alias, s1);
-                                                                                                       UART1_Write_Text('DG Alias = $' + s1+LF);
-                                                                                                     end;   }
-                                                                                                     
                                                                                                      if NMRAnetUtilities_FindInDatagramByState(Node, DatagramBuffer, CBS_OUTGOING or CBS_TRANSFER_COMPLETE, False) then
                                                                                                      begin
                                                                                                        NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
@@ -315,10 +302,18 @@ begin
                                                                                                        BaseBuffer^.mCode := BMC_SIMPLE_NODE_INFO_REQEUST;
                                                                                                        BaseBuffer^.Alias := SourceAlias
                                                                                                      end else
-                                                                                                       BaseBufferAllocFailed := True
+                                                                                                       BufferAllocFailed := True
                                                                                                    end;
                                                                MTI_TRACTION_PROTOCOL             : begin
-                                                                                                      AppCallback_TractionControl(Node, CANBuffer);
+                                                                                                      if NMRAnetBufferPools_AllocateDataBuffer(DataBuffer) then
+                                                                                                      begin
+                                                                                                        NMRAnetUtilities_DataBufferLink(Node, DataBuffer);
+                                                                                                        DataBuffer^.mCode := BMC_TRACTION;
+                                                                                                        DataBuffer^.Alias := SourceAlias;
+                                                                                                        DataBuffer^.ByteCount := CANBuffer^.DataCount;
+                                                                                                        DataBuffer^.Bytes := CANBuffer^.DataBytes
+                                                                                                      end else
+                                                                                                       BufferAllocFailed := True
                                                                                                    end
                                                              {$ENDIF}
                                                              else begin
@@ -327,21 +322,21 @@ begin
                                                                MTI_Code := (CANBuffer^.ID shr 12) and $0FFF;
                                                                DataBytes[2] := (MTI_Code shr 8) and $00FF;
                                                                DataBytes[3] := MTI_Code and $00FF;
-                                                               NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_AddressedErrorBuffer, MTI_OPTIONAL_INTERACTION_REJECTED, SourceAlias, 4, @DataBytes);
+                                                               NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_AddressedErrorBuffer, MTI_OPTIONAL_INTERACTION_REJECTED, SourceAlias, 4, @DataBytes, $00);
                                                                CAN_Engine.TX_AddressedErrorBuffer.State := CAN_Engine.TX_AddressedErrorBuffer.State or BS_ALLOCATED;
                                                                StartCANHighPriorityMessageEngine;
                                                                end;
                                                              end; {case}
 
                                                              // Buffer Allocation failed ask to have it resent
-                                                             if BaseBufferAllocFailed then
+                                                             if BufferAllocFailed then
                                                              begin
                                                                DataBytes[0] := Hi( TERMINATE_DUE_TO_ERROR_TEMPORARY);
                                                                DataBytes[1] := Lo( TERMINATE_DUE_TO_ERROR_TEMPORARY);
                                                                MTI_Code := (CANBuffer^.ID shr 12) and $0FFF;
                                                                DataBytes[2] := (MTI_Code shr 8) and $00FF;
                                                                DataBytes[3] := MTI_Code and $00FF;
-                                                               NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_AddressedErrorBuffer, MTI_OPTIONAL_INTERACTION_REJECTED, SourceAlias, 4, @DataBytes);
+                                                               NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_AddressedErrorBuffer, MTI_OPTIONAL_INTERACTION_REJECTED, SourceAlias, 4, @DataBytes, $00);
                                                                CAN_Engine.TX_AddressedErrorBuffer.State := CAN_Engine.TX_AddressedErrorBuffer.State or BS_ALLOCATED;
                                                                StartCANHighPriorityMessageEngine;
                                                              end
@@ -450,7 +445,7 @@ begin
                                                                 NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
                                                                 NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);
                                                                 DataBytesPtr := PCAN_DataBytes( @DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED);
-                                                                NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr);
+                                                                NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr, $00);
                                                                 CAN_Engine.TX_DatagramRejected.State := CAN_Engine.TX_DatagramRejected.State or BS_ALLOCATED;
                                                                 StartCANHighPriorityMessageEngine
                                                               end;
@@ -462,7 +457,7 @@ begin
                                                             UART1_Write_Text('Reject Overflow');
                                                           {$ENDIF}
                                                           DataBytesPtr := PCAN_DataBytes( @DATAGRAM_RESULT_REJECTED_BUFFER_FULL);
-                                                          NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr);
+                                                          NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr, $00);
                                                           CAN_Engine.TX_DatagramRejected.State := CAN_Engine.TX_DatagramRejected.State or BS_ALLOCATED;
                                                           StartCANHighPriorityMessageEngine;
                                                         end
@@ -527,7 +522,7 @@ begin
                                                               NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);
                                                               NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);
                                                               DataBytesPtr := PCAN_DataBytes( @DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED);
-                                                              NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr);
+                                                              NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr, $00);
                                                               CAN_Engine.TX_DatagramRejected.State := CAN_Engine.TX_DatagramRejected.State or BS_ALLOCATED;
                                                               StartCANHighPriorityMessageEngine;
                                                             end;
@@ -539,7 +534,7 @@ begin
                                                             UART1_Write_Text('Reject Overflow');
                                                           {$ENDIF}
                                                           DataBytesPtr := PCAN_DataBytes( @DATAGRAM_RESULT_REJECTED_BUFFER_FULL);
-                                                          NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr);
+                                                          NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, @CAN_Engine.TX_DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceAlias, 2, DataBytesPtr, $00);
                                                           CAN_Engine.TX_DatagramRejected.State := CAN_Engine.TX_DatagramRejected.State or BS_ALLOCATED;
                                                           StartCANHighPriorityMessageEngine;
                                                         end

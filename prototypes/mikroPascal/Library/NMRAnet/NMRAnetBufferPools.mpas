@@ -36,6 +36,12 @@ type
     Count: Byte;                                                                // Number of Buffers currently used
   end;
   
+  TDataBufferPool = record
+    Pool: array[0..MAX_DATA_BUFFER_POOL-1] of TDataBuffer;                      // Pool Array
+    MaxCount: Byte;                                                             // Max Count of Pool Buffers used
+    Count: Byte;                                                                // Number of Buffers currently used
+  end;
+  
   TDatagramBufferPool = record
     Pool: array[0..MAX_DATAGRAM_BUFFER_POOL-1] of TDatagramBuffer;              // Pool Array
     MaxCount: Byte;                                                             // Max Count of Pool Buffers used
@@ -52,6 +58,7 @@ procedure NMRAnetBufferPools_Initialize;
 procedure NMRAnetBufferPools_InitializeBaseBuffer(Buffer: PBaseBuffer);
 procedure NMRAnetBufferPools_InitializeDatagramBuffer(Buffer: PDatagramBuffer);
 procedure NMRAnetBufferPools_InitializeConfigMemBuffer(Buffer: PConfigMemBuffer);
+procedure NMRAnetBufferPools_InitializeDataBuffer(Buffer: PDataBuffer);
 
 function NMRAnetBufferPools_AllocateBaseBuffer(var Buffer: PBaseBuffer): Boolean;
 procedure NMRAnetBufferPools_ReleaseBaseBuffer(Buffer: PBaseBuffer);
@@ -61,6 +68,9 @@ procedure NMRAnetBufferPools_ReleaseDatagramBuffer(Buffer: PDatagramBuffer);
 
 function NMRAnetBufferPools_AllocateConfigMemBuffer(var Buffer: PConfigMemBuffer): Boolean;
 procedure NMRAnetBufferPools_ReleaseConfigMemBuffer(Buffer: PConfigMemBuffer);
+
+function NMRAnetBufferPools_AllocateDataBuffer(var Buffer: PDataBuffer): Boolean;
+procedure NMRAnetBufferPools_ReleaseDataBuffer(Buffer: PDataBuffer);
 
 procedure NMRAnetBufferPools_100ms_TimeTick;
 
@@ -72,6 +82,7 @@ var
   BaseBufferPool: TBaseBufferPool;
   DatagramPool: TDatagramBufferPool;
   ConfigMemPool: TConfigMemBufferPool;
+  DataPool: TDataBufferPool;
 
 implementation
 
@@ -204,6 +215,21 @@ begin
   Buffer^.ErrorString := '';
 end;
 
+procedure NMRAnetBufferPools_InitializeDataBuffer(Buffer: PDataBuffer);
+var
+  i: Integer;
+begin
+  Buffer^.State := 0;
+  Buffer^.Alias := 0;
+  Buffer^.Next := nil;
+  Buffer^.mCode := 0;   
+  Buffer^.StateMachine := 0;
+  Buffer^.Tag := 0;
+  Buffer^.Bytecount := 0;
+  for i := 0 to CAN_DATA_LEN - 1 do
+    Buffer^.Bytes[i] := 0;
+end;
+
 // *****************************************************************************
 //  procedure NMRAnetBufferPools_Initialize;
 //
@@ -231,6 +257,11 @@ begin
     NMRAnetBufferPools_InitializeConfigMemBuffer(@ConfigMemPool.Pool[i]);
   ConfigMemPool.Count := 0;
   ConfigMemPool.MaxCount := 0;
+  
+  for i := 0 to MAX_DATA_BUFFER_POOL - 1 do
+    NMRAnetBufferPools_InitializeDataBuffer(@DataPool.Pool[i]);
+  DataPool.Count := 0;
+  DataPool.MaxCount := 0;
 end;
 
 // *****************************************************************************
@@ -383,11 +414,63 @@ end;
 // *****************************************************************************
 procedure NMRAnetBufferPools_ReleaseConfigMemBuffer(Buffer: PConfigMemBuffer);
 begin
-    if Buffer <> nil then
+  if Buffer <> nil then
   begin
     {$IFDEF TRACK_BUFFER_ALLOCATIONS}UART1_Write_Text('CMB_Free: '); WordToHex(Buffer, s1); UART1_Write_Text('$'+s1+LF);{$ENDIF}
     Buffer^.State := 0;
     Dec(ConfigMemPool.Count);
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetBufferPools_AllocateDataBuffer;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetBufferPools_AllocateDataBuffer(var Buffer: PDataBuffer): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to MAX_DATA_BUFFER_POOL - 1 do
+  begin
+    if DataPool.Pool[i].State = 0 then
+    begin
+      Buffer := @DataPool.Pool[i];
+      {$IFDEF TRACK_BUFFER_ALLOCATIONS} UART1_Write_Text('DB_Alloc: '); WordToHex(Buffer, s1); UART1_Write_Text('$'+s1+LF);{$ENDIF}
+      NMRAnetBufferPools_InitializeDataBuffer(Buffer);
+      Buffer^.State := CBS_ALLOCATED;
+      Inc(DataPool.Count);
+      if DataPool.Count >= DataPool.MaxCount then
+        DataPool.MaxCount := DataPool.Count;
+      Result := True;
+      {$IFDEF TRACK_BUFFER_MAX_COUNT}UART1_Write_Text('DB MaxCount: '); ByteToStr(DataPool.MaxCount, s1); UART1_Write_Text(s1+LF);{$ENDIF}
+      Break
+    end
+  end;
+  {$IFDEF TRACK_BUFFER_OVERFLOWS} if not Result then begin UART1_Write_Text('ConfigMemAllocateFail: ' + LF);{NMRAnetBufferPools_Print;} end {$ENDIF}
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetBufferPools_ReleaseDataBuffer;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetBufferPools_ReleaseDataBuffer(Buffer: PDataBuffer);
+begin
+  if Buffer <> nil then
+  begin
+    {$IFDEF TRACK_BUFFER_ALLOCATIONS}UART1_Write_Text('DB_Free: '); WordToHex(Buffer, s1); UART1_Write_Text('$'+s1+LF);{$ENDIF}
+    Buffer^.State := 0;
+    Dec(DataPool.Count);
   end;
 end;
 

@@ -26,8 +26,6 @@ program dsPIC33EP_NMRAnetCommandStation;
 //    - Can't detect no loco on the track in Byte by Bit mode because a lack of an ACK is interperted as it "must be a 0"
 //    - Operations Service Mode needs implementing
 //
-//* Open Questions
-//    - Think about do I Free the vNode completely when a throttle releases it.
 //
 // * Improvements
 //    - Optimize how Service Mode looks for values (check 0, 255, 64, 192 first)
@@ -37,6 +35,7 @@ program dsPIC33EP_NMRAnetCommandStation;
 //    - Auto Allocate vTrainNodes         4/1/13: Added configuration option to turn this on off.
 //    - Reworked the Overcurrent to use ADC Interrupts.  Much faster and less overhead needed (12us every 5.5ms with 16x oversampling)  4/13/2013
 //    - Reworked statemachine to allow Binary Searching of Nodes for fast access of vNodes 4/13/2013
+//    - Reworked Free Node to release vNodes when Train is released; 4/20/13
 //
 // ******************************************************************************
 
@@ -53,6 +52,7 @@ uses
   HelperFunctions,
   NodeIDs,
   NMRAnetServiceMode,
+  TractionProtocol,
   ServiceModeDefines;
 
 {$I Options.inc}
@@ -354,7 +354,7 @@ begin
     begin 
       LockCANInterrupt;
       // There may be dangling nodes that have been allocated then released
-      if FindFirstNonDCCAllocatedNode = nil then
+      if NMRAnetTractionProtocol_FindFirstNonDCCAllocatedNode = nil then
       begin
         NMRAnetNode_Allocate;
       end;
@@ -390,7 +390,7 @@ begin
               TempNode := NMRAnetNode_FindFirstVirtualNode;
               if TempNode <> nil then
               begin
-                ProxyData := ExtractTrainProxyRamData( TempNode);
+                ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData( TempNode);
                 ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
               end;
               UnLockCANInterrupt

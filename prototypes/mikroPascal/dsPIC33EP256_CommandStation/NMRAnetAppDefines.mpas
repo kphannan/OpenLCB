@@ -43,6 +43,7 @@ const
   MAX_BASE_BUFFER_POOL             = 2*MAX_NODE_COUNT;                          // Number of Base Buffers to allocate for Messages , JMRI Interleaves all the nodes so we need a Buffer for every Node <;^(
   MAX_DATAGRAM_BUFFER_POOL         = 10;                                        // Number of Datagram Buffers to allocate for Messages
   MAX_CONFIG_MEM_BUFFER_POOL       = 2;                                         // Number of Configuration Memory Access buffers to allocate
+  MAX_DATA_BUFFER_POOL             = 10;                                        // Number of Data Buffers to allocate for Messages that need to transfer the 8 CAN bytes
 
 // **************************************************************************************************************************************************************
 // Memory Configuration Protocol Supported Options

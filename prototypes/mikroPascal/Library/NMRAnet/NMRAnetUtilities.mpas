@@ -27,7 +27,7 @@ uses
   
 procedure NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(NodeBuffer: PNMRAnetNode; CANBuffer: PCANBuffer);
 procedure NMRAnetUtilities_CreateCANControlFrameCANBuffer(NodeBuffer: PNMRAnetNode; CANBuffer: PCANBuffer; MTI: DWord);
-procedure NMRAnetUtilities_CreateNMRABusMessageCANBuffer(NodeBuffer: PNMRAnetNode; CANBuffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; ByteCount: Byte; DataBytes: PCAN_DataBytes);
+procedure NMRAnetUtilities_CreateNMRABusMessageCANBuffer(NodeBuffer: PNMRAnetNode; CANBuffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; ByteCount: Byte; DataBytes: PCAN_DataBytes; UpperNibbleFlagMask: Word);
 procedure NMRAnetUtilities_CreateNMRABusMessageCANBufferWithDestInMTI(NodeBuffer: PNMRAnetNode; CANBuffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; ByteCount: Byte; DataBytes: PCAN_DataBytes);
 function NMRAnetUtilities_ExtractDestinationAlias(CANBuffer: PCANBuffer): Word;
 function NMRAnetUtilities_ExtractDestinationAliasFlags(CANBuffer: PCANBuffer): Word;
@@ -47,7 +47,7 @@ function NMRAnetUtilities_IsAddressedMessageToNode(NodeBuffer: PNMRAnetNode; CAN
 function NMRAnetUtilities_IsAddressedMessage(CANBuffer: PCANBuffer): Boolean;
 function NMRAnetUtilities_IsDatagramMsg(CANBuffer: PCANBuffer): Boolean;
 procedure NMRAnetUtilities_LoadCANData(var DataBytes: TCAN_DataBytes; Byte0, Byte1, Byte2, Byte3, Byte4, Byte5, Byte6, Byte7: Byte);
-procedure NMRAnetUtilities_LoadDestinationAlias(DestinationAlias: Word; DataBytes: PCAN_DataBytes);
+procedure NMRAnetUtilities_LoadDestinationAlias(DestinationAlias: Word; DataBytes: PCAN_DataBytes; UpperNibbleFlagMask: Word);
 procedure NMRAnetUtilities_ZeroCANData(var DataBytes: TCAN_DataBytes);
 function NMRAnetUtilities_PackBytesLo(CANBuffer: PCANBuffer): DWord;
 function NMRAnetUtilities_PackBytesHi(CANBuffer: PCANBuffer): DWord;
@@ -71,6 +71,10 @@ function NMRAnetUtilities_NextDatagramBuffer(Node: PNMRAnetNode): PDatagramBuffe
 procedure NMRAnetUtilities_ConfigMemBufferLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
 procedure NMRAnetUtilities_ConfigMemBufferUnLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
 function NMRAnetUtilities_NextConfigMemBuffer(Node: PNMRAnetNode): PConfigMemBuffer;
+
+procedure NMRAnetUtilities_DataBufferLink(Node: PNMRAnetNode; Buffer: PDataBuffer);
+procedure NMRAnetUtilities_DataBufferUnLink(Node: PNMRAnetNode; Buffer: PDataBuffer);
+function NMRAnetUtilities_NextDataBuffer(Node: PNMRAnetNode): PDataBuffer;
 
 function NMRAnetUtilities_FindInProcessDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
 function NMRAnetUtilities_FindCompletedDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
@@ -128,7 +132,7 @@ end;
 //     Description:
 //
 // *****************************************************************************
-procedure NMRAnetUtilities_CreateNMRABusMessageCANBuffer(NodeBuffer: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; ByteCount: Byte; DataBytes: PCAN_DataBytes);
+procedure NMRAnetUtilities_CreateNMRABusMessageCANBuffer(NodeBuffer: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; ByteCount: Byte; DataBytes: PCAN_DataBytes; UpperNibbleFlagMask: Word);
 var
   Offset: Word;
   i: Integer;
@@ -138,7 +142,7 @@ begin
   begin
     if DestinationAlias <> 0 then
     begin
-      NMRAnetUtilities_LoadDestinationAlias(DestinationAlias, @Buffer^.DataBytes);
+      NMRAnetUtilities_LoadDestinationAlias(DestinationAlias, @Buffer^.DataBytes, UpperNibbleFlagMask);
       ByteCount := ByteCount + 2;
       Offset := 2;
     end; 
@@ -493,9 +497,9 @@ end;
 //     Description:
 //
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadDestinationAlias(DestinationAlias: Word; DataBytes: PCAN_DataBytes);
+procedure NMRAnetUtilities_LoadDestinationAlias(DestinationAlias: Word; DataBytes: PCAN_DataBytes; UpperNibbleFlagMask: Word);
 begin
-  DataBytes^[0] := (DestinationAlias shr 8) and $000F;
+  DataBytes^[0] := (DestinationAlias shr 8) and $000F or UpperNibbleFlagMask;
   DataBytes^[1] := DestinationAlias and $00FF;
 end;
 
@@ -914,6 +918,73 @@ function NMRAnetUtilities_NextConfigMemBuffer(Node: PNMRAnetNode): PConfigMemBuf
 begin
   Result := Node^.ConfigMemBuffers;
 end;
+
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_DataBufferLink
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetUtilities_DataBufferLink(Node: PNMRAnetNode; Buffer: PDataBuffer);
+var
+  Temp: PDataBuffer;
+begin
+  if Node^.DataBuffers = nil then
+    Node^.DataBuffers := Buffer
+  else begin                                  // Tack it to the end of the chain
+    Temp := Node^.DataBuffers;
+    while Temp^.Next <> nil do
+      Temp := Temp^.Next;
+    Temp^.Next := Buffer
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_DataBufferUnLink
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetUtilities_DataBufferUnLink(Node: PNMRAnetNode; Buffer: PDataBuffer);
+var
+  Temp, Parent: PDataBuffer;
+begin
+  if Node^.DataBuffers <> nil then
+  begin
+    if Node^.DataBuffers = Buffer then           // Root Buffer match case is easy
+      Node^.DataBuffers := Node^.DataBuffers^.Next
+    else begin
+      Parent := Node^.DataBuffers;                // Already know it is not the root buffer so setup for the first level down
+      Temp := Node^.DataBuffers^.Next;
+      while (Temp <> nil) and (Temp <> Buffer) do
+      begin
+        Parent := Temp;
+        Temp := Temp^.Next
+      end;
+      if Temp <> nil then
+        Parent^.Next := Temp^.Next
+    end
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_NextDataBuffer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_NextDataBuffer(Node: PNMRAnetNode): PDataBuffer;
+begin
+  Result := Node^.DataBuffers
+end;
+
 
 // *****************************************************************************
 //  procedure NMRAnetUtilities_FindInDatagramByState

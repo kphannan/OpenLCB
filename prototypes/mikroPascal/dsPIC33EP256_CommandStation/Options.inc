@@ -19,9 +19,9 @@
 {$DEFINE SUPPORT_VIRTUAL_NODES}
 
 {$DEFINE dsPIC33}
+{$DEFINE TRACTION_PROTOCOL}
 
 {.$DEFINE DISABLE_DATAGRAM_ABANDON_TIMEOUT}
-
 
 
 {$DEFINE ENABLE_TRAPS}                 // Enables the Trap Interrupts on the MCU, uses the dsPICxx_Traps.mpas file
