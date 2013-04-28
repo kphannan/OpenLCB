@@ -161,6 +161,7 @@ type
     LabelTrainNodeCountValue: TLabel;
     LabelTrainCountName: TLabel;
     MainMenu: TMainMenu;
+    MainMenu1: TMainMenu;
     MenuItemConfigEditorsSep1: TMenuItem;
     MenuItemConfigEditorsShowAll: TMenuItem;
     MenuItemConfigEditorsHide: TMenuItem;

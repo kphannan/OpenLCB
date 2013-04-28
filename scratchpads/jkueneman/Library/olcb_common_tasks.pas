@@ -273,11 +273,14 @@ type
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionAllocateDccProxyTask }
+  { TTractionAttachDccProxyTask }
 
-  TTractionAllocateDccProxyTask = class(TOlcbTaskBase)
+  TTractionAttachDccProxyTask = class(TOlcbTaskBase)
   private
     FAddress: Word;
+    FReplyAddress: Word;
+    FReplyCode: Integer;
+    FReplySpeedSteps: Byte;
     FIsShort: Boolean;
     FSpeedStep: Byte;
   protected
@@ -287,13 +290,31 @@ type
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte); reintroduce;
     procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
+    property ReplySpeedSteps: Byte read FReplySpeedSteps;
+    property ReplyAddress: Word read FReplyAddress;
   end;
 
-  { TTractionDeAllocateDccProxyTask }
+  { TTractionDetachDccProxyTask }
 
-  TTractionDeAllocateDccProxyTask = class(TOlcbTaskBase)
+  TTractionDetachDccProxyTask = class(TOlcbTaskBase)
+  private
+    FAddress: Word;
+    FIsShort: Boolean;
+    FReplyAddress: Word;
+    FReplyCode: Integer;
+    FReplySpeedSteps: Byte;
+  protected
+    property Address: Word read FAddress write FAddress;
+    property IsShort: Boolean read FIsShort write FIsShort;
   public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
     procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
+    property ReplySpeedSteps: Byte read FReplySpeedSteps;
+    property ReplyAddress: Word read FReplyAddress;
   end;
 
   { TTractionQueryDccAddressProxyTask }
@@ -336,6 +357,39 @@ type
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: DWord; AValue: Word); reintroduce;
     procedure Process(MessageInfo: TOlcbMessage); override;
+  end;
+
+  { TTractionQueryFunctionTask }
+
+  TTractionQueryFunctionTask = class(TOlcbTaskBase)
+  private
+    FAddress: DWord;
+    FValue: Integer;
+  protected
+    property Address: DWord read FAddress write FAddress;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: DWord); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property Value: Integer read FValue write FValue;
+  end;
+
+  { TTractionQuerySpeedTask }
+
+  TTractionQuerySpeedTask = class(TOlcbTaskBase)
+  private
+    FActualSpeed: Word;
+    FCommandedSpeed: Word;
+    FSetSpeed: Word;
+    FStatus: Byte;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); reintroduce;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property SetSpeed: Word read FSetSpeed write FSetSpeed;
+    property CommandedSpeed: Word read FCommandedSpeed write FCommandedSpeed;
+    property ActualSpeed: Word read FActualSpeed write FActualSpeed;
+    property Staus: Byte read FStatus write FStatus;
   end;
 
 implementation
@@ -548,23 +602,38 @@ begin
   end;
 end;
 
-{ TTractionAllocateDccProxyTask }
+{ TTractionAttachDccProxyTask }
 
-constructor TTractionAllocateDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
+constructor TTractionAttachDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FSpeedStep := ASpeedStep;
   FAddress := AnAddress;
   FIsShort := IsShortAddress;
+  FReplyCode := -1;
+  FReplyAddress := 0;
+  FReplySpeedSteps := 0;
 end;
 
-procedure TTractionAllocateDccProxyTask.Process(MessageInfo: TOlcbMessage);
+procedure TTractionAttachDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendTractionAllocateDccProxyMessage(Address, IsShort, SpeedStep);
-         iState := STATE_DONE;
+         SendTractionAttachDccProxyMessage(Address, IsShort, SpeedStep);
+         Sending := False;
+         iState := 1;
+       end;
+    1: begin
+         if IsTractionAttachDCCAddressReply(MessageInfo) then
+         begin
+           if TOpenLCBMessageHelper( MessageInfo).DataCount = 8 then
+             FReplyCode := TOpenLCBMessageHelper( MessageInfo).Data[7];
+           FReplySpeedSteps := TOpenLCBMessageHelper( MessageInfo).Data[6];
+           FReplyAddress := (TOpenLCBMessageHelper( MessageInfo).Data[4] shl 8) or TOpenLCBMessageHelper( MessageInfo).Data[5];
+           Sending := True;
+           iState := STATE_DONE;
+         end;
        end;
     STATE_DONE: begin
          FDone := True;
@@ -572,15 +641,38 @@ begin
   end;
 end;
 
-{ TTractionDeAllocateDccProxyTask }
+{ TTractionDetachDccProxyTask }
 
-procedure TTractionDeAllocateDccProxyTask.Process(MessageInfo: TOlcbMessage);
+constructor TTractionDetachDccProxyTask.Create(ASourceAlias,
+  ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word;
+  IsShortAddress: Boolean);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FAddress := AnAddress;
+  FIsShort := IsShortAddress;
+  FReplyCode := -1;
+  FReplyAddress := 0;
+  FReplySpeedSteps := 0;
+end;
+
+procedure TTractionDetachDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendTractionDeAllocateDccAddressProxyMessage;
-         iState := STATE_DONE;
+         SendTractionDetachDccAddressProxyMessage(Address, IsShort);
+         Sending := False;
+         iState := 1;
+       end;
+    1: begin
+         if IsTractionDetachDCCAddressReply(MessageInfo) then
+         begin
+           if TOpenLCBMessageHelper( MessageInfo).DataCount = 7 then
+             FReplyCode := TOpenLCBMessageHelper( MessageInfo).Data[6];
+           FReplyAddress := (TOpenLCBMessageHelper( MessageInfo).Data[4] shl 8) or TOpenLCBMessageHelper( MessageInfo).Data[5];
+           Sending := True;
+           iState := STATE_DONE;
+         end;
        end;
     STATE_DONE: begin
          FDone := True;
@@ -658,6 +750,82 @@ begin
            SendTractionSpeedMessage(Speed)
          end;
          iState := STATE_DONE;
+       end;
+    STATE_DONE: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionQuerySpeedTask }
+
+constructor TTractionQuerySpeedTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FActualSpeed := 0;
+  FCommandedSpeed := 0;
+  FSetSpeed := 0;
+  FStatus := 0;
+end;
+
+procedure TTractionQuerySpeedTask.Process(MessageInfo: TOlcbMessage);
+begin
+  inherited Process(MessageInfo);
+  case iState of
+    0: begin
+         SendTractionQuerySpeeds;
+         Sending := False;
+         iState := 1;
+       end;
+    1: begin
+         if IsTractionSpeedsQueryFirstFrameReply(MessageInfo) then
+         begin
+           FSetSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(3, 4);
+           FCommandedSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(6, 7);
+           FStatus := TOpenLCBMessageHelper( MessageInfo).Data[5];
+           iState := 2;
+         end;
+       end;
+    2: begin
+         if IsTractionSpeedsQuerySecondFrameReply(MessageInfo) then
+         begin
+           FActualSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 3);
+           Sending := True;
+           iState := STATE_DONE;
+         end;
+       end;
+    STATE_DONE: begin
+         FDone := True;
+       end;
+  end;
+end;
+
+{ TTractionQueryFunctionTask }
+
+constructor TTractionQueryFunctionTask.Create(ASourceAlias,
+  ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: DWord);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
+  FAddress := AnAddress;
+  FValue := -1;
+end;
+
+procedure TTractionQueryFunctionTask.Process(MessageInfo: TOlcbMessage);
+begin
+  inherited Process(MessageInfo);
+  case iState of
+    0: begin
+         SendTractionQueryFunction(Address);
+         Sending := False;
+         iState := 1;
+       end;
+    1: begin
+         if IsTractionFunctionQueryReply(MessageInfo) then
+         begin
+           FValue := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(6, 7);
+           Sending := True;
+           iState := STATE_DONE
+         end;
        end;
     STATE_DONE: begin
          FDone := True;
@@ -1355,4 +1523,4 @@ begin
 end;
 
 end.
-
+

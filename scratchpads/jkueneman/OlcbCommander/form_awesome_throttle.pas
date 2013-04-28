@@ -27,8 +27,8 @@ type
     gwttNone,
     gwttQueryAddress,
     gwttQueryIsIdle,
-    gwttAllocateAddress,
-    gwttDeallocateAddress
+    gwttAttachAddress,
+    gwttDeattachAddress
   );
 
   TThrottleWaitingAction = (
@@ -58,6 +58,8 @@ type
   { TFormAwesomeThrottle }
 
   TFormAwesomeThrottle = class(TForm)
+    ActionQuerySpeed: TAction;
+    ActionQueryFunctions: TAction;
     ActionFunction13: TAction;
     ActionFunction22: TAction;
     ActionFunction23: TAction;
@@ -98,6 +100,8 @@ type
     ActionToggleAllocationPanel: TAction;
     ActionListThrottle: TActionList;
     ButtonAllocateTrainByAddress: TButton;
+    ButtonQueryFunctions: TButton;
+    ButtonQuerySpeed: TButton;
     ButtonShowHideAllocatePanel: TButton;
     ButtonEditConfiguration: TButton;
     ButtonSearchForTrain: TButton;
@@ -122,6 +126,7 @@ type
     RadioGroupSpeedStep: TRadioGroup;
     RadioGroupSpeedScale: TRadioGroup;
     ScrollBoxFunctions: TScrollBox;
+    SpeedButton1: TSpeedButton;
     SpinEditAddress: TSpinEdit;
     TimerGeneralTimeout: TTimer;
     TimerToggleAnimation: TTimer;
@@ -162,8 +167,9 @@ type
     procedure ActionFunction7Execute(Sender: TObject);
     procedure ActionFunction8Execute(Sender: TObject);
     procedure ActionFunction9Execute(Sender: TObject);
+    procedure ActionQueryFunctionsExecute(Sender: TObject);
+    procedure ActionQuerySpeedExecute(Sender: TObject);
     procedure ActionToggleAllocationPanelExecute(Sender: TObject);
-    procedure ButtonAllocateTrainByAddressClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -198,11 +204,13 @@ type
     procedure RunTractionQueryIsIdle(WaitTime: Cardinal);
     procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
     procedure RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
+    procedure RunTractionQueryFunctions(AliasID: Word; Address: DWord);
+    procedure RunTractionQuerySpeed(AliasID: Word);
     procedure SetAllocated(AValue: Boolean);
     procedure SetAllocatedAlias(AValue: Word);
     procedure SetComPortThread(AValue: TComPortThread);
   protected
-    procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction);
+    procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
     procedure HandleGeneralTimerResults;
     function IsForward: Boolean;
@@ -537,9 +545,17 @@ begin
   RunTractionFunction(AllocatedAlias, 9, (Sender as TComponent).Tag)
 end;
 
-procedure TFormAwesomeThrottle.ButtonAllocateTrainByAddressClick(Sender: TObject);
+procedure TFormAwesomeThrottle.ActionQueryFunctionsExecute(Sender: TObject);
+var
+  i: Integer;
 begin
-  ;
+  for i := 0 to 28 do
+   RunTractionQueryFunctions(AllocatedAlias, i);
+end;
+
+procedure TFormAwesomeThrottle.ActionQuerySpeedExecute(Sender: TObject);
+begin
+  RunTractionQuerySpeed(AllocatedAlias);
 end;
 
 procedure TFormAwesomeThrottle.FormHide(Sender: TObject);
@@ -711,7 +727,7 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
 var
-  Task: TTractionAllocateDccProxyTask;
+  Task: TTractionAttachDccProxyTask;
   SpeedStep: Byte;
 begin
   if Assigned(ComPortThread) then
@@ -723,29 +739,29 @@ begin
     else
       SpeedStep := SPEEDSTEP_DEFAULT;
     end;
-    Task := TTractionAllocateDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
+    Task := TTractionAttachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
-    WaitTimeTask := gwttAllocateAddress;
+    WaitTimeTask := gwttAttachAddress;
   end;
 end;
 
 procedure TFormAwesomeThrottle.RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
 var
-  Task: TTractionDeAllocateDccProxyTask;
+  Task: TTractionDetachDccProxyTask;
 begin
   if Assigned(ComPortThread) then
   begin
-    Task := TTractionDeAllocateDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+    Task := TTractionDetachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
-    WaitTimeTask := gwttDeallocateAddress;
+    WaitTimeTask := gwttDeattachAddress;
   end;
 end;
 
@@ -811,6 +827,30 @@ begin
   end;
 end;
 
+procedure TFormAwesomeThrottle.RunTractionQueryFunctions(AliasID: Word; Address: DWord);
+var
+  Task: TTractionQueryFunctionTask;
+begin
+  if Assigned(ComPortThread) then
+  begin
+    Task := TTractionQueryFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+end;
+
+procedure TFormAwesomeThrottle.RunTractionQuerySpeed(AliasID: Word);
+var
+  Task: TTractionQuerySpeedTask;
+begin
+  if Assigned(ComPortThread) then
+  begin
+    Task := TTractionQuerySpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+end;
+
 procedure TFormAwesomeThrottle.SetAllocated(AValue: Boolean);
 begin
   if FAllocated=AValue then Exit;
@@ -842,17 +882,20 @@ begin
   FComPortThread:=AValue;
 end;
 
-procedure TFormAwesomeThrottle.CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction);
+procedure TFormAwesomeThrottle.CreateFunctionUIButton(ButtonLabel: string;
+  Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
 var
-  Button: TButton;
+  Button: TSpeedButton;
 begin
-  Button := TButton.Create(ScrollBoxFunctions);
+  Button := TSpeedButton.Create(ScrollBoxFunctions);
+  Button.AllowAllUp := True;
   Button.Top := MaxInt;
   Button.Align := alTop;
   Button.BorderSpacing.Left := Level * 4;
   Button.BorderSpacing.Top := 4;
   Button.BorderSpacing.Right := 4;
   Button.Height := 22;;
+  Button.GroupIndex := ButtonIndex + 1;
   Button.Action := ButtonAction;
   ButtonAction.Caption := ButtonLabel;
   Button.Parent := ScrollBoxFunctions;
@@ -924,7 +967,7 @@ begin
           WaitTimeTask := gwttNone;
         end;
       end;
-    gwttAllocateAddress :
+    gwttAttachAddress :
       begin
         if AliasList.Count = 0 then
         begin
@@ -934,7 +977,7 @@ begin
         end;
         WaitTimeTask := gwttNone;
       end;
-    gwttDeallocateAddress :
+    gwttDeattachAddress :
       begin
         if AliasList.Count = 0 then
         begin
@@ -974,9 +1017,35 @@ begin
   begin
 
   end else
-  if Sender is TTractionAllocateDccProxyTask then
+  if Sender is TTractionAttachDccProxyTask then
   begin
-
+    // Looking for the DCC Address Attach Result from our Allocated Alias and the correct Address, if found handle here and drop only errors to the General Timer
+    if PotentialAlias = TTractionAttachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
+    begin
+      if TTractionAttachDccProxyTask( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
+      begin
+        AliasList.Add( Pointer( TTractionAttachDccProxyTask( Sender).MessageHelper.SourceAliasID));
+        TimerGeneralTimeout.Enabled := False;   // Done
+        AllocatedAlias := PotentialAlias;
+        Allocated := True;
+        AliasList.Clear;
+        WaitTimeTask := gwttNone;
+        UpdateUI;
+      end;
+    end;
+  end else
+  if Sender is TTractionDetachDccProxyTask then
+  begin
+    // Looking for our Allocated Alias and Events that show it is now not allocated
+    if AllocatedAlias = TTractionDetachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
+    begin
+      TimerGeneralTimeout.Enabled := False;  // Done
+      Allocated := False;
+      AllocatedAlias := 0;
+      AliasList.Clear;
+      WaitTimeTask := gwttNone;
+      UpdateUI;
+    end
   end else
   if Sender is TTractionQueryDccAddressProxyTask then
   begin
@@ -986,10 +1055,13 @@ end;
 
 procedure TFormAwesomeThrottle.ToggleTagOnComponent(Sender: TComponent);
 begin
-   if Sender.Tag = 0 then
-    Sender.Tag := 1
-  else
+  if Sender.Tag = 0 then
+  begin
+   Sender.Tag := 1;
+  end else
+  begin
     Sender.Tag := 0;
+  end;
 end;
 
 procedure TFormAwesomeThrottle.UpdateAddressRange;
@@ -1021,7 +1093,7 @@ begin
   try
     UpdateFunctionsClearControls;
     for i := 0 to 28 do
-      CreateFunctionUIButton('F' + IntToStr(i), 0, FindComponent('ActionFunction' + IntToStr(i)) as TAction) ;
+      CreateFunctionUIButton('F' + IntToStr(i), 0, FindComponent('ActionFunction' + IntToStr(i)) as TAction, i) ;
   finally
       ScrollBoxFunctions.EndUpdateBounds;
   end;
@@ -1035,11 +1107,12 @@ procedure TFormAwesomeThrottle.UpdateFunctionsWithFDI(MemStream: TMemoryStream);
   procedure RunDownGroup(Parent: TDOMNode; Level: Integer);
   var
     Child, NameNode, NumberNode: TDOMNode;
-    i: Integer;
+    i, iButton: Integer;
     ActionName: string;
   begin
     if Assigned(Parent) then
     begin
+      iButton := 0;
       i := Parent.ChildNodes.Count;
       Child := Parent.FirstChild;
       while Assigned(Child) do
@@ -1065,7 +1138,8 @@ procedure TFormAwesomeThrottle.UpdateFunctionsWithFDI(MemStream: TMemoryStream);
               begin end;
             end;
             ActionName := 'ActionFunction' + NumberNode.FirstChild.NodeValue;
-            CreateFunctionUIButton(NameNode.FirstChild.NodeValue, Level, FindComponent(ActionName) as TAction);
+            CreateFunctionUIButton(NameNode.FirstChild.NodeValue, Level, FindComponent(ActionName) as TAction, iButton);
+            Inc(iButton);
           end else
             ShowMessage('Can not find <number> element to define the function');
         end;
@@ -1124,7 +1198,7 @@ procedure TFormAwesomeThrottle.EventTaskReceived(EventTask: TEventTask);
     begin
       DoCompare := True;
       if MatchAllocatedAlias then
-        DoCompare := (AllocatedAlias = EventTask.MessageHelper.DestinationAliasID) or (PotentialAlias = EventTask.MessageHelper.DestinationAliasID);
+        DoCompare := (AllocatedAlias = EventTask.MessageHelper.SourceAliasID) or (PotentialAlias = EventTask.MessageHelper.SourceAliasID);
 
       if DoCompare then
       begin
@@ -1168,36 +1242,6 @@ begin
           WaitTimeTask := gwttNone;
           RunTractionAllocateTrainByAddress( PotentialAlias, TIME_QUERY_DCC_ADDRESS);
         end
-      end;
-    gwttAllocateAddress :
-      begin
-        // Looking for the DCC Address Event from our Allocated Alias and the correct Address, if found handle here and drop only errors to the General Timer
-        ValidateDccAddressEvent(EventTask.MessageHelper.Data, True);
-        if AliasList.Count > 0 then
-        begin
-          TimerGeneralTimeout.Enabled := False;   // Done
-          AllocatedAlias := PotentialAlias;
-          Allocated := True;
-          AliasList.Clear;
-          WaitTimeTask := gwttNone;
-          UpdateUI;
-        end;
-      end;
-    gwttDeallocateAddress :
-      begin
-        // Looking for our Allocated Alias and Events that show it is now not allocated
-        if (AllocatedAlias = EventTask.MessageHelper.SourceAliasID) and (
-            ((EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_IDLE)) or
-            ((EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_CLEAR) and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_INUSE))
-            ) then
-            begin
-              TimerGeneralTimeout.Enabled := False;  // Done
-              Allocated := False;
-              AllocatedAlias := 0;
-              AliasList.Clear;
-              WaitTimeTask := gwttNone;
-              UpdateUI;
-            end
       end;
   end;
 end;

@@ -12,7 +12,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.0.2.0'
+  LCLVersion = '1.0.8.0'
   object PageControlMain: TPageControl
     Left = 0
     Height = 401
@@ -24,8 +24,8 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 362
-      ClientWidth = 688
+      ClientHeight = 724
+      ClientWidth = 1376
       object PanelNetwork: TPanel
         Left = 0
         Height = 362

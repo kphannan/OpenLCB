@@ -293,6 +293,13 @@ type
     function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
     function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
     function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
     procedure SendIdentifyEventsMessage;
     procedure SendIdentifyEventsAddressedMessage;
@@ -304,11 +311,13 @@ type
     procedure SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
     procedure SendProtocolIdentificationProtocolMessage;
     procedure SendSnipMessage;
-    procedure SendTractionAllocateDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
-    procedure SendTractionDeAllocateDccAddressProxyMessage;
+    procedure SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
+    procedure SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
     procedure SendTractionEStopMessage;
     procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
+    procedure SendTractionQueryFunction(FunctionAddress: DWord);
     procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+    procedure SendTractionQuerySpeeds;
     procedure SendTractionSpeedMessage(Speed: THalfFloat);
     procedure SendVerifyNodeIDGlobalMessage;
     procedure SendVerifyNodeIDToDestinationMessage;
@@ -487,6 +496,146 @@ begin
   end;
 end;
 
+function TOlcbTaskBase.IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_QUERY_FUNCTION_REPLY) then
+        Result := True;
+    end;
+  end;
+
+end;
+
+function TOlcbTaskBase.IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_QUERY_SPEED_REPLY) and
+         (Helper.Data[0] and $F0 = $10) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[0] and $F0 = $20) then
+        Result := True;
+    end;
+  end;
+
+end;
+
+function TOlcbTaskBase.IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[3] = TRACTION_ATTACH_DCC_ADDRESS_REPLY) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[3] = TRACTION_DETACH_DCC_ADDRESS_REPLY) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[3] = TRACTION_ATTACH_NODE_REPLY) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[3] = TRACTION_DETACH_NODE_REPLY) then
+        Result := True;
+    end;
+  end;
+end;
+
 procedure TOlcbTaskBase.Process(MessageInfo: TOlcbMessage);
 begin
   FHasStarted := True;
@@ -612,29 +761,35 @@ begin
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
-procedure TOlcbTaskBase.SendTractionAllocateDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
+procedure TOlcbTaskBase.SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
 begin
   if not Short then
     Address := Address or $C000;
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, 0, 0, TRACTION_DCC or TRACTION_OP_PROXY_MGMT, TRACTION_DCC_ALLOCATE_ADDRESS, SpeedStep, Hi(Address), Lo(Address), $00);
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_ATTACH_DCC_ADDRESS, Hi(Address), Lo(Address), SpeedStep, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
-procedure TOlcbTaskBase.SendTractionDeAllocateDccAddressProxyMessage;
+procedure TOlcbTaskBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
 begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_DCC or TRACTION_OP_PROXY_MGMT, TRACTION_DCC_DEALLOCATE_ADDRESS, $00, $00, $00, $00);
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionEStopMessage;
 begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_OLCB or TRACTION_OP_E_STOP, $00, $00, $00, $00, $00);
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_E_STOP, $00, $00, $00, $00, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
 begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 8, $00, $00, TRACTION_OLCB or TRACTION_OP_FUNCTION, (FunctionAddress shr 16) and $000F, (FunctionAddress shr 8) and $000F, FunctionAddress and $000F, Hi(Value), Lo(Value));
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 8, $00, $00, TRACTION_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, Hi(Value), Lo(Value));
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionQueryFunction(FunctionAddress: DWord);
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_QUERY_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, 0, 0);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
@@ -646,9 +801,15 @@ begin
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
+procedure TOlcbTaskBase.SendTractionQuerySpeeds;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_QUERY_SPEED, $00, $00, $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
 procedure TOlcbTaskBase.SendTractionSpeedMessage(Speed: THalfFloat);
 begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 5, $00, $00, TRACTION_OLCB or TRACTION_OP_SPEED_DIR, Hi(Speed), Lo(Speed), $00, $00, $00);
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 5, $00, $00, TRACTION_SPEED_DIR, Hi(Speed), Lo(Speed), $00, $00, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 

@@ -85,7 +85,8 @@ const
   MTI_SIMPLE_NODE_INFO_REQUEST       = $09DE8000;                                // Databytes = Destination Alias
   MTI_SIMPLE_NODE_INFO_REPLY         = $09A08000;                                // Databytes = Destination Alias, ACDI Data
 
-  MTI_TRACTION_PROTOCOL              = $095E8000;                                // Databyte = depends
+  MTI_TRACTION_PROTOCOL              = $095EA000;                                // Databyte = depends
+  MTI_TRACTION_REPLY                 = $095E8000;                                // Databyte = depends
 
   MTI_DATAGRAM_OK_REPLY              = $09A28000;                                // Databytes = Destination Alias
   MTI_DATAGRAM_REJECTED_REPLY        = $09A48000;                                // Databytes = Destination Alias, Error Code
@@ -191,21 +192,26 @@ const
   MCWL_RESERVED                      = $0C;
 
 
-  TRACTION_PROTOCOL_MASK             = $F0;
-  TRACTION_OLCB                      = $00;
-  TRACTION_DCC                       = $80;
+  TRACTION_SPEED_DIR                 = $00;
+  TRACTION_FUNCTION                  = $01;
+  TRACTION_E_STOP                    = $02;
+  TRACTION_QUERY_SPEED               = $10;
+  TRACTION_QUERY_FUNCTION            = $11;
+  TRACTION_MANAGE_PROXY              = $80;
 
-  TRACTION_OP_MASK                   = $0F;
-  TRACTION_OP_SPEED_DIR              = $00;
-  TRACTION_OP_FUNCTION               = $01;
-  TRACTION_OP_E_STOP                 = $02;
+  TRACTION_ATTACH_NODE               = $01;
+  TRACTION_DETACH_NODE               = $02;
+  TRACTION_ATTACH_DCC_ADDRESS        = $81;
+  TRACTION_DETACH_DCC_ADDRESS        = $82;
 
-  TRACTION_OP_PROXY_MGMT             = $02;
+  TRACTION_QUERY_SPEED_REPLY         = $10;
+  TRACTION_QUERY_FUNCTION_REPLY      = $11;
+  TRACTION_MANAGE_PROXY_REPLY        = $80;
 
-  TRACTION_DCC_ALLOCATE_ADDRESS      = $01;
-  TRACTION_DCC_DEALLOCATE_ADDRESS    = $02;
-  TRACTION_DCC_FUNCTION_28           = $00;
-  TRACTION_DCC_FUNCTION_32k          = $01;
+  TRACTION_ATTACH_NODE_REPLY         = $01;
+  TRACTION_DETACH_NODE_REPLY         = $02;
+  TRACTION_ATTACH_DCC_ADDRESS_REPLY  = $81;
+  TRACTION_DETACH_DCC_ADDRESS_REPLY  = $82;
 
   MAX_DATAGRAM_LENGTH = 72;
   MAX_CONFIG_MEM_READWRITE_SIZE = 64;

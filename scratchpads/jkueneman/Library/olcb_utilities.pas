@@ -134,6 +134,7 @@ implementation
 
 var
   LocalHelper: TOpenLCBMessageHelper;
+  SpeedQueryReplyState: Byte;                                                   // First or second CAN frame
 
 function GetTickCount : DWORD;
  {On Windows, this is number of milliseconds since Windows was
@@ -284,7 +285,7 @@ begin
     MTI_EVENTS_IDENTIFY_DEST           : Result := 'Events Identify with Destination Address';
     MTI_EVENTS_IDENTIFY                : Result := 'Events Identify Global';
     MTI_EVENT_LEARN                    : Result := 'Event Learn';
-    MTI_PC_EVENT_REPORT                : Result := 'Producer/Consumer Event Report [PCER]';
+    MTI_PC_EVENT_REPORT                : Result := 'Producer/Consumer Event Report [PCER] ';
 
     MTI_SIMPLE_NODE_INFO_REQUEST       : Result := 'Simple Node Info Request [SNIP]';
     MTI_SIMPLE_NODE_INFO_REPLY         : Result := 'Simple Node Info Reply [SNIP]';
@@ -302,7 +303,8 @@ begin
                                          end;
     MTI_DATAGRAM_REJECTED_REPLY        : Result := 'Datagram Rejected Reply';
 
-    MTI_TRACTION_PROTOCOL              : Result := 'Traction Protocol'
+    MTI_TRACTION_PROTOCOL              : Result := 'Traction Protocol';
+    MTI_TRACTION_REPLY                 : Result := 'Traction Reply'
    else
     Result := 'Unknown MTI';
   end;
@@ -476,7 +478,7 @@ begin
             begin
               if MTI and MTI_ADDRESS_PRESENT = MTI_ADDRESS_PRESENT then
               begin
-                DestinationAliasID := Word( (Data[0] shl 8)) or (Data[1]);
+                DestinationAliasID := Word( (Data[0] shl 8) and $0FFF) or (Data[1]);
                 HasDestinationAddress := True;
               end
             end
@@ -608,6 +610,7 @@ var
   j, S_Len: Integer;
   f: single;
   Address: Word;
+  Half: Word;
 begin
   if LocalHelper.Decompose(MessageString) then
   begin
@@ -637,6 +640,10 @@ begin
     end else
       Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
 
+    if LocalHelper.MTI = MTI_OPTIONAL_INTERACTION_REJECTED then
+    begin
+    end;
+
     // SNII/SNIP
     if LocalHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
     begin
@@ -654,94 +661,221 @@ begin
     // Events
     if (LocalHelper.MTI = MTI_PRODUCER_IDENDIFY) or (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) or (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_CLEAR) or
       (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_UNKNOWN) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFY) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_SET) or
-      (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_CLEAR) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_UNKNOWN)
+      (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_CLEAR) or (LocalHelper.MTI = MTI_CONSUMER_IDENTIFIED_UNKNOWN) or (LocalHelper.MTI = MTI_PC_EVENT_REPORT)
     then begin
         Result := Result + 'EventID: ' + EventIDToString(@LocalHelper.Data);
+    end;
+
+    // Traction Protocol Reply
+    if LocalHelper.MTI = MTI_TRACTION_REPLY then
+    begin
+      // Are we in the middle of a SpeedQuery Message, if so must complete that message first
+      if SpeedQueryReplyState > 0 then
+      begin
+        if LocalHelper.Data[0] and $F0 = $20 then      // Second message block
+        begin
+          Result := Result + 'Traction Speed Reply (second frame) : Actual Speed = ';
+          Half := (LocalHelper.Data[2] shl 8) or LocalHelper.Data[3];
+          if Half = $FFFF then
+          begin
+            Result := Result + 'NaN'
+          end else
+          begin
+            f := HalfToFloat( Half);
+            if f = 0 then
+            begin
+              if DWord( f) and $80000000 = $80000000 then
+                Result := Result + '-0.0'
+              else
+                Result := Result + '+0.0'
+            end else
+              Result := Result + IntToStr( round(f));
+          end
+        end;
+        SpeedQueryReplyState := 0;
+      end else
+      begin
+        case LocalHelper.Data[2] of
+            TRACTION_QUERY_SPEED_REPLY :
+              begin
+                if LocalHelper.Data[0] and $F0 = $10 then            // First message block
+                begin
+                  Result := Result + 'Traction Speed Reply (first frame) : Set Speed = ';
+                  Half := (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4];
+                  if Half = $FFFF then
+                  begin
+                    Result := Result + 'NaN'
+                  end else
+                  begin
+                    f := HalfToFloat( Half);
+                    if f = 0 then
+                    begin
+                      if DWord( f) and $80000000 = $80000000 then
+                        Result := Result + '-0.0'
+                      else
+                        Result := Result + '+0.0'
+                    end else
+                      Result := Result + IntToStr( round(f));
+                  end;
+
+                  Result := Result + ': Commanded Speed = ';
+                  Half := (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7];
+                  if Half = $FFFF then
+                  begin
+                    Result := Result + 'NaN'
+                  end else
+                  begin
+                    f := HalfToFloat( Half);
+                    if f = 0 then
+                    begin
+                      if DWord( f) and $80000000 = $80000000 then
+                        Result := Result + '-0.0'
+                      else
+                        Result := Result + '+0.0'
+                    end else
+                      Result := Result + IntToStr( round(f));
+                  end;
+                  SpeedQueryReplyState := 1;
+                end
+              end;
+            TRACTION_QUERY_FUNCTION_REPLY :
+              begin
+                Result := Result + 'Traction Function Reply';
+                Result := Result + ' Function = ' + IntToStr( (LocalHelper.Data[3] shl 16) or (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) + '  Value = ' + IntToStr( (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7]);
+              end;
+            TRACTION_MANAGE_PROXY_REPLY :
+              begin
+                case LocalHelper.Data[3] of
+                    TRACTION_ATTACH_NODE_REPLY :
+                      begin
+                      end;
+                    TRACTION_DETACH_NODE_REPLY :
+                      begin
+                      end;
+                    TRACTION_ATTACH_DCC_ADDRESS_REPLY :
+                      begin
+                        Result := Result + 'DCC Proxy Attach: ';
+                        Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
+                        if LocalHelper.Data[5] and $C0 = $C0 then
+                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + '): Speed Steps = ' + IntToStr(LocalHelper.Data[6])
+                        else
+                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + '): Speed Steps = ' + IntToStr(LocalHelper.Data[6]);
+                        if LocalHelper.DataCount = 8 then
+                          Result := Result + ': Reply Code = ' + IntToStr(LocalHelper.Data[7])
+                        else
+                          Result := Result + ': Reply Code = Not Available';
+                      end;
+                    TRACTION_DETACH_DCC_ADDRESS_REPLY :
+                      begin
+                        Result := Result + 'DCC Proxy Detach: ';
+                        Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
+                        if LocalHelper.Data[5] and $C0 = $C0 then
+                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
+                        else
+                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')';
+                        if LocalHelper.DataCount = 7 then
+                          Result := Result + ': Reply Code = ' + IntToStr(LocalHelper.Data[6])
+                        else
+                          Result := Result + ': Reply Code = Not Available';
+                      end;
+                end; // Case
+              end;
+          end;
+        end;
     end;
 
     // Traction Protocol
     if LocalHelper.MTI = MTI_TRACTION_PROTOCOL then
     begin
-      case LocalHelper.Data[2] and TRACTION_PROTOCOL_MASK of
-        TRACTION_DCC:
-          begin
-            case LocalHelper.Data[2] and TRACTION_OP_MASK of
-              TRACTION_OP_SPEED_DIR :
-                begin
-                  Result := Result + 'DCC Speed/Dir Operation; Speed = 0x';
-                  Result := Result + IntToHex( LocalHelper.Data[3] and %00011111, 2) + ', Direction = ';
-                  if LocalHelper.Data[3] and %00100000 = %00100000 then
-                    Result := Result + 'Fwd; Steps = '
-                  else
-                    Result := Result + 'Rev; Steps = ';
-                  Result := Result + IntToStr(LocalHelper.Data[4]) + ', Raw Speed Byte = 0x' + IntToHex(LocalHelper.Data[3], 2)
-                end;
-              TRACTION_OP_FUNCTION :
-                begin
-                  Result := Result + 'DCC Function Operation; Function Number = ';
-                  if LocalHelper.Data[3] = $00 then
-                    Result := Result + '28 Functions;'
-                  else
-                    Result := Result + '32k Functions;';
-                  Result := Result + '  Address = ' + IntToStr( (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
-                  if LocalHelper.Data[6] = $00 then
-                    Result := Result + '  Value = OFF'
-                  else
-                    Result := Result + '  Value = ON ';
-                end;
-              TRACTION_OP_PROXY_MGMT :
-                begin
-                  case LocalHelper.Data[3] of
-                     TRACTION_DCC_ALLOCATE_ADDRESS :
-                       begin
-                         Result := Result + 'DCC Proxy Allocate Operation, ';
-                         Address := ((LocalHelper.Data[5] shl 8) or LocalHelper.Data[6]) and $3FFF;  // Strip off the Extended bits if they are there
-                         if LocalHelper.Data[5] and $C0 = $C0 then
-                           Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
-                         else
-                           Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
-                       end;
-                     TRACTION_DCC_DEALLOCATE_ADDRESS :
-                       begin
-                         Result := Result + 'DCC Proxy De-Allocate Operation, ';
-                       end
-                  end
-                end
-              else
-                Result := Result + 'Unknown DCC Traction Operation';
+      case LocalHelper.Data[2] of
+          TRACTION_SPEED_DIR :
+            begin
+              Result := Result + 'OLCB Speed/Dir Operation; Speed = ';
+              f := HalfToFloat( (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4]);
+              if f= 0 then
+              begin
+                if DWord( f) and $80000000 = $80000000 then
+                  Result := Result + '-0.0'
+                else
+                  Result := Result + '+0.0'
+              end else
+                Result := Result + IntToStr( round(f));
             end;
-          end;
-        TRACTION_OLCB:
-          begin
-            case LocalHelper.Data[2] and TRACTION_OP_MASK of
-              TRACTION_OP_SPEED_DIR :
-                begin
-                  Result := Result + 'OLCB Speed/Dir Operation; Speed = ';
-
-                  f := HalfToFloat( (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4]);
-                  if f= 0 then
-                  begin
-                    if DWord( f) and $80000000 = $80000000 then
-                      Result := Result + '-0.0'
-                    else
-                      Result := Result + '+0.0'
-                  end else
-                    Result := Result + IntToStr( round(f));
-                end;
-              TRACTION_OP_E_STOP :
-                begin
-                  Result := Result + 'OLCB Traction Emergency Stop';
-                end;
-              TRACTION_OP_FUNCTION :
-                begin
-                  Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';
-                end
-              else
-                Result := Result + 'Unknown OLCB Traction Operation';
-            end
-          end;
-        else
-          Result := Result + 'Unknown Traction procotol';
+          TRACTION_FUNCTION :
+            begin
+              Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';
+            end;
+          TRACTION_E_STOP :
+            begin
+              Result := Result + 'OLCB Traction Emergency Stop';
+            end;
+          TRACTION_QUERY_SPEED :
+            begin
+              Result := Result + 'Query Speeds';
+            end;
+          TRACTION_QUERY_FUNCTION :
+            begin
+              Result := Result + 'Query Function ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + ']';
+            end;
+          TRACTION_MANAGE_PROXY :
+            begin
+              case LocalHelper.Data[3] of
+                  TRACTION_ATTACH_NODE :
+                    begin
+                      if LocalHelper.Data[0] and $F0 = $10 then
+                      begin
+                        Result := Result + 'Node Attach Operation (first frame)';
+                        Result := Result + ' NodeID = ' + IntToStr( (LocalHelper.Data[4] shl 24) or (LocalHelper.Data[5] shl 16) or (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7]);
+                      end else
+                      if LocalHelper.Data[0] and $F0 = $20 then
+                      begin
+                        Result := Result + 'Node Attach Operation (second frame)';
+                        Result := Result + ' NodeID = ' + IntToStr( (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+                        if LocalHelper.DataCount = 7 then
+                          Result := Result + ': Reply Code = ' + IntToStr(LocalHelper.Data[6])
+                        else
+                          Result := Result + ': Reply Code = Not Available';
+                      end;
+                    end;
+                  TRACTION_DETACH_NODE :
+                    begin
+                      if LocalHelper.Data[0] and $F0 = $10 then
+                      begin
+                        Result := Result + 'Node Detach Operation (first frame)';
+                        Result := Result + ' NodeID = ' + IntToStr( (LocalHelper.Data[4] shl 24) or (LocalHelper.Data[5] shl 16) or (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7]);
+                      end else
+                      if LocalHelper.Data[0] and $F0 = $20 then
+                      begin
+                        Result := Result + 'Node Detach Operation (second frame)';
+                        Result := Result + ' NodeID = ' + IntToStr( (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+                        if LocalHelper.DataCount = 7 then
+                          Result := Result + ': Reply Code = ' + IntToStr(LocalHelper.Data[6])
+                        else
+                          Result := Result + ': Reply Code = Not Available';
+                      end;
+                    end;
+                  TRACTION_ATTACH_DCC_ADDRESS :
+                    begin
+                      Result := Result + 'DCC Proxy Attach Operation ';
+                      Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
+                      if LocalHelper.Data[5] and $C0 = $C0 then
+                        Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + '): Speed Steps = ' + IntToStr(LocalHelper.Data[6])
+                      else
+                        Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + '): Speed Steps = ' + IntToStr(LocalHelper.Data[6]);
+                    end;
+                  TRACTION_DETACH_DCC_ADDRESS :
+                    begin
+                      Result := Result + 'DCC Proxy Detach Operation ';
+                      Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
+                      if LocalHelper.Data[5] and $C0 = $C0 then
+                        Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
+                      else
+                        Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')';
+                    end else
+                      Result := Result + 'Unknown Traction Operation';
+            end;
+          end else
+            Result := Result + 'Unknown Traction Operation';
       end;
     end
   end;
@@ -877,9 +1011,11 @@ end;
 
 initialization
   LocalHelper := TOpenLCBMessageHelper.Create;
+  SpeedQueryReplyState := 0;
 
 finalization
   FreeAndNil(LocalHelper);
+
 
 end.
 
