@@ -273,9 +273,9 @@ type
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionAttachDccProxyTask }
+  { TTractionReserveAndAttachDccProxyTask }
 
-  TTractionAttachDccProxyTask = class(TOlcbTaskBase)
+  TTractionReserveAndAttachDccProxyTask = class(TOlcbTaskBase)
   private
     FAddress: Word;
     FReplyAddress: Word;
@@ -296,9 +296,9 @@ type
     property ReplyAddress: Word read FReplyAddress;
   end;
 
-  { TTractionDetachDccProxyTask }
+  { TTractionReserveAndDetachDccProxyTask }
 
-  TTractionDetachDccProxyTask = class(TOlcbTaskBase)
+  TTractionReserveAndDetachDccProxyTask = class(TOlcbTaskBase)
   private
     FAddress: Word;
     FIsShort: Boolean;
@@ -602,9 +602,9 @@ begin
   end;
 end;
 
-{ TTractionAttachDccProxyTask }
+{ TTractionReserveAndAttachDccProxyTask }
 
-constructor TTractionAttachDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
+constructor TTractionReserveAndAttachDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FSpeedStep := ASpeedStep;
@@ -615,16 +615,37 @@ begin
   FReplySpeedSteps := 0;
 end;
 
-procedure TTractionAttachDccProxyTask.Process(MessageInfo: TOlcbMessage);
+procedure TTractionReserveAndAttachDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendTractionAttachDccProxyMessage(Address, IsShort, SpeedStep);
+         FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
+         SendTractionReserveProxyMessage;
          Sending := False;
          iState := 1;
        end;
     1: begin
+         if IsTractionReserveProxyReply(MessageInfo) then
+         begin
+           Sending := True;
+           if TOpenLCBMessageHelper(MessageInfo).Data[4] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+           begin
+             Sending := True;
+             iState := 2;
+           end else
+           begin
+             FReplyCode := TOpenLCBMessageHelper(MessageInfo).Data[4];
+             iState := STATE_DONE
+           end
+         end
+       end;
+    2: begin
+         SendTractionAttachDccProxyMessage(Address, IsShort, SpeedStep);
+         Sending := False;
+         iState := 3;
+       end;
+    3: begin
          if IsTractionAttachDCCAddressReply(MessageInfo) then
          begin
            if TOpenLCBMessageHelper( MessageInfo).DataCount = 8 then
@@ -632,8 +653,12 @@ begin
            FReplySpeedSteps := TOpenLCBMessageHelper( MessageInfo).Data[6];
            FReplyAddress := (TOpenLCBMessageHelper( MessageInfo).Data[4] shl 8) or TOpenLCBMessageHelper( MessageInfo).Data[5];
            Sending := True;
-           iState := STATE_DONE;
+           iState := 4;
          end;
+       end;
+    4: begin
+         SendTractionReleaseProxyMessage;
+         iState := STATE_DONE;
        end;
     STATE_DONE: begin
          FDone := True;
@@ -641,9 +666,9 @@ begin
   end;
 end;
 
-{ TTractionDetachDccProxyTask }
+{ TTractionReserveAndDetachDccProxyTask }
 
-constructor TTractionDetachDccProxyTask.Create(ASourceAlias,
+constructor TTractionReserveAndDetachDccProxyTask.Create(ASourceAlias,
   ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word;
   IsShortAddress: Boolean);
 begin
@@ -655,24 +680,49 @@ begin
   FReplySpeedSteps := 0;
 end;
 
-procedure TTractionDetachDccProxyTask.Process(MessageInfo: TOlcbMessage);
+procedure TTractionReserveAndDetachDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendTractionDetachDccAddressProxyMessage(Address, IsShort);
+         FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
+         SendTractionReserveProxyMessage;
          Sending := False;
          iState := 1;
        end;
     1: begin
+         if IsTractionReserveProxyReply(MessageInfo) then
+         begin
+           Sending := True;
+           if TOpenLCBMessageHelper(MessageInfo).Data[4] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+           begin
+             Sending := True;
+             iState := 2;
+           end else
+           begin
+             FReplyCode := TOpenLCBMessageHelper(MessageInfo).Data[4];
+             iState := STATE_DONE
+           end
+         end
+       end;
+    2: begin
+         SendTractionDetachDccAddressProxyMessage(Address, IsShort);
+         Sending := False;
+         iState := 3;
+       end;
+    3: begin
          if IsTractionDetachDCCAddressReply(MessageInfo) then
          begin
            if TOpenLCBMessageHelper( MessageInfo).DataCount = 7 then
              FReplyCode := TOpenLCBMessageHelper( MessageInfo).Data[6];
            FReplyAddress := (TOpenLCBMessageHelper( MessageInfo).Data[4] shl 8) or TOpenLCBMessageHelper( MessageInfo).Data[5];
            Sending := True;
-           iState := STATE_DONE;
+           iState := 4;
          end;
+       end;
+    4: begin
+         SendTractionReleaseProxyMessage;
+         iState := STATE_DONE;
        end;
     STATE_DONE: begin
          FDone := True;
@@ -1523,4 +1573,4 @@ begin
 end;
 
 end.
-
+

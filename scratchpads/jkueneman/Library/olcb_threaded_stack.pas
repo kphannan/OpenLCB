@@ -300,6 +300,8 @@ type
     function IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
     procedure SendIdentifyEventsMessage;
     procedure SendIdentifyEventsAddressedMessage;
@@ -318,6 +320,9 @@ type
     procedure SendTractionQueryFunction(FunctionAddress: DWord);
     procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
     procedure SendTractionQuerySpeeds;
+    procedure SendTractionQueryProxyMessage;
+    procedure SendTractionReleaseProxyMessage;
+    procedure SendTractionReserveProxyMessage;
     procedure SendTractionSpeedMessage(Speed: THalfFloat);
     procedure SendVerifyNodeIDGlobalMessage;
     procedure SendVerifyNodeIDToDestinationMessage;
@@ -569,7 +574,7 @@ begin
       if (Helper.MTI = MTI_TRACTION_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_ATTACH_DCC_ADDRESS_REPLY) then
         Result := True;
     end;
@@ -589,7 +594,7 @@ begin
       if (Helper.MTI = MTI_TRACTION_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_DETACH_DCC_ADDRESS_REPLY) then
         Result := True;
     end;
@@ -609,7 +614,7 @@ begin
       if (Helper.MTI = MTI_TRACTION_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_ATTACH_NODE_REPLY) then
         Result := True;
     end;
@@ -629,8 +634,48 @@ begin
       if (Helper.MTI = MTI_TRACTION_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_DETACH_NODE_REPLY) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[3] = TRACTION_MANAGE_PROXY_QUERY) then
+        Result := True;
+    end;
+  end;
+end;
+
+function TOlcbTaskBase.IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
+var
+  Helper: TOpenLCBMessageHelper;
+begin
+  Result := False;
+  if Assigned(MessageInfo) then
+  begin
+    if MessageInfo is TOpenLCBMessageHelper then
+    begin
+      Helper := TOpenLCBMessageHelper( MessageInfo);
+      if (Helper.MTI = MTI_TRACTION_REPLY) and
+         (Helper.SourceAliasID = DestinationAlias) and
+         (Helper.DestinationAliasID = SourceAlias) and
+         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
+         (Helper.Data[3] = TRACTION_MANAGE_PROXY_RESERVE) then
         Result := True;
     end;
   end;
@@ -765,13 +810,13 @@ procedure TOlcbTaskBase.SendTractionAttachDccProxyMessage(Address: Word; Short: 
 begin
   if not Short then
     Address := Address or $C000;
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_ATTACH_DCC_ADDRESS, Hi(Address), Lo(Address), SpeedStep, $00);
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_ATTACH_DCC_ADDRESS, Hi(Address), Lo(Address), SpeedStep, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
 begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
@@ -804,6 +849,24 @@ end;
 procedure TOlcbTaskBase.SendTractionQuerySpeeds;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_QUERY_SPEED, $00, $00, $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionQueryProxyMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_QUERY, $00, $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionReleaseProxyMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RELEASE, $00, $00, $00, $00);
+  ComPortThread.Add(MessageHelper.Encode);
+end;
+
+procedure TOlcbTaskBase.SendTractionReserveProxyMessage;
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RESERVE, $00, $00, $00, $00);
   ComPortThread.Add(MessageHelper.Encode);
 end;
 
@@ -1861,4 +1924,4 @@ finalization
 
 
 end.
-
+

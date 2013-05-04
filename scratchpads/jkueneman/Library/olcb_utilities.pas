@@ -743,7 +743,7 @@ begin
                 Result := Result + 'Traction Function Reply';
                 Result := Result + ' Function = ' + IntToStr( (LocalHelper.Data[3] shl 16) or (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) + '  Value = ' + IntToStr( (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7]);
               end;
-            TRACTION_MANAGE_PROXY_REPLY :
+            TRACTION_CONFIGURE_PROXY_REPLY :
               begin
                 case LocalHelper.Data[3] of
                     TRACTION_ATTACH_NODE_REPLY :
@@ -779,6 +779,22 @@ begin
                           Result := Result + ': Reply Code = Not Available';
                       end;
                 end; // Case
+              end;
+            TRACTION_MANAGE_PROXY_REPLY :
+              begin
+                case LocalHelper.Data[3] of
+                    TRACTION_MANAGE_RESERVE_REPLY :
+                      begin
+                        if LocalHelper.Data[4] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                          Result := Result + 'Proxy Reserve Reply; Error Code = ' + IntToStr(LocalHelper.Data[4]) + ': OK'
+                        else
+                          Result := Result + 'Proxy Reserve Reply; Error Code = ' + IntToStr(LocalHelper.Data[4]) + ': FAIL';
+                      end;
+                    TRACTION_MANAGE_QUERY_REPLY :
+                      begin
+                        Result := Result + 'Proxy Query Reply; Max Nodes = ' + IntToStr(LocalHelper.Data[4]) + '; Node Count = ' + IntToStr(LocalHelper.Data[5]) + '; Max DCC Addresses = ' + IntToStr(LocalHelper.Data[6]) + '; DCC Address Count = ' + IntToStr(LocalHelper.Data[7]);
+                      end;
+                end
               end;
           end;
         end;
@@ -817,7 +833,7 @@ begin
             begin
               Result := Result + 'Query Function ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + ']';
             end;
-          TRACTION_MANAGE_PROXY :
+          TRACTION_CONFIGURE_PROXY :
             begin
               case LocalHelper.Data[3] of
                   TRACTION_ATTACH_NODE :
@@ -873,9 +889,27 @@ begin
                         Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')';
                     end else
                       Result := Result + 'Unknown Traction Operation';
-            end;
-          end else
-            Result := Result + 'Unknown Traction Operation';
+                end
+              end;
+            TRACTION_MANAGE_PROXY :
+              begin
+                case LocalHelper.Data[3] of
+                    TRACTION_MANAGE_PROXY_RESERVE :
+                      begin
+                        Result := Result + 'Proxy Reserve Operation'
+                      end;
+                    TRACTION_MANAGE_PROXY_RELEASE :
+                      begin
+                        Result := Result + 'Proxy Release Operation'
+                      end;
+                    TRACTION_MANAGE_PROXY_QUERY :
+                      begin
+                        Result := Result + 'Proxy Query Operation'
+                      end;
+                end
+              end;
+      else
+        Result := Result + 'Unknown Traction Operation';
       end;
     end
   end;

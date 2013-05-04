@@ -29,6 +29,7 @@ type
     SpeedSteps: Byte;                                                           // TEMPORARY - PUT IN CONFIGURATION
     Functions: DWord;                                                           // Function State (F0..F28)
     Address: Word;                                                              // DCC Address
+    Reserved: Boolean;
   end;
   PTrainProxyRamData = ^TTrainProxyRamData;
 
@@ -40,44 +41,33 @@ const
   TRACTION_E_STOP                    = $02;
   TRACTION_QUERY_SPEED               = $10;
   TRACTION_QUERY_FUNCTION            = $11;
-  TRACTION_MANAGE_PROXY              = $80;
+  TRACTION_CONFIGURE_PROXY           = $80;
+  TRACTION_MANAGE_PROXY              = $82;
+
+  TRACTION_QUERY_SPEED_REPLY         = $10;
+  TRACTION_QUERY_FUNCTION_REPLY      = $11;
+  TRACTION_CONFIGURE_PROXY_REPLY     = $80;
+  TRACTION_MANAGE_PROXY_REPLY        = $82;
 
   TRACTION_ATTACH_NODE               = $01;
   TRACTION_DETACH_NODE               = $02;
   TRACTION_ATTACH_DCC_ADDRESS        = $81;
   TRACTION_DETACH_DCC_ADDRESS        = $82;
 
-  TRACTION_QUERY_SPEED_REPLY         = $10;
-  TRACTION_QUERY_FUNCTION_REPLY      = $11;
-  TRACTION_MANAGE_PROXY_REPLY        = $80;
-
   TRACTION_ATTACH_NODE_REPLY         = $01;
   TRACTION_DETACH_NODE_REPLY         = $02;
   TRACTION_ATTACH_DCC_ADDRESS_REPLY  = $81;
   TRACTION_DETACH_DCC_ADDRESS_REPLY  = $82;
-  
-  
-{
-  TRACTION_PROTOCOL_MASK             = $F0;
-  TRACTION_OLCB                      = $00;
-  TRACTION_OLCB_QUERY                = $10;
-  TRACTION_DCC                       = $80;
 
-  TRACTION_OP_MASK                   = $0F;
-  TRACTION_OP_SPEED_DIR              = $00;
-  TRACTION_OP_FUNCTION               = $01;
-  TRACTION_OP_E_STOP                 = $02;
+  TRACTION_MANAGE_PROXY_RESERVE      = $01;
+  TRACTION_MANAGE_PROXY_RELEASE      = $02;
+  TRACTION_MANAGE_PROXY_QUERY        = $03;
 
-  TRACTION_OP_PROXY_MGMT             = $00;
+  TRACTION_MANAGE_RESERVE_REPLY      = $01;
+  TRACTION_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
+  TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed is not 0
+  TRACTION_MANAGE_QUERY_REPLY        = $03;
 
-  DCC_ALLOCATE_ADDRESS               = $01;
-  DCC_DEALLOCATE_ADDRESS             = $02;
-  DCC_FUNCTION_28                    = $00;
-  DCC_FUNCTION_32k                   = $01;
-  
-  DCC_ALLOCATE_REPLY_FAIL_TEMPORARY  = $02;
-  DCC_ALLOCATE_REPLY_FAIL_PERMENENT  = $03;    }
-  
   STR_LOCO_NOT_FOUND                 = 'Loco not detected' + #0;                     // 60 characters limit
   STR_SHORT_CIRCUIT                  = 'Overcurrent detected' + #0;                  // 60 characters limit
   STR_INVALID_PROGRAMMING_METHOD     = 'Programming method not compatible' + #0;     // 60 characters limit
@@ -163,6 +153,8 @@ type
     DebugAutoAllocate: Byte;                                                    // Start of EEPROM_DEBUG memory space
   end;
   
+  procedure NMRAnetTractionProtocol_Initialize;
+  procedure NMRAnetTractionProtocol_InitializeRamData(NodeRamData: PTrainProxyRamData);
   procedure NMRAnetTractionProtocol_RunProtocol(Node: PNMRAnetNode; DataBuffer: PDataBuffer);
   function NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
   function NMRAnetTractionProtocol_FindFirstNonDCCAllocatedNode: PNMRAnetNode;
@@ -182,6 +174,41 @@ var
   TrainProxyRamData: array[0..MAX_NODE_COUNT - 1] of TTrainProxyRamData;   // Easier to allocate 1 extra but not use it for the CS node
 
 implementation
+
+
+procedure NMRAnetTractionProtocol_InitializeRamData(NodeRamData: PTrainProxyRamData);
+begin
+  NodeRamData^.State := 0;
+  NodeRamData^.Speed := 0;
+  NodeRamData^.Functions := 0;
+  NodeRamData^.Address := 0;
+  NodeRamData^.SpeedSteps := 28; // Default
+  NodeRamData^.Reserved := False;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetTractionProtocol_Initialize;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetTractionProtocol_Initialize;
+var
+  i: Integer;
+begin
+  for i := 0 to MAX_NODE_COUNT - 1 do
+    NMRAnetTractionProtocol_InitializeRamData(@TrainProxyRamData[i]);
+  CommandStationRamData.AllocateProxy := 1;   // Allocate the first one
+  CommandStationRamData.EnableAutoAllocateProxy := 0;
+  OverCurrent.OverCurrentSampleLimit := 0;
+  OverCurrent.OverCurrentSampleCount := 0;
+  OverCurrent.BitValue := 0;
+  OverCurrent.OverCurrentLimit := 0;
+  OverCurrent.OverCurrentCounter := 0;
+end;
 
 // *****************************************************************************
 //  procedure UpdateFunctionsAndSendDCCMessage;
@@ -445,7 +472,7 @@ begin
                   end else
                     ReleaseBuffer := False
                 end;
-              TRACTION_MANAGE_PROXY :
+              TRACTION_CONFIGURE_PROXY :
                 begin
                   case DataBuffer^.Bytes[3] of
                       TRACTION_ATTACH_NODE :
@@ -458,25 +485,17 @@ begin
                         begin
                           if NMRABusTxBufferAvailable then
                           begin
-                            if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then
-                            begin
-                              ProxyData^.State := ProxyData^.State or PS_DCC_ADDRESS_ALLOCATED;
-                              Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
-                              NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_INUSE_INDEX, False);                           // Changed State so notify the system
-                              ProxyData^.SpeedSteps := DataBuffer^.Bytes[6];                                                // TO DO: NEED TO WRITE TO CONFIGURATION
-                              ProxyData^.Address := Word ((DataBuffer^.Bytes[4] shl 8)) or DataBuffer^.Bytes[5];            // This is in NMRA DCC format for short/long address
-                              if CommandStationRamData.EnableAutoAllocateProxy = 0 then
-                                Inc(CommandStationRamData.AllocateProxy);                                                   // Set the flag to allocate a new proxy since we used the last one
-                              Bytes[0] := DataBuffer^.Bytes[2];                                                             // First two bytes are Alias
-                              Bytes[1] := DataBuffer^.Bytes[3];
-                              Bytes[2] := DataBuffer^.Bytes[4];
-                              Bytes[3] := DataBuffer^.Bytes[5];
-                              Bytes[4] := DataBuffer^.Bytes[6];
-                              Bytes[5] := 0;                       // Reply Code when decided upon
-                            end else
-                            begin
-                              // some kind of error code as we are already attached
-                            end;
+                            // NEED TO CHECK FOR DUPLICATE ADDRESS.......
+                            // TODO: FINISH THIS FOR CONSISTS
+                            Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined or MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                            ProxyData^.SpeedSteps := DataBuffer^.Bytes[6];                                                // TO DO: NEED TO WRITE TO CONFIGURATION
+                            ProxyData^.Address := Word ((DataBuffer^.Bytes[4] shl 8)) or DataBuffer^.Bytes[5];            // This is in NMRA DCC format for short/long address
+                            Bytes[0] := DataBuffer^.Bytes[2];                                                             // First two bytes are Alias
+                            Bytes[1] := DataBuffer^.Bytes[3];
+                            Bytes[2] := DataBuffer^.Bytes[4];
+                            Bytes[3] := DataBuffer^.Bytes[5];
+                            Bytes[4] := DataBuffer^.Bytes[6];
+                            Bytes[5] := 0;                       // Reply Code when decided upon
                             TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_TRACTION_REPLY, DataBuffer^.Alias, 5, @Bytes, False, $00);
                           end else
                             ReleaseBuffer := False;
@@ -485,24 +504,71 @@ begin
                         begin
                           if NMRABusTxBufferAvailable then
                           begin
+                            // if All DCC Addresses are detached then           TODO: FINISH THIS FOR CONSISTS
                             ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
-                            Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
-                            NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_IDLE_INDEX, False);                                 // Changed State so notify the system
                             Bytes[0] := DataBuffer^.Bytes[2];                                                             // First two bytes are Alias
                             Bytes[1] := DataBuffer^.Bytes[3];
                             Bytes[2] := DataBuffer^.Bytes[4];
                             Bytes[3] := DataBuffer^.Bytes[5];
                             Bytes[4] := 0;                       // Reply Code when decided upon
-                              
-                            for i := 2 to 6 do                                                                            // First two bytes are Alias
-                              DataBuffer^.Bytes[i-2] := DataBuffer^.Bytes[i];
                             TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_TRACTION_REPLY, DataBuffer^.Alias, 4, @Bytes, False, $00);
-                            NMRAnetNode_MarkForRelease(Node);
                           end else
                             ReleaseBuffer := False;
                         end;
                   end
                 end;
+              TRACTION_MANAGE_PROXY :
+              begin
+                case DataBuffer^.Bytes[3] of
+                    TRACTION_MANAGE_PROXY_RESERVE :
+                      begin
+                        if NMRABusTxBufferAvailable then
+                        begin
+                          Bytes[0] := TRACTION_MANAGE_PROXY_REPLY;            // First two bytes are Alias
+                          Bytes[1] := TRACTION_MANAGE_RESERVE_REPLY;
+                          if ProxyData^.Reserved then
+                            Bytes[2] := TRACTION_MANAGE_RESERVE_REPLY_FAIL
+                          else begin
+                            Bytes[2] := TRACTION_MANAGE_RESERVE_REPLY_OK;
+                            ProxyData^.Reserved := True;
+                            if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then  // Need to Allocate the Proxy
+                            begin
+                              ProxyData^.State := ProxyData^.State or PS_DCC_ADDRESS_ALLOCATED;
+                              NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_INUSE_INDEX, False);                           // Changed State so notify the system
+                              if CommandStationRamData.EnableAutoAllocateProxy = 0 then
+                                Inc(CommandStationRamData.AllocateProxy);                                                   // Set the flag to allocate a new proxy since we used the last one
+                            end;
+                          end;
+                          TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_TRACTION_REPLY, DataBuffer^.Alias, 3, @Bytes, False, $00);
+                        end else
+                          ReleaseBuffer := False;
+                      end;
+                    TRACTION_MANAGE_PROXY_RELEASE :
+                      begin
+                        ProxyData^.Reserved := False;
+                        if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = 0 then
+                        begin
+                          Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;     // Changed State so notify the system
+                          NMRAnetNode_SetPCER_Flag(Node, EVENT_TRAIN_DCC_IDLE_INDEX, False);                                 // Changed State so notify the system
+                          NMRAnetNode_MarkForRelease(Node);
+                        end
+                      end;
+                    TRACTION_MANAGE_PROXY_QUERY :
+                      begin
+                        if NMRABusTxBufferAvailable then
+                        begin
+                          Bytes[0] := TRACTION_MANAGE_PROXY_REPLY;              // First two bytes are Alias
+                          Bytes[1] := TRACTION_MANAGE_QUERY_REPLY;
+                          Bytes[2] := TRACTION_MANAGE_QUERY_REPLY;
+                          Bytes[3] := TRACTION_MANAGE_QUERY_REPLY;
+                          Bytes[4] := TRACTION_MANAGE_QUERY_REPLY;
+                          Bytes[5] := TRACTION_MANAGE_QUERY_REPLY;
+                          TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_TRACTION_REPLY, DataBuffer^.Alias, 6, @Bytes, False, $00);
+                        end else
+                          ReleaseBuffer := False;
+                      end;
+                end;
+              end;
           end;
           if ReleaseBuffer then
           begin

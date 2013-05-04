@@ -14,8 +14,8 @@ uses
 
 const
   ANIMATION_DELTA = 50;
-  TIME_QUERY_DCC_ADDRESS = 1000;   // Wait 1s to find Proxies that are assigned to the requested DCC address
-  TIME_DEALLOCATE_ADDRESS = 1000;
+  TIME_QUERY_DCC_ADDRESS = 2000;   // Wait 1s to find Proxies that are assigned to the requested DCC address
+  TIME_DEALLOCATE_ADDRESS = 2000;
   STR_UNASSIGNED = 'Unassigned';
 
 type
@@ -198,7 +198,7 @@ type
     procedure RunProtocolSupport(AliasID: Word);
     procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
     procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
-    procedure RunTractionAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
+    procedure RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
     procedure RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
     procedure RunTractionQueryDccAddress(WaitTime: Cardinal);
     procedure RunTractionQueryIsIdle(WaitTime: Cardinal);
@@ -725,9 +725,9 @@ begin
   end;
 end;
 
-procedure TFormAwesomeThrottle.RunTractionAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
+procedure TFormAwesomeThrottle.RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
 var
-  Task: TTractionAttachDccProxyTask;
+  Task: TTractionReserveAndAttachDccProxyTask;
   SpeedStep: Byte;
 begin
   if Assigned(ComPortThread) then
@@ -739,7 +739,7 @@ begin
     else
       SpeedStep := SPEEDSTEP_DEFAULT;
     end;
-    Task := TTractionAttachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
+    Task := TTractionReserveAndAttachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
@@ -751,11 +751,11 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
 var
-  Task: TTractionDetachDccProxyTask;
+  Task: TTractionReserveAndDetachDccProxyTask;
 begin
   if Assigned(ComPortThread) then
   begin
-    Task := TTractionDetachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
+    Task := TTractionReserveAndDetachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
@@ -1017,34 +1017,46 @@ begin
   begin
 
   end else
-  if Sender is TTractionAttachDccProxyTask then
+  if Sender is TTractionReserveAndAttachDccProxyTask then
   begin
     // Looking for the DCC Address Attach Result from our Allocated Alias and the correct Address, if found handle here and drop only errors to the General Timer
-    if PotentialAlias = TTractionAttachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
+    if PotentialAlias = TTractionReserveAndAttachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
     begin
-      if TTractionAttachDccProxyTask( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
+      TimerGeneralTimeout.Enabled := False;   // Done
+      WaitTimeTask := gwttNone;
+      AliasList.Clear;
+      if TTractionReserveAndAttachDccProxyTask( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
       begin
-        AliasList.Add( Pointer( TTractionAttachDccProxyTask( Sender).MessageHelper.SourceAliasID));
-        TimerGeneralTimeout.Enabled := False;   // Done
+        AliasList.Add( Pointer( TTractionReserveAndAttachDccProxyTask( Sender).MessageHelper.SourceAliasID));
         AllocatedAlias := PotentialAlias;
         Allocated := True;
-        AliasList.Clear;
-        WaitTimeTask := gwttNone;
+        UpdateUI;
+      end else
+      begin
+        ShowMessage('Error Code: ' + IntToStr(TTractionReserveAndAttachDccProxyTask( Sender).ReplyCode) + ': Unable to Attach the DCC Address: ' + IntToStr(TTractionReserveAndAttachDccProxyTask( Sender).ReplyCode));
+        AllocatedAlias := 0;
+        Allocated := False;
         UpdateUI;
       end;
     end;
   end else
-  if Sender is TTractionDetachDccProxyTask then
+  if Sender is TTractionReserveAndDetachDccProxyTask then
   begin
     // Looking for our Allocated Alias and Events that show it is now not allocated
-    if AllocatedAlias = TTractionDetachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
+    if AllocatedAlias = TTractionReserveAndDetachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
     begin
-      TimerGeneralTimeout.Enabled := False;  // Done
-      Allocated := False;
-      AllocatedAlias := 0;
-      AliasList.Clear;
+      TimerGeneralTimeout.Enabled := False;   // Done
       WaitTimeTask := gwttNone;
-      UpdateUI;
+      AliasList.Clear;
+      if TTractionReserveAndDetachDccProxyTask( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
+      begin
+        Allocated := False;
+        AllocatedAlias := 0;
+        UpdateUI;
+      end else
+      begin
+        ShowMessage('Error Code: ' + IntToStr(TTractionReserveAndDetachDccProxyTask( Sender).ReplyCode) + ': Unable to detach the DCC Address: ' + IntToStr(TTractionReserveAndDetachDccProxyTask( Sender).ReplyAddress));
+      end;
     end
   end else
   if Sender is TTractionQueryDccAddressProxyTask then
@@ -1240,7 +1252,7 @@ begin
           PotentialAlias := EventTask.MessageHelper.SourceAliasID;
           AliasList.Clear;
           WaitTimeTask := gwttNone;
-          RunTractionAllocateTrainByAddress( PotentialAlias, TIME_QUERY_DCC_ADDRESS);
+          RunTractionReserveAndAttachTrainByAddress( PotentialAlias, TIME_QUERY_DCC_ADDRESS);
         end
       end;
   end;

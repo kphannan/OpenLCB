@@ -477,24 +477,7 @@ end;
 //  Initialize the VolatileData structure
 //******************************************************************************
 procedure NMRAnetAppCallbacks_Initialize;
-var
-  i: Integer;
 begin
-  for i := 0 to MAX_NODE_COUNT - 1 do
-  begin
-    TrainProxyRamData[i].State := 0;
-    TrainProxyRamData[i].Speed := 0;
-    TrainProxyRamData[i].Functions := 0;
-    TrainProxyRamData[i].Address := 0;
-    TrainProxyRamData[i].SpeedSteps := 28; // Default
-  end;
-  CommandStationRamData.AllocateProxy := 1;   // Allocate the first one
-  CommandStationRamData.EnableAutoAllocateProxy := 0;
-  OverCurrent.OverCurrentSampleLimit := 0;
-  OverCurrent.OverCurrentSampleCount := 0;
-  OverCurrent.BitValue := 0;
-  OverCurrent.OverCurrentLimit := 0;
-  OverCurrent.OverCurrentCounter := 0;
 end;
 
 // *****************************************************************************

@@ -330,6 +330,9 @@ begin
   Node^.RightSibling := nil;
   Node^.Login.TimeCounter := 0;
   Node^.Login.iCID := 0;
+  {$IFDEF TRACTION_PROTOCOL}
+  NMRAnetTractionProtocol_InitializeRamData( NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node));
+  {$ENDIF}
  // I don't think I want to reset these as they are set at startup
  // ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory
  // RAMAddress: Generic32BitPointer;                                            // Pointer to a DataStructure that is in RAM
@@ -345,9 +348,8 @@ end;
 // *****************************************************************************
 procedure NMRAnetStateMachine_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
 begin
-  {$IFDEF dsPIC33}
-  dsPIC33_CAN_Initialize;
-  {$ENDIF}
+  {$IFDEF dsPIC33} dsPIC33_CAN_Initialize;{$ENDIF}
+  {$IFDEF TRACTION_PROTOCOL}NMRAnetTractionProtocol_Initialize;{$ENDIF}
   CANStorage_Initialize;
   NMRAnetCANReceive_Initialize;
   NMRAnetBufferPools_Initialize;
