@@ -120,6 +120,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionOpenLCBCommandReadFSI: TAction;
     ActionConfigEditorsHideAll: TAction;
     ActionConfigEditorsShowAll: TAction;
     ActionConfigEditorsCloseAll: TAction;
@@ -162,6 +163,7 @@ type
     LabelTrainCountName: TLabel;
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
+    MenuItemReadFSI: TMenuItem;
     MenuItemConfigEditorsSep1: TMenuItem;
     MenuItemConfigEditorsShowAll: TMenuItem;
     MenuItemConfigEditorsHide: TMenuItem;
@@ -221,6 +223,7 @@ type
     procedure ActionOpenLCBCommandReadCDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadConfigurationExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadFDIExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandReadFSIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadMfgACDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadUserACDIExecute(Sender: TObject);
     procedure ActionOpenLCBCommandSNIIExecute(Sender: TObject);
@@ -602,6 +605,20 @@ var
     if IsParentRootNode(Node) then
       RunReadMemorySpaceOnNode(Node, MSI_FDI);
   end;
+end;
+
+procedure TFormOLCB_Commander.ActionOpenLCBCommandReadFSIExecute(Sender: TObject);
+var
+  Node: TOlcbTreeNode;
+  i: Integer;
+ begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if IsParentRootNode(Node) then
+      RunReadMemorySpaceOnNode(Node, MSI_FSI);
+  end;
+
 end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandReadMfgACDIExecute(Sender: TObject);

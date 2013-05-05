@@ -13,7 +13,7 @@ unit NMRAnetStateMachine;
 //     2012-10-07:   Version 1.0
 //
 // * Description:
-//    Implements NMRAnet StateMachine for the main loop in a program.
+//    Implements NMRAnet StateMachine for the main loop in a programg.
 //
 // ******************************************************************************
 {$I Options.inc}
@@ -73,13 +73,14 @@ uses
   // ***************************************************************************
   function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean; external;
   function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean; external;
+  function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;  external;
   
-  function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;  external;
   procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);  external;
   procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);  external;
+  function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean; external;
+  function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean; external;
   procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
   procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
-
 
 // Forward declarations
 function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord; DestinationAliasID: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word): Boolean; forward;
@@ -466,7 +467,6 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
                           Result := MAX_CDI_ARRAY;
                       end;
       MSI_ALL       : Result := ALL_MAP.HighMem;
-      MSI_CONFIG    : Result := AppCallback_Configuration_AddressSpaceSize(Node);
       MSI_ACDI_MFG  : begin
                         {$IFDEF SUPPORT_VIRTUAL_NODES}
                         if Node^.State and NS_VIRTUAL <> 0 then
@@ -475,7 +475,12 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
                           Result := MAX_ACDI_MFG_ARRAY + 1 // for the Version ID Byte
                       end;
       MSI_ACDI_USER : begin
-                      Result := MAX_USER_CONFIG_DATA + 1  // for the Version ID Byte
+                        Result := MAX_USER_CONFIG_DATA + 1  // for the Version ID Byte
+                      end;
+      MSI_CONFIG,
+      MSI_FSI,
+      MSI_FDI       : begin
+                        Result := AppCallback_AddressSpaceSize(Node, AddressSpace);
                       end
     else
       Result := 0;
@@ -798,6 +803,7 @@ begin
                               // Very wasteful and slow 1 at a time but it is easy
                               ConfigMemBuffer^.Address := BaseBuffer^.Tag;
                               ConfigMemBuffer^.DataCount := 1;
+                              ConfigMemBuffer^.AddressSpace := MSI_CONFIG;
                               AppCallback_Configuration_Read(Node, ConfigMemBuffer);
                               DataBytes[i] := ConfigMemBuffer^.DataBytes[0];
 
@@ -840,7 +846,6 @@ begin
                           begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_DONE'+LF); {$ENDIF}
                           end;
                     end;
-                    NMRAnetBufferPools_ReleaseConfigMemBuffer(ConfigMemBuffer);
                   end;
 
                 if i > 0 then
@@ -851,6 +856,8 @@ begin
                   NMRAnetUtilities_BaseBufferUnLink(Node, BaseBuffer);
                   NMRAnetBufferPools_ReleaseBaseBuffer(BaseBuffer);
                 end;
+                
+                NMRAnetBufferPools_ReleaseConfigMemBuffer(ConfigMemBuffer);
               end
             end;
        {$ENDIF} // BOOTLOADER
@@ -966,77 +973,83 @@ begin
           end;
         STATE_MEM_CONFIG_READWRITE_READ :
           begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_READ'+LF); {$ENDIF}
-             case ConfigMemBuffer^.AddressSpace of
-              MSI_CDI       : begin {$IFDEF SUPPORT_VIRTUAL_NODES}
-                                if Node^.State and NS_VIRTUAL <> 0 then
-                                begin
-                                  for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-                                    ConfigMemBuffer^.DataBytes[i] := CDI_ARRAY_VNODE[i+ConfigMemBuffer^.Address]
-                                end else {$ENDIF}
-                                begin
-                                  for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-                                    ConfigMemBuffer^.DataBytes[i] := CDI_ARRAY[i+ConfigMemBuffer^.Address]
+             if not AppCallback_AddressSpace_Read(Node, ConfigMemBuffer) then
+             begin
+               case ConfigMemBuffer^.AddressSpace of
+                MSI_CDI       : begin {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                  if Node^.State and NS_VIRTUAL <> 0 then
+                                  begin
+                                    for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                                      ConfigMemBuffer^.DataBytes[i] := CDI_ARRAY_VNODE[i+ConfigMemBuffer^.Address]
+                                  end else {$ENDIF}
+                                  begin
+                                    for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                                      ConfigMemBuffer^.DataBytes[i] := CDI_ARRAY[i+ConfigMemBuffer^.Address]
+                                  end;
                                 end;
-                              end;
-              MSI_ALL       : begin
-                                ByteArray := PByteArray( ALL_MAP.LowMem);
-                                for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-                                  ConfigMemBuffer^.DataBytes[i] := ByteArray^[i+ConfigMemBuffer^.Address];
-                              end;
-              MSI_CONFIG    : AppCallback_Configuration_Read(Node, ConfigMemBuffer);
-              MSI_ACDI_MFG  : begin
-                                if ConfigMemBuffer^.Address = 0 then
-                                begin  
-                                  Dec(ConfigMemBuffer^.DataCount);
-                                  ConfigMemBuffer^.DataOffset := 1;
-                                  ConfigMemBuffer^.DataBytes[0] := ACDI_MFG_VERSION;
-                                end;
-                                  
-                                {$IFDEF SUPPORT_VIRTUAL_NODES}
-                                if Node^.State and NS_VIRTUAL <> 0 then
-                                begin
+                MSI_ALL       : begin
+                                  ByteArray := PByteArray( ALL_MAP.LowMem);
                                   for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-                                    ConfigMemBuffer^.DataBytes[i + ConfigMemBuffer^.DataOffset] := ACDI_MFG_STRINGS_VNODE[ConfigMemBuffer^.Address + i];
-                                end else {$ENDIF}
-                                begin
-                                  for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-                                    ConfigMemBuffer^.DataBytes[i + ConfigMemBuffer^.DataOffset] := ACDI_MFG_STRINGS[ConfigMemBuffer^.Address + i];
+                                    ConfigMemBuffer^.DataBytes[i] := ByteArray^[i+ConfigMemBuffer^.Address];
                                 end;
-                                
-                                if ConfigMemBuffer^.Address = 0 then
-                                begin
-                                  ConfigMemBuffer^.DataOffset := 1;
-                                  Inc(ConfigMemBuffer^.DataCount);
+                MSI_CONFIG    : AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                MSI_ACDI_MFG  : begin
+                                  if ConfigMemBuffer^.Address = 0 then
+                                  begin
+                                    Dec(ConfigMemBuffer^.DataCount);
+                                    ConfigMemBuffer^.DataOffset := 1;
+                                    ConfigMemBuffer^.DataBytes[0] := ACDI_MFG_VERSION;
+                                  end;
+
+                                  {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                  if Node^.State and NS_VIRTUAL <> 0 then
+                                  begin
+                                    for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                                      ConfigMemBuffer^.DataBytes[i + ConfigMemBuffer^.DataOffset] := ACDI_MFG_STRINGS_VNODE[ConfigMemBuffer^.Address + i];
+                                  end else {$ENDIF}
+                                  begin
+                                    for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                                      ConfigMemBuffer^.DataBytes[i + ConfigMemBuffer^.DataOffset] := ACDI_MFG_STRINGS[ConfigMemBuffer^.Address + i];
+                                  end;
+
+                                  if ConfigMemBuffer^.Address = 0 then
+                                  begin
+                                    ConfigMemBuffer^.DataOffset := 1;
+                                    Inc(ConfigMemBuffer^.DataCount);
+                                  end;
                                 end;
-                              end;
-              MSI_ACDI_USER : begin
-                                if ConfigMemBuffer^.Address = 0 then
-                                begin
-                                  ConfigMemBuffer^.DataBytes[0] := ACDI_USER_VERSION;
-                                  Inc(ConfigMemBuffer^.Address);                // The CDI offsets the Configuration Memory by 1 so everything needs to be shifted
-                                  Dec(ConfigMemBuffer^.DataCount);
-                                  ConfigMemBuffer^.DataOffset := 1;             // Write to the array at offset 1
-                                  AppCallback_Configuration_Read(Node, ConfigMemBuffer);
-                                  Inc(ConfigMemBuffer^.DataCount);              // Restore the state
-                                  ConfigMemBuffer^.DataOffset := 0;   
-                                  Dec(ConfigMemBuffer^.Address);
-                                end else
-                                begin
-                                  Inc(ConfigMemBuffer^.Address);                // The CDI offsets the Configuration Memory by 1 so everything needs to be shifted
-                                  AppCallback_Configuration_Read(Node, ConfigMemBuffer);
-                                  Dec(ConfigMemBuffer^.Address);
-                                end
-                              end;
+                MSI_ACDI_USER : begin
+                                  if ConfigMemBuffer^.Address = 0 then
+                                  begin
+                                    ConfigMemBuffer^.DataBytes[0] := ACDI_USER_VERSION;
+                                    Inc(ConfigMemBuffer^.Address);                // The CDI offsets the Configuration Memory by 1 so everything needs to be shifted
+                                    Dec(ConfigMemBuffer^.DataCount);
+                                    ConfigMemBuffer^.DataOffset := 1;             // Write to the array at offset 1
+                                    AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                                    Inc(ConfigMemBuffer^.DataCount);              // Restore the state
+                                    ConfigMemBuffer^.DataOffset := 0;
+                                    Dec(ConfigMemBuffer^.Address);
+                                  end else
+                                  begin
+                                    Inc(ConfigMemBuffer^.Address);                // The CDI offsets the Configuration Memory by 1 so everything needs to be shifted
+                                    AppCallback_Configuration_Read(Node, ConfigMemBuffer);
+                                    Dec(ConfigMemBuffer^.Address);
+                                  end
+                                end;
+              end;
             end;
             ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT
           end;
         STATE_MEM_CONFIG_READWRITE_WRITE :
           begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_WRITE'+LF); {$ENDIF}
-             case ConfigMemBuffer^.AddressSpace of
-               MSI_CONFIG    : AppCallback_Configuration_Write(Node, ConfigMemBuffer);
-               MSI_ACDI_USER : UART1_Write_Text('Unimplemented Configuration Mem write'+LF);
-             end;
-             ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT
+            if not AppCallback_AddressSpace_Write(Node, ConfigMemBuffer) then
+            begin
+              case ConfigMemBuffer^.AddressSpace of
+                MSI_CONFIG    : AppCallback_Configuration_Write(Node, ConfigMemBuffer);
+                MSI_ACDI_USER : UART1_Write_Text('Unimplemented Configuration Mem write'+LF);
+              end;
+            end;
+            ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT
           end;
         STATE_MEM_CONFIG_READWRITE_WAIT :
           begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_WAIT'+LF); {$ENDIF}
@@ -1114,11 +1127,23 @@ begin
                                        begin {$IFDEF TRACE_MEM_CONFIG_OP_STATEMACHINE} UART1_Write_Text('MCP_OP_GET_CONFIG'+LF);{$ENDIF}
                                          DatagramBuffer^.DataBytes[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
                                          DatagramBuffer^.DataBytes[1] := MCP_OP_GET_CONFIG_REPLY;
-                                         DatagramBuffer^.DataBytes[2] := Hi( MEMORY_CONFIG_OPTIONS.MemoryConfigOptions);
-                                         DatagramBuffer^.DataBytes[3] := Lo( MEMORY_CONFIG_OPTIONS.MemoryConfigOptions);
-                                         DatagramBuffer^.DataBytes[4] := MEMORY_CONFIG_OPTIONS.MemoryConfigWriteLength;
-                                         DatagramBuffer^.DataBytes[5] := MEMORY_CONFIG_OPTIONS.MemoryConfigHighestSpace;
-                                         DatagramBuffer^.DataBytes[6] := MEMORY_CONFIG_OPTIONS.MemoryConfigLowestSpace;
+                                         {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                         if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+                                         begin
+                                           DatagramBuffer^.DataBytes[2] := Hi( MEMORY_CONFIG_OPTIONS_VNODE.MemoryConfigOptions);
+                                           DatagramBuffer^.DataBytes[3] := Lo( MEMORY_CONFIG_OPTIONS_VNODE.MemoryConfigOptions);
+                                           DatagramBuffer^.DataBytes[4] := MEMORY_CONFIG_OPTIONS_VNODE.MemoryConfigWriteLength;
+                                           DatagramBuffer^.DataBytes[5] := MEMORY_CONFIG_OPTIONS_VNODE.MemoryConfigHighestSpace;
+                                           DatagramBuffer^.DataBytes[6] := MEMORY_CONFIG_OPTIONS_VNODE.MemoryConfigLowestSpace;
+                                         end else
+                                         {$ENDIF}
+                                         begin
+                                           DatagramBuffer^.DataBytes[2] := Hi( MEMORY_CONFIG_OPTIONS.MemoryConfigOptions);
+                                           DatagramBuffer^.DataBytes[3] := Lo( MEMORY_CONFIG_OPTIONS.MemoryConfigOptions);
+                                           DatagramBuffer^.DataBytes[4] := MEMORY_CONFIG_OPTIONS.MemoryConfigWriteLength;
+                                           DatagramBuffer^.DataBytes[5] := MEMORY_CONFIG_OPTIONS.MemoryConfigHighestSpace;
+                                           DatagramBuffer^.DataBytes[6] := MEMORY_CONFIG_OPTIONS.MemoryConfigLowestSpace;
+                                         end;
                                          DatagramBuffer^.iByteCount := 7;
                                           // Send a response
                                          DatagramBuffer^.Statemachine := STATE_DATAGRAM_MEM_CONFIG_SEND_RESUSED_DATAGRAM
@@ -1540,7 +1565,7 @@ begin
         // Done until reboot
       end
   else
-    UART1_Write_Text('Statemachine Index Error');
+    UART1_Write_Text('Statemachine Index Error'+LF);
   end;
   UnLockCANInterrupt
 end;

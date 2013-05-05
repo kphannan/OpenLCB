@@ -37,7 +37,7 @@ end;
 // ***************************************************************************
 procedure PageRegisterWriteCycle(BufferPtr: PDCCBufferInfo);
 begin
-  if (ServiceModeInfo.iInstructionCountSent < SERVICEMODE_PAGED_PAGE_WRITE_COUNT) and (ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 0) then
+  if (ServiceModeInfo.iInstructionCountSent < SERVICEMODE_PAGED_PAGE_WRITE_COUNT) and (ServiceModeInfo.State.PROGRAMMING_ACK_DETECTED_BIT = 0) then
   begin
     // If we have not sent all Page Register Write instructions AND we have not received an ACK from a previous on then keep sending them
     Inc(ServiceModeInfo.iInstructionCountSent);
@@ -47,10 +47,10 @@ begin
     // Even if we did not get an ACK assume it succeeded since the spec says to move on after an ACK OR if the number of packets has been sent
     ServiceModeInfo.iInstructionCountSent := 1;
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);
-    ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT := 0;
-    ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
-    ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
-    ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 0;
+    ServiceModeInfo.State.PROGRAMMING_ACK_DETECTED_BIT := 0;
+    ServiceModeInfo.State.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
+    ServiceModeInfo.State.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
+    ServiceModeInfo.State.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 0;
     ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_PAGED_WRITE_PAGE_REGISTER_RECOVER;
   end
 end;

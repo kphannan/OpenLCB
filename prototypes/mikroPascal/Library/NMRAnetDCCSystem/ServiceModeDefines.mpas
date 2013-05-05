@@ -78,7 +78,7 @@ type
     ReadWrite               : Byte;                       // [IN] SERVICEMODE_READ or SERVICEMODE_WRITE
     CV                      : Word;                       // [IN] The CV to write or read from
     ServiceModeType         : Byte;                       // [IN] Which Service Mode Type to use; see SERVICE_MODE_TYPE_xxxx constants
-    Flags                   : Byte;                       // [INTERNAL] See PROGRAMMING_ACK_STATE_XXXXX constants
+    State                   : Byte;                       // [INTERNAL] See PROGRAMMING_ACK_STATE_XXXXX constants
     iStateMachine           : Byte;                       // [INTERNAL] Current State of the Service Mode State Machine
     iInstructionCountSent   : Byte;                       // [INTERNAL] State Machine uses to count the number of Packets for different states of a Service Mode call
     ReadIndex               : Byte;                       // [INTERNAL] Tracks what Value the read is attempting or the Offset Bit in Bit mode

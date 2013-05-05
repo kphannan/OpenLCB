@@ -28,7 +28,7 @@ uses
   {$ELSE}
   LclIntf,
   {$ENDIF}
-  DOM, XMLRead, math_float16;
+  Math, DOM, XMLRead, math_float16;
 
 const
   LF = #13+#10;
@@ -239,6 +239,125 @@ begin
 end;
 
 function MTI_ToString(MTI: DWord): WideString;
+
+  procedure ConfigurationDatagram;
+  begin
+    if LocalHelper.DataCount > 0 then
+        begin
+          if LocalHelper.Data[0] = DATAGRAM_PROTOCOL_CONFIGURATION then
+          begin
+            case LocalHelper.Data[1] and $F8 of
+              MCP_WRITE :
+                  begin
+                    case LocalHelper.Data[1] and $07 of
+                      MCP_CDI            : Result := Result + ' Write Command, Address Space = CDI';
+                      MCP_ALL            : Result := Result + ' Write Command, Address Space = All';
+                      MCP_CONFIGURATION  : Result := Result + ' Write Command, Address Space = Configuration';
+                      MCP_NONE           : begin
+                                             case LocalHelper.Data[6] of
+                                               MSI_CDI         : Result := Result + ' Write Command, Address Space = CDI';
+                                               MSI_ALL         : Result := Result + ' Write Command, Address Space = All';
+                                               MSI_CONFIG      : Result := Result + ' Write Command, Address Space = Configuration';
+                                               MSI_ACDI_MFG    : Result := Result + ' Write Command, Address Space = ACDI Manufacturer';
+                                               MSI_ACDI_USER   : Result := Result + ' Write Command, Address Space = ACDI User';
+                                               MSI_FDI         : Result := Result + ' Write Command, Address Space = Function Definition Info';
+                                               MSI_FSI         : Result := Result + ' Write Command, Address Space = Function State Info'
+                                             else
+                                               Result := Result + ' Write Command, Address Space = [Unknown]'      ;
+                                             end;
+                                           end
+                    end; // Case
+                    Result := Result + ', Starting Address = ' + IntToHex( LocalHelper.ExtractDataBytesAsInt(2, 5), 8);
+                  end;
+              MCP_READ  :
+                  begin
+                    case LocalHelper.Data[1] and $07 of
+                      MCP_CDI            : Result := Result + ' Read Command, Address Space = CDI';
+                      MCP_ALL            : Result := Result + ' Read Command, Address Space = All';
+                      MCP_CONFIGURATION  : Result := Result + ' Read Command, Address Space = Configuration';
+                      MCP_NONE           : begin
+                                             case LocalHelper.Data[6] of
+                                               MSI_CDI         : Result := Result + ' Read Command, Address Space = CDI';
+                                               MSI_ALL         : Result := Result + ' Read Command, Address Space = All';
+                                               MSI_CONFIG      : Result := Result + ' Read Command, Address Space = Configuration';
+                                               MSI_ACDI_MFG    : Result := Result + ' Read Command, Address Space = ACDI Manufacturer';
+                                               MSI_ACDI_USER   : Result := Result + ' Read Command, Address Space = ACDI User';
+                                               MSI_FDI         : Result := Result + ' Read Command, Address Space = Function Definition Info';
+                                               MSI_FSI         : Result := Result + ' Read Command, Address Space = Function State Info'
+                                             else
+                                               Result := Result + ' Read Command, Address Space = [Unknown]'      ;
+                                             end;
+                                           end
+                    end; // Case
+                    Result := Result + ', Starting Address = ' + IntToHex( LocalHelper.ExtractDataBytesAsInt(2, 5), 8);
+                  end;
+              MCP_OPERATION  :
+                  begin
+                  end;
+              MCP_WRITE_DATAGRAM_REPLY :
+                  begin
+                    case LocalHelper.Data[1] and $07 of
+                      MCP_CDI            : Result := Result + ' Write Reply, Address Space = CDI';
+                      MCP_ALL            : Result := Result + ' Write Reply, Address Space = All';
+                      MCP_CONFIGURATION  : Result := Result + ' Write Reply, Address Space = Configuration';
+                      MCP_NONE           : begin
+                                             case LocalHelper.Data[6] of
+                                               MSI_CDI         : Result := Result + ' Write Reply, Address Space = CDI';
+                                               MSI_ALL         : Result := Result + ' Write Reply, Address Space = All';
+                                               MSI_CONFIG      : Result := Result + ' Write Reply, Address Space = Configuration';
+                                               MSI_ACDI_MFG    : Result := Result + ' Write Reply, Address Space = ACDI Manufacturer';
+                                               MSI_ACDI_USER   : Result := Result + ' Write Reply, Address Space = ACDI User';
+                                               MSI_FDI         : Result := Result + ' Write Reply, Address Space = Function Definition Info';
+                                               MSI_FSI         : Result := Result + ' Write Reply, Address Space = Function State Info'
+                                             else
+                                               Result := Result + ' Write Reply, Address Space = [Unknown]'      ;
+                                             end;
+                                           end
+                    end; // Case
+                    Result := Result + ', Starting Address = ' + IntToHex( LocalHelper.ExtractDataBytesAsInt(2, 5), 8);
+                    if LocalHelper.Data[1] and $F8 = MCP_WRITE_OK then
+                      Result := Result + ', Success'
+                    else
+                    if LocalHelper.Data[1] and $F8 = MCP_WRITE_ERROR then
+                      Result := Result + ', Error'
+                  end;
+              MCP_READ_DATAGRAM_REPLY  :
+                  begin
+                    case LocalHelper.Data[1] and $07 of
+                      MCP_CDI            : Result := Result + ' Read Reply, Address Space = CDI';
+                      MCP_ALL            : Result := Result + ' Read Reply, Address Space = All';
+                      MCP_CONFIGURATION  : Result := Result + ' Read Reply, Address Space = Configuration';
+                      MCP_NONE           : begin
+                                             case LocalHelper.Data[6] of
+                                               MSI_CDI         : Result := Result + ' Read Reply, Address Space = CDI';
+                                               MSI_ALL         : Result := Result + ' Read Reply, Address Space = All';
+                                               MSI_CONFIG      : Result := Result + ' Read Reply, Address Space = Configuration';
+                                               MSI_ACDI_MFG    : Result := Result + ' Read Reply, Address Space = ACDI Manufacturer';
+                                               MSI_ACDI_USER   : Result := Result + ' Read Reply, Address Space = ACDI User';
+                                               MSI_FDI         : Result := Result + ' Read Reply, Address Space = Function Definition Info';
+                                               MSI_FSI         : Result := Result + ' Read Reply, Address Space = Function State Info'
+                                             else
+                                               Result := Result + ' Read Reply, Address Space = [Unknown]'      ;
+                                             end;
+                                           end
+                    end; // Case
+                    Result := Result + ', Starting Address = ' + IntToHex( LocalHelper.ExtractDataBytesAsInt(2, 5), 8);
+                    if LocalHelper.Data[1] and $F8 = MCP_READ_OK then
+                      Result := Result + ', Success'
+                    else
+                    if LocalHelper.Data[1] and $F8 = MCP_READ_ERROR then
+                      Result := Result + ', Error'
+                  end;
+              MCP_READ_STREAM_REPLY  :
+                  begin
+
+                  end;
+            end;
+          end;
+        end;
+
+  end;
+
 begin
   case MTI of
     MTI_CID0 : Result := 'Check ID 0';
@@ -254,8 +373,14 @@ begin
     MTI_AME : Result := 'Alias Map Enquiry [AME]';
     MTI_AMR : Result := 'Alias Map Reset [AMR]';
 
-    MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME : Result := 'Datagram Single Frame';
-    MTI_FRAME_TYPE_DATAGRAM_FRAME_START : Result := 'Datagram Start Frame';
+    MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME : begin
+                                           Result := 'Datagram Single Frame:';
+                                           ConfigurationDatagram;
+                                         end;
+    MTI_FRAME_TYPE_DATAGRAM_FRAME_START : begin
+                                           Result := 'Datagram Start Frame:';
+                                           ConfigurationDatagram;
+                                         end;
     MTI_FRAME_TYPE_DATAGRAM_FRAME : Result := 'Datagram Frame';
     MTI_FRAME_TYPE_DATAGRAM_FRAME_END : Result := 'Datagram End Frame';
     MTI_FRAME_TYPE_STREAM_SEND : Result := 'Stream Send Frame';
@@ -295,9 +420,13 @@ begin
                                            if LocalHelper.DataCount > 2 then
                                            begin
                                              if LocalHelper.Data[2] and DATAGRAM_OK_ACK_REPLY_PENDING = DATAGRAM_OK_ACK_REPLY_PENDING then
-                                               Result := Result + ' - Reply Is Pending - Maximum wait time = ' + IntToStr( LocalHelper.Data[2] and $0F)
-                                             else
-                                               Result := Result + ' - Reply Is Not Pending - Maximum wait time = ' + IntToStr( LocalHelper.Data[2] and $0F)
+                                             begin
+                                               if LocalHelper.Data[2] and $7F = 0 then
+                                                 Result := Result + ' - Reply Is Pending - Maximum wait time = Infinity'
+                                               else
+                                                 Result := Result + ' - Reply Is Pending - Maximum wait time = ' + IntToStr( Round( Power(2, LocalHelper.Data[2] and $7F))) + ' seconds'
+                                             end else
+                                               Result := Result + ' - Reply Is Not Pending'
                                            end else
                                              Result := Result + ' - Does not include Extended Flags';
                                          end;
@@ -933,7 +1062,7 @@ begin
     PIP_CDI                    : Result := STR_PIP_CDI;
     PIP_TRACTION               : Result := STR_PIP_TRACTION;
     PIP_FDI                    : Result := STR_PIP_FDI;
-    PIP_COMMANDSTATION         : Result := STR_PIP_COMMANDSTATION
+    PIP_FSI                    : Result := STR_PIP_FSI;
   else
     Result := '[Unknown Protocol]';
   end;
@@ -947,7 +1076,8 @@ begin
     $FD : Result := 'Configruation Memory';
     $FC : Result := 'Mfg ACDI Memory';
     $FB : Result := 'User ACDI Memory';
-    $FA : Result := 'Function Memory';
+    $FA : Result := 'Function Definition Information Memory';
+    $F9 : Result := 'Function State Information Memory';
   else
     Result := '[Unknown Memory]';
   end;

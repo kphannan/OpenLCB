@@ -330,8 +330,6 @@ begin
   DCC_NMRA_Tranmitter_Lo_Direction := 0;                                        // Output
   DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
   
-//  ADC1_Read(0);  // cheating, intializes and set to Analog input
-  
   UART1_Write_Text('Starting 1'+LF);
 
  // TON_T3CON_bit := 1;       // Turn on current limit
@@ -438,110 +436,34 @@ begin
               ByteToStr(CommandStationConfigurationInRam.DccBusMode, s1);
               UART1_Write_Text('DCC Bus Mode: ' + s1 + LF);
             end;
-          '1' :
+          '1' : ServiceMode_Print;
+
+          '2' :
             begin
-              ByteToStr(ServiceModeInfo.ServiceModeResult, s1);
-              UART1_Write_Text('SM Result: ' + s1 + LF);
-              ByteToStr(ServiceModeInfo.Value, s1);
-              UART1_Write_Text('SM Value: ' + s1 + LF);
-              ByteToStr(ServiceModeInfo.ReadWrite, s1);
-              UART1_Write_Text('SM ReadWrite: ' + s1 + LF);
-              
-              ByteToStr(ServiceModeInfo.CV, s1);
-              UART1_Write_Text('SM CV: ' + s1 + LF);
-              ByteToStr(ServiceModeInfo.ServiceModeType, s1);
-              UART1_Write_Text('SM ServiceModeType: ' + s1 + LF);
-              ByteToStr(ServiceModeInfo.Flags, s1);
-              UART1_Write_Text('SM Flags: ' + s1 + LF);
-              ByteToStr(ServiceModeInfo.iStateMachine, s1);
-              UART1_Write_Text('SM iStateMachine: ' + s1 + LF);
-              
-              ByteToStr(ServiceModeInfo.iInstructionCountSent, s1);
-              UART1_Write_Text('SM iInstructionCountSent: ' + s1 + LF);
-              ByteToStr(ServiceModeInfo.ReadIndex, s1);
-              UART1_Write_Text('SM ReadIndex: ' + s1 + LF);
+              IntToStr(OverCurrent.OverCurrentSampleLimit, s1);
+              UART1_Write_Text('5ms Sample Count to Trigger: ' + s1 + LF);
+              IntToStr(OverCurrent.OverCurrentCounter, s1);
+              UART1_Write_Text('Over Current Counter: ' + s1 + LF);
+              FloatToStr(Double( OverCurrent.BitValue) * 0.520 * 0.00322266, s1);       // .00322266 V/Bit * 0.520A/V * Bits =
+              UART1_Write_Text('Measured Current: ' + s1 + 'A' + LF);
+              WordToStr(CommandStationConfigurationInRam.OverCurrentLevel, s1);
+              UART1_Write_Text('I Level: ' + s1 + LF);
+              WordToStr(CommandStationConfigurationInRam.OverCurrentTime, s1);
+              UART1_Write_Text('I Time: ' + s1 + LF);
+              WordToStr(CommandStationConfigurationInRam.OverloadDetected, s1);
+              UART1_Write_Text('OverloadDetected: ' + s1 + LF);
             end;
-            '2' :
-              begin
-                IntToStr(OverCurrent.OverCurrentSampleLimit, s1);
-                UART1_Write_Text('5ms Sample Count to Trigger: ' + s1 + LF);
-                IntToStr(OverCurrent.OverCurrentCounter, s1);
-                UART1_Write_Text('Over Current Counter: ' + s1 + LF);
-                FloatToStr(Double( OverCurrent.BitValue) * 0.520 * 0.00322266, s1);       // .00322266 V/Bit * 0.520A/V * Bits =
-                UART1_Write_Text('Measured Current: ' + s1 + 'A' + LF);
-                WordToStr(CommandStationConfigurationInRam.OverCurrentLevel, s1);
-                UART1_Write_Text('I Level: ' + s1 + LF);
-                WordToStr(CommandStationConfigurationInRam.OverCurrentTime, s1);
-                UART1_Write_Text('I Time: ' + s1 + LF);
-                WordToStr(CommandStationConfigurationInRam.OverloadDetected, s1);
-                UART1_Write_Text('OverloadDetected: ' + s1 + LF);
-              end;
-            '3' :
-              begin
-              //  NMRAnetNode_PrintAllocatedNodeData
-              end;
-            '4' :
-              begin
-              //  NMRAnetNode_PrintRawNodeData
-              end;
-            '5' :
-              begin
-                IntToStr(ADC1BUF0, s1);
-                UART1_Write_Text('ADC0: ' + s1 + LF);
-                IntToStr(ADC1BUF1, s1);
-                UART1_Write_Text('ADC1: ' + s1 + LF);
-                IntToStr(ADC1BUF2, s1);
-                UART1_Write_Text('ADC2: ' + s1 + LF);
-                IntToStr(ADC1BUF3, s1);
-                UART1_Write_Text('ADC3: ' + s1 + LF);
-                IntToStr(ADC1BUF4, s1);
-                UART1_Write_Text('ADC4: ' + s1 + LF);
-                IntToStr(ADC1BUF5, s1);
-                UART1_Write_Text('ADC5: ' + s1 + LF);
-                IntToStr(ADC1BUF6, s1);
-                UART1_Write_Text('ADC6: ' + s1 + LF);
-                IntToStr(ADC1BUF7, s1);
-                UART1_Write_Text('ADC7: ' + s1 + LF);
-                IntToStr(ADC1BUF8, s1);
-                UART1_Write_Text('ADC8: ' + s1 + LF);
-                IntToStr(ADC1BUF9, s1);
-                UART1_Write_Text('ADC9: ' + s1 + LF);
-                IntToStr(ADC1BUFA, s1);
-                UART1_Write_Text('ADC10: ' + s1 + LF);
-                IntToStr(ADC1BUFB, s1);
-                UART1_Write_Text('ADC11: ' + s1 + LF);
-                IntToStr(ADC1BUFC, s1);
-                UART1_Write_Text('ADC12: ' + s1 + LF);
-                IntToStr(ADC1BUFD, s1);
-                UART1_Write_Text('ADC13: ' + s1 + LF);
-                IntToStr(ADC1BUFE, s1);
-                UART1_Write_Text('ADC14: ' + s1 + LF);
-                IntToStr(ADC1BUFF, s1);
-                UART1_Write_Text('ADC15: ' + s1 + LF);
-              end;
-            '6' :
-              begin
-                WordToHex(AD1CON1, s1);
-                UART1_Write_Text('AD1CON1: 0x' + s1 + LF);
-                WordToHex(AD1CON2, s1);
-                UART1_Write_Text('AD1CON2: 0x' + s1 + LF);
-                WordToHex(AD1CON3, s1);
-                UART1_Write_Text('AD1CON3: 0x' + s1 + LF);
-                WordToHex(AD1CON4, s1);
-                UART1_Write_Text('AD1CON4: 0x' + s1 + LF);
-                WordToHex(AD1CHS123, s1);
-                UART1_Write_Text('AD1CHS123: 0x' + s1 + LF);
-                WordToHex(AD1CHS0, s1);
-                UART1_Write_Text('AD1CHS0: 0x' + s1 + LF);
-                WordToHex(AD1CSSH, s1);
-                UART1_Write_Text('AD1CSSH: 0x' + s1 + LF);
-                WordToHex(AD1CSSL, s1);
-                UART1_Write_Text('AD1CSSL: 0x' + s1 + LF);
-                WordToHex(ANSELA, s1);
-                UART1_Write_Text('ANSELA: 0x' + s1 + LF);
-                WordToHex(ANSELB, s1);
-                UART1_Write_Text('ANSELB: 0x' + s1 + LF);
-              end;
+          '3' :
+            begin
+              NMRAnetNode_PrintAllocatedNodeData
+            end;
+          '4' :
+            begin
+              NMRAnetNode_PrintRawNodeData
+            end;
+          '5' :
+            begin
+            end;
        end;
       end;
     end;

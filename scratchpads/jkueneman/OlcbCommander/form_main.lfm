@@ -24,8 +24,8 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 724
-      ClientWidth = 1376
+      ClientHeight = 362
+      ClientWidth = 688
       object PanelNetwork: TPanel
         Left = 0
         Height = 362
@@ -1831,6 +1831,11 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Caption = 'Close All'
       OnExecute = ActionConfigEditorsCloseAllExecute
     end
+    object ActionOpenLCBCommandReadFSI: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read FSI Memory'
+      OnExecute = ActionOpenLCBCommandReadFSIExecute
+    end
   end
   object PopupMenuTreeNode: TPopupMenu
     Images = ImageListMainSmall
@@ -1864,6 +1869,9 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object MenuItemReadFDI: TMenuItem
         Action = ActionOpenLCBCommandReadFDI
+      end
+      object MenuItemReadFSI: TMenuItem
+        Action = ActionOpenLCBCommandReadFSI
       end
     end
     object MenuItemTVPopupSep3: TMenuItem

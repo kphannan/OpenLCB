@@ -38,15 +38,23 @@ const
 
 const
   MAX_BASE_BUFFER_POOL             = 2*MAX_NODE_COUNT;                          // Number of Base Buffers to allocate for Messages , JMRI Interleaves all the nodes so we need a Buffer for every Node <;^(
-  MAX_DATAGRAM_BUFFER_POOL         = 10;                                     
-     // Number of Datagram Buffers to allocate for Messages
+  MAX_DATAGRAM_BUFFER_POOL         = 10;                                        // Number of Datagram Buffers to allocate for Messages
   MAX_CONFIG_MEM_BUFFER_POOL       = 10;                                        // Number of Configuration Memory Access buffers to allocate
+  MAX_DATA_BUFFER_POOL             = 10;                                        // Number of Buffers that require 8 CAN bytes to be passed to the main statemachine
 
 // **************************************************************************************************************************************************************
 // Memory Configuration Protocol Supported Options
 // **************************************************************************************************************************************************************
 const
   MEMORY_CONFIG_OPTIONS: TMemConfigurationOptions = (
+    MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES or MCO_UNALIGNED_WRITES,  // MemoryConfigOptions
+    MCWL_ARBITRARY_BYTE,                                                                                  // MemoryConfigWriteLength
+    MSI_CDI,                                                                                              // MemoryConfigHighestSpace
+    MSI_ACDI_USER                                                                                         // MemoryConfigLowestSpace
+  );
+  
+const
+  MEMORY_CONFIG_OPTIONS_VNODE: TMemConfigurationOptions = (
     MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES or MCO_UNALIGNED_WRITES,  // MemoryConfigOptions
     MCWL_ARBITRARY_BYTE,                                                                                  // MemoryConfigWriteLength
     MSI_CDI,                                                                                              // MemoryConfigHighestSpace
@@ -86,10 +94,10 @@ const
     $3C, $67, $72, $6F, $75, $70, $20, $6F, $66, $66, $73, $65, $74, $3D, $22, $31, $22, $3E,    // <group offset="1">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $61, $74, $61, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Data</name>
     $3C, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E, $41, $64, $64, $20, $79, $6F, $75, $72, $20, $6F, $77, $6E, $20, $75, $6E, $69, $71, $75, $65, $20, $6E, $6F, $64, $65, $20, $69, $6E, $66, $6F, $20, $68, $65, $72, $65, $3C, $2F, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E,    // <description>Add your own unique node info here</description>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $32, $30, $22, $3E,    // <string size="20">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $33, $22, $3E,    // <string size="63">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $4E, $61, $6D, $65, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Name</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $34, $30, $22, $3E,    // <string size="40">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $34, $22, $3E,    // <string size="64">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Description</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
     $3C, $2F, $67, $72, $6F, $75, $70, $3E,    // </group>
@@ -122,10 +130,10 @@ const
     $3C, $69, $6E, $74, $20, $73, $69, $7A, $65, $3D, $22, $31, $22, $3E,    // <int size="1">
     $3C, $6E, $61, $6D, $65, $3E, $56, $65, $72, $73, $69, $6F, $6E, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>Version</name>
     $3C, $2F, $69, $6E, $74, $3E,    // </int>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $32, $30, $22, $3E,    // <string size="20">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $33, $22, $3E,    // <string size="63">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $4E, $61, $6D, $65, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Name</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $34, $30, $22, $3E,    // <string size="40">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $34, $22, $3E,    // <string size="64">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Description</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
     $3C, $2F, $67, $72, $6F, $75, $70, $3E,    // </group>
@@ -162,10 +170,10 @@ const
     $3C, $67, $72, $6F, $75, $70, $20, $6F, $66, $66, $73, $65, $74, $3D, $22, $31, $22, $3E,    // <group offset="1">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $61, $74, $61, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Data</name>
     $3C, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E, $41, $64, $64, $20, $79, $6F, $75, $72, $20, $6F, $77, $6E, $20, $75, $6E, $69, $71, $75, $65, $20, $6E, $6F, $64, $65, $20, $69, $6E, $66, $6F, $20, $68, $65, $72, $65, $3C, $2F, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E,    // <description>Add your own unique node info here</description>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $32, $30, $22, $3E,    // <string size="20">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $33, $22, $3E,    // <string size="63">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $4E, $61, $6D, $65, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Name</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $34, $30, $22, $3E,    // <string size="40">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $34, $22, $3E,    // <string size="64">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Description</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
     $3C, $2F, $67, $72, $6F, $75, $70, $3E,    // </group>
@@ -198,10 +206,10 @@ const
     $3C, $69, $6E, $74, $20, $73, $69, $7A, $65, $3D, $22, $31, $22, $3E,    // <int size="1">
     $3C, $6E, $61, $6D, $65, $3E, $56, $65, $72, $73, $69, $6F, $6E, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>Version</name>
     $3C, $2F, $69, $6E, $74, $3E,    // </int>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $32, $30, $22, $3E,    // <string size="20">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $33, $22, $3E,    // <string size="63">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $4E, $61, $6D, $65, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Name</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
-    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $34, $30, $22, $3E,    // <string size="40">
+    $3C, $73, $74, $72, $69, $6E, $67, $20, $73, $69, $7A, $65, $3D, $22, $36, $34, $22, $3E,    // <string size="64">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Description</name>
     $3C, $2F, $73, $74, $72, $69, $6E, $67, $3E,    // </string>
     $3C, $2F, $67, $72, $6F, $75, $70, $3E,    // </group>
@@ -228,8 +236,8 @@ const
 // **************************************************************************************************************************************************************
 
 const
-  MAX_USER_NAME = 20;
-  MAX_USER_DESC = 40;
+  MAX_USER_NAME = 63;
+  MAX_USER_DESC = 64;
 
 const
   MAX_USER_CONFIG_DATA = MAX_USER_NAME + MAX_USER_DESC;

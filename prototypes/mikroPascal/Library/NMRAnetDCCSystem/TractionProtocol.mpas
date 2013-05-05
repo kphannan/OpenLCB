@@ -68,10 +68,12 @@ const
   TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed is not 0
   TRACTION_MANAGE_QUERY_REPLY        = $03;
 
-  STR_LOCO_NOT_FOUND                 = 'Loco not detected' + #0;                     // 60 characters limit
-  STR_SHORT_CIRCUIT                  = 'Overcurrent detected' + #0;                  // 60 characters limit
-  STR_INVALID_PROGRAMMING_METHOD     = 'Programming method not compatible' + #0;     // 60 characters limit
-  
+  STR_ERROR_LOCO_NOT_FOUND           = 'Loco not detected (No ACK)' + #0;       // 60 characters limit
+  STR_ERROR_SHORT_ACK                = 'Ack pulse too short' + #0;              // 60 characters limit
+  STR_ERROR_INVALID_CV               = 'Invalid CV' + #0;                       // 60 characters limit
+  STR_ERROR_SHORT_CIRCUIT            = 'Overcurrent detected' + #0;             // 60 characters limit
+  STR_INVALID_PROGRAMMING_METHOD     = 'Programming method not compatible' + #0;// 60 characters limit
+
   NMRA_LONGADDRESS_MASK_BYTE         = $C0;
   NMRA_LONGADDRESS_MASK_WORD         = $C000;
   
@@ -557,12 +559,12 @@ begin
                       begin
                         if NMRABusTxBufferAvailable then
                         begin
-                          Bytes[0] := TRACTION_MANAGE_PROXY_REPLY;              // First two bytes are Alias
-                          Bytes[1] := TRACTION_MANAGE_QUERY_REPLY;
-                          Bytes[2] := TRACTION_MANAGE_QUERY_REPLY;
-                          Bytes[3] := TRACTION_MANAGE_QUERY_REPLY;
-                          Bytes[4] := TRACTION_MANAGE_QUERY_REPLY;
-                          Bytes[5] := TRACTION_MANAGE_QUERY_REPLY;
+                          Bytes[0] := 0;              // First two bytes are Alias
+                          Bytes[1] := 0;
+                          Bytes[2] := 0;
+                          Bytes[3] := 0;
+                          Bytes[4] := 0;
+                          Bytes[5] := 0;
                           TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_TRACTION_REPLY, DataBuffer^.Alias, 6, @Bytes, False, $00);
                         end else
                           ReleaseBuffer := False;

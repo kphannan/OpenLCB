@@ -24,10 +24,10 @@
     <group offset="1">
       <name>User Data</name>
       <description>Add your own unique node info here</description>
-      <string size="20">
+      <string size="63">
         <name>User Name</name>
       </string>
-      <string size="40">
+      <string size="64">
         <name>User Description`</name>
       </string>
     </group>
@@ -79,10 +79,10 @@
       <int size="1">
         <name>Version</name>
       </int>
-      <string size="20">
+      <string size="63">
         <name>User Name</name>
       </string>
-      <string size="40">
+      <string size="64">
         <name>User Description</name>
       </string>
     </group>

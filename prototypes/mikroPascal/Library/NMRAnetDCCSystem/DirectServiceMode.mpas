@@ -1,5 +1,7 @@
 unit DirectServiceMode;
 
+{.$DEFINE PRINT_DIRECT_MODE_STATEMACHINE}
+
 uses
   NMRAnetDCC,
   CommonServiceMode,
@@ -130,14 +132,25 @@ begin
     if ServiceModeInfo.CV <= SERVICE_MODE_DIRECT_MODE_MAX_CV then
     begin
       case ServiceModeInfo.iStateMachine of
-        STATE_SERVICEMODE_POWER_ON_CYCLE            : CommonServiceMode_PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
-        STATE_SERVICEMODE_RESET_CYCLE               : CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
-        STATE_SERVICEMODE_SEND_INSTRUCTION          : CommonServiceMode_SendInstructions(BufferPtr, @InstructionSendByte, @CommonServiceMode_AckHandlerByte, @CommonServiceMode_NoAckHandler, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
-        STATE_SERVICEMODE_WRITE_RECOVERY            : CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, True);
-        STATE_SERVICEMODE_RESULTS_READY             : CommonServiceMode_ResultReady(BufferPtr);
+        STATE_SERVICEMODE_POWER_ON_CYCLE            : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_POWER_ON_CYCLE'+LF); {$ENDIF}
+                                                        CommonServiceMode_PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
+                                                      end;
+        STATE_SERVICEMODE_RESET_CYCLE               : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_RESET_CYCLE'+LF); {$ENDIF}
+                                                        CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
+                                                      end;
+        STATE_SERVICEMODE_SEND_INSTRUCTION          : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_SEND_INSTRUCTION'+LF); {$ENDIF}
+                                                        CommonServiceMode_SendInstructions(BufferPtr, @InstructionSendByte, @CommonServiceMode_AckHandlerByte, @CommonServiceMode_NoAckHandler, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
+                                                      end;
+        STATE_SERVICEMODE_WRITE_RECOVERY            : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_WRITE_RECOVERY'+LF); {$ENDIF}
+                                                        CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendByte, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, True);
+                                                      end;
+        STATE_SERVICEMODE_RESULTS_READY             : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_RESULTS_READY'+LF); {$ENDIF}
+                                                        CommonServiceMode_ResultReady(BufferPtr);
+                                                      end;
       end
     end else
     begin
+      {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('INVALID_CV_IN_SERVICE_MODE_STATEMACHINE'+LF); {$ENDIF}
       ServiceModeInfo.Value := 0;
       ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_INVALID_CV;
       NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
@@ -169,14 +182,25 @@ begin
     if ServiceModeInfo.CV <= SERVICE_MODE_DIRECT_MODE_MAX_CV then
     begin
       case ServiceModeInfo.iStateMachine of
-        STATE_SERVICEMODE_POWER_ON_CYCLE            : CommonServiceMode_PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
-        STATE_SERVICEMODE_RESET_CYCLE               : CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendBit, SERVICEMODE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
-        STATE_SERVICEMODE_SEND_INSTRUCTION          : CommonServiceMode_SendInstructions(BufferPtr, @InstructionSendBit, @AckHandlerBit, @NoAckHandlerBit, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
-        STATE_SERVICEMODE_WRITE_RECOVERY            : CommonServiceMode_ResetCycle(BufferPtr, nil, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, False);
-        STATE_SERVICEMODE_RESULTS_READY             : CommonServiceMode_ResultReady(BufferPtr);
+        STATE_SERVICEMODE_POWER_ON_CYCLE            : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_POWER_ON_CYCLE'+LF); {$ENDIF}
+                                                        CommonServiceMode_PowerOnCycle(BufferPtr, SERVICEMODE_POWER_ON_CYCLE_COUNT, STATE_SERVICEMODE_RESET_CYCLE);
+                                                      end;
+        STATE_SERVICEMODE_RESET_CYCLE               : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_RESET_CYCLE'+LF); {$ENDIF}
+                                                        CommonServiceMode_ResetCycle(BufferPtr, @InstructionSendBit, SERVICEMODE_RESET_COUNT, STATE_SERVICEMODE_SEND_INSTRUCTION, True);
+                                                      end;
+        STATE_SERVICEMODE_SEND_INSTRUCTION          : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_SEND_INSTRUCTION'+LF); {$ENDIF}
+                                                        CommonServiceMode_SendInstructions(BufferPtr, @InstructionSendBit, @AckHandlerBit, @NoAckHandlerBit, SERVICEMODE_DIRECT_INSTRUCTION_COUNT);
+                                                      end;
+        STATE_SERVICEMODE_WRITE_RECOVERY            : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_WRITE_RECOVERY'+LF); {$ENDIF}
+                                                        CommonServiceMode_ResetCycle(BufferPtr, nil, SERVICEMODE_RECOVER_CYCLE_RESET_COUNT, STATE_SERVICEMODE_RESULTS_READY, False);
+                                                      end;
+        STATE_SERVICEMODE_RESULTS_READY             : begin {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('STATE_SERVICEMODE_RESULTS_READY'+LF); {$ENDIF}
+                                                        CommonServiceMode_ResultReady(BufferPtr);
+                                                      end;
       end
     end else
     begin
+      {$IFDEF PRINT_DIRECT_MODE_STATEMACHINE}UART1_Write_Text('INVALID_CV_IN_SERVICE_MODE_STATEMACHINE'+LF); {$ENDIF}
       ServiceModeInfo.Value := 0;
       ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_INVALID_CV;
       NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3

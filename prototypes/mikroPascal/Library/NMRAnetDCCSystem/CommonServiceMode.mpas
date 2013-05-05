@@ -41,10 +41,10 @@ implementation
 
 procedure ResetACK;
 begin
-  ServiceModeInfo.Flags.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 1;            // Start Looking
-  ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT := 0;
-  ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
-  ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
+  ServiceModeInfo.State.PROGRAMMING_ACK_SCANNING_FOR_ACK_BIT := 1;            // Start Looking
+  ServiceModeInfo.State.PROGRAMMING_ACK_DETECTED_BIT := 0;
+  ServiceModeInfo.State.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT := 0;
+  ServiceModeInfo.State.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT := 0;
 end;
 
 // ***************************************************************************
@@ -236,18 +236,18 @@ end;
 // ***************************************************************************
 procedure CommonServiceMode_SendInstructions(BufferPtr: PDCCBufferInfo; SendInstruction, AckHandler, NoAckHandler: PServiceModePtr; InstructionCount: Word);
 begin
-  if ServiceModeInfo.Flags.PROGRAMMING_ACK_DETECTED_BIT = 1 then
+  if ServiceModeInfo.State.PROGRAMMING_ACK_DETECTED_BIT = 1 then
   begin                                                                 // ACK detected and we are done
     AckHandler(BufferPtr);
   end else
-  if ServiceModeInfo.Flags.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
+  if ServiceModeInfo.State.PROGRAMMING_ACK_FAILED_TO_DETECT_TRAILINGEDGE_BIT = 1 then
   begin
     ServiceModeInfo.Value := 0;
     ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_SHORT_ACK;
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE);  // Per 9.2.3
     ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY;
   end else
-  if ServiceModeInfo.Flags.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT = 1 then
+  if ServiceModeInfo.State.PROGRAMMING_ACK_TIMER_DETECTED_LEADINGEDGE_BIT = 1 then
     NMRA_DCC_LoadResetPacketIntoTransmitter(BufferPtr, PREAMBLE_BIT_COUNT_SERVICEMODE)       // Ack start detected so drop into Reset Packets are either success or failure handled above after 5ms
   else begin
     if ServiceModeInfo.iInstructionCountSent < InstructionCount then

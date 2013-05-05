@@ -66,10 +66,12 @@ procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word
 
 function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
 
-function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;
 procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
 procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 
@@ -158,6 +160,16 @@ begin
    _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
 end;
 
+function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+begin
+  Result := False;
+end;
+
+function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+begin
+  Result := False
+end;
+
 // *****************************************************************************
 //
 // *****************************************************************************
@@ -178,12 +190,19 @@ end;
 //******************************************************************************
 //  Returns the overall size of the Configuration Data
 //******************************************************************************
-function AppCallback_Configuration_AddressSpaceSize(Node: PNMRAnetNode): DWord;
+function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
 begin
-  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
-    Result := MAX_VNODE_CFG_DATA
+  case AddressSpace of
+    MSI_CDI :
+        begin
+          if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+            Result := MAX_VNODE_CFG_DATA
+          else
+            Result := MAX_NODE_CFG_DATA
+        end
   else
-    Result := MAX_NODE_CFG_DATA
+    Result := 0;
+  end;
 end;
 
 //******************************************************************************

@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=NMRAnetAppDefines.mpas
+Value=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_DMA.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -43,11 +43,13 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=4
+Count=6
 File0=Throttle_main.mpas
 File1=NMRAnetAppCallbacks.mpas
 File2=NMRAnetAppDefines.mpas
 File3=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetBufferPools.mpas
+File4=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetStateMachine.mpas
+File5=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\dsPIC33_DMA.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

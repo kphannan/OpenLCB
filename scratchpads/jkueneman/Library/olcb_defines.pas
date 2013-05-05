@@ -110,7 +110,7 @@ const
   PIP_CDI                            = $000800000000;
   PIP_TRACTION                       = $000400000000;
   PIP_FDI                            = $000200000000;
-  PIP_COMMANDSTATION                 = $000100000000;
+  PIP_FSI                            = $000100000000;
 
   PIP_UNASSIGNED                     = $0000FFFFFFF0;
   PIP_RESERVED                       = $00000000000F;
@@ -130,7 +130,8 @@ const
   STR_PIP_CDI                        = 'Configuration Description Information (CDI) Protocol';
   STR_PIP_TRACTION                   = 'Traction Protocol';
   STR_PIP_FDI                        = 'Function Description Information (FDI) Protocol';
-  STR_PIP_COMMANDSTATION             = 'DCC Command Station Protocol';
+  STR_PIP_FSI                        = 'Function State Information (FSI) Protocol';
+
 
   OIR_TEMPORARY_ERROR                 = $1000;
   OIR_PERMANENT_ERROR                 = $2000;
@@ -140,6 +141,7 @@ const
   MCP_READ                            = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
   MCP_READ_DATAGRAM_REPLY             = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
+  MCP_WRITE_DATAGRAM_REPLY            = $10;
   MCP_READ_STREAM_REPLY               = $60;
 
   MCP_READ_OK                         = $50;
@@ -168,12 +170,13 @@ const
   MCP_OP_RESETS                      = $A8;                                     // MemoryConfigurationProtocol Operation - Resets
 
 
-  MSI_CDI                            = $FF;                                     // MemorySpaceIdentifer - Access the Configuration Definition Infomation (CDI)
-  MSI_ALL                            = $FE;                                     // MemorySpaceIdentifer - Access All memory (define all in the application)
-  MSI_CONFIG                         = $FD;                                     // MemorySpaceIdentifer - Access basic configuration memory that feeds into the CDI
-  MSI_ACDI_MFG                       = $FC;                                     // MemorySpaceIdentifer - Access the ACDI Manfacturers Info
-  MSI_ACDI_USER                      = $FB;                                     // MemorySpaceIdentifer - Access the ACDI User definable Info
-  MSI_FDI                            = $FA;                                     // MemorySpaceIdentifer - Access the Traction Functions definable Info
+  MSI_CDI                            = $FF;                                     // MemorySpaceIdentifier - Access the Configuration Definition Infomation (CDI)
+  MSI_ALL                            = $FE;                                     // MemorySpaceIdentifier - Access All memory (define all in the application)
+  MSI_CONFIG                         = $FD;                                     // MemorySpaceIdentifier - Access basic configuration memory that feeds into the CDI
+  MSI_ACDI_MFG                       = $FC;                                     // MemorySpaceIdentifier - Access the ACDI Manfacturers Info
+  MSI_ACDI_USER                      = $FB;                                     // MemorySpaceIdentifier - Access the ACDI User definable Info
+  MSI_FDI                            = $FA;                                     // MemorySpaceIdentifier - Access the Traction Functions definable Info
+  MSI_FSI                            = $F9;                                     // MemorySpaceIdentifier = Access the Traction Function State Information
 
   MCO_WRITE_UNDER_MASK               = $8000;                                   // MemoryConfigurationOptions - Write under mask supported
   MCO_UNALIGNED_READS                = $4000;                                   // MemoryConfigurationOptions - Unaligned memory Reads supported
