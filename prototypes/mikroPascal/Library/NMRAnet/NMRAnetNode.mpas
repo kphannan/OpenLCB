@@ -70,6 +70,7 @@ uses
   {$IFDEF PRINT_NODE}
   procedure NMRAnetNode_PrintRawNodeData;
   procedure NMRAnetNode_PrintAllocatedNodeData;
+  procedure NMRAnetNode_PrintNodeData(Index: Integer; Node: PNMRAnetNode);
   {$ENDIF}
   
   // Defined in NMRAnetStateMachine.mpas
@@ -90,37 +91,50 @@ procedure NMRAnetNode_PrintNodeData(Index: Integer; Node: PNMRAnetNode);
 var
   j: Integer;
 begin
-  IntToStr(Index, s1);
-  UART1_Write_Text('Node: ' + s1);
-  WordToStr( Word( Node), s1);
-  UART1_Write_Text('0x ' + s1 + LF);
+  LongWordToHex( Node, s1);
+  UART1_Write_Text('Node Address: 0x' + s1 + LF);
   ByteToStr(Node^.iIndex, s1);
-  UART1_Write_Text('  iIndex: ' + s1 + LF);
+  UART1_Write_Text('  iIndex              : ' + s1 + LF);
   ByteToStr(Node^.State, s1);
-  UART1_Write_Text('  State: ' + s1 + LF);
+  UART1_Write_Text('  State               : ' + s1 + LF);
   ByteToStr(Node^.MsgFlags, s1);
-  UART1_Write_Text('  MsgFlags: ' + s1 + LF);
+  UART1_Write_Text('  MsgFlags            : ' + s1 + LF);
+  ByteToStr(Node^.MsgFlagsUserDefined, s1);
+  UART1_Write_Text('  MsgFlagsUserDefined : ' + s1 + LF);
   ByteToStr(Node^.iStateMachine, s1);
-  UART1_Write_Text('  iStateMachine: ' + s1 + LF);
-  LongWordToStr(Node^.ConfigurationAddress, s1);
-  UART1_Write_Text('  ConfigurationAddress: ' + s1 + LF);
-  LongWordToStr(Node^.RAMAddress, s1);
-  UART1_Write_Text('  RAMAddress: ' + s1 + LF);
-  WordToStr(Word( Node^.DatagramBuffers), s1);
-  UART1_Write_Text('  DatagramBuffers: ' + s1 + LF);
-  WordToStr(Word( Node^.BaseBuffers), s1);
-  UART1_Write_Text('  BaseBuffers: ' + s1 + LF);
-  UART1_Write_Text('  Produced Bytes' + LF);
+  UART1_Write_Text('  iStateMachine       : ' + s1 + LF);
+  
+  LongWordToHex(Node^.ConfigurationAddress, s1);
+  UART1_Write_Text('  ConfigurationAddress: 0x' + s1 + LF);
+  LongWordToHex(Node^.RAMAddress, s1);
+  UART1_Write_Text('  RAMAddress          : 0x' + s1 + LF);
+  
+  LongWordToHex(Word( Node^.BaseBuffers), s1);
+  UART1_Write_Text('  BaseBuffers         : 0x' + s1 + LF);
+  LongWordToHex(Word( Node^.DatagramBuffers), s1);
+  UART1_Write_Text('  DatagramBuffers     : 0x' + s1 + LF);
+  LongWordToHex(Word( Node^.ConfigMemBuffers), s1);
+  UART1_Write_Text('  ConfigMemBuffers    : 0x' + s1 + LF);
+  LongWordToHex(Word( Node^.DataBuffers), s1);
+  UART1_Write_Text('  DataBuffers         : 0x' + s1 + LF);
+  
+  UART1_Write_Text('  Produced Bytes -' + LF);
   for j := 0 to MAX_EVENTS_PRODUCED_BIT_BYTES -1 do
   begin
     ByteToStr(Node^.EventsProducedFlags[j], s1);
-    UART1_Write_Text('    EventsProducedFlags Byte: ' + s1 + LF);
+    UART1_Write_Text('    EventsProducedFlags Byte  : ' + s1 + LF);
   end;
-  UART1_Write_Text('  Consumed Bytes' + LF);
+  UART1_Write_Text('  Consumed Bytes -' + LF);
   for j := 0 to MAX_EVENTS_CONSUMED_BIT_BYTES -1 do
   begin
     ByteToStr(Node^.EventsConsumedFlags[j], s1);
-    UART1_Write_Text('    EventsConsumedFlags Byte: ' + s1 + LF);
+    UART1_Write_Text('    EventsConsumedFlags Byte  : ' + s1 + LF);
+  end;
+  UART1_Write_Text('  PCER Bytes -' + LF);
+  for j := 0 to MAX_PCER_BIT_BYTES-1 do
+  begin
+    ByteToStr(Node^.PCER_Flags[j], s1);
+    UART1_Write_Text('    PCER_Flags Byte           : ' + s1 + LF);
   end;
 end;
 

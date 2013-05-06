@@ -21,8 +21,6 @@ type
     ActionLogCut: TAction;
     ActionLogPaste: TAction;
     ActionLogSelectAll: TAction;
-    BitBtnClear: TBitBtn;
-    BitBtnClear1: TBitBtn;
     Label1: TLabel;
     MenuItemClear: TMenuItem;
     MenuItemSeparator1: TMenuItem;
@@ -32,6 +30,8 @@ type
     MenuItemSelectAll: TMenuItem;
     MenuItemCut: TMenuItem;
     PopupMenuSynMemo: TPopupMenu;
+    SpeedButtonClear1: TSpeedButton;
+    SpeedButtonClear: TSpeedButton;
     SynMemo: TSynMemo;
     procedure ActionLogClearExecute(Sender: TObject);
     procedure ActionLogCopyExecute(Sender: TObject);

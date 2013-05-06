@@ -13,13 +13,21 @@ uses
   NMRAnetDefinesShared,
   NMRAnetDefines;
   
+const
+  STATE_OVERCURRENT_NORMAL         = 0;                                         // Normal Running Condition
+  STATE_OVERCURRENT_DETECTED       = 1;                                         // Overcurrent State Set
+  STATE_OVERCURRENT_OFF            = 2;                                         // Overcurrent turned CS off
+  STATE_OVERCURRENT_REMOVED        = 3;                                         // Overcurrent condition removed
+  
 type
   TOverCurrent = record
-    OverCurrentSampleLimit: Integer;                                            // Number of 5ms cycles to run before making an overcurrent decision
-    OverCurrentSampleCount: Word;                                               // Current 5ms Index looking for the OverCurrentSampleLimit
-    BitValue: Word;                                                             // Last ADC value of the current.
-    OverCurrentLimit: Word;                                                     // The value defined as overcurrent converted from Amps to ADC Bits
-    OverCurrentCounter: Integer;                                                // OC Filtered Flag
+    SampleTimeStepLimitShutDown: Word;                                          // Number of 5ms cycles to run before making an OverCurrent decision
+    SampleTimeStepLimitRestart: Word;                                           // Number of 5ms cycles to run before making an Restart decision
+    SampleTimeStepLimitCounter: Word;                                           // Current 5ms Index looking for the SampleTimeStepLimit
+    BitValue: Word;                                                             // Last ADC value of the current, used to display the current to the user if needed
+    Limit: Word;                                                                // The value defined as overcurrent in ADC Bits (was converted from user entered Amps to bits)
+    Counter: Integer;                                                           // Number of ADC samples that where greater than the OverCurrentLimit
+    iStateMachine: Byte;                                                        // StateMachine Index
   end;
 
 type
@@ -133,23 +141,26 @@ const
 
   MSG_SEND_DCC_ADDRESS_ALLOCATED   = $01;                                       // Need to send a Message for the DCC Address was Allocated
   
+  FUNCTION_COUNT = 28;
+  
 type
   TCommandStationRamData = record
     EnableAutoAllocateProxy: Byte;                                              // For Debugging
     AllocateProxy: Word;                                                        // Running count of how many proxies to allocate
+    OverloadDetected: Boolean;
   end;
   PCommandStationRamData = ^TCommandStationRamData;
 
-  TRepeatFunctionPacketArray = array[0..27] of Byte;
+  TRepeatFunctionPacketArray = array[0..FUNCTION_COUNT-1] of Byte;
 
-  TCommandStationConfigurationInRam = record                                    // This mirrors the EEPROM values for fast lookup in real time
+  TCommandStationConfigurationShadowRam = record                                    // This mirrors the EEPROM values for fast lookup in real time
     OutputMode: Byte;
     ProgrammingMode: Byte;
     DccBusMode: Byte;
     RailComEnable: Byte;
     OverCurrentLevel: Word;                                                     // In milliAmps
     OverCurrentTime: Word;                                                      // In milliSeconds
-    OverloadDetected: Byte;                                                     // 0 = Normal; 1 = Overloaded
+    RestartTime: Word;                                                          // In milliSeconds
     RepeatSpeedPacket: Byte;
     RepeatFunctions: TRepeatFunctionPacketArray;
     DebugAutoAllocate: Byte;                                                    // Start of EEPROM_DEBUG memory space
@@ -161,13 +172,17 @@ type
   function NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node: PNMRAnetNode): PTrainProxyRamData;
   function NMRAnetTractionProtocol_FindFirstNonDCCAllocatedNode: PNMRAnetNode;
   
+  procedure NMRAnetTractionProtocol_OvercurrentUpdateCountersWithAdcBuffers(AdcBuffer: ^Word; NumberOfBuffers: Byte; ClampLowerLimit, ClampUpperLimit: Byte);
+  
+  procedure NMRAnetTractionProtocol_PrintNodeRamData(Node: PNMRAnetNode; PrintNodeAddress: Boolean);
+  
   function NMRABusTxBufferAvailable: Boolean; external;
   function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word): Boolean; external;
   function CANBusBufferAvailable: Boolean; external;
   function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean; external;
   
 var
-  CommandStationConfigurationInRam: TCommandStationConfigurationInRam;
+  CommandStationConfigurationShadowRam: TCommandStationConfigurationShadowRam;
   CommandStationRamData: TCommandStationRamData;
   OverCurrent: TOverCurrent;
   
@@ -176,6 +191,52 @@ var
   TrainProxyRamData: array[0..MAX_NODE_COUNT - 1] of TTrainProxyRamData;   // Easier to allocate 1 extra but not use it for the CS node
 
 implementation
+
+procedure NMRAnetTractionProtocol_OvercurrentUpdateCountersWithAdcBuffers(AdcBuffer: ^Word; NumberOfBuffers: Byte; ClampLowerLimit, ClampUpperLimit: Byte);
+var
+  i: Integer;
+begin
+  i := 0;
+  OverCurrent.BitValue := AdcBuffer^;
+  while i < NumberOfBuffers do
+  begin
+    if (AdcBuffer^ > OverCurrent.Limit) then
+      Inc(OverCurrent.Counter)
+    else
+      Dec(OverCurrent.Counter);
+    Inc(AdcBuffer);
+    Inc(i);
+  end;
+  if OverCurrent.Counter > ClampUpperLimit then
+    OverCurrent.Counter := ClampUpperLimit
+  else
+  if OverCurrent.Counter < ClampLowerLimit then
+    OverCurrent.Counter := ClampLowerLimit;
+end;
+
+procedure NMRAnetTractionProtocol_PrintNodeRamData(Node: PNMRAnetNode; PrintNodeAddress: Boolean);
+var
+   RamData: PTrainProxyRamData;
+begin
+  RamData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
+  if PrintNodeAddress then
+  begin
+    LongWordToHex( Node, s1);
+    UART1_Write_Text('Node Address: 0x' + s1 + LF);
+  end;
+  WordToStr(RamData^.State, s1);
+  UART1_Write_Text('  State      : ' + s1 + LF);
+  WordToStr(RamData^.Speed, s1);
+  UART1_Write_Text('  Speed      : ' + s1 + LF);
+  WordToStr(RamData^.SpeedSteps, s1);
+  UART1_Write_Text('  SpeedSteps : ' + s1 + LF);
+  LongWordToHex(RamData^.Functions, s1);
+  UART1_Write_Text('  Functions  : ' + s1 + LF);
+  WordToHex(RamData^.Address, s1);
+  UART1_Write_Text('  Address    : 0x' + s1 + LF);
+  WordToStr(RamData^.Reserved, s1);
+  UART1_Write_Text('  Reserved   : ' + s1 + LF);
+end;
 
 
 procedure NMRAnetTractionProtocol_InitializeRamData(NodeRamData: PTrainProxyRamData);
@@ -205,11 +266,27 @@ begin
     NMRAnetTractionProtocol_InitializeRamData(@TrainProxyRamData[i]);
   CommandStationRamData.AllocateProxy := 1;   // Allocate the first one
   CommandStationRamData.EnableAutoAllocateProxy := 0;
-  OverCurrent.OverCurrentSampleLimit := 0;
-  OverCurrent.OverCurrentSampleCount := 0;
+  CommandStationRamData.OverloadDetected := False;
+
+  CommandStationConfigurationShadowRam.OutputMode := 0;
+  CommandStationConfigurationShadowRam.OutputMode := 0;
+  CommandStationConfigurationShadowRam.ProgrammingMode := 0;
+  CommandStationConfigurationShadowRam.DccBusMode := 0;
+  CommandStationConfigurationShadowRam.RailComEnable := 0;
+  CommandStationConfigurationShadowRam.OverCurrentLevel := 0;
+  CommandStationConfigurationShadowRam.OverCurrentTime := 0;
+  CommandStationConfigurationShadowRam.RepeatSpeedPacket := 0;
+  for i := 0 to FUNCTION_COUNT - 1 do
+    CommandStationConfigurationShadowRam.RepeatFunctions[i] := 0;
+  CommandStationConfigurationShadowRam.DebugAutoAllocate := 0;
+
   OverCurrent.BitValue := 0;
-  OverCurrent.OverCurrentLimit := 0;
-  OverCurrent.OverCurrentCounter := 0;
+  OverCurrent.SampleTimeStepLimitShutDown := 1;
+  OverCurrent.SampleTimeStepLimitRestart := 200;   // Min = 1000ms or 5ms * 200
+  OverCurrent.SampleTimeStepLimitCounter := 0;
+  OverCurrent.Limit := 0;
+  OverCurrent.Counter := 0;
+  OverCurrent.iStateMachine := STATE_OVERCURRENT_NORMAL;
 end;
 
 // *****************************************************************************

@@ -1,7 +1,7 @@
 object FormMessageLog: TFormMessageLog
-  Left = 436
+  Left = 643
   Height = 290
-  Top = 219
+  Top = 209
   Width = 757
   Caption = 'Message Logger'
   ClientHeight = 290
@@ -9,7 +9,7 @@ object FormMessageLog: TFormMessageLog
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnHide = FormHide
-  LCLVersion = '1.0.2.0'
+  LCLVersion = '1.0.8.0'
   inline SynMemo: TSynMemo
     Cursor = crIBeam
     Left = 0
@@ -27,7 +27,7 @@ object FormMessageLog: TFormMessageLog
     PopupMenu = PopupMenuSynMemo
     TabOrder = 0
     OnKeyDown = SynMemoKeyDown
-    Gutter.Width = 57
+    Gutter.Width = 61
     Gutter.MouseActions = <>
     Keystrokes = <    
       item
@@ -457,13 +457,19 @@ object FormMessageLog: TFormMessageLog
     )
     ScrollBars = ssAutoBoth
     SelectedColor.Background = clSkyBlue
+    SelectedColor.BackPriority = 50
+    SelectedColor.ForePriority = 50
+    SelectedColor.FramePriority = 50
+    SelectedColor.BoldPriority = 50
+    SelectedColor.ItalicPriority = 50
+    SelectedColor.UnderlinePriority = 50
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterMarks1: TSynGutterMarks
         Width = 24
         MouseActions = <>
       end
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 17
+        Width = 21
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
@@ -481,6 +487,8 @@ object FormMessageLog: TFormMessageLog
       object SynGutterSeparator1: TSynGutterSeparator
         Width = 2
         MouseActions = <>
+        MarkupInfo.Background = clWhite
+        MarkupInfo.Foreground = clGray
       end
       object SynGutterCodeFolding1: TSynGutterCodeFolding
         MouseActions = <>
@@ -491,12 +499,13 @@ object FormMessageLog: TFormMessageLog
       end
     end
   end
-  object BitBtnClear: TBitBtn
-    Left = 588
+  object SpeedButtonClear: TSpeedButton
+    Left = 576
     Height = 22
-    Top = 261
+    Top = 256
     Width = 150
     Action = ActionLogClear
+    AllowAllUp = True
     Anchors = [akRight, akBottom]
     Glyph.Data = {
       36040000424D3604000000000000360000002800000010000000100000000100
@@ -534,16 +543,19 @@ object FormMessageLog: TFormMessageLog
       FF000000001C0000003300000036000000360000003600000036000000360000
       003600000036000000360000002000000002FFFFFF00FFFFFF00
     }
-    TabOrder = 1
+    GroupIndex = 1
+    NumGlyphs = 0
   end
-  object BitBtnClear1: TBitBtn
-    Left = 426
+  object SpeedButtonClear1: TSpeedButton
+    Left = 416
     Height = 22
-    Top = 261
+    Top = 256
     Width = 150
     Action = ActionLogPause
+    AllowAllUp = True
     Anchors = [akRight, akBottom]
-    TabOrder = 2
+    GroupIndex = 1
+    NumGlyphs = 0
   end
   object PopupMenuSynMemo: TPopupMenu
     left = 192
@@ -605,8 +617,10 @@ object FormMessageLog: TFormMessageLog
     end
     object ActionLogPause: TAction
       Category = 'LogWindow'
+      AutoCheck = True
       Caption = 'Pause'
+      GroupIndex = 1
       OnExecute = ActionLogPauseExecute
     end
   end
-end
+end

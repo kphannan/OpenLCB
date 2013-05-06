@@ -378,6 +378,7 @@ begin
   FormAwesomeThrottle.OnThrottleClose := @SyncThrottleClose;
   FormAwesomeThrottle.OnThrottleHide := @SyncThrottleHide;
   FormAwesomeThrottle.ComPortThread := ComPortThread;
+  FormAwesomeThrottle.ImageList16x16 := ImageList16x16;
   ThrottleList.Add(FormAwesomeThrottle);
   FormAwesomeThrottle.Show;
   UpdateUI // Update the Separator before the user tries to open the Throttle Menu

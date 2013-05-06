@@ -188,6 +188,7 @@ type
     FAllocationPanelToggleExpand: Boolean;
     FComPortThread: TComPortThread;
     FConfigurationViewer: TFormTrainConfigEditor;
+    FImageList16x16: TImageList;
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
@@ -231,6 +232,7 @@ type
     property AllocatedAlias: Word read FAllocatedAlias write SetAllocatedAlias;
     property ComPortThread: TComPortThread read FComPortThread write SetComPortThread;
     property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
+    property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
     property WaitingActions: TThrottleWaitingActions read FWaitingActions write FWaitingActions;
@@ -307,6 +309,7 @@ begin
   ComPortThread := nil;
   AliasList := TAliasList.Create;
   FConfigurationViewer := nil;
+  FImageList16x16 := nil;
 end;
 
 procedure TFormAwesomeThrottle.FormDestroy(Sender: TObject);
@@ -333,6 +336,8 @@ begin
     FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
     ConfigurationViewer.ComPortThread := ComPortThread;
     ConfigurationViewer.AliasID := AllocatedAlias;
+    ConfigurationViewer.ImageList16x16 := ImageList16x16;
+    ConfigurationViewer.Caption := 'Configuration Editor: Train ' + IntToStr(SpinEditAddress.Value);
     ConfigurationViewer.ShowModal;
     ConfigurationViewer.Release;
     FConfigurationViewer := nil;

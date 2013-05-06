@@ -38,15 +38,16 @@ uses
   HelperFunctions;
 
 const
-  MAX_NODE_CFG_DATA  = 511;                                                     // Command Station Configuration = 2 frames of 256 bytes
-  MAX_VNODE_CFG_DATA = 1791;                                                    // Proxy Configuration = 7 frames of 256 bytes
+  MAX_NODE_CFG_DATA  = 512;                                                     // Command Station Configuration = 2 frames of 256 bytes
+  MAX_VNODE_CFG_DATA = 1792;                                                    // Proxy Configuration = 7 frames of 256 bytes
   
   // Command Station EEPROM Configuration
   EEPROM_CONFIG_OFFSET = 128;                                                   // Start of the Command Station Specific Config Data
   EEPROM_OVERCURRENT_LEVEL     = 132;
   EEPROM_OVERCURRENT_TIME      = 134;
-  EEPROM_OVERCURRENT_DECTECTED = 136;
-  EEPROM_CONFIG_MAX_OFFSET = 166;                                               // Last Offset of the Command Station Config Data that is currently _implemented_.
+  EEPROM_AUTORESTART_TIME      = 136;
+  EEPROM_FUNCTION_OPTIONS      = 138;
+  EEPROM_CONFIG_MAX_OFFSET     = 167;                                           // Last Offset of the Command Station Config Data that is currently _implemented_.
   // Command Station EEPROM Debug Configuration
   EEPROM_DEBUG_CONFG_OFFSET = 256;
   EEPROM_AUTOALLOCATE_TRAIN_NODES = 256;                                        // Allows turning off the AutoAllocation of vNodes to debug and test software
@@ -233,15 +234,20 @@ begin
       Delay_us(10);
    _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_TIME, 2, @LocalBuffer);   // RailCom Time
    
-   LocalBuffer[0] := 0;   // Overload State = No Overload
-   LocalBuffer[1] := 1;   // Repeat Speed/Dir Packets
-   LocalBuffer[2] := 1;   // Repeat F0 Packets
-   LocalBuffer[3] := 1;   // Repeat F1 Packets
-   LocalBuffer[4] := 1;   // Repeat F2 Packets
-   LocalBuffer[5] := 1;   // Repeat F3 Packets
+   LocalBuffer[1] := Lo(Word( 1000));     // 1000ms autorestart
+   LocalBuffer[0] := Hi(Word( 1000));
     while _25AAxxxx_Busy(EEPROM_BANK_0) do
       Delay_us(10);
-   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 6, @LocalBuffer);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_AUTORESTART_TIME, 2, @LocalBuffer);   // RailCom Time
+   
+   LocalBuffer[0] := 1;   // Repeat Speed/Dir Packets
+   LocalBuffer[1] := 1;   // Repeat F0 Packets
+   LocalBuffer[2] := 1;   // Repeat F1 Packets
+   LocalBuffer[3] := 1;   // Repeat F2 Packets
+   LocalBuffer[4] := 1;   // Repeat F3 Packets
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_FUNCTION_OPTIONS, 5, @LocalBuffer);
    _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_AUTOALLOCATE_TRAIN_NODES, 1, @CommandStationRamData.EnableAutoAllocateProxy);
   end
 end;
@@ -255,15 +261,22 @@ procedure AppCallback_Sync_Config_Ram_with_EEPROM;
 begin
   while _25AAxxxx_Busy(EEPROM_BANK_0) do
     Delay_us(10);
-  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, PByte( @CommandStationConfigurationInRam));
-  CommandStationConfigurationInRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationInRam.OverCurrentLevel);
-  CommandStationConfigurationInRam.OverCurrentTime := SwapBytes(CommandStationConfigurationInRam.OverCurrentTime);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, PByte( @CommandStationConfigurationShadowRam));
+  CommandStationConfigurationShadowRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationShadowRam.OverCurrentLevel);
+  CommandStationConfigurationShadowRam.OverCurrentTime := SwapBytes(CommandStationConfigurationShadowRam.OverCurrentTime);
+  CommandStationConfigurationShadowRam.RestartTime := SwapBytes(CommandStationConfigurationShadowRam.RestartTime);
   // Convert the users mA limit into Bit Counts
-  OverCurrent.OverCurrentLimit := Word( 310.302669 * 1.923076 *  Double( CommandStationConfigurationInRam.OverCurrentLevel) / 1000); // 310.302669 Bits/V * 1.923076 V/A * Amps = Bits
+  OverCurrent.Limit := Word( 310.302669 * 0.520 *  Double( CommandStationConfigurationShadowRam.OverCurrentLevel) / 1000); // 310.302669 Bits/V * 0.520V/A * Amps = Bits
+  
   // Convert the users Tigger timeout to 5ms counts
-  OverCurrent.OverCurrentSampleLimit := ( Word ( (Double(CommandStationConfigurationInRam.OverCurrentTime)/ADC_SAMPLE_INTERRUPT_TIME) - 1));
-  if OverCurrent.OverCurrentSampleLimit <= 0 then
-    OverCurrent.OverCurrentSampleLimit := 1;
+  OverCurrent.SampleTimeStepLimitShutDown := ( Word ( (Double(CommandStationConfigurationShadowRam.OverCurrentTime)/ADC_SAMPLE_INTERRUPT_TIME) - 1));
+  if OverCurrent.SampleTimeStepLimitShutDown <= 0 then
+    OverCurrent.SampleTimeStepLimitShutDown := 1;
+    
+  OverCurrent.SampleTimeStepLimitRestart := ( Word ( (Double(CommandStationConfigurationShadowRam.RestartTime)/ADC_SAMPLE_INTERRUPT_TIME) - 1));
+  if OverCurrent.SampleTimeStepLimitRestart <= 200 then    // Minimum of 1000ms restart time limit
+    OverCurrent.SampleTimeStepLimitRestart := 200;
+    
   while _25AAxxxx_Busy(EEPROM_BANK_0) do
     Delay_us(10);
   _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);
@@ -339,14 +352,14 @@ begin
         end;
     1: begin
          // Double Indexed CV
-         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
          begin
            UART_Write_Text('Double Indexed CV Write');
          end
        end;
     2: begin
          // Single Indexed CV
-         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
          begin
            UART_Write_Text('Single Indexed CV Write');
          end
@@ -354,9 +367,9 @@ begin
     3: begin
          if ConfigMemBuffer^.DataCount = 1 then  // Only support 1 CV for now
          begin
-           if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+           if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
            begin
-             case CommandStationConfigurationInRam.ProgrammingMode of
+             case CommandStationConfigurationShadowRam.ProgrammingMode of
                CONFIG_SERVICE_MODE_AUTO_DETECT        : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
                CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT,
                CONFIG_SERVICE_MODE_DIRECT_BYTE        : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, (ConfigMemBuffer^.Address and $000007FF), ConfigMemBuffer^.DataBytes[0], 0);
@@ -367,7 +380,7 @@ begin
            end else
            begin
              // CS is in Main Line Output Mode
-             if CommandStationConfigurationInRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             if CommandStationConfigurationShadowRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
              begin
                // Load DCC Queue
              end else
@@ -412,7 +425,7 @@ begin
         end;
     1: begin
          // Double Indexed CV
-         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
          begin
            UART_Write_Text('Double Indexed CV Read');
          end else
@@ -421,7 +434,7 @@ begin
        end;
     2: begin
          // Single Indexed CV
-         if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
          begin
            UART_Write_Text('Single Indexed CV Read');
          end else
@@ -432,9 +445,9 @@ begin
          // Basic CV
          if ConfigMemBuffer^.DataCount = 1 then  // Only support 1 CV for now
          begin
-           if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+           if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
            begin
-             case CommandStationConfigurationInRam.ProgrammingMode of
+             case CommandStationConfigurationShadowRam.ProgrammingMode of
                CONFIG_SERVICE_MODE_AUTO_DETECT        : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
                CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (ConfigMemBuffer^.Address and $000007FF), $FF, 0);
                CONFIG_SERVICE_MODE_DIRECT_BYTE        : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (ConfigMemBuffer^.Address and $000007FF), $FF, 0);
@@ -445,7 +458,7 @@ begin
            end else
            begin
              // CS is in Main Line Output Mode
-             if CommandStationConfigurationInRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             if CommandStationConfigurationShadowRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
              begin
                // Load DCC Queue
              end else
@@ -578,7 +591,7 @@ end;
 // *****************************************************************************
 procedure SetProxyNodeProducerFlags(Node: PNMRAnetNode; EventIndex: Integer);
 begin
-  // This uses the fact that there are hard coded will known Event ID offsets in the Event Arrays
+  // This uses the fact that there are hard coded well known Event ID offsets in the Event Arrays
   case EventIndex of
     EVENT_TRAIN_INDEX           : NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
     EVENT_TRAIN_DCC_IDLE_INDEX  : begin

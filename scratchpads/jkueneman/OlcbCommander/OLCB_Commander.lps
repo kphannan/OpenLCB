@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="34">
+    <Units Count="33">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -21,11 +21,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_main"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="229"/>
-        <CursorPos X="51" Y="244"/>
+        <TopLine Value="433"/>
+        <CursorPos X="3" Y="439"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -34,7 +33,7 @@
         <Filename Value="..\Library\olcb_app_common_settings.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_app_common_settings"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
         <TopLine Value="176"/>
         <CursorPos X="1" Y="192"/>
@@ -81,16 +80,20 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_messagelog"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="106"/>
+        <TopLine Value="63"/>
         <CursorPos X="27" Y="63"/>
         <UsageCount Value="200"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\Library\common_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_utilities"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="12" Y="19"/>
@@ -137,7 +140,7 @@
         <Filename Value="..\Library\olcb_threaded_stack.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_threaded_stack"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="583"/>
         <CursorPos X="37" Y="597"/>
@@ -148,7 +151,7 @@
         <Filename Value="..\Library\olcb_common_tasks.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_common_tasks"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1441"/>
         <CursorPos X="34" Y="1458"/>
@@ -159,7 +162,7 @@
         <Filename Value="..\Library\olcb_structure_helpers.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_structure_helpers"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="261"/>
         <CursorPos X="3" Y="263"/>
@@ -173,7 +176,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_config_mem_viewer"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="14"/>
         <CursorPos X="85" Y="18"/>
@@ -196,10 +199,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1035"/>
-        <CursorPos X="54" Y="1057"/>
+        <TopLine Value="325"/>
+        <CursorPos X="100" Y="340"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -223,7 +226,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_duplicate_address"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="99" Y="18"/>
@@ -251,8 +254,8 @@
         <UnitName Value="form_train_config_editor"/>
         <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="354"/>
-        <CursorPos X="42" Y="373"/>
+        <TopLine Value="6"/>
+        <CursorPos X="25" Y="20"/>
         <UsageCount Value="223"/>
         <Loaded Value="True"/>
       </Unit21>
@@ -260,7 +263,7 @@
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1124"/>
         <CursorPos X="35" Y="1137"/>
@@ -272,15 +275,15 @@
         <UnitName Value="olcb_utilities"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="296"/>
-        <CursorPos X="63" Y="321"/>
+        <TopLine Value="215"/>
+        <CursorPos X="86" Y="302"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\Library\olcb_defines.pas"/>
         <UnitName Value="olcb_defines"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="122"/>
         <CursorPos X="14" Y="147"/>
@@ -293,21 +296,21 @@
         <WindowIndex Value="0"/>
         <TopLine Value="19"/>
         <CursorPos X="1" Y="34"/>
-        <UsageCount Value="39"/>
+        <UsageCount Value="35"/>
       </Unit25>
       <Unit26>
         <Filename Value="C:\lazarus\lcl\interfaces\win32\win32callback.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1078"/>
         <CursorPos X="90" Y="1091"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="1"/>
       </Unit26>
       <Unit27>
         <Filename Value="C:\lazarus\lcl\include\spinedit.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="194"/>
         <CursorPos X="1" Y="217"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="8"/>
       </Unit27>
       <Unit28>
         <Filename Value="C:\lazarus\components\synedit\synedit.pp"/>
@@ -315,181 +318,163 @@
         <WindowIndex Value="0"/>
         <TopLine Value="3977"/>
         <CursorPos X="44" Y="3993"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="1"/>
       </Unit28>
       <Unit29>
         <Filename Value="C:\lazarus\lcl\include\customform.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1592"/>
         <CursorPos X="1" Y="1613"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="1"/>
       </Unit29>
       <Unit30>
-        <Filename Value="C:\lazarus\lcl\include\menuitem.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="402"/>
-        <CursorPos X="54" Y="404"/>
-        <UsageCount Value="4"/>
-      </Unit30>
-      <Unit31>
         <Filename Value="..\Components\synapse40\source\lib\synaser.pas"/>
         <UnitName Value="synaser"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1853"/>
         <CursorPos X="56" Y="1863"/>
-        <UsageCount Value="5"/>
-      </Unit31>
-      <Unit32>
+        <UsageCount Value="1"/>
+      </Unit30>
+      <Unit31>
         <Filename Value="C:\lazarus\lcl\include\containedaction.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="87"/>
         <CursorPos X="1" Y="104"/>
-        <UsageCount Value="5"/>
-      </Unit32>
-      <Unit33>
+        <UsageCount Value="1"/>
+      </Unit31>
+      <Unit32>
         <Filename Value="C:\lazarus\lcl\actnlist.pas"/>
         <UnitName Value="ActnList"/>
         <WindowIndex Value="0"/>
         <TopLine Value="186"/>
         <CursorPos X="100" Y="174"/>
-        <UsageCount Value="5"/>
-      </Unit33>
+        <UsageCount Value="1"/>
+      </Unit32>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="..\Library\olcb_structure_helpers.pas"/>
-        <Caret Line="144" Column="59" TopLine="128"/>
+        <Filename Value="..\Library\olcb_defines.pas"/>
+        <Caret Line="237" Column="49" TopLine="208"/>
       </Position1>
       <Position2>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="924" Column="28" TopLine="912"/>
+        <Filename Value="..\Library\olcb_defines.pas"/>
+        <Caret Line="240" Column="49" TopLine="211"/>
       </Position2>
       <Position3>
-        <Filename Value="..\Library\olcb_common_tasks.pas"/>
-        <Caret Line="143" Column="66" TopLine="124"/>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <Caret Line="285" Column="120" TopLine="256"/>
       </Position3>
       <Position4>
         <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="639" Column="42" TopLine="617"/>
+        <Caret Line="31" Column="8" TopLine="1"/>
       </Position4>
       <Position5>
         <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="298" Column="50" TopLine="274"/>
+        <Caret Line="415" Column="185" TopLine="398"/>
       </Position5>
       <Position6>
         <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="136" Column="14" TopLine="119"/>
+        <Caret Line="320" Column="20" TopLine="290"/>
       </Position6>
       <Position7>
         <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="298" Column="58" TopLine="270"/>
+        <Caret Line="297" Column="25" TopLine="291"/>
       </Position7>
       <Position8>
         <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="300" Column="60" TopLine="272"/>
+        <Caret Line="250" Column="21" TopLine="240"/>
       </Position8>
       <Position9>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="301" Column="135" TopLine="273"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="924" Column="28" TopLine="907"/>
       </Position9>
       <Position10>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="303" Column="139" TopLine="275"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="1057" Column="54" TopLine="1035"/>
       </Position10>
       <Position11>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="618" Column="17" TopLine="589"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="447" Column="45" TopLine="431"/>
       </Position11>
       <Position12>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="22" Column="70" TopLine="1"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="158" Column="19" TopLine="140"/>
       </Position12>
       <Position13>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="136" Column="14" TopLine="107"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="9" Column="83" TopLine="1"/>
       </Position13>
       <Position14>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="19" Column="40" TopLine="1"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="286" Column="64" TopLine="258"/>
       </Position14>
       <Position15>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="100" Column="43" TopLine="71"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="293" Column="67" TopLine="265"/>
       </Position15>
       <Position16>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="137" Column="44" TopLine="108"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="316" Column="62" TopLine="288"/>
       </Position16>
       <Position17>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="92" Column="43" TopLine="63"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="317" Column="63" TopLine="289"/>
       </Position17>
       <Position18>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="100" Column="43" TopLine="71"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="381" Column="56" TopLine="356"/>
       </Position18>
       <Position19>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="137" Column="44" TopLine="108"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="235" Column="84" TopLine="218"/>
       </Position19>
       <Position20>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="182" Column="43" TopLine="153"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="178" Column="141" TopLine="171"/>
       </Position20>
       <Position21>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="190" Column="43" TopLine="161"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="190" Column="49" TopLine="171"/>
       </Position21>
       <Position22>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="237" Column="49" TopLine="208"/>
+        <Filename Value="form_awesome_throttle.pas"/>
+        <Caret Line="234" Column="57" TopLine="206"/>
       </Position22>
       <Position23>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="240" Column="49" TopLine="211"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="378" Column="57" TopLine="363"/>
       </Position23>
       <Position24>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="285" Column="120" TopLine="256"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="63" Column="27" TopLine="106"/>
       </Position24>
       <Position25>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="31" Column="8" TopLine="1"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="64" Column="27" TopLine="64"/>
       </Position25>
       <Position26>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="415" Column="185" TopLine="398"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="63" Column="27" TopLine="63"/>
       </Position26>
       <Position27>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="320" Column="20" TopLine="290"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="64" Column="27" TopLine="64"/>
       </Position27>
       <Position28>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="297" Column="25" TopLine="291"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="63" Column="27" TopLine="63"/>
       </Position28>
       <Position29>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="250" Column="21" TopLine="240"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="64" Column="27" TopLine="64"/>
       </Position29>
       <Position30>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="924" Column="28" TopLine="912"/>
+        <Filename Value="form_messagelog.pas"/>
+        <Caret Line="63" Column="27" TopLine="63"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
-  <Debugging>
-    <BreakPoints Count="1">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="form_main.pas"/>
-        <Line Value="912"/>
-      </Item1>
-    </BreakPoints>
-  </Debugging>
 </CONFIG>

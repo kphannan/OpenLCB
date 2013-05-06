@@ -154,18 +154,25 @@ end;
 procedure INTERRUPT_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT;
 begin
   T1IF_bit := 0;                                                                // Clear the Flag
-  if CommandStationConfigurationInRam.OverloadDetected = 0 then
+  if CommandStationRamData.OverloadDetected then
   begin
-    if CommandStationConfigurationInRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+    // Toggle the Bridge off
+    H_Bridge_A_Lo := 0;                                                           // Bridge Off
+    H_Bridge_A_Hi := 0;                                                           // Bridge Off
+    H_Bridge_B_Lo := 0;                                                           // Bridge Off
+    H_Bridge_B_Hi := 0;                                                           // Bridge Off
+  end else
+  begin
+    if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
     begin
       RunServiceMode                                                              // Command Station is in Service Mode
     end else
     begin
       // Command Station is in Main Line Mode
-      if CommandStationConfigurationInRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
+      if CommandStationConfigurationShadowRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
         RunNmraDccTranmitter;
 
-      if CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED then
+      if CommandStationConfigurationShadowRam.RailComEnable = CONFIG_RAILCOM_ENABLED then
       begin
         if Track.TX_Flags.TRANSMITTING_FLAG_RAIL_COM_CUTOUT_BIT = 1 then
         begin
@@ -178,16 +185,9 @@ begin
 
       // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
       NMRA_DCC_58us_TimeTick(@Track);                                                         // < 1us
-      NMRA_DCC_TransmitterStateMachine(@Track, False, CommandStationConfigurationInRam.RailComEnable = CONFIG_RAILCOM_ENABLED);   // < 5us
+      NMRA_DCC_TransmitterStateMachine(@Track, False, CommandStationConfigurationShadowRam.RailComEnable = CONFIG_RAILCOM_ENABLED);   // < 5us
       NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
     end
-  end else
-  begin
-   // Toggle the Bridge off
-    H_Bridge_A_Lo := 0;                                                           // Bridge Off
-    H_Bridge_A_Hi := 0;                                                           // Bridge Off
-    H_Bridge_B_Lo := 0;                                                           // Bridge Off
-    H_Bridge_B_Hi := 0;                                                           // Bridge Off
   end
 end;
 
@@ -203,8 +203,6 @@ begin
   ServiceMode_100ms_TimeTick
 end;
 
-
-
 procedure INTERRUPT_5ms_Timer(); iv IVT_ADDR_T5INTERRUPT;
 // Called once every 5m during Service MOde
 begin
@@ -213,41 +211,58 @@ begin
 end;
 
 procedure INTERRUPT_ADC1(); iv IVT_ADDR_AD1INTERRUPT; ics ICS_AUTO;
+
+const
+  CLAMP_UPPER_LIMIT = 7;
+  CLAMP_LOWER_LIMIT = 0;
+
 var
   i: Integer;
-  ADCBuf: ^Word;
 begin
   AD1IF_bit := 0;
-  ADCBuf := @ADC1BUF0;
-  OverCurrent.BitValue := ADCBuf^;
-  for i := 0 to 7 do                                                            // Sampling 16 times but only using 8 so speed up this call
-  begin  
-    if (ADCBuf^ > OverCurrent.OverCurrentLimit) then
-    begin 
-      if OverCurrent.OverCurrentCounter < 5 then
-        Inc(OverCurrent.OverCurrentCounter);
-    end else
-    begin
-      if OverCurrent.OverCurrentCounter > 0 then
-        Dec(OverCurrent.OverCurrentCounter);
-    end;
-    Inc(ADCBuf);
+
+  case OverCurrent.iStateMachine of
+      STATE_OVERCURRENT_NORMAL :
+        begin
+          NMRAnetTractionProtocol_OvercurrentUpdateCountersWithAdcBuffers(@ADC1BUF0, 8, CLAMP_LOWER_LIMIT, CLAMP_UPPER_LIMIT);
+          if OverCurrent.Counter = CLAMP_UPPER_LIMIT then
+          begin                                                                                          // Potential OC detected in this Sampling time frame
+            if OverCurrent.SampleTimeStepLimitCounter = OverCurrent.SampleTimeStepLimitShutDown then
+              Inc(OverCurrent.iStateMachine)                                                             // Have found N Sampling frames that all said an overcurrent occured, start the fault sequence
+            else
+              Inc(OverCurrent.SampleTimeStepLimitCounter);                                               // Have not found N sampling frames that have all said an overcurrent occured, increase the sampling counter
+          end else
+            OverCurrent.SampleTimeStepLimitCounter := 0;                                                 // If we get one Sampling time frame that is not an OC then reset the timer
+        end;
+      STATE_OVERCURRENT_DETECTED :
+        begin
+          i := 1;
+          CommandStationRamData.OverloadDetected := True;
+          OverCurrent.Counter := CLAMP_LOWER_LIMIT;                                        // Reset the Counters
+          OverCurrent.SampleTimeStepLimitCounter := 0;
+          Inc(OverCurrent.iStateMachine);
+        end;
+      STATE_OVERCURRENT_OFF :
+        begin
+          NMRAnetTractionProtocol_OvercurrentUpdateCountersWithAdcBuffers(@ADC1BUF0, 8, CLAMP_LOWER_LIMIT, CLAMP_UPPER_LIMIT);
+          if OverCurrent.Counter = CLAMP_LOWER_LIMIT then
+          begin                                                                                          // Potential recovery detected in this Sampling time frame
+            if OverCurrent.SampleTimeStepLimitCounter = OverCurrent.SampleTimeStepLimitRestart then
+              Inc(OverCurrent.iStateMachine)                                                             // Have found N Sampling frames that all said an overcurrent occured, start the fault sequence
+            else              
+              Inc(OverCurrent.SampleTimeStepLimitCounter);                                               // Have not found N sampling frames that have all said an overcurrent occured, increase the sampling counter
+          end else
+            OverCurrent.SampleTimeStepLimitCounter := 0;                                                 // If we get one Sampling time frame that is an OC then reset the timer
+        end;
+      STATE_OVERCURRENT_REMOVED :
+        begin
+          i := 0;
+          CommandStationRamData.OverloadDetected := False;
+          OverCurrent.Counter := CLAMP_LOWER_LIMIT;                                        // Reset the Counters
+          OverCurrent.SampleTimeStepLimitCounter := 0;
+          OverCurrent.iStateMachine := STATE_OVERCURRENT_NORMAL;
+        end;
   end;
-  
-  if CommandStationConfigurationInRam.OverloadDetected = 1 then                 // Never run the overcurrent test below if it is already overcurrent
-    OverCurrent.OverCurrentSampleCount := 0;
-    
-  if OverCurrent.OverCurrentSampleCount > OverCurrent.OverCurrentSampleLimit then
-  begin
-    OverCurrent.OverCurrentSampleCount := 0;
-    if OverCurrent.OverCurrentCounter = 5 then
-    begin
-      i := 1;
-      _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_DECTECTED, 1, PByte( @i));     // Shut Down
-      CommandStationConfigurationInRam.OverloadDetected := 1;
-    end;
-  end else
-    Inc(OverCurrent.OverCurrentSampleCount);
 end;
 
 procedure INTERRUPT_Timer_3(); iv IVT_ADDR_T3INTERRUPT;
@@ -429,33 +444,46 @@ begin
             end;
           '9' :
             begin
-              ByteToStr(CommandStationConfigurationInRam.OutputMode, s1);
+              ByteToStr(CommandStationConfigurationShadowRam.OutputMode, s1);
               UART1_Write_Text('Output Mode: ' + s1 + LF);
-              ByteToStr(CommandStationConfigurationInRam.ProgrammingMode, s1);
+              ByteToStr(CommandStationConfigurationShadowRam.ProgrammingMode, s1);
               UART1_Write_Text('Programming Mode: ' + s1 + LF);
-              ByteToStr(CommandStationConfigurationInRam.DccBusMode, s1);
+              ByteToStr(CommandStationConfigurationShadowRam.DccBusMode, s1);
               UART1_Write_Text('DCC Bus Mode: ' + s1 + LF);
             end;
           '1' : ServiceMode_Print;
 
           '2' :
             begin
-              IntToStr(OverCurrent.OverCurrentSampleLimit, s1);
-              UART1_Write_Text('5ms Sample Count to Trigger: ' + s1 + LF);
-              IntToStr(OverCurrent.OverCurrentCounter, s1);
+              IntToStr(OverCurrent.SampleTimeStepLimitShutDown, s1);
+              UART1_Write_Text('SampleTimeStepLimitShutDown: ' + s1 + LF);
+              IntToStr(OverCurrent.SampleTimeStepLimitRestart, s1);
+              UART1_Write_Text('SampleTimeStepLimitRestart: ' + s1 + LF);
+              IntToStr(OverCurrent.SampleTimeStepLimitCounter, s1);
+              UART1_Write_Text('SampleTimeStepLimitCounter: ' + s1 + LF);
+              IntToStr(OverCurrent.Limit, s1);
+              UART1_Write_Text('Over Current Limit: ' + s1 + LF);
+              IntToStr(OverCurrent.Counter, s1);
               UART1_Write_Text('Over Current Counter: ' + s1 + LF);
-              FloatToStr(Double( OverCurrent.BitValue) * 0.520 * 0.00322266, s1);       // .00322266 V/Bit * 0.520A/V * Bits =
+              IntToStr(OverCurrent.BitValue, s1);
+              UART1_Write_Text('BitValue: ' + s1 + LF);
+              FloatToStr(Double( OverCurrent.BitValue) * 1.9230769 * 0.00322266, s1);       // .00322266 V/Bit * 1.9230769A/V * Bits =
               UART1_Write_Text('Measured Current: ' + s1 + 'A' + LF);
-              WordToStr(CommandStationConfigurationInRam.OverCurrentLevel, s1);
+              WordToStr(CommandStationConfigurationShadowRam.OverCurrentLevel, s1);
               UART1_Write_Text('I Level: ' + s1 + LF);
-              WordToStr(CommandStationConfigurationInRam.OverCurrentTime, s1);
+              WordToStr(CommandStationConfigurationShadowRam.OverCurrentTime, s1);
               UART1_Write_Text('I Time: ' + s1 + LF);
-              WordToStr(CommandStationConfigurationInRam.OverloadDetected, s1);
+              WordToStr(CommandStationRamData.OverloadDetected, s1);
               UART1_Write_Text('OverloadDetected: ' + s1 + LF);
             end;
           '3' :
             begin
-              NMRAnetNode_PrintAllocatedNodeData
+              for i := 0 to Nodes.AllocatedCount - 1 do
+              begin
+                NMRAnetNode_PrintNodeData( i, Nodes.AllocatedList[i]);
+                NMRAnetTractionProtocol_PrintNodeRamData(Nodes.AllocatedList[i], False);
+                UART1_Write_Text(LF + LF);
+              end;
             end;
           '4' :
             begin
