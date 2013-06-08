@@ -34,7 +34,6 @@ uses
   NMRAnetCANReceive,
   CANStorage,
   NMRAnetNode,
-  NMRAnetDatagrams,
   NMRAnetBufferPools;
 
 

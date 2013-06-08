@@ -6,7 +6,7 @@
 +24V_Booster_3
 +24V_Booster_4
 +24V_Programming
-1N4148||#SM=2||@Manufacturer=NXP||@Manufacturer Part Number=PMLL4148L,135||@Distributor=Digikey||@Distributor Part Number=568-8106-1-ND
+1N4148WS||#SM=2||@Manufacturer=Fairchild Semiconductor||@Manufacturer Part Number=1N4148WS||@Distributor=Digikey||@Distributor Part Number=1N4148WSFSCT-ND
 6N137||#SM=8||@Manufacturer=Fairchild Optoelectrics||@Manufacturer Part Number=6N137SD||@Distributor=Digikey||@Distributor Part Number=6N137SDCT-ND||#DIL=8||@Manufacturer=Fairchild Optoelectrics||@Manufacturer Part Number=6N137||@Distributor=Digkey||@Distributor Part Number=160-1791-ND
 8Mhz Crystal||#SM=2||@Manufacturer=ECS Inc||@Manufacturer Part Number=ECS-80-20-5PXDU-TR||@Distributor=Digikey||@Distributor Part Number=XC1526CT-ND||#DIL=2||@Manufacturer=ECS Inc||@Manufacturer Part Number=ECS-80-20-4||@Distributor=Digikey||@Distributor Part Number=X165-ND
 10Mhz Crystal||#SM=2||@Manufacturer=ECS Inc||@Manufacturer Part Number=ECS-100-20-5PXDU-TR||@Distributor=Digikey||@Distributor Part Number=XC1528CT-ND||#DIL=2||@Manufacturer=ECS Inc||@Manufacturer Part Number=ECS-100-20-4VX||@Distributor=Digikey||@Distributor Part Number=XC1574-ND

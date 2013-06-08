@@ -27,5 +27,6 @@ Terminal Block 2 Wire - 100mil||#DIL=2||@Manufacturer=TE Connectivity||@Manufact
 Terminal Block 2 Wire - 200mil||#MISC=2||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282841-2||@Distributor=Digikey||@Distributor Part Number=A98342-ND
 Terminal Block 3 Wire-100mil||#Q_SIL=3||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-3||@Distributor=Digikey||@Distributor Part Number=A98334-ND
 Terminal Block 4 Wire||#MISC=4||@Manufacturer=||@Manufacturer Part Number=||@Distributor=Digikey||@Distributor Part Number=
+Terminal Block 4 Wire-100mil||#DIL=4||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 TortoiseEdge||#Q_SIL=8||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 USB-B - Metal Shell||#MISC=6||@Manufacturer=TE Connecctivity||@Manufacturer Part Number=292304-1||@Distributor=Digikey||@Distributor Part Number=A31725-ND
