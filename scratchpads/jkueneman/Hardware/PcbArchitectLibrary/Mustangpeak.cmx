@@ -1,4 +1,5 @@
 +3.3V
++5V
 +12V
 +24V_Accessory
 +24V_Booster_1
@@ -46,7 +47,7 @@ MCP23S17||#DIL=28||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@D
 MCP616||#SM=8||@Manufacturer=Microchip||@Manufacturer Part Number=MCP616-I/MS||@Distributor=Digikey||@Distributor Part Number=MCP616-I/SN-ND
 MCP619||#DIL=14||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 MCP1541||#DIL=3||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
-MCP2551||#SM=8||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=||#DIL=8||@Manufacturer=Microchip||@Manufacturer Part Number=MCP2551-I/P||@Distributor=Digikey||@Distributor Part Number=MCP2551-I/P-ND
+MCP2551||#SM=8||@Manufacturer=Microchip||@Manufacturer Part Number=MCP2551-I/SN||@Distributor=Digikey||@Distributor Part Number=MCP2551-I/SN-ND||#DIL=8||@Manufacturer=Microchip||@Manufacturer Part Number=MCP2551-I/P||@Distributor=Digikey||@Distributor Part Number=MCP2551-I/P-ND
 MCP3208||#DIL=16||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 MCP6544||#DIL=14||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 MMBTA56||#SM=3||@Manufacturer=Fairchild Semiconductor||@Manufacturer Part Number=MMBTA56||@Distributor=Digikey||@Distributor Part Number=MMBTA56FSCT-ND

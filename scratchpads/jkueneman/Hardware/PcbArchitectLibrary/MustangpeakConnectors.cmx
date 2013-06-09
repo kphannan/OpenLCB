@@ -13,7 +13,7 @@ DIN5 Female Socket Right Angle||#DIL=7||@Manufacturer=Tyco||@Manufacturer Part N
 GLCD Header||#DIL=20||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 LDC Header||#DIL=16||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 mikroBUS||#DIL=16||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
-Molex microSD||#SM=10||@Manufacturer=Molex||@Manufacturer Part Number=5040771891||@Distributor=Digikey||@Distributor Part Number=WM9315CT-ND
+Molex microSD||#SM=10||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 Power Jack 2.1mm x 5.5mm||#SM=6||@Manufacturer=CUI Inc||@Manufacturer Part Number=PJ-002AH-SMT||@Distributor=Digikey||@Distributor Part Number=CP-002AHPJCT-ND
 Power Jack 2.5mm x 5.5mm||#SM=6||@Manufacturer=CUI Inc||@Manufacturer Part Number=PJ-002BH-SMT||@Distributor=Digikey||@Distributor Part Number=CP-002BHPJCT-ND
 RJ12 Molex Plastic||#SM=8||@Manufacturer=Molex||@Manufacturer Part Number=95501-6669||@Distributor=Digikey||@Distributor Part Number=WM5575-ND
@@ -27,6 +27,6 @@ Terminal Block 2 Wire - 100mil||#DIL=2||@Manufacturer=TE Connectivity||@Manufact
 Terminal Block 2 Wire - 200mil||#MISC=2||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282841-2||@Distributor=Digikey||@Distributor Part Number=A98342-ND
 Terminal Block 3 Wire-100mil||#Q_SIL=3||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-3||@Distributor=Digikey||@Distributor Part Number=A98334-ND
 Terminal Block 4 Wire||#MISC=4||@Manufacturer=||@Manufacturer Part Number=||@Distributor=Digikey||@Distributor Part Number=
-Terminal Block 4 Wire-100mil||#DIL=4||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
+Terminal Block 4 Wire-100mil||#DIL=4||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-4||@Distributor=Digikey||@Distributor Part Number=A98335-ND
 TortoiseEdge||#Q_SIL=8||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 USB-B - Metal Shell||#MISC=6||@Manufacturer=TE Connecctivity||@Manufacturer Part Number=292304-1||@Distributor=Digikey||@Distributor Part Number=A31725-ND
