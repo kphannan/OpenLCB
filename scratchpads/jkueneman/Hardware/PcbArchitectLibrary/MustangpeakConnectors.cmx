@@ -20,7 +20,7 @@ RJ12 Molex Plastic||#SM=8||@Manufacturer=Molex||@Manufacturer Part Number=95501-
 RJ12 Molex Plastic Xpressnet||#SM=8||@Manufacturer=Molex||@Manufacturer Part Number=95501-6669||@Distributor=Digikey||@Distributor Part Number=WM5575-ND
 RJ45 Amphenol Plastic||#DIL=10||@Manufacturer=Amphenol||@Manufacturer Part Number=RJHSE-5080||@Distributor=Digikey||@Distributor Part Number=RJHSE-5080-ND
 RJ45 Amphenol Plastic OpenLCB||#DIL=10||@Manufacturer=Amphenol||@Manufacturer Part Number=RJHSE-5080||@Distributor=Digikey||@Distributor Part Number=RJHSE-5080-ND
-RJ45 Amphinol Dual SMT||#SM=20||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
+RJ45 Amphinol Dual SMT||#SM=20||@Manufacturer=Amphenol||@Manufacturer Part Number=RJSSE-5080-02||@Distributor=Digikey||@Distributor Part Number=RJSSE-5080-02-ND
 RJ45 Amphinol Dual SMT OpenLCB||#SM=20||@Manufacturer=Amphenol||@Manufacturer Part Number=RJSSE-5080-02||@Distributor=Digikey||@Distributor Part Number=RJSSE-5080-02-ND
 RJ45 Molex Plastic SMT OpenLCB||#SM=10||@Manufacturer=Molex||@Manufacturer Part Number=43743-8101||@Distributor=Digikey||@Distributor Part Number=WM6469CT-ND
 Terminal Block 2 Wire - 100mil||#DIL=2||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-2||@Distributor=Digikey||@Distributor Part Number=A98333-ND
@@ -28,5 +28,6 @@ Terminal Block 2 Wire - 200mil||#MISC=2||@Manufacturer=TE Connectivity||@Manufac
 Terminal Block 3 Wire-100mil||#Q_SIL=3||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-3||@Distributor=Digikey||@Distributor Part Number=A98334-ND
 Terminal Block 4 Wire||#MISC=4||@Manufacturer=||@Manufacturer Part Number=||@Distributor=Digikey||@Distributor Part Number=
 Terminal Block 4 Wire-100mil||#DIL=4||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-4||@Distributor=Digikey||@Distributor Part Number=A98335-ND
+Terminal Block 5 Wire - 100mil||#DIL=5||@Manufacturer=TE Connectivity||@Manufacturer Part Number=282834-5||@Distributor=Digikey||@Distributor Part Number=A98336-ND
 TortoiseEdge||#Q_SIL=8||@Manufacturer=||@Manufacturer Part Number=||@Distributor=||@Distributor Part Number=
 USB-B - Metal Shell||#MISC=6||@Manufacturer=TE Connecctivity||@Manufacturer Part Number=292304-1||@Distributor=Digikey||@Distributor Part Number=A31725-ND
