@@ -75,13 +75,6 @@ begin
   Net_Ethernet_28j60_stackInitTCP();
   Net_Ethernet_28j60_Init(@myMacAddr, @myIpAddr, Net_Ethernet_28j60_FULLDUPLEX);  // init ethernet module
   Net_Ethernet_28j60_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);
-  
-  case Net_Ethernet_28j60_connectTCP(@ipServer, 12021, 12022, @OlcbSocket) of
-                  0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
-                  1 : UART_Write_Text('successful transmit SYN segment' + LF);
-                  2 : UART_Write_Text('no available socket_28j60' + LF);
-                  3 : UART_Write_Text('no ARP resolve' + LF);
-                end;
 end;
 
 procedure MCU_Setup_Initialize;

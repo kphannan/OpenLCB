@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\Library\NMRAnet\NMRAnetDefines.mpas
+Value=..\Library\TCPBus\TCPStorage.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -47,16 +47,19 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=12
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=NMRAnetAppCallbacks.mpas
 File2=..\Library\NMRAnet\NMRAnetCANReceive.mpas
 File3=..\Library\TCPBus\TCPStorage.mpas
 File4=MCU_Setup_dsPIC33EP64GP502.mpas
-File5=..\Library\NMRAnet\NMRAnetDefines.mpas
-File6=..\Library\HelperFunctions.mpas
-File7=E:\trunk\prototypes\mikroPascal\Library\TCPBus\TCPStorage.mpas
-File8=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File5=..\dsPIC_TCP-IP_Testing\dsPIC33EP\HTTP_Demo.mpas
+File6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc28j60_Defs.mpas
+File7=..\Library\NMRAnet\NMRAnetDefines.mpas
+File8=..\Library\NMRAnet\NMRAnetNode.mpas
+File9=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File10=..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File11=..\Library\NMRAnet\NMRAnetUtilities.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -68,8 +71,8 @@ File0=Options.inc
 Count=17
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
-Path3=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
+Path3=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
 Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
 Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
 Path6=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\

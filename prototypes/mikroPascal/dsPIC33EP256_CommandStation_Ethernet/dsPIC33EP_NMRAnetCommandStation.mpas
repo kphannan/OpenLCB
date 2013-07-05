@@ -365,22 +365,18 @@ begin
   
   EthernetTimerCounter := 0;
   
-  UART1_Write_Text('Starting 1'+LF);
+  UART1_Write_Text('Starting DCC Packets'+LF);
 
  // TON_T3CON_bit := 1;       // Turn on current limit
   AD1IE_bit := 1;           // Turn on ADC1 interrupt
   TON_T2CON_bit := 1;       // Turn on the 100ms timer
-  MCU_Setup_Enable_OlcbBus;
   {$IFNDEF DCCTIMER_DISABLE}
   TON_T1CON_bit := 1;                                                           // Start the DCC Timer
   Delay_ms(10);
   NMRA_DCC_Packet_Init;                                                         // Send our 20 Idle Packets per the spec, note we are not on the OLCB bus yet so this will block until done.
   {$ENDIF}
-
-  UART1_Write_Text('Starting 2'+LF);
-  
-  if OlcbSocket^.state = SOCKET_STATE_CLOSED then
-    UART1_Write_Text('Could not make Socket Connection'+LF);
+  UART1_Write_Text('Initializing OlcbBus'+LF);
+  MCU_Setup_Enable_OlcbBus;
   
   while (TRUE) do
   begin
@@ -400,124 +396,151 @@ begin
 
       ActiveNode := NMRAnetNode_NextNode;
       if ActiveNode <> PNMRAnetNode( nil) then
-      begin
-        Net_Ethernet_28j60_doPacket;
         NMRAnetStateMachine_Process(ActiveNode);
+    end;
+    
+    Net_Ethernet_28j60_doPacket;
+    
+    if UART1_Data_Ready then
+    begin
+      Cmd := UART1_Read;
+      case Cmd of
+        'u', 'U' :
+          begin
+            if OlcbSocket <> nil then
+            begin
+              UART_Write_Text('Disconnecting' + LF);
+              case Net_Ethernet_28j60_disconnectTCP(OlcbSocket) of
+                0 : UART_Write_Text('unsuccessful FYN transmit' + LF);
+                1 : UART_Write_Text('successful FYN transmit' + LF)
+              else
+               UART_Write_Text('Unknown disconnect result' + LF);
+              end;
+              OlcbSocket := nil;
+            end else
+              UART_Write_Text('Socket was not connected' + LF);
+          end;
+        's', 'S' :
+          begin
+            UART_Write_Text('Connecting' + LF);
+            while OlcbSocket = nil do
+            begin
+              case Net_Ethernet_28j60_connectTCP(@ipServer, 12021, 12022, @OlcbSocket) of
+                0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
+                1 : UART_Write_Text('successful transmit SYN segment' + LF);
+                2 : UART_Write_Text('no available socket_28j60' + LF);
+                3 : UART_Write_Text('no ARP resolve' + LF);
+              end;
+            end;
+          end;
+        'P' : begin
+             //PrintDMABuffers
+           end;
+        'X' : begin
+              NMRAnetStateMachine_TrySendVerifyNodeID(ActiveNode, 0);
+           end;
+        'A', 'a' :
+          begin
+            LockCANInterrupt;
+            NMRAnetNode_Allocate;
+            UnLockCANInterrupt;
+          end;
+        'D', 'd' :
+          begin
+            LockCANInterrupt;
+            TempNode := NMRAnetNode_FindFirstVirtualNode;
+            if TempNode <> nil then
+            begin
+              ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData( TempNode);
+              ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
+            end;
+            UnLockCANInterrupt
+          end;
+        'F', 'f' :
+          begin
+            LockCANInterrupt;
+            TempNode := NMRAnetNode_FindFirstVirtualNode;
+            if TempNode <> nil then
+              NMRAnetNode_MarkForRelease(TempNode);
+            UnLockCANInterrupt
+          end;
+        'Z', 'z' :
+          begin
+     //       _25AAxxxx_Erase(EEPROM_BANK_0);
+          end;
+        'V' :
+          begin
+            DumpEEProm(True);   // Print in ASCII
+          end;
+        'v' :
+          begin
+            DumpEEProm(False);     // Print in Hex
+          end;
+        'M', 'm' :
+          begin
+              for i := 0 to MAX_NODE_COUNT - 1 do
+              begin
+                LongWordToStr(Nodes.RawList[i].ConfigurationAddress, s1);
+                UART1_Write_Text('Offset: ' + s1 +LF);
+              end;
 
-        if UART1_Data_Ready then
-        begin
-          Cmd := UART1_Read;
-          case Cmd of
-            'P' : begin
-                 //PrintDMABuffers
-               end;
-            'X' : begin
-                  NMRAnetStateMachine_TrySendVerifyNodeID(ActiveNode, 0);
-               end;
-            'A', 'a' :
+              for i := 0 to MAX_NODE_COUNT - 1 do
               begin
-                LockCANInterrupt;
-                NMRAnetNode_Allocate;
-                UnLockCANInterrupt;
+                LongWordToStr(Nodes.RawList[i].RAMAddress, s1);
+                UART1_Write_Text('RAM Offset: ' + s1 +LF);
               end;
-            'D', 'd' :
-              begin
-                LockCANInterrupt;
-                TempNode := NMRAnetNode_FindFirstVirtualNode;
-                if TempNode <> nil then
-                begin
-                  ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData( TempNode);
-                  ProxyData^.State := ProxyData^.State and not PS_DCC_ADDRESS_ALLOCATED;
-                end;
-                UnLockCANInterrupt
-              end;
-            'F', 'f' :
-              begin
-                LockCANInterrupt;
-                TempNode := NMRAnetNode_FindFirstVirtualNode;
-                if TempNode <> nil then
-                  NMRAnetNode_MarkForRelease(TempNode);
-                UnLockCANInterrupt
-              end;
-            'Z', 'z' :
-              begin
-         //       _25AAxxxx_Erase(EEPROM_BANK_0);
-              end;
-            'V' :
-              begin
-                DumpEEProm(True);   // Print in ASCII
-              end;
-            'v' :
-              begin
-                DumpEEProm(False);     // Print in Hex
-              end;
-            'M', 'm' :
-              begin
-                  for i := 0 to MAX_NODE_COUNT - 1 do
-                  begin
-                    LongWordToStr(Nodes.RawList[i].ConfigurationAddress, s1);
-                    UART1_Write_Text('Offset: ' + s1 +LF);
-                  end;
+          end;
+        '9' :
+          begin
+            ByteToStr(CommandStationConfigurationShadowRam.OutputMode, s1);
+            UART1_Write_Text('Output Mode: ' + s1 + LF);
+            ByteToStr(CommandStationConfigurationShadowRam.ProgrammingMode, s1);
+            UART1_Write_Text('Programming Mode: ' + s1 + LF);
+            ByteToStr(CommandStationConfigurationShadowRam.DccBusMode, s1);
+            UART1_Write_Text('DCC Bus Mode: ' + s1 + LF);
+          end;
+        '1' : ServiceMode_Print;
 
-                  for i := 0 to MAX_NODE_COUNT - 1 do
-                  begin
-                    LongWordToStr(Nodes.RawList[i].RAMAddress, s1);
-                    UART1_Write_Text('RAM Offset: ' + s1 +LF);
-                  end;
-              end;
-            '9' :
-              begin
-                ByteToStr(CommandStationConfigurationShadowRam.OutputMode, s1);
-                UART1_Write_Text('Output Mode: ' + s1 + LF);
-                ByteToStr(CommandStationConfigurationShadowRam.ProgrammingMode, s1);
-                UART1_Write_Text('Programming Mode: ' + s1 + LF);
-                ByteToStr(CommandStationConfigurationShadowRam.DccBusMode, s1);
-                UART1_Write_Text('DCC Bus Mode: ' + s1 + LF);
-              end;
-            '1' : ServiceMode_Print;
-
-            '2' :
-              begin
-                IntToStr(OverCurrent.SampleTimeStepLimitShutDown, s1);
-                UART1_Write_Text('SampleTimeStepLimitShutDown: ' + s1 + LF);
-                IntToStr(OverCurrent.SampleTimeStepLimitRestart, s1);
-                UART1_Write_Text('SampleTimeStepLimitRestart: ' + s1 + LF);
-                IntToStr(OverCurrent.SampleTimeStepLimitCounter, s1);
-                UART1_Write_Text('SampleTimeStepLimitCounter: ' + s1 + LF);
-                IntToStr(OverCurrent.Limit, s1);
-                UART1_Write_Text('Over Current Limit: ' + s1 + LF);
-                IntToStr(OverCurrent.Counter, s1);
-                UART1_Write_Text('Over Current Counter: ' + s1 + LF);
-                IntToStr(OverCurrent.BitValue, s1);
-                UART1_Write_Text('BitValue: ' + s1 + LF);
-                FloatToStr(Double( OverCurrent.BitValue) * 1.9230769 * 0.00322266, s1);       // .00322266 V/Bit * 1.9230769A/V * Bits =
-                UART1_Write_Text('Measured Current: ' + s1 + 'A' + LF);
-                WordToStr(CommandStationConfigurationShadowRam.OverCurrentLevel, s1);
-                UART1_Write_Text('I Level: ' + s1 + LF);
-                WordToStr(CommandStationConfigurationShadowRam.OverCurrentTime, s1);
-                UART1_Write_Text('I Time: ' + s1 + LF);
-                WordToStr(CommandStationRamData.OverloadDetected, s1);
-                UART1_Write_Text('OverloadDetected: ' + s1 + LF);
-              end;
-            '3' :
-              begin
-                for i := 0 to Nodes.AllocatedCount - 1 do
-                begin
-                  NMRAnetNode_PrintNodeData( i, Nodes.AllocatedList[i]);
-                  NMRAnetTractionProtocol_PrintNodeRamData(Nodes.AllocatedList[i], False);
-                  UART1_Write_Text(LF + LF);
-                end;
-              end;
-            '4' :
-              begin
-                NMRAnetNode_PrintRawNodeData
-              end;
-            '5' :
-              begin
-              end;
-         end;
-        end;
-      end
+        '2' :
+          begin
+            IntToStr(OverCurrent.SampleTimeStepLimitShutDown, s1);
+            UART1_Write_Text('SampleTimeStepLimitShutDown: ' + s1 + LF);
+            IntToStr(OverCurrent.SampleTimeStepLimitRestart, s1);
+            UART1_Write_Text('SampleTimeStepLimitRestart: ' + s1 + LF);
+            IntToStr(OverCurrent.SampleTimeStepLimitCounter, s1);
+            UART1_Write_Text('SampleTimeStepLimitCounter: ' + s1 + LF);
+            IntToStr(OverCurrent.Limit, s1);
+            UART1_Write_Text('Over Current Limit: ' + s1 + LF);
+            IntToStr(OverCurrent.Counter, s1);
+            UART1_Write_Text('Over Current Counter: ' + s1 + LF);
+            IntToStr(OverCurrent.BitValue, s1);
+            UART1_Write_Text('BitValue: ' + s1 + LF);
+            FloatToStr(Double( OverCurrent.BitValue) * 1.9230769 * 0.00322266, s1);       // .00322266 V/Bit * 1.9230769A/V * Bits =
+            UART1_Write_Text('Measured Current: ' + s1 + 'A' + LF);
+            WordToStr(CommandStationConfigurationShadowRam.OverCurrentLevel, s1);
+            UART1_Write_Text('I Level: ' + s1 + LF);
+            WordToStr(CommandStationConfigurationShadowRam.OverCurrentTime, s1);
+            UART1_Write_Text('I Time: ' + s1 + LF);
+            WordToStr(CommandStationRamData.OverloadDetected, s1);
+            UART1_Write_Text('OverloadDetected: ' + s1 + LF);
+          end;
+        '3' :
+          begin
+            for i := 0 to Nodes.AllocatedCount - 1 do
+            begin
+              NMRAnetNode_PrintNodeData( i, Nodes.AllocatedList[i]);
+              NMRAnetTractionProtocol_PrintNodeRamData(Nodes.AllocatedList[i], False);
+              UART1_Write_Text(LF + LF);
+            end;
+          end;
+        '4' :
+          begin
+            NMRAnetNode_PrintRawNodeData
+          end;
+        '5' :
+          begin
+          end;
+     end;
     end;
   end;
 end.

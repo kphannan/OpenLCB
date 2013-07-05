@@ -28,6 +28,8 @@ type
 procedure TruncFloat(Value: PStrArray; Digits, Len: Byte);
 function SwapBytes(Test: Word): Word;
 function IsValidHexChar(AChar: Char): Boolean;
+function HexToLongWord(var Hex: string[8]): DWord;
+function HexToWord(var Hex: string[4]): Word;
 //procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
 
 implementation
@@ -88,6 +90,58 @@ end;
 function IsValidHexChar(AChar: Char): Boolean;
 begin
   Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
+end;
+
+function HexToLongWord(var Hex: string[8]): DWord;
+var
+  i: Integer;
+  Nibble: Byte;
+  Base: DWord;
+begin
+  Result := 0;
+  i :=  0;
+  while i < Length(Hex) do
+  begin
+    if Hex[i] >= 'a' then
+      Nibble := Ord(Hex[i]) - 87
+    else
+    if Hex[i] >= 'A' then
+      Nibble := Ord(Hex[i]) - 55
+    else
+      Nibble := Hex[i] - 48;
+    if i <> Length(Hex) - 1 then
+      Base := 2 shl (((Length(Hex)-1-i)*4)-1)
+    else
+      Base := 1;
+    Result := Result + (Base * Nibble);
+    Inc(i);
+  end;
+end;
+
+function HexToWord(var Hex: string[4]): Word;
+var
+  i: Integer;
+  Nibble: Byte;
+  Base: Word;
+begin
+  Result := 0;
+  i :=  0;
+  while i < Length(Hex) do
+  begin
+    if Hex[i] >= 'a' then
+      Nibble := Ord(Hex[i]) - 87
+    else
+    if Hex[i] >= 'A' then
+      Nibble := Ord(Hex[i]) - 55
+    else
+      Nibble := Hex[i] - 48;
+    if i <> Length(Hex) - 1 then
+      Base := 2 shl (((Length(Hex)-1-i)*4)-1)
+    else
+      Base := 1;
+    Result := Result + (Base * Nibble);
+    Inc(i);
+  end;
 end;
 
 end.
