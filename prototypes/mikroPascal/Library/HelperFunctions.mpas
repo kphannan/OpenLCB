@@ -27,6 +27,7 @@ type
 
 procedure TruncFloat(Value: PStrArray; Digits, Len: Byte);
 function SwapBytes(Test: Word): Word;
+function IsValidHexChar(AChar: Char): Boolean;
 //procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
 
 implementation
@@ -82,6 +83,11 @@ begin
   Hi( Test) := Lo( Test);
   Lo(Test) := B;
   Result := Test;
+end;
+
+function IsValidHexChar(AChar: Char): Boolean;
+begin
+  Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
 end;
 
 end.

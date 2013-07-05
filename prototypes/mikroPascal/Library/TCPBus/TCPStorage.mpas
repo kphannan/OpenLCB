@@ -1,0 +1,308 @@
+unit TCPStorage;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-04-01:   1.0.0.0 Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//    Implements a FIFO data structure for CAN Message Buffers
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+{.$DEFINE TRACK_CAN_BUFFER_OVERFLOWS}
+
+uses
+  HelperFunctions,
+  NMRAnetDefines;
+
+const
+  CAN_DIRECTION_READ = 1;
+  CAN_DIRECTION_WRITE = 0;
+
+const
+  CES_TRANSMITTING = $0001;                                                     // CAN Engine State constants
+  
+const
+  BS_EXTENDED     = $01;                                                       // CAN Buffer State constants, Buffer is extended
+  BS_ALLOCATED    = $02;                                                       // Buffer Slot contains valid data to send
+
+const
+  SOCKET_STATE_CLOSED        = 0;
+  SOCKET_STATE_ESTABLISHED   = 3;
+type
+ // ***************************************************************************
+  // CAN Message Buffers in user friendly form that can be easily maniuplated then
+  // loaded into the Raw CAN FIFOs
+  // ***************************************************************************
+  TCANBuffer = record
+    ID: DWord;
+    DataCount: Byte;
+    DataBytes: TCAN_DataBytes;
+    State: Byte;                                                                // See CBS_xxxx Constants (CAN Buffer State)
+  end;
+  PCANBuffer = ^TCANBuffer;
+
+ type
+  TCAN_Engine = record
+    State: Byte;                                                                // See the CES_xxx constants (CAN Engine State)
+    InterruptLockCount: Byte;
+    TX_CANBuffer,
+    TX_NMRAnetBuffer,
+    TX_AddressedErrorBuffer,
+    TX_DatagramRejected: TCANBuffer;
+  end;
+
+procedure CANStorage_Initialize;
+procedure CANStorage_FlushBuffers(AliasID: Word);
+
+procedure LockCANInterrupt;
+procedure UnLockCANInterrupt;
+procedure StartCANMessageEngine;                                                // Used to start a transmission cycle after a message is placed in a TX Buffer
+procedure StartCANHighPriorityMessageEngine;
+
+procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
+function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
+
+procedure ReceivedOnFilter0(CANBuffer: PCANBuffer); external;                            // CAN Layer Message
+procedure ReceivedOnFilter1(CANBuffer: PCANBuffer); external;                            // NMRAnet Layer Message
+procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString); external;
+procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer); external;
+
+var
+  OlcbSocket: ^SOCKET_28j60_Dsc;
+  CAN_Engine: TCAN_Engine;
+
+implementation
+
+const
+  TCP_STATE_SYNC_START = 0;
+  TCP_STATE_SYNC_FIND_X = 1;
+  TCP_STATE_SYNC_FIND_HEADER = 2;
+  TCP_STATE_SYNC_FIND_N = 3;
+  TCP_STATE_SYNC_FIND_DATA = 4;
+  
+var
+  TCP_Receive_State: word;     // Statemachine Index
+
+procedure CANStorage_Initialize;
+begin
+  OlcbSocket := nil;
+  TCP_Receive_State := TCP_STATE_SYNC_START;
+  
+  CAN_Engine.State := 0;
+  CAN_Engine.InterruptLockCount := 0;
+  
+  CAN_Engine.TX_CANBuffer.ID := 0;
+  CAN_Engine.TX_CANBuffer.DataCount := 0;
+  CAN_Engine.TX_CANBuffer.State := 0;
+
+  CAN_Engine.TX_NMRAnetBuffer.ID := 0;
+  CAN_Engine.TX_NMRAnetBuffer.DataCount := 0;
+  CAN_Engine.TX_NMRAnetBuffer.State := 0;
+
+  CAN_Engine.TX_AddressedErrorBuffer.ID := 0;
+  CAN_Engine.TX_AddressedErrorBuffer.DataCount := 0;
+  CAN_Engine.TX_AddressedErrorBuffer.State := 0;
+
+  CAN_Engine.TX_DatagramRejected.ID := 0;
+  CAN_Engine.TX_DatagramRejected.DataCount := 0;
+  CAN_Engine.TX_DatagramRejected.State := 0;
+end;
+
+procedure CANStorage_FlushBuffers(AliasID: Word);
+begin
+  LockCANInterrupt;
+  if AliasID = 0 then
+  begin
+    CAN_Engine.TX_CANBuffer.State := 0;
+    CAN_Engine.TX_NMRAnetBuffer.State := 0;
+    CAN_Engine.TX_AddressedErrorBuffer.State := 0;
+    CAN_Engine.TX_DatagramRejected.State := 0;
+  end else
+  begin
+    if CAN_Engine.TX_CANBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_CANBuffer.State := 0;
+    if CAN_Engine.TX_NMRAnetBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_NMRAnetBuffer.State := 0;
+    if CAN_Engine.TX_AddressedErrorBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_AddressedErrorBuffer.State := 0;
+    if CAN_Engine.TX_DatagramRejected.ID and MASK_SOURCE_ALIAS = AliasID then
+      CAN_Engine.TX_DatagramRejected.State := 0;
+  end;
+  UnLockCANInterrupt
+end;
+
+function CANStorage_NextToSend: PCANBuffer;
+begin
+  // High Priority to Low
+  if CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_CANBuffer
+  else
+  if CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_NMRAnetBuffer
+  else
+    Result := PCANBuffer( nil);
+end;
+
+function CANStorage_NextHighPriorityToSend: PCANBuffer;
+begin
+  if CAN_Engine.TX_AddressedErrorBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_AddressedErrorBuffer
+  else
+  if CAN_Engine.TX_DatagramRejected.State and BS_ALLOCATED = BS_ALLOCATED then
+    Result := @CAN_Engine.TX_DatagramRejected
+  else
+    Result := PCANBuffer( nil);
+end;
+
+procedure LockCANInterrupt;
+begin
+end;
+
+procedure UnLockCANInterrupt;
+begin
+end;
+
+procedure StartCANMessageEngine;
+begin
+  Net_Ethernet_28j60_startSendTCP(OlcbSocket);
+end;
+
+procedure StartCANHighPriorityMessageEngine;
+begin 
+  Net_Ethernet_28j60_startSendTCP(OlcbSocket);
+end;
+
+
+var
+  Receive_GridConnectBuffer: TGridConnectString;
+  RxCANBuffer: TCANBuffer;
+  
+procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
+var
+  TxBuffer: PCANBuffer;
+  GridConnectBuffer: array[MAX_GRID_CONNECT_LEN] of char;
+  TCP_Receive_Char: char;
+  Done: Boolean;
+  i, Receive_GridConnectBufferIndex: Integer;
+
+begin
+  if socket^.State = SOCKET_STATE_ESTABLISHED then
+  begin
+    TxBuffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
+    if TxBuffer <> nil then
+    begin
+      CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+      Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
+    end else
+    begin
+      TxBuffer := CANStorage_NextToSend;
+      if TxBuffer <> nil then
+      begin
+        CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+        Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
+      end;
+    end;
+    
+    // Look for the correct port and some data
+    if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
+    begin
+      Done := False;
+      i := 0;
+      Receive_GridConnectBufferIndex := 0;
+      while not Done and (i < socket^.dataLength) do
+      begin
+        TCP_Receive_Char := Net_Ethernet_28j60_getByte();                       // Get the next byte from the stack
+        case TCP_Receive_State of
+          TCP_STATE_SYNC_START :                                                // Find a starting ':'
+            begin
+              if TCP_Receive_Char = ':' then
+              begin
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
+                Inc(Receive_GridConnectBufferIndex);
+                TCP_Receive_State := TCP_STATE_SYNC_FIND_X
+              end
+            end;
+          TCP_STATE_SYNC_FIND_X :
+            begin
+              if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
+              begin
+                if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
+                begin
+                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
+                  Inc(Receive_GridConnectBufferIndex);
+                  TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
+                end else
+                   TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
+              end
+            end;
+          TCP_STATE_SYNC_FIND_HEADER :
+            begin
+              if IsValidHexChar(TCP_Receive_Char) then
+              begin
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                if Receive_GridConnectBufferIndex = 9 then
+                  TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
+                Inc(Receive_GridConnectBufferIndex);
+              end else
+                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+            end;
+          TCP_STATE_SYNC_FIND_N :
+            begin
+              if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
+              begin
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
+                Inc(Receive_GridConnectBufferIndex);
+                TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
+              end else
+                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+            end;
+          TCP_STATE_SYNC_FIND_DATA :
+            begin
+               if TCP_Receive_Char = ';' then
+               begin
+                 if Receive_GridConnectBufferIndex mod 2 = 0 then
+                 begin
+                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
+                   GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
+                   if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
+                     ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
+                   else
+                     ReceivedOnFilter0(@RxCANBuffer);
+                   Done := True;                                                // Only process one message per loop
+                 end;
+                 TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
+               end else
+               begin
+                 if IsValidHexChar(TCP_Receive_Char) then
+                 begin
+                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                   Inc(Receive_GridConnectBufferIndex);
+                 end else
+                   TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
+               end
+            end;
+        end;
+        Inc(i);
+      end;
+    end;
+  end;
+end;
+
+function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
+begin
+  Result := 0;
+end;
+
+end.

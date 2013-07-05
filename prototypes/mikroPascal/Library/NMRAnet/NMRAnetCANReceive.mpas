@@ -31,7 +31,12 @@ uses
   NMRAnetDefines,
   NMRAnetDefinesShared,
   NMRAnetNode,
+  {$IFDEF CAN_BUS}
   CANStorage,
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS}
+  TCPStorage,
+  {$ENDIF}
   NMRAnetAppDefines;
 
 type
@@ -50,9 +55,14 @@ type
   procedure ReceivedOnFilter4(Buffer: PCANBuffer);
   procedure ReceivedOnFilter5(Buffer: PCANBuffer);
   procedure ReceivedOnFilter6(Buffer: PCANBuffer);
+  
+  procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString);
+  procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer);
 
+  {$IFDEF CAN_BUS}
   procedure StartCANMessageEngine; external;
   procedure StartCANHighPriorityMessageEngine; external;
+  {$ENDIF}
   function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean; external;
   function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean; external;
   function AppCallback_EventsIdentify: Boolean; external;
@@ -97,6 +107,68 @@ end;
 procedure NMRAnetCANReceive_SetNMRANetLayerReceiveHook(HookFunc: PPacketHandlerFunc);
 begin
   NMRAnetLayerReceiveHook := HookFunc
+end;
+
+procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString);
+var
+  ConvertString: string[4];
+  i, GridConnectBufferOffset: Integer;
+begin
+  GridConnectBuffer[0] := ':';
+  GridConnectBuffer[1] := 'X';
+  WordToHex(Buffer^.ID shr 16, ConvertString);
+  GridConnectBuffer[2] := ConvertString[3];
+  GridConnectBuffer[3] := ConvertString[2];
+  GridConnectBuffer[4] := ConvertString[1];
+  GridConnectBuffer[5] := ConvertString[0];
+  WordToHex(Buffer^.ID and $0000FFFF, ConvertString);
+  GridConnectBuffer[6] := ConvertString[3];
+  GridConnectBuffer[7] := ConvertString[2];
+  GridConnectBuffer[8] := ConvertString[1];
+  GridConnectBuffer[9] := ConvertString[0];
+  GridConnectBuffer[10] := 'N';
+  if Buffer^.DataCount > 0 then
+  begin
+    GridConnectBufferOffset := 11;
+    for i := 0 to Buffer^.DataCount - 1 do
+    begin
+      WordToHex(Buffer^.DataBytes[i], ConvertString);
+      GridConnectBuffer[GridConnectBufferOffset]     := ConvertString[1];
+      GridConnectBuffer[GridConnectBufferOffset + 1] := ConvertString[0];
+      GridConnectBufferOffset := GridConnectBufferOffset + 2;
+    end;
+    GridConnectBuffer[GridConnectBufferOffset] := ';';
+  end else
+    GridConnectBuffer[11] := ';';
+end;
+
+procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer);
+var
+  ConvertString: string[5];
+  i: Integer;
+begin
+  Buffer^.DataCount := 0;
+  Buffer^.State := BS_EXTENDED or BS_ALLOCATED;
+  ConvertString[4] := '$';
+  for i := 0 to 3 do
+    ConvertString[i] := GridConnectBuffer[GRID_CONNECT_HEADER_OFFSET_HI + i];
+  Buffer^.ID := DWord( StrToWord(ConvertString)) shl 16;
+  for i := 0 to 3 do
+    ConvertString[i] := GridConnectBuffer[GRID_CONNECT_HEADER_OFFSET_LO + i];
+  Buffer^.ID := Buffer^.ID or DWord( StrToWord(ConvertString));
+  if GridConnectBuffer[GRID_CONNECT_DATA_OFFSET] <> ';' then
+  begin
+    i := 0;
+    while GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i] <> ';' do
+    begin
+      ConvertString[0] := GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i + 1];
+      ConvertString[1] := GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i];
+      ConvertString[2] := '$';
+      Buffer^.DataBytes[Buffer^.DataCount] := StrToWord(ConvertString);
+      Inc(Buffer^.DataCount);
+      i := i + 2;
+    end;
+  end;
 end;
 
 // *****************************************************************************

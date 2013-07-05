@@ -23,9 +23,7 @@ unit dsPIC33_CAN;
 
 
 uses
-
-NMRAnetDefinesShared,
-
+  NMRAnetDefinesShared,
   CANBuffers,
   CANStorage,
   NMRAnetCANReceive,

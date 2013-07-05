@@ -17,6 +17,8 @@
 
 unit NMRAnetServiceMode;
 
+{$I Options.inc}
+
 uses
   NMRAnetDCC,
   DirectServiceMode,

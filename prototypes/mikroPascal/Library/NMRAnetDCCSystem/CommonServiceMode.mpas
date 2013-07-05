@@ -17,6 +17,8 @@
 
 unit CommonServiceMode;
 
+{$I Options.inc}
+
 uses
   NMRAnetDCC,
   ServiceModeDefines,

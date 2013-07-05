@@ -21,7 +21,12 @@ unit NMRAnetUtilities;
 
 uses
   NMRAnetDefinesShared,
+  {$IFDEF CAN_BUS}
   CANStorage,
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS}
+  TCPStorage,
+  {$ENDIF}
   NMRAnetDefines,
   NMRAnetAppDefines;
   

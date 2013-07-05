@@ -26,14 +26,12 @@ uses
   NMRAnetDefines;
 
 const
-  TX_CAN_BUFFER_LEN = 2;
-  TX_NMRANET_BUFFER_LEN = 2;
 
   CAN_DIRECTION_READ = 1;
   CAN_DIRECTION_WRITE = 0;
   
-  MAX_ECAN_TX_BUFFER = 2;
   MAX_ECAN_RX_BUFFER = 2;
+  MAX_ECAN_TX_BUFFER = 2;
 
 const
   CES_TRANSMITTING = $0001;                                                     // CAN Engine State constants
@@ -89,13 +87,8 @@ type
 
 procedure CANStorage_Initialize;
 procedure CANStorage_FlushBuffers(AliasID: Word);
-
-// *****************************************************************************
-// These are exported through the "external" modifier
-// *****************************************************************************
 function CANStorage_NextToSend: PCANBuffer;
 function CANStorage_NextHighPriorityToSend: PCANBuffer;
-// *****************************************************************************
 
 procedure LockCANInterrupt; external;
 procedure UnLockCANInterrupt; external;

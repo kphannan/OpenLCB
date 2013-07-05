@@ -19,10 +19,16 @@ unit NMRAnetStateMachine;
 {$I Options.inc}
 
 uses
-  {$IFDEF dsPIC33}
-  dsPIC33_CAN,
-  {$ELSE}
-  dsPIC30_CAN,
+  {$IFDEF CAN_BUS}
+    {$IFDEF dsPIC33}
+    dsPIC33_CAN,
+    {$ELSE}
+    dsPIC30_CAN,
+    {$ENDIF}
+  CANStorage,
+  {$ENDIF CAN_BUS}
+  {$IFDEF ETHERNET_BUS}
+  TCPStorage,
   {$ENDIF}
   {$IFDEF TRACTION_PROTOCOL}
   TractionProtocol,
@@ -32,7 +38,7 @@ uses
   NMRAnetDefinesShared,
   NMRAnetUtilities,
   NMRAnetCANReceive,
-  CANStorage,
+
   NMRAnetNode,
   NMRAnetBufferPools;
 
@@ -348,7 +354,9 @@ end;
 // *****************************************************************************
 procedure NMRAnetStateMachine_Initialize(PhysicalNodeID_HI, PhysicalNodeID_Lo: DWord);
 begin
-  {$IFDEF dsPIC33} dsPIC33_CAN_Initialize;{$ENDIF}
+  {$IFDEF dsPIC33}
+    {$IFDEF CAN_BUS} dsPIC33_CAN_Initialize; {$ENDIF}
+  {$ENDIF}
   {$IFDEF TRACTION_PROTOCOL}NMRAnetTractionProtocol_Initialize;{$ENDIF}
   CANStorage_Initialize;
   NMRAnetCANReceive_Initialize;

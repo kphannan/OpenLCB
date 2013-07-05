@@ -1,5 +1,7 @@
 unit DirectServiceMode;
 
+{$I Options.inc}
+
 {.$DEFINE PRINT_DIRECT_MODE_STATEMACHINE}
 
 uses

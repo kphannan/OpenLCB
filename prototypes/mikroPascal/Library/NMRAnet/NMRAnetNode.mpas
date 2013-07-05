@@ -91,7 +91,7 @@ procedure NMRAnetNode_PrintNodeData(Index: Integer; Node: PNMRAnetNode);
 var
   j: Integer;
 begin
-  LongWordToHex( Node, s1);
+  LongWordToHex( Word( Node), s1);
   UART1_Write_Text('Node Address: 0x' + s1 + LF);
   ByteToStr(Node^.iIndex, s1);
   UART1_Write_Text('  iIndex              : ' + s1 + LF);

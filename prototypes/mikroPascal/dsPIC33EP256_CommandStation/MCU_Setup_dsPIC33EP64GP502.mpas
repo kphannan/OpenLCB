@@ -20,11 +20,11 @@ const
   
 
   procedure MCU_Setup_Initialize;
-  procedure MCU_Setup_Enable_CAN;
+  procedure MCU_Setup_Enable_OlcbBus;
 
 implementation
 
-procedure MCU_Setup_Enable_CAN;
+procedure MCU_Setup_Enable_OlcbBus;
 begin
   dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode
   // Setup the CAN Baud Rate

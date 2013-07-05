@@ -9,7 +9,12 @@ uses
   NMRAnetBufferPools,
   Float16,
   NMRAnetNode,
+  {$IFDEF CAN_BUS}
   CANStorage,
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS}
+  TCPStorage,
+  {$ENDIF}
   NMRAnetDefinesShared,
   NMRAnetDefines;
   
@@ -221,7 +226,7 @@ begin
   RamData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
   if PrintNodeAddress then
   begin
-    LongWordToHex( Node, s1);
+    LongWordToHex( Word( Node), s1);
     UART1_Write_Text('Node Address: 0x' + s1 + LF);
   end;
   WordToStr(RamData^.State, s1);
