@@ -231,7 +231,6 @@ begin
     end;
 
     // Look for the correct port and some data
-    BytesRead := 0;
     if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
     begin
       BytesRead := 0;
@@ -288,18 +287,22 @@ begin
             begin
                if TCP_Receive_Char = ';'then
                begin
-                 if Receive_GridConnectBufferIndex + 1 mod 2 = 0 then           // 0 index, add 1 for the actual character count
+                 if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
                  begin
                    Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
                    Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
                    GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
                    if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
                    begin
+                   
                      UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
+                     
                      ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
                    end else
                    begin
+                   
                      UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
+                     
                      ReceivedOnFilter0(@RxCANBuffer);
                    end;
                  end;

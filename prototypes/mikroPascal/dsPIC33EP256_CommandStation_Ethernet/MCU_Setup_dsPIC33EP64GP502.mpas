@@ -14,7 +14,8 @@ uses
   dsPIC33_DMA;
   
 const
-  ipServer: array[0..3] of byte = (192, 168, 0, 127);
+  ipServer: array[0..3] of byte = (192, 168, 0, 127);  // iMac
+ // ipServer: array[0..3] of byte = (10, 211, 55, 5);    // Windows XP in Parallels
   
   DCC_TIMER_58US = 1850; //1792;            // Clock ticks every 31.25ns * 1856 = 58us interrupts
   DCC_TIMER_29US = 928;             // Clock ticks every 31.25ns * 928 = 29us interrupts
@@ -47,7 +48,14 @@ begin
   myIpAddr[1] := 168;
   myIpAddr[2] := 0;
   myIpAddr[3] := 128;
-
+ 
+ {
+  // set IP address
+  myIpAddr[0] := 10;
+  myIpAddr[1] := 211;
+  myIpAddr[2] := 55;
+  myIpAddr[3] := 128;
+                          }
   // set gateway address
   gwIpAddr[0]  := 192;
   gwIpAddr[1]  := 168;
@@ -59,7 +67,7 @@ begin
   dnsIpAddr[1] := 67;
   dnsIpAddr[2] := 222;
   dnsIpAddr[3] := 222;
-
+  
   // set subnet mask
   ipMask[0]    := 255;
   ipMask[1]    := 255;

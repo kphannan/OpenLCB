@@ -386,12 +386,12 @@ begin
       // Allcoate a proxy if needed
       if (CommandStationRamData.EnableAutoAllocateProxy = 0) and (CommandStationRamData.AllocateProxy > 0) then
       begin
-        LockCANInterrupt;
+     {   LockCANInterrupt;
         // There may be dangling nodes that have been allocated then released
         if NMRAnetTractionProtocol_FindFirstNonDCCAllocatedNode = nil then
           NMRAnetNode_Allocate;
         Dec(CommandStationRamData.AllocateProxy);
-        UnLockCANInterrupt;
+        UnLockCANInterrupt;  }
       end;
 
       ActiveNode := NMRAnetNode_NextNode;

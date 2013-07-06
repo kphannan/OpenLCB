@@ -200,7 +200,7 @@ begin
 
   if DoDefault then
   begin
-    // First thing is the extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
+    // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
     SourceAlias := NMRAnetUtilities_ExtractSourceAlias(CANBuffer);
     Node := NMRAnetNode_FindByAlias(SourceAlias);
     if Node <> nil then                                                         // Check for a Duplicate Alias
