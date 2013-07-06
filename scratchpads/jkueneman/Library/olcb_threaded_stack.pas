@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils, synaser, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
-  olcb_app_common_settings, math_float16, Forms;
+  olcb_app_common_settings, math_float16, Forms, blcksock, synsock;
 
 const
   DATAGRAM_MAX_RETRYS = 5;

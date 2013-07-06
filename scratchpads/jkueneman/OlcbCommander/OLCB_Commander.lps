@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="27">
+    <Units Count="35">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -21,11 +21,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_main"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="37"/>
-        <CursorPos X="21" Y="58"/>
+        <TopLine Value="307"/>
+        <CursorPos X="58" Y="320"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -81,19 +80,16 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_messagelog"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="63"/>
         <CursorPos X="111" Y="89"/>
         <UsageCount Value="200"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\Library\common_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_utilities"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="12" Y="19"/>
@@ -140,10 +136,10 @@
         <Filename Value="..\Library\olcb_threaded_stack.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_threaded_stack"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="583"/>
-        <CursorPos X="37" Y="597"/>
+        <TopLine Value="986"/>
+        <CursorPos X="115" Y="988"/>
         <UsageCount Value="203"/>
         <Loaded Value="True"/>
       </Unit12>
@@ -151,12 +147,10 @@
         <Filename Value="..\Library\olcb_common_tasks.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_common_tasks"/>
-        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1441"/>
-        <CursorPos X="34" Y="1458"/>
+        <CursorPos X="91" Y="1451"/>
         <UsageCount Value="205"/>
-        <Loaded Value="True"/>
       </Unit13>
       <Unit14>
         <Filename Value="..\Library\olcb_structure_helpers.pas"/>
@@ -176,12 +170,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_config_mem_viewer"/>
-        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="14"/>
         <CursorPos X="85" Y="18"/>
         <UsageCount Value="202"/>
-        <Loaded Value="True"/>
       </Unit15>
       <Unit16>
         <Filename Value="common_objects.pas"/>
@@ -199,13 +191,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle"/>
-        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1010"/>
+        <TopLine Value="1009"/>
         <CursorPos X="116" Y="1041"/>
         <UsageCount Value="200"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit17>
       <Unit18>
         <Filename Value="form_awesome_throttle_deallocate_error.pas"/>
@@ -226,12 +215,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_duplicate_address"/>
-        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="99" Y="18"/>
         <UsageCount Value="226"/>
-        <Loaded Value="True"/>
       </Unit19>
       <Unit20>
         <Filename Value="form_effects_editor.pas"/>
@@ -252,25 +239,33 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
-        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="25" Y="20"/>
         <UsageCount Value="223"/>
-        <Loaded Value="True"/>
       </Unit21>
       <Unit22>
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1124"/>
         <CursorPos X="35" Y="1137"/>
         <UsageCount Value="222"/>
-        <Loaded Value="True"/>
       </Unit22>
       <Unit23>
+        <Filename Value="ethernet_hub.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ethernet_hub"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="252"/>
+        <CursorPos X="36" Y="261"/>
+        <UsageCount Value="62"/>
+        <Loaded Value="True"/>
+      </Unit23>
+      <Unit24>
         <Filename Value="..\Library\olcb_utilities.pas"/>
         <UnitName Value="olcb_utilities"/>
         <EditorIndex Value="1"/>
@@ -279,8 +274,8 @@
         <CursorPos X="86" Y="302"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
-      </Unit23>
-      <Unit24>
+      </Unit24>
+      <Unit25>
         <Filename Value="..\Library\olcb_defines.pas"/>
         <UnitName Value="olcb_defines"/>
         <EditorIndex Value="2"/>
@@ -289,143 +284,205 @@
         <CursorPos X="14" Y="147"/>
         <UsageCount Value="101"/>
         <Loaded Value="True"/>
-      </Unit24>
-      <Unit25>
+      </Unit25>
+      <Unit26>
         <Filename Value="..\Library\math_float16.pas"/>
         <UnitName Value="math_float16"/>
         <WindowIndex Value="0"/>
         <TopLine Value="19"/>
         <CursorPos X="1" Y="34"/>
-        <UsageCount Value="34"/>
-      </Unit25>
-      <Unit26>
+        <UsageCount Value="30"/>
+      </Unit26>
+      <Unit27>
         <Filename Value="C:\lazarus\lcl\include\spinedit.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="194"/>
         <CursorPos X="1" Y="217"/>
-        <UsageCount Value="7"/>
-      </Unit26>
+        <UsageCount Value="3"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="..\Components\synapse40\source\lib\synsock.pas"/>
+        <UnitName Value="synsock"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="6"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="..\Components\synapse40\source\demo\echo\echo.pas"/>
+        <UnitName Value="echo"/>
+        <EditorIndex Value="10"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="68"/>
+        <CursorPos X="63" Y="84"/>
+        <UsageCount Value="31"/>
+        <Loaded Value="True"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
+        <UnitName Value="blcksock"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1889"/>
+        <CursorPos X="3" Y="1895"/>
+        <UsageCount Value="30"/>
+        <Loaded Value="True"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="E:\usr\local\share\fpcsrc\rtl\objpas\classes\classesh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1538"/>
+        <CursorPos X="3" Y="1553"/>
+        <UsageCount Value="8"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="..\Components\synapse40\source\lib\ssfpc.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="76"/>
+        <CursorPos X="3" Y="91"/>
+        <UsageCount Value="6"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="E:\usr\local\share\fpcsrc\rtl\objpas\classes\lists.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="65"/>
+        <CursorPos X="3" Y="69"/>
+        <UsageCount Value="6"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="..\Components\synapse40\source\lib\sswin32.inc"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="325"/>
+        <CursorPos X="54" Y="349"/>
+        <UsageCount Value="29"/>
+        <Loaded Value="True"/>
+      </Unit34>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="29" HistoryIndex="28">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <Caret Line="240" Column="49" TopLine="211"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="75" Column="10" TopLine="59"/>
       </Position1>
       <Position2>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="285" Column="120" TopLine="256"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="78" Column="18" TopLine="60"/>
       </Position2>
       <Position3>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="31" Column="8" TopLine="1"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="736" Column="64" TopLine="711"/>
       </Position3>
       <Position4>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="415" Column="185" TopLine="398"/>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="322" Column="15" TopLine="306"/>
       </Position4>
       <Position5>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="320" Column="20" TopLine="290"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="263" Column="32" TopLine="247"/>
       </Position5>
       <Position6>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="297" Column="25" TopLine="291"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="189" Column="32" TopLine="182"/>
       </Position6>
       <Position7>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <Caret Line="250" Column="21" TopLine="240"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="47" Column="58" TopLine="32"/>
       </Position7>
       <Position8>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="924" Column="28" TopLine="907"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="123" Column="9" TopLine="108"/>
       </Position8>
       <Position9>
-        <Filename Value="form_awesome_throttle.pas"/>
-        <Caret Line="1057" Column="54" TopLine="1035"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="26" Column="57" TopLine="11"/>
       </Position9>
       <Position10>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="447" Column="45" TopLine="431"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="189" Column="39" TopLine="182"/>
       </Position10>
       <Position11>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="158" Column="19" TopLine="140"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="86" Column="46" TopLine="67"/>
       </Position11>
       <Position12>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="9" Column="83" TopLine="1"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="330" Column="24" TopLine="321"/>
       </Position12>
       <Position13>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="286" Column="64" TopLine="258"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="269" Column="31" TopLine="250"/>
       </Position13>
       <Position14>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="293" Column="67" TopLine="265"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="116" Column="27" TopLine="103"/>
       </Position14>
       <Position15>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="316" Column="62" TopLine="288"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="62" Column="28" TopLine="37"/>
       </Position15>
       <Position16>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="317" Column="63" TopLine="289"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="44" Column="15" TopLine="29"/>
       </Position16>
       <Position17>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="381" Column="56" TopLine="356"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="270" Column="11" TopLine="191"/>
       </Position17>
       <Position18>
-        <Filename Value="form_awesome_throttle.pas"/>
-        <Caret Line="235" Column="84" TopLine="218"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="219" Column="50" TopLine="200"/>
       </Position18>
       <Position19>
-        <Filename Value="form_awesome_throttle.pas"/>
-        <Caret Line="178" Column="141" TopLine="171"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="117" Column="29" TopLine="103"/>
       </Position19>
       <Position20>
-        <Filename Value="form_awesome_throttle.pas"/>
-        <Caret Line="190" Column="49" TopLine="171"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="122" Column="30" TopLine="103"/>
       </Position20>
       <Position21>
-        <Filename Value="form_awesome_throttle.pas"/>
-        <Caret Line="234" Column="57" TopLine="206"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="117" Column="29" TopLine="101"/>
       </Position21>
       <Position22>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="378" Column="57" TopLine="363"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="27" Column="16" TopLine="12"/>
       </Position22>
       <Position23>
-        <Filename Value="form_messagelog.pas"/>
-        <Caret Line="64" Column="27" TopLine="64"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="305" Column="20" TopLine="285"/>
       </Position23>
       <Position24>
-        <Filename Value="form_messagelog.pas"/>
-        <Caret Line="63" Column="27" TopLine="63"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="224" Column="21" TopLine="214"/>
       </Position24>
       <Position25>
-        <Filename Value="form_messagelog.pas"/>
-        <Caret Line="64" Column="27" TopLine="64"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="39" Column="8" TopLine="26"/>
       </Position25>
       <Position26>
-        <Filename Value="form_messagelog.pas"/>
-        <Caret Line="63" Column="27" TopLine="63"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="47" Column="18" TopLine="24"/>
       </Position26>
       <Position27>
-        <Filename Value="form_messagelog.pas"/>
-        <Caret Line="64" Column="27" TopLine="64"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="305" Column="14" TopLine="292"/>
       </Position27>
       <Position28>
-        <Filename Value="form_messagelog.pas"/>
-        <Caret Line="63" Column="27" TopLine="63"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="359" Column="3" TopLine="330"/>
       </Position28>
       <Position29>
-        <Filename Value="form_awesome_throttle.pas"/>
-        <Caret Line="9" Column="103" TopLine="1"/>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="299" Column="32" TopLine="286"/>
       </Position29>
+      <Position30>
+        <Filename Value="ethernet_hub.pas"/>
+        <Caret Line="262" Column="10" TopLine="252"/>
+      </Position30>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

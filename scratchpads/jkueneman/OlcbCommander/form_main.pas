@@ -68,7 +68,7 @@ uses
   Spin, types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
   olcb_structure_helpers, form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
   laz2_XMLWrite, common_utilities, form_awesome_throttle,
-  form_train_config_editor,
+  form_train_config_editor, ethernet_hub,
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}
@@ -120,6 +120,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionToolsEthernetHub: TAction;
     ActionOpenLCBCommandReadFSI: TAction;
     ActionConfigEditorsHideAll: TAction;
     ActionConfigEditorsShowAll: TAction;
@@ -157,12 +158,10 @@ type
     ImageList24x24: TImageList;
     ImageList16x16: TImageList;
     ImageListMainSmall: TImageList;
-    LabelNetworkNodeCount: TLabel;
-    LabelNetworkNodeCountValue: TLabel;
-    LabelTrainNodeCountValue: TLabel;
-    LabelTrainCountName: TLabel;
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
+    MenuItem1: TMenuItem;
+    MenuItemToolsSep3: TMenuItem;
     MenuItemReadFSI: TMenuItem;
     MenuItemConfigEditorsSep1: TMenuItem;
     MenuItemConfigEditorsShowAll: TMenuItem;
@@ -206,6 +205,7 @@ type
     PageControlMain: TPageControl;
     PanelNetwork: TPanel;
     PopupMenuTreeNode: TPopupMenu;
+    StatusBar: TStatusBar;
     TabSheetNetwork: TTabSheet;
     TreeViewNetwork: TTreeView;
     procedure ActionConfigEditorsCloseAllExecute(Sender: TObject);
@@ -234,6 +234,7 @@ type
     procedure ActionToolsComConnectExecute(Sender: TObject);
     procedure ActionToolsComDisconnectExecute(Sender: TObject);
     procedure ActionToolsConfigureNodeExecute(Sender: TObject);
+    procedure ActionToolsEthernetHubExecute(Sender: TObject);
     procedure ActionToolsMessageLogShowExecute(Sender: TObject);
     procedure ActionToolsPreferenceShowMacExecute(Sender: TObject);
     procedure ActionToolsSettingsShowWinExecute(Sender: TObject);
@@ -245,8 +246,10 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure MenuItemToolsSep3Click(Sender: TObject);
     procedure MenuItemConfigEditorsClick(Sender: TObject);
     procedure MenuItemThrottlesClick(Sender: TObject);
+    procedure PanelNetworkClick(Sender: TObject);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
     procedure TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
@@ -256,6 +259,7 @@ type
     FCommandStationNode: TTreeNode;
     FComPortThread: TComPortThread;
     FConfigEditorList: TFormConfigEditorList;
+    FEthernetHub: TEthernetHub;
     FLazyLoadTaskList: TList;
     FMessageHelper: TOpenLCBMessageHelper;
     {$IFDEF DARWIN}
@@ -311,6 +315,10 @@ type
     procedure SyncErrorMessage(MessageStr: String);
     procedure SyncReceiveMessage(MessageStr: String);
     procedure SyncSendMessage(MessageStr: String);
+    procedure SyncHubConnected(HostIP: string; HostPort: Integer);
+    procedure SyncHubDisconnected(HostIP: string; HostPort: Integer);
+    procedure SyncHubNewConnection(SocketCount: Integer);
+    procedure SyncHubDroppedConnection(SocketCount: Integer);
     {$IFDEF DEBUG_THREAD} procedure SyncDebugMessage(Info: TComPortThreadDebugRec); {$ENDIF}
     procedure SyncMessageLogHide;
     procedure SyncThrottleHide(Throttle: TFormAwesomeThrottle);
@@ -330,6 +338,7 @@ type
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
     property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
     property ConfigEditorList: TFormConfigEditorList read FConfigEditorList write FConfigEditorList;
+    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property LazyLoadTaskList: TList read FLazyLoadTaskList write FLazyLoadTaskList;
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property RootNetworkNode: TTreeNode read FRootNetworkNode write FRootNetworkNode;
@@ -691,6 +700,11 @@ begin
 
 end;
 
+procedure TFormOLCB_Commander.ActionToolsEthernetHubExecute(Sender: TObject);
+begin
+  EthernetHub.Enabled := ActionToolsEthernetHub.Checked
+end;
+
 procedure TFormOLCB_Commander.ActionToolsMessageLogShowExecute(Sender: TObject);
 begin
   FormMessageLog.Show;
@@ -714,6 +728,11 @@ begin
   FThrottleList := TFormThrottleList.Create;
   FConfigEditorList := TFormConfigEditorList.Create;
   FLazyLoadTaskList := TList.Create;
+  FEthernetHub := TEthernetHub.Create;
+  EthernetHub.OnConnectionConnected := @SyncHubConnected;
+  EthernetHub.OnConnectionDisconnected := @SyncHubDisconnected;
+  EthernetHub.OnNewConnection := @SyncHubNewConnection;
+  EthernetHub.OnDroppedConnection := @SyncHubDroppedConnection;
 end;
 
 procedure TFormOLCB_Commander.FormDestroy(Sender: TObject);
@@ -722,6 +741,7 @@ begin
   FreeAndNil( FThrottleList);
   FreeAndNil( FLazyLoadTaskList);
   FreeAndNil( FConfigEditorList);
+  FreeAndNil(FEthernetHub);
 end;
 
 procedure TFormOLCB_Commander.FormShow(Sender: TObject);
@@ -787,6 +807,11 @@ begin
   {$ENDIF}
 end;
 
+procedure TFormOLCB_Commander.MenuItemToolsSep3Click(Sender: TObject);
+begin
+
+end;
+
 procedure TFormOLCB_Commander.MenuItemConfigEditorsClick(Sender: TObject);
 var
   Start, i: Integer;
@@ -815,6 +840,11 @@ begin
   end;
   for i := 0 to ThrottleList.Count - 1 do
      AddThrottleSubMenu(ThrottleList.Throttles[i]);
+end;
+
+procedure TFormOLCB_Commander.PanelNetworkClick(Sender: TObject);
+begin
+
 end;
 
 procedure TFormOLCB_Commander.TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
@@ -1684,6 +1714,26 @@ begin
   end;
 end;
 
+procedure TFormOLCB_Commander.SyncHubConnected(HostIP: string; HostPort: Integer);
+begin
+  Statusbar.Panels[2].Text := 'Hub Connected to IP: ' + HostIP + ' Port: ' + IntToStr(HostPort);
+end;
+
+procedure TFormOLCB_Commander.SyncHubDisconnected(HostIP: string; HostPort: Integer);
+begin
+  Statusbar.Panels[2].Text := 'Hub Disconnected';
+end;
+
+procedure TFormOLCB_Commander.SyncHubNewConnection(SocketCount: Integer);
+begin
+  Statusbar.Panels[3].Text := 'Connection Count: ' + IntToStr(SocketCount);
+end;
+
+procedure TFormOLCB_Commander.SyncHubDroppedConnection(SocketCount: Integer);
+begin
+  Statusbar.Panels[3].Text := 'Connection Count: ' + IntToStr(SocketCount);
+end;
+
  {$IFDEF DEBUG_THREAD}
 procedure TFormOLCB_Commander.SyncDebugMessage(Info: TComPortThreadDebugRec);
 begin
@@ -1895,8 +1945,8 @@ begin
   ActionOpenLCBCommandSNII.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandAll.Enabled := (RootNetworkNode.Count > 0);
 
-  LabelNetworkNodeCountValue.Caption := IntToStr(RootNetworkNode.Count);
-  LabelTrainNodeCountValue.Caption := IntToStr(RootTrainNode.Count);
+  StatusBar.Panels[0].Text := 'Node Count = ' + IntToStr(RootNetworkNode.Count);
+  StatusBar.Panels[1].Text := 'Train Count = ' + IntToStr(RootTrainNode.Count);
 
   MenuItemThrottlesSep1.Visible := ThrottleList.Count > 0;
   ActionThrottlesCloseAll.Enabled := ThrottleList.Count > 0;

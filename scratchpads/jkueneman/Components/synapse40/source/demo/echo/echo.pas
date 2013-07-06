@@ -1,5 +1,7 @@
 unit echo;
 
+{$MODE Delphi}
+
 interface
 
 uses

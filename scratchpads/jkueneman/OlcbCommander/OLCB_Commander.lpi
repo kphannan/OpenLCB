@@ -42,7 +42,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="23">
+    <Units Count="24">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -188,6 +188,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
       </Unit22>
+      <Unit23>
+        <Filename Value="ethernet_hub.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ethernet_hub"/>
+      </Unit23>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -223,7 +228,6 @@ if TargetOS = 'linux' then
     </CodeGeneration>
     <Linking>
       <Debugging>
-        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
       </Debugging>
       <Options>
