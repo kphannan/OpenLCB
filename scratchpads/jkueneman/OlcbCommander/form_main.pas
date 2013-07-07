@@ -120,8 +120,9 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionToolsEthernetHubDisconnect: TAction;
     ActionToolsEthernetHubMessageLogShow: TAction;
-    ActionToolsEthernetHub: TAction;
+    ActionToolsEthernetHubConnect: TAction;
     ActionOpenLCBCommandReadFSI: TAction;
     ActionConfigEditorsHideAll: TAction;
     ActionConfigEditorsShowAll: TAction;
@@ -161,7 +162,8 @@ type
     ImageListMainSmall: TImageList;
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
-    MenuItem1: TMenuItem;
+    MenuItemToolsEthernetHubConnect: TMenuItem;
+    MenuItemToolsEthernetHubDisconnect: TMenuItem;
     MenuItemToolsEthernetMessageLog: TMenuItem;
     MenuItemToolsSep3: TMenuItem;
     MenuItemReadFSI: TMenuItem;
@@ -213,6 +215,7 @@ type
     procedure ActionConfigEditorsCreateExecute(Sender: TObject);
     procedure ActionConfigEditorsHideAllExecute(Sender: TObject);
     procedure ActionConfigEditorsShowAllExecute(Sender: TObject);
+    procedure ActionToolsEthernetHubDisconnectExecute(Sender: TObject);
     procedure ActionToolsEthernetHubMessageLogShowExecute(Sender: TObject);
     procedure ActionHelpAboutShowExecute(Sender: TObject);
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
@@ -236,7 +239,7 @@ type
     procedure ActionToolsComConnectExecute(Sender: TObject);
     procedure ActionToolsComDisconnectExecute(Sender: TObject);
     procedure ActionToolsConfigureNodeExecute(Sender: TObject);
-    procedure ActionToolsEthernetHubExecute(Sender: TObject);
+    procedure ActionToolsEthernetHubConnectExecute(Sender: TObject);
     procedure ActionToolsCOMPortMessageLogShowExecute(Sender: TObject);
     procedure ActionToolsPreferenceShowMacExecute(Sender: TObject);
     procedure ActionToolsSettingsShowWinExecute(Sender: TObject);
@@ -297,6 +300,8 @@ type
     procedure DeleteNetworkTreeAlias(NodeAlias: Word);
     procedure DeleteConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
     procedure DeleteThrottleSubMenu(Throttle: TFormAwesomeThrottle);
+    procedure EthernetConnect;
+    procedure EthernetDisconnect;
     function FindChildThatContainsText(ParentNode: TTreeNode; TestString: string): TTreeNode;
     function FindTreeNodeByAlias(Root: TTreeNode; AnAliasID: Word): TOlcbTreeNode;
     function FindSNIPNode(AliasNode: TTreeNode): TTreeNode;
@@ -487,6 +492,11 @@ end;
 procedure TFormOLCB_Commander.ActionConfigEditorsShowAllExecute(Sender: TObject);
 begin
   ConfigEditorList.ShowAll;
+end;
+
+procedure TFormOLCB_Commander.ActionToolsEthernetHubDisconnectExecute(Sender: TObject);
+begin
+  EthernetDisconnect;
 end;
 
 procedure TFormOLCB_Commander.ActionToolsEthernetHubMessageLogShowExecute( Sender: TObject);
@@ -717,9 +727,9 @@ begin
 
 end;
 
-procedure TFormOLCB_Commander.ActionToolsEthernetHubExecute(Sender: TObject);
+procedure TFormOLCB_Commander.ActionToolsEthernetHubConnectExecute(Sender: TObject);
 begin
-  EthernetHub.Enabled := ActionToolsEthernetHub.Checked
+  EthernetConnect;
 end;
 
 procedure TFormOLCB_Commander.ActionToolsCOMPortMessageLogShowExecute(Sender: TObject);
@@ -1164,10 +1174,6 @@ begin
     ComPortThread.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
     ComPortThread.OnBeforeDestroyTask := @OnBeforeDestroyTask;
 
-    EthernetHub.SyncErrorMessageFunc := @SyncErrorEthernetMessage;
-    EthernetHub.SyncReceiveMessageFunc := @SyncReceiveEthernetMessage;
-    EthernetHub.SyncSendMessageFunc := @SyncSendEthernetMessage;
-
     ComPortThread.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
     ComPortThread.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
     {$IFDEF DEBUG_THREAD}
@@ -1291,6 +1297,21 @@ begin
       Break
     end;
   end;
+end;
+
+procedure TFormOLCB_Commander.EthernetConnect;
+begin
+  EthernetHub.SyncErrorMessageFunc := @SyncErrorEthernetMessage;
+  EthernetHub.SyncReceiveMessageFunc := @SyncReceiveEthernetMessage;
+  EthernetHub.SyncSendMessageFunc := @SyncSendEthernetMessage;
+  EthernetHub.Enabled := True;
+  UpdateUI
+end;
+
+procedure TFormOLCB_Commander.EthernetDisconnect;
+begin
+  EthernetHub.Enabled := False;
+  UpdateUI
 end;
 
 function TFormOLCB_Commander.FindChildThatContainsText(ParentNode: TTreeNode; TestString: string): TTreeNode;
@@ -2004,6 +2025,9 @@ var
 begin
   ActionToolsComConnect.Enabled := not Assigned(FComPortThread);
   ActionToolsComDisconnect.Enabled := Assigned(FComPortThread);
+
+  ActionToolsEthernetHubConnect.Enabled := not EthernetHub.Enabled;
+  ActionToolsEthernetHubDisconnect.Enabled := EthernetHub.Enabled;
 
   ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortThread);
   ActionOpenLCBCommandProtocolSupport.Enabled := (TreeViewNetwork.SelectionCount > 0);

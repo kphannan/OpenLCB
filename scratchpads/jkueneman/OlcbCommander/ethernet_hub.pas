@@ -224,7 +224,7 @@ var
   ReceivedData: AnsiString;
   Receive_GridConnectBufferIndex: Integer;
   Receive_GridConnectBuffer: array[0..MAX_GRID_CONNECT_LEN-1] of char;
-  BytesRead, PacketIndex: Integer;
+  PacketIndex: Integer;
   Done: Boolean;
   TCP_Receive_Char: char;
   GridConnectMsg: TTCPMessage;
@@ -237,10 +237,10 @@ begin
     begin
       ReceivedData := ConnectedSocket.RecvPacket(1000);
 
-      BytesRead := 0;
+      Done := False;
       PacketIndex := 1;
       Receive_GridConnectBufferIndex := 0;
-      while not Done and (BytesRead < Length(ReceivedData)) do
+      while not Done and (PacketIndex <= Length(ReceivedData)) do
       begin
         TCP_Receive_Char := ReceivedData[PacketIndex];                       // Get the next byte from the stack
         case TCP_Receive_State of
@@ -322,7 +322,7 @@ begin
             end else
               TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
         end;
-        Inc(BytesRead);
+        Inc(PacketIndex);
       end;
 
 
@@ -502,13 +502,13 @@ end;
 
 procedure TEthernetHub.SyncReceiveMessage;
 begin
-    if Assigned(SyncErrorMessageFunc) then
+  if Assigned(SyncReceiveMessageFunc) then
     SyncReceiveMessageFunc(BufferRawMessage)
 end;
 
 procedure TEthernetHub.SyncSendMessage;
 begin
-  if Assigned(SyncErrorMessageFunc) then
+  if Assigned(SyncSendMessageFunc) then
     SyncSendMessageFunc(BufferRawMessage)
 end;
 
