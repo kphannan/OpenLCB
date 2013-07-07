@@ -422,16 +422,20 @@ begin
           end;
         's', 'S' :
           begin
-            UART_Write_Text('Connecting' + LF);
-            while OlcbSocket = nil do
+            if OlcbSocket = nil then
             begin
-              case Net_Ethernet_28j60_connectTCP(@ipServer, 12021, 12022, @OlcbSocket) of
-                0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
-                1 : UART_Write_Text('successful transmit SYN segment' + LF);
-                2 : UART_Write_Text('no available socket_28j60' + LF);
-                3 : UART_Write_Text('no ARP resolve' + LF);
+              while OlcbSocket = nil do
+              begin
+                UART_Write_Text('Connecting' + LF);
+                case Net_Ethernet_28j60_connectTCP(@ipServer, 12021, 12022, @OlcbSocket) of
+                  0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
+                  1 : UART_Write_Text('successful transmit SYN segment' + LF);
+                  2 : UART_Write_Text('no available socket_28j60' + LF);
+                  3 : UART_Write_Text('no ARP resolve' + LF);
+                end;
               end;
-            end;
+            end else
+              UART_Write_Text('Already Connected' + LF);
           end;
         'P' : begin
              //PrintDMABuffers

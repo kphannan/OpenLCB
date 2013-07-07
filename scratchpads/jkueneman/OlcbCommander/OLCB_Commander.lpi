@@ -42,7 +42,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="24">
+    <Units Count="21">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -83,12 +83,12 @@
         <UnitName Value="form_about"/>
       </Unit5>
       <Unit6>
-        <Filename Value="form_messagelog.pas"/>
+        <Filename Value="form_ethernet_messagelog.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormMessageLog"/>
+        <ComponentName Value="FormEthernetMessageLog"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="form_messagelog"/>
+        <UnitName Value="form_ethernet_messagelog"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\Library\common_utilities.pas"/>
@@ -96,103 +96,88 @@
         <UnitName Value="common_utilities"/>
       </Unit7>
       <Unit8>
-        <Filename Value="..\Library\snii.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="snii"/>
-      </Unit8>
-      <Unit9>
         <Filename Value="..\Library\olcb_node.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_node"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="..\Library\olcb_mem_protocol.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_mem_protocol"/>
-      </Unit10>
-      <Unit11>
-        <Filename Value="..\Library\statemachine_engine.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="statemachine_engine"/>
-      </Unit11>
-      <Unit12>
+      </Unit8>
+      <Unit9>
         <Filename Value="..\Library\olcb_threaded_stack.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_threaded_stack"/>
-      </Unit12>
-      <Unit13>
+      </Unit9>
+      <Unit10>
         <Filename Value="..\Library\olcb_common_tasks.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_common_tasks"/>
-      </Unit13>
-      <Unit14>
+      </Unit10>
+      <Unit11>
         <Filename Value="..\Library\olcb_structure_helpers.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_structure_helpers"/>
-      </Unit14>
-      <Unit15>
+      </Unit11>
+      <Unit12>
         <Filename Value="form_config_mem_viewer.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMemConfigViewer"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_config_mem_viewer"/>
-      </Unit15>
-      <Unit16>
+      </Unit12>
+      <Unit13>
         <Filename Value="common_objects.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_objects"/>
-      </Unit16>
-      <Unit17>
+      </Unit13>
+      <Unit14>
         <Filename Value="form_awesome_throttle.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormAwesomeThrottle"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle"/>
-      </Unit17>
-      <Unit18>
+      </Unit14>
+      <Unit15>
         <Filename Value="form_awesome_throttle_deallocate_error.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormDeallocationError"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_deallocate_error"/>
-      </Unit18>
-      <Unit19>
+      </Unit15>
+      <Unit16>
         <Filename Value="form_awesome_throttle_duplicate_address.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMulitipleTrains"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_duplicate_address"/>
-      </Unit19>
-      <Unit20>
-        <Filename Value="form_effects_editor.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormEffectsEditor"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="form_effects_editor"/>
-      </Unit20>
-      <Unit21>
+      </Unit16>
+      <Unit17>
         <Filename Value="form_train_config_editor.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormTrainConfigEditor"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
-      </Unit21>
-      <Unit22>
+      </Unit17>
+      <Unit18>
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-      </Unit22>
-      <Unit23>
+      </Unit18>
+      <Unit19>
         <Filename Value="ethernet_hub.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ethernet_hub"/>
-      </Unit23>
+      </Unit19>
+      <Unit20>
+        <Filename Value="form_messagelog.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMessageLog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_messagelog"/>
+      </Unit20>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

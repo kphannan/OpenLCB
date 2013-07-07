@@ -68,7 +68,7 @@ uses
   Spin, types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
   olcb_structure_helpers, form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
   laz2_XMLWrite, common_utilities, form_awesome_throttle,
-  form_train_config_editor, ethernet_hub,
+  form_train_config_editor, ethernet_hub, form_ethernet_messagelog,
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}
@@ -120,6 +120,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionToolsEthernetHubMessageLogShow: TAction;
     ActionToolsEthernetHub: TAction;
     ActionOpenLCBCommandReadFSI: TAction;
     ActionConfigEditorsHideAll: TAction;
@@ -146,7 +147,7 @@ type
     ActionOpenLCBCommandAll: TAction;
     ActionOpenLCBCommandSNII: TAction;
     ActionOpenLCBCommandProtocolSupport: TAction;
-    ActionToolsMessageLogShow: TAction;
+    ActionToolsCOMPortMessageLogShow: TAction;
     ActionOpenLCBCommandIdentifyIDGlobal: TAction;
     ActionToolsComDisconnect: TAction;
     ActionToolsComConnect: TAction;
@@ -161,6 +162,7 @@ type
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
+    MenuItemToolsEthernetMessageLog: TMenuItem;
     MenuItemToolsSep3: TMenuItem;
     MenuItemReadFSI: TMenuItem;
     MenuItemConfigEditorsSep1: TMenuItem;
@@ -198,7 +200,6 @@ type
     MenuItemToolsMessageLog: TMenuItem;
     MenuItemToolsComConnect: TMenuItem;
     MenuItemToolsComDisconnect: TMenuItem;
-    MenuItemToolsSep1: TMenuItem;
     MenuItemHelp: TMenuItem;
     MenuItemToolsSettingsShow: TMenuItem;
     MenuItemTools: TMenuItem;
@@ -212,6 +213,7 @@ type
     procedure ActionConfigEditorsCreateExecute(Sender: TObject);
     procedure ActionConfigEditorsHideAllExecute(Sender: TObject);
     procedure ActionConfigEditorsShowAllExecute(Sender: TObject);
+    procedure ActionToolsEthernetHubMessageLogShowExecute(Sender: TObject);
     procedure ActionHelpAboutShowExecute(Sender: TObject);
     procedure ActionOpenLCBCommandAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandIdentifyEventsExecute(Sender: TObject);
@@ -235,7 +237,7 @@ type
     procedure ActionToolsComDisconnectExecute(Sender: TObject);
     procedure ActionToolsConfigureNodeExecute(Sender: TObject);
     procedure ActionToolsEthernetHubExecute(Sender: TObject);
-    procedure ActionToolsMessageLogShowExecute(Sender: TObject);
+    procedure ActionToolsCOMPortMessageLogShowExecute(Sender: TObject);
     procedure ActionToolsPreferenceShowMacExecute(Sender: TObject);
     procedure ActionToolsSettingsShowWinExecute(Sender: TObject);
     procedure ActionTreeviewNetworkCollapseAllExecute(Sender: TObject);
@@ -321,6 +323,7 @@ type
     procedure SyncHubDroppedClient(SocketCount: Integer);
     {$IFDEF DEBUG_THREAD} procedure SyncDebugMessage(Info: TComPortThreadDebugRec); {$ENDIF}
     procedure SyncMessageLogHide;
+    procedure SyncEthernetMessageLogHide;
     procedure SyncThrottleHide(Throttle: TFormAwesomeThrottle);
     procedure SyncThrottleClose(Throttle: TFormAwesomeThrottle);
     procedure SyncConfigEditorHide(ConfigEditor: TFormTrainConfigEditor);
@@ -481,6 +484,17 @@ end;
 procedure TFormOLCB_Commander.ActionConfigEditorsShowAllExecute(Sender: TObject);
 begin
   ConfigEditorList.ShowAll;
+end;
+
+procedure TFormOLCB_Commander.ActionToolsEthernetHubMessageLogShowExecute( Sender: TObject);
+begin
+  FormEthernetMessageLog.Show;
+  if EthernetHub.Enabled then
+  begin
+  //  ComPortThread.EnableReceiveMessages := True;
+  //  ComPortThread.EnableSendMessages := True;
+  end;
+  ActionToolsEthernetHubMessageLogShow.Checked := True;
 end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandAllExecute(Sender: TObject);
@@ -705,7 +719,7 @@ begin
   EthernetHub.Enabled := ActionToolsEthernetHub.Checked
 end;
 
-procedure TFormOLCB_Commander.ActionToolsMessageLogShowExecute(Sender: TObject);
+procedure TFormOLCB_Commander.ActionToolsCOMPortMessageLogShowExecute(Sender: TObject);
 begin
   FormMessageLog.Show;
   if Assigned(ComPortThread) then
@@ -713,7 +727,7 @@ begin
     ComPortThread.EnableReceiveMessages := True;
     ComPortThread.EnableSendMessages := True;
   end;
-  ActionToolsMessageLogShow.Checked := True;
+  ActionToolsCOMPortMessageLogShow.Checked := True;
 end;
 
 procedure TFormOLCB_Commander.ActionToolsPreferenceShowMacExecute(Sender: TObject);
@@ -769,12 +783,14 @@ begin
     ActionToolsSettingsShowWin.Visible := False;
     MenuItemToolsSep2.Visible := False;
     FormMessageLog.SynMemo.Font.Height := 0;
+    FormEthernetMessageLog.SynMemo.Font.Height := 0;
     {$ELSE}
     AppAboutCmd := TMenuItem.Create(Self);
     AppAboutCmd.Action := ActionHelpAboutShow;
     MenuItemHelp.Add(AppAboutCmd);
     {$ENDIF}
     FormMessageLog.HideCallback := @SyncMessageLogHide;
+    FormEthernetMessageLog.HideCallback := @SyncEthernetMessageLogHide;
     {$IFDEF Linux}
     FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
@@ -1145,8 +1161,8 @@ begin
     ComPortThread.SyncErrorMessageFunc := @SyncErrorMessage;
     ComPortThread.OnBeforeDestroyTask := @OnBeforeDestroyTask;
 
-    ComPortThread.EnableReceiveMessages := ActionToolsMessageLogShow.Checked;
-    ComPortThread.EnableSendMessages := ActionToolsMessageLogShow.Checked;
+    ComPortThread.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
+    ComPortThread.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
     {$IFDEF DEBUG_THREAD}
     ComPortThread.SyncDebugFunc := @SyncDebugMessage;
     {$ENDIF}
@@ -1763,11 +1779,21 @@ end;
 
 procedure TFormOLCB_Commander.SyncMessageLogHide;
 begin
-  ActionToolsMessageLogShow.Checked := False;
+  ActionToolsCOMPortMessageLogShow.Checked := False;
   if Assigned(ComPortThread) then
   begin
     ComPortThread.EnableReceiveMessages := False;
     ComPortThread.EnableSendMessages := False;
+  end;
+end;
+
+procedure TFormOLCB_Commander.SyncEthernetMessageLogHide;
+begin
+  ActionToolsEthernetHubMessageLogShow.Checked := False;
+  if EthernetHub.Enabled then
+  begin
+  //  ComPortThread.EnableReceiveMessages := False;
+  //  ComPortThread.EnableSendMessages := False;
   end;
 end;
 

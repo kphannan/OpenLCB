@@ -1,9 +1,9 @@
-object FormMessageLog: TFormMessageLog
+object FormEthernetMessageLog: TFormEthernetMessageLog
   Left = 643
   Height = 290
   Top = 209
   Width = 757
-  Caption = 'COM Port Message Logger'
+  Caption = 'Ethernet Message Logger'
   ClientHeight = 290
   ClientWidth = 757
   OnCreate = FormCreate

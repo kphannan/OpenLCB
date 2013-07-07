@@ -5,29 +5,58 @@ unit ethernet_hub;
 interface
 
 uses
-  Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs;
+  Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs,
+  common_utilities;
 
 type
   TClientSocketThread = class;
   TEthernetHub = class;
+  TSocketThreadList = class;
 
-  { TSocketThreadList }
-  TSocketThreadList = class
+  { TTCPMessage }
+
+  TTCPMessage = class
   private
-    FList: TThreadList;
+    FMessage: string;
+    FSource: TClientSocketThread;
+  public
+    constructor Create;
+    property Source: TClientSocketThread read FSource write FSource;   // which socket the message came from
+    property Message: string read FMessage write FMessage;           // Grid Connect message received
+  end;
+
+  { TTCPMessageList }
+
+  TTCPMessageList = class(TThreadList)
+  private
     function GetCount: Integer;
-    function GetSocket(Index: Integer): TClientSocketThread;
-    procedure SetSocket(Index: Integer; AValue: TClientSocketThread);
-  protected
-    property List: TThreadList read FList write FList;
+  public
+    destructor Destroy; override;
+    procedure ClearObjects;
+
+    property Count: Integer read GetCount;
+  end;
+
+  { TTCPMessageManager }
+
+  TTCPMessageManager = class
+  private
+    FMessages: TTCPMessageList;
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Add(hNewSocket: TSocket; Hub: TEthernetHub);
-    procedure Remove(Socket: TClientSocketThread);
-    procedure Clear;
 
-    property Sockets[Index: Integer]: TClientSocketThread read GetSocket write SetSocket; default;
+    property Messasges: TTCPMessageList read FMessages write FMessages;
+  end;
+
+  { TSocketThreadList }
+  TSocketThreadList = class(TThreadList)      // Contains TClientSocketThread objects
+  private
+    function GetCount: Integer;
+  public
+    destructor Destroy; override;
+    procedure ClearObjects;
+
     property Count: Integer read GetCount;
   end;
 
@@ -37,10 +66,12 @@ type
     FConnectedSocket: TTCPBlockSocket;
     FhSocketLocal: TSocket;
     FOwnerHub: TEthernetHub;
+    FTCP_Receive_State: Integer;
   protected
     procedure Execute; override;
     property hSocketLocal: TSocket read FhSocketLocal write FhSocketLocal;
     property ConnectedSocket: TTCPBlockSocket read FConnectedSocket;
+    property TCP_Receive_State: Integer read FTCP_Receive_State write FTCP_Receive_State;    // Statemachine Index
   public
     constructor Create(hSocket: TSocket);
     destructor Destroy; override;
@@ -71,6 +102,7 @@ type
   { TEthernetHub }
   TEthernetHub = class
   private
+    FMessageManager: TTCPMessageManager;
     FOnHubConnect: TOnHubConnectFunc;
     FOnHubDisconnect: TOnHubConnectFunc;
     FEnabled: Boolean;
@@ -90,21 +122,97 @@ type
     destructor Destroy; override;
     property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
     property Enabled: Boolean read FEnabled write SetEnabled;
+    property MessageManager: TTCPMessageManager read FMessageManager write FMessageManager;
     property OnHubConnect: TOnHubConnectFunc read FOnHubConnect write FOnHubConnect;
     property OnHubDisconnect: TOnHubConnectFunc read FOnHubDisconnect write FOnHubDisconnect;
     property OnClientClientConnect: TOnClientConnectChangeFunc read FOnClientConnect write FOnClientConnect;
     property OnClientDisconnect: TOnClientConnectChangeFunc read FOnClientDisconnect write FOnClientDisconnect;
-
   end;
 
 
 implementation
+
+const
+  TCP_STATE_SYNC_START = 0;
+  TCP_STATE_SYNC_FIND_X = 1;
+  TCP_STATE_SYNC_FIND_HEADER = 2;
+  TCP_STATE_SYNC_FIND_N = 3;
+  TCP_STATE_SYNC_FIND_DATA = 4;
+
+  const
+  // :X19170640N0501010107015555;   Example.....
+  // ^         ^                ^
+  // 0         10               27
+  MAX_GRID_CONNECT_LEN = 28;
+  GRID_CONNECT_HEADER_OFFSET_HI = 2;
+  GRID_CONNECT_HEADER_OFFSET_LO = 4;
+  GRID_CONNECT_DATA_OFFSET = 11;
+
+constructor TTCPMessage.Create;
+begin
+  FMessage := '';
+  FSource := nil;
+end;
+
+{ TTCPMessageManager }
+
+constructor TTCPMessageManager.Create;
+begin
+  FMessages := TTCPMessageList.Create;
+end;
+
+destructor TTCPMessageManager.Destroy;
+begin
+  FreeAndNil(FMessages);
+  inherited Destroy;
+end;
+
+{ TTCPMessageList }
+
+function TTCPMessageList.GetCount: Integer;
+var
+  L: TList;
+begin
+  L := LockList;
+  try
+    Result := L.Count
+  finally
+    UnLockList
+  end;
+end;
+
+destructor TTCPMessageList.Destroy;
+begin
+  ClearObjects;
+  inherited Destroy;
+end;
+
+procedure TTCPMessageList.ClearObjects;
+var
+  L: TList;
+  i: Integer;
+begin
+  L := LockList;
+  try
+    for i := 0 to L.Count - 1 do
+      TObject(L[i]).Free;
+  finally
+    L.Clear;
+    UnLockList
+  end;
+end;
 
 { TClientSocketThread }
 
 procedure TClientSocketThread.Execute;
 var
   ReceivedData: AnsiString;
+  Receive_GridConnectBufferIndex: Integer;
+  Receive_GridConnectBuffer: array[0..MAX_GRID_CONNECT_LEN-1] of char;
+  BytesRead, PacketIndex: Integer;
+  Done: Boolean;
+  TCP_Receive_Char: char;
+  GridConnectMsg: TTCPMessage;
 begin
   FConnectedSocket := TTCPBlockSocket.Create;
   try
@@ -112,15 +220,100 @@ begin
     ConnectedSocket.GetSins;                     // Back load the IP's / Ports information from the handle
     while not Terminated do
     begin
-       ReceivedData := ConnectedSocket.RecvPacket(1000);
+      ReceivedData := ConnectedSocket.RecvPacket(1000);
 
- {      if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0)  and Assigned(OwnerHub) then
+      BytesRead := 0;
+      PacketIndex := 1;
+      Receive_GridConnectBufferIndex := 0;
+      while not Done and (BytesRead < Length(ReceivedData)) do
+      begin
+        TCP_Receive_Char := ReceivedData[PacketIndex];                       // Get the next byte from the stack
+        case TCP_Receive_State of
+          TCP_STATE_SYNC_START :                                                // Find a starting ':'
+            begin
+              if TCP_Receive_Char = ':' then
+              begin
+                Receive_GridConnectBufferIndex := 0;
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
+                Inc(Receive_GridConnectBufferIndex);
+                TCP_Receive_State := TCP_STATE_SYNC_FIND_X
+              end
+            end;
+          TCP_STATE_SYNC_FIND_X :
+            begin
+              if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
+              begin
+                if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
+                begin
+                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
+                  Inc(Receive_GridConnectBufferIndex);
+                  TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
+                end else
+                   TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
+              end
+            end;
+          TCP_STATE_SYNC_FIND_HEADER :
+            begin
+              if IsValidHexChar(TCP_Receive_Char) then
+              begin
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                if Receive_GridConnectBufferIndex = 9 then
+                  TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
+                Inc(Receive_GridConnectBufferIndex);
+              end else
+                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+            end;
+          TCP_STATE_SYNC_FIND_N :
+            begin
+              if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
+              begin
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
+                Inc(Receive_GridConnectBufferIndex);
+                TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
+              end else
+                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+            end;
+          TCP_STATE_SYNC_FIND_DATA :
+            begin
+               if TCP_Receive_Char = ';'then
+               begin
+                 if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
+                 begin
+                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
+                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
+                   if Assigned(OwnerHub) then
+                   begin
+                     GridConnectMsg := TTCPMessage.Create;
+                     GridConnectMsg.Message := Receive_GridConnectBuffer;
+                     GridConnectMsg.Source := Self;
+                     OwnerHub.MessageManager.Messasges.Add(GridConnectMsg);
+                   end
+                 end;
+                 TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
+               end else
+               begin
+                 if IsValidHexChar(TCP_Receive_Char) then
+                 begin
+                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                   Inc(Receive_GridConnectBufferIndex);
+                 end else
+                   TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
+               end
+            end else
+              TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
+        end;
+        Inc(BytesRead);
+      end;
+
+
+
+   {    if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0)  and Assigned(OwnerHub) then
        begin
          OwnerHub.ClientThreadList.Remove(Self);
          Synchronize(@OwnerHub.LocalOnClientDisconnect);
          OwnerHub := nil;      // Unlink as we may go away soon
          Terminate;
-       end;         }
+       end;      }
     end;
   finally
     ConnectedSocket.Free
@@ -142,100 +335,42 @@ end;
 
 { TSocketThreadList }
 
-function TSocketThreadList.GetSocket(Index: Integer): TClientSocketThread;
-var
-  L: TList;
-begin
-  L := List.LockList;
-  try
-    Result := TClientSocketThread( L[Index]);
-  finally
-    List.UnlockList;
-  end;
-end;
 
 function TSocketThreadList.GetCount: Integer;
 var
   L: TList;
 begin
-  L := List.LockList;
+  L := LockList;
   try
     Result := L.Count
   finally
-    List.UnlockList;
+    UnlockList;
   end;
-end;
-
-procedure TSocketThreadList.SetSocket(Index: Integer; AValue: TClientSocketThread);
-var
-  L: TList;
-begin
-  L := List.LockList;
-  try
-    L[Index] := AValue
-  finally
-    List.UnlockList;
-  end;
-end;
-
-constructor TSocketThreadList.Create;
-begin
-  FList := TThreadList.Create;
 end;
 
 destructor TSocketThreadList.Destroy;
 begin
-  Clear;
-  FreeAndNil(FList);
+  ClearObjects;
   inherited Destroy;
 end;
 
-procedure TSocketThreadList.Add(hNewSocket: TSocket; Hub: TEthernetHub);
-var
-  ConnectedSocketThread: TClientSocketThread;
-begin
-  if hNewSocket <> 0 then
-  begin
-    ConnectedSocketThread := TClientSocketThread.Create(hNewSocket);
-    ConnectedSocketThread.OwnerHub := Hub;
-    ConnectedSocketThread.FreeOnTerminate := True;
-    List.Add(ConnectedSocketThread);
-    ConnectedSocketThread.Suspended := False;
-  end;
-end;
-
-procedure TSocketThreadList.Remove(Socket: TClientSocketThread);
-var
-  L: TList;
-begin
-  if Assigned(Socket) then
-  begin
-    L := List.LockList;
-    try
-      L.Extract(Socket);
-    finally
-      List.UnlockList;
-    end;
-  end;
-end;
-
-procedure TSocketThreadList.Clear;
+procedure TSocketThreadList.ClearObjects;
 var
   i: Integer;
   L: TList;
   SocketThread: TClientSocketThread;
 begin
-  L := List.LockList;
+  L := LockList;
   try
     for i := 0 to L.Count - 1 do
     begin;
-      SocketThread := Sockets[i];
+      SocketThread := TClientSocketThread( L[i]);
       SocketThread.OwnerHub := nil;
       SocketThread.Terminate;
     end;
   finally
-    List.Clear;
-    List.UnlockList;
+    L.Clear;
+    UnlockList;
   end;
 end;
 
@@ -255,6 +390,7 @@ end;
 procedure TEthernetHubThread.Execute;
 var
   hSocket: TSocket;
+  ClientSocketThread: TClientSocketThread;
 begin
   ListeningSocket := TTCPBlockSocket.Create;
   ListeningSocket.CreateSocket;
@@ -274,7 +410,12 @@ begin
         hSocket := ListeningSocket.Accept;        // Get the handle of the new ListeningSocket for the client connection
         if ListeningSocket.LastError = 0 then
         begin
-          OwnerHub.ClientThreadList.Add(hSocket, OwnerHub);       // add it to the list
+          ClientSocketThread := TClientSocketThread.Create(hSocket);
+          ClientSocketThread.OwnerHub := OwnerHub;
+          ClientSocketThread.FreeOnTerminate := True;
+          OwnerHub.ClientThreadList.Add(ClientSocketThread);       // add it to the list
+          ClientSocketThread.Suspended := False;
+
           if Assigned(OwnerHub) and not Terminated then
             Synchronize(@OwnerHub.LocalOnClientConnect);
         end;
@@ -340,12 +481,15 @@ begin
   FOnHubDisconnect := nil;
   FOnClientDisconnect := nil;
   FClientThreadList := TSocketThreadList.Create;
+  FMessageManager := TTCPMessageManager.Create;
 end;
 
 destructor TEthernetHub.Destroy;
 begin
-  Enabled := False;                      // Destroy the thread
+  Enabled := False;                      // Destroy the thread, this ensures that no more client thread will be added to ClientThreadList
   FreeAndNil(FClientThreadList);
+  // Possible issue here with Client threads silently quitting in the background, did set Hub to nil but they may be in a place where it is waiting to do something with Hub....
+  FreeAndNil(FMessageManager);
   inherited Destroy;
 end;
 

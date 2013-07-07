@@ -21,6 +21,7 @@ type
   function StreamAsString(Stream: TStream): string;
   function GetTickCount : DWORD;
   function SetBooleanCaption(Caption: string; Test: Boolean): string;
+  function IsValidHexChar(AChar: Char): Boolean;
 
 implementation
 
@@ -77,5 +78,10 @@ begin
     Result := Result + Chr( Stream.ReadByte);
 end;
 
-end.
+function IsValidHexChar(AChar: Char): Boolean;
+begin
+  Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
+end;
 
+end.
+

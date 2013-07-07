@@ -118,7 +118,7 @@ end;
 
 procedure TFormMessageLog.ActionLogPasteExecute(Sender: TObject);
 begin
-  FormMessageLog.SynMemo.CommandProcessor(TSynEditorCommand(ecPaste), ' ', nil);
+  SynMemo.CommandProcessor(TSynEditorCommand(ecPaste), ' ', nil);
 end;
 
 procedure TFormMessageLog.ActionLogPauseExecute(Sender: TObject);
@@ -138,4 +138,4 @@ begin
 end;
 
 end.
-
+
