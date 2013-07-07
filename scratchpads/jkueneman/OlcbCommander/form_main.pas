@@ -314,9 +314,12 @@ type
     procedure RefreshCommandStationTreeAliasEvents(NodeAlias: Word; NodeID: QWord; LocalHelper: TOpenLCBMessageHelper);
     procedure RefreshNetworkTreeAliasSnip(NodeAlias: Word; Snip: TOlcbSNIP);
     procedure RefreshNetworkTreeAliasProtocolSupport(NodeAlias: Word; Protocols: QWord);
-    procedure SyncErrorMessage(MessageStr: String);
-    procedure SyncReceiveMessage(MessageStr: String);
-    procedure SyncSendMessage(MessageStr: String);
+    procedure SyncErrorCOMPortMessage(MessageStr: String);
+    procedure SyncReceiveCOMPortMessage(MessageStr: String);
+    procedure SyncSendCOMPortMessage(MessageStr: String);
+    procedure SyncErrorEthernetMessage(MessageStr: String);
+    procedure SyncReceiveEthernetMessage(MessageStr: String);
+    procedure SyncSendEthernetMessage(MessageStr: String);
     procedure SyncHubConnect(HostIP: string; HostPort: Integer);
     procedure SyncHubDisconnect(HostIP: string; HostPort: Integer);
     procedure SyncHubNewClient(SocketCount: Integer);
@@ -491,8 +494,8 @@ begin
   FormEthernetMessageLog.Show;
   if EthernetHub.Enabled then
   begin
-  //  ComPortThread.EnableReceiveMessages := True;
-  //  ComPortThread.EnableSendMessages := True;
+    EthernetHub.EnableReceiveMessages := True;
+    EthernetHub.EnableSendMessages := True;
   end;
   ActionToolsEthernetHubMessageLogShow.Checked := True;
 end;
@@ -1156,10 +1159,14 @@ begin
     {$ENDIF}
     ComPortThread.BaudRate := GlobalSettings.ComPort.BaudRate;
 
-    ComPortThread.SyncReceiveMessageFunc := @SyncReceiveMessage;
-    ComPortThread.SyncSendMessageFunc := @SyncSendMessage;
-    ComPortThread.SyncErrorMessageFunc := @SyncErrorMessage;
+    ComPortThread.SyncReceiveMessageFunc := @SyncReceiveCOMPortMessage;
+    ComPortThread.SyncSendMessageFunc := @SyncSendCOMPortMessage;
+    ComPortThread.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
     ComPortThread.OnBeforeDestroyTask := @OnBeforeDestroyTask;
+
+    EthernetHub.SyncErrorMessageFunc := @SyncErrorEthernetMessage;
+    EthernetHub.SyncReceiveMessageFunc := @SyncReceiveEthernetMessage;
+    EthernetHub.SyncSendMessageFunc := @SyncSendEthernetMessage;
 
     ComPortThread.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
     ComPortThread.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
@@ -1704,7 +1711,7 @@ begin
   end
 end;
 
-procedure TFormOLCB_Commander.SyncReceiveMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncReceiveCOMPortMessage(MessageStr: String);
 begin
   MessageHelper.Decompose(MessageStr);
   if FormMessageLog.Visible and not FormMessageLog.Paused then
@@ -1716,7 +1723,7 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.SyncSendMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncSendCOMPortMessage(MessageStr: String);
 begin
   if MessageHelper.Decompose(MessageStr) then
   begin
@@ -1726,6 +1733,38 @@ begin
       FormMessageLog.SynMemo.Text := FormMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, True);
       FormMessageLog.SynMemo.CaretY := FormMessageLog.SynMemo.LineHeight * FormMessageLog.SynMemo.Lines.Count;
       FormMessageLog.SynMemo.Lines.EndUpdate;
+    end;
+  end;
+end;
+
+procedure TFormOLCB_Commander.SyncErrorEthernetMessage(MessageStr: String);
+begin
+  UpdateUI;
+  ShowMessage(MessageStr);
+end;
+
+procedure TFormOLCB_Commander.SyncReceiveEthernetMessage(MessageStr: String);
+begin
+  MessageHelper.Decompose(MessageStr);
+  if FormEthernetMessageLog.Visible and not FormEthernetMessageLog.Paused then
+  begin
+    FormEthernetMessageLog.SynMemo.Lines.BeginUpdate;
+    FormEthernetMessageLog.SynMemo.Text := FormEthernetMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, False);
+    FormEthernetMessageLog.SynMemo.CaretY := FormEthernetMessageLog.SynMemo.LineHeight * FormEthernetMessageLog.SynMemo.Lines.Count;
+    FormEthernetMessageLog.SynMemo.Lines.EndUpdate;
+  end;
+end;
+
+procedure TFormOLCB_Commander.SyncSendEthernetMessage(MessageStr: String);
+begin
+  if MessageHelper.Decompose(MessageStr) then
+  begin
+    if FormEthernetMessageLog.Visible and not FormEthernetMessageLog.Paused then
+    begin
+      FormEthernetMessageLog.SynMemo.Lines.BeginUpdate;
+      FormEthernetMessageLog.SynMemo.Text := FormEthernetMessageLog.SynMemo.Text + MessageToDetailedMessage( MessageStr, True);
+      FormEthernetMessageLog.SynMemo.CaretY := FormEthernetMessageLog.SynMemo.LineHeight * FormEthernetMessageLog.SynMemo.Lines.Count;
+      FormEthernetMessageLog.SynMemo.Lines.EndUpdate;
     end;
   end;
 end;
@@ -1766,7 +1805,7 @@ begin
 end;
 {$ENDIF}
 
-procedure TFormOLCB_Commander.SyncErrorMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncErrorCOMPortMessage(MessageStr: String);
 begin
   if Assigned(ComPortThread) then
   begin
@@ -1792,8 +1831,8 @@ begin
   ActionToolsEthernetHubMessageLogShow.Checked := False;
   if EthernetHub.Enabled then
   begin
-  //  ComPortThread.EnableReceiveMessages := False;
-  //  ComPortThread.EnableSendMessages := False;
+    EthernetHub.EnableReceiveMessages := False;
+    EthernetHub.EnableSendMessages := False;
   end;
 end;
 

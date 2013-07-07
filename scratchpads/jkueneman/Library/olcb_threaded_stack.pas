@@ -51,8 +51,6 @@ type
   end;
   {$ENDIF}
 
-  TSyncRawMessageFunc = procedure(MessageStr: String) of object;
-  TSyncDatagramFunc = procedure(Datagram: TDatagramReceive) of object;
   {$IFDEF DEBUG_THREAD} TSyncDebugFunc = procedure(DebugInfo: TComPortThreadDebugRec) of object; {$ENDIF}
 
 { TComPortThread }
@@ -75,7 +73,6 @@ type
     FPort: String;                                                              // Port to connect to
     FRunning: Boolean;
     FSerial: TBlockSerial;                                                      // Serial object
-    FSyncDatagramMemConfigOperationReplyFunc: TSyncDatagramFunc;
     {$IFDEF DEBUG_THREAD} FSyncDebugFunc: TSyncDebugFunc; {$ENDIF}
     FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
@@ -1168,7 +1165,6 @@ begin
   FSyncErrorMessageFunc := nil;
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
-  FSyncDatagramMemConfigOperationReplyFunc := nil;
   FLoopTime := 0;
   FMaxLoopTime := 0;
   OnBeforeDestroyTask := nil;

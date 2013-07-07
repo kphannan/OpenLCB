@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs,
-  common_utilities;
+  common_utilities, olcb_utilities;
 
 type
   TClientSocketThread = class;
@@ -46,7 +46,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    property Messasges: TTCPMessageList read FMessages write FMessages;
+    property Messages: TTCPMessageList read FMessages write FMessages;
   end;
 
   { TSocketThreadList }
@@ -102,6 +102,9 @@ type
   { TEthernetHub }
   TEthernetHub = class
   private
+    FBufferRawMessage: string;
+    FEnableReceiveMessages: Boolean;
+    FEnableSendMessages: Boolean;
     FMessageManager: TTCPMessageManager;
     FOnHubConnect: TOnHubConnectFunc;
     FOnHubDisconnect: TOnHubConnectFunc;
@@ -110,23 +113,35 @@ type
     FOnClientDisconnect: TOnClientConnectChangeFunc;
     FOnClientConnect: TOnClientConnectChangeFunc;
     FClientThreadList: TSocketThreadList;
+    FSyncErrorMessageFunc: TSyncRawMessageFunc;
+    FSyncReceiveMessageFunc: TSyncRawMessageFunc;
+    FSyncSendMessageFunc: TSyncRawMessageFunc;
     procedure SetEnabled(AValue: Boolean);
   protected
     procedure LocalOnHubConnect;
     procedure LocalOnHubDisconnect;
     procedure LocalOnClientConnect;
     procedure LocalOnClientDisconnect;
+    procedure SyncErrorMessage;
+    procedure SyncReceiveMessage;
+    procedure SyncSendMessage;
+    property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property ListenDameon: TEthernetHubThread read FListenDameon;
   public
     constructor Create;
     destructor Destroy; override;
     property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
     property Enabled: Boolean read FEnabled write SetEnabled;
+    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
+    property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
     property MessageManager: TTCPMessageManager read FMessageManager write FMessageManager;
     property OnHubConnect: TOnHubConnectFunc read FOnHubConnect write FOnHubConnect;
     property OnHubDisconnect: TOnHubConnectFunc read FOnHubDisconnect write FOnHubDisconnect;
     property OnClientClientConnect: TOnClientConnectChangeFunc read FOnClientConnect write FOnClientConnect;
     property OnClientDisconnect: TOnClientConnectChangeFunc read FOnClientDisconnect write FOnClientDisconnect;
+    property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
+    property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
+    property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
   end;
 
 
@@ -286,7 +301,12 @@ begin
                      GridConnectMsg := TTCPMessage.Create;
                      GridConnectMsg.Message := Receive_GridConnectBuffer;
                      GridConnectMsg.Source := Self;
-                     OwnerHub.MessageManager.Messasges.Add(GridConnectMsg);
+                     OwnerHub.MessageManager.Messages.Add(GridConnectMsg);
+                     if OwnerHub.EnableReceiveMessages then
+                     begin
+                       OwnerHub.BufferRawMessage := GridConnectMsg.Message;
+                       Self.Synchronize(@OwnerHub.SyncReceiveMessage);
+                     end;
                    end
                  end;
                  TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
@@ -474,12 +494,35 @@ begin
     OnClientDisconnect(ClientThreadList.Count);
 end;
 
+procedure TEthernetHub.SyncErrorMessage;
+begin
+  if Assigned(SyncErrorMessageFunc) then
+    SyncErrorMessageFunc(BufferRawMessage)
+end;
+
+procedure TEthernetHub.SyncReceiveMessage;
+begin
+    if Assigned(SyncErrorMessageFunc) then
+    SyncReceiveMessageFunc(BufferRawMessage)
+end;
+
+procedure TEthernetHub.SyncSendMessage;
+begin
+  if Assigned(SyncErrorMessageFunc) then
+    SyncSendMessageFunc(BufferRawMessage)
+end;
+
 constructor TEthernetHub.Create;
 begin
   FOnClientConnect := nil;
   FOnHubConnect := nil;
   FOnHubDisconnect := nil;
   FOnClientDisconnect := nil;
+  EnableReceiveMessages := False;
+  EnableSendMessages := False;
+  FSyncErrorMessageFunc := nil;
+  FSyncReceiveMessageFunc := nil;
+  FSyncSendMessageFunc := nil;
   FClientThreadList := TSocketThreadList.Create;
   FMessageManager := TTCPMessageManager.Create;
 end;
