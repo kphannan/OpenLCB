@@ -29,6 +29,10 @@ const
   STR_INI_THROTTLE_SECTION = 'Throttle';
   STR_INI_THROTTLE_AUTOLOADFDI = 'AutoLoadFDI';
 
+  STR_INI_ETHERNET_SECTION = 'Ethernet';
+  STR_INI_ETHERNET_LOCAL_IP = 'LocalIP';
+  STR_INI_ETHERNET_LOCAL_PORT = 'LocalPort';
+
 type
   TComPortParity = (
     cpp_None,
@@ -111,6 +115,20 @@ type
     property AutoLoadFDI: Boolean read FAutoLoadFDI write FAutoLoadFDI;
   end;
 
+  { TEthernetSettings }
+
+  TEthernetSettings = class
+  private
+    FLocalIP: string;
+    FLocalPort: Integer;
+  public
+    constructor Create;
+    procedure LoadFromFile(IniFile: TIniFile);
+    procedure SaveToFile(IniFile: TIniFile);
+    property LocalIP: string read FLocalIP write FLocalIP;
+    property LocalPort: Integer read FLocalPort write FLocalPort;
+  end;
+
   // Settings that all OLCB Applications will have in common
 
   { TOlcbCommonSettings }
@@ -118,6 +136,7 @@ type
   TOlcbCommonSettings = class
   private
     FComPort: TComPortSettings;
+    FEthernet: TEthernetSettings;
     FGeneral: TGeneralSettings;
     FThrottle: TThrottleSettings;
   public
@@ -126,6 +145,7 @@ type
     procedure LoadFromFile(FileName: string);
     procedure SaveToFile(FileName: string);
     property ComPort: TComPortSettings read FComPort write FComPort;
+    property Ethernet: TEthernetSettings read FEthernet write FEthernet;
     property General: TGeneralSettings read FGeneral write FGeneral;
     property Throttle: TThrottleSettings read FThrottle write FThrottle;
   end;
@@ -135,6 +155,26 @@ var
   GlobalSettingLock: TRTLCriticalSection;
 
 implementation
+
+{ TEthernetSettings }
+
+constructor TEthernetSettings.Create;
+begin
+  LocalIP := '0.0.0.0';
+  LocalPort := 12021;
+end;
+
+procedure TEthernetSettings.LoadFromFile(IniFile: TIniFile);
+begin
+  LocalIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_IP, '0.0.0.0');
+  LocalPort := IniFile.ReadInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_PORT, 12021);
+end;
+
+procedure TEthernetSettings.SaveToFile(IniFile: TIniFile);
+begin
+  IniFile.WriteString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_IP, FLocalIP);
+  IniFile.WriteInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_PORT, FLocalPort);
+end;
 
 { TThrottleSettings }
 
@@ -248,6 +288,7 @@ begin
   FComPort := TComPortSettings.Create;
   FGeneral := TGeneralSettings.Create;
   FThrottle := TThrottleSettings.Create;
+  FEthernet := TEthernetSettings.Create;
 end;
 
 destructor TOlcbCommonSettings.Destroy;
@@ -255,6 +296,7 @@ begin
   FreeAndNil(FComPort);
   FreeAndNil(FGeneral);
   FreeAndNil(FThrottle);
+  FreeAndNil(FEthernet);
   inherited Destroy;
 end;
 
@@ -267,6 +309,7 @@ begin
    ComPort.LoadFromFile(IniFile);
    General.LoadFromFile(IniFile);
    Throttle.LoadFromFile(IniFile);
+   Ethernet.LoadFromFile(IniFile);
   finally
     IniFile.Free;
   end;
@@ -281,6 +324,7 @@ begin
     ComPort.SaveToFile(IniFile);
     General.SaveToFile(IniFile);
     Throttle.SaveToFile(IniFile);
+    Ethernet.SaveToFile(IniFile);
   finally
     IniFile.Free;
   end;
@@ -295,4 +339,4 @@ finalization
   DoneCriticalsection(GlobalSettingLock);
 
 end.
-
+

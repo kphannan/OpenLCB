@@ -5,34 +5,34 @@ unit ethernet_hub;
 interface
 
 uses
-  Classes, SysUtils, blcksock, synsock, Forms;
+  Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs;
 
 type
-  TConnectedSocketThread = class;
+  TClientSocketThread = class;
   TEthernetHub = class;
 
-  { TSocketList }
-  TSocketList = class
+  { TSocketThreadList }
+  TSocketThreadList = class
   private
     FList: TThreadList;
     function GetCount: Integer;
-    function GetSocket(Index: Integer): TConnectedSocketThread;
-    procedure SetSocket(Index: Integer; AValue: TConnectedSocketThread);
+    function GetSocket(Index: Integer): TClientSocketThread;
+    procedure SetSocket(Index: Integer; AValue: TClientSocketThread);
   protected
     property List: TThreadList read FList write FList;
   public
     constructor Create;
     destructor Destroy; override;
     procedure Add(hNewSocket: TSocket; Hub: TEthernetHub);
-    procedure Remove(Socket: TConnectedSocketThread);
+    procedure Remove(Socket: TClientSocketThread);
     procedure Clear;
 
-    property Sockets[Index: Integer]: TConnectedSocketThread read GetSocket write SetSocket; default;
+    property Sockets[Index: Integer]: TClientSocketThread read GetSocket write SetSocket; default;
     property Count: Integer read GetCount;
   end;
 
-  { TConnectedSocketThread }
-  TConnectedSocketThread = class(TThread)
+  { TClientSocketThread }
+  TClientSocketThread = class(TThread)
   private
     FConnectedSocket: TTCPBlockSocket;
     FhSocketLocal: TSocket;
@@ -54,53 +54,55 @@ type
   private
     FIsTerminated: Boolean;
     FOwnerHub: TEthernetHub;
-    FSocket: TTCPBlockSocket;
+    FListeningSocket: TTCPBlockSocket;
   protected
     procedure Execute; override;
     property OwnerHub: TEthernetHub read FOwnerHub write FOwnerHub;
-    property Socket: TTCPBlockSocket read FSocket write FSocket;     // Caution, created in context of thread
+    property ListeningSocket: TTCPBlockSocket read FListeningSocket write FListeningSocket;     // Caution, created in context of thread
   public
-    constructor Create;
+    constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     property IsTerminated: Boolean read FIsTerminated;
   end;
 
-  TConnectionCallbackFunc = procedure(HostIP: string; HostPort: Integer) of object;
-  TConnectionChangeCallbackFunc = procedure(SocketCount: Integer) of object;
+  TOnHubConnectFunc = procedure(HostIP: string; HostPort: Integer) of object;
+  TOnClientConnectChangeFunc = procedure(SocketCount: Integer) of object;
 
   { TEthernetHub }
   TEthernetHub = class
   private
-    FOnConnectedCallback: TConnectionCallbackFunc;
-    FOnDisconnectedCallback: TConnectionCallbackFunc;
+    FOnHubConnect: TOnHubConnectFunc;
+    FOnHubDisconnect: TOnHubConnectFunc;
     FEnabled: Boolean;
     FListenDameon: TEthernetHubThread;
-    FOnDroppedConnection: TConnectionChangeCallbackFunc;
-    FOnNewConnection: TConnectionChangeCallbackFunc;
-    FSocketList: TSocketList;
+    FOnClientDisconnect: TOnClientConnectChangeFunc;
+    FOnClientConnect: TOnClientConnectChangeFunc;
+    FClientThreadList: TSocketThreadList;
     procedure SetEnabled(AValue: Boolean);
   protected
-    procedure LocalConnectedCallback;
-    procedure LocalDisconnectedCallback;
-    procedure LocalNewConnectionCallback;
-    procedure LocalDroppedConnectionCallback;
+    procedure LocalOnHubConnect;
+    procedure LocalOnHubDisconnect;
+    procedure LocalOnClientConnect;
+    procedure LocalOnClientDisconnect;
     property ListenDameon: TEthernetHubThread read FListenDameon;
   public
     constructor Create;
     destructor Destroy; override;
+    property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
     property Enabled: Boolean read FEnabled write SetEnabled;
-    property OnConnectionConnected: TConnectionCallbackFunc read FOnConnectedCallback write FOnConnectedCallback;
-    property OnConnectionDisconnected: TConnectionCallbackFunc read FOnDisconnectedCallback write FOnDisconnectedCallback;
-    property OnNewConnection: TConnectionChangeCallbackFunc read FOnNewConnection write FOnNewConnection;
-    property OnDroppedConnection: TConnectionChangeCallbackFunc read FOnDroppedConnection write FOnDroppedConnection;
-    property SocketList: TSocketList read FSocketList write FSocketList;
+    property OnHubConnect: TOnHubConnectFunc read FOnHubConnect write FOnHubConnect;
+    property OnHubDisconnect: TOnHubConnectFunc read FOnHubDisconnect write FOnHubDisconnect;
+    property OnClientClientConnect: TOnClientConnectChangeFunc read FOnClientConnect write FOnClientConnect;
+    property OnClientDisconnect: TOnClientConnectChangeFunc read FOnClientDisconnect write FOnClientDisconnect;
+
   end;
+
 
 implementation
 
-{ TConnectedSocketThread }
+{ TClientSocketThread }
 
-procedure TConnectedSocketThread.Execute;
+procedure TClientSocketThread.Execute;
 var
   ReceivedData: AnsiString;
 begin
@@ -112,21 +114,20 @@ begin
     begin
        ReceivedData := ConnectedSocket.RecvPacket(1000);
 
-       if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0) then
+ {      if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0)  and Assigned(OwnerHub) then
        begin
-         OwnerHub.SocketList.Remove(Self);
-         if Assigned(OwnerHub) then
-           Synchronize(@OwnerHub.LocalDroppedConnectionCallback);
+         OwnerHub.ClientThreadList.Remove(Self);
+         Synchronize(@OwnerHub.LocalOnClientDisconnect);
          OwnerHub := nil;      // Unlink as we may go away soon
          Terminate;
-       end;
+       end;         }
     end;
   finally
     ConnectedSocket.Free
   end;
 end;
 
-constructor TConnectedSocketThread.Create(hSocket: TSocket);
+constructor TClientSocketThread.Create(hSocket: TSocket);
 begin
   inherited Create(True);
   FhSocketLocal := hSocket;
@@ -134,26 +135,26 @@ begin
   FConnectedSocket := nil;
 end;
 
-destructor TConnectedSocketThread.Destroy;
+destructor TClientSocketThread.Destroy;
 begin
   inherited Destroy;
 end;
 
-{ TSocketList }
+{ TSocketThreadList }
 
-function TSocketList.GetSocket(Index: Integer): TConnectedSocketThread;
+function TSocketThreadList.GetSocket(Index: Integer): TClientSocketThread;
 var
   L: TList;
 begin
   L := List.LockList;
   try
-    Result := TConnectedSocketThread( L[Index]);
+    Result := TClientSocketThread( L[Index]);
   finally
     List.UnlockList;
   end;
 end;
 
-function TSocketList.GetCount: Integer;
+function TSocketThreadList.GetCount: Integer;
 var
   L: TList;
 begin
@@ -165,7 +166,7 @@ begin
   end;
 end;
 
-procedure TSocketList.SetSocket(Index: Integer; AValue: TConnectedSocketThread);
+procedure TSocketThreadList.SetSocket(Index: Integer; AValue: TClientSocketThread);
 var
   L: TList;
 begin
@@ -177,25 +178,25 @@ begin
   end;
 end;
 
-constructor TSocketList.Create;
+constructor TSocketThreadList.Create;
 begin
   FList := TThreadList.Create;
 end;
 
-destructor TSocketList.Destroy;
+destructor TSocketThreadList.Destroy;
 begin
   Clear;
   FreeAndNil(FList);
   inherited Destroy;
 end;
 
-procedure TSocketList.Add(hNewSocket: TSocket; Hub: TEthernetHub);
+procedure TSocketThreadList.Add(hNewSocket: TSocket; Hub: TEthernetHub);
 var
-  ConnectedSocketThread: TConnectedSocketThread;
+  ConnectedSocketThread: TClientSocketThread;
 begin
   if hNewSocket <> 0 then
   begin
-    ConnectedSocketThread := TConnectedSocketThread.Create(hNewSocket);
+    ConnectedSocketThread := TClientSocketThread.Create(hNewSocket);
     ConnectedSocketThread.OwnerHub := Hub;
     ConnectedSocketThread.FreeOnTerminate := True;
     List.Add(ConnectedSocketThread);
@@ -203,7 +204,7 @@ begin
   end;
 end;
 
-procedure TSocketList.Remove(Socket: TConnectedSocketThread);
+procedure TSocketThreadList.Remove(Socket: TClientSocketThread);
 var
   L: TList;
 begin
@@ -218,33 +219,32 @@ begin
   end;
 end;
 
-procedure TSocketList.Clear;
+procedure TSocketThreadList.Clear;
 var
   i: Integer;
   L: TList;
-  SocketThread: TConnectedSocketThread;
+  SocketThread: TClientSocketThread;
 begin
   L := List.LockList;
   try
     for i := 0 to L.Count - 1 do
     begin;
       SocketThread := Sockets[i];
-      Remove(SocketThread);
       SocketThread.OwnerHub := nil;
       SocketThread.Terminate;
     end;
   finally
+    List.Clear;
     List.UnlockList;
   end;
 end;
 
 { TEthernetHubThread }
 
-constructor TEthernetHubThread.Create;
+constructor TEthernetHubThread.Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
 begin
-  inherited Create(True);
+  inherited Create(CreateSuspended, StackSize);
   FOwnerHub := nil;
-  FIsTerminated := False;
 end;
 
 destructor TEthernetHubThread.Destroy;
@@ -256,33 +256,32 @@ procedure TEthernetHubThread.Execute;
 var
   hSocket: TSocket;
 begin
-  Socket := TTCPBlockSocket.Create;
-  Socket.Bind('0.0.0.0', '12021');  // Bind to this machine IP at Port 12021;
-  Socket.SetLinger(True, 1000);
-  Socket.Listen;                    // Listen for connections
+  ListeningSocket := TTCPBlockSocket.Create;
+  ListeningSocket.CreateSocket;
+  ListeningSocket.Bind(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.LocalPort));  // Bind to this machine IP at Port 12021;
+  ListeningSocket.SetLinger(True, 1000);
+  ListeningSocket.Listen;                    // Listen for connections
 
-  if Assigned(OwnerHub) then
-    Synchronize(@OwnerHub.LocalConnectedCallback);
+  if Assigned(OwnerHub) and not Terminated then
+    Synchronize(@OwnerHub.LocalOnHubConnect);
 
   while not Terminated do
   begin
-    if Socket.CanRead(1000) then
+    if ListeningSocket.CanRead(1000) then
     begin
-      if Socket.LastError = 0 then
+      if (ListeningSocket.LastError = 0) and Assigned(OwnerHub) and not Terminated then
       begin
-        hSocket := Socket.Accept;        // Get the handle of the new socket for the client connection
-        if Socket.LastError = 0 then
+        hSocket := ListeningSocket.Accept;        // Get the handle of the new ListeningSocket for the client connection
+        if ListeningSocket.LastError = 0 then
         begin
-          OwnerHub.SocketList.Add(hSocket, OwnerHub);       // add it to the list
-          if Assigned(OwnerHub) then
-            Synchronize(@OwnerHub.LocalNewConnectionCallback);
+          OwnerHub.ClientThreadList.Add(hSocket, OwnerHub);       // add it to the list
+          if Assigned(OwnerHub) and not Terminated then
+            Synchronize(@OwnerHub.LocalOnClientConnect);
         end;
       end;
     end;
   end;
-  if Assigned(OwnerHub) then
-    Synchronize(@OwnerHub.LocalDisconnectedCallback);
-
+  FreeAndNil(FListeningSocket);
   FIsTerminated := True;
 end;
 
@@ -295,63 +294,58 @@ begin
     FEnabled:=AValue;
     if FEnabled then
     begin
-      FListenDameon := TEthernetHubThread.Create;
-      ListenDameon.FreeOnTerminate := True;
+      FListenDameon := TEthernetHubThread.Create(True);
       ListenDameon.OwnerHub := Self;
       ListenDameon.Suspended := False;
     end else
     begin
+      LocalOnHubDisconnect;
       ListenDameon.Terminate;
       while not ListenDameon.IsTerminated do
-      begin
-        Application.ProcessMessages;   // The Syncronize call needs to pump message to complete and not deadlock
-        Sleep(100);
-      end;
-      FListenDameon := nil;
-      SocketList.Clear;
-      LocalDroppedConnectionCallback;
+        Application.ProcessMessages;         // Yuck, but Syncronize needs the main thread to pump messages to complete and not deadlock
+      FreeAndNil(FListenDameon);             // Can't free on terminate because it may be gone when we check for IsTerminated....
+      ClientThreadList.Clear;
     end;
   end;
 end;
 
-procedure TEthernetHub.LocalConnectedCallback;
+procedure TEthernetHub.LocalOnHubConnect;
 begin
-  if Assigned(OnConnectionConnected) then
-    OnConnectionConnected(ListenDameon.Socket.GetLocalSinIP, ListenDameon.Socket.GetLocalSinPort);
+  if Assigned(OnHubConnect) and Assigned(ListenDameon) then
+    OnHubConnect(ListenDameon.ListeningSocket.GetLocalSinIP, ListenDameon.ListeningSocket.GetLocalSinPort);
 end;
 
-procedure TEthernetHub.LocalDisconnectedCallback;
+procedure TEthernetHub.LocalOnHubDisconnect;
 begin
-  if Assigned(OnConnectionDisconnected) then
-    OnConnectionDisconnected(ListenDameon.Socket.GetLocalSinIP, ListenDameon.Socket.GetLocalSinPort);
+  if Assigned(OnHubDisconnect) and Assigned(ListenDameon) then
+    OnHubDisconnect(ListenDameon.ListeningSocket.GetLocalSinIP, ListenDameon.ListeningSocket.GetLocalSinPort);
 end;
 
-procedure TEthernetHub.LocalNewConnectionCallback;
+procedure TEthernetHub.LocalOnClientConnect;
 begin
-  if Assigned(OnNewConnection) then
-    OnNewConnection(SocketList.Count);
+  if Assigned(OnClientClientConnect) and Assigned(ClientThreadList) then
+    OnClientClientConnect(ClientThreadList.Count);
 end;
 
-procedure TEthernetHub.LocalDroppedConnectionCallback;
+procedure TEthernetHub.LocalOnClientDisconnect;
 begin
-  if Assigned(OnDroppedConnection) then
-    OnDroppedConnection(SocketList.Count);
+  if Assigned(OnClientDisconnect) and Assigned(ClientThreadList) then
+    OnClientDisconnect(ClientThreadList.Count);
 end;
 
 constructor TEthernetHub.Create;
 begin
-  FListenDameon := nil;
-  FOnNewConnection := nil;
-  FOnConnectedCallback := nil;
-  FOnDisconnectedCallback := nil;
-  FOnDroppedConnection := nil;
-  FSocketList := TSocketList.Create;
+  FOnClientConnect := nil;
+  FOnHubConnect := nil;
+  FOnHubDisconnect := nil;
+  FOnClientDisconnect := nil;
+  FClientThreadList := TSocketThreadList.Create;
 end;
 
 destructor TEthernetHub.Destroy;
 begin
-  Enabled := False;
-  FreeAndNil(FSocketList);
+  Enabled := False;                      // Destroy the thread
+  FreeAndNil(FClientThreadList);
   inherited Destroy;
 end;
 

@@ -25,6 +25,7 @@ type
     ComboBoxComPort: TComboBox;
     ComboBoxDataBits: TComboBox;
     ComboBoxFlowControl: TComboBox;
+    EditEthernetLocalIP: TEdit;
     EditAliasID: TEdit;
     EditNodeID: TEdit;
     GroupBox1: TGroupBox;
@@ -33,6 +34,8 @@ type
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
     LabelComPort: TLabel;
     LabelBaud: TLabel;
     LabelDataBits: TLabel;
@@ -43,6 +46,8 @@ type
     PanelComPort: TPanel;
     PanelThrottle: TPanel;
     PanelGeneral: TPanel;
+    PanelEthernet: TPanel;
+    SpinEditEthernetLocalPort: TSpinEdit;
     SpinEditSendPacketDelay: TSpinEdit;
     procedure BitBtnFTDIDefaultsClick(Sender: TObject);
     procedure BitBtnRescanPortsClick(Sender: TObject);
@@ -79,21 +84,31 @@ begin
     begin
       PanelThrottle.Visible := False;
       PanelGeneral.Visible := False;
+      PanelEthernet.Visible := False;
       PanelComPort.Visible := True;
     end
     else
     if Item.Caption = 'Throttle' then
     begin
-      PanelThrottle.Visible := True;
       PanelGeneral.Visible := False;
       PanelComPort.Visible := False;
+      PanelEthernet.Visible := False;
+      PanelThrottle.Visible := True;
     end
     else
     if Item.Caption = 'General' then
     begin
       PanelThrottle.Visible := False;
-      PanelGeneral.Visible := True;
       PanelComPort.Visible := False;
+      PanelEthernet.Visible := False;
+      PanelGeneral.Visible := True;
+    end else
+    if Item.Caption = 'Ethernet' then
+    begin
+      PanelThrottle.Visible := False;
+      PanelGeneral.Visible := False;
+      PanelComPort.Visible := False;
+      PanelEthernet.Visible := True;
     end;
   end
   else
@@ -141,6 +156,10 @@ begin
   // Throttle
   GlobalSettings.Throttle.AutoLoadFDI := CheckBoxAutoLoadFDI.Checked;
 
+  // Ethernet
+  GlobalSettings.Ethernet.LocalIP := EditEthernetLocalIP.Text;      // Should validate this
+  GlobalSettings.Ethernet.LocalPort := SpinEditEthernetLocalPort.Value;
+
   GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
 
 end;
@@ -167,6 +186,10 @@ begin
 
   // Throttle
   CheckBoxAutoLoadFDI.Checked := GlobalSettings.Throttle.AutoLoadFDI;
+
+  //Ethernet
+  EditEthernetLocalIP.Text := GlobalSettings.Ethernet.LocalIP;
+  SpinEditEthernetLocalPort.Value := GlobalSettings.Ethernet.LocalPort;
 end;
 
 procedure TFormSettings.FormHide(Sender: TObject);
@@ -194,4 +217,4 @@ begin
   ComboBoxFlowControl.ItemIndex := ComboBoxFlowControl.Items.IndexOf('XON/XOFF');
 end;
 
-end.
+end.

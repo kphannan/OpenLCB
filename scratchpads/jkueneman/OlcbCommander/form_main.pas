@@ -315,10 +315,10 @@ type
     procedure SyncErrorMessage(MessageStr: String);
     procedure SyncReceiveMessage(MessageStr: String);
     procedure SyncSendMessage(MessageStr: String);
-    procedure SyncHubConnected(HostIP: string; HostPort: Integer);
-    procedure SyncHubDisconnected(HostIP: string; HostPort: Integer);
-    procedure SyncHubNewConnection(SocketCount: Integer);
-    procedure SyncHubDroppedConnection(SocketCount: Integer);
+    procedure SyncHubConnect(HostIP: string; HostPort: Integer);
+    procedure SyncHubDisconnect(HostIP: string; HostPort: Integer);
+    procedure SyncHubNewClient(SocketCount: Integer);
+    procedure SyncHubDroppedClient(SocketCount: Integer);
     {$IFDEF DEBUG_THREAD} procedure SyncDebugMessage(Info: TComPortThreadDebugRec); {$ENDIF}
     procedure SyncMessageLogHide;
     procedure SyncThrottleHide(Throttle: TFormAwesomeThrottle);
@@ -729,10 +729,10 @@ begin
   FConfigEditorList := TFormConfigEditorList.Create;
   FLazyLoadTaskList := TList.Create;
   FEthernetHub := TEthernetHub.Create;
-  EthernetHub.OnConnectionConnected := @SyncHubConnected;
-  EthernetHub.OnConnectionDisconnected := @SyncHubDisconnected;
-  EthernetHub.OnNewConnection := @SyncHubNewConnection;
-  EthernetHub.OnDroppedConnection := @SyncHubDroppedConnection;
+  EthernetHub.OnHubConnect := @SyncHubConnect;
+  EthernetHub.OnHubDisconnect := @SyncHubDisconnect;
+  EthernetHub.OnClientClientConnect := @SyncHubNewClient;
+  EthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
 end;
 
 procedure TFormOLCB_Commander.FormDestroy(Sender: TObject);
@@ -1714,22 +1714,24 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.SyncHubConnected(HostIP: string; HostPort: Integer);
+procedure TFormOLCB_Commander.SyncHubConnect(HostIP: string; HostPort: Integer);
 begin
   Statusbar.Panels[2].Text := 'Hub Connected to IP: ' + HostIP + ' Port: ' + IntToStr(HostPort);
+  Statusbar.Panels[3].Text := 'Clients = 0';
 end;
 
-procedure TFormOLCB_Commander.SyncHubDisconnected(HostIP: string; HostPort: Integer);
+procedure TFormOLCB_Commander.SyncHubDisconnect(HostIP: string; HostPort: Integer);
 begin
   Statusbar.Panels[2].Text := 'Hub Disconnected';
+  Statusbar.Panels[3].Text := '';
 end;
 
-procedure TFormOLCB_Commander.SyncHubNewConnection(SocketCount: Integer);
+procedure TFormOLCB_Commander.SyncHubNewClient(SocketCount: Integer);
 begin
   Statusbar.Panels[3].Text := 'Connection Count: ' + IntToStr(SocketCount);
 end;
 
-procedure TFormOLCB_Commander.SyncHubDroppedConnection(SocketCount: Integer);
+procedure TFormOLCB_Commander.SyncHubDroppedClient(SocketCount: Integer);
 begin
   Statusbar.Panels[3].Text := 'Connection Count: ' + IntToStr(SocketCount);
 end;

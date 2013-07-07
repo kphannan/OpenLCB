@@ -1,7 +1,7 @@
 object FormOLCB_Commander: TFormOLCB_Commander
-  Left = 735
+  Left = 453
   Height = 401
-  Top = 450
+  Top = 248
   Width = 694
   Caption = 'OpenLCB Commander'
   ClientHeight = 401
@@ -78,10 +78,9 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end    
       item
         Text = 'Hub Disconnected'
-        Width = 240
+        Width = 280
       end    
       item
-        Text = 'Count: 0'
         Width = 50
       end>
     SimplePanel = False
