@@ -69,11 +69,11 @@ uses
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
   laz2_XMLWrite, common_utilities, form_awesome_throttle,
   form_train_config_editor, ethernet_hub, form_ethernet_messagelog,
-  olcb_transport_layer,
+
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}
-  olcb_common_tasks;
+  olcb_transport_layer;
 
 const
   BUNDLENAME             = 'OpenLCB Commander';
@@ -537,7 +537,7 @@ end;
 
 procedure TFormOLCB_Commander.ActionOpenLCBCommandIdentifyIDGlobalExecute(Sender: TObject);
 begin
-  TreeViewNetwork.BeginUpdate;
+ TreeViewNetwork.BeginUpdate;
   try
     RootNetworkNode.DeleteChildren;
     RootNetworkNode.HasChildren := True;
@@ -2070,4 +2070,4 @@ end;
 
 
 end.
-
+

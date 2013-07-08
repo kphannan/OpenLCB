@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  StdCtrls, ComCtrls, Spin, laz2_DOM, laz2_XMLRead, Types, olcb_common_tasks,
+  StdCtrls, ComCtrls, Spin, laz2_DOM, laz2_XMLRead, Types,
   Buttons, olcb_transport_layer;
 
 const

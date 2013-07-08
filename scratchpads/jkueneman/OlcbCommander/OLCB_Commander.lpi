@@ -42,7 +42,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="20">
+    <Units Count="22">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -156,23 +156,33 @@
         <UnitName Value="unit_cdi_parser"/>
       </Unit16>
       <Unit17>
-        <Filename Value="ethernet_hub.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="ethernet_hub"/>
-      </Unit17>
-      <Unit18>
         <Filename Value="form_messagelog.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMessageLog"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_messagelog"/>
-      </Unit18>
-      <Unit19>
+      </Unit17>
+      <Unit18>
         <Filename Value="olcb_transport_layer.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_transport_layer"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_utilities"/>
       </Unit19>
+      <Unit20>
+        <Filename Value="..\Library\olcb_defines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_defines"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="..\Library\ethernet_hub.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ethernet_hub"/>
+      </Unit21>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -69,7 +69,6 @@ type
     property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager;
     property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
     property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
-    property SourceAlias: Word read GetSourceAlias;
   public
     constructor Create(CreateSuspended: Boolean);
     destructor Destroy; override;
@@ -91,6 +90,7 @@ type
     property MaxLoopTime: DWord read FMaxLoopTime write FMAxLoopTime;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
     property Running: Boolean read FRunning;
+    property SourceAlias: Word read GetSourceAlias;
   end;
 
   { TOlcbStructureHelperBase }
@@ -869,7 +869,12 @@ implementation
 
 function TTransportLayerThread.GetSourceAlias: Word;
 begin
-
+  EnterCriticalsection(GlobalSettingLock);
+  try
+    Result := GlobalSettings.General.AliasIDAsVal;
+  finally
+    LeaveCriticalsection(GlobalSettingLock)
+  end;
 end;
 
 procedure TTransportLayerThread.ExecuteBegin;

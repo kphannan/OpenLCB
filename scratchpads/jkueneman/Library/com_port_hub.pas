@@ -35,11 +35,8 @@ type
     FBaudRate: DWord;                                                           // Baud rate to connect with
     FPort: String;                                                              // Port to connect to
     FSerial: TBlockSerial;                                                      // Serial object
-    function GetSourceAlias: Word;
     protected
       procedure Execute; override;
-
-      property SourceAlias: Word read GetSourceAlias;
     public
       constructor Create(CreateSuspended: Boolean);
       destructor Destroy; override;
@@ -53,16 +50,6 @@ type
 implementation
 
 { TComPortThread }
-
-function TComPortThread.GetSourceAlias: Word;
-begin
-  EnterCriticalsection(GlobalSettingLock);
-  try
-    Result := GlobalSettings.General.AliasIDAsVal;
-  finally
-    LeaveCriticalsection(GlobalSettingLock)
-  end;
-end;
 
 procedure TComPortThread.Execute;
 var

@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   ComCtrls, StdCtrls, ActnList, Spin, Buttons, math_float16,
-  olcb_transport_layer, olcb_common_tasks, olcb_app_common_settings,
+  olcb_transport_layer, olcb_app_common_settings,
   olcb_utilities, olcb_defines, form_awesome_throttle_duplicate_address,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
   form_train_config_editor, com_port_hub;

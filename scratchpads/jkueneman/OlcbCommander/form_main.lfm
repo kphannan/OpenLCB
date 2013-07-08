@@ -4,7 +4,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Top = 248
   Width = 694
   Caption = 'OpenLCB Commander'
-  ClientHeight = 401
+  ClientHeight = 381
   ClientWidth = 694
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -15,7 +15,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.8.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 386
+    Height = 358
     Top = 0
     Width = 694
     ActivePage = TabSheetNetwork
@@ -24,26 +24,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 347
-      ClientWidth = 688
+      ClientHeight = 332
+      ClientWidth = 686
       object PanelNetwork: TPanel
         Left = 0
-        Height = 347
+        Height = 332
         Top = 0
-        Width = 688
+        Width = 686
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 347
-        ClientWidth = 688
+        ClientHeight = 332
+        ClientWidth = 686
         TabOrder = 0
         OnClick = PanelNetworkClick
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 347
+          Height = 332
           Top = 0
-          Width = 688
+          Width = 686
           Align = alClient
-          DefaultItemHeight = 18
+          DefaultItemHeight = 16
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -64,8 +64,8 @@ object FormOLCB_Commander: TFormOLCB_Commander
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 386
+    Height = 23
+    Top = 358
     Width = 694
     Panels = <    
       item
@@ -8174,4 +8174,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
       50605D5D5DFF5B5B5BB42C2C2C10
     }
   end
-end
+end
