@@ -63,12 +63,13 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  Menus, ActnList, ComCtrls, ExtCtrls, Buttons, olcb_threaded_stack,
+  Menus, ActnList, ComCtrls, ExtCtrls, Buttons, com_port_hub,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
   Spin, types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
-  olcb_structure_helpers, form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
+  form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
   laz2_XMLWrite, common_utilities, form_awesome_throttle,
   form_train_config_editor, ethernet_hub, form_ethernet_messagelog,
+  olcb_transport_layer,
   {$IFDEF DEBUG_THREAD}
   form_thread_debug,
   {$ENDIF}

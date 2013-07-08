@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls, ComCtrls, Spin, laz2_DOM, laz2_XMLRead, Types, olcb_common_tasks,
-  olcb_threaded_stack, Buttons;
+  Buttons, olcb_transport_layer;
 
 const
   CV_BUTTON_WIDTH = 80;

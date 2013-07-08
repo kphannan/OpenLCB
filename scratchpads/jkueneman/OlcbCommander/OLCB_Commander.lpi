@@ -42,7 +42,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="21">
+    <Units Count="20">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -101,83 +101,78 @@
         <UnitName Value="olcb_node"/>
       </Unit8>
       <Unit9>
-        <Filename Value="..\Library\olcb_threaded_stack.pas"/>
+        <Filename Value="..\Library\com_port_hub.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_threaded_stack"/>
+        <UnitName Value="com_port_hub"/>
       </Unit9>
       <Unit10>
-        <Filename Value="..\Library\olcb_common_tasks.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_common_tasks"/>
-      </Unit10>
-      <Unit11>
-        <Filename Value="..\Library\olcb_structure_helpers.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_structure_helpers"/>
-      </Unit11>
-      <Unit12>
         <Filename Value="form_config_mem_viewer.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMemConfigViewer"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_config_mem_viewer"/>
-      </Unit12>
-      <Unit13>
+      </Unit10>
+      <Unit11>
         <Filename Value="common_objects.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="common_objects"/>
-      </Unit13>
-      <Unit14>
+      </Unit11>
+      <Unit12>
         <Filename Value="form_awesome_throttle.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormAwesomeThrottle"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle"/>
-      </Unit14>
-      <Unit15>
+      </Unit12>
+      <Unit13>
         <Filename Value="form_awesome_throttle_deallocate_error.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormDeallocationError"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_deallocate_error"/>
-      </Unit15>
-      <Unit16>
+      </Unit13>
+      <Unit14>
         <Filename Value="form_awesome_throttle_duplicate_address.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMulitipleTrains"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_awesome_throttle_duplicate_address"/>
-      </Unit16>
-      <Unit17>
+      </Unit14>
+      <Unit15>
         <Filename Value="form_train_config_editor.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormTrainConfigEditor"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
-      </Unit17>
-      <Unit18>
+      </Unit15>
+      <Unit16>
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-      </Unit18>
-      <Unit19>
+      </Unit16>
+      <Unit17>
         <Filename Value="ethernet_hub.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ethernet_hub"/>
-      </Unit19>
-      <Unit20>
+      </Unit17>
+      <Unit18>
         <Filename Value="form_messagelog.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormMessageLog"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_messagelog"/>
-      </Unit20>
+      </Unit18>
+      <Unit19>
+        <Filename Value="olcb_transport_layer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_transport_layer"/>
+      </Unit19>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

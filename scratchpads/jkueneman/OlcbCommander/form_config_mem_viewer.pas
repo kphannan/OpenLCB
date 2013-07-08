@@ -7,9 +7,8 @@ interface
 uses
   Classes, SysUtils, FileUtil, SynEdit, SynHighlighterXML, Forms, Controls,
   Graphics, Dialogs, ComCtrls, Grids, ExtCtrls, StdCtrls, Buttons, laz2_DOM,
-  olcb_threaded_stack, olcb_common_tasks,
-  olcb_app_common_settings, olcb_utilities, olcb_defines, KHexEditor,
-  laz2_XMLRead;
+  com_port_hub, olcb_common_tasks, olcb_app_common_settings, olcb_utilities,
+  olcb_defines, KHexEditor, laz2_XMLRead;
 
 type
 

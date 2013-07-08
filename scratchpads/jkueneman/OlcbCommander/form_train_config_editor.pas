@@ -6,9 +6,9 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, ComCtrls, laz2_DOM, laz2_XMLRead,
-  olcb_threaded_stack, olcb_common_tasks, olcb_app_common_settings,
-  olcb_utilities, olcb_defines, unit_cdi_parser, Buttons, ActnList, Menus;
+  ExtCtrls, ComCtrls, laz2_DOM, laz2_XMLRead, com_port_hub, olcb_transport_layer,
+  olcb_app_common_settings, olcb_utilities, olcb_defines, unit_cdi_parser, Buttons,
+  ActnList, Menus;
 
 type
   TFormTrainConfigEditor = class;
