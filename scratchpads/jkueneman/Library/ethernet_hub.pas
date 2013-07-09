@@ -277,12 +277,9 @@ begin
                   SendStr := SendStr + BufferRawMessage + #10
                 else
                   SendStr := SendStr + BufferRawMessage;
-
               end;
             end;
             TStringList( List[0]).Clear;
-         //   SendStr := TStringList( List[0])[0];
-         //   TStringList( List[0]).Delete(0);
           end;
         end;
       finally
@@ -734,14 +731,18 @@ procedure TEthernetHub.AddTask(NewTask: TOlcbTaskBase);
 var
   List: TList;
   i: Integer;
+  Task: TOlcbTaskBase;
 begin
   List := ClientThreadList.LockList;
   try
     for i := 0 to List.Count - 1 do
     begin
-      TClientSocketThread( List[i]).AddTask(NewTask);
-    end
+      Task := NewTask.Clone;
+      NewTask.CopyTo(Task);
+      TClientSocketThread( List[i]).AddTask(Task);
+    end;
   finally
+    NewTask.Free;
     ClientThreadList.UnlockList;
   end;
 end;

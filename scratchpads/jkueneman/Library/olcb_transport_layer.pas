@@ -395,7 +395,6 @@ end;
       FMessageHelper: TOpenLCBMessageHelper;
       FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
       FSending: Boolean;
-    private
       FErrorString: string;
       FRemoveKey: PtrInt;
       FHasStarted: Boolean;
@@ -454,6 +453,8 @@ end;
     public
       constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); virtual;
       destructor Destroy; override;
+      function Clone: TOlcbTaskBase; virtual; abstract;
+      procedure CopyTo(Target: TOlcbTaskBase); virtual;
       property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
       property DestinationAlias: Word read FDestinationAlias;
       property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
@@ -472,6 +473,7 @@ end;
 
   TVerifyNodeIDGlobalTask = class(TOlcbTaskBase)
   public
+   function Clone: TOlcbTaskBase; override;
    procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -479,6 +481,7 @@ end;
 
   TVerifyNodeIDTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -488,6 +491,8 @@ end;
   private
     FProtocols: QWord;
   public
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property Protocols: QWord read FProtocols;
   end;
@@ -503,6 +508,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); override;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property Snip: TOlcbSNIP read FSnip;
   end;
@@ -515,6 +522,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); override;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property ConfigMemoryOptions: TOlcbMemOptions read FConfigMemoryOptions write FConfigMemoryOptions;
   end;
@@ -528,6 +537,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte); reintroduce; virtual;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property ConfigMemoryAddressSpace: TOlcbMemAddressSpace read FConfigMemoryAddressSpace write FConfigMemoryAddressSpace;
     property AddressSpace: Byte read FAddressSpace;
@@ -545,6 +556,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); override;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property MinAddressSpace: Byte read FMinAddressSpace write FMinAddressSpace;
     property MaxAddressSpace: Byte read FMaxAddressSpace write FMaxAddressSpace;
@@ -576,8 +589,9 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
-
     property AddressSpace: Byte read FAddressSpace;
     property DataStream: TMemoryStream read FDataStream;
     property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
@@ -589,6 +603,8 @@ end;
   { TReadAddressSpaceMemoryTask }
 
   TReadAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryTask)
+  public
+    function Clone: TOlcbTaskBase; override;
   end;
 
   { TWriteAddressSpaceMemoryTask }
@@ -596,6 +612,7 @@ end;
   TWriteAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryTask)
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream); reintroduce;
+    function Clone: TOlcbTaskBase; override;
   end;
 
   { TWriteAddressSpaceMemoryRawTask }
@@ -609,6 +626,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AWriteAddress: DWord; AStream: TStream); reintroduce;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property AddressSpace: Byte read FAddressSpace;
@@ -638,6 +657,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property AddressSpace: Byte read FAddressSpace;
@@ -653,6 +674,7 @@ end;
 
   TIdentifyEventsTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -660,6 +682,7 @@ end;
 
   TIdentifyEventsAddressedTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -672,6 +695,8 @@ end;
     property Event: TEventID read FEvent write FEvent;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnEvent: TEventID); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -684,12 +709,15 @@ end;
     property Event: TEventID read FEvent write FEvent;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnEvent: TEventID); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
   { TCANLayerTask }
   TCANLayerTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -697,6 +725,7 @@ end;
 
   TEventTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -704,6 +733,7 @@ end;
 
   TVerifiedNodeIDTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -711,6 +741,7 @@ end;
 
   TTractionProtocolTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -718,6 +749,7 @@ end;
 
   TInitializationCompleteTask = class(TOlcbTaskBase)
   public
+    function Clone: TOlcbTaskBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -737,6 +769,8 @@ end;
     property SpeedStep: Byte read FSpeedStep write FSpeedStep;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
@@ -758,6 +792,8 @@ end;
     property IsShort: Boolean read FIsShort write FIsShort;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
@@ -776,6 +812,8 @@ end;
     property IsShort: Boolean read FIsShort write FIsShort;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -790,6 +828,8 @@ end;
     property EStop: Boolean read FEStop write FEStop;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; ASpeed: THalfFloat; IsEStop: Boolean); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -804,6 +844,8 @@ end;
     property Value: Word read FWord write FWord;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: DWord; AValue: Word); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -817,6 +859,8 @@ end;
     property Address: DWord read FAddress write FAddress;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean; AnAddress: DWord); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property Value: Integer read FValue write FValue;
@@ -832,6 +876,8 @@ end;
     FStatus: Byte;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); reintroduce;
+    function Clone: TOlcbTaskBase; override;
+    procedure CopyTo(Target: TOlcbTaskBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property SetSpeed: Word read FSetSpeed write FSetSpeed;
@@ -864,6 +910,13 @@ var
   TaskObjects: DWord;
 
 implementation
+
+{ TReadAddressSpaceMemoryTask }
+
+function TReadAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
+begin
+  Result := TReadAddressSpaceMemoryTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, UsingTerminator);
+end;
 
 { TTransportLayerThread }
 
@@ -2538,6 +2591,23 @@ begin
   inherited Destroy;
 end;
 
+procedure TOlcbTaskBase.CopyTo(Target: TOlcbTaskBase);
+begin
+  Target.FErrorCode := FErrorCode;
+  Target.FOnBeforeDestroy := FOnBeforeDestroy;
+  Target.FSending := FSending;
+  Target.FErrorString := FErrorString;
+  Target.FRemoveKey := FRemoveKey;
+  Target.FHasStarted := FHasStarted;
+  Target.FTag := FTag;
+  Target.FForceTermination := FForceTermination;
+  Target.FTransportLayerThread := FTransportLayerThread;
+  Target.FDestinationAlias := FDestinationAlias;
+  Target.FDone := FDone;
+  Target.FiState := FiState;
+  Target.FSourceAlias := FSourceAlias;
+end;
+
 { TReadAddressSpaceMemoryRawTask }
 
 function TReadAddressSpaceMemoryRawTask.GetPayloadSize: Integer;
@@ -2566,6 +2636,25 @@ destructor TReadAddressSpaceMemoryRawTask.Destroy;
 begin
   FreeAndNil(FStream);
   inherited Destroy;
+end;
+
+function TReadAddressSpaceMemoryRawTask.Clone: TOlcbTaskBase;
+begin
+  Result := TReadAddressSpaceMemoryRawTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, ReadAddress, ReadByteCount, UsingTerminator);
+end;
+
+procedure TReadAddressSpaceMemoryRawTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TReadAddressSpaceMemoryRawTask).FAddressSpace := FAddressSpace;
+  (Target as TReadAddressSpaceMemoryRawTask).FCurrentOffset := FCurrentOffset;
+  (Target as TReadAddressSpaceMemoryRawTask).FForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TReadAddressSpaceMemoryRawTask).FIncludeTerminator := FIncludeTerminator;
+  (Target as TReadAddressSpaceMemoryRawTask).FReadByteCount := FReadByteCount;
+  (Target as TReadAddressSpaceMemoryRawTask).FStream.CopyFrom(FStream, FStream.Size);
+  (Target as TReadAddressSpaceMemoryRawTask).FReadAddress := FReadAddress;
+  (Target as TReadAddressSpaceMemoryRawTask).FTerminator := FTerminator;
+  (Target as TReadAddressSpaceMemoryRawTask).UsingTerminator := FUsingTerminator;
 end;
 
 procedure TReadAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
@@ -2667,6 +2756,20 @@ begin
   inherited Destroy;
 end;
 
+function TWriteAddressSpaceMemoryRawTask.Clone: TOlcbTaskBase;
+begin
+  Result := TWriteAddressSpaceMemoryRawTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, WriteAddress, Stream);
+end;
+
+procedure TWriteAddressSpaceMemoryRawTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TWriteAddressSpaceMemoryRawTask).FAddressSpace := FAddressSpace;
+  (Target as TWriteAddressSpaceMemoryRawTask).ForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TWriteAddressSpaceMemoryRawTask).FStream.CopyFrom(FStream, FStream.Size);
+  (Target as TWriteAddressSpaceMemoryRawTask).FWriteAddress := FWriteAddress;
+end;
+
 procedure TWriteAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -2700,6 +2803,11 @@ begin
   FWritingToAddress := True;
 end;
 
+function TWriteAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
+begin
+  Result := TWriteAddressSpaceMemoryTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, DataStream);
+end;
+
 { TIdentifyConsumerTask }
 
 constructor TIdentifyConsumerTask.Create(ASourceAlias, ADestinationAlias: Word;
@@ -2707,6 +2815,17 @@ constructor TIdentifyConsumerTask.Create(ASourceAlias, ADestinationAlias: Word;
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FEvent := AnEvent;
+end;
+
+function TIdentifyConsumerTask.Clone: TOlcbTaskBase;
+begin
+  Result := TIdentifyConsumerTask.Create(SourceAlias, DestinationAlias, Sending, Event);
+end;
+
+procedure TIdentifyConsumerTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TIdentifyConsumerTask).FEvent := FEvent;
 end;
 
 procedure TIdentifyConsumerTask.Process(MessageInfo: TOlcbMessage);
@@ -2730,6 +2849,17 @@ constructor TIdentifyProducerTask.Create(ASourceAlias, ADestinationAlias: Word;
 begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FEvent := AnEvent;
+end;
+
+function TIdentifyProducerTask.Clone: TOlcbTaskBase;
+begin
+  Result := TIdentifyProducerTask.Create(SourceAlias, DestinationAlias, Sending, Event);
+end;
+
+procedure TIdentifyProducerTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TIdentifyProducerTask).FEvent := FEvent;
 end;
 
 procedure TIdentifyProducerTask.Process(MessageInfo: TOlcbMessage);
@@ -2757,6 +2887,22 @@ begin
   FReplyCode := -1;
   FReplyAddress := 0;
   FReplySpeedSteps := 0;
+end;
+
+function TTractionReserveAndAttachDccProxyTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionReserveAndAttachDccProxyTask.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort, SpeedStep);
+end;
+
+procedure TTractionReserveAndAttachDccProxyTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionReserveAndAttachDccProxyTask).FAddress := FAddress;
+  (Target as TTractionReserveAndAttachDccProxyTask).FReplyAddress := FReplyAddress;
+  (Target as TTractionReserveAndAttachDccProxyTask).FReplyCode := FReplyCode;
+  (Target as TTractionReserveAndAttachDccProxyTask).FReplySpeedSteps := FReplySpeedSteps;
+  (Target as TTractionReserveAndAttachDccProxyTask).FIsShort := FIsShort;
+  (Target as TTractionReserveAndAttachDccProxyTask).FSpeedStep := FSpeedStep;
 end;
 
 procedure TTractionReserveAndAttachDccProxyTask.Process(MessageInfo: TOlcbMessage);
@@ -2824,6 +2970,21 @@ begin
   FReplySpeedSteps := 0;
 end;
 
+function TTractionReserveAndDetachDccProxyTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionReserveAndDetachDccProxyTask.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
+end;
+
+procedure TTractionReserveAndDetachDccProxyTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionReserveAndDetachDccProxyTask).FAddress := FAddress;
+  (Target as TTractionReserveAndDetachDccProxyTask).FIsShort := FIsShort;
+  (Target as TTractionReserveAndDetachDccProxyTask).FReplyAddress := FReplyAddress;
+  (Target as TTractionReserveAndDetachDccProxyTask).FReplyCode := FReplyCode;
+  (Target as TTractionReserveAndDetachDccProxyTask).FReplySpeedSteps := FReplySpeedSteps
+end;
+
 procedure TTractionReserveAndDetachDccProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -2885,6 +3046,18 @@ begin
   FIsShort := IsShortAddress;
 end;
 
+function TTractionQueryDccAddressProxyTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionQueryDccAddressProxyTask.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
+end;
+
+procedure TTractionQueryDccAddressProxyTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionQueryDccAddressProxyTask).FAddress := FAddress;
+  (Target as TTractionQueryDccAddressProxyTask).FIsShort := FIsShort;
+end;
+
 procedure TTractionQueryDccAddressProxyTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -2909,6 +3082,18 @@ begin
   Value := AValue;
 end;
 
+function TTractionFunctionTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionFunctionTask.Create(SourceAlias, DestinationAlias, Sending, Address, Value);
+end;
+
+procedure TTractionFunctionTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionFunctionTask).FAddress := FAddress;
+  (Target as TTractionFunctionTask).FWord := FWord;
+end;
+
 procedure TTractionFunctionTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -2931,6 +3116,18 @@ begin
   inherited Create(ASourceAlias, ADestinationAlias, StartAsSending);
   FSpeed := ASpeed;
   FEStop := IsEStop;
+end;
+
+function TTractionSpeedTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionSpeedTask.Create(SourceAlias, DestinationAlias, Sending, Speed, EStop);
+end;
+
+procedure TTractionSpeedTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionSpeedTask).EStop := EStop;
+  (Target as TTractionSpeedTask).FSpeed := FSpeed;
 end;
 
 procedure TTractionSpeedTask.Process(MessageInfo: TOlcbMessage);
@@ -2960,6 +3157,20 @@ begin
   FCommandedSpeed := 0;
   FSetSpeed := 0;
   FStatus := 0;
+end;
+
+function TTractionQuerySpeedTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionQuerySpeedTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TTractionQuerySpeedTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionQuerySpeedTask).FActualSpeed := FActualSpeed;
+  (Target as TTractionQuerySpeedTask).FCommandedSpeed := FCommandedSpeed;
+  (Target as TTractionQuerySpeedTask).FSetSpeed := FSetSpeed;
+  (Target as TTractionQuerySpeedTask).FStatus := FStatus;
 end;
 
 procedure TTractionQuerySpeedTask.Process(MessageInfo: TOlcbMessage);
@@ -3004,6 +3215,18 @@ begin
   FValue := -1;
 end;
 
+function TTractionQueryFunctionTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionQueryFunctionTask.Create(SourceAlias, DestinationAlias, Sending, Address);
+end;
+
+procedure TTractionQueryFunctionTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTractionQueryFunctionTask).FAddress := FAddress;
+  (Target as TTractionQueryFunctionTask).FValue := FValue;
+end;
+
 procedure TTractionQueryFunctionTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3030,6 +3253,11 @@ end;
 
 { TIdentifyEventsAddressedTask }
 
+function TIdentifyEventsAddressedTask.Clone: TOlcbTaskBase;
+begin
+  Result := TIdentifyEventsAddressedTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
 procedure TIdentifyEventsAddressedTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3045,6 +3273,11 @@ begin
 end;
 
 { TIdentifyEventsTask }
+
+function TIdentifyEventsTask.Clone: TOlcbTaskBase;
+begin
+  Result := TIdentifyEventsTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
 
 procedure TIdentifyEventsTask.Process(MessageInfo: TOlcbMessage);
 begin
@@ -3062,6 +3295,11 @@ end;
 
 { TVerifiedNodeIDTask }
 
+function TVerifiedNodeIDTask.Clone: TOlcbTaskBase;
+begin
+  Result := TVerifiedNodeIDTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
 procedure TVerifiedNodeIDTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3069,6 +3307,11 @@ begin
 end;
 
 { TTractionProtocolTask }
+
+function TTractionProtocolTask.Clone: TOlcbTaskBase;
+begin
+  Result := TTractionProtocolTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
 
 procedure TTractionProtocolTask.Process(MessageInfo: TOlcbMessage);
 begin
@@ -3078,6 +3321,11 @@ end;
 
 { TInitializationCompleteTask }
 
+function TInitializationCompleteTask.Clone: TOlcbTaskBase;
+begin
+  Result := TInitializationCompleteTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
 procedure TInitializationCompleteTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3086,6 +3334,11 @@ end;
 
 { TEventTask }
 
+function TEventTask.Clone: TOlcbTaskBase;
+begin
+  Result := TEventTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
 procedure TEventTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3093,6 +3346,11 @@ begin
 end;
 
 { TCANLayerTask }
+
+function TCANLayerTask.Clone: TOlcbTaskBase;
+begin
+  Result := TCANLayerTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
 
 procedure TCANLayerTask.Process(MessageInfo: TOlcbMessage);
 begin
@@ -3112,6 +3370,18 @@ destructor TSimpleNodeInformationTask.Destroy;
 begin
   FreeAndNil(FSnip);
   inherited Destroy;
+end;
+
+function TSimpleNodeInformationTask.Clone: TOlcbTaskBase;
+begin
+  Result := TSimpleNodeInformationTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TSimpleNodeInformationTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  Snip.CopyTo( (Target as TSimpleNodeInformationTask).FSnip);
+  (Target as TSimpleNodeInformationTask).FStateMachineIndex :=  FStateMachineIndex;  // for inner SNIP statemachine
 end;
 
 procedure TSimpleNodeInformationTask.Process(MessageInfo: TOlcbMessage);
@@ -3241,6 +3511,17 @@ end;
 
 { TProtocolSupportTask }
 
+function TProtocolSupportTask.Clone: TOlcbTaskBase;
+begin
+  Result := TProtocolSupportTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TProtocolSupportTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  (Target as TProtocolSupportTask).FProtocols := FProtocols;
+  inherited CopyTo(Target);
+end;
+
 procedure TProtocolSupportTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3278,6 +3559,18 @@ destructor TConfigMemoryAddressSpaceInfoTask.Destroy;
 begin
   FreeAndNil(FConfigMemoryAddressSpace);
   inherited Destroy;
+end;
+
+function TConfigMemoryAddressSpaceInfoTask.Clone: TOlcbTaskBase;
+begin
+  Result := TConfigMemoryAddressSpaceInfoTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace);
+end;
+
+procedure TConfigMemoryAddressSpaceInfoTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TConfigMemoryAddressSpaceInfoTask).FAddressSpace := AddressSpace;
+  ConfigMemoryAddressSpace.CopyTo( (Target as TConfigMemoryAddressSpaceInfoTask).ConfigMemoryAddressSpace);
 end;
 
 procedure TConfigMemoryAddressSpaceInfoTask.Process(MessageInfo: TOlcbMessage);
@@ -3327,6 +3620,17 @@ begin
   inherited Destroy;
 end;
 
+function TConfigMemoryOptionsTask.Clone: TOlcbTaskBase;
+begin
+  Result := TConfigMemoryOptionsTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TConfigMemoryOptionsTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  ConfigMemoryOptions.CopyTo( (Target as TConfigMemoryOptionsTask).ConfigMemoryOptions);
+end;
+
 procedure TConfigMemoryOptionsTask.Process(MessageInfo: TOlcbMessage);
 var
   DatagramReceive: TDatagramReceive;
@@ -3362,6 +3666,11 @@ end;
 
 { TVerifyNodeIDTask }
 
+function TVerifyNodeIDTask.Clone: TOlcbTaskBase;
+begin
+  Result := TVerifyNodeIDTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
 procedure TVerifyNodeIDTask.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
@@ -3377,6 +3686,11 @@ begin
 end;
 
 { TVerifyNodeIDGlobalTask }
+
+function TVerifyNodeIDGlobalTask.Clone: TOlcbTaskBase;
+begin
+  Result := TVerifyNodeIDGlobalTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
 
 procedure TVerifyNodeIDGlobalTask.Process(MessageInfo: TOlcbMessage);
 begin
@@ -3415,6 +3729,26 @@ destructor TBaseAddressSpaceMemoryTask.Destroy;
 begin
   FreeAndNil(FDataStream);
   inherited Destroy;
+end;
+
+function TBaseAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
+begin
+  Result := TBaseAddressSpaceMemoryTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, UsingTerminator);
+end;
+
+procedure TBaseAddressSpaceMemoryTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TBaseAddressSpaceMemoryTask).FAddressSpace := FAddressSpace;
+  (Target as TBaseAddressSpaceMemoryTask).FCurrentAddress := FCurrentAddress;
+  (Target as TBaseAddressSpaceMemoryTask).FCurrentSendSize := FCurrentSendSize;
+  (Target as TBaseAddressSpaceMemoryTask).FDataStream.CopyFrom(FDataStream, FDataStream.Size);
+  (Target as TBaseAddressSpaceMemoryTask).FForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TBaseAddressSpaceMemoryTask).FMaxAddress := FMaxAddress;
+  (Target as TBaseAddressSpaceMemoryTask).FMinAddress := FMinAddress;
+  (Target as TBaseAddressSpaceMemoryTask).FTerminator := FTerminator;
+  (Target as TBaseAddressSpaceMemoryTask).FUsingTerminator := FUsingTerminator;
+  (Target as TBaseAddressSpaceMemoryTask).FWritingToAddress := FWritingToAddress;
 end;
 
 procedure TBaseAddressSpaceMemoryTask.Process(MessageInfo: TOlcbMessage);
@@ -3647,6 +3981,20 @@ destructor TEnumAllConfigMemoryAddressSpaceInfoTask.Destroy;
 begin
   FreeAndNil(FConfigMemAddressInfo);
   inherited Destroy;
+end;
+
+function TEnumAllConfigMemoryAddressSpaceInfoTask.Clone: TOlcbTaskBase;
+begin
+  Result := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TEnumAllConfigMemoryAddressSpaceInfoTask.CopyTo(Target: TOlcbTaskBase);
+begin
+  inherited CopyTo(Target);
+  ConfigMemAddressInfo.CopyTo( (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).ConfigMemAddressInfo);
+  (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).CurrentAddressSpace := CurrentAddressSpace;
+  (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).MaxAddressSpace := MaxAddressSpace;
+  (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).MinAddressSpace := MinAddressSpace;
 end;
 
 procedure TEnumAllConfigMemoryAddressSpaceInfoTask.Process(MessageInfo: TOlcbMessage);
