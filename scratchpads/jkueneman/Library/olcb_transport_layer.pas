@@ -70,7 +70,7 @@ type
     property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
     property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
   public
-    constructor Create(CreateSuspended: Boolean);
+    constructor Create(CreateSuspended: Boolean); virtual;
     destructor Destroy; override;
     procedure Add(Msg: AnsiString);
     procedure AddDatagramToSend(Datagram: TDatagramSend);
@@ -279,7 +279,7 @@ type
     FSourceAlias: Word;
   protected
     procedure Clear;
-    procedure SendACK(ComPortThread: TTransportLayerThread);
+    procedure SendACK(TransportLayerThread: TTransportLayerThread);
     property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;   // Global object to work with OLCB messages
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word);
@@ -287,7 +287,7 @@ type
     function ExtractDataBytesAsInt(StartByteIndex, EndByteIndex: Integer): QWord;       // Helpers to pull information out of the datagram byte array
     function ExtractDataBytesAsString(StartIndex, Count: Integer): String;              // Helpers to pull information out of the datagram byte array
     procedure CopyToStream(Stream: TStream; StartIndex, Count: Integer);                // Helpers to move datagram bytes to a stream
-    procedure Process(AHelper: TOpenLCBMessageHelper; ComPortThread: TTransportLayerThread);   // Processes the message/
+    procedure Process(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread);   // Processes the message/
     property CurrentPos: Byte read FCurrentPos write FCurrentPos;                       // Running count of the number of bytes being received, once "Full" this is the number of byte in the datagram
     property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;     // Node who is sending the Datagram to this object
     property RawDatagram: TDatagramArray read FRawDatagram write FRawDatagram;          // Raw datagram bytes received
@@ -353,7 +353,7 @@ public
   constructor Create;
   destructor Destroy; override;
   procedure Initialize(AStream: TStream; AProtocolHeader: TCANByteArray; AProtocolHeaderLen: Byte; ASourceAlias, ADestinationAlias: Word);
-  function ProcessSend(ComPortThread: TTransportLayerThread): Boolean;
+  function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
   function ProcessReceive(AHelper: TOpenLCBMessageHelper): Boolean;
   property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
   property Empty: Boolean read FEmpty write FEmpty;
@@ -403,7 +403,7 @@ end;
       FForceTermination: Boolean;
       function SpaceToCommandByteEncoding(ASpace: Byte): Byte;
     protected
-      FComPortThread: TTransportLayerThread;
+      FTransportLayerThread: TTransportLayerThread;
       FDestinationAlias: Word;
       FDone: Boolean;
       FiState: Integer;
@@ -454,7 +454,7 @@ end;
     public
       constructor Create(ASourceAlias, ADestinationAlias: Word; StartAsSending: Boolean); virtual;
       destructor Destroy; override;
-      property ComPortThread: TTransportLayerThread read FComPortThread;
+      property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
       property DestinationAlias: Word read FDestinationAlias;
       property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
       property ErrorCode: DWord read FErrorCode write FErrorCode;
@@ -983,7 +983,7 @@ var
 begin
   List := OlcbTaskManager.TaskList.LockList;
   try
-    NewTask.FComPortThread := Self;
+    NewTask.FTransportLayerThread := Self;
     List.Add(NewTask);
     if List.Count > OlcbTaskManager.MaxCount then
       OlcbTaskManager.MaxCount := List.Count;
@@ -1741,9 +1741,9 @@ end;
 
 // *****************************************************************************
 // Call repeatedly in the statemachine until Empty = True
-//   ComPortThread: Thread to send the messages to
+//   TransportLayerThread: Thread to send the messages to
 // *****************************************************************************
-function TDatagramSend.ProcessSend(ComPortThread: TTransportLayerThread): Boolean;
+function TDatagramSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
 var
   Count: Byte;
 begin
@@ -1767,7 +1767,7 @@ begin
       StreamBytesToByteArray(ProtocolHeaderLen, FDataBytesSent, Count);
       DataBytesSentLen := Count + ProtocolHeaderLen;
       LocalHelper.Load(ol_OpenLCB, MTI, SourceAlias, DestinationAlias, DataBytesSentLen, DataBytesSent[0], DataBytesSent[1], DataBytesSent[2], DataBytesSent[3], DataBytesSent[4], DataBytesSent[5], DataBytesSent[6], DataBytesSent[7]);
-      ComPortThread.Add(LocalHelper.Encode);
+      TransportLayerThread.Add(LocalHelper.Encode);
     end else
     begin
       if (Stream.Size - Stream.Position <= 8) or (MAX_DATAGRAM_LENGTH - BlockByteCount <= 8) then
@@ -1779,7 +1779,7 @@ begin
       StreamBytesToByteArray(0, FDataBytesSent, Count);
       DataBytesSentLen := Count;
       LocalHelper.Load(ol_OpenLCB, MTI, SourceAlias, DestinationAlias, DataBytesSentLen, DataBytesSent[0], DataBytesSent[1], DataBytesSent[2], DataBytesSent[3], DataBytesSent[4], DataBytesSent[5], DataBytesSent[6], DataBytesSent[7]);
-      ComPortThread.Add(LocalHelper.Encode);
+      TransportLayerThread.Add(LocalHelper.Encode);
     end;
     Result := True;
   end;
@@ -1841,10 +1841,10 @@ begin
     RawDatagram[i] := 0;
 end;
 
-procedure TDatagramReceive.SendACK(ComPortThread: TTransportLayerThread);
+procedure TDatagramReceive.SendACK(TransportLayerThread: TTransportLayerThread);
 begin
   LocalHelper.Load(ol_OpenLCB, MTI_DATAGRAM_OK_REPLY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0, 0, 0, 0, 0);
-  ComPortThread.Add(LocalHelper.Encode);
+  TransportLayerThread.Add(LocalHelper.Encode);
 end;
 
 constructor TDatagramReceive.Create(ASourceAlias, ADestinationAlias: Word);
@@ -1934,7 +1934,7 @@ end;
 //         have already been made.
 //
 // *****************************************************************************
-procedure TDatagramReceive.Process(AHelper: TOpenLCBMessageHelper; ComPortThread: TTransportLayerThread);
+procedure TDatagramReceive.Process(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread);
 var
   i: Integer;
 begin
@@ -1945,7 +1945,7 @@ begin
          for i := 0 to AHelper.DataCount - 1 do
            RawDatagram[i] := AHelper.Data[i];
          CurrentPos := AHelper.DataCount;
-         SendACK(ComPortThread);
+         SendACK(TransportLayerThread);
          Full := True
        end;
      MTI_FRAME_TYPE_DATAGRAM_FRAME_START :
@@ -1966,7 +1966,7 @@ begin
         for i := 0 to AHelper.DataCount - 1 do
           RawDatagram[CurrentPos+i] := AHelper.Data[i];
         CurrentPos := CurrentPos + AHelper.DataCount;
-        SendACK(ComPortThread);
+        SendACK(TransportLayerThread);
         Full := True;
       end;
   end;
@@ -2314,25 +2314,25 @@ end;
 procedure TOlcbTaskBase.SendIdentifyEventsMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY, SourceAlias, 0, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendIdentifyEventsAddressedMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendIdentifyConsumerMessage(Event: TEventID);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_CONSUMER_IDENTIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendIdentifyProducerMessage(Event: TEventID);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationOptions;
@@ -2341,7 +2341,7 @@ var
 begin
   DatagramSend := TDatagramSend.Create;
   DatagramSend.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, SourceAlias, DestinationAlias);
-  ComPortThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.AddDatagramToSend(DatagramSend);
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationSpaceInfo(Space: Byte);
@@ -2353,7 +2353,7 @@ begin
   CANByteArray := HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST;
   CANByteArray[2] := Space;                                     // Set the address
   DatagramSend.Initialize(nil, CANByteArray, 3, SourceAlias, DestinationAlias);
-  ComPortThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.AddDatagramToSend(DatagramSend);
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
@@ -2382,7 +2382,7 @@ begin
   CANByteArray[5] := StartAddress and $000000FF;
 
   DatagramSend.Initialize(nil, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
-  ComPortThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.AddDatagramToSend(DatagramSend);
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
@@ -2411,19 +2411,19 @@ begin
   if AStream.Size > MaxAddressSize then
     AStream.Size := MaxAddressSize;
   DatagramSend.Initialize(AStream, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
-  ComPortThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.AddDatagramToSend(DatagramSend);
 end;
 
 procedure TOlcbTaskBase.SendProtocolIdentificationProtocolMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendSnipMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
@@ -2431,31 +2431,31 @@ begin
   if not Short then
     Address := Address or $C000;
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_ATTACH_DCC_ADDRESS, Hi(Address), Lo(Address), SpeedStep, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionEStopMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_E_STOP, $00, $00, $00, $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 8, $00, $00, TRACTION_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, Hi(Value), Lo(Value));
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionQueryFunction(FunctionAddress: DWord);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_QUERY_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, 0, 0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
@@ -2463,49 +2463,49 @@ begin
   if not Short then
     Address := Address or $C000;
   MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $06, $01, $00, $00, Hi(Address), Lo(Address), $00, $01);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionQuerySpeeds;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_QUERY_SPEED, $00, $00, $00, $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionQueryProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_QUERY, $00, $00, $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionReleaseProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RELEASE, $00, $00, $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionReserveProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RESERVE, $00, $00, $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendTractionSpeedMessage(Speed: THalfFloat);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 5, $00, $00, TRACTION_SPEED_DIR, Hi(Speed), Lo(Speed), $00, $00, $00);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendVerifyNodeIDGlobalMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SendVerifyNodeIDToDestinationMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER, SourceAlias, DestinationAlias, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  ComPortThread.Add(MessageHelper.Encode);
+  TransportLayerThread.Add(MessageHelper.Encode);
 end;
 
 procedure TOlcbTaskBase.SyncOnBeforeTaskDestroy;
@@ -2521,7 +2521,7 @@ begin
   FDestinationAlias := ADestinationAlias;
   FSourceAlias := ASourceAlias;
   FMessageHelper := TOpenLCBMessageHelper.Create;
-  FComPortThread := nil;
+  FTransportLayerThread := nil;
   FErrorCode := 0;
   FSending := StartAsSending;
   FTag := 0;

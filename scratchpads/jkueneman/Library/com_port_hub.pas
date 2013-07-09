@@ -38,7 +38,7 @@ type
     protected
       procedure Execute; override;
     public
-      constructor Create(CreateSuspended: Boolean);
+      constructor Create(CreateSuspended: Boolean);  override;
       destructor Destroy; override;
 
       property Serial: TBlockSerial read FSerial write FSerial;
@@ -213,14 +213,6 @@ begin
     ExecuteEnd;
   end;
 end;
-
-{$IFDEF DEBUG_THREAD}
-procedure TComPortThread.SyncDebugMessage;
-begin
-  if Assigned(SyncDebugFunc) then
-    SyncDebugFunc(DebugInfo);
-end;
-{$ENDIF}
 
 
 constructor TComPortThread.Create(CreateSuspended: Boolean);

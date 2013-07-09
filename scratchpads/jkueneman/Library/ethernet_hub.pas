@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs,
-  common_utilities, olcb_utilities;
+  common_utilities, olcb_utilities, olcb_transport_layer, olcb_defines;
 
 type
   TClientSocketThread = class;
@@ -61,11 +61,10 @@ type
   end;
 
   { TClientSocketThread }
-  TClientSocketThread = class(TThread)
+  TClientSocketThread = class(TTransportLayerThread)
   private
     FConnectedSocket: TTCPBlockSocket;
     FhSocketLocal: TSocket;
-    FOwnerHub: TEthernetHub;
     FTCP_Receive_State: Integer;
   protected
     procedure Execute; override;
@@ -73,9 +72,8 @@ type
     property ConnectedSocket: TTCPBlockSocket read FConnectedSocket;
     property TCP_Receive_State: Integer read FTCP_Receive_State write FTCP_Receive_State;    // Statemachine Index
   public
-    constructor Create(hSocket: TSocket);
+    constructor Create(CreateSuspended: Boolean); override;
     destructor Destroy; override;
-    property OwnerHub: TEthernetHub read FOwnerHub write FOwnerHub;
   end;
 
 
@@ -106,6 +104,7 @@ type
     FEnableReceiveMessages: Boolean;
     FEnableSendMessages: Boolean;
     FMessageManager: TTCPMessageManager;
+    FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;
     FOnHubConnect: TOnHubConnectFunc;
     FOnHubDisconnect: TOnHubConnectFunc;
     FEnabled: Boolean;
@@ -117,6 +116,8 @@ type
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;
     FSyncSendMessageFunc: TSyncRawMessageFunc;
     procedure SetEnabled(AValue: Boolean);
+    procedure SetEnableReceiveMessages(AValue: Boolean);
+    procedure SetEnableSendMessages(AValue: Boolean);
   protected
     procedure LocalOnHubConnect;
     procedure LocalOnHubDisconnect;
@@ -130,11 +131,18 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+
+    procedure Add(Msg: AnsiString);
+    procedure AddDatagramToSend(Datagram: TDatagramSend);
+    procedure AddTask(NewTask: TOlcbTaskBase);
+    procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
+
     property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
     property Enabled: Boolean read FEnabled write SetEnabled;
-    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
-    property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
+    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write SetEnableReceiveMessages;
+    property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
     property MessageManager: TTCPMessageManager read FMessageManager write FMessageManager;
+    property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
     property OnHubConnect: TOnHubConnectFunc read FOnHubConnect write FOnHubConnect;
     property OnHubDisconnect: TOnHubConnectFunc read FOnHubDisconnect write FOnHubDisconnect;
     property OnClientClientConnect: TOnClientConnectChangeFunc read FOnClientConnect write FOnClientConnect;
@@ -224,18 +232,72 @@ var
   ReceivedData: AnsiString;
   Receive_GridConnectBufferIndex: Integer;
   Receive_GridConnectBuffer: array[0..MAX_GRID_CONNECT_LEN-1] of char;
-  PacketIndex: Integer;
+  PacketIndex, i: Integer;
   Done: Boolean;
+  T: DWord;
+  List: TList;
+  SendStr, ReceiveStr: AnsiString;
+  Helper: TOpenLCBMessageHelper;
   TCP_Receive_Char: char;
   GridConnectMsg: TTCPMessage;
+  CompletedSendDatagram: TDatagramSend;
+  CANLayerTask: TCANLayerTask;
+  EventTask: TEventTask;
+  VerifiedNodeIDTask: TVerifiedNodeIDTask;
+  TractionProtocolTask: TTractionProtocolTask;
+  InitializationCompleteTask: TInitializationCompleteTask;
+  BufferDatagramReceive: TDatagramReceive;
 begin
+  ExecuteBegin;
   FConnectedSocket := TTCPBlockSocket.Create;
   try
+     T := 0;
+    Helper := TOpenLCBMessageHelper.Create;
     ConnectedSocket.Socket := hSocketLocal;
     ConnectedSocket.GetSins;                     // Back load the IP's / Ports information from the handle
     while not Terminated do
     begin
-      ReceivedData := ConnectedSocket.RecvPacket(1000);
+
+      T := GetTickCount;
+      ThreadSwitch;
+      List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
+      try
+        if List.Count > 0 then
+        begin
+          if TStringList( List[0]).Count > 0 then
+          begin
+            for i := 0 to TStringList( List[0]).Count - 1 do
+            begin
+              BufferRawMessage := TStringList( List[0])[i] ;
+              if Helper.Decompose(BufferRawMessage) then
+              begin
+                if EnableSendMessages then
+                  Synchronize(@SyncSendMessage);
+                if i < TStringList( List[0]).Count - 1 then
+                  SendStr := SendStr + BufferRawMessage + #10
+                else
+                  SendStr := SendStr + BufferRawMessage;
+
+              end;
+            end;
+            TStringList( List[0]).Clear;
+         //   SendStr := TStringList( List[0])[0];
+         //   TStringList( List[0]).Delete(0);
+          end;
+        end;
+      finally
+        ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
+      end;
+
+      DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
+      OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
+      if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
+      begin
+        ConnectedSocket.SendString(SendStr + LF);
+        SendStr := '';
+      end;
+
+      ReceivedData := ConnectedSocket.RecvPacket(1);
 
       Done := False;
       PacketIndex := 1;
@@ -296,18 +358,84 @@ begin
                  begin
                    Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
                    Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
-                   if Assigned(OwnerHub) then
-                   begin
-                     GridConnectMsg := TTCPMessage.Create;
-                     GridConnectMsg.Message := Receive_GridConnectBuffer;
-                     GridConnectMsg.Source := Self;
-                     OwnerHub.MessageManager.Messages.Add(GridConnectMsg);
-                     if OwnerHub.EnableReceiveMessages then
-                     begin
-                       OwnerHub.BufferRawMessage := GridConnectMsg.Message;
-                       Self.Synchronize(@OwnerHub.SyncReceiveMessage);
-                     end;
-                   end
+
+                   ReceiveStr := Receive_GridConnectBuffer;
+                   ReceiveStr := Trim(ReceiveStr);
+
+                  if Helper.Decompose(ReceiveStr) then
+                  begin
+                    if EnableReceiveMessages then                                         // *** Communicate back to the app the raw message string
+                    begin
+                      BufferRawMessage := ReceiveStr;
+                      Synchronize(@SyncReceiveMessage);
+                    end;
+
+                    if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
+                    begin
+                      CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
+                      if Assigned(CompletedSendDatagram) then
+                      begin
+                        OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);          // Give the Task subsystem a crack at knowning about the sent datagram
+                        FreeAndNil(CompletedSendDatagram)
+                      end else
+                      begin
+                        BufferDatagramReceive := DatagramReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
+                        if Assigned(BufferDatagramReceive) then
+                        begin
+                          OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);        // Give the Task subsystem a crack at knowning about the received datagram
+                          FreeAndNil(BufferDatagramReceive)
+                        end;
+                      end;
+                    end else                                                              // *** Test for a Datagram message that came in ***
+                      OlcbTaskManager.ProcessReceiving(Helper);
+
+                    if Helper.Layer = ol_CAN then
+                    begin
+                      CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                      CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                      Helper.CopyTo(CANLayerTask.MessageHelper);
+                      AddTask(CANLayerTask);
+                    end;
+
+                    case Helper.MTI of
+                      MTI_INITIALIZATION_COMPLETE :
+                        begin
+                          InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                          InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                          Helper.CopyTo(InitializationCompleteTask.MessageHelper);
+                          AddTask(InitializationCompleteTask);
+                        end;
+                      MTI_VERIFIED_NODE_ID_NUMBER :
+                        begin
+                          VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                          VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                          Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
+                          AddTask(VerifiedNodeIDTask);
+                        end;
+                      MTI_CONSUMER_IDENTIFIED_CLEAR,
+                      MTI_CONSUMER_IDENTIFIED_SET,
+                      MTI_CONSUMER_IDENTIFIED_UNKNOWN,
+                      MTI_CONSUMER_IDENTIFIED_RESERVED,
+                      MTI_PRODUCER_IDENTIFIED_CLEAR,
+                      MTI_PRODUCER_IDENTIFIED_SET,
+                      MTI_PRODUCER_IDENTIFIED_UNKNOWN,
+                      MTI_PRODUCER_IDENTIFIED_RESERVED,
+                      MTI_PC_EVENT_REPORT :
+                        begin
+                          EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                          EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                          Helper.CopyTo(EventTask.MessageHelper);
+                          AddTask(EventTask);
+                        end;
+                      MTI_TRACTION_PROTOCOL :
+                        begin
+                          TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+                          TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
+                          Helper.CopyTo(TractionProtocolTask.MessageHelper);
+                          AddTask(TractionProtocolTask);
+                        end;
+                    end;
+                  end;
                  end;
                  TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
                end else
@@ -336,15 +464,15 @@ begin
        end;      }
     end;
   finally
-    ConnectedSocket.Free
+    ConnectedSocket.Free;
+    Helper.Free;
   end;
+  ExecuteEnd;
 end;
 
-constructor TClientSocketThread.Create(hSocket: TSocket);
+constructor TClientSocketThread.Create(CreateSuspended: Boolean);
 begin
   inherited Create(True);
-  FhSocketLocal := hSocket;
-  FOwnerHub := nil;
   FConnectedSocket := nil;
 end;
 
@@ -385,7 +513,6 @@ begin
     for i := 0 to L.Count - 1 do
     begin;
       SocketThread := TClientSocketThread( L[i]);
-      SocketThread.OwnerHub := nil;
       SocketThread.Terminate;
     end;
   finally
@@ -430,8 +557,14 @@ begin
         hSocket := ListeningSocket.Accept;        // Get the handle of the new ListeningSocket for the client connection
         if ListeningSocket.LastError = 0 then
         begin
-          ClientSocketThread := TClientSocketThread.Create(hSocket);
-          ClientSocketThread.OwnerHub := OwnerHub;
+          ClientSocketThread := TClientSocketThread.Create(True);
+          ClientSocketThread.hSocketLocal := hSocket;
+          ClientSocketThread.SyncReceiveMessageFunc := OwnerHub.SyncReceiveMessageFunc;
+          ClientSocketThread.SyncSendMessageFunc := OwnerHub.SyncSendMessageFunc;
+          ClientSocketThread.SyncErrorMessageFunc := OwnerHub.SyncErrorMessageFunc;
+          ClientSocketThread.EnableReceiveMessages := OwnerHub.EnableReceiveMessages;
+          ClientSocketThread.EnableSendMessages := OwnerHub.EnableSendMessages;
+          ClientSocketThread.OnBeforeDestroyTask := OwnerHub.OnBeforeDestroyTask;
           ClientSocketThread.FreeOnTerminate := True;
           OwnerHub.ClientThreadList.Add(ClientSocketThread);       // add it to the list
           ClientSocketThread.Suspended := False;
@@ -467,6 +600,38 @@ begin
       FreeAndNil(FListenDameon);             // Can't free on terminate because it may be gone when we check for IsTerminated....
       ClientThreadList.Clear;
     end;
+  end;
+end;
+
+procedure TEthernetHub.SetEnableReceiveMessages(AValue: Boolean);
+var
+  List: TList;
+  i: Integer;
+begin
+  if FEnableReceiveMessages=AValue then Exit;
+  FEnableReceiveMessages:=AValue;
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).EnableReceiveMessages := AValue;
+  finally
+    ClientThreadList.UnlockList;
+  end;
+end;
+
+procedure TEthernetHub.SetEnableSendMessages(AValue: Boolean);
+var
+  List: TList;
+  i: Integer;
+begin
+  if FEnableSendMessages=AValue then Exit;
+  FEnableSendMessages:=AValue;
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).EnableSendMessages := AValue;
+  finally
+    ClientThreadList.UnlockList;
   end;
 end;
 
@@ -523,6 +688,7 @@ begin
   FSyncErrorMessageFunc := nil;
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
+  FOnBeforeDestroyTask := nil;;
   FClientThreadList := TSocketThreadList.Create;
   FMessageManager := TTCPMessageManager.Create;
 end;
@@ -534,6 +700,64 @@ begin
   // Possible issue here with Client threads silently quitting in the background, did set Hub to nil but they may be in a place where it is waiting to do something with Hub....
   FreeAndNil(FMessageManager);
   inherited Destroy;
+end;
+
+procedure TEthernetHub.Add(Msg: AnsiString);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).Add(Msg);
+  finally
+    ClientThreadList.UnlockList;
+  end;
+end;
+
+procedure TEthernetHub.AddDatagramToSend(Datagram: TDatagramSend);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).AddDatagramToSend(Datagram);
+  finally
+    ClientThreadList.UnlockList;
+  end;
+end;
+
+procedure TEthernetHub.AddTask(NewTask: TOlcbTaskBase);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+    begin
+      TClientSocketThread( List[i]).AddTask(NewTask);
+    end
+  finally
+    ClientThreadList.UnlockList;
+  end;
+end;
+
+procedure TEthernetHub.RemoveAndFreeTasks(RemoveKey: PtrInt);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).RemoveAndFreeTasks(RemoveKey);   // UNKNWON IF THIS IS CORRECT >>>>>>>>>>>>>>>>>>
+  finally
+    ClientThreadList.UnlockList;
+  end;
 end;
 
 end.

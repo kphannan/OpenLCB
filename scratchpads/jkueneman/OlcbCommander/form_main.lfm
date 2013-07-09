@@ -4,7 +4,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Top = 248
   Width = 694
   Caption = 'OpenLCB Commander'
-  ClientHeight = 381
+  ClientHeight = 401
   ClientWidth = 694
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -15,7 +15,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.8.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 358
+    Height = 386
     Top = 0
     Width = 694
     ActivePage = TabSheetNetwork
@@ -24,26 +24,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 332
-      ClientWidth = 686
+      ClientHeight = 347
+      ClientWidth = 688
       object PanelNetwork: TPanel
         Left = 0
-        Height = 332
+        Height = 347
         Top = 0
-        Width = 686
+        Width = 688
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 332
-        ClientWidth = 686
+        ClientHeight = 347
+        ClientWidth = 688
         TabOrder = 0
         OnClick = PanelNetworkClick
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 332
+          Height = 347
           Top = 0
-          Width = 686
+          Width = 688
           Align = alClient
-          DefaultItemHeight = 16
+          DefaultItemHeight = 18
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -64,8 +64,8 @@ object FormOLCB_Commander: TFormOLCB_Commander
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 358
+    Height = 15
+    Top = 386
     Width = 694
     Panels = <    
       item
@@ -214,7 +214,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object MenuItemToolsEthernetHubConnect: TMenuItem
         Action = ActionToolsEthernetHubConnect
-        AutoCheck = True
         Bitmap.Data = {
           36040000424D3604000000000000360000002800000010000000100000000100
           2000000000000004000064000000640000000000000000000000B1704100AB69
@@ -1944,7 +1943,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object ActionToolsEthernetHubConnect: TAction
       Category = 'Tools'
-      AutoCheck = True
       Caption = 'Ethernet Hub Connect'
       ImageIndex = 3
       OnExecute = ActionToolsEthernetHubConnectExecute
@@ -8174,4 +8172,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
       50605D5D5DFF5B5B5BB42C2C2C10
     }
   end
-end
+end

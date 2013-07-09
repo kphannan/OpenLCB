@@ -761,6 +761,7 @@ begin
   EthernetHub.OnHubDisconnect := @SyncHubDisconnect;
   EthernetHub.OnClientClientConnect := @SyncHubNewClient;
   EthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
+  EthernetHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
 end;
 
 procedure TFormOLCB_Commander.FormDestroy(Sender: TObject);
@@ -931,80 +932,168 @@ procedure TFormOLCB_Commander.RunConfigMemoryOptionsTaskOnNode(Node: TOlcbTreeNo
 var
   Task: TConfigMemoryOptionsTask;
 begin
-  Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end;
 end;
 
 procedure TFormOLCB_Commander.RunIdentifyEventsGlobal;
 var
   Task: TIdentifyEventsTask;
 begin
-  Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end;
 end;
 
 procedure TFormOLCB_Commander.RunIdentifyEventsOnNode(Node: TOlcbTreeNode);
 var
   Task: TIdentifyEventsAddressedTask;
 begin
-  Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end;
 end;
 
 procedure TFormOLCB_Commander.RunMemConfigSpacesAllInfoOnNode(Node: TOlcbTreeNode);
 var
   Task: TEnumAllConfigMemoryAddressSpaceInfoTask;
 begin
-  Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end;
 end;
 
 procedure TFormOLCB_Commander.RunProtocolSupportOnNode(Node: TOlcbTreeNode);
 var
   Task: TProtocolSupportTask;
 begin
-  Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end
 end;
 
 procedure TFormOLCB_Commander.RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte);
 var
   Task: TReadAddressSpaceMemoryTask;
 begin
-  case AddressSpace of
-    MSI_CDI: begin
-               Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
-               Task.Terminator := #0;
-             end
-    else
-      Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+  if Assigned(ComportThread) then
+  begin
+    case AddressSpace of
+      MSI_CDI: begin
+                 Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+                 Task.Terminator := #0;
+               end
+      else
+        Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+    end;
+    Task.ForceOptionalSpaceByte := False;
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
   end;
-  Task.ForceOptionalSpaceByte := False;
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+
+  if EthernetHub.Enabled then
+  begin
+    case AddressSpace of
+      MSI_CDI: begin
+                 Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+                 Task.Terminator := #0;
+               end
+      else
+        Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+    end;
+    Task.ForceOptionalSpaceByte := False;
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end
 end;
 
 procedure TFormOLCB_Commander.RunSNIIOnNode(Node: TOlcbTreeNode);
 var
   Task: TSimpleNodeInformationTask;
 begin
-  Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end
 end;
 
 procedure TFormOLCB_Commander.RunVerifyNodeIdGlobal;
 var
   Task: TVerifyNodeIDGlobalTask;
 begin
-  Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  ComPortThread.AddTask(Task);
+  if Assigned(ComportThread) then
+  begin
+    Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    ComPortThread.AddTask(Task);
+  end;
+
+  if EthernetHub.Enabled then
+  begin
+    Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+  end
 end;
 
 function TFormOLCB_Commander.AddNetworkCommandStationAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
@@ -2030,7 +2119,7 @@ begin
   ActionToolsEthernetHubConnect.Enabled := not EthernetHub.Enabled;
   ActionToolsEthernetHubDisconnect.Enabled := EthernetHub.Enabled;
 
-  ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortThread);
+  ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortThread) or EthernetHub.Enabled;
   ActionOpenLCBCommandProtocolSupport.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandMemConfigOptions.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandMemConfigAllSpacesInfo.Enabled:= (TreeViewNetwork.SelectionCount > 0);
@@ -2070,4 +2159,4 @@ end;
 
 
 end.
-
+
