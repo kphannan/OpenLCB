@@ -2593,6 +2593,7 @@ end;
 
 procedure TOlcbTaskBase.CopyTo(Target: TOlcbTaskBase);
 begin
+  // don't copy the State Machine Index!!!
   Target.FErrorCode := FErrorCode;
   Target.FOnBeforeDestroy := FOnBeforeDestroy;
   Target.FSending := FSending;
@@ -2604,7 +2605,6 @@ begin
   Target.FTransportLayerThread := FTransportLayerThread;
   Target.FDestinationAlias := FDestinationAlias;
   Target.FDone := FDone;
-  Target.FiState := FiState;
   Target.FSourceAlias := FSourceAlias;
 end;
 
@@ -3381,7 +3381,6 @@ procedure TSimpleNodeInformationTask.CopyTo(Target: TOlcbTaskBase);
 begin
   inherited CopyTo(Target);
   Snip.CopyTo( (Target as TSimpleNodeInformationTask).FSnip);
-  (Target as TSimpleNodeInformationTask).FStateMachineIndex :=  FStateMachineIndex;  // for inner SNIP statemachine
 end;
 
 procedure TSimpleNodeInformationTask.Process(MessageInfo: TOlcbMessage);

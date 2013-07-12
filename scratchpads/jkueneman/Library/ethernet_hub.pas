@@ -247,17 +247,18 @@ var
   TractionProtocolTask: TTractionProtocolTask;
   InitializationCompleteTask: TInitializationCompleteTask;
   BufferDatagramReceive: TDatagramReceive;
+  SyncSendMessageList: TStringList;
 begin
   ExecuteBegin;
   FConnectedSocket := TTCPBlockSocket.Create;
   try
-     T := 0;
+    T := 0;
     Helper := TOpenLCBMessageHelper.Create;
     ConnectedSocket.Socket := hSocketLocal;
     ConnectedSocket.GetSins;                     // Back load the IP's / Ports information from the handle
     while not Terminated do
     begin
-
+      SyncSendMessageList := TStringList.Create;
       T := GetTickCount;
       ThreadSwitch;
       List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
@@ -272,7 +273,7 @@ begin
               if Helper.Decompose(BufferRawMessage) then
               begin
                 if EnableSendMessages then
-                  Synchronize(@SyncSendMessage);
+                  SyncSendMessageList.Add(BufferRawMessage);
                 if i < TStringList( List[0]).Count - 1 then
                   SendStr := SendStr + BufferRawMessage + #10
                 else
@@ -284,6 +285,14 @@ begin
         end;
       finally
         ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
+
+        // Send the strings to the logging windows OUTSIDE of the locked input string list
+        for i := 0 to SyncSendMessageList.Count - 1 do
+        begin
+          BufferRawMessage := SyncSendMessageList[i];
+          Synchronize(@SyncSendMessage);
+        end;
+        SyncSendMessageList.Clear;
       end;
 
       DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
@@ -349,7 +358,7 @@ begin
             end;
           TCP_STATE_SYNC_FIND_DATA :
             begin
-               if TCP_Receive_Char = ';'then
+               if TCP_Receive_Char = ';' then
                begin
                  if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
                  begin
@@ -432,7 +441,8 @@ begin
                           AddTask(TractionProtocolTask);
                         end;
                     end;
-                  end;
+                  end else
+                    beep; // Can't decompose
                  end;
                  TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
                end else

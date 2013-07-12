@@ -444,6 +444,9 @@ begin
   ComDisconnect;
   ThrottleList.Clear;
   ConfigEditorList.Clear;
+
+  CanClose := TaskObjects = 0;
+  ShowMessage('TaskCount = ' + IntToStr(TaskObjects));
 end;
 
 procedure TFormOLCB_Commander.ActionHelpAboutShowExecute(Sender: TObject);
@@ -2159,4 +2162,4 @@ end;
 
 
 end.
-
+
