@@ -59,6 +59,7 @@ type
     function GetSourceAlias: Word;
     function GetTaskCount: Integer;
   protected
+    procedure DecomposeAndDispatchGridConnectString(ReceiveStr: AnsiString; Helper: TOpenLCBMessageHelper);
     procedure ExecuteBegin;
     procedure ExecuteEnd;
     procedure SyncErrorMessage;
@@ -388,89 +389,89 @@ public
   procedure ProcessSend;
 end;
 
-  { TOlcbTaskBase }
+{ TOlcbTaskBase }
 
-    TOlcbTaskBase = class
-    private
-      FErrorCode: DWord;
-      FMessageHelper: TOpenLCBMessageHelper;
-      FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
-      FSending: Boolean;
-      FErrorString: string;
-      FRemoveKey: PtrInt;
-      FHasStarted: Boolean;
-      FStartAsSending: Boolean;
-      FTag: PtrInt;
-      FForceTermination: Boolean;
-      function SpaceToCommandByteEncoding(ASpace: Byte): Byte;
-    protected
-      FTransportLayerThread: TTransportLayerThread;
-      FDestinationAlias: Word;
-      FDone: Boolean;
-      FiState: Integer;
-      FSourceAlias: Word;
-      procedure ExtractErrorInformation(DatagramReceive: TDatagramReceive);
-      function IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
-      function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
-      function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
-      function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
-      function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
-      function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
-      function IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
-      procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
-      procedure SendIdentifyEventsMessage;
-      procedure SendIdentifyEventsAddressedMessage;
-      procedure SendIdentifyConsumerMessage(Event: TEventID);
-      procedure SendIdentifyProducerMessage(Event: TEventID);
-      procedure SendMemoryConfigurationOptions;
-      procedure SendMemoryConfigurationSpaceInfo(Space: Byte);
-      procedure SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
-      procedure SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
-      procedure SendProtocolIdentificationProtocolMessage;
-      procedure SendSnipMessage;
-      procedure SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
-      procedure SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
-      procedure SendTractionEStopMessage;
-      procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
-      procedure SendTractionQueryFunction(FunctionAddress: DWord);
-      procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
-      procedure SendTractionQuerySpeeds;
-      procedure SendTractionQueryProxyMessage;
-      procedure SendTractionReleaseProxyMessage;
-      procedure SendTractionReserveProxyMessage;
-      procedure SendTractionSpeedMessage(Speed: THalfFloat);
-      procedure SendVerifyNodeIDGlobalMessage;
-      procedure SendVerifyNodeIDToDestinationMessage;
-      procedure SyncOnBeforeTaskDestroy;
-      property iState: Integer read FiState write FiState;
-      property Done: Boolean read FDone;
-      property StartAsSending: Boolean read FStartAsSending write FStartAsSending;
-    public
-      constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); virtual;
-      destructor Destroy; override;
-      function Clone: TOlcbTaskBase; virtual; abstract;
-      procedure CopyTo(Target: TOlcbTaskBase); virtual;
-      property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
-      property DestinationAlias: Word read FDestinationAlias;
-      property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
-      property ErrorCode: DWord read FErrorCode write FErrorCode;
-      property ErrorString: string read FErrorString write FErrorString;
-      property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
-      property SourceAlias: Word read FSourceAlias;
-      property Sending: Boolean read FSending write FSending;
-      property Tag: PtrInt read FTag write FTag;
-      property RemoveKey: PtrInt read FRemoveKey write FRemoveKey;
-      property HasStarted: Boolean read FHasStarted;
-      property ForceTermination: Boolean read FForceTermination write FForceTermination;
-    end;
+  TOlcbTaskBase = class
+  private
+    FErrorCode: DWord;
+    FMessageHelper: TOpenLCBMessageHelper;
+    FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
+    FSending: Boolean;
+    FErrorString: string;
+    FRemoveKey: PtrInt;
+    FHasStarted: Boolean;
+    FStartAsSending: Boolean;
+    FTag: PtrInt;
+    FForceTermination: Boolean;
+    function SpaceToCommandByteEncoding(ASpace: Byte): Byte;
+  protected
+    FTransportLayerThread: TTransportLayerThread;
+    FDestinationAlias: Word;
+    FDone: Boolean;
+    FiState: Integer;
+    FSourceAlias: Word;
+    procedure ExtractErrorInformation(DatagramReceive: TDatagramReceive);
+    function IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
+    function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
+    function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
+    function IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
+    procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
+    procedure SendIdentifyEventsMessage;
+    procedure SendIdentifyEventsAddressedMessage;
+    procedure SendIdentifyConsumerMessage(Event: TEventID);
+    procedure SendIdentifyProducerMessage(Event: TEventID);
+    procedure SendMemoryConfigurationOptions;
+    procedure SendMemoryConfigurationSpaceInfo(Space: Byte);
+    procedure SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
+    procedure SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
+    procedure SendProtocolIdentificationProtocolMessage;
+    procedure SendSnipMessage;
+    procedure SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
+    procedure SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
+    procedure SendTractionEStopMessage;
+    procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
+    procedure SendTractionQueryFunction(FunctionAddress: DWord);
+    procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+    procedure SendTractionQuerySpeeds;
+    procedure SendTractionQueryProxyMessage;
+    procedure SendTractionReleaseProxyMessage;
+    procedure SendTractionReserveProxyMessage;
+    procedure SendTractionSpeedMessage(Speed: THalfFloat);
+    procedure SendVerifyNodeIDGlobalMessage;
+    procedure SendVerifyNodeIDToDestinationMessage;
+    procedure SyncOnBeforeTaskDestroy;
+    property iState: Integer read FiState write FiState;
+    property Done: Boolean read FDone;
+    property StartAsSending: Boolean read FStartAsSending write FStartAsSending;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); virtual;
+    destructor Destroy; override;
+    function Clone: TOlcbTaskBase; virtual; abstract;
+    procedure CopyTo(Target: TOlcbTaskBase); virtual;
+    property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
+    property DestinationAlias: Word read FDestinationAlias;
+    property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
+    property ErrorCode: DWord read FErrorCode write FErrorCode;
+    property ErrorString: string read FErrorString write FErrorString;
+    property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
+    property SourceAlias: Word read FSourceAlias;
+    property Sending: Boolean read FSending write FSending;
+    property Tag: PtrInt read FTag write FTag;
+    property RemoveKey: PtrInt read FRemoveKey write FRemoveKey;
+    property HasStarted: Boolean read FHasStarted;
+    property ForceTermination: Boolean read FForceTermination write FForceTermination;
+  end;
 
   { TVerifyNodeIDGlobalTask }
 
@@ -942,6 +943,93 @@ begin
     Result := List.Count
   finally
     OlcbTaskManager.TaskList.UnlockList;
+  end;
+end;
+
+procedure TTransportLayerThread.DecomposeAndDispatchGridConnectString(ReceiveStr: AnsiString; Helper: TOpenLCBMessageHelper);
+var
+  CANLayerTask: TCANLayerTask;
+  EventTask: TEventTask;
+  VerifiedNodeIDTask: TVerifiedNodeIDTask;
+  TractionProtocolTask: TTractionProtocolTask;
+  InitializationCompleteTask: TInitializationCompleteTask;
+  CompletedSendDatagram: TDatagramSend;
+  BufferDatagramReceive: TDatagramReceive;
+begin
+  ReceiveStr := Trim(ReceiveStr);
+  if Helper.Decompose(ReceiveStr) then
+  begin
+    if EnableReceiveMessages then                                         // *** Communicate back to the app the raw message string
+    begin
+      BufferRawMessage := ReceiveStr;
+      Synchronize(@SyncReceiveMessage);
+    end;
+
+    if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
+    begin
+      CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
+      if Assigned(CompletedSendDatagram) then
+      begin
+        OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);          // Give the Task subsystem a crack at knowning about the sent datagram
+        FreeAndNil(CompletedSendDatagram)
+      end else
+      begin
+        BufferDatagramReceive := DatagramReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
+        if Assigned(BufferDatagramReceive) then
+        begin
+          OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);        // Give the Task subsystem a crack at knowning about the received datagram
+          FreeAndNil(BufferDatagramReceive)
+        end;
+      end;
+    end else                                                              // *** Test for a Datagram message that came in ***
+      OlcbTaskManager.ProcessReceiving(Helper);
+
+    if Helper.Layer = ol_CAN then
+    begin
+      CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+      CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
+      Helper.CopyTo(CANLayerTask.MessageHelper);
+      AddTask(CANLayerTask);
+    end;
+
+    case Helper.MTI of
+      MTI_INITIALIZATION_COMPLETE :
+        begin
+          InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
+          Helper.CopyTo(InitializationCompleteTask.MessageHelper);
+          AddTask(InitializationCompleteTask);
+        end;
+      MTI_VERIFIED_NODE_ID_NUMBER :
+        begin
+          VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
+          Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
+          AddTask(VerifiedNodeIDTask);
+        end;
+      MTI_CONSUMER_IDENTIFIED_CLEAR,
+      MTI_CONSUMER_IDENTIFIED_SET,
+      MTI_CONSUMER_IDENTIFIED_UNKNOWN,
+      MTI_CONSUMER_IDENTIFIED_RESERVED,
+      MTI_PRODUCER_IDENTIFIED_CLEAR,
+      MTI_PRODUCER_IDENTIFIED_SET,
+      MTI_PRODUCER_IDENTIFIED_UNKNOWN,
+      MTI_PRODUCER_IDENTIFIED_RESERVED,
+      MTI_PC_EVENT_REPORT :
+        begin
+          EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
+          Helper.CopyTo(EventTask.MessageHelper);
+          AddTask(EventTask);
+        end;
+      MTI_TRACTION_PROTOCOL :
+        begin
+          TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
+          Helper.CopyTo(TractionProtocolTask.MessageHelper);
+          AddTask(TractionProtocolTask);
+        end;
+    end;
   end;
 end;
 

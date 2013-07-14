@@ -24,6 +24,7 @@ unit NMRAnetCANReceive;
 {.$DEFINE TRACE_DATAGRAM_TX}
 {.$DEFINE TRACE_DATAGRAM_RESPOSES}
 {.$DEFINE TRACK_HI_PRIORITY_DG_REJECT_OVERFLOW}
+{$DEFINE TRACE_CAN}
 
 uses
   NMRAnetUtilities,
@@ -192,8 +193,14 @@ var
   SourceAlias: Word;
   DatagramBuffer: PDatagramBuffer;
   i: Integer;
+  {$IFDEF TRACE_CAN}
+  GridConnectBuffer: TGridConnectString;
+  {$ENDIF}
 begin
- //UART1_Write_Text('CAN'+LF);
+  {$IFDEF TRACE_CAN}
+  CANBufferToGridConnect( CANBuffer, GridConnectBuffer);
+  UART_Write_Text('CAN Rx: ' + GridConnectBuffer+LF);
+  {$ENDIF}
   DoDefault := True;
   if CANLayerReceiveHook <> nil then
     CANLayerReceiveHook(CANBuffer, DoDefault);
@@ -290,7 +297,14 @@ var
   DataBytes: TCAN_DataBytes;
   DataBytesPtr: PCAN_DataBytes;
   MTI_Code: Word;
+  {$IFDEF TRACE_CAN}
+  GridConnectBuffer: TGridConnectString;
+  {$ENDIF}
 begin
+  {$IFDEF TRACE_CAN}
+  CANBufferToGridConnect( CANBuffer, GridConnectBuffer);
+  UART_Write_Text('Olcb Rx: ' + GridConnectBuffer+LF);
+  {$ENDIF}
   DoDefault := True;
   if NMRAnetLayerReceiveHook <> nil then
     NMRAnetLayerReceiveHook(CANBuffer, DoDefault);                              // Allow the program to have a crack at the message handler

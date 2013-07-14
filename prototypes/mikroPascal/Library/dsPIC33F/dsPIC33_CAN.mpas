@@ -21,6 +21,8 @@ unit dsPIC33_CAN;
 // ******************************************************************************
 {$I Options.inc}
 
+{$DEFINE TRACE_CAN}
+
 
 uses
   NMRAnetDefinesShared,
@@ -216,87 +218,19 @@ procedure dsPIC33_DMA_Style_Buffer(Direction: Byte; CANPtr: ^Word; var Buffer: T
 function StartTransmission: Boolean;
 var
   Buffer: PCANBuffer;
+  {$IFDEF TRACE_CAN}
+  GridConnectBuffer: TGridConnectString;
+  {$ENDIF}
 begin
   Result := False;
   Buffer := CANStorage_NextToSend;                                              // Get a pointer to the Buffer to transmit
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
- {
-  UART2_Write_Text(' StartTransmission - Before');
-   
-  IntToHex(TX_Main_RawBufferArray[0].Word0, s1);
-  UART2_Write_Text(' 0_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word1, s1);
-  UART2_Write_Text(' 0_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word2, s1);
-  UART2_Write_Text(' 0_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word3, s1);
-  UART2_Write_Text(' 0_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word4, s1);
-  UART2_Write_Text(' 0_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word5, s1);
-  UART2_Write_Text(' 0_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word6, s1);
-  UART2_Write_Text(' 0_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word7, s1);
-  UART2_Write_Text(' 0_Word7: $'+s1);
-
-  IntToHex(TX_Main_RawBufferArray[1].Word0, s1);
-  UART2_Write_Text(' 1_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word1, s1);
-  UART2_Write_Text(' 1_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word2, s1);
-  UART2_Write_Text(' 1_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word3, s1);
-  UART2_Write_Text(' 1_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word4, s1);
-  UART2_Write_Text(' 1_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word5, s1);
-  UART2_Write_Text(' 1_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word6, s1);
-  UART2_Write_Text(' 1_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word7, s1);
-  UART2_Write_Text(' 1_Word7: $'+s1);
-                                           }
-  
+    {$IFDEF TRACE_CAN}
+    CANBufferToGridConnect(Buffer, GridConnectBuffer);
+    UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer+LF);
+    {$ENDIF}
     dsPIC33_DMA_Style_Buffer(CAN_DIRECTION_WRITE, @TX_Main_RawBufferArray[CAN_TX_0_BUFFER].Word0, Buffer^);      // Convert it into a version that matches the registers
- {
-  UART2_Write_Text(' StartTransmission - After');
-  
-  IntToHex(TX_Main_RawBufferArray[0].Word0, s1);
-  UART2_Write_Text(' 0_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word1, s1);
-  UART2_Write_Text(' 0_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word2, s1);
-  UART2_Write_Text(' 0_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word3, s1);
-  UART2_Write_Text(' 0_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word4, s1);
-  UART2_Write_Text(' 0_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word5, s1);
-  UART2_Write_Text(' 0_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word6, s1);
-  UART2_Write_Text(' 0_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word7, s1);
-  UART2_Write_Text(' 0_Word7: $'+s1);
-
-  IntToHex(TX_Main_RawBufferArray[1].Word0, s1);
-  UART2_Write_Text(' 1_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word1, s1);
-  UART2_Write_Text(' 1_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word2, s1);
-  UART2_Write_Text(' 1_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word3, s1);
-  UART2_Write_Text(' 1_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word4, s1);
-  UART2_Write_Text(' 1_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word5, s1);
-  UART2_Write_Text(' 1_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word6, s1);
-  UART2_Write_Text(' 1_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word7, s1);
-  UART2_Write_Text(' 1_Word7: $'+s1);      }
-  
     dsPIC33_CAN_RequestTransmit(CAN_TX_0_BUFFER);                               // Set the Flag to start the transmission
     Buffer^.State := Buffer^.State and not BS_ALLOCATED;                        // Release the Buffer from the List
     CAN_Engine.State := CAN_Engine.State or CES_TRANSMITTING;
@@ -315,86 +249,19 @@ end;
 procedure StartCANHighPriorityMessageEngine;
 var
   Buffer: PCANBuffer;
+  {$IFDEF TRACE_CAN}
+  GridConnectBuffer: TGridConnectString;
+  {$ENDIF}
 begin
   Buffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
   // Just do it as there should not be an overlap here since this is ONLY called AFTER a message we can't handle is received so any transmission here should be long finished
   if Buffer <> nil then
   begin
-  
- { UART2_Write_Text(' StartCANHighPriorityMessageEngine - Before');
-
-  IntToHex(TX_Main_RawBufferArray[0].Word0, s1);
-  UART2_Write_Text(' 0_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word1, s1);
-  UART2_Write_Text(' 0_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word2, s1);
-  UART2_Write_Text(' 0_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word3, s1);
-  UART2_Write_Text(' 0_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word4, s1);
-  UART2_Write_Text(' 0_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word5, s1);
-  UART2_Write_Text(' 0_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word6, s1);
-  UART2_Write_Text(' 0_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word7, s1);
-  UART2_Write_Text(' 0_Word7: $'+s1);
-
-  IntToHex(TX_Main_RawBufferArray[1].Word0, s1);
-  UART2_Write_Text(' 1_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word1, s1);
-  UART2_Write_Text(' 1_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word2, s1);
-  UART2_Write_Text(' 1_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word3, s1);
-  UART2_Write_Text(' 1_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word4, s1);
-  UART2_Write_Text(' 1_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word5, s1);
-  UART2_Write_Text(' 1_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word6, s1);
-  UART2_Write_Text(' 1_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word7, s1);
-  UART2_Write_Text(' 1_Word7: $'+s1);                               }
-  
+    {$IFDEF TRACE_CAN}
+    CANBufferToGridConnect(Buffer, GridConnectBuffer);
+    UART_Write_Text('High Priority Tx: ' + GridConnectBuffer+LF);
+    {$ENDIF}
     dsPIC33_DMA_Style_Buffer(CAN_DIRECTION_WRITE, @TX_Main_RawBufferArray[CAN_TX_1_BUFFER].Word0, Buffer^);      // Convert it into a version that matches the registers
-    
-  {  UART2_Write_Text(' StartCANHighPriorityMessageEngine - After');
-
-  IntToHex(TX_Main_RawBufferArray[0].Word0, s1);
-  UART2_Write_Text(' 0_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word1, s1);
-  UART2_Write_Text(' 0_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word2, s1);
-  UART2_Write_Text(' 0_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word3, s1);
-  UART2_Write_Text(' 0_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word4, s1);
-  UART2_Write_Text(' 0_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word5, s1);
-  UART2_Write_Text(' 0_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word6, s1);
-  UART2_Write_Text(' 0_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[0].Word7, s1);
-  UART2_Write_Text(' 0_Word7: $'+s1);
-
-  IntToHex(TX_Main_RawBufferArray[1].Word0, s1);
-  UART2_Write_Text(' 1_Word0: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word1, s1);
-  UART2_Write_Text(' 1_Word1: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word2, s1);
-  UART2_Write_Text(' 1_Word2: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word3, s1);
-  UART2_Write_Text(' 1_Word3: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word4, s1);
-  UART2_Write_Text(' 1_Word4: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word5, s1);
-  UART2_Write_Text(' 1_Word5: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word6, s1);
-  UART2_Write_Text(' 1_Word6: $'+s1);
-  IntToHex(TX_Main_RawBufferArray[1].Word7, s1);
-  UART2_Write_Text(' 1_Word7: $'+s1);     }
-
     dsPIC33_CAN_RequestTransmit(CAN_TX_1_BUFFER);                             // Set the Flag to start the transmission
     Buffer^.State := Buffer^.State and not BS_ALLOCATED;                           // Release the Buffer from the List
   end
@@ -456,25 +323,6 @@ begin
       end;
       ICODE_TRB2 :                                                              // Tx Rx Buffer 0
       begin
-      
-      {  IntToHex(RX_Main_RawBufferArray[0].Word0, s1);
-        UART2_Write_Text(' 0_Word0: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word1, s1);
-        UART2_Write_Text(' 0_Word1: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word2, s1);
-        UART2_Write_Text(' 0_Word2: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word3, s1);
-        UART2_Write_Text(' 0_Word3: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word4, s1);
-        UART2_Write_Text(' 0_Word4: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word5, s1);
-        UART2_Write_Text(' 0_Word5: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word6, s1);
-        UART2_Write_Text(' 0_Word6: $'+s1);
-        IntToHex(RX_Main_RawBufferArray[0].Word7, s1);
-        UART2_Write_Text(' 0_Word7: $'+s1+LF);
-                                                  }
-                                                  
         dsPIC33_DMA_Style_Buffer(CAN_DIRECTION_READ, @RX_Main_RawBufferArray[0].Word0, Buffer);      // Convert it into a version that matches the registers
         case Hi(RX_Main_RawBufferArray[0].Word7) of
           0: ReceivedOnFilter0(@Buffer);
@@ -488,16 +336,14 @@ begin
         dsPIC33_CAN_RX_Full(CAN_RX_0_BUFFER, True);                             // Reset the Full Flag
         
         if RBOVIF_bit = 1 then
-        begin  RBOVIF_bit := 0; end;
+          RBOVIF_bit := 0;
         
         dsPIC33_CAN_InterruptFlagRXBuffer(True);                                // RX Interrupt Flag Reset
-
       end;
       ICODE_RX_OVERFLOW :
       begin
      //   UART1_Write_Text('RxOVR'+LF);
         dsPIC33_CAN_InterruptFlagRXBufferOverflow(True);
-
       end else
       begin
 

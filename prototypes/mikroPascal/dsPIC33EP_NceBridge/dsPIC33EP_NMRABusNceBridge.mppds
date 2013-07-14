@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
+Value=..\Library\dsPIC33F\dsPIC33_CAN.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -43,7 +43,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=9
 File0=dsPIC33EP_NMRABusNceBridge.mpas
 File1=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File2=NMRAnetAppCallbacks.mpas
@@ -51,7 +51,8 @@ File3=..\Library\NCE\NMRAnetNceBridge.mpas
 File4=NMRAnetAppDefines.mpas
 File5=..\Library\NMRAnet\NMRAnetBufferPools.mpas
 File6=..\Library\dsPIC33F\dsPIC33_DMA.mpas
-File7=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
+File7=..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File8=..\Library\dsPIC33F\dsPIC33_CAN.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

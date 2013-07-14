@@ -54,20 +54,12 @@ implementation
 procedure TComPortThread.Execute;
 var
   List: TList;
-  ReceiveStr, SendStr: AnsiString;
+  SendStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
-  CompletedSendDatagram: TDatagramSend;
-  T: DWord;
-  CANLayerTask: TCANLayerTask;
-  EventTask: TEventTask;
-  VerifiedNodeIDTask: TVerifiedNodeIDTask;
   TractionProtocolTask: TTractionProtocolTask;
   InitializationCompleteTask: TInitializationCompleteTask;
-  BufferDatagramReceive: TDatagramReceive;
 begin
   ExecuteBegin;
-  T := 0;
-  CompletedSendDatagram := nil;
   Helper := TOpenLCBMessageHelper.Create;
   Serial := TBlockSerial.Create;                           // Create the Serial object in the context of the thread
   Serial.LinuxLock:=False;
@@ -80,7 +72,6 @@ begin
       Connected:=True;
       while not Terminated do
       begin
-        T := GetTickCount;
         ThreadSwitch;
 
         List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
@@ -117,87 +108,8 @@ begin
 
         if GlobalSettings.General.SendPacketDelay > 0 then                      // *** Grab the next message from the wire ***
           Sleep(GlobalSettings.General.SendPacketDelay);
-        ReceiveStr := Serial.Recvstring(0);
-        ReceiveStr := Trim(ReceiveStr);
 
-        if Helper.Decompose(ReceiveStr) then
-        begin
-          if EnableReceiveMessages then                                         // *** Communicate back to the app the raw message string
-          begin
-            BufferRawMessage := ReceiveStr;
-            Synchronize(@SyncReceiveMessage);
-          end;
-
-          if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
-          begin
-            CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
-            if Assigned(CompletedSendDatagram) then
-            begin
-              OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);          // Give the Task subsystem a crack at knowning about the sent datagram
-              FreeAndNil(CompletedSendDatagram)
-            end else
-            begin
-              BufferDatagramReceive := DatagramReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
-              if Assigned(BufferDatagramReceive) then
-              begin
-                OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);        // Give the Task subsystem a crack at knowning about the received datagram
-                FreeAndNil(BufferDatagramReceive)
-              end;
-            end;
-          end else                                                              // *** Test for a Datagram message that came in ***
-            OlcbTaskManager.ProcessReceiving(Helper);
-
-          if Helper.Layer = ol_CAN then
-          begin
-            CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-            CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
-            Helper.CopyTo(CANLayerTask.MessageHelper);
-            AddTask(CANLayerTask);
-          end;
-
-          case Helper.MTI of
-            MTI_INITIALIZATION_COMPLETE :
-              begin
-                InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                Helper.CopyTo(InitializationCompleteTask.MessageHelper);
-                AddTask(InitializationCompleteTask);
-              end;
-            MTI_VERIFIED_NODE_ID_NUMBER :
-              begin
-                VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
-                AddTask(VerifiedNodeIDTask);
-              end;
-            MTI_CONSUMER_IDENTIFIED_CLEAR,
-            MTI_CONSUMER_IDENTIFIED_SET,
-            MTI_CONSUMER_IDENTIFIED_UNKNOWN,
-            MTI_CONSUMER_IDENTIFIED_RESERVED,
-            MTI_PRODUCER_IDENTIFIED_CLEAR,
-            MTI_PRODUCER_IDENTIFIED_SET,
-            MTI_PRODUCER_IDENTIFIED_UNKNOWN,
-            MTI_PRODUCER_IDENTIFIED_RESERVED,
-            MTI_PC_EVENT_REPORT :
-              begin
-                EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                Helper.CopyTo(EventTask.MessageHelper);
-                AddTask(EventTask);
-              end;
-            MTI_TRACTION_PROTOCOL :
-              begin
-                TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                Helper.CopyTo(TractionProtocolTask.MessageHelper);
-                AddTask(TractionProtocolTask);
-              end;
-          end;
-        end;
-
-        LoopTime := GetTickCount - T;
-        if LoopTime > MaxLoopTime then
-          MaxLoopTime := LoopTime;
+        DecomposeAndDispatchGridConnectString(Serial.Recvstring(0), Helper);
       end;
     end else
     begin

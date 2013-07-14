@@ -229,37 +229,29 @@ end;
 
 procedure TClientSocketThread.Execute;
 var
-  ReceivedData: AnsiString;
-  Receive_GridConnectBufferIndex: Integer;
-  Receive_GridConnectBuffer: array[0..MAX_GRID_CONNECT_LEN-1] of char;
-  PacketIndex, i: Integer;
-  Done: Boolean;
-  T: DWord;
+//  ReceivedData: AnsiString;
+//  Receive_GridConnectBufferIndex: Integer;
+//  Receive_GridConnectBuffer: array[0..MAX_GRID_CONNECT_LEN-1] of char;
+//  PacketIndex, i: Integer;
+//  Done: Boolean;
+  i: Integer;
   List: TList;
-  SendStr, ReceiveStr: AnsiString;
+  SendStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
-  TCP_Receive_Char: char;
-  GridConnectMsg: TTCPMessage;
-  CompletedSendDatagram: TDatagramSend;
-  CANLayerTask: TCANLayerTask;
-  EventTask: TEventTask;
-  VerifiedNodeIDTask: TVerifiedNodeIDTask;
-  TractionProtocolTask: TTractionProtocolTask;
-  InitializationCompleteTask: TInitializationCompleteTask;
-  BufferDatagramReceive: TDatagramReceive;
+ // TCP_Receive_Char: char;
+ // GridConnectMsg: TTCPMessage;
   SyncSendMessageList: TStringList;
 begin
   ExecuteBegin;
   FConnectedSocket := TTCPBlockSocket.Create;
+  ConnectedSocket.ConvertLineEnd := True;      // User #10, #13, or both to be a "string"
   try
-    T := 0;
     Helper := TOpenLCBMessageHelper.Create;
     ConnectedSocket.Socket := hSocketLocal;
     ConnectedSocket.GetSins;                     // Back load the IP's / Ports information from the handle
     while not Terminated do
     begin
       SyncSendMessageList := TStringList.Create;
-      T := GetTickCount;
       ThreadSwitch;
       List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
       try
@@ -303,6 +295,9 @@ begin
         SendStr := '';
       end;
 
+      DecomposeAndDispatchGridConnectString(ConnectedSocket.RecvString(1), Helper);
+
+      {
       ReceivedData := ConnectedSocket.RecvPacket(1);
 
       Done := False;
@@ -459,7 +454,7 @@ begin
         end;
         Inc(PacketIndex);
       end;
-
+              }
 
 
    {    if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0)  and Assigned(OwnerHub) then

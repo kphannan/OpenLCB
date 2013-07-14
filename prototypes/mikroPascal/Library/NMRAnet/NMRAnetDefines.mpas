@@ -28,18 +28,6 @@ type
 
   TBufferTag = Word;
   
-const
-  // :X19170640N0501010107015555;   Example.....
-  // ^         ^                ^
-  // 0         10               27
-  MAX_GRID_CONNECT_LEN = 28;
-  GRID_CONNECT_HEADER_OFFSET_HI = 2;
-  GRID_CONNECT_HEADER_OFFSET_LO = 4;
-  GRID_CONNECT_DATA_OFFSET = 11;
-
-type
-  TGridConnectString = string[MAX_GRID_CONNECT_LEN];
-  
   
 // *****************************************************************************
 // Buffer Pool Defines
