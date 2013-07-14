@@ -720,16 +720,17 @@ begin
   // Handle the oddball DCC Address Event that can come and go
   if Node^.MsgFlagsUserDefined and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
   begin
-    DataBytesPtr^[0] := $06;
-    DataBytesPtr^[1] := $01;
-    DataBytesPtr^[2] := $00;
-    DataBytesPtr^[3] := $00;
-    DataBytesPtr^[4] := (ProxyData^.Address shr 8) and $00FF;
-    DataBytesPtr^[5] := ProxyData^.Address and $00FF;
-    DataBytesPtr^[6] := $00;
-    DataBytesPtr^[7] := $01;
-    if TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False, $00) then
+    if NMRABusTxBufferAvailable then
     begin
+      DataBytesPtr^[0] := $06;
+      DataBytesPtr^[1] := $01;
+      DataBytesPtr^[2] := $00;
+      DataBytesPtr^[3] := $00;
+      DataBytesPtr^[4] := (ProxyData^.Address shr 8) and $00FF;
+      DataBytesPtr^[5] := ProxyData^.Address and $00FF;
+      DataBytesPtr^[6] := $00;
+      DataBytesPtr^[7] := $01;
+      TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False, $00);
       Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
       Result := True;
     end

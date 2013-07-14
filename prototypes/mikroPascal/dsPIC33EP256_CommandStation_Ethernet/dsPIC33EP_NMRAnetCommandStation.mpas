@@ -100,11 +100,13 @@ var
   Net_Ethernet_28j60_CS_Direction  : sbit at TRISB6_bit;
 
   EthernetTimerCounter: Word;
+  LastSocketState: Integer;
 // *****************************************************************************
 //  INTERRUPTS
 // *****************************************************************************
 
   DCCTime: Word;
+  
   
   
 procedure RunServiceMode;
@@ -324,6 +326,44 @@ begin
   end;    }
 end;
 
+procedure PrintSocketState(socket: ^SOCKET_28j60_Dsc);
+begin
+ if LastSocketState <> socket^.State then
+  begin
+    LastSocketState := socket^.State;
+    case socket^.state of
+      SOCKET_STATE_CLOSED :
+        begin
+          UART_Write_Text('connection closed'+LF);
+        end;
+      SOCKET_STATE_SYN_REC_SYN_SENT_WAIT_ACK :
+        begin
+          UART_Write_Text('remote SYN segment received, our SYN segment sent, and We wait for ACK (server mode)'+LF);
+        end;
+      SOCKET_STATE_ESTABLISHED :
+        begin
+          UART_Write_Text('connection established'+LF);
+        end;
+      SOCKET_STATE_SYN_SENT_WAIT_FOR_SYN_RESPONSE :
+        begin
+          UART_Write_Text('our SYN segment sent, and We wait for SYN response (client mode)'+LF);
+        end;
+      SOCKET_STATE_FIN_SENT_WAIT_FOR_ACK :
+        begin
+          UART_Write_Text('FIN segment sent, wait for ACK.'+LF);
+        end;
+      SOCKET_STATE_FIN_ACK_REC_WAIT_FOR_REMOTE_FIN :
+        begin
+          UART_Write_Text('Received ACK on our FIN, wait for remote FIN.'+LF);
+        end;
+      SOCKET_STATE_EXPIRED_ACK_WAIT_TIME :
+        begin
+          UART_Write_Text('Expired ACK wait time. We retransmit last sent packet, and again set Wait-Timer. If this happen again connection close.'+LF);
+        end;
+     end;
+  end;
+end;
+
 // *******************
 // MAIN LOOP
 // *******************
@@ -378,6 +418,8 @@ begin
   UART1_Write_Text('Initializing OlcbBus'+LF);
   MCU_Setup_Enable_OlcbBus;
   
+  LastSocketState := -1;
+  
   while (TRUE) do
   begin
     if OlcbSocket^.state = SOCKET_STATE_ESTABLISHED then
@@ -399,7 +441,12 @@ begin
         NMRAnetStateMachine_Process(ActiveNode);
     end;
     
+    PrintSocketState(OlcbSocket);
+    
     Net_Ethernet_28j60_doPacket;
+    
+    if (CANStorage_NextToSend <> nil) or (CANStorage_NextHighPriorityToSend <> nil) then
+      Net_Ethernet_28j60_startSendTCP(OlcbSocket);
     
     if UART1_Data_Ready then
     begin

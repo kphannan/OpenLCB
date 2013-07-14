@@ -182,9 +182,9 @@ type
   procedure NMRAnetTractionProtocol_PrintNodeRamData(Node: PNMRAnetNode; PrintNodeAddress: Boolean);
   
   function NMRABusTxBufferAvailable: Boolean; external;
-  function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word): Boolean; external;
+  procedure TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word); external;
   function CANBusBufferAvailable: Boolean; external;
-  function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean; external;
+  procedure TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord); external;
   
 var
   CommandStationConfigurationShadowRam: TCommandStationConfigurationShadowRam;

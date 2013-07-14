@@ -88,8 +88,8 @@ uses
   procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
 
 // Forward declarations
-function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord; DestinationAliasID: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word): Boolean; forward;
-function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean; forward;
+procedure TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord; DestinationAliasID: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word); forward;
+procedure TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord); forward;
 function NMRABusTxBufferAvailable: Boolean; forward;
 function CANBusBufferAvailable: Boolean; forward;
 
@@ -107,7 +107,11 @@ var
   CANBuffer: TCANBUffer;
   DataBytes: TCAN_DataBytes;
 begin
-  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_SIMPLE_NODE_INFO_REQUEST, DestinationAliasID, 0, @DataBytes, False, $00);
+  Result := True;
+  if NMRABusTxBufferAvailable then
+    TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_SIMPLE_NODE_INFO_REQUEST, DestinationAliasID, 0, @DataBytes, False, $00)
+  else
+    Result := False
 end;
 
 // *****************************************************************************
@@ -122,7 +126,11 @@ function NMRAnetStateMachine_TrySendIdentifyProducer(Node: PNMRAnetNode; EventID
 var
   CANBuffer: TCANBUffer;
 begin
-  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_PRODUCER_IDENDIFY, 0, EVENT_ARRAY_LENGTH, PCAN_DataBytes( EventID), False, $00)
+  Result := True;
+  if NMRABusTxBufferAvailable then
+    TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_PRODUCER_IDENDIFY, 0, EVENT_ARRAY_LENGTH, PCAN_DataBytes( EventID), False, $00)
+  else
+    Result := False
 end;
 
 // *****************************************************************************
@@ -137,7 +145,11 @@ function NMRAnetStateMachine_TrySendIdentifyConsumer(Node: PNMRAnetNode; EventID
 var
   CANBuffer: TCANBUffer;
 begin
-  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_CONSUMER_IDENTIFY, 0, EVENT_ARRAY_LENGTH,  PCAN_DataBytes( EventID), False, $00);
+  Result := True;
+  if NMRABusTxBufferAvailable then
+    TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_CONSUMER_IDENTIFY, 0, EVENT_ARRAY_LENGTH,  PCAN_DataBytes( EventID), False, $00)
+  else
+    Result := False
 end;
 
 // *****************************************************************************
@@ -152,7 +164,11 @@ function NMRAnetStateMachine_TrySendIdentifyEvents(Node: PNMRAnetNode): Boolean;
 var
   CANBuffer: TCANBUffer;
 begin
-  Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_EVENTS_IDENTIFY, 0, 0, nil, False, $00);
+  Result := True;
+  if NMRABusTxBufferAvailable then
+    TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_EVENTS_IDENTIFY, 0, 0, nil, False, $00)
+  else
+    Result := False;
 end;
 
 // *****************************************************************************
@@ -167,7 +183,11 @@ function NMRAnetStateMachine_TrySendAliasMapEnquiry(Node: PNMRAnetNode): Boolean
 var
   CANBuffer: TCANBUffer;
 begin
-  Result := TransmitCANLayerMsg(Node, @CANBuffer, MTI_AME);
+  Result := True;
+  if CANBusBufferAvailable then
+    TransmitCANLayerMsg(Node, @CANBuffer, MTI_AME)
+  else
+    Result := False;
 end;
 
 // *****************************************************************************
@@ -182,7 +202,11 @@ function NMRAnetStateMachine_TrySendAliasMapReset(Node: PNMRAnetNode): Boolean;
 var
   CANBuffer: TCANBUffer;
 begin
-  Result := TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
+  Result := True;
+  if CANBusBufferAvailable then
+    TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR)
+  else
+    Result := False;
 end;
 
 // *****************************************************************************
@@ -198,10 +222,15 @@ var
   DataBytes: TCAN_DataBytes;
   CANBuffer: TCANBUffer;
 begin
-  if DestinationAliasID <> 0 then
-    Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_VERIFY_NODE_ID_NUMBER_DEST, DestinationAliasID, 0, @DataBytes, False, $00)
-  else
-    Result := TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_VERIFY_NODE_ID_NUMBER, 0, 0, nil, False, $00);
+  Result := False;
+  if NMRABusTxBufferAvailable then
+  begin
+    if DestinationAliasID <> 0 then
+      TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_VERIFY_NODE_ID_NUMBER_DEST, DestinationAliasID, 0, @DataBytes, False, $00)
+    else
+      TransmitNMRABusLayerMsg(Node, @CANBuffer, MTI_VERIFY_NODE_ID_NUMBER, 0, 0, nil, False, $00);
+  end else
+    Result := False
 end;
 
 // *****************************************************************************
@@ -386,17 +415,16 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord): Boolean;
+procedure TransmitCANLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; VariableField: DWord);
 begin
-  Result := False;
   if CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = 0 then
   begin
     NMRAnetUtilities_CreateCANControlFrameCANBuffer(Node, Buffer, VariableField);
     CAN_Engine.TX_CANBuffer := Buffer^;
     CAN_Engine.TX_CANBuffer.State := CAN_Engine.TX_CANBuffer.State or BS_ALLOCATED;
     StartCANMessageEngine();
-    Result := True
-  end;
+  end else
+    UART_Write_Text('ERROR: Can''t Transmit CAN Layer'+LF)
 end;
 
 // *****************************************************************************
@@ -420,13 +448,11 @@ end;
 //     Description: This assumes the caller has tested for room in the buffer
 //
 // *****************************************************************************
-function TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word): Boolean;
+procedure TransmitNMRABusLayerMsg(Node: PNMRAnetNode; Buffer: PCANBuffer; MTI: DWord; DestinationAlias: Word; DataCount: Byte; DataBytes: PCAN_DataBytes; AliasInHeader: Boolean; UpperNibbleFlagMask: Word);
 begin          
 
  // TODO:  IF THE DESTINATION IS A VNNODE THEN WE NEED TO NOT PUT IT IN THE CAN BUFFER BUT JUST SHORT CUT IT TO THE RECEIVE BUFFER
- 
-  Result := False;
-  
+
   if CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0 then
   begin
     if AliasInHeader then
@@ -437,8 +463,8 @@ begin
     CAN_Engine.TX_NMRAnetBuffer := Buffer^;
     CAN_Engine.TX_NMRAnetBuffer.State := CAN_Engine.TX_NMRAnetBuffer.State or BS_ALLOCATED;
     StartCANMessageEngine();
-    Result := True
-  end;
+  end else
+    UART_Write_Text('ERROR: Can''t Transmit OLCB Layer'+LF)
 end;
 
 // *****************************************************************************
@@ -1312,7 +1338,10 @@ begin
                 if (Node^.MsgFlagsUserDefined = 0) then
                   if (Node^.BaseBuffers = nil) then
                     if (Node^.DatagramBuffers = nil) then
-                      DoDeallocate := TransmitCANLayerMsg(Node, CANBuffer, MTI_AMR);
+                    begin
+                      TransmitCANLayerMsg(Node, CANBuffer, MTI_AMR);
+                      DoDeallocate := True;
+                    end;
       end else
         DoDeallocate := True;                                                   // If it is not in the Permitted state then we are not allowed to send a AMR so just free it
 

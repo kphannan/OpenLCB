@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=NMRAnetAppCallbacks.mpas
+Value=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -43,7 +43,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=7
+Count=8
 File0=dsPIC33EP_NMRABusNceBridge.mpas
 File1=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File2=NMRAnetAppCallbacks.mpas
@@ -51,6 +51,7 @@ File3=..\Library\NCE\NMRAnetNceBridge.mpas
 File4=NMRAnetAppDefines.mpas
 File5=..\Library\NMRAnet\NMRAnetBufferPools.mpas
 File6=..\Library\dsPIC33F\dsPIC33_DMA.mpas
+File7=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\NMRAnetUtilities.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -59,18 +60,27 @@ Count=0
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=11
+Count=20
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\dsPIC33EP_NceBridge\
-Path3=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
-Path4=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\
-Path5=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path6=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
-Path7=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\Math\
-Path8=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NCE\
-Path9=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path10=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP_NceBridge\
+Path3=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\dsPIC33EP_NceBridge\
+Path4=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
+Path5=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\CANBus\
+Path6=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path7=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
+Path8=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\Math\
+Path9=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NCE\
+Path10=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path11=\\psf\Home\Documents\openlcb\trunk\prototypes\mikroPascal\Library\
+Path12=E:\trunk\prototypes\mikroPascal\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\
+Path13=E:\trunk\prototypes\mikroPascal\Library\CANBus\
+Path14=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path15=E:\trunk\prototypes\mikroPascal\Library\InterfaceIntegratedCircuits\
+Path16=E:\trunk\prototypes\mikroPascal\Library\Math\
+Path17=E:\trunk\prototypes\mikroPascal\Library\NCE\
+Path18=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path19=E:\trunk\prototypes\mikroPascal\Library\
 [HEADER_PATH]
 Count=0
 [HEADERS]

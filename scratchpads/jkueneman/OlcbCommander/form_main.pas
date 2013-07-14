@@ -158,6 +158,7 @@ type
     ActionToolsSettingsShowWin: TAction;
     ActionListMain: TActionList;
     ApplicationProperties: TApplicationProperties;
+    Button1: TButton;
     ImageList24x24: TImageList;
     ImageList16x16: TImageList;
     ImageListMainSmall: TImageList;
@@ -248,6 +249,7 @@ type
     procedure ActionTreeviewNetworkCollapseSelectedExecute(Sender: TObject);
     procedure ActionTreeviewNetworkExpandAllExecute(Sender: TObject);
     procedure ActionTreeviewNetworkExpandSelectedExecute(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -437,6 +439,18 @@ var
 begin
   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
     TreeViewNetwork.Selections[i].Expand(True);
+end;
+
+procedure TFormOLCB_Commander.Button1Click(Sender: TObject);
+begin
+  if Assigned(ComPortThread) then
+  begin
+    if ComPortThread.TaskCount > 0 then
+    begin
+    end
+  end;
+
+  EthernetHub.RemoveAndFreeTasks(0);
 end;
 
 procedure TFormOLCB_Commander.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -2099,6 +2113,8 @@ begin
   begin
 
   end;
+
+  StatusBar.Panels[3].Text := 'Task Count: ' + IntToStr(TaskObjects-1)  // This task will be freed
 end;
 
 procedure TFormOLCB_Commander.OnConfigEditorMenuItemClick(Sender: TObject);

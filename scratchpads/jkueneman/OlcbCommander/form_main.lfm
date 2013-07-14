@@ -1,7 +1,7 @@
 object FormOLCB_Commander: TFormOLCB_Commander
-  Left = 518
+  Left = 583
   Height = 401
-  Top = 234
+  Top = 301
   Width = 694
   Caption = 'OpenLCB Commander'
   ClientHeight = 381
@@ -59,6 +59,15 @@ object FormOLCB_Commander: TFormOLCB_Commander
           OnSelectionChanged = TreeViewNetworkSelectionChanged
           Options = [tvoAllowMultiselect, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoRightClickSelect, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
         end
+        object Button1: TButton
+          Left = 536
+          Height = 25
+          Top = 92
+          Width = 75
+          Caption = 'Button1'
+          OnClick = Button1Click
+          TabOrder = 1
+        end
       end
     end
   end
@@ -81,6 +90,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
         Width = 280
       end    
       item
+        Text = 'Task Count: 0'
         Width = 50
       end>
     SimplePanel = False

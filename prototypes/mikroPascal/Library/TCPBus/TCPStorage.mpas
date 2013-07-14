@@ -20,7 +20,8 @@ unit TCPStorage;
 
 {$I Options.inc}
 
-{.$DEFINE TRACK_CAN_BUFFER_OVERFLOWS}
+{$DEFINE TRACE_ETHERNET_OVERFLOW}
+{.$DEFINE TRACE_ETHERNET}
 
 uses
   HelperFunctions,
@@ -40,9 +41,14 @@ const
   BS_ALLOCATED    = $02;                                                       // Buffer Slot contains valid data to send
 
 const
-  SOCKET_STATE_CLOSED        = 0;
-  SOCKET_STATE_ESTABLISHED   = 3;
-  
+  SOCKET_STATE_CLOSED                          = 0;
+  SOCKET_STATE_SYN_REC_SYN_SENT_WAIT_ACK       = 1;
+  SOCKET_STATE_ESTABLISHED                     = 3;
+  SOCKET_STATE_SYN_SENT_WAIT_FOR_SYN_RESPONSE  = 4;
+  SOCKET_STATE_FIN_SENT_WAIT_FOR_ACK           = 5;
+  SOCKET_STATE_FIN_ACK_REC_WAIT_FOR_REMOTE_FIN = 6;
+  SOCKET_STATE_EXPIRED_ACK_WAIT_TIME           = 7;
+
 type
  // ***************************************************************************
   // CAN Message Buffers in user friendly form that can be easily maniuplated then
@@ -73,6 +79,8 @@ procedure LockCANInterrupt;
 procedure UnLockCANInterrupt;
 procedure StartCANMessageEngine;                                                // Used to start a transmission cycle after a message is placed in a TX Buffer
 procedure StartCANHighPriorityMessageEngine;
+function CANStorage_NextToSend: PCANBuffer;
+function CANStorage_NextHighPriorityToSend: PCANBuffer;
 
 procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
 function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
@@ -179,12 +187,12 @@ end;
 
 procedure StartCANMessageEngine;
 begin
-  Net_Ethernet_28j60_startSendTCP(OlcbSocket);
+//  Net_Ethernet_28j60_startSendTCP(OlcbSocket);
 end;
 
 procedure StartCANHighPriorityMessageEngine;
 begin 
-  Net_Ethernet_28j60_startSendTCP(OlcbSocket);
+ // Net_Ethernet_28j60_startSendTCP(OlcbSocket);
 end;
 
 
@@ -197,7 +205,7 @@ var
   TxBuffer: PCANBuffer;
   GridConnectBuffer: array[MAX_GRID_CONNECT_LEN] of char;
   TCP_Receive_Char: char;
-  Receive_GridConnectBufferIndex: Integer;
+  Receive_GridConnectBufferIndex, i: Integer;
   sx: string[16];
   sx1: string[16];
   BytesRead: Integer;
@@ -205,30 +213,57 @@ begin
  // PrintSocket(socket);
   if socket^.State = SOCKET_STATE_ESTABLISHED then
   begin
-    TxBuffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
-    if TxBuffer <> nil then
+  
+    if Net_Ethernet_28J60_bufferEmptyTCP(socket) = 1 then
     begin
-    
-      UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
-      
-      CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-      Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-      Net_Ethernet_28j60_putByteTCP(#10, socket);
-      TxBuffer^.State := BS_CLEAR;
-    end else
-    begin
-      TxBuffer := CANStorage_NextToSend;
+      TxBuffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
       if TxBuffer <> nil then
       begin
         CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-        
-        UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
-        
+    
+        {$IFDEF TRACE_ETHERNET}
+        UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
+        {$ENDIF}
+
+        {$IFDEF TRACE_ETHERNET_OVERFLOW}
+        BytesRead := strlen(GridConnectBuffer);
+        if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
+          UART_Write_Text('Buffer overflow' +LF);
+        if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
+            UART_Write_Text('Buffer overflow' +LF);
+        {$ELSE}
         Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-        Net_Ethernet_28j60_putByteTCP(#10, socket);
+        Net_Ethernet_28j60_putByteTCP(#10, socket)
+        {$ENDIF}
+
         TxBuffer^.State := BS_CLEAR;
+      end else
+      begin
+        TxBuffer := CANStorage_NextToSend;
+        if TxBuffer <> nil then
+        begin
+          CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+          
+          {$IFDEF TRACE_ETHERNET}
+          UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
+          {$ENDIF}
+
+          {$IFDEF TRACE_ETHERNET_OVERFLOW}
+          BytesRead := strlen(GridConnectBuffer);
+          if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
+            UART_Write_Text('Buffer overflow' +LF);
+          if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
+            UART_Write_Text('Buffer overflow' +LF);
+          {$ELSE}
+          Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
+          Net_Ethernet_28j60_putByteTCP(#10, socket)
+          {$ENDIF}
+            
+          TxBuffer^.State := BS_CLEAR;
+        end;
       end;
-    end;
+    end; // else
+   //   UART_Write_Text('Buffer not Empty'+LF);
 
     // Look for the correct port and some data
     if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
@@ -294,15 +329,15 @@ begin
                    GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
                    if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
                    begin
-                   
+                     {$IFDEF TRACE_ETHERNET}
                      UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
-                     
+                     {$ENDIF}
                      ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
                    end else
                    begin
-                   
+                     {$IFDEF TRACE_ETHERNET}
                      UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
-                     
+                     {$ENDIF}
                      ReceivedOnFilter0(@RxCANBuffer);
                    end;
                  end;
