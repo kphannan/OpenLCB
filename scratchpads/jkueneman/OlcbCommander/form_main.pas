@@ -67,7 +67,7 @@ uses
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
   Spin, types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
-  laz2_XMLWrite, common_utilities, form_awesome_throttle,
+  laz2_XMLWrite, common_utilities, form_awesome_throttle, blcksock,
   form_train_config_editor, ethernet_hub, form_ethernet_messagelog,
 
   {$IFDEF DEBUG_THREAD}
@@ -162,6 +162,7 @@ type
     ImageList24x24: TImageList;
     ImageList16x16: TImageList;
     ImageListMainSmall: TImageList;
+    ListBoxLog: TListBox;
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
     MenuItemToolsEthernetHubConnect: TMenuItem;
@@ -210,6 +211,7 @@ type
     PageControlMain: TPageControl;
     PanelNetwork: TPanel;
     PopupMenuTreeNode: TPopupMenu;
+    Splitter1: TSplitter;
     StatusBar: TStatusBar;
     TabSheetNetwork: TTabSheet;
     TreeViewNetwork: TTreeView;
@@ -332,6 +334,7 @@ type
     procedure SyncHubDisconnect(HostIP: string; HostPort: Integer);
     procedure SyncHubNewClient(SocketCount: Integer);
     procedure SyncHubDroppedClient(SocketCount: Integer);
+    procedure SyncHubOnStatus(Client: TClientSocketThread; Reason: THookSocketReason; Value: String);
     {$IFDEF DEBUG_THREAD} procedure SyncDebugMessage(Info: TComPortThreadDebugRec); {$ENDIF}
     procedure SyncMessageLogHide;
     procedure SyncEthernetMessageLogHide;
@@ -779,6 +782,7 @@ begin
   EthernetHub.OnClientClientConnect := @SyncHubNewClient;
   EthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
   EthernetHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
+  EthernetHub.OnSyncStatus := @SyncHubOnStatus;
 end;
 
 procedure TFormOLCB_Commander.FormDestroy(Sender: TObject);
@@ -1911,12 +1915,34 @@ end;
 
 procedure TFormOLCB_Commander.SyncHubNewClient(SocketCount: Integer);
 begin
-  Statusbar.Panels[3].Text := 'Connection Count: ' + IntToStr(SocketCount);
+  Statusbar.Panels[3].Text := 'Client Count: ' + IntToStr(SocketCount);
 end;
 
 procedure TFormOLCB_Commander.SyncHubDroppedClient(SocketCount: Integer);
 begin
-  Statusbar.Panels[3].Text := 'Connection Count: ' + IntToStr(SocketCount);
+  Statusbar.Panels[3].Text := 'Client Count: ' + IntToStr(SocketCount);
+end;
+
+procedure TFormOLCB_Commander.SyncHubOnStatus(Client: TClientSocketThread; Reason: THookSocketReason; Value: String);
+begin
+  ListBoxLog.Items.BeginUpdate;
+  case Reason of
+    HR_ResolvingBegin :  ListBoxLog.AddItem('Resolving Begin: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_ResolvingEnd :    ListBoxLog.AddItem('Resolving End: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_SocketCreate :    ListBoxLog.AddItem('Socket Create: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_SocketClose :     ListBoxLog.AddItem('Socket Close: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_Bind :            ListBoxLog.AddItem('Bind: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_Connect :         ListBoxLog.AddItem('Connect: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_CanRead :         ListBoxLog.AddItem('Can Read: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_CanWrite :        ListBoxLog.AddItem('Can Write: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_Listen :          ListBoxLog.AddItem('Listen: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_Accept :          ListBoxLog.AddItem('Accept: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_ReadCount :       ListBoxLog.AddItem('Read Count: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_WriteCount :      ListBoxLog.AddItem('Write Count: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    HR_Wait :            ListBoxLog.AddItem('Wait: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+ //   HR_Error :           ListBoxLog.AddItem('Error: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+  end;
+  ListBoxLog.Items.EndUpdate;
 end;
 
  {$IFDEF DEBUG_THREAD}
@@ -2114,7 +2140,7 @@ begin
 
   end;
 
-  StatusBar.Panels[3].Text := 'Task Count: ' + IntToStr(TaskObjects-1)  // This task will be freed
+  StatusBar.Panels[4].Text := 'Task Count: ' + IntToStr(TaskObjects-1)  // This task will be freed
 end;
 
 procedure TFormOLCB_Commander.OnConfigEditorMenuItemClick(Sender: TObject);
@@ -2178,4 +2204,4 @@ end;
 
 
 end.
-
+

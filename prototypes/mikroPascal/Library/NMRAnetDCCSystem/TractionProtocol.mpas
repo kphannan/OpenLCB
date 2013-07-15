@@ -278,8 +278,8 @@ begin
   CommandStationConfigurationShadowRam.ProgrammingMode := 0;
   CommandStationConfigurationShadowRam.DccBusMode := 0;
   CommandStationConfigurationShadowRam.RailComEnable := 0;
-  CommandStationConfigurationShadowRam.OverCurrentLevel := 0;
-  CommandStationConfigurationShadowRam.OverCurrentTime := 0;
+  CommandStationConfigurationShadowRam.OverCurrentLevel := 1000;      // Default to 1000ma
+  CommandStationConfigurationShadowRam.OverCurrentTime := 100;        // Default to 100ms
   CommandStationConfigurationShadowRam.RepeatSpeedPacket := 0;
   for i := 0 to FUNCTION_COUNT - 1 do
     CommandStationConfigurationShadowRam.RepeatFunctions[i] := 0;
@@ -289,7 +289,7 @@ begin
   OverCurrent.SampleTimeStepLimitShutDown := 1;
   OverCurrent.SampleTimeStepLimitRestart := 200;   // Min = 1000ms or 5ms * 200
   OverCurrent.SampleTimeStepLimitCounter := 0;
-  OverCurrent.Limit := 0;
+  OverCurrent.Limit := 1000;
   OverCurrent.Counter := 0;
   OverCurrent.iStateMachine := STATE_OVERCURRENT_NORMAL;
 end;

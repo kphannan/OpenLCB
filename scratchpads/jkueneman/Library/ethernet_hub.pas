@@ -60,20 +60,30 @@ type
     property Count: Integer read GetCount;
   end;
 
+  TOnSyncStatus = procedure(Client: TClientSocketThread; Reason: THookSocketReason; Value: String) of object;
+
   { TClientSocketThread }
   TClientSocketThread = class(TTransportLayerThread)
   private
     FConnectedSocket: TTCPBlockSocket;
     FhSocketLocal: TSocket;
+    FOnStatusReason: THookSocketReason;
+    FOnStatusValue: string;
+    FOnSyncStatus: TOnSyncStatus;
     FTCP_Receive_State: Integer;
   protected
     procedure Execute; override;
+    procedure OnStatus(Sender: TObject; Reason: THookSocketReason; const Value: String);
+    procedure SyncOnStatus;
     property hSocketLocal: TSocket read FhSocketLocal write FhSocketLocal;
     property ConnectedSocket: TTCPBlockSocket read FConnectedSocket;
     property TCP_Receive_State: Integer read FTCP_Receive_State write FTCP_Receive_State;    // Statemachine Index
+    property OnStatusReason: THookSocketReason read FOnStatusReason write FOnStatusReason;
+    property OnStatusValue: string read FOnStatusValue write FOnStatusValue;
   public
     constructor Create(CreateSuspended: Boolean); override;
     destructor Destroy; override;
+    property OnSyncStatus: TOnSyncStatus read FOnSyncStatus write FOnSyncStatus;
   end;
 
 
@@ -112,6 +122,7 @@ type
     FOnClientDisconnect: TOnClientConnectChangeFunc;
     FOnClientConnect: TOnClientConnectChangeFunc;
     FClientThreadList: TSocketThreadList;
+    FOnSyncStatus: TOnSyncStatus;
     FSyncErrorMessageFunc: TSyncRawMessageFunc;
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;
     FSyncSendMessageFunc: TSyncRawMessageFunc;
@@ -143,6 +154,7 @@ type
     property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
     property MessageManager: TTCPMessageManager read FMessageManager write FMessageManager;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+    property OnSyncStatus: TOnSyncStatus read FOnSyncStatus write FOnSyncStatus;
     property OnHubConnect: TOnHubConnectFunc read FOnHubConnect write FOnHubConnect;
     property OnHubDisconnect: TOnHubConnectFunc read FOnHubDisconnect write FOnHubDisconnect;
     property OnClientClientConnect: TOnClientConnectChangeFunc read FOnClientConnect write FOnClientConnect;
@@ -244,6 +256,7 @@ var
 begin
   ExecuteBegin;
   FConnectedSocket := TTCPBlockSocket.Create;
+  ConnectedSocket.OnStatus := @OnStatus;
   ConnectedSocket.ConvertLineEnd := True;      // User #10, #13, or both to be a "string"
   try
     Helper := TOpenLCBMessageHelper.Create;
@@ -297,166 +310,6 @@ begin
 
       DecomposeAndDispatchGridConnectString(ConnectedSocket.RecvString(1), Helper);
 
-      {
-      ReceivedData := ConnectedSocket.RecvPacket(1);
-
-      Done := False;
-      PacketIndex := 1;
-      Receive_GridConnectBufferIndex := 0;
-      while not Done and (PacketIndex <= Length(ReceivedData)) do
-      begin
-        TCP_Receive_Char := ReceivedData[PacketIndex];                       // Get the next byte from the stack
-        case TCP_Receive_State of
-          TCP_STATE_SYNC_START :                                                // Find a starting ':'
-            begin
-              if TCP_Receive_Char = ':' then
-              begin
-                Receive_GridConnectBufferIndex := 0;
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
-                Inc(Receive_GridConnectBufferIndex);
-                TCP_Receive_State := TCP_STATE_SYNC_FIND_X
-              end
-            end;
-          TCP_STATE_SYNC_FIND_X :
-            begin
-              if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
-              begin
-                if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
-                begin
-                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
-                  Inc(Receive_GridConnectBufferIndex);
-                  TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
-                end else
-                   TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
-              end
-            end;
-          TCP_STATE_SYNC_FIND_HEADER :
-            begin
-              if IsValidHexChar(TCP_Receive_Char) then
-              begin
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
-                if Receive_GridConnectBufferIndex = 9 then
-                  TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
-                Inc(Receive_GridConnectBufferIndex);
-              end else
-                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
-            end;
-          TCP_STATE_SYNC_FIND_N :
-            begin
-              if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
-              begin
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
-                Inc(Receive_GridConnectBufferIndex);
-                TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
-              end else
-                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
-            end;
-          TCP_STATE_SYNC_FIND_DATA :
-            begin
-               if TCP_Receive_Char = ';' then
-               begin
-                 if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
-                 begin
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
-
-                   ReceiveStr := Receive_GridConnectBuffer;
-                   ReceiveStr := Trim(ReceiveStr);
-
-                  if Helper.Decompose(ReceiveStr) then
-                  begin
-                    if EnableReceiveMessages then                                         // *** Communicate back to the app the raw message string
-                    begin
-                      BufferRawMessage := ReceiveStr;
-                      Synchronize(@SyncReceiveMessage);
-                    end;
-
-                    if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
-                    begin
-                      CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
-                      if Assigned(CompletedSendDatagram) then
-                      begin
-                        OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);          // Give the Task subsystem a crack at knowning about the sent datagram
-                        FreeAndNil(CompletedSendDatagram)
-                      end else
-                      begin
-                        BufferDatagramReceive := DatagramReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
-                        if Assigned(BufferDatagramReceive) then
-                        begin
-                          OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);        // Give the Task subsystem a crack at knowning about the received datagram
-                          FreeAndNil(BufferDatagramReceive)
-                        end;
-                      end;
-                    end else                                                              // *** Test for a Datagram message that came in ***
-                      OlcbTaskManager.ProcessReceiving(Helper);
-
-                    if Helper.Layer = ol_CAN then
-                    begin
-                      CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                      CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                      Helper.CopyTo(CANLayerTask.MessageHelper);
-                      AddTask(CANLayerTask);
-                    end;
-
-                    case Helper.MTI of
-                      MTI_INITIALIZATION_COMPLETE :
-                        begin
-                          InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                          InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                          Helper.CopyTo(InitializationCompleteTask.MessageHelper);
-                          AddTask(InitializationCompleteTask);
-                        end;
-                      MTI_VERIFIED_NODE_ID_NUMBER :
-                        begin
-                          VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                          VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                          Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
-                          AddTask(VerifiedNodeIDTask);
-                        end;
-                      MTI_CONSUMER_IDENTIFIED_CLEAR,
-                      MTI_CONSUMER_IDENTIFIED_SET,
-                      MTI_CONSUMER_IDENTIFIED_UNKNOWN,
-                      MTI_CONSUMER_IDENTIFIED_RESERVED,
-                      MTI_PRODUCER_IDENTIFIED_CLEAR,
-                      MTI_PRODUCER_IDENTIFIED_SET,
-                      MTI_PRODUCER_IDENTIFIED_UNKNOWN,
-                      MTI_PRODUCER_IDENTIFIED_RESERVED,
-                      MTI_PC_EVENT_REPORT :
-                        begin
-                          EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                          EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                          Helper.CopyTo(EventTask.MessageHelper);
-                          AddTask(EventTask);
-                        end;
-                      MTI_TRACTION_PROTOCOL :
-                        begin
-                          TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
-                          TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
-                          Helper.CopyTo(TractionProtocolTask.MessageHelper);
-                          AddTask(TractionProtocolTask);
-                        end;
-                    end;
-                  end else
-                    beep; // Can't decompose
-                 end;
-                 TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
-               end else
-               begin
-                 if IsValidHexChar(TCP_Receive_Char) then
-                 begin
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
-                   Inc(Receive_GridConnectBufferIndex);
-                 end else
-                   TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
-               end
-            end else
-              TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
-        end;
-        Inc(PacketIndex);
-      end;
-              }
-
-
    {    if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0)  and Assigned(OwnerHub) then
        begin
          OwnerHub.ClientThreadList.Remove(Self);
@@ -472,10 +325,27 @@ begin
   ExecuteEnd;
 end;
 
+procedure TClientSocketThread.OnStatus(Sender: TObject; Reason: THookSocketReason; const Value: String);
+begin
+  if Assigned(OnSyncStatus) then
+  begin
+    OnStatusReason := Reason;
+    OnStatusValue := Value;
+    Synchronize(@SyncOnStatus);
+  end;
+end;
+
+procedure TClientSocketThread.SyncOnStatus;
+begin
+  if Assigned(OnSyncStatus) then
+    OnSyncStatus(Self, OnStatusReason, OnStatusValue);
+end;
+
 constructor TClientSocketThread.Create(CreateSuspended: Boolean);
 begin
   inherited Create(True);
   FConnectedSocket := nil;
+  FOnSyncStatus := nil;
 end;
 
 destructor TClientSocketThread.Destroy;
@@ -567,6 +437,7 @@ begin
           ClientSocketThread.EnableReceiveMessages := OwnerHub.EnableReceiveMessages;
           ClientSocketThread.EnableSendMessages := OwnerHub.EnableSendMessages;
           ClientSocketThread.OnBeforeDestroyTask := OwnerHub.OnBeforeDestroyTask;
+          ClientSocketThread.OnSyncStatus := OwnerHub.OnSyncStatus;
           ClientSocketThread.FreeOnTerminate := True;
           OwnerHub.ClientThreadList.Add(ClientSocketThread);       // add it to the list
           ClientSocketThread.Suspended := False;
@@ -690,7 +561,8 @@ begin
   FSyncErrorMessageFunc := nil;
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
-  FOnBeforeDestroyTask := nil;;
+  FOnBeforeDestroyTask := nil;
+  FOnSyncStatus := nil;
   FClientThreadList := TSocketThreadList.Create;
   FMessageManager := TTCPMessageManager.Create;
 end;

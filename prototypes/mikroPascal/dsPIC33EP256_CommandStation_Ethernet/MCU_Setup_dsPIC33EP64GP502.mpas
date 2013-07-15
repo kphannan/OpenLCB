@@ -15,7 +15,7 @@ uses
   
 const
  // ipServer: array[0..3] of byte = (192, 168, 0, 127);  // iMac
-  ipServer: array[0..3] of byte = (192, 168, 0, 8);    // Windows XP in Parallels
+//  ipServer: array[0..3] of byte = (192, 168, 0, 8);    // Windows XP in Parallels
   
   DCC_TIMER_58US = 1850; //1792;            // Clock ticks every 31.25ns * 1856 = 58us interrupts
   DCC_TIMER_29US = 928;             // Clock ticks every 31.25ns * 928 = 29us interrupts

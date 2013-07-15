@@ -58,7 +58,9 @@ uses
   TractionProtocol,
   ServiceModeDefines;
 
-
+const
+  MAX_CONNECT_TRY_COUNT = 2;
+  DEFAULT_SERVER_PORT = 12021;
 
 var
   // EEPROM SPI PINS
@@ -334,19 +336,19 @@ begin
     case socket^.state of
       SOCKET_STATE_CLOSED :
         begin
-          UART_Write_Text('connection closed'+LF);
+          UART_Write_Text('Connection is closed'+LF);
         end;
       SOCKET_STATE_SYN_REC_SYN_SENT_WAIT_ACK :
         begin
-          UART_Write_Text('remote SYN segment received, our SYN segment sent, and We wait for ACK (server mode)'+LF);
+          UART_Write_Text('Remote SYN segment received, our SYN segment sent, and We wait for ACK (server mode)'+LF);
         end;
       SOCKET_STATE_ESTABLISHED :
         begin
-          UART_Write_Text('connection established'+LF);
+          UART_Write_Text('Connection is established'+LF);
         end;
       SOCKET_STATE_SYN_SENT_WAIT_FOR_SYN_RESPONSE :
         begin
-          UART_Write_Text('our SYN segment sent, and We wait for SYN response (client mode)'+LF);
+          UART_Write_Text('Our SYN segment sent, and We wait for SYN response (client mode)'+LF);
         end;
       SOCKET_STATE_FIN_SENT_WAIT_FOR_ACK :
         begin
@@ -364,22 +366,39 @@ begin
   end;
 end;
 
+procedure PrintMenu;
+begin
+  UART1_Write_Text(LF+'Menu:'+LF);
+  UART1_Write_Text('****************************************************************'+LF);
+  UART1_Write_Text('s xxx.xxx.xxx.xxx;  - Connect to Server with IP given IP Address'+LF);
+  UART1_Write_Text('u;                  - Disconnect from server'+LF);
+  UART1_Write_Text('a;                  - Allocate Train Node'+LF);
+  UART1_Write_Text('d;                  - Deallocate Train Node'+LF);
+  UART1_Write_Text('****************************************************************'+LF);
+  UART1_Write_Text('Don''t forget to terminate UART commands with a semicolon!'+LF);
+  UART1_Write_Text('****************************************************************'+LF);
+end;
+
 // *******************
 // MAIN LOOP
 // *******************
 var
   ActiveNode, TempNode: PNMRAnetNode;
-  i: Integer;
-  Cmd: Char;
+  i, IpCount, ConnectTryCount: Integer;
+  Cmd: array[128] of char;
   str: string[6];
   ProxyData: PTrainProxyRamData;
+  TempIP: TIPAddressStr;
+  TempIpServer: array[0..3] of byte;
+  TempChar: char;
+  ipPortClient, ipPortServer: Word;
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
   ANSELB := 0;
   
   TRISA4_bit := 0;
-  LATA4_bit := 1;
+  LATA4_bit := 0;
                                                // Output
  // _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, {MUSTANGPEAK_SERVICETRACK_NODE_ID_0_LO} MUSTANGPEAK_COMMANDSTATION_ID_0_LO);
@@ -404,6 +423,7 @@ begin
   DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
   
   EthernetTimerCounter := 0;
+  ipPortClient := 12022;
   
   UART1_Write_Text('Starting DCC Packets'+LF);
 
@@ -417,8 +437,10 @@ begin
   {$ENDIF}
   UART1_Write_Text('Initializing OlcbBus'+LF);
   MCU_Setup_Enable_OlcbBus;
-  
+
   LastSocketState := -1;
+  
+  PrintMenu;
   
   while (TRUE) do
   begin
@@ -442,16 +464,27 @@ begin
     end;
     
     PrintSocketState(OlcbSocket);
+    if OlcbSocket <> nil then
+    begin
+      if OlcbSocket^.State = SOCKET_STATE_CLOSED then
+      begin
+        Net_Ethernet_28j60_disconnectTCP(OlcbSocket);
+        OlcbSocket := nil;
+      end;
+    end;
     
     Net_Ethernet_28j60_doPacket;
     
     if (CANStorage_NextToSend <> nil) or (CANStorage_NextHighPriorityToSend <> nil) then
       Net_Ethernet_28j60_startSendTCP(OlcbSocket);
-    
-    if UART1_Data_Ready then
+      
+    LATA4_bit := not LATA4_bit;
+
+    if UART1_Data_Ready = 1 then
     begin
-      Cmd := UART1_Read;
-      case Cmd of
+      UART_Read_Text(Cmd, ';', 128);
+      UART_Write_Text('Echo Cmd: ' + Cmd + LF);
+      case Cmd[0] of
         'u', 'U' :
           begin
             if OlcbSocket <> nil then
@@ -471,16 +504,48 @@ begin
           begin
             if OlcbSocket = nil then
             begin
-              while OlcbSocket = nil do
+              TempIP := '';
+              ipCount := 0;
+              i := 1;       // Skip over the 's'
+              while (Cmd[i] = ' ') and (Cmd[i] <> #0) do
+                Inc(i);
+              while IsValidIPChar(Cmd[i]) and (ipCount < MAX_IP_ADDRESS_LEN) do
               begin
-                UART_Write_Text('Connecting' + LF);
-                case Net_Ethernet_28j60_connectTCP(@ipServer, 12021, 12022, @OlcbSocket) of
-                  0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
-                  1 : UART_Write_Text('successful transmit SYN segment' + LF);
-                  2 : UART_Write_Text('no available socket_28j60' + LF);
-                  3 : UART_Write_Text('no ARP resolve' + LF);
-                end;
+                TempIP[ipCount] := Cmd[i];
+                Inc(i);
+                Inc(ipCount);
               end;
+              TempIP[ipCount] := #0;
+              
+              if strLen(TempIP) > 0 then
+              begin
+                if StrToIPAddress(TempIP, TempIpServer, ipPortServer) then
+                begin
+                  if ipPortServer = 0 then
+                    ipPortServer := DEFAULT_SERVER_PORT;
+                  ConnectTryCount := 0;
+                  WordToStr(ipPortServer, s1);
+                  TrimValue(@s1);
+                  WordToStr(ipPortClient, str);
+                  TrimValue(@str);
+                  UART1_Write_Text('Connecting to IP Address: ' + IPAddressToStr(TempIpServer) + ':' + s1  + '  Client port: ' + str+ LF);
+                  while (OlcbSocket = nil) and (ConnectTryCount < MAX_CONNECT_TRY_COUNT) do
+                  begin
+                    case Net_Ethernet_28j60_connectTCP(@TempIpServer, ipPortServer, ipPortClient, @OlcbSocket) of
+                      0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
+                      1 : UART_Write_Text('successful transmit SYN segment' + LF);
+                      2 : UART_Write_Text('no available socket_28j60' + LF);
+                      3 : UART_Write_Text('no ARP resolve' + LF);
+                    end;
+                    Inc(ConnectTryCount);
+                  end;
+                  Inc(ipPortClient);
+                  if ConnectTryCount = MAX_CONNECT_TRY_COUNT then
+                    UART_Write_Text('Failed to Connect'+LF);
+                end else
+                  UART_Write_Text('Invalid IP Address'+LF);
+              end else
+                UART_Write_Text('Please enter a IP Address'+LF);
             end else
               UART_Write_Text('Already Connected' + LF);
           end;

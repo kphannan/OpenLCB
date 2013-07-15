@@ -72,6 +72,7 @@ type
     TX_DatagramRejected: TCANBuffer;
   end;
 
+
 procedure CANStorage_Initialize;
 procedure CANStorage_FlushBuffers(AliasID: Word);
 
@@ -330,13 +331,13 @@ begin
                    if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
                    begin
                      {$IFDEF TRACE_ETHERNET}
-                     UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
+                     UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
                      {$ENDIF}
                      ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
                    end else
                    begin
                      {$IFDEF TRACE_ETHERNET}
-                     UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
+                     UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
                      {$ENDIF}
                      ReceivedOnFilter0(@RxCANBuffer);
                    end;
