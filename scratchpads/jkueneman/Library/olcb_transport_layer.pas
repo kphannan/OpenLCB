@@ -394,6 +394,10 @@ end;
   TOlcbTaskBase = class
   private
     FErrorCode: DWord;
+    FLog: Boolean;
+    FiLogState: Integer;
+    FLogStrings: TStringList;
+    FLogThreadName: string;
     FMessageHelper: TOpenLCBMessageHelper;
     FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
     FSending: Boolean;
@@ -451,19 +455,24 @@ end;
     procedure SendVerifyNodeIDGlobalMessage;
     procedure SendVerifyNodeIDToDestinationMessage;
     procedure SyncOnBeforeTaskDestroy;
-    property iState: Integer read FiState write FiState;
     property Done: Boolean read FDone;
+    property iLogState: Integer read FiLogState write FiLogState;
+    property iState: Integer read FiState write FiState;
+    property LogStrings: TStringList read FLogStrings write FLogStrings;
+    property LogTheadName: string read FLogThreadName write FLogThreadName;
     property StartAsSending: Boolean read FStartAsSending write FStartAsSending;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); virtual;
     destructor Destroy; override;
     function Clone: TOlcbTaskBase; virtual; abstract;
     procedure CopyTo(Target: TOlcbTaskBase); virtual;
+    procedure LogMsg(Msg: string); virtual;
     property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
     property DestinationAlias: Word read FDestinationAlias;
     property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
     property ErrorCode: DWord read FErrorCode write FErrorCode;
     property ErrorString: string read FErrorString write FErrorString;
+    property Log: Boolean read FLog write FLog;
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
@@ -505,10 +514,13 @@ end;
 
   TSimpleNodeInformationTask = class(TOlcbTaskBase)
   private
+    FiLogStateSnip: Integer;
     FSnip: TOlcbSNIP;
-    FStateMachineIndex: Integer;  // for inner SNIP statemachine
+    FiSnipState: Integer;  // for inner SNIP statemachine
   protected
-    property StateMachineIndex: Integer read FStateMachineIndex write FStateMachineIndex;
+    procedure LogSnipMsg(Msg: string);
+    property iLogStateSnip: Integer read FiLogStateSnip write FiLogStateSnip;
+    property iSnipState: Integer read FiSnipState write FiSnipState;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); override;
     destructor Destroy; override;
@@ -2457,13 +2469,36 @@ begin
   end;
 end;
 
+procedure TOlcbTaskBase.LogMsg(Msg: string);
+begin
+  if Log then
+  begin
+    if iState <> iLogState then
+    begin
+      if iState = STATE_DONE then
+        LogStrings.Add('Class: ' +  Self.ClassName + #9 + '; State = STATE_DONE : ' + Msg)
+      else
+        LogStrings.Add('Class: ' +  Self.ClassName + #9 + '; State = ' + IntToStr(iState) + ': ' + Msg);
+      iLogState := iState
+    end;
+  end;
+end;
+
 procedure TOlcbTaskBase.Process(MessageInfo: TOlcbMessage);
 begin
-  FHasStarted := True;
+  if not HasStarted then
+  begin
+    FHasStarted := True;
+    LogStrings.Add('................................');
+    LogMsg('Task starting');
+    LogStrings.Add('................................');
+  end;
   if ForceTermination then
   begin
     Sending := True;
     iState := STATE_DONE;
+    LogMsg('Task force terminated');
+    LogStrings.Add('...............................');
   end;
 end;
 
@@ -2687,12 +2722,16 @@ begin
   FForceTermination := False;
   FHasStarted := False;
   FErrorString := '';
+  FLogStrings := TStringList.Create;
+  FLog := False;
+  FiLogState := 0;
 end;
 
 destructor TOlcbTaskBase.Destroy;
 begin
   Dec(TaskObjects);
   FreeAndNil(FMessageHelper);
+  FreeAndNil(FLogStrings);
   inherited Destroy;
 end;
 
@@ -2774,12 +2813,14 @@ begin
   case iState of
     0: begin
         // Ask for a read from the node
+        LogMsg('SendMemoryConfigurationRead');
          SendMemoryConfigurationRead(AddressSpace, CurrentOffset, PayloadSize, ForceOptionalSpaceByte);
          Sending := False;
          Inc(FiState);
        end;
     1: begin
          // Node received the datagram
+         LogMsg('Waiting for SendMemoryConfigurationRead Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -2788,6 +2829,7 @@ begin
        end;
     2: begin
           // Node sending frame of data
+          LogMsg('Waiting for SendMemoryConfigurationRead Datagram Reply');
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
@@ -2834,6 +2876,7 @@ begin
         end;
     STATE_DONE : begin
        // Done
+         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -2882,20 +2925,24 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0 : begin
+          LogMsg('SendMemoryConfigurationWrite');
           SendMemoryConfigurationWrite(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
           Sending := False;
           Inc(FiState);
         end;
     1 : begin
           // Node received the request datagram
+           LogMsg('Waiting for SendMemoryConfigurationWrite Datagram ACK Reply');
            if IsDatagramAckFromDestination(MessageInfo) then
            begin
              Sending := True;
              FiState := STATE_DONE;
            end;
         end;
-    STATE_DONE : begin
+    STATE_DONE :
+       begin
        // Done
+         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -2939,10 +2986,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendIdentifyConsumerMessage');
          SendIdentifyConsumerMessage(Event);
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -2972,10 +3022,13 @@ begin
   inherited Process(MessageInfo);
    case iState of
     0: begin
+         LogMsg('SendIdentifyProducerMessage');
          SendIdentifyProducerMessage(Event);
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3015,12 +3068,14 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendTractionReserveProxyMessage');
          FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
          SendTractionReserveProxyMessage;
          Sending := False;
          iState := 1;
        end;
     1: begin
+         LogMsg('Waiting for SendTractionReserveProxyMessage Reply');
          if IsTractionReserveProxyReply(MessageInfo) then
          begin
            Sending := True;
@@ -3036,11 +3091,13 @@ begin
          end
        end;
     2: begin
+         LogMsg('SendTractionAttachDccProxyMessage');
          SendTractionAttachDccProxyMessage(Address, IsShort, SpeedStep);
          Sending := False;
          iState := 3;
        end;
     3: begin
+         LogMsg('Waiting for SendTractionAttachDccProxyMessage Reply');
          if IsTractionAttachDCCAddressReply(MessageInfo) then
          begin
            if TOpenLCBMessageHelper( MessageInfo).DataCount = 8 then
@@ -3052,6 +3109,7 @@ begin
          end;
        end;
     4: begin
+         LogMsg('SendTractionReleaseProxyMessage');
          SendTractionReleaseProxyMessage;
          iState := STATE_DONE;
        end;
@@ -3093,12 +3151,14 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendTractionReserveProxyMessage');
          FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
          SendTractionReserveProxyMessage;
          Sending := False;
          iState := 1;
        end;
     1: begin
+         LogMsg('Waiting for SendTractionReserveProxyMessage Reply');
          if IsTractionReserveProxyReply(MessageInfo) then
          begin
            Sending := True;
@@ -3114,11 +3174,13 @@ begin
          end
        end;
     2: begin
+         LogMsg('SendTractionDetachDccAddressProxyMessage');
          SendTractionDetachDccAddressProxyMessage(Address, IsShort);
          Sending := False;
          iState := 3;
        end;
     3: begin
+         LogMsg('Waiting for SendTractionDetachDccAddressProxyMessage Reply');
          if IsTractionDetachDCCAddressReply(MessageInfo) then
          begin
            if TOpenLCBMessageHelper( MessageInfo).DataCount = 7 then
@@ -3129,10 +3191,13 @@ begin
          end;
        end;
     4: begin
+         LogMsg('SendTractionReleaseProxyMessage');
          SendTractionReleaseProxyMessage;
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3164,10 +3229,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendTractionQueryDccAddressProxyMessage');
          SendTractionQueryDccAddressProxyMessage(Address, IsShort);
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3199,10 +3267,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendTractionFunction');
          SendTractionFunction(Address, Value);
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3277,11 +3348,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendTractionQuerySpeeds');
          SendTractionQuerySpeeds;
          Sending := False;
          iState := 1;
        end;
     1: begin
+         LogMsg('Waiting for SendTractionQuerySpeeds first frame Reply');
          if IsTractionSpeedsQueryFirstFrameReply(MessageInfo) then
          begin
            FSetSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(3, 4);
@@ -3291,6 +3364,7 @@ begin
          end;
        end;
     2: begin
+         LogMsg('Waiting for SendTractionQuerySpeeds second frame Reply');
          if IsTractionSpeedsQuerySecondFrameReply(MessageInfo) then
          begin
            FActualSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 3);
@@ -3298,7 +3372,9 @@ begin
            iState := STATE_DONE;
          end;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3330,11 +3406,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendTractionQueryFunction');
          SendTractionQueryFunction(Address);
          Sending := False;
          iState := 1;
        end;
     1: begin
+         LogMsg('Waiting for SendTractionQueryFunction Reply');
          if IsTractionFunctionQueryReply(MessageInfo) then
          begin
            FValue := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(6, 7);
@@ -3342,7 +3420,9 @@ begin
            iState := STATE_DONE
          end;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3361,10 +3441,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendIdentifyEventsAddressedMessage');
          SendIdentifyEventsAddressedMessage;
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+      begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3382,10 +3465,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendIdentifyEventsMessage');
          SendIdentifyEventsMessage;
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3458,11 +3544,21 @@ end;
 
 { TSimpleNodeInformationTask }
 
+procedure TSimpleNodeInformationTask.LogSnipMsg(Msg: string);
+begin
+  if iSnipState <> iLogStateSnip then
+  begin
+    iLogStateSnip := iSnipState;
+    LogMsg(Msg)
+  end;
+end;
+
 constructor TSimpleNodeInformationTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FSnip := TOlcbSNIP.Create;
-  FStateMachineIndex := 0;
+  FiSnipState := 0;
+  iSnipState := 0;
 end;
 
 destructor TSimpleNodeInformationTask.Destroy;
@@ -3499,27 +3595,31 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendSnipMessage');
          SendSnipMessage;
-         StateMachineIndex := 0;
+         iSnipState := 0;
          Sending := False;
          Inc(FiState);
        end;
     1: begin
+         LogMsg('Waiting for SendSnipMessage Reply');
          if IsSnipMessageReply(MessageInfo) then
          begin
            LocalMessageHelper := TOpenLCBMessageHelper( MessageInfo);  // Already know this is true
            i := 2;                                               // Strip off the destination Alias
            while i < LocalMessageHelper.DataCount do
            begin
-             case StateMachineIndex of
+             case iSnipState of
                STATE_SNII_MFG_VERSION :
                  begin
+                   LogSnipMsg('STATE_SNII_MFG_VERSION');
                    Snip.SniiMfgVersion := LocalMessageHelper.Data[i];
                    Inc(i);
-                   StateMachineIndex := STATE_SNII_MFG_NAME;
+                   iSnipState := STATE_SNII_MFG_NAME;
                  end;
                STATE_SNII_MFG_NAME     :
                  begin
+                   LogSnipMsg('STATE_SNII_MFG_NAME');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiMfgName := Snip.SniiMfgName + Chr( LocalMessageHelper.Data[i]);
@@ -3527,11 +3627,12 @@ begin
                    end else
                    begin
                      Inc(i);
-                     StateMachineIndex := STATE_SNII_MFG_MODEL;
+                     iSnipState := STATE_SNII_MFG_MODEL;
                    end;
                  end;
                STATE_SNII_MFG_MODEL     :
                  begin
+                   LogSnipMsg('STATE_SNII_MFG_MODEL');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiMfgModel := Snip.SniiMfgModel + Chr( LocalMessageHelper.Data[i]);
@@ -3539,11 +3640,12 @@ begin
                    end else
                    begin
                      Inc(i);
-                     StateMachineIndex := STATE_SNII_HARDWARE_VER;
+                     iSnipState := STATE_SNII_HARDWARE_VER;
                    end;
                  end;
                STATE_SNII_HARDWARE_VER  :
                  begin
+                   LogSnipMsg('STATE_SNII_HARDWARE_VER');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiHardwareVersion := Snip.SniiHardwareVersion + Chr( LocalMessageHelper.Data[i]);
@@ -3551,11 +3653,12 @@ begin
                    end else
                    begin
                      Inc(i);
-                     StateMachineIndex := STATE_SNII_SOFTWARE_VER;
+                     iSnipState := STATE_SNII_SOFTWARE_VER;
                    end;
                  end;
                STATE_SNII_SOFTWARE_VER  :
                  begin
+                   LogSnipMsg('STATE_SNII_SOFTWARE_VER');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiSoftwareVersion := Snip.SniiSoftwareVersion + Chr( LocalMessageHelper.Data[i]);
@@ -3563,17 +3666,19 @@ begin
                    end else
                    begin
                      Inc(i);
-                     StateMachineIndex := STATE_SNII_USER_VERSION;
+                     iSnipState := STATE_SNII_USER_VERSION;
                    end;
                  end;
                STATE_SNII_USER_VERSION  :
                  begin
+                   LogSnipMsg('STATE_SNII_USER_VERSION');
                    Snip.SniiUserVersion := LocalMessageHelper.Data[i];
                    Inc(i);
-                   StateMachineIndex := STATE_SNII_USER_NAME;
+                   iSnipState := STATE_SNII_USER_NAME;
                  end;
                STATE_SNII_USER_NAME     :
                  begin
+                   LogSnipMsg('STATE_SNII_USER_NAME');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiUserName := Snip.SniiUserName + Chr( LocalMessageHelper.Data[i]);
@@ -3581,11 +3686,12 @@ begin
                    end else
                    begin
                      Inc(i);
-                     StateMachineIndex := STATE_SNII_USER_DESC;
+                     iSnipState := STATE_SNII_USER_DESC;
                    end;
                  end;
                STATE_SNII_USER_DESC     :
                  begin
+                   LogSnipMsg('STATE_SNII_USER_DESC');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiUserDescription := Snip.SniiUserDescription + Chr( LocalMessageHelper.Data[i]);
@@ -3601,7 +3707,9 @@ begin
            end
          end;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3625,12 +3733,14 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendProtocolIdentificationProtocolMessage');
          SendProtocolIdentificationProtocolMessage;
          FProtocols := 0;
          Sending := False;
          Inc(FiState);
        end;
     1: begin
+         LogMsg('Waiting for SendProtocolIdentificationProtocolMessage Reply');
          if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
            FProtocols := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 7);
@@ -3639,6 +3749,7 @@ begin
          end;
        end;
     STATE_DONE: begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3678,11 +3789,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendMemoryConfigurationSpaceInfo');
          SendMemoryConfigurationSpaceInfo(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     1: begin
+         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -3690,6 +3803,7 @@ begin
          end;
        end;
     2: begin
+         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
@@ -3698,7 +3812,9 @@ begin
            iState := STATE_DONE;
          end;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3736,11 +3852,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendMemoryConfigurationOptions');
          SendMemoryConfigurationOptions;
          Sending := False;
          Inc(FiState);
        end;
     1: begin
+         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -3748,6 +3866,7 @@ begin
          end;
        end;
     2: begin
+         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -3756,7 +3875,9 @@ begin
            iState := STATE_DONE;
          end;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3774,10 +3895,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendVerifyNodeIDGlobalMessage');
          SendVerifyNodeIDGlobalMessage;
          iState := STATE_DONE;
        end;
-    STATE_DONE: begin
+    STATE_DONE:
+       begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3795,10 +3919,12 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendVerifyNodeIDToDestinationMessage');
          SendVerifyNodeIDToDestinationMessage;
          iState := STATE_DONE;
        end;
     STATE_DONE: begin
+         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3872,12 +3998,14 @@ begin
   case iState of
     0: begin
          // Ask for the protocols the node supports
+         LogMsg('SendProtocolIdentificationProtocolMessage');
          SendProtocolIdentificationProtocolMessage;
          Inc(FiState);
          Sending := False;
        end;
     1: begin
          // First see if the node even supports the Memory Configuration Protocol
+         LogMsg('Waiting for SendProtocolIdentificationProtocolMessage Datagram ACK Reply');
          if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
            PIP := TOlcbProtocolIdentification.Create;
@@ -3901,12 +4029,14 @@ begin
        end;
     2: begin
          // Ask for what Address Spaces the node supports
+         LogMsg('SendMemoryConfigurationOptions');
          SendMemoryConfigurationOptions;
          Inc(FiState);
          Sending := False;
        end;
     3: begin
          // Node received the request datagram
+         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -3915,6 +4045,7 @@ begin
        end;
     4: begin
          // Is the address space we are asking for supported?
+         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -3938,12 +4069,14 @@ begin
        end;
     5: begin
         // Ask for details about the address space we are interested in
+         LogMsg('SendMemoryConfigurationSpaceInfo');
          SendMemoryConfigurationSpaceInfo(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     6: begin
         // Node received the datagram
+         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -3951,6 +4084,7 @@ begin
          end;
        end;
     7: begin
+         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram Reply');
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
            Space := TOlcbMemAddressSpace.Create;
@@ -3988,6 +4122,7 @@ begin
        end;
     STATE_READ_START : begin
          // Calculate how many bytes to read in this frame (depends on if the address space is carried in the frame or if at the end of the mem space)
+         LogMsg('STATE_READ_START');
          if MaxAddress - CurrentAddress > MaxPayloadSize then
             CurrentSendSize := MaxPayloadSize
           else
@@ -3997,12 +4132,14 @@ begin
        end;
     9: begin
         // Ask for a read from the node
+         LogMsg('SendMemoryConfigurationRead');
          SendMemoryConfigurationRead(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte);
          Sending := False;
          Inc(FiState);
        end;
     10: begin
          // Node received the datagram
+         LogMsg('Waiting for SendMemoryConfigurationRead Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4011,6 +4148,7 @@ begin
        end;
     11: begin
           // Node sending frame of data
+          LogMsg('Waiting for SendMemoryConfigurationRead Datagram Reply');
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
@@ -4050,6 +4188,7 @@ begin
         end;
     STATE_WRITE_START :
         begin
+          LogMsg('STATE_WRITE_START');
           if DataStream.Size > Space.AddressHi - Space.AddressLo then
             ErrorCode := ERROR_ADDRESS_SPACE_WRITE_LARGER_THAN_SPACE
           else
@@ -4058,6 +4197,7 @@ begin
         end;
     STATE_DONE : begin
        // Done
+         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -4102,11 +4242,13 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
+         LogMsg('SendMemoryConfigurationOptions');
          SendMemoryConfigurationOptions;
          Inc(FiState);
          Sending := False;
        end;
     1: begin
+         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4114,6 +4256,7 @@ begin
          end;
        end;
     2: begin
+         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -4125,11 +4268,13 @@ begin
          end;
        end;
     3: begin
+         LogMsg('SendMemoryConfigurationSpaceInfo');
          SendMemoryConfigurationSpaceInfo(CurrentAddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     4: begin
+         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4137,6 +4282,7 @@ begin
          end;
        end;
     5: begin
+         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, CurrentAddressSpace, DatagramReceive) then
          begin
@@ -4156,6 +4302,7 @@ begin
        end;
     STATE_DONE: begin
        // Done
+         LogMsg('Done');
          FDone := True
        end;
   end;

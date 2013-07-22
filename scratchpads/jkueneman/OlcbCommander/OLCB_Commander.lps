@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="46">
+    <Units Count="49">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -23,8 +23,8 @@
         <UnitName Value="form_main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1922"/>
-        <CursorPos X="4" Y="1943"/>
+        <TopLine Value="447"/>
+        <CursorPos X="56" Y="454"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -105,10 +105,10 @@
         <Filename Value="..\Library\com_port_hub.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="com_port_hub"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="76"/>
-        <CursorPos X="58" Y="88"/>
+        <TopLine Value="112"/>
+        <CursorPos X="5" Y="140"/>
         <UsageCount Value="203"/>
         <Loaded Value="True"/>
       </Unit9>
@@ -119,7 +119,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_config_mem_viewer"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="17" Y="10"/>
@@ -187,7 +187,7 @@
         <Filename Value="unit_cdi_parser.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="unit_cdi_parser"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="35" Y="15"/>
@@ -204,7 +204,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="100"/>
         <CursorPos X="3" Y="121"/>
-        <UsageCount Value="163"/>
+        <UsageCount Value="166"/>
       </Unit17>
       <Unit18>
         <Filename Value="olcb_transport_layer.pas"/>
@@ -213,16 +213,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="41" Y="4"/>
-        <UsageCount Value="153"/>
+        <UsageCount Value="156"/>
       </Unit18>
       <Unit19>
         <Filename Value="..\Library\olcb_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_utilities"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1149"/>
-        <CursorPos X="3" Y="1113"/>
+        <TopLine Value="99"/>
+        <CursorPos X="36" Y="123"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit19>
@@ -230,7 +230,7 @@
         <Filename Value="..\Library\olcb_defines.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_defines"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="18" Y="1"/>
@@ -241,10 +241,10 @@
         <Filename Value="..\Library\ethernet_hub.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ethernet_hub"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="327"/>
-        <CursorPos X="1" Y="342"/>
+        <TopLine Value="86"/>
+        <CursorPos X="15" Y="149"/>
         <UsageCount Value="206"/>
         <Loaded Value="True"/>
       </Unit21>
@@ -323,13 +323,10 @@
       <Unit31>
         <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
         <UnitName Value="blcksock"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="3043"/>
+        <TopLine Value="146"/>
         <CursorPos X="115" Y="3060"/>
-        <UsageCount Value="42"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="43"/>
       </Unit31>
       <Unit32>
         <Filename Value="E:\usr\local\share\fpcsrc\rtl\objpas\classes\classesh.inc"/>
@@ -370,11 +367,12 @@
       <Unit37>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
-        <EditorIndex Value="2"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1046"/>
-        <CursorPos X="1" Y="1049"/>
-        <UsageCount Value="75"/>
+        <TopLine Value="2463"/>
+        <CursorPos X="25" Y="2481"/>
+        <UsageCount Value="76"/>
         <Loaded Value="True"/>
       </Unit37>
       <Unit38>
@@ -416,156 +414,147 @@
       <Unit43>
         <Filename Value="..\Components\synapse40\source\lib\synaser.pas"/>
         <UnitName Value="synaser"/>
-        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2241"/>
         <CursorPos X="15" Y="2266"/>
         <UsageCount Value="14"/>
-        <Loaded Value="True"/>
       </Unit43>
       <Unit44>
         <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\include\customlistbox.inc"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="543"/>
         <CursorPos X="1" Y="559"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit44>
       <Unit45>
         <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="600"/>
         <CursorPos X="1" Y="624"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="11"/>
       </Unit45>
+      <Unit46>
+        <Filename Value="..\..\..\..\..\..\..\..\usr\local\share\fpcsrc\rtl\inc\threadh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="127"/>
+        <CursorPos X="41" Y="143"/>
+        <UsageCount Value="10"/>
+      </Unit46>
+      <Unit47>
+        <Filename Value="..\..\..\..\..\..\..\..\usr\local\share\fpcsrc\rtl\bsd\sysosh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="40" Y="27"/>
+        <UsageCount Value="10"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="..\..\..\..\..\..\..\..\usr\local\share\fpcsrc\rtl\inc\systemh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="993"/>
+        <CursorPos X="25" Y="1009"/>
+        <UsageCount Value="10"/>
+      </Unit48>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="24" HistoryIndex="23">
       <Position1>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="616" Column="1" TopLine="592"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="462" Column="17" TopLine="446"/>
       </Position1>
       <Position2>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1943" Column="1" TopLine="1922"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="400" Column="28" TopLine="400"/>
       </Position2>
       <Position3>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1945" Column="1" TopLine="1922"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="462" Column="34" TopLine="447"/>
       </Position3>
       <Position4>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1946" Column="1" TopLine="1922"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="465" Column="114" TopLine="458"/>
       </Position4>
       <Position5>
-        <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="342" Column="1" TopLine="327"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="894" Column="114" TopLine="880"/>
       </Position5>
       <Position6>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="616" Column="1" TopLine="592"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="934" Column="131" TopLine="917"/>
       </Position6>
       <Position7>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="620" Column="1" TopLine="596"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="606" Column="17" TopLine="590"/>
       </Position7>
       <Position8>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="621" Column="1" TopLine="597"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="72" Column="22" TopLine="69"/>
       </Position8>
       <Position9>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="623" Column="1" TopLine="599"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="1001" Column="112" TopLine="517"/>
       </Position9>
       <Position10>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="624" Column="1" TopLine="600"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="73" Column="21" TopLine="47"/>
       </Position10>
       <Position11>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="626" Column="1" TopLine="602"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2772" Column="228" TopLine="2757"/>
       </Position11>
       <Position12>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="599" Column="1" TopLine="585"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2774" Column="87" TopLine="2758"/>
       </Position12>
       <Position13>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="600" Column="1" TopLine="585"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2713" Column="19" TopLine="2700"/>
       </Position13>
       <Position14>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="601" Column="1" TopLine="585"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="462" Column="34" TopLine="432"/>
       </Position14>
       <Position15>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="603" Column="1" TopLine="585"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="525" Column="17" TopLine="510"/>
       </Position15>
       <Position16>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="604" Column="1" TopLine="585"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="515" Column="44" TopLine="493"/>
       </Position16>
       <Position17>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="610" Column="1" TopLine="586"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="465" Column="90" TopLine="448"/>
       </Position17>
       <Position18>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="613" Column="1" TopLine="589"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2708" Column="73" TopLine="2692"/>
       </Position18>
       <Position19>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="616" Column="1" TopLine="592"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2481" Column="106" TopLine="2471"/>
       </Position19>
       <Position20>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="620" Column="1" TopLine="596"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2479" Column="56" TopLine="2463"/>
       </Position20>
       <Position21>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="621" Column="1" TopLine="597"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2481" Column="71" TopLine="2464"/>
       </Position21>
       <Position22>
-        <Filename Value="..\..\..\..\..\..\..\..\Developer\lazarus\lcl\interfaces\carbon\carbonobject.inc"/>
-        <Caret Line="623" Column="1" TopLine="599"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2479" Column="64" TopLine="2463"/>
       </Position22>
       <Position23>
-        <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="342" Column="1" TopLine="327"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2479" Column="54" TopLine="2463"/>
       </Position23>
       <Position24>
-        <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
-        <Caret Line="147" Column="58" TopLine="136"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="2479" Column="64" TopLine="2463"/>
       </Position24>
-      <Position25>
-        <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
-        <Caret Line="3056" Column="3" TopLine="3053"/>
-      </Position25>
-      <Position26>
-        <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="342" Column="1" TopLine="327"/>
-      </Position26>
-      <Position27>
-        <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
-        <Caret Line="3058" Column="1" TopLine="3052"/>
-      </Position27>
-      <Position28>
-        <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
-        <Caret Line="2602" Column="1" TopLine="2587"/>
-      </Position28>
-      <Position29>
-        <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
-        <Caret Line="2611" Column="1" TopLine="2587"/>
-      </Position29>
-      <Position30>
-        <Filename Value="form_main.pas"/>
-        <Caret Line="1943" Column="4" TopLine="1922"/>
-      </Position30>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>
