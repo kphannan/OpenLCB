@@ -30,7 +30,7 @@ type
 
 { TComPortHub }
 
-  TComPortHub = class(TTransportLayerThread)
+  TComPortHub =  class(TTransportLayerThread)
   private
     FBaudRate: DWord;                                                           // Baud rate to connect with
     FPort: String;                                                              // Port to connect to
