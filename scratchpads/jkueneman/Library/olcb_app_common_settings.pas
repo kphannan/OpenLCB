@@ -33,6 +33,11 @@ const
   STR_INI_ETHERNET_LOCAL_IP = 'LocalIP';
   STR_INI_ETHERNET_LOCAL_PORT = 'LocalPort';
 
+
+
+  MAX_MESSAGE_WAIT_TIME_DEFAULT = 5000;    // 5 seconds
+  MAX_DATAGRAM_WAIT_TIME_DEFAULT = 20000;  // 20 seconds
+
 type
   TComPortParity = (
     cpp_None,
@@ -88,6 +93,8 @@ type
   private
     FAliasID: string;
     FAutoScanNetworkAtBoot: Boolean;
+    FDatagramWaitTime: DWord;
+    FMessageWaitTime: DWord;
     FNodeID: string;
     FSendPacketDelay: Word;
     procedure SetAliasID(AValue: string);
@@ -99,8 +106,10 @@ type
     function NodeIDAsVal: DWord;
     property AutoScanNetworkAtBoot: Boolean read FAutoScanNetworkAtBoot write FAutoScanNetworkAtBoot;
     property AliasID: string read FAliasID write SetAliasID;
+    property DatagramWaitTime: DWord read FDatagramWaitTime write FDatagramWaitTime;
     property NodeID: string read FNodeID write FNodeID;
     property SendPacketDelay: Word read FSendPacketDelay write FSendPacketDelay;
+    property MessageWaitTime: DWord read FMessageWaitTime write FMessageWaitTime;
   end;
 
   { TThrottleSettings }
@@ -208,6 +217,8 @@ begin
   FAliasID := '0x0AAA';
   FNodeID := '0x010203040506';
   FSendPacketDelay := 0;
+  FMessageWaitTime := MAX_MESSAGE_WAIT_TIME_DEFAULT;
+  FDatagramWaitTime := MAX_DATAGRAM_WAIT_TIME_DEFAULT;
 end;
 
 procedure TGeneralSettings.LoadFromFile(IniFile: TIniFile);

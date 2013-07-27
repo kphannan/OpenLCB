@@ -4,7 +4,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Top = 310
   Width = 788
   Caption = 'OpenLCB Commander'
-  ClientHeight = 385
+  ClientHeight = 405
   ClientWidth = 788
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -15,7 +15,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.8.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 362
+    Height = 390
     Top = 0
     Width = 788
     ActivePage = TabSheetNetwork
@@ -24,26 +24,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 336
-      ClientWidth = 780
+      ClientHeight = 351
+      ClientWidth = 782
       object PanelNetwork: TPanel
         Left = 0
-        Height = 336
+        Height = 351
         Top = 0
-        Width = 780
+        Width = 782
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 336
-        ClientWidth = 780
+        ClientHeight = 351
+        ClientWidth = 782
         TabOrder = 0
         OnClick = PanelNetworkClick
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 336
+          Height = 351
           Top = 0
           Width = 502
           Align = alLeft
-          DefaultItemHeight = 16
+          DefaultItemHeight = 18
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -59,37 +59,55 @@ object FormOLCB_Commander: TFormOLCB_Commander
           OnSelectionChanged = TreeViewNetworkSelectionChanged
           Options = [tvoAllowMultiselect, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoRightClickSelect, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
         end
-        object Button1: TButton
-          Left = 197
-          Height = 25
-          Top = 284
-          Width = 75
-          Caption = 'Button1'
-          OnClick = Button1Click
-          TabOrder = 1
-        end
         object Splitter1: TSplitter
           Left = 502
-          Height = 336
+          Height = 351
           Top = 0
           Width = 10
         end
-        object ListBoxLog: TListBox
+        object Panel1: TPanel
           Left = 512
-          Height = 336
+          Height = 351
           Top = 0
-          Width = 268
+          Width = 270
           Align = alClient
-          ItemHeight = 0
-          TabOrder = 3
+          Caption = 'Panel1'
+          ClientHeight = 351
+          ClientWidth = 270
+          TabOrder = 2
+          object ListBoxLog: TListBox
+            Left = 1
+            Height = 323
+            Top = 27
+            Width = 268
+            Align = alClient
+            ItemHeight = 0
+            TabOrder = 0
+          end
+          object ToolBar1: TToolBar
+            Left = 1
+            Height = 26
+            Top = 1
+            Width = 268
+            Caption = 'ToolBar1'
+            ShowCaptions = True
+            TabOrder = 1
+            OnClick = ToolBar1Click
+            object ToolButtonLogEthernet: TToolButton
+              Left = 1
+              Top = 2
+              Caption = 'Log Ethernet Socket'
+              Style = tbsCheck
+            end
+          end
         end
       end
     end
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 362
+    Height = 15
+    Top = 390
     Width = 788
     Panels = <    
       item
@@ -8201,4 +8219,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
       50605D5D5DFF5B5B5BB42C2C2C10
     }
   end
-end
+end

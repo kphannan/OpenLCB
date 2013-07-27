@@ -27,16 +27,16 @@ type
     procedure FormCreate(Sender: TObject);
   private
     FAliasID: Word;
-    FComPortThread: TComPortThread;
+    FComPortThread: TComPortHub;
     FXmlDoc: TXMLDocument;
-    procedure SetComPortThread(AValue: TComPortThread);
+    procedure SetComPortHub(AValue: TComPortHub);
     { private declarations }
   protected
 
   public
     { public declarations }
     property AliasID: Word read FAliasID write FAliasID;
-    property ComPortThread: TComPortThread read FComPortThread write SetComPortThread;
+    property ComPortThread: TComPortHub read FComPortThread write SetComPortHub;
     property XmlDoc: TXMLDocument read FXmlDoc write FXmlDoc;
   end;
 
@@ -63,7 +63,7 @@ begin
 end;
 
 
-procedure TFormMemConfigViewer.SetComPortThread(AValue: TComPortThread);
+procedure TFormMemConfigViewer.SetComPortHub(AValue: TComPortHub);
 begin
   FComPortThread:=AValue;
 end;

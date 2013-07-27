@@ -65,7 +65,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   Menus, ActnList, ComCtrls, ExtCtrls, Buttons, com_port_hub,
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
-  Spin, types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
+  types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
   laz2_XMLWrite, common_utilities, form_awesome_throttle, blcksock,
   form_train_config_editor, ethernet_hub, form_ethernet_messagelog,
@@ -158,7 +158,6 @@ type
     ActionToolsSettingsShowWin: TAction;
     ActionListMain: TActionList;
     ApplicationProperties: TApplicationProperties;
-    Button1: TButton;
     ImageList24x24: TImageList;
     ImageList16x16: TImageList;
     ImageListMainSmall: TImageList;
@@ -209,11 +208,14 @@ type
     MenuItemToolsSettingsShow: TMenuItem;
     MenuItemTools: TMenuItem;
     PageControlMain: TPageControl;
+    Panel1: TPanel;
     PanelNetwork: TPanel;
     PopupMenuTreeNode: TPopupMenu;
     Splitter1: TSplitter;
     StatusBar: TStatusBar;
     TabSheetNetwork: TTabSheet;
+    ToolBar1: TToolBar;
+    ToolButtonLogEthernet: TToolButton;
     TreeViewNetwork: TTreeView;
     procedure ActionConfigEditorsCloseAllExecute(Sender: TObject);
     procedure ActionConfigEditorsCreateExecute(Sender: TObject);
@@ -251,7 +253,6 @@ type
     procedure ActionTreeviewNetworkCollapseSelectedExecute(Sender: TObject);
     procedure ActionTreeviewNetworkExpandAllExecute(Sender: TObject);
     procedure ActionTreeviewNetworkExpandSelectedExecute(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -260,6 +261,7 @@ type
     procedure MenuItemConfigEditorsClick(Sender: TObject);
     procedure MenuItemThrottlesClick(Sender: TObject);
     procedure PanelNetworkClick(Sender: TObject);
+    procedure ToolBar1Click(Sender: TObject);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
     procedure TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
@@ -267,7 +269,7 @@ type
     procedure TreeViewNetworkSelectionChanged(Sender: TObject);
   private
     FCommandStationNode: TTreeNode;
-    FComPortThread: TComPortThread;
+    FComPortHub: TComPortHub;
     FConfigEditorList: TFormConfigEditorList;
     FEthernetHub: TEthernetHub;
     FLazyLoadTaskList: TList;
@@ -305,6 +307,7 @@ type
     procedure DeleteNetworkTreeAlias(NodeAlias: Word);
     procedure DeleteConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
     procedure DeleteThrottleSubMenu(Throttle: TFormAwesomeThrottle);
+    function DispatchTask(Task: TOlcbTaskBase): Boolean;
     procedure EthernetConnect;
     procedure EthernetDisconnect;
     function FindChildThatContainsText(ParentNode: TTreeNode; TestString: string): TTreeNode;
@@ -353,7 +356,7 @@ type
     property OSXPrefCmd: TMenuItem read FOSXPrefCmd write FOSXPrefCmd;
     {$ENDIF}
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
-    property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
+    property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
     property ConfigEditorList: TFormConfigEditorList read FConfigEditorList write FConfigEditorList;
     property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property LazyLoadTaskList: TList read FLazyLoadTaskList write FLazyLoadTaskList;
@@ -403,7 +406,7 @@ begin
   FormAwesomeThrottle := TFormAwesomeThrottle.Create(Application);
   FormAwesomeThrottle.OnThrottleClose := @SyncThrottleClose;
   FormAwesomeThrottle.OnThrottleHide := @SyncThrottleHide;
-  FormAwesomeThrottle.ComPortThread := ComPortThread;
+  FormAwesomeThrottle.InitTransportLayers(EthernetHub, ComPortHub, @DispatchTask);
   FormAwesomeThrottle.ImageList16x16 := ImageList16x16;
   ThrottleList.Add(FormAwesomeThrottle);
   FormAwesomeThrottle.Show;
@@ -444,31 +447,6 @@ begin
     TreeViewNetwork.Selections[i].Expand(True);
 end;
 
-procedure TFormOLCB_Commander.Button1Click(Sender: TObject);
-var
-  TaskList, List: TList;
-
-  i: Integer;
-begin
-  if Assigned(ComPortThread) then
-  begin
-    if ComPortThread.TaskCount > 0 then
-    begin
-    end
-  end;
-
-  List := EthernetHub.ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-    begin
-  //    TaskList := TClientSocketThread( List[0])..;
-    end;
-  finally
-    EthernetHub.ClientThreadList.UnlockList;
-  end;
-  EthernetHub.RemoveAndFreeTasks(0);
-end;
-
 procedure TFormOLCB_Commander.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   ComDisconnect;
@@ -500,7 +478,7 @@ begin
       begin
         ConfigEditor := TFormTrainConfigEditor.Create(Application);
         ConfigEditor.ImageList16x16 := ImageList16x16;
-        ConfigEditor.ComPortThread := ComPortThread;
+        ConfigEditor.InitTransportLayers(EthernetHub, ComPortHub, @DispatchTask);
         ConfigEditor.Caption := ConfigEditor.Caption + ' - 0x' + IntToHex(Node.OlcbData.NodeIDAlias, 4) + ' [' + IntToStr(Node.OlcbData.NodeIDAlias) + ']';
         ConfigEditor.AliasID := Node.OlcbData.NodeIDAlias;
         ConfigEditor.OnConfigEditorClose := @SyncConfigEditorClose;
@@ -769,10 +747,10 @@ end;
 procedure TFormOLCB_Commander.ActionToolsCOMPortMessageLogShowExecute(Sender: TObject);
 begin
   FormMessageLog.Show;
-  if Assigned(ComPortThread) then
+  if Assigned(ComPortHub) then
   begin
-    ComPortThread.EnableReceiveMessages := True;
-    ComPortThread.EnableSendMessages := True;
+    ComPortHub.EnableReceiveMessages := True;
+    ComPortHub.EnableSendMessages := True;
   end;
   ActionToolsCOMPortMessageLogShow.Checked := True;
 end;
@@ -912,6 +890,11 @@ begin
 
 end;
 
+procedure TFormOLCB_Commander.ToolBar1Click(Sender: TObject);
+begin
+
+end;
+
 procedure TFormOLCB_Commander.TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
 var
   ScreenPos: TPoint;
@@ -966,168 +949,80 @@ procedure TFormOLCB_Commander.RunConfigMemoryOptionsTaskOnNode(Node: TOlcbTreeNo
 var
   Task: TConfigMemoryOptionsTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end;
+  Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunIdentifyEventsGlobal;
 var
   Task: TIdentifyEventsTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end;
+  Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunIdentifyEventsOnNode(Node: TOlcbTreeNode);
 var
   Task: TIdentifyEventsAddressedTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end;
+  Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunMemConfigSpacesAllInfoOnNode(Node: TOlcbTreeNode);
 var
   Task: TEnumAllConfigMemoryAddressSpaceInfoTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end;
+  Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunProtocolSupportOnNode(Node: TOlcbTreeNode);
 var
   Task: TProtocolSupportTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end
+  Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte);
 var
   Task: TReadAddressSpaceMemoryTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    case AddressSpace of
-      MSI_CDI: begin
-                 Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
-                 Task.Terminator := #0;
-               end
-      else
-        Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
-    end;
-    Task.ForceOptionalSpaceByte := False;
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
+  case AddressSpace of
+    MSI_CDI: begin
+               Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+               Task.Terminator := #0;
+             end
+    else
+      Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
   end;
-
-  if EthernetHub.Enabled then
-  begin
-    case AddressSpace of
-      MSI_CDI: begin
-                 Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
-                 Task.Terminator := #0;
-               end
-      else
-        Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
-    end;
-    Task.ForceOptionalSpaceByte := False;
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end
+  Task.ForceOptionalSpaceByte := False;
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunSNIIOnNode(Node: TOlcbTreeNode);
 var
   Task: TSimpleNodeInformationTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end
+  Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunVerifyNodeIdGlobal;
 var
   Task: TVerifyNodeIDGlobalTask;
 begin
-  if Assigned(ComportThread) then
-  begin
-    Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
-
-  if EthernetHub.Enabled then
-  begin
-    Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    EthernetHub.AddTask(Task);
-  end
+  Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 function TFormOLCB_Commander.AddNetworkCommandStationAlias(NodeAlias: Word; NodeID: QWord): TOlcbTreeNode;
@@ -1279,34 +1174,34 @@ procedure TFormOLCB_Commander.ComConnect;
 var
   i: Integer;
 begin
-  FComPortThread := TComPortThread.Create(True);
+  FComPortHub := TComPortHub.Create(True);
   try
-    ComPortThread.FreeOnTerminate := True;
+    ComPortHub.FreeOnTerminate := True;
     {$IFDEF MSWINDOWS}
     ComPortThread.Port := GlobalSettings.ComPort.Port;
     {$ELSE}
       {$IFDEF DARWIN}
-      ComPortThread.Port := PATH_OSX_DEV + GlobalSettings.ComPort.Port;
+      ComPortHub.Port := PATH_OSX_DEV + GlobalSettings.ComPort.Port;
       {$ELSE}
       ComPortThread.Port := PATH_LINUX_DEV + GlobalSettings.ComPort.Port;
       {$ENDIF}
     {$ENDIF}
-    ComPortThread.BaudRate := GlobalSettings.ComPort.BaudRate;
+    ComPortHub.BaudRate := GlobalSettings.ComPort.BaudRate;
 
-    ComPortThread.SyncReceiveMessageFunc := @SyncReceiveCOMPortMessage;
-    ComPortThread.SyncSendMessageFunc := @SyncSendCOMPortMessage;
-    ComPortThread.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
-    ComPortThread.OnBeforeDestroyTask := @OnBeforeDestroyTask;
+    ComPortHub.SyncReceiveMessageFunc := @SyncReceiveCOMPortMessage;
+    ComPortHub.SyncSendMessageFunc := @SyncSendCOMPortMessage;
+    ComPortHub.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
+    ComPortHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
 
-    ComPortThread.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
-    ComPortThread.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
+    ComPortHub.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
+    ComPortHub.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
     {$IFDEF DEBUG_THREAD}
     ComPortThread.SyncDebugFunc := @SyncDebugMessage;
     {$ENDIF}
-    ComPortThread.Suspended := False;
+    ComPortHub.Suspended := False;
 
     i := 0;
-    while (not ComPortThread.Connected and (i < 100)) or ComPortThread.Terminated do
+    while (not ComPortHub.Connected and (i < 100)) or ComPortHub.Terminated do
     begin
       Sleep(100);
       Inc(i);
@@ -1318,15 +1213,15 @@ begin
     RootNetworkNode.Expanded := True;
 
     for i := 0 to ThrottleList.Count - 1 do
-      ThrottleList.Throttles[i].ComPortThread := ComPortThread;
+      ThrottleList.Throttles[i].InitTransportLayers(EthernetHub, ComPortHub, @DispatchTask);
     for i := 0 to ConfigEditorList.Count - 1 do
-      ConfigEditorList.ConfigEditors[i].ComPortThread := ComPortThread;
+      ConfigEditorList.ConfigEditors[i].InitTransportLayers(EthernetHub, ComPortHub, @DispatchTask);
     UpdateUI;
   except
-    if Assigned(ComPortThread) then
+    if Assigned(ComPortHub) then
     begin
-      ComPortThread.Terminate;
-      ComPortThread := nil;
+      ComPortHub.Terminate;
+      ComPortHub := nil;
     end;
     UpdateUI
   end;
@@ -1337,15 +1232,15 @@ var
   i: Integer;
 begin
   for i := 0 to ThrottleList.Count - 1 do
-    ThrottleList.Throttles[i].ComPortThread := nil;
+    ThrottleList.Throttles[i].InitTransportLayers(EthernetHub, nil, @DispatchTask);
   for i := 0 to ConfigEditorList.Count - 1 do
-      ConfigEditorList.ConfigEditors[i].ComPortThread := nil;
-  if Assigned(FComPortThread) then
+      ConfigEditorList.ConfigEditors[i].InitTransportLayers(EthernetHub, nil, @DispatchTask);
+  if Assigned(FComPortHub) then
   begin
-    ComPortThread.Terminate;
-    while not ComPortThread.TerminateComplete do
+    ComPortHub.Terminate;
+    while not ComPortHub.TerminateComplete do
       Application.ProcessMessages;               // Hate this but we can deadlock if a Syncronize is called if this is blocked.
-    FComPortThread := nil;
+    FComPortHub := nil;
   end;
   UpdateUI;
 end;
@@ -1420,6 +1315,32 @@ begin
       MenuItemThrottles.Delete(i);
       Break
     end;
+  end;
+end;
+
+function TFormOLCB_Commander.DispatchTask(Task: TOlcbTaskBase): Boolean;
+begin
+  Result := False;
+
+  if Task.DestinationAlias = 0 then
+  begin
+    EthernetHub.AddTask(Task);        // Broadcast to all
+    if Assigned(ComPortHub) then
+      ComPortHub.AddTask(Task);
+  end else
+  begin
+    if not EthernetHub.AddTask(Task) then
+    begin
+      if Assigned(ComPortHub) then
+      begin
+        if not ComPortHub.AddTask(Task) then
+          Task.Free
+        else
+          Result := True
+      end else
+        Task.Free;
+    end else
+      Result := True
   end;
 end;
 
@@ -1938,24 +1859,27 @@ end;
 
 procedure TFormOLCB_Commander.SyncHubOnStatus(Client: TClientSocketThread; Reason: THookSocketReason; Value: String);
 begin
-  ListBoxLog.Items.BeginUpdate;
-  case Reason of
-    HR_ResolvingBegin :  ListBoxLog.AddItem('Resolving Begin: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_ResolvingEnd :    ListBoxLog.AddItem('Resolving End: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_SocketCreate :    ListBoxLog.AddItem('Socket Create: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_SocketClose :     ListBoxLog.AddItem('Socket Close: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_Bind :            ListBoxLog.AddItem('Bind: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_Connect :         ListBoxLog.AddItem('Connect: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_CanRead :         ListBoxLog.AddItem('Can Read: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_CanWrite :        ListBoxLog.AddItem('Can Write: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_Listen :          ListBoxLog.AddItem('Listen: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_Accept :          ListBoxLog.AddItem('Accept: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_ReadCount :       ListBoxLog.AddItem('Read Count: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_WriteCount :      ListBoxLog.AddItem('Write Count: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
-    HR_Wait :            ListBoxLog.AddItem('Wait: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
- //   HR_Error :           ListBoxLog.AddItem('Error: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+  if ToolButtonLogEthernet.Down then
+  begin
+    ListBoxLog.Items.BeginUpdate;
+    case Reason of
+      HR_ResolvingBegin :  ListBoxLog.AddItem('Resolving Begin: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_ResolvingEnd :    ListBoxLog.AddItem('Resolving End: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_SocketCreate :    ListBoxLog.AddItem('Socket Create: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_SocketClose :     ListBoxLog.AddItem('Socket Close: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_Bind :            ListBoxLog.AddItem('Bind: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_Connect :         ListBoxLog.AddItem('Connect: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_CanRead :         ListBoxLog.AddItem('Can Read: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_CanWrite :        ListBoxLog.AddItem('Can Write: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_Listen :          ListBoxLog.AddItem('Listen: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_Accept :          ListBoxLog.AddItem('Accept: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_ReadCount :       ListBoxLog.AddItem('Read Count: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_WriteCount :      ListBoxLog.AddItem('Write Count: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+      HR_Wait :            ListBoxLog.AddItem('Wait: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+   //   HR_Error :           ListBoxLog.AddItem('Error: ' + Value + ' [Thread: 0x' + IntToHex(IntPtr( Client), 8) + ']', nil);
+    end;
+    ListBoxLog.Items.EndUpdate;
   end;
-  ListBoxLog.Items.EndUpdate;
 end;
 
  {$IFDEF DEBUG_THREAD}
@@ -1974,10 +1898,10 @@ end;
 
 procedure TFormOLCB_Commander.SyncErrorCOMPortMessage(MessageStr: String);
 begin
-  if Assigned(ComPortThread) then
+  if Assigned(ComPortHub) then
   begin
-    ComPortThread.Terminate;
-    ComPortThread := nil
+    ComPortHub.Terminate;
+    ComPortHub := nil
   end;
   UpdateUI;
   ShowMessage(MessageStr);
@@ -1986,10 +1910,10 @@ end;
 procedure TFormOLCB_Commander.SyncMessageLogHide;
 begin
   ActionToolsCOMPortMessageLogShow.Checked := False;
-  if Assigned(ComPortThread) then
+  if Assigned(ComPortHub) then
   begin
-    ComPortThread.EnableReceiveMessages := False;
-    ComPortThread.EnableSendMessages := False;
+    ComPortHub.EnableReceiveMessages := False;
+    ComPortHub.EnableSendMessages := False;
   end;
 end;
 
@@ -2034,7 +1958,7 @@ begin
   if Index > -1 then
   begin
     ConfigEditorList.Delete( Index);
-    ComPortThread.RemoveAndFreeTasks( PtrInt( ConfigEditor));
+    ComPortHub.RemoveAndFreeTasks( PtrInt( ConfigEditor));
     DeleteConfigEditorSubMenu(ConfigEditor);
     UpdateUI
   end
@@ -2171,13 +2095,13 @@ var
   ConfigEditorCreateEnabled: Boolean;
   i: Integer;
 begin
-  ActionToolsComConnect.Enabled := not Assigned(FComPortThread);
-  ActionToolsComDisconnect.Enabled := Assigned(FComPortThread);
+  ActionToolsComConnect.Enabled := not Assigned(FComPortHub);
+  ActionToolsComDisconnect.Enabled := Assigned(FComPortHub);
 
   ActionToolsEthernetHubConnect.Enabled := not EthernetHub.Enabled;
   ActionToolsEthernetHubDisconnect.Enabled := EthernetHub.Enabled;
 
-  ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortThread) or EthernetHub.Enabled;
+  ActionOpenLCBCommandIdentifyIDGlobal.Enabled := Assigned(FComPortHub) or EthernetHub.Enabled;
   ActionOpenLCBCommandProtocolSupport.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandMemConfigOptions.Enabled := (TreeViewNetwork.SelectionCount > 0);
   ActionOpenLCBCommandMemConfigAllSpacesInfo.Enabled:= (TreeViewNetwork.SelectionCount > 0);
@@ -2217,4 +2141,4 @@ end;
 
 
 end.
-
+

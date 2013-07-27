@@ -130,6 +130,8 @@ type
     procedure SetEnableReceiveMessages(AValue: Boolean);
     procedure SetEnableSendMessages(AValue: Boolean);
   protected
+    procedure InternalAdd(Msg: AnsiString);
+    procedure InternalAddDatagramToSend(Datagram: TDatagramSend);
     procedure LocalOnHubConnect;
     procedure LocalOnHubDisconnect;
     procedure LocalOnClientConnect;
@@ -143,9 +145,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure Add(Msg: AnsiString);
-    procedure AddDatagramToSend(Datagram: TDatagramSend);
-    procedure AddTask(NewTask: TOlcbTaskBase);
+    function AddTask(NewTask: TOlcbTaskBase): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
     property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
@@ -576,7 +576,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TEthernetHub.Add(Msg: AnsiString);
+procedure TEthernetHub.InternalAdd(Msg: AnsiString);
 var
   List: TList;
   i: Integer;
@@ -584,13 +584,13 @@ begin
   List := ClientThreadList.LockList;
   try
     for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).Add(Msg);
+      TClientSocketThread( List[i]).InternalAdd(Msg);
   finally
     ClientThreadList.UnlockList;
   end;
 end;
 
-procedure TEthernetHub.AddDatagramToSend(Datagram: TDatagramSend);
+procedure TEthernetHub.InternalAddDatagramToSend(Datagram: TDatagramSend);
 var
   List: TList;
   i: Integer;
@@ -598,29 +598,38 @@ begin
   List := ClientThreadList.LockList;
   try
     for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).AddDatagramToSend(Datagram);
+      TClientSocketThread( List[i]).InternalAddDatagramToSend(Datagram);
   finally
     ClientThreadList.UnlockList;
   end;
 end;
 
-procedure TEthernetHub.AddTask(NewTask: TOlcbTaskBase);
+function TEthernetHub.AddTask(NewTask: TOlcbTaskBase): Boolean;
 var
   List: TList;
   i: Integer;
-  Task: TOlcbTaskBase;
+  Done: Boolean;
 begin
+  Done := False;
   List := ClientThreadList.LockList;
   try
-    for i := 0 to List.Count - 1 do
+    if NewTask.DestinationAlias = 0 then
     begin
-      Task := NewTask.Clone;
-      NewTask.CopyTo(Task);
-      TClientSocketThread( List[i]).AddTask(Task);
+      for i := 0 to List.Count - 1 do
+        TClientSocketThread( List[i]).AddTask(NewTask);   // Broadcast
+      Done := True;
+    end else
+    begin
+      i := 0;
+      while (i < List.Count) and not Done do
+      begin
+        Done := TClientSocketThread( List[i]).AddTask(NewTask);
+        Inc(i);
+      end;
     end;
   finally
-    NewTask.Free;
     ClientThreadList.UnlockList;
+    Result := Done;
   end;
 end;
 

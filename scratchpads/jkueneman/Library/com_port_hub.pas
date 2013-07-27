@@ -28,9 +28,9 @@ type
 
   {$IFDEF DEBUG_THREAD} TSyncDebugFunc = procedure(DebugInfo: TComPortThreadDebugRec) of object; {$ENDIF}
 
-{ TComPortThread }
+{ TComPortHub }
 
-  TComPortThread = class(TTransportLayerThread)
+  TComPortHub = class(TTransportLayerThread)
   private
     FBaudRate: DWord;                                                           // Baud rate to connect with
     FPort: String;                                                              // Port to connect to
@@ -49,9 +49,9 @@ type
 
 implementation
 
-{ TComPortThread }
+{ TComPortHub }
 
-procedure TComPortThread.Execute;
+procedure TComPortHub.Execute;
 var
   List: TList;
   SendStr: AnsiString;
@@ -127,14 +127,14 @@ begin
 end;
 
 
-constructor TComPortThread.Create(CreateSuspended: Boolean);
+constructor TComPortHub.Create(CreateSuspended: Boolean);
 begin
   inherited Create(CreateSuspended);
   FBaudRate := 9600;
   FPort := '';
 end;
 
-destructor TComPortThread.Destroy;
+destructor TComPortHub.Destroy;
 begin
   inherited Destroy;
 end;

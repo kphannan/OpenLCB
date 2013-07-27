@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
-  olcb_app_common_settings, math_float16, Forms, blcksock, synsock;
+  olcb_app_common_settings, math_float16, Forms, blcksock, synsock, contnrs;
 
 const
   ERROR_NO_MEMORY_CONFIG_PROTOCOL = $00000001;
@@ -35,11 +35,38 @@ type
   TDatagramSend           = class;
 
   TOlcbTaskBeforeDestroy = procedure(Sender: TOlcbTaskBase) of object;
+  TDispatchTaskFunc = function(Task: TOlcbTaskBase): Boolean of object;
+
+  { TAliasTaskContainer }
+
+  TAliasTaskContainer = class
+  private
+    FAliasID: Word;
+    FAttemptCount: Integer;
+  public
+    constructor Create(AnAliasID: Word);
+    destructor Destroy; override;
+    property AliasID: Word read FAliasID;
+    property AttemptCount: Integer read FAttemptCount write FAttemptCount;
+  end;
+
+  { TAliasTaskContainerList }
+
+  TAliasTaskContainerList = class(TFPObjectList)
+  private
+    function GetAliasTaskContainer(Index: Integer): TAliasTaskContainer;
+    procedure SetAliasTaskContainer(Index: Integer; AValue: TAliasTaskContainer);
+  public
+    function FindByAlias(AnAlias: Word): TAliasTaskContainer;
+    procedure RemoveByAlias(AnAlias: Word);
+    property AliasTaskContainer[Index: Integer]: TAliasTaskContainer read GetAliasTaskContainer write SetAliasTaskContainer;
+  end;
 
   { TTransportLayerThread }
 
   TTransportLayerThread = class(TThread)
   private
+    FAliasList: TAliasTaskContainerList;
     FBufferRawMessage: string;                                                  // Shared data to pass string between thread and the Syncronized callbacks
     FConnected: Boolean;                                                        // True if connected to the port
     FDatagramReceiveManager: TDatagramReceiveManager;
@@ -62,10 +89,13 @@ type
     procedure DecomposeAndDispatchGridConnectString(ReceiveStr: AnsiString; Helper: TOpenLCBMessageHelper);
     procedure ExecuteBegin;
     procedure ExecuteEnd;
+    procedure InternalAdd(Msg: AnsiString);
+    procedure InternalAddDatagramToSend(Datagram: TDatagramSend);
     procedure SyncErrorMessage;
     procedure SyncReceiveMessage;
     procedure SyncSendMessage;
 
+    property AliasList: TAliasTaskContainerList read FAliasList write FAliasList;                 // Tracks the Alias that have been registered with Olcb through this Transport Thread
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager;
     property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
@@ -73,9 +103,7 @@ type
   public
     constructor Create(CreateSuspended: Boolean); virtual;
     destructor Destroy; override;
-    procedure Add(Msg: AnsiString);
-    procedure AddDatagramToSend(Datagram: TDatagramSend);
-    procedure AddTask(NewTask: TOlcbTaskBase);
+    function AddTask(NewTask: TOlcbTaskBase): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
     property Connected: Boolean read FConnected write FConnected;
@@ -273,6 +301,7 @@ type
 
   TDatagramReceive = class( TOlcbMessage)
   private
+    FCreateTime: DWord;
     FDestinationAlias: Word;
     FLocalHelper: TOpenLCBMessageHelper;
     FRawDatagram: TDatagramArray;
@@ -283,6 +312,7 @@ type
     procedure Clear;
     procedure SendACK(TransportLayerThread: TTransportLayerThread);
     property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;   // Global object to work with OLCB messages
+    property CreateTime: DWord read FCreateTime write FCreateTime;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word);
     destructor Destroy; override;
@@ -305,7 +335,7 @@ type
     FMaxCount: Integer;
     FOwner: TTransportLayerThread;
   protected
-    function FindInProcessDatagram(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
+    function FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
     property Datagrams: TThreadList read FDatagrams write FDatagrams;
     property Owner: TTransportLayerThread read FOwner write FOwner;
     property MaxCount: Integer read FMaxCount write FMaxCount;
@@ -394,11 +424,10 @@ end;
   TOlcbTaskBase = class
   private
     FErrorCode: DWord;
-    FLog: Boolean;
     FiLogState: Integer;
-    FLogStrings: TStringList;
     FLogThreadName: string;
     FMessageHelper: TOpenLCBMessageHelper;
+    FMessageWaitTimeStart: DWord;
     FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
     FSending: Boolean;
     FErrorString: string;
@@ -430,6 +459,8 @@ end;
     function IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
+    procedure MessageWaitTimerReset;
+    function MessageWaitTimerCheckTimeout: Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
     procedure SendIdentifyEventsMessage;
     procedure SendIdentifyEventsAddressedMessage;
@@ -458,21 +489,19 @@ end;
     property Done: Boolean read FDone;
     property iLogState: Integer read FiLogState write FiLogState;
     property iState: Integer read FiState write FiState;
-    property LogStrings: TStringList read FLogStrings write FLogStrings;
     property LogTheadName: string read FLogThreadName write FLogThreadName;
+    property MessageWaitTimeStart: DWord read FMessageWaitTimeStart write FMessageWaitTimeStart;
     property StartAsSending: Boolean read FStartAsSending write FStartAsSending;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); virtual;
     destructor Destroy; override;
     function Clone: TOlcbTaskBase; virtual; abstract;
     procedure CopyTo(Target: TOlcbTaskBase); virtual;
-    procedure LogMsg(Msg: string); virtual;
     property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
     property DestinationAlias: Word read FDestinationAlias;
     property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
     property ErrorCode: DWord read FErrorCode write FErrorCode;
     property ErrorString: string read FErrorString write FErrorString;
-    property Log: Boolean read FLog write FLog;
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
@@ -514,12 +543,9 @@ end;
 
   TSimpleNodeInformationTask = class(TOlcbTaskBase)
   private
-    FiLogStateSnip: Integer;
     FSnip: TOlcbSNIP;
     FiSnipState: Integer;  // for inner SNIP statemachine
   protected
-    procedure LogSnipMsg(Msg: string);
-    property iLogStateSnip: Integer read FiLogStateSnip write FiLogStateSnip;
     property iSnipState: Integer read FiSnipState write FiSnipState;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); override;
@@ -927,6 +953,55 @@ var
 
 implementation
 
+{ TAliasTaskContainerList }
+
+function TAliasTaskContainerList.GetAliasTaskContainer(Index: Integer): TAliasTaskContainer;
+begin
+  Result := TAliasTaskContainer( Items[Index])
+end;
+
+procedure TAliasTaskContainerList.SetAliasTaskContainer(Index: Integer; AValue: TAliasTaskContainer);
+begin
+  Items[Index] := AValue
+end;
+
+function TAliasTaskContainerList.FindByAlias(AnAlias: Word): TAliasTaskContainer;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := 0;
+  while (Result = nil) and (i < Count) do
+  begin
+    if AliasTaskContainer[i].AliasID = AnAlias then
+      Result := AliasTaskContainer[i];
+    Inc(i)
+  end;
+end;
+
+procedure TAliasTaskContainerList.RemoveByAlias(AnAlias: Word);
+var
+  AliasTask: TAliasTaskContainer;
+begin
+  AliasTask := FindByAlias(AnAlias);
+  if AliasTask <> nil then
+    Remove(AliasTask)
+end;
+
+
+{ TAliasTaskContainer }
+
+constructor TAliasTaskContainer.Create(AnAliasID: Word);
+begin
+  FAliasID := AnAliasID;
+  FAttemptCount := 0;
+end;
+
+destructor TAliasTaskContainer.Destroy;
+begin
+  inherited Destroy;
+end;
+
 { TReadAddressSpaceMemoryTask }
 
 function TReadAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
@@ -998,6 +1073,17 @@ begin
 
     if Helper.Layer = ol_CAN then
     begin
+      case Helper.MTI of
+        MTI_AMD :
+          begin
+            if AliasList.FindByAlias(Helper.DestinationAliasID) <> nil then
+              AliasList.Add(TAliasTaskContainer.Create(Helper.DestinationAliasID));
+          end;
+        MTI_AMR :
+          begin
+            AliasList.RemoveByAlias(Helper.DestinationAliasID);
+          end;
+      end;
       CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
       CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
       Helper.CopyTo(CANLayerTask.MessageHelper);
@@ -1081,6 +1167,7 @@ begin
   FDatagramReceiveManager := TDatagramReceiveManager.Create(Self);
   FDatagramSendManager := TDatagramSendManager.Create(Self);
   FOlcbTaskManager := TOlcbTaskEngine.Create(Self);
+  FAliasList := TAliasTaskContainerList.Create;
   FTerminateComplete := False;
   FEnableReceiveMessages := True;
   FEnableSendMessages := True;
@@ -1108,10 +1195,12 @@ begin
   FreeAndNil(FDatagramReceiveManager);
   DatagramSendManager.Clear;
   FreeAndNil(FDatagramSendManager);
+  FreeAndNil(FAliasList);
   inherited Destroy;
 end;
 
-procedure TTransportLayerThread.Add(Msg: AnsiString);
+
+procedure TTransportLayerThread.InternalAdd(Msg: AnsiString);
 var
   List: TList;
   StringList: TStringList;
@@ -1131,33 +1220,42 @@ begin
   end;
 end;
 
-procedure TTransportLayerThread.AddDatagramToSend(Datagram: TDatagramSend);
+procedure TTransportLayerThread.InternalAddDatagramToSend(Datagram: TDatagramSend);
 var
   List: TList;
 begin
-  List := DatagramSendManager.Datagrams.LockList;
-  try
-    List.Add(Datagram);
-    if List.Count > DatagramSendManager.MaxCount then
-      DatagramSendManager.MaxCount := List.Count;
-  finally
-    DatagramSendManager.Datagrams.UnLockList
-  end;
+  if AliasList.FindByAlias(Datagram.DestinationAlias) <> nil then
+  begin
+    List := DatagramSendManager.Datagrams.LockList;
+    try
+      List.Add(Datagram);
+      if List.Count > DatagramSendManager.MaxCount then
+        DatagramSendManager.MaxCount := List.Count;
+    finally
+      DatagramSendManager.Datagrams.UnLockList
+    end;
+  end else
+    Datagram.Free
 end;
 
-procedure TTransportLayerThread.AddTask(NewTask: TOlcbTaskBase);
+function TTransportLayerThread.AddTask(NewTask: TOlcbTaskBase): Boolean;
 var
   List: TList;
 begin
-  List := OlcbTaskManager.TaskList.LockList;
-  try
-    NewTask.FTransportLayerThread := Self;
-    List.Add(NewTask);
-    if List.Count > OlcbTaskManager.MaxCount then
-      OlcbTaskManager.MaxCount := List.Count;
-  finally
-    OlcbTaskManager.TaskList.UnlockList;
-  end;
+  Result := False;
+  if (NewTask.DestinationAlias = 0) or (AliasList.FindByAlias(NewTask.DestinationAlias) <> nil) then
+  begin
+    List := OlcbTaskManager.TaskList.LockList;
+    try
+      NewTask.FTransportLayerThread := Self;
+      List.Add(NewTask);
+      if List.Count > OlcbTaskManager.MaxCount then
+        OlcbTaskManager.MaxCount := List.Count;
+    finally
+      OlcbTaskManager.TaskList.UnlockList;
+      Result := True;
+    end;
+  end
 end;
 
 procedure TTransportLayerThread.RemoveAndFreeTasks(RemoveKey: PtrInt);
@@ -1754,7 +1852,7 @@ end;
 
 { TDatagramReceiveManager }
 
-function TDatagramReceiveManager.FindInProcessDatagram(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
+function TDatagramReceiveManager.FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
 //
 // Searches an in process datagram interaction between the nodes in the message
 //
@@ -1763,16 +1861,21 @@ var
   List: TList;
   Datagram: TDatagramReceive;
 begin
-  i := 0;
   Result := nil;
   List := Datagrams.LockList;
   try
-    while not Assigned(Result) and (i < List.Count) do
+    for i := List.Count-1 downto 0 do    // So we can delete abandon items from the top of the list
     begin
       Datagram := TDatagramReceive( List[i]);
       if not Datagram.Full and (Datagram.DestinationAlias = AHelper.SourceAliasID) and (Datagram.SourceAlias = AHelper.DestinationAliasID) then
         Result := Datagram;
-      Inc(i)
+
+      if Datagram.CreateTime + GlobalSettings.General.DatagramWaitTime > GetTickCount then
+      begin
+        // Abandon Datagram
+        Datagram.Free;
+        List.Delete(i);
+      end;
     end;
   finally
     Datagrams.UnlockList;
@@ -1817,13 +1920,14 @@ begin
   Result := nil;
   if IsDatagramMTI(AHelper.MTI, False) then
   begin
-    TestDatagram := FindInProcessDatagram(AHelper);
+    TestDatagram := FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper);
     if not Assigned(TestDatagram) then
     begin
       TestDatagram := TDatagramReceive.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
       Datagrams.Add(TestDatagram);
       List := Datagrams.LockList;
-      if List.Count > MaxCount then MaxCount := List.Count;
+      if List.Count > MaxCount then
+        MaxCount := List.Count;
       Datagrams.UnlockList;
     end;
     TestDatagram.Process(AHelper, Owner);
@@ -1935,7 +2039,7 @@ begin
       StreamBytesToByteArray(ProtocolHeaderLen, FDataBytesSent, Count);
       DataBytesSentLen := Count + ProtocolHeaderLen;
       LocalHelper.Load(ol_OpenLCB, MTI, SourceAlias, DestinationAlias, DataBytesSentLen, DataBytesSent[0], DataBytesSent[1], DataBytesSent[2], DataBytesSent[3], DataBytesSent[4], DataBytesSent[5], DataBytesSent[6], DataBytesSent[7]);
-      TransportLayerThread.Add(LocalHelper.Encode);
+      TransportLayerThread.InternalAdd(LocalHelper.Encode);
     end else
     begin
       if (Stream.Size - Stream.Position <= 8) or (MAX_DATAGRAM_LENGTH - BlockByteCount <= 8) then
@@ -1947,7 +2051,7 @@ begin
       StreamBytesToByteArray(0, FDataBytesSent, Count);
       DataBytesSentLen := Count;
       LocalHelper.Load(ol_OpenLCB, MTI, SourceAlias, DestinationAlias, DataBytesSentLen, DataBytesSent[0], DataBytesSent[1], DataBytesSent[2], DataBytesSent[3], DataBytesSent[4], DataBytesSent[5], DataBytesSent[6], DataBytesSent[7]);
-      TransportLayerThread.Add(LocalHelper.Encode);
+      TransportLayerThread.InternalAdd(LocalHelper.Encode);
     end;
     Result := True;
   end;
@@ -2012,7 +2116,7 @@ end;
 procedure TDatagramReceive.SendACK(TransportLayerThread: TTransportLayerThread);
 begin
   LocalHelper.Load(ol_OpenLCB, MTI_DATAGRAM_OK_REPLY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0, 0, 0, 0, 0);
-  TransportLayerThread.Add(LocalHelper.Encode);
+  TransportLayerThread.InternalAdd(LocalHelper.Encode);
 end;
 
 constructor TDatagramReceive.Create(ASourceAlias, ADestinationAlias: Word);
@@ -2021,6 +2125,7 @@ begin
   FLocalHelper := TOpenLCBMessageHelper.Create;
   FDestinationAlias := ADestinationAlias;
   FSourceAlias := ASourceAlias;
+  FCreateTime := GetTickCount;
 end;
 
 destructor TDatagramReceive.Destroy;
@@ -2188,7 +2293,10 @@ begin
       if DatagramSend.Empty and
          (DatagramSend.SourceAlias = SourceAlias) and
          (DatagramSend.DestinationAlias = DestinationAlias) then
-      Result := True
+      begin
+        MessageWaitTimerReset;
+        Result := True
+      end;
     end;
   end;
 end;
@@ -2209,6 +2317,7 @@ begin
          (DatagramReceive.SourceAlias = SourceAlias) and
          (DatagramReceive.DestinationAlias = DestinationAlias) then
       begin
+        MessageWaitTimerReset;
         Result := True
       end;
     end;
@@ -2229,7 +2338,10 @@ begin
           (DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_CONFIG_REPLY) and
           (DatagramReceive.SourceAlias = SourceAlias) and
           (DatagramReceive.DestinationAlias = DestinationAlias) then
+      begin
+        MessageWaitTimerReset;
         Result := True
+      end;
     end;
   end;
 end;
@@ -2248,7 +2360,10 @@ begin
           (DatagramReceive.RawDatagram[1] and MCP_READ_DATAGRAM_REPLY = MCP_READ_DATAGRAM_REPLY) and
           (DatagramReceive.SourceAlias = SourceAlias) and
           (DatagramReceive.DestinationAlias = DestinationAlias) then
+      begin
+        MessageWaitTimerReset;
         Result := True
+      end;
     end;
   end;
 end;
@@ -2266,7 +2381,10 @@ begin
       if (Helper.MTI = MTI_PROTOCOL_SUPPORT_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2284,7 +2402,10 @@ begin
       if (Helper.MTI = MTI_SIMPLE_NODE_INFO_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2303,7 +2424,10 @@ begin
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_QUERY_FUNCTION_REPLY) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 
@@ -2324,7 +2448,10 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_QUERY_SPEED_REPLY) and
          (Helper.Data[0] and $F0 = $10) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2343,7 +2470,10 @@ begin
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[0] and $F0 = $20) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 
@@ -2364,7 +2494,10 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_ATTACH_DCC_ADDRESS_REPLY) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2384,7 +2517,10 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_DETACH_DCC_ADDRESS_REPLY) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2404,7 +2540,10 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_ATTACH_NODE_REPLY) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2424,7 +2563,10 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_DETACH_NODE_REPLY) then
-        Result := True;
+       begin
+         MessageWaitTimerReset;
+         Result := True;
+       end;
     end;
   end;
 end;
@@ -2444,7 +2586,10 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_MANAGE_PROXY_QUERY) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
@@ -2464,24 +2609,21 @@ begin
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
          (Helper.Data[3] = TRACTION_MANAGE_PROXY_RESERVE) then
+      begin
+        MessageWaitTimerReset;
         Result := True;
+      end;
     end;
   end;
 end;
-
-procedure TOlcbTaskBase.LogMsg(Msg: string);
+procedure TOlcbTaskBase.MessageWaitTimerReset;
 begin
-  if Log then
-  begin
-    if iState <> iLogState then
-    begin
-      if iState = STATE_DONE then
-        LogStrings.Add('Class: ' +  Self.ClassName + #9 + '; State = STATE_DONE : ' + Msg)
-      else
-        LogStrings.Add('Class: ' +  Self.ClassName + #9 + '; State = ' + IntToStr(iState) + ': ' + Msg);
-      iLogState := iState
-    end;
-  end;
+  MessageWaitTimeStart := GetTickCount;
+end;
+
+function TOlcbTaskBase.MessageWaitTimerCheckTimeout: Boolean;
+begin
+  Result := GetTickCount - MessageWaitTimeStart > GlobalSettings.General.MessageWaitTime;
 end;
 
 procedure TOlcbTaskBase.Process(MessageInfo: TOlcbMessage);
@@ -2489,41 +2631,42 @@ begin
   if not HasStarted then
   begin
     FHasStarted := True;
-    LogStrings.Add('................................');
-    LogMsg('Task starting');
-    LogStrings.Add('................................');
+    MessageWaitTimerReset;
   end;
+
   if ForceTermination then
   begin
     Sending := True;
     iState := STATE_DONE;
-    LogMsg('Task force terminated');
-    LogStrings.Add('...............................');
   end;
 end;
 
 procedure TOlcbTaskBase.SendIdentifyEventsMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY, SourceAlias, 0, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendIdentifyEventsAddressedMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendIdentifyConsumerMessage(Event: TEventID);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_CONSUMER_IDENTIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendIdentifyProducerMessage(Event: TEventID);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationOptions;
@@ -2532,7 +2675,8 @@ var
 begin
   DatagramSend := TDatagramSend.Create;
   DatagramSend.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, SourceAlias, DestinationAlias);
-  TransportLayerThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationSpaceInfo(Space: Byte);
@@ -2544,7 +2688,8 @@ begin
   CANByteArray := HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST;
   CANByteArray[2] := Space;                                     // Set the address
   DatagramSend.Initialize(nil, CANByteArray, 3, SourceAlias, DestinationAlias);
-  TransportLayerThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: Byte; ForceUseOfSpaceByte: Boolean);
@@ -2573,7 +2718,8 @@ begin
   CANByteArray[5] := StartAddress and $000000FF;
 
   DatagramSend.Initialize(nil, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
-  TransportLayerThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
@@ -2602,19 +2748,22 @@ begin
   if AStream.Size > MaxAddressSize then
     AStream.Size := MaxAddressSize;
   DatagramSend.Initialize(AStream, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
-  TransportLayerThread.AddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendProtocolIdentificationProtocolMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendSnipMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
@@ -2622,31 +2771,36 @@ begin
   if not Short then
     Address := Address or $C000;
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_ATTACH_DCC_ADDRESS, Hi(Address), Lo(Address), SpeedStep, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionEStopMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_E_STOP, $00, $00, $00, $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 8, $00, $00, TRACTION_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, Hi(Value), Lo(Value));
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionQueryFunction(FunctionAddress: DWord);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_QUERY_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, 0, 0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
@@ -2654,49 +2808,57 @@ begin
   if not Short then
     Address := Address or $C000;
   MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $06, $01, $00, $00, Hi(Address), Lo(Address), $00, $01);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionQuerySpeeds;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_QUERY_SPEED, $00, $00, $00, $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionQueryProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_QUERY, $00, $00, $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionReleaseProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RELEASE, $00, $00, $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionReserveProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RESERVE, $00, $00, $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendTractionSpeedMessage(Speed: THalfFloat);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 5, $00, $00, TRACTION_SPEED_DIR, Hi(Speed), Lo(Speed), $00, $00, $00);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendVerifyNodeIDGlobalMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SendVerifyNodeIDToDestinationMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER, SourceAlias, DestinationAlias, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
-  TransportLayerThread.Add(MessageHelper.Encode);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
 end;
 
 procedure TOlcbTaskBase.SyncOnBeforeTaskDestroy;
@@ -2722,16 +2884,14 @@ begin
   FForceTermination := False;
   FHasStarted := False;
   FErrorString := '';
-  FLogStrings := TStringList.Create;
-  FLog := False;
   FiLogState := 0;
+  FMessageWaitTimeStart := 0;
 end;
 
 destructor TOlcbTaskBase.Destroy;
 begin
   Dec(TaskObjects);
   FreeAndNil(FMessageHelper);
-  FreeAndNil(FLogStrings);
   inherited Destroy;
 end;
 
@@ -2813,14 +2973,12 @@ begin
   case iState of
     0: begin
         // Ask for a read from the node
-        LogMsg('SendMemoryConfigurationRead');
          SendMemoryConfigurationRead(AddressSpace, CurrentOffset, PayloadSize, ForceOptionalSpaceByte);
          Sending := False;
          Inc(FiState);
        end;
     1: begin
          // Node received the datagram
-         LogMsg('Waiting for SendMemoryConfigurationRead Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -2829,7 +2987,6 @@ begin
        end;
     2: begin
           // Node sending frame of data
-          LogMsg('Waiting for SendMemoryConfigurationRead Datagram Reply');
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
@@ -2876,7 +3033,6 @@ begin
         end;
     STATE_DONE : begin
        // Done
-         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -2925,14 +3081,12 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0 : begin
-          LogMsg('SendMemoryConfigurationWrite');
           SendMemoryConfigurationWrite(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
           Sending := False;
           Inc(FiState);
         end;
     1 : begin
           // Node received the request datagram
-           LogMsg('Waiting for SendMemoryConfigurationWrite Datagram ACK Reply');
            if IsDatagramAckFromDestination(MessageInfo) then
            begin
              Sending := True;
@@ -2942,7 +3096,6 @@ begin
     STATE_DONE :
        begin
        // Done
-         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -2986,13 +3139,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendIdentifyConsumerMessage');
          SendIdentifyConsumerMessage(Event);
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3022,13 +3173,11 @@ begin
   inherited Process(MessageInfo);
    case iState of
     0: begin
-         LogMsg('SendIdentifyProducerMessage');
          SendIdentifyProducerMessage(Event);
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3068,14 +3217,12 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendTractionReserveProxyMessage');
          FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
          SendTractionReserveProxyMessage;
          Sending := False;
          iState := 1;
        end;
     1: begin
-         LogMsg('Waiting for SendTractionReserveProxyMessage Reply');
          if IsTractionReserveProxyReply(MessageInfo) then
          begin
            Sending := True;
@@ -3091,13 +3238,11 @@ begin
          end
        end;
     2: begin
-         LogMsg('SendTractionAttachDccProxyMessage');
          SendTractionAttachDccProxyMessage(Address, IsShort, SpeedStep);
          Sending := False;
          iState := 3;
        end;
     3: begin
-         LogMsg('Waiting for SendTractionAttachDccProxyMessage Reply');
          if IsTractionAttachDCCAddressReply(MessageInfo) then
          begin
            if TOpenLCBMessageHelper( MessageInfo).DataCount = 8 then
@@ -3109,7 +3254,6 @@ begin
          end;
        end;
     4: begin
-         LogMsg('SendTractionReleaseProxyMessage');
          SendTractionReleaseProxyMessage;
          iState := STATE_DONE;
        end;
@@ -3151,14 +3295,12 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendTractionReserveProxyMessage');
          FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
          SendTractionReserveProxyMessage;
          Sending := False;
          iState := 1;
        end;
     1: begin
-         LogMsg('Waiting for SendTractionReserveProxyMessage Reply');
          if IsTractionReserveProxyReply(MessageInfo) then
          begin
            Sending := True;
@@ -3174,13 +3316,11 @@ begin
          end
        end;
     2: begin
-         LogMsg('SendTractionDetachDccAddressProxyMessage');
          SendTractionDetachDccAddressProxyMessage(Address, IsShort);
          Sending := False;
          iState := 3;
        end;
     3: begin
-         LogMsg('Waiting for SendTractionDetachDccAddressProxyMessage Reply');
          if IsTractionDetachDCCAddressReply(MessageInfo) then
          begin
            if TOpenLCBMessageHelper( MessageInfo).DataCount = 7 then
@@ -3191,13 +3331,11 @@ begin
          end;
        end;
     4: begin
-         LogMsg('SendTractionReleaseProxyMessage');
          SendTractionReleaseProxyMessage;
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3229,13 +3367,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendTractionQueryDccAddressProxyMessage');
          SendTractionQueryDccAddressProxyMessage(Address, IsShort);
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3267,13 +3403,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendTractionFunction');
          SendTractionFunction(Address, Value);
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3348,13 +3482,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendTractionQuerySpeeds');
          SendTractionQuerySpeeds;
          Sending := False;
          iState := 1;
        end;
     1: begin
-         LogMsg('Waiting for SendTractionQuerySpeeds first frame Reply');
          if IsTractionSpeedsQueryFirstFrameReply(MessageInfo) then
          begin
            FSetSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(3, 4);
@@ -3364,7 +3496,6 @@ begin
          end;
        end;
     2: begin
-         LogMsg('Waiting for SendTractionQuerySpeeds second frame Reply');
          if IsTractionSpeedsQuerySecondFrameReply(MessageInfo) then
          begin
            FActualSpeed := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 3);
@@ -3374,7 +3505,6 @@ begin
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3406,13 +3536,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendTractionQueryFunction');
          SendTractionQueryFunction(Address);
          Sending := False;
          iState := 1;
        end;
     1: begin
-         LogMsg('Waiting for SendTractionQueryFunction Reply');
          if IsTractionFunctionQueryReply(MessageInfo) then
          begin
            FValue := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(6, 7);
@@ -3422,7 +3550,6 @@ begin
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3441,13 +3568,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendIdentifyEventsAddressedMessage');
          SendIdentifyEventsAddressedMessage;
          iState := STATE_DONE;
        end;
     STATE_DONE:
       begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3465,13 +3590,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendIdentifyEventsMessage');
          SendIdentifyEventsMessage;
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3544,15 +3667,6 @@ end;
 
 { TSimpleNodeInformationTask }
 
-procedure TSimpleNodeInformationTask.LogSnipMsg(Msg: string);
-begin
-  if iSnipState <> iLogStateSnip then
-  begin
-    iLogStateSnip := iSnipState;
-    LogMsg(Msg)
-  end;
-end;
-
 constructor TSimpleNodeInformationTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
@@ -3595,14 +3709,12 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendSnipMessage');
          SendSnipMessage;
          iSnipState := 0;
          Sending := False;
          Inc(FiState);
        end;
     1: begin
-         LogMsg('Waiting for SendSnipMessage Reply');
          if IsSnipMessageReply(MessageInfo) then
          begin
            LocalMessageHelper := TOpenLCBMessageHelper( MessageInfo);  // Already know this is true
@@ -3612,14 +3724,12 @@ begin
              case iSnipState of
                STATE_SNII_MFG_VERSION :
                  begin
-                   LogSnipMsg('STATE_SNII_MFG_VERSION');
                    Snip.SniiMfgVersion := LocalMessageHelper.Data[i];
                    Inc(i);
                    iSnipState := STATE_SNII_MFG_NAME;
                  end;
                STATE_SNII_MFG_NAME     :
                  begin
-                   LogSnipMsg('STATE_SNII_MFG_NAME');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiMfgName := Snip.SniiMfgName + Chr( LocalMessageHelper.Data[i]);
@@ -3632,7 +3742,6 @@ begin
                  end;
                STATE_SNII_MFG_MODEL     :
                  begin
-                   LogSnipMsg('STATE_SNII_MFG_MODEL');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiMfgModel := Snip.SniiMfgModel + Chr( LocalMessageHelper.Data[i]);
@@ -3645,7 +3754,6 @@ begin
                  end;
                STATE_SNII_HARDWARE_VER  :
                  begin
-                   LogSnipMsg('STATE_SNII_HARDWARE_VER');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiHardwareVersion := Snip.SniiHardwareVersion + Chr( LocalMessageHelper.Data[i]);
@@ -3658,7 +3766,6 @@ begin
                  end;
                STATE_SNII_SOFTWARE_VER  :
                  begin
-                   LogSnipMsg('STATE_SNII_SOFTWARE_VER');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiSoftwareVersion := Snip.SniiSoftwareVersion + Chr( LocalMessageHelper.Data[i]);
@@ -3671,14 +3778,12 @@ begin
                  end;
                STATE_SNII_USER_VERSION  :
                  begin
-                   LogSnipMsg('STATE_SNII_USER_VERSION');
                    Snip.SniiUserVersion := LocalMessageHelper.Data[i];
                    Inc(i);
                    iSnipState := STATE_SNII_USER_NAME;
                  end;
                STATE_SNII_USER_NAME     :
                  begin
-                   LogSnipMsg('STATE_SNII_USER_NAME');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiUserName := Snip.SniiUserName + Chr( LocalMessageHelper.Data[i]);
@@ -3691,7 +3796,6 @@ begin
                  end;
                STATE_SNII_USER_DESC     :
                  begin
-                   LogSnipMsg('STATE_SNII_USER_DESC');
                    if Chr( LocalMessageHelper.Data[i]) <> #0 then
                    begin
                      Snip.SniiUserDescription := Snip.SniiUserDescription + Chr( LocalMessageHelper.Data[i]);
@@ -3709,7 +3813,6 @@ begin
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3733,14 +3836,12 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendProtocolIdentificationProtocolMessage');
          SendProtocolIdentificationProtocolMessage;
          FProtocols := 0;
          Sending := False;
          Inc(FiState);
        end;
     1: begin
-         LogMsg('Waiting for SendProtocolIdentificationProtocolMessage Reply');
          if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
            FProtocols := TOpenLCBMessageHelper( MessageInfo).ExtractDataBytesAsInt(2, 7);
@@ -3749,7 +3850,6 @@ begin
          end;
        end;
     STATE_DONE: begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3789,13 +3889,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendMemoryConfigurationSpaceInfo');
          SendMemoryConfigurationSpaceInfo(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     1: begin
-         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -3803,7 +3901,6 @@ begin
          end;
        end;
     2: begin
-         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
@@ -3814,7 +3911,6 @@ begin
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3852,13 +3948,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendMemoryConfigurationOptions');
          SendMemoryConfigurationOptions;
          Sending := False;
          Inc(FiState);
        end;
     1: begin
-         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -3866,7 +3960,6 @@ begin
          end;
        end;
     2: begin
-         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -3877,7 +3970,6 @@ begin
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3895,13 +3987,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendVerifyNodeIDGlobalMessage');
          SendVerifyNodeIDGlobalMessage;
          iState := STATE_DONE;
        end;
     STATE_DONE:
        begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3919,12 +4009,10 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendVerifyNodeIDToDestinationMessage');
          SendVerifyNodeIDToDestinationMessage;
          iState := STATE_DONE;
        end;
     STATE_DONE: begin
-         LogMsg('Done');
          FDone := True;
        end;
   end;
@@ -3998,14 +4086,12 @@ begin
   case iState of
     0: begin
          // Ask for the protocols the node supports
-         LogMsg('SendProtocolIdentificationProtocolMessage');
          SendProtocolIdentificationProtocolMessage;
          Inc(FiState);
          Sending := False;
        end;
     1: begin
          // First see if the node even supports the Memory Configuration Protocol
-         LogMsg('Waiting for SendProtocolIdentificationProtocolMessage Datagram ACK Reply');
          if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
            PIP := TOlcbProtocolIdentification.Create;
@@ -4029,14 +4115,12 @@ begin
        end;
     2: begin
          // Ask for what Address Spaces the node supports
-         LogMsg('SendMemoryConfigurationOptions');
          SendMemoryConfigurationOptions;
          Inc(FiState);
          Sending := False;
        end;
     3: begin
          // Node received the request datagram
-         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4045,7 +4129,6 @@ begin
        end;
     4: begin
          // Is the address space we are asking for supported?
-         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -4069,14 +4152,12 @@ begin
        end;
     5: begin
         // Ask for details about the address space we are interested in
-         LogMsg('SendMemoryConfigurationSpaceInfo');
          SendMemoryConfigurationSpaceInfo(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     6: begin
         // Node received the datagram
-         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4084,7 +4165,6 @@ begin
          end;
        end;
     7: begin
-         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram Reply');
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
            Space := TOlcbMemAddressSpace.Create;
@@ -4122,7 +4202,6 @@ begin
        end;
     STATE_READ_START : begin
          // Calculate how many bytes to read in this frame (depends on if the address space is carried in the frame or if at the end of the mem space)
-         LogMsg('STATE_READ_START');
          if MaxAddress - CurrentAddress > MaxPayloadSize then
             CurrentSendSize := MaxPayloadSize
           else
@@ -4132,14 +4211,12 @@ begin
        end;
     9: begin
         // Ask for a read from the node
-         LogMsg('SendMemoryConfigurationRead');
          SendMemoryConfigurationRead(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte);
          Sending := False;
          Inc(FiState);
        end;
     10: begin
          // Node received the datagram
-         LogMsg('Waiting for SendMemoryConfigurationRead Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4148,7 +4225,6 @@ begin
        end;
     11: begin
           // Node sending frame of data
-          LogMsg('Waiting for SendMemoryConfigurationRead Datagram Reply');
           DatagramReceive := nil;
           if IsConfigMemoryReadReplyFromDestination(MessageInfo, DatagramReceive) then
           begin
@@ -4188,7 +4264,6 @@ begin
         end;
     STATE_WRITE_START :
         begin
-          LogMsg('STATE_WRITE_START');
           if DataStream.Size > Space.AddressHi - Space.AddressLo then
             ErrorCode := ERROR_ADDRESS_SPACE_WRITE_LARGER_THAN_SPACE
           else
@@ -4197,7 +4272,6 @@ begin
         end;
     STATE_DONE : begin
        // Done
-         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -4242,13 +4316,11 @@ begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         LogMsg('SendMemoryConfigurationOptions');
          SendMemoryConfigurationOptions;
          Inc(FiState);
          Sending := False;
        end;
     1: begin
-         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4256,7 +4328,6 @@ begin
          end;
        end;
     2: begin
-         LogMsg('Waiting for SendMemoryConfigurationOptions Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
@@ -4268,13 +4339,11 @@ begin
          end;
        end;
     3: begin
-         LogMsg('SendMemoryConfigurationSpaceInfo');
          SendMemoryConfigurationSpaceInfo(CurrentAddressSpace);
          Sending := False;
          Inc(FiState);
        end;
     4: begin
-         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram ACK Reply');
          if IsDatagramAckFromDestination(MessageInfo) then
          begin
            Sending := False;
@@ -4282,7 +4351,6 @@ begin
          end;
        end;
     5: begin
-         LogMsg('Waiting for SendMemoryConfigurationSpaceInfo Datagram Reply');
          DatagramReceive := nil;
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, CurrentAddressSpace, DatagramReceive) then
          begin
@@ -4302,7 +4370,6 @@ begin
        end;
     STATE_DONE: begin
        // Done
-         LogMsg('Done');
          FDone := True
        end;
   end;
@@ -4329,13 +4396,20 @@ begin
     if List.Count > 0 then
     begin
       Task := TOlcbTaskBase( List[0]);
-      if not Task.Sending then
+      if Task.ForceTermination or Task.MessageWaitTimerCheckTimeout then
       begin
-        Task.Process(MessageInfo);
-        if Task.Done then
+        List.Delete(0);
+        Task.Free;            // Throw it away for now.... maybe save them for forensics?
+      end else
+      begin
+        if not Task.Sending then
         begin
-          CompletedTask := Task;
-          List.Delete(0);
+          Task.Process(MessageInfo);
+          if Task.Done then
+          begin
+            CompletedTask := Task;
+            List.Delete(0);
+          end;
         end;
       end;
     end;
@@ -4362,14 +4436,21 @@ begin
     if List.Count > 0 then
     begin
       Task := TOlcbTaskBase( List[0]);
-      if Task.Sending then
+      if Task.ForceTermination or Task.MessageWaitTimerCheckTimeout then
       begin
-        Task.Process(nil);
-        if Task.Done then
+        List.Delete(0);
+        Task.Free;            // Throw it away for now.... maybe save them for forensics?
+      end else
+      begin
+        if Task.Sending then
         begin
-          CompletedTask := Task;
-          List.Delete(0);
-        end;
+          Task.Process(nil);
+          if Task.Done then
+          begin
+            CompletedTask := Task;
+            List.Delete(0);
+          end;
+        end
       end;
     end;
   finally

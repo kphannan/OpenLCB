@@ -5,10 +5,10 @@ unit form_train_config_editor;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, ComCtrls, laz2_DOM, laz2_XMLRead, com_port_hub, olcb_transport_layer,
   olcb_app_common_settings, olcb_utilities, olcb_defines, unit_cdi_parser, Buttons,
-  ActnList, Menus;
+  ActnList, Menus, ethernet_hub;
 
 type
   TFormTrainConfigEditor = class;
@@ -59,11 +59,13 @@ type
   private
     FAliasID: Word;
     FCdiParser: TCdiParser;
-    FComPortThread: TComPortThread;
+    FComPortThread: TComPortHub;
     FConfigReadTaskQueue: TList;
     FConfigReadTaskRunning: Boolean;
     FConfigWriteTaskQueue: TList;
     FConfigWriteTaskRunning: Boolean;
+    FDispatchTask: TDispatchTaskFunc;
+    FEthernetHub: TEthernetHub;
     FImageList16x16: TImageList;
     FOnConfigEditorClose: TOnConfigEditorEvent;
     FOnConfigEditorHide: TOnConfigEditorEvent;
@@ -73,6 +75,8 @@ type
     { private declarations }
   protected
     function FindScrollBox(Page: TTabSheet): TScrollBox;
+    function FindControlPageAndIndex(Control: TControl; var iPage: Word; var iControl: Word): Boolean;
+    function FindControlByPageAndIndex(var Control: TControl; iPage, iControl: Word): Boolean;
     procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
     procedure OnSpeedButtonReadConfigClickCallback(Sender: TObject);
     procedure OnSpeedButtonWriteConfigClickCallback(Sender: TObject);
@@ -88,23 +92,24 @@ type
     procedure WriteConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
     procedure QueueConfigWriteTask(Task: TOlcbTaskBase);
     procedure QueueConfigReadTask(Task: TOlcbTaskBase);
-    function FindControlPageAndIndex(Control: TControl; var iPage: Word; var iControl: Word): Boolean;
-    function FindControlByPageAndIndex(var Control: TControl; iPage, iControl: Word): Boolean;
     procedure UpdateUI;
 
     property CdiParser: TCdiParser read FCdiParser write FCdiParser;
-    property ShownOnce: Boolean read FShownOnce write FShownOnce;
-    property PageControl: TPageControl read FPageControl write FPageControl;
+    property ComPortThread: TComPortHub read FComPortThread write FComPortThread;
     property ConfigReadTaskQueue: TList read FConfigReadTaskQueue write FConfigReadTaskQueue;
     property ConfigWriteTaskQueue: TList read FConfigWriteTaskQueue write FConfigWriteTaskQueue;
     property ConfigWriteTaskRunning: Boolean read FConfigWriteTaskRunning write FConfigWriteTaskRunning;
     property ConfigReadTaskRunning: Boolean read FConfigReadTaskRunning write FConfigReadTaskRunning;
+    property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
+    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
+    property ShownOnce: Boolean read FShownOnce write FShownOnce;
+    property PageControl: TPageControl read FPageControl write FPageControl;
   public
     { public declarations }
     procedure FlushConfigWriteTasks;
     procedure FlushConfigReadTasks;
+    procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortThread: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
     property AliasID: Word read FAliasID write FAliasID;
-    property ComPortThread: TComPortThread read FComPortThread write FComPortThread;
     property OnConfigEditorHide: TOnConfigEditorEvent read FOnConfigEditorHide write FOnConfigEditorHide;
     property OnConfigEditorClose: TOnConfigEditorEvent read FOnConfigEditorClose write FOnConfigEditorClose;
     property ImageList16x16: TImageList read FImageList16x16 write SetImageList;
@@ -190,6 +195,7 @@ end;
 procedure TFormTrainConfigEditor.FormCreate(Sender: TObject);
 begin
   FComPortThread := nil;
+  FEthernetHub := nil;
   FAliasID := 0;
   FShownOnce := False;
   FCdiParser := TCdiParser.Create;
@@ -284,7 +290,7 @@ begin
     Task.Terminator := #0;
     Task.ForceOptionalSpaceByte := False;
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
+    DispatchTask(Task);
     ActionStopRead.Enabled := False;
     ActionStopWrite.Enabled := False;
     ActionReadAll.Enabled := False;
@@ -467,7 +473,7 @@ begin
           end;
           if ConfigReadTaskQueue.Count > 0 then
           begin
-            ComPortThread.AddTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
+            DispatchTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
             ConfigReadTaskQueue.Delete(0);
           end else
             ConfigReadTaskRunning := False;
@@ -499,7 +505,7 @@ begin
         // Writes must be serialize as the micro may not keep up as some will "freeze" when they write EEPROM
         if ConfigWriteTaskQueue.Count > 0 then
         begin
-          ComPortThread.AddTask( TOlcbTaskBase( ConfigWriteTaskQueue[0]));
+          DispatchTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
           ConfigWriteTaskQueue.Delete(0);
         end else
           ConfigWriteTaskRunning := False;
@@ -517,6 +523,8 @@ var
   SpinEdit: TOlcbSpinEdit;
   ComboBox: TOlcbComboBox;
 begin
+  iPage := 0;
+  iControl := 0;
   if (Sender as TSpeedButton).Owner is TOlcbEdit then
   begin
     Edit := (Sender as TSpeedButton).Owner as TOlcbEdit;
@@ -544,6 +552,8 @@ var
   SpinEdit: TOlcbSpinEdit;
   ComboBox: TOlcbComboBox;
 begin
+  iPage := 0;
+  iControl := 0;
   if (Sender as TSpeedButton).Owner is TOlcbEdit then
   begin
     Edit := (Sender as TSpeedButton).Owner as TOlcbEdit;
@@ -803,7 +813,7 @@ begin
   if ConfigWriteTaskRunning then
     ConfigWriteTaskQueue.Add(Task)        // Need to allow node to finish write and send the ACK before sending next
   else begin
-    ComPortThread.AddTask(Task);
+    DispatchTask(Task);
     ConfigWriteTaskRunning := True
   end;
 end;
@@ -813,7 +823,7 @@ begin
   if ConfigReadTaskRunning then
     ConfigReadTaskQueue.Add(Task)        // Need to allow node to finish read and send the ACK before sending next
   else begin
-    ComPortThread.AddTask(Task);
+    DispatchTask(Task);
     ConfigReadTaskRunning := True
   end;
 end;
@@ -919,6 +929,13 @@ begin
     ConfigReadTaskQueue.Clear;
     ConfigReadTaskRunning := False;
   end;
+end;
+
+procedure TFormTrainConfigEditor.InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortThread: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
+begin
+  FDispatchTask := ADispatchTaskFunc;
+  FEthernetHub := AnEthernetHub;
+  FComPortThread := AComPortThread;
 end;
 
 end.

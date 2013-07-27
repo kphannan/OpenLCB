@@ -10,7 +10,7 @@ uses
   olcb_transport_layer, olcb_app_common_settings,
   olcb_utilities, olcb_defines, form_awesome_throttle_duplicate_address,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
-  form_train_config_editor, com_port_hub;
+  form_train_config_editor, com_port_hub, ethernet_hub;
 
 const
   ANIMATION_DELTA = 50;
@@ -186,8 +186,10 @@ type
     FAllocated: Boolean;
     FAllocatedAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
-    FComPortThread: TComPortThread;
+    FComPortHub: TComPortHub;
     FConfigurationViewer: TFormTrainConfigEditor;
+    FDispatchTask: TDispatchTaskFunc;
+    FEthernetHub: TEthernetHub;
     FImageList16x16: TImageList;
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
@@ -209,7 +211,6 @@ type
     procedure RunTractionQuerySpeed(AliasID: Word);
     procedure SetAllocated(AValue: Boolean);
     procedure SetAllocatedAlias(AValue: Word);
-    procedure SetComPortThread(AValue: TComPortThread);
   protected
     procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
@@ -224,19 +225,22 @@ type
     procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
     property AliasList: TAliasList read FAliasList write FAliasList;
+    property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
+    property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
+    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property PotentialAlias: Word read FPotentialAlias write FPotentialAlias;
     property WaitTimeTask: TGeneralWaitTimeTask read FWaitTimeTask write FWaitTimeTask;
   public
     { public declarations }
     property Allocated: Boolean read FAllocated write SetAllocated;
     property AllocatedAlias: Word read FAllocatedAlias write SetAllocatedAlias;
-    property ComPortThread: TComPortThread read FComPortThread write SetComPortThread;
     property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
     property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
     property WaitingActions: TThrottleWaitingActions read FWaitingActions write FWaitingActions;
     procedure EventTaskReceived(EventTask: TEventTask);
+    procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
     procedure UpdateUI;
   end;
 
@@ -306,7 +310,8 @@ begin
   Allocated := False;
   FWaitTimeTask := gwttNone;
   FWaitingActions := [wa_None];
-  ComPortThread := nil;
+  FComPortHub := nil;
+  FEthernetHub := nil;
   AliasList := TAliasList.Create;
   FConfigurationViewer := nil;
   FImageList16x16 := nil;
@@ -334,7 +339,7 @@ begin
   if not Assigned(ConfigurationViewer) then
   begin
     FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
-    ConfigurationViewer.ComPortThread := ComPortThread;
+    ConfigurationViewer.InitTransportLayers(EthernetHub, ComPortHub, DispatchTask);
     ConfigurationViewer.AliasID := AllocatedAlias;
     ConfigurationViewer.ImageList16x16 := ImageList16x16;
     ConfigurationViewer.Caption := 'Configuration Editor: Train ' + IntToStr(SpinEditAddress.Value);
@@ -638,7 +643,7 @@ var
   b: Byte;
   StartFDI: Integer;
 begin
-  if Assigned(FComPortThread) then
+  if Assigned(FComPortHub) then
   begin
     FileStream := TFileStream.Create(FileName, fmOpenRead);
     try
@@ -675,10 +680,11 @@ begin
             BufferStream.Size := 0;
             while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
               BufferStream.WriteByte( MemStream.ReadByte);
+
             Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, Offset, BufferStream);
             if MemStream.Position >= MemStream.Size then
-              Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
-            ComPortThread.AddTask(Task);
+            Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
+            DispatchTask(Task);
             Offset := Offset + MAX_CONFIG_MEM_READWRITE_SIZE;
           end;
         finally
@@ -696,38 +702,29 @@ procedure TFormAwesomeThrottle.RunProtocolSupport(AliasID: Word);
 var
   Task: TProtocolSupportTask;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
 var
   Task: TReadAddressSpaceMemoryTask;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace, False);
-    Task.ForceOptionalSpaceByte := False;
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace, False);
+  Task.ForceOptionalSpaceByte := False;
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpace: Byte; StartAddress, ByteCount: DWord);
 var
   Task: TReadAddressSpaceMemoryRawTask;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
-    Task.ForceOptionalSpaceByte := False;
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
+  Task.ForceOptionalSpaceByte := False;
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
@@ -735,18 +732,17 @@ var
   Task: TTractionReserveAndAttachDccProxyTask;
   SpeedStep: Byte;
 begin
-  if Assigned(ComPortThread) then
+  case RadioGroupSpeedStep.ItemIndex of
+    0: SpeedStep := 14;
+    1: SpeedStep := 28;
+    2: SpeedStep := 128
+  else
+    SpeedStep := SPEEDSTEP_DEFAULT;
+  end;
+  Task := TTractionReserveAndAttachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  if DispatchTask(Task) then
   begin
-    case RadioGroupSpeedStep.ItemIndex of
-      0: SpeedStep := 14;
-      1: SpeedStep := 28;
-      2: SpeedStep := 128
-    else
-      SpeedStep := SPEEDSTEP_DEFAULT;
-    end;
-    Task := TTractionReserveAndAttachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
@@ -758,11 +754,10 @@ procedure TFormAwesomeThrottle.RunTractionDeAllocateTrainByAddress(AliasID: Word
 var
   Task: TTractionReserveAndDetachDccProxyTask;
 begin
-  if Assigned(ComPortThread) then
+  Task := TTractionReserveAndDetachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  if DispatchTask(Task) then
   begin
-    Task := TTractionReserveAndDetachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
@@ -774,11 +769,10 @@ procedure TFormAwesomeThrottle.RunTractionQueryDccAddress(WaitTime: Cardinal);
 var
   Task: TTractionQueryDccAddressProxyTask;
 begin
-  if Assigned(ComPortThread) then
+  Task := TTractionQueryDccAddressProxyTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True, SpinEditAddress.Value, IsShortAddress);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  if DispatchTask(Task) then
   begin
-    Task := TTractionQueryDccAddressProxyTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True, SpinEditAddress.Value, IsShortAddress);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
@@ -790,11 +784,10 @@ procedure TFormAwesomeThrottle.RunTractionQueryIsIdle(WaitTime: Cardinal);
 var
   Task: TIdentifyProducerTask;
 begin
-  if Assigned(ComPortThread) then
+  Task := TIdentifyProducerTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  if DispatchTask(Task) then
   begin
-    Task := TIdentifyProducerTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
     TimerGeneralTimeout.Enabled := False;
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
@@ -808,52 +801,40 @@ var
   Speed: single;
   CalculatedSpeed: THalfFloat;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
-    if not IsForward then
-      Speed := -Speed;
-    CalculatedSpeed := FloatToHalf( Speed);
-    Task := TTractionSpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, CalculatedSpeed, EmergencyStop);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
+  if not IsForward then
+    Speed := -Speed;
+  CalculatedSpeed := FloatToHalf( Speed);
+  Task := TTractionSpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, CalculatedSpeed, EmergencyStop);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
 var
   Task: TTractionFunctionTask;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Task := TTractionFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address, Value);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Task := TTractionFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address, Value);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionQueryFunctions(AliasID: Word; Address: DWord);
 var
   Task: TTractionQueryFunctionTask;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Task := TTractionQueryFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Task := TTractionQueryFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionQuerySpeed(AliasID: Word);
 var
   Task: TTractionQuerySpeedTask;
 begin
-  if Assigned(ComPortThread) then
-  begin
-    Task := TTractionQuerySpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    ComPortThread.AddTask(Task);
-  end;
+  Task := TTractionQuerySpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.SetAllocated(AValue: Boolean);
@@ -878,13 +859,6 @@ begin
       PotentialAlias := 0;
     end;
   end;
-end;
-
-procedure TFormAwesomeThrottle.SetComPortThread(AValue: TComPortThread);
-begin
-  if Assigned(ConfigurationViewer) then
-    ConfigurationViewer.ComPortThread := AValue;
-  FComPortThread:=AValue;
 end;
 
 procedure TFormAwesomeThrottle.CreateFunctionUIButton(ButtonLabel: string;
@@ -1261,6 +1235,15 @@ begin
         end
       end;
   end;
+end;
+
+procedure TFormAwesomeThrottle.InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
+begin
+  FDispatchTask := ADispatchTaskFunc;
+  FEthernetHub := AnEthernetHub;
+  FComPortHub := AComPortHub;
+  if Assigned(ConfigurationViewer) then
+    ConfigurationViewer.InitTransportLayers(AnEthernetHub, AComPortHub, ADispatchTaskFunc)
 end;
 
 procedure TFormAwesomeThrottle.UpdateUI;
