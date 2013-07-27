@@ -445,6 +445,10 @@ begin
 end;
 
 procedure TFormOLCB_Commander.Button1Click(Sender: TObject);
+var
+  TaskList, List: TList;
+
+  i: Integer;
 begin
   if Assigned(ComPortThread) then
   begin
@@ -453,6 +457,15 @@ begin
     end
   end;
 
+  List := EthernetHub.ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+    begin
+  //    TaskList := TClientSocketThread( List[0])..;
+    end;
+  finally
+    EthernetHub.ClientThreadList.UnlockList;
+  end;
   EthernetHub.RemoveAndFreeTasks(0);
 end;
 
@@ -2204,4 +2217,4 @@ end;
 
 
 end.
-
+

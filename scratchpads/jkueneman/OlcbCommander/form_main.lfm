@@ -4,7 +4,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   Top = 310
   Width = 788
   Caption = 'OpenLCB Commander'
-  ClientHeight = 405
+  ClientHeight = 385
   ClientWidth = 788
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -15,7 +15,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   LCLVersion = '1.0.8.0'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 390
+    Height = 362
     Top = 0
     Width = 788
     ActivePage = TabSheetNetwork
@@ -24,26 +24,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
     TabOrder = 0
     object TabSheetNetwork: TTabSheet
       Caption = 'OLCB Network'
-      ClientHeight = 351
-      ClientWidth = 782
+      ClientHeight = 336
+      ClientWidth = 780
       object PanelNetwork: TPanel
         Left = 0
-        Height = 351
+        Height = 336
         Top = 0
-        Width = 782
+        Width = 780
         Align = alClient
         BevelOuter = bvNone
-        ClientHeight = 351
-        ClientWidth = 782
+        ClientHeight = 336
+        ClientWidth = 780
         TabOrder = 0
         OnClick = PanelNetworkClick
         object TreeViewNetwork: TTreeView
           Left = 0
-          Height = 351
+          Height = 336
           Top = 0
           Width = 502
           Align = alLeft
-          DefaultItemHeight = 18
+          DefaultItemHeight = 16
           Images = ImageListMainSmall
           MultiSelect = True
           MultiSelectStyle = [msControlSelect, msSiblingOnly]
@@ -70,15 +70,15 @@ object FormOLCB_Commander: TFormOLCB_Commander
         end
         object Splitter1: TSplitter
           Left = 502
-          Height = 351
+          Height = 336
           Top = 0
           Width = 10
         end
         object ListBoxLog: TListBox
           Left = 512
-          Height = 351
+          Height = 336
           Top = 0
-          Width = 270
+          Width = 268
           Align = alClient
           ItemHeight = 0
           TabOrder = 3
@@ -88,8 +88,8 @@ object FormOLCB_Commander: TFormOLCB_Commander
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 390
+    Height = 23
+    Top = 362
     Width = 788
     Panels = <    
       item
@@ -8201,4 +8201,4 @@ object FormOLCB_Commander: TFormOLCB_Commander
       50605D5D5DFF5B5B5BB42C2C2C10
     }
   end
-end
+end
