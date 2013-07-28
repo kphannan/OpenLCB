@@ -616,14 +616,14 @@ begin
     if NewTask.DestinationAlias = 0 then
     begin
       for i := 0 to List.Count - 1 do
-        TClientSocketThread( List[i]).AddTask(NewTask);   // Broadcast
+        TClientSocketThread( List[i]).AddTask(NewTask, True);   // Broadcast, Task will be cloned in thread
       Done := True;
     end else
     begin
       i := 0;
       while (i < List.Count) and not Done do
       begin
-        Done := TClientSocketThread( List[i]).AddTask(NewTask);
+        Done := TClientSocketThread( List[i]).AddTask(NewTask, True); // Task will be cloned in thread
         Inc(i);
       end;
     end;

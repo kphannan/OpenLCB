@@ -768,12 +768,22 @@ begin
   FConfigEditorList := TFormConfigEditorList.Create;
   FLazyLoadTaskList := TList.Create;
   FEthernetHub := TEthernetHub.Create;
-  EthernetHub.OnHubConnect := @SyncHubConnect;
-  EthernetHub.OnHubDisconnect := @SyncHubDisconnect;
-  EthernetHub.OnClientClientConnect := @SyncHubNewClient;
-  EthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
-  EthernetHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
-  EthernetHub.OnSyncStatus := @SyncHubOnStatus;
+
+  FEthernetHub.SyncErrorMessageFunc := @SyncErrorEthernetMessage;
+  FEthernetHub.SyncReceiveMessageFunc := @SyncReceiveEthernetMessage;
+  FEthernetHub.SyncSendMessageFunc := @SyncSendEthernetMessage;
+  FEthernetHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
+  FEthernetHub.OnHubConnect := @SyncHubConnect;
+  FEthernetHub.OnHubDisconnect := @SyncHubDisconnect;
+  FEthernetHub.OnClientClientConnect := @SyncHubNewClient;
+  FEthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
+  FEthernetHub.OnSyncStatus := @SyncHubOnStatus;
+
+  FComPortHub := TComPortHub.Create;
+  FComPortHub.SyncReceiveMessageFunc := @SyncReceiveCOMPortMessage;
+  FComPortHub.SyncSendMessageFunc := @SyncSendCOMPortMessage;
+  FComPortHub.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
+  FComPortHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
 end;
 
 procedure TFormOLCB_Commander.FormDestroy(Sender: TObject);
@@ -783,6 +793,7 @@ begin
   FreeAndNil( FLazyLoadTaskList);
   FreeAndNil( FConfigEditorList);
   FreeAndNil(FEthernetHub);
+  FreeAndNil(FComPortHub);
 end;
 
 procedure TFormOLCB_Commander.FormShow(Sender: TObject);
@@ -1174,74 +1185,29 @@ procedure TFormOLCB_Commander.ComConnect;
 var
   i: Integer;
 begin
-  FComPortHub := TComPortHub.Create(True);
-  try
-    ComPortHub.FreeOnTerminate := True;
-    {$IFDEF MSWINDOWS}
-    ComPortThread.Port := GlobalSettings.ComPort.Port;
+  {$IFDEF MSWINDOWS}
+  ComPortHub.AddComPort(GlobalSettings.ComPort.BaudRate, GlobalSettings.ComPort.Port);
+  {$ELSE}
+    {$IFDEF DARWIN}
+    ComPortHub.AddComPort(GlobalSettings.ComPort.BaudRate, PATH_OSX_DEV + GlobalSettings.ComPort.Port);
     {$ELSE}
-      {$IFDEF DARWIN}
-      ComPortHub.Port := PATH_OSX_DEV + GlobalSettings.ComPort.Port;
-      {$ELSE}
-      ComPortThread.Port := PATH_LINUX_DEV + GlobalSettings.ComPort.Port;
-      {$ENDIF}
+    ComPortHub.AddComPort(GlobalSettings.ComPort.BaudRate, PATH_LINUX_DEV + GlobalSettings.ComPort.Port);
     {$ENDIF}
-    ComPortHub.BaudRate := GlobalSettings.ComPort.BaudRate;
+  {$ENDIF}
+  ComPortHub.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
+  ComPortHub.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
 
-    ComPortHub.SyncReceiveMessageFunc := @SyncReceiveCOMPortMessage;
-    ComPortHub.SyncSendMessageFunc := @SyncSendCOMPortMessage;
-    ComPortHub.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
-    ComPortHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
+  if GlobalSettings.General.AutoScanNetworkAtBoot then
+    ActionOpenLCBCommandIdentifyIDGlobal.Execute;
 
-    ComPortHub.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
-    ComPortHub.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
-    {$IFDEF DEBUG_THREAD}
-    ComPortThread.SyncDebugFunc := @SyncDebugMessage;
-    {$ENDIF}
-    ComPortHub.Suspended := False;
-
-    i := 0;
-    while (not ComPortHub.Connected and (i < 100)) or ComPortHub.Terminated do
-    begin
-      Sleep(100);
-      Inc(i);
-    end;
-
-    if GlobalSettings.General.AutoScanNetworkAtBoot then
-      ActionOpenLCBCommandIdentifyIDGlobal.Execute;
-    RootNetworkNode.HasChildren := True;
-    RootNetworkNode.Expanded := True;
-
-    for i := 0 to ThrottleList.Count - 1 do
-      ThrottleList.Throttles[i].InitTransportLayers(EthernetHub, ComPortHub, @DispatchTask);
-    for i := 0 to ConfigEditorList.Count - 1 do
-      ConfigEditorList.ConfigEditors[i].InitTransportLayers(EthernetHub, ComPortHub, @DispatchTask);
-    UpdateUI;
-  except
-    if Assigned(ComPortHub) then
-    begin
-      ComPortHub.Terminate;
-      ComPortHub := nil;
-    end;
-    UpdateUI
-  end;
+  RootNetworkNode.HasChildren := True;
+  RootNetworkNode.Expanded := True;
+  UpdateUI;
 end;
 
 procedure TFormOLCB_Commander.ComDisconnect;
-var
-  i: Integer;
 begin
-  for i := 0 to ThrottleList.Count - 1 do
-    ThrottleList.Throttles[i].InitTransportLayers(EthernetHub, nil, @DispatchTask);
-  for i := 0 to ConfigEditorList.Count - 1 do
-      ConfigEditorList.ConfigEditors[i].InitTransportLayers(EthernetHub, nil, @DispatchTask);
-  if Assigned(FComPortHub) then
-  begin
-    ComPortHub.Terminate;
-    while not ComPortHub.TerminateComplete do
-      Application.ProcessMessages;               // Hate this but we can deadlock if a Syncronize is called if this is blocked.
-    FComPortHub := nil;
-  end;
+  ComPortHub.RemoveComPort(nil);
   UpdateUI;
 end;
 
@@ -1321,35 +1287,26 @@ end;
 function TFormOLCB_Commander.DispatchTask(Task: TOlcbTaskBase): Boolean;
 begin
   Result := False;
-
   if Task.DestinationAlias = 0 then
   begin
-    EthernetHub.AddTask(Task);        // Broadcast to all
-    if Assigned(ComPortHub) then
-      ComPortHub.AddTask(Task);
+    EthernetHub.AddTask(Task);
+    ComPortHub.AddTask(Task);
   end else
   begin
-    if not EthernetHub.AddTask(Task) then
-    begin
-      if Assigned(ComPortHub) then
-      begin
-        if not ComPortHub.AddTask(Task) then
-          Task.Free
-        else
-          Result := True
-      end else
-        Task.Free;
-    end else
+    if EthernetHub.AddTask(Task) then
+      Result := True
+    else
+    if ComPortHub.AddTask(Task) then
       Result := True
   end;
+  Task.Free;  // Task is Cloned
 end;
 
 procedure TFormOLCB_Commander.EthernetConnect;
 begin
-  EthernetHub.SyncErrorMessageFunc := @SyncErrorEthernetMessage;
-  EthernetHub.SyncReceiveMessageFunc := @SyncReceiveEthernetMessage;
-  EthernetHub.SyncSendMessageFunc := @SyncSendEthernetMessage;
   EthernetHub.Enabled := True;
+  EthernetHub.EnableReceiveMessages := ActionToolsEthernetHubMessageLogShow.Checked;
+  EthernetHub.EnableSendMessages := ActionToolsEthernetHubMessageLogShow.Checked;
   UpdateUI
 end;
 
@@ -1898,11 +1855,6 @@ end;
 
 procedure TFormOLCB_Commander.SyncErrorCOMPortMessage(MessageStr: String);
 begin
-  if Assigned(ComPortHub) then
-  begin
-    ComPortHub.Terminate;
-    ComPortHub := nil
-  end;
   UpdateUI;
   ShowMessage(MessageStr);
 end;
@@ -1974,107 +1926,110 @@ var
   i: Integer;
   Done: Boolean;
 begin
-  if Sender is TReadAddressSpaceMemoryTask then
+  if not Sender.ForceTermination then
   begin
-    MemTask := TReadAddressSpaceMemoryTask( Sender);
-    MemConfigViewer := TFormMemConfigViewer.Create(Application);
-    MemConfigViewer.Caption := MemConfigViewer.Caption + ' - Alias:  0x' + IntToHex(MemTask.DestinationAlias, 4) + '  Address Space: ' + IntToStr(MemTask.AddressSpace);
-    case MemTask.AddressSpace of
-      MSI_CDI{, MSI_FDI}:
-        begin
-          try
-            MemConfigViewer.KHexEditor.Visible := False;
-            MemConfigViewer.SynEditCDI.Visible := True;
-            MemConfigViewer.SynEditCDI.BeginUpdate;
-            MemConfigViewer.SynEditCDI.ClearAll;
-            MemConfigViewer.SynEditCDI.EndUpdate;
-            MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
+    if Sender is TReadAddressSpaceMemoryTask then
+    begin
+      MemTask := TReadAddressSpaceMemoryTask( Sender);
+      MemConfigViewer := TFormMemConfigViewer.Create(Application);
+      MemConfigViewer.Caption := MemConfigViewer.Caption + ' - Alias:  0x' + IntToHex(MemTask.DestinationAlias, 4) + '  Address Space: ' + IntToStr(MemTask.AddressSpace);
+      case MemTask.AddressSpace of
+        MSI_CDI{, MSI_FDI}:
+          begin
+            try
+              MemConfigViewer.KHexEditor.Visible := False;
+              MemConfigViewer.SynEditCDI.Visible := True;
+              MemConfigViewer.SynEditCDI.BeginUpdate;
+              MemConfigViewer.SynEditCDI.ClearAll;
+              MemConfigViewer.SynEditCDI.EndUpdate;
+              MemTask.DataStream.Position := MemTask.DataStream.Size - 1;
 
-            Done := False;
-            MemTask.DataStream.Position := 0;
-            while not Done and (MemTask.DataStream.Position < MemTask.DataStream.Size) do
-            begin
-              if Char( MemTask.DataStream.ReadByte) = #0 then
+              Done := False;
+              MemTask.DataStream.Position := 0;
+              while not Done and (MemTask.DataStream.Position < MemTask.DataStream.Size) do
               begin
-                // Strip the null and any trailing characters.
-                MemTask.DataStream.Size := MemTask.DataStream.Position - 1;
-                Done := True;
-              end
+                if Char( MemTask.DataStream.ReadByte) = #0 then
+                begin
+                  // Strip the null and any trailing characters.
+                  MemTask.DataStream.Size := MemTask.DataStream.Position - 1;
+                  Done := True;
+                end
+              end;
+              MemTask.DataStream.Position := 0;
+              ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
+              WriteXMLFile(ADoc, MemTask.DataStream);
+              MemConfigViewer.XmlDoc := ADoc;
+              x := StreamAsString(MemTask.DataStream);
+              MemConfigViewer.SynEditCDI.Text := x ;
+            except
+              MemConfigViewer.SynEditCDI.Lines.Add('************************');
+              MemConfigViewer.SynEditCDI.Lines.Add('ERROR');
+              MemConfigViewer.SynEditCDI.Lines.Add('************************');
+              MemConfigViewer.SynEditCDI.Lines.Add('FAILED TO PARSE XML FILE');
+              MemConfigViewer.SynEditCDI.Lines.Add('************************');
+              FreeAndNil(ADoc);
             end;
+          end
+       else
+          begin
+            MemConfigViewer.SynEditCDI.Visible := False;
+            MemConfigViewer.KHexEditor.Visible := True;
             MemTask.DataStream.Position := 0;
-            ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
-            WriteXMLFile(ADoc, MemTask.DataStream);
-            MemConfigViewer.XmlDoc := ADoc;
-            x := StreamAsString(MemTask.DataStream);
-            MemConfigViewer.SynEditCDI.Text := x ;
-          except
-            MemConfigViewer.SynEditCDI.Lines.Add('************************');
-            MemConfigViewer.SynEditCDI.Lines.Add('ERROR');
-            MemConfigViewer.SynEditCDI.Lines.Add('************************');
-            MemConfigViewer.SynEditCDI.Lines.Add('FAILED TO PARSE XML FILE');
-            MemConfigViewer.SynEditCDI.Lines.Add('************************');
-            FreeAndNil(ADoc);
+            MemConfigViewer.KHexEditor.LoadFromStream(MemTask.DataStream);
           end;
-        end
-     else
-        begin
-          MemConfigViewer.SynEditCDI.Visible := False;
-          MemConfigViewer.KHexEditor.Visible := True;
-          MemTask.DataStream.Position := 0;
-          MemConfigViewer.KHexEditor.LoadFromStream(MemTask.DataStream);
-        end;
-    end;
-    MemConfigViewer.Show;
-  end else
-  if Sender is TConfigMemoryAddressSpaceInfoTask then
-    RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TConfigMemoryAddressSpaceInfoTask( Sender).ConfigMemoryAddressSpace)
-  else
-  if Sender is TConfigMemoryOptionsTask then
-     RefreshNetworkTreeAliasConfigMemOptions(Sender.DestinationAlias, TConfigMemoryOptionsTask( Sender).ConfigMemoryOptions)
-  else
-  if Sender is TConfigMemoryAddressSpaceInfoTask then
-    RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TConfigMemoryAddressSpaceInfoTask( Sender).ConfigMemoryAddressSpace)
-  else
-  if Sender is TProtocolSupportTask then
-    RefreshNetworkTreeAliasProtocolSupport(Sender.DestinationAlias, TProtocolSupportTask( Sender).Protocols)
-  else
-  if Sender is TSimpleNodeInformationTask then
-    RefreshNetworkTreeAliasSnip(Sender.DestinationAlias, TSimpleNodeInformationTask( Sender).Snip)
-  else
-  if Sender is TEnumAllConfigMemoryAddressSpaceInfoTask then
-  begin
-    EnumAllSpaces := TEnumAllConfigMemoryAddressSpaceInfoTask( Sender);
-    for i := 0 to EnumAllSpaces.ConfigMemAddressInfo.AddressSpaceCount - 1 do
-      RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, EnumAllSpaces.ConfigMemAddressInfo.AddressSpace[i])
-  end else
-  if Sender is TEventTask then
-  begin
-    RefreshNetworkTreeAliasEvents(Sender.DestinationAlias, Sender.MessageHelper);
-    for i := 0 to ThrottleList.Count - 1 do
-      ThrottleList.Throttles[i].EventTaskReceived(Sender as TEventTask);
-  end else
-  if Sender is TCANLayerTask then
-  begin
-    case Sender.MessageHelper.MTI of
-      MTI_AMD : AddNetworkTreeAlias(Sender.DestinationAlias, Sender.MessageHelper.ExtractDataBytesAsInt(0, 5), True);
-      MTI_AMR : DeleteNetworkTreeAlias(Sender.DestinationAlias);
-    end
-  end else
-  if Sender is TVerifiedNodeIDTask then
-  begin
-    if Sender.MessageHelper.DataCount = 6 then
-      AddNetworkTreeAlias(Sender.DestinationAlias, Sender.MessageHelper.ExtractDataBytesAsInt(0, 5), True)
+      end;
+      MemConfigViewer.Show;
+    end else
+    if Sender is TConfigMemoryAddressSpaceInfoTask then
+      RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TConfigMemoryAddressSpaceInfoTask( Sender).ConfigMemoryAddressSpace)
     else
-      AddNetworkTreeAlias(Sender.DestinationAlias, 0, True);
-  end
- else
-  if Sender is TTractionProtocolTask then
-  begin
+    if Sender is TConfigMemoryOptionsTask then
+       RefreshNetworkTreeAliasConfigMemOptions(Sender.DestinationAlias, TConfigMemoryOptionsTask( Sender).ConfigMemoryOptions)
+    else
+    if Sender is TConfigMemoryAddressSpaceInfoTask then
+      RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TConfigMemoryAddressSpaceInfoTask( Sender).ConfigMemoryAddressSpace)
+    else
+    if Sender is TProtocolSupportTask then
+      RefreshNetworkTreeAliasProtocolSupport(Sender.DestinationAlias, TProtocolSupportTask( Sender).Protocols)
+    else
+    if Sender is TSimpleNodeInformationTask then
+      RefreshNetworkTreeAliasSnip(Sender.DestinationAlias, TSimpleNodeInformationTask( Sender).Snip)
+    else
+    if Sender is TEnumAllConfigMemoryAddressSpaceInfoTask then
+    begin
+      EnumAllSpaces := TEnumAllConfigMemoryAddressSpaceInfoTask( Sender);
+      for i := 0 to EnumAllSpaces.ConfigMemAddressInfo.AddressSpaceCount - 1 do
+        RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, EnumAllSpaces.ConfigMemAddressInfo.AddressSpace[i])
+    end else
+    if Sender is TEventTask then
+    begin
+      RefreshNetworkTreeAliasEvents(Sender.DestinationAlias, Sender.MessageHelper);
+      for i := 0 to ThrottleList.Count - 1 do
+        ThrottleList.Throttles[i].EventTaskReceived(Sender as TEventTask);
+    end else
+    if Sender is TCANLayerTask then
+    begin
+      case Sender.MessageHelper.MTI of
+        MTI_AMD : AddNetworkTreeAlias(Sender.DestinationAlias, Sender.MessageHelper.ExtractDataBytesAsInt(0, 5), True);
+        MTI_AMR : DeleteNetworkTreeAlias(Sender.DestinationAlias);
+      end
+    end else
+    if Sender is TVerifiedNodeIDTask then
+    begin
+      if Sender.MessageHelper.DataCount = 6 then
+        AddNetworkTreeAlias(Sender.DestinationAlias, Sender.MessageHelper.ExtractDataBytesAsInt(0, 5), True)
+      else
+        AddNetworkTreeAlias(Sender.DestinationAlias, 0, True);
+    end
+   else
+    if Sender is TTractionProtocolTask then
+    begin
 
-  end else
-  if Sender is TInitializationCompleteTask then
-  begin
+    end else
+    if Sender is TInitializationCompleteTask then
+    begin
 
+    end;
   end;
 
   StatusBar.Panels[4].Text := 'Task Count: ' + IntToStr(TaskObjects-1)  // This task will be freed
@@ -2095,8 +2050,8 @@ var
   ConfigEditorCreateEnabled: Boolean;
   i: Integer;
 begin
-  ActionToolsComConnect.Enabled := not Assigned(FComPortHub);
-  ActionToolsComDisconnect.Enabled := Assigned(FComPortHub);
+  ActionToolsComConnect.Enabled := not ComPortHub.Connected;
+  ActionToolsComDisconnect.Enabled := ComPortHub.Connected;
 
   ActionToolsEthernetHubConnect.Enabled := not EthernetHub.Enabled;
   ActionToolsEthernetHubDisconnect.Enabled := EthernetHub.Enabled;
@@ -2141,4 +2096,4 @@ end;
 
 
 end.
-
+

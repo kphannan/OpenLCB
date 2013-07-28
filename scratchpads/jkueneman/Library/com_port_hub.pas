@@ -13,24 +13,9 @@ uses
 
 type
 
-   {$IFDEF DEBUG_THREAD}
-  TComPortThreadDebugRec = record
-    ReceiveDatagramCount: Integer;
-    MaxReceiveDatagramCount: Integer;
-    SendDatagramCount: Integer;
-    MaxSendDatagramCount: Integer;
-    TaskCount: Integer;
-    MaxTaskCount: Integer;
-    ThreadTime: DWord;
-    MaxThreadTime: DWord;
-  end;
-  {$ENDIF}
+{ TComPortThread }
 
-  {$IFDEF DEBUG_THREAD} TSyncDebugFunc = procedure(DebugInfo: TComPortThreadDebugRec) of object; {$ENDIF}
-
-{ TComPortHub }
-
-  TComPortHub =  class(TTransportLayerThread)
+  TComPortThread =  class(TTransportLayerThread)
   private
     FBaudRate: DWord;                                                           // Baud rate to connect with
     FPort: String;                                                              // Port to connect to
@@ -46,12 +31,242 @@ type
       property Port: String read FPort write FPort;
   end;
 
+  { TComPortThreadList }
+
+  TComPortThreadList = class(TThreadList)      // Contains TClientSocketThread objects
+  private
+    function GetCount: Integer;
+  public
+    destructor Destroy; override;
+    procedure ClearObjects;
+
+    property Count: Integer read GetCount;
+  end;
+
+  { TComPortHub }
+
+  TComPortHub = class
+  private
+    FComPortThreadList: TComPortThreadList;
+    FEnableReceiveMessages: Boolean;
+    FEnableSendMessages: Boolean;
+    FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;
+    FSyncErrorMessageFunc: TSyncRawMessageFunc;
+    FSyncReceiveMessageFunc: TSyncRawMessageFunc;
+    FSyncSendMessageFunc: TSyncRawMessageFunc;
+    function GetConnected: Boolean;
+    procedure SetEnableReceiveMessages(AValue: Boolean);
+    procedure SetEnableSendMessages(AValue: Boolean);
+  protected
+    property ComPortThreadList: TComPortThreadList read FComPortThreadList write FComPortThreadList;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function AddTask(NewTask: TOlcbTaskBase): Boolean;
+    function AddComPort(BaudRate: DWord; Port: String): TComPortThread;
+    procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
+    procedure RemoveComPort(ComPort: TComPortThread);
+    property Connected: Boolean read GetConnected;
+    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write SetEnableReceiveMessages;
+    property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
+    property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+    property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
+    property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
+    property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
+  end;
+
 
 implementation
 
+{ TComPortThreadList }
+
+function TComPortThreadList.GetCount: Integer;
+var
+  L: TList;
+begin
+  L := LockList;
+  try
+    Result := L.Count
+  finally
+    UnlockList;
+  end;
+end;
+
+destructor TComPortThreadList.Destroy;
+begin
+  ClearObjects;
+  inherited Destroy;
+end;
+
+procedure TComPortThreadList.ClearObjects;
+var
+  i: Integer;
+  L: TList;
+  ComPortThread: TComPortThread;
+begin
+  L := LockList;
+  try
+    for i := 0 to L.Count - 1 do
+    begin;
+      ComPortThread := TComPortThread( L[i]);
+      ComPortThread.Terminate;
+    end;
+  finally
+    L.Clear;
+    UnlockList;
+  end;
+end;
+
 { TComPortHub }
 
-procedure TComPortHub.Execute;
+procedure TComPortHub.SetEnableReceiveMessages(AValue: Boolean);
+var
+  List: TList;
+  i: Integer;
+begin
+  if FEnableSendMessages=AValue then Exit;
+  FEnableSendMessages:=AValue;
+  List := ComPortThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TComPortThread( List[i]).EnableSendMessages := AValue;
+  finally
+    ComPortThreadList.UnlockList;
+  end;
+end;
+
+function TComPortHub.GetConnected: Boolean;
+begin
+  Result := ComPortThreadList.Count > 0;
+end;
+
+procedure TComPortHub.SetEnableSendMessages(AValue: Boolean);
+var
+  List: TList;
+  i: Integer;
+begin
+  if FEnableReceiveMessages=AValue then Exit;
+  FEnableReceiveMessages:=AValue;
+  List := ComPortThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TComPortThread( List[i]).EnableReceiveMessages := AValue;
+  finally
+    ComPortThreadList.UnlockList;
+  end;
+end;
+
+constructor TComPortHub.Create;
+begin
+  inherited Create;
+  ComPortThreadList := TComPortThreadList.Create;
+  FOnBeforeDestroyTask := nil;
+  FSyncErrorMessageFunc := nil;
+  FSyncReceiveMessageFunc := nil;
+  FSyncSendMessageFunc := nil;
+end;
+
+destructor TComPortHub.Destroy;
+begin
+  FreeAndNil(FComPortThreadList);
+  inherited Destroy
+end;
+
+function TComPortHub.AddTask(NewTask: TOlcbTaskBase): Boolean;
+var
+  List: TList;
+  i: Integer;
+  Done: Boolean;
+begin
+  Done := False;
+  List := ComPortThreadList.LockList;
+  try
+    if NewTask.DestinationAlias = 0 then
+    begin
+      for i := 0 to List.Count - 1 do
+        TComPortThread( List[i]).AddTask(NewTask, True);   // Broadcast, Thread will clone task
+      Done := True;
+    end else
+    begin
+      i := 0;
+      while (i < List.Count) and not Done do
+      begin
+        Done := TComPortThread( List[i]).AddTask(NewTask, True);  // Thread will clone task
+        Inc(i);
+      end;
+    end;
+  finally
+    ComPortThreadList.UnlockList;
+    Result := Done;
+  end;
+end;
+
+function TComPortHub.AddComPort(BaudRate: DWord; Port: String): TComPortThread;
+var
+  List: TList;
+begin
+  Result := TComPortThread.Create(True);
+  Result.FreeOnTerminate := True;
+  Result.BaudRate := BaudRate;
+  Result.Port := Port;
+  Result.SyncErrorMessageFunc := SyncErrorMessageFunc;
+  Result.SyncReceiveMessageFunc := SyncReceiveMessageFunc;
+  Result.SyncSendMessageFunc := SyncSendMessageFunc;
+  Result.OnBeforeDestroyTask := OnBeforeDestroyTask;
+  List := ComPortThreadList.LockList;
+  try
+    List.Add(Result);
+  finally
+    ComPortThreadList.UnlockList;
+  end;
+  Result.Suspended := False;
+end;
+
+procedure TComPortHub.RemoveAndFreeTasks(RemoveKey: PtrInt);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ComPortThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TComPortThread( List[i]).RemoveAndFreeTasks(RemoveKey);   // UNKNWON IF THIS IS CORRECT >>>>>>>>>>>>>>>>>>
+  finally
+    ComPortThreadList.UnlockList;
+  end;
+end;
+
+procedure TComPortHub.RemoveComPort(ComPort: TComPortThread);
+var
+  List: TList;
+  i: Integer;
+begin
+  if ComPort = nil then
+  begin
+    List := ComPortThreadList.LockList;
+    try
+      for i := List.Count - 1 downto 0  do
+      begin
+        if (ComPort = TComPortThread( List[i])) or (ComPort = nil) then
+        begin
+          TComPortThread( List[i]).SyncReceiveMessageFunc := nil;
+          TComPortThread( List[i]).SyncSendMessageFunc := nil;
+          TComPortThread( List[i]).SyncErrorMessageFunc := nil;
+          TComPortThread( List[i]).OnBeforeDestroyTask := nil;
+          TComPortThread( List[i]).RemoveAndFreeTasks(0);
+          TComPortThread( List[i]).Terminate;
+          List.Delete(i);
+        end;
+      end;
+    finally
+      ComPortThreadList.UnLockList;
+    end;
+  end;
+end;
+
+{ TComPortThread }
+
+procedure TComPortThread.Execute;
 var
   List: TList;
   SendStr: AnsiString;
@@ -127,14 +342,14 @@ begin
 end;
 
 
-constructor TComPortHub.Create(CreateSuspended: Boolean);
+constructor TComPortThread.Create(CreateSuspended: Boolean);
 begin
   inherited Create(CreateSuspended);
   FBaudRate := 9600;
   FPort := '';
 end;
 
-destructor TComPortHub.Destroy;
+destructor TComPortThread.Destroy;
 begin
   inherited Destroy;
 end;

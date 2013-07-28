@@ -59,14 +59,12 @@ type
     FMapList: TMap;
     FOnChangeState: TNotifyEvent;
     FState: TOlcbConfigState;
-    FTask: TOlcbTaskBase;
     procedure SetState(AValue: TOlcbConfigState);
   public
     constructor Create(MemOffset, MemSize: DWord; ADataType: TOlcbConfigDataType);
     destructor Destroy; override;
     property ConfigMemAddress: DWord read FConfigMemAddress write FConfigMemAddress;
     property ConfigMemSize: DWord read FConfigMemSize write FConfigMemSize;
-    property Task: TOlcbTaskBase read FTask write FTask;
     property DataType: TOlcbConfigDataType read FDataType write FDataType;
     property MapList: TMap read FMapList write FMapList;
     property State: TOlcbConfigState read FState write SetState;
@@ -1194,7 +1192,6 @@ begin
   FState := ocs_Unknown;
   FConfigMemAddress := MemOffset;
   FConfigMemSize := MemSize;
-  FTask := nil;
   FDataType := ADataType;
   MapList := TMap.Create;
 end;

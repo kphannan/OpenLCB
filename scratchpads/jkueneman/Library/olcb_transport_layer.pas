@@ -6,7 +6,8 @@ interface
 
 uses
   Classes, SysUtils, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
-  olcb_app_common_settings, math_float16, Forms, blcksock, synsock, contnrs;
+  olcb_app_common_settings, math_float16, Forms, blcksock, synsock, contnrs,
+  Controls;
 
 const
   ERROR_NO_MEMORY_CONFIG_PROTOCOL = $00000001;
@@ -103,7 +104,7 @@ type
   public
     constructor Create(CreateSuspended: Boolean); virtual;
     destructor Destroy; override;
-    function AddTask(NewTask: TOlcbTaskBase): Boolean;
+    function AddTask(NewTask: TOlcbTaskBase; CopyTask: Boolean): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
     property Connected: Boolean read FConnected write FConnected;
@@ -429,6 +430,7 @@ end;
     FMessageHelper: TOpenLCBMessageHelper;
     FMessageWaitTimeStart: DWord;
     FOnBeforeDestroy: TOlcbTaskBeforeDestroy;
+    FOwnerControl: TControl;
     FSending: Boolean;
     FErrorString: string;
     FRemoveKey: PtrInt;
@@ -497,18 +499,19 @@ end;
     destructor Destroy; override;
     function Clone: TOlcbTaskBase; virtual; abstract;
     procedure CopyTo(Target: TOlcbTaskBase); virtual;
-    property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
     property DestinationAlias: Word read FDestinationAlias;
-    property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
     property ErrorCode: DWord read FErrorCode write FErrorCode;
     property ErrorString: string read FErrorString write FErrorString;
+    property ForceTermination: Boolean read FForceTermination write FForceTermination;
+    property HasStarted: Boolean read FHasStarted;
     property MessageHelper: TOpenLCBMessageHelper read FMessageHelper write FMessageHelper;
+    property OnBeforeDestroy: TOlcbTaskBeforeDestroy read FOnBeforeDestroy write FOnBeforeDestroy;
+    property OwnerControl: TControl read FOwnerControl write FOwnerControl;
     property SourceAlias: Word read FSourceAlias;
     property Sending: Boolean read FSending write FSending;
     property Tag: PtrInt read FTag write FTag;
+    property TransportLayerThread: TTransportLayerThread read FTransportLayerThread;
     property RemoveKey: PtrInt read FRemoveKey write FRemoveKey;
-    property HasStarted: Boolean read FHasStarted;
-    property ForceTermination: Boolean read FForceTermination write FForceTermination;
   end;
 
   { TVerifyNodeIDGlobalTask }
@@ -1052,6 +1055,9 @@ begin
       Synchronize(@SyncReceiveMessage);
     end;
 
+    if AliasList.FindByAlias(Helper.SourceAliasID) = nil then             // Any message from a node is on our segement
+      AliasList.Add(TAliasTaskContainer.Create(Helper.SourceAliasID));
+
     if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
     begin
       CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
@@ -1074,11 +1080,6 @@ begin
     if Helper.Layer = ol_CAN then
     begin
       case Helper.MTI of
-        MTI_AMD :
-          begin
-            if AliasList.FindByAlias(Helper.DestinationAliasID) <> nil then
-              AliasList.Add(TAliasTaskContainer.Create(Helper.DestinationAliasID));
-          end;
         MTI_AMR :
           begin
             AliasList.RemoveByAlias(Helper.DestinationAliasID);
@@ -1087,7 +1088,7 @@ begin
       CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
       CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
       Helper.CopyTo(CANLayerTask.MessageHelper);
-      AddTask(CANLayerTask);
+      AddTask(CANLayerTask, False);
     end;
 
     case Helper.MTI of
@@ -1096,14 +1097,14 @@ begin
           InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(InitializationCompleteTask.MessageHelper);
-          AddTask(InitializationCompleteTask);
+          AddTask(InitializationCompleteTask, False);
         end;
       MTI_VERIFIED_NODE_ID_NUMBER :
         begin
           VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
-          AddTask(VerifiedNodeIDTask);
+          AddTask(VerifiedNodeIDTask, False);
         end;
       MTI_CONSUMER_IDENTIFIED_CLEAR,
       MTI_CONSUMER_IDENTIFIED_SET,
@@ -1118,14 +1119,14 @@ begin
           EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(EventTask.MessageHelper);
-          AddTask(EventTask);
+          AddTask(EventTask, False);
         end;
       MTI_TRACTION_PROTOCOL :
         begin
           TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(TractionProtocolTask.MessageHelper);
-          AddTask(TractionProtocolTask);
+          AddTask(TractionProtocolTask, False);
         end;
     end;
   end;
@@ -1238,17 +1239,25 @@ begin
     Datagram.Free
 end;
 
-function TTransportLayerThread.AddTask(NewTask: TOlcbTaskBase): Boolean;
+function TTransportLayerThread.AddTask(NewTask: TOlcbTaskBase; CopyTask: Boolean): Boolean;
 var
   List: TList;
+  CloneTask: TOlcbTaskBase;
 begin
   Result := False;
   if (NewTask.DestinationAlias = 0) or (AliasList.FindByAlias(NewTask.DestinationAlias) <> nil) then
   begin
     List := OlcbTaskManager.TaskList.LockList;
     try
-      NewTask.FTransportLayerThread := Self;
-      List.Add(NewTask);
+      if CopyTask then
+      begin
+        CloneTask := NewTask.Clone;
+        NewTask.CopyTo(CloneTask);
+      end else
+        CloneTask := NewTask;
+
+      CloneTask.FTransportLayerThread := Self;
+      List.Add(CloneTask);
       if List.Count > OlcbTaskManager.MaxCount then
         OlcbTaskManager.MaxCount := List.Count;
     finally
@@ -1269,7 +1278,7 @@ begin
     i := List.count;
     for i := List.Count - 1 downto 0 do
     begin
-      if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) then
+      if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) or (TOlcbTaskBase( List[i]).RemoveKey = 0) then
       begin
         TOlcbTaskBase( List[i]).ForceTermination := True;
         TOlcbTaskBase( List[i]).Free;
@@ -1873,8 +1882,8 @@ begin
       if Datagram.CreateTime + GlobalSettings.General.DatagramWaitTime > GetTickCount then
       begin
         // Abandon Datagram
-        Datagram.Free;
-        List.Delete(i);
+    //    Datagram.Free;
+   //     List.Delete(i);
       end;
     end;
   finally
@@ -2623,7 +2632,10 @@ end;
 
 function TOlcbTaskBase.MessageWaitTimerCheckTimeout: Boolean;
 begin
-  Result := GetTickCount - MessageWaitTimeStart > GlobalSettings.General.MessageWaitTime;
+  if HasStarted then
+    Result := GetTickCount - MessageWaitTimeStart > GlobalSettings.General.MessageWaitTime
+  else
+    Result := True
 end;
 
 procedure TOlcbTaskBase.Process(MessageInfo: TOlcbMessage);
@@ -2632,6 +2644,10 @@ begin
   begin
     FHasStarted := True;
     MessageWaitTimerReset;
+  end else
+  begin
+    if MessageWaitTimerCheckTimeout then
+      ForceTermination := True;
   end;
 
   if ForceTermination then
@@ -2886,6 +2902,7 @@ begin
   FErrorString := '';
   FiLogState := 0;
   FMessageWaitTimeStart := 0;
+  FOwnerControl := nil;
 end;
 
 destructor TOlcbTaskBase.Destroy;
@@ -2912,6 +2929,7 @@ begin
   Target.FSourceAlias := FSourceAlias;
   Target.FStartAsSending := FStartAsSending;
   Target.Sending := FStartAsSending;
+  Target.OwnerControl := FOwnerControl;
 end;
 
 { TReadAddressSpaceMemoryRawTask }
@@ -4396,20 +4414,13 @@ begin
     if List.Count > 0 then
     begin
       Task := TOlcbTaskBase( List[0]);
-      if Task.ForceTermination or Task.MessageWaitTimerCheckTimeout then
+      if not Task.Sending then
       begin
-        List.Delete(0);
-        Task.Free;            // Throw it away for now.... maybe save them for forensics?
-      end else
-      begin
-        if not Task.Sending then
+        Task.Process(MessageInfo);
+        if Task.Done or Task.ForceTermination then
         begin
-          Task.Process(MessageInfo);
-          if Task.Done then
-          begin
-            CompletedTask := Task;
-            List.Delete(0);
-          end;
+          CompletedTask := Task;
+          List.Delete(0);
         end;
       end;
     end;
@@ -4436,21 +4447,14 @@ begin
     if List.Count > 0 then
     begin
       Task := TOlcbTaskBase( List[0]);
-      if Task.ForceTermination or Task.MessageWaitTimerCheckTimeout then
+      if Task.Sending then
       begin
-        List.Delete(0);
-        Task.Free;            // Throw it away for now.... maybe save them for forensics?
-      end else
-      begin
-        if Task.Sending then
+        Task.Process(nil);
+        if Task.Done or Task.ForceTermination then
         begin
-          Task.Process(nil);
-          if Task.Done then
-          begin
-            CompletedTask := Task;
-            List.Delete(0);
-          end;
-        end
+          CompletedTask := Task;
+          List.Delete(0);
+        end;
       end;
     end;
   finally

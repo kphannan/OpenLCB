@@ -59,7 +59,7 @@ type
   private
     FAliasID: Word;
     FCdiParser: TCdiParser;
-    FComPortThread: TComPortHub;
+    FComPortHub: TComPortHub;
     FConfigReadTaskQueue: TList;
     FConfigReadTaskRunning: Boolean;
     FConfigWriteTaskQueue: TList;
@@ -95,7 +95,7 @@ type
     procedure UpdateUI;
 
     property CdiParser: TCdiParser read FCdiParser write FCdiParser;
-    property ComPortThread: TComPortHub read FComPortThread write FComPortThread;
+    property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
     property ConfigReadTaskQueue: TList read FConfigReadTaskQueue write FConfigReadTaskQueue;
     property ConfigWriteTaskQueue: TList read FConfigWriteTaskQueue write FConfigWriteTaskQueue;
     property ConfigWriteTaskRunning: Boolean read FConfigWriteTaskRunning write FConfigWriteTaskRunning;
@@ -194,7 +194,7 @@ end;
 
 procedure TFormTrainConfigEditor.FormCreate(Sender: TObject);
 begin
-  FComPortThread := nil;
+  FComPortHub := nil;
   FEthernetHub := nil;
   FAliasID := 0;
   FShownOnce := False;
@@ -259,16 +259,16 @@ end;
 
 procedure TFormTrainConfigEditor.ActionStopReadExecute(Sender: TObject);
 begin
- if Assigned(ComPortThread) then
-   ComPortThread.RemoveAndFreeTasks( PtrInt( Self));
+ ComPortHub.RemoveAndFreeTasks( PtrInt( Self));
+ EthernetHub.RemoveAndFreeTasks( PtrInt(Self));
  FlushConfigReadTasks;
  UpdateUI
 end;
 
 procedure TFormTrainConfigEditor.ActionStopWriteExecute(Sender: TObject);
 begin
- if Assigned(ComPortThread) then
-   ComPortThread.RemoveAndFreeTasks( PtrInt( Self));
+ ComPortHub.RemoveAndFreeTasks( PtrInt( Self));
+ EthernetHub.RemoveAndFreeTasks( PtrInt(Self));
  FlushConfigWriteTasks;
  UpdateUI
 end;
@@ -283,7 +283,7 @@ procedure TFormTrainConfigEditor.FormShow(Sender: TObject);
 var
   Task: TReadAddressSpaceMemoryTask;
 begin
-  if Assigned(ComPortThread) and not ShownOnce then
+  if Assigned(ComPortHub) and not ShownOnce then
   begin
     Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CDI, True);
     Task.RemoveKey := PtrInt( Self);
@@ -385,7 +385,7 @@ begin
                 Control := ScrollBox.Controls[iControl];
                 if Control is TOlcbEdit then
                 begin
-                  if (Control as TOlcbEdit).ConfigInfo.Task = Sender then
+                  if Control = Sender.OwnerControl then
                   begin
                     // Whew, success
                     TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
@@ -415,7 +415,7 @@ begin
                 end else
                 if Control is TOlcbSpinEdit then
                 begin
-                   if (Control as TOlcbSpinEdit).ConfigInfo.Task = Sender then
+                   if Control = Sender.OwnerControl then
                   begin
                     // Whew, success
                     TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
@@ -437,7 +437,7 @@ begin
                 end else
                 if Control is TOlcbComboBox then
                 begin
-                  if (Control as TOlcbComboBox).ConfigInfo.Task = Sender then
+                  if Control = Sender.OwnerControl then
                   begin
                     // Whew, success
                     TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
@@ -610,30 +610,39 @@ begin
 end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
+var
+  Task: TOlcbTaskBase;
 begin
-  Edit.ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
-  Edit.ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  Edit.ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-  Edit.ConfigInfo.Task.RemoveKey := PtrInt( Self);
-  QueueConfigReadTask(Edit.ConfigInfo.Task);
+  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  Task.Tag := iPage or (iControl shl 16);
+  Task.RemoveKey := PtrInt( Self);
+  Task.OwnerControl := Edit;
+  QueueConfigReadTask(Task);
 end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationSpinEdit(Edit: TOlcbSpinEdit; iPage, iControl: Word);
+var
+  Task: TOlcbTaskBase;
 begin
-  Edit.ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
-  Edit.ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  Edit.ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-  Edit.ConfigInfo.Task.RemoveKey := PtrInt( Self);
-  QueueConfigReadTask(Edit.ConfigInfo.Task);
+  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  Task.Tag := iPage or (iControl shl 16);
+  Task.RemoveKey := PtrInt( Self);
+  Task.OwnerControl := Edit;
+  QueueConfigReadTask(Task);
 end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
+var
+  Task: TOlcbTaskBase;
 begin
-  Edit.ConfigInfo.Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
-  Edit.ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  Edit.ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-  Edit.ConfigInfo.Task.RemoveKey := PtrInt( Self);
-  QueueConfigReadTask(Edit.ConfigInfo.Task);
+  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
+  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+  Task.Tag := iPage or (iControl shl 16);
+  Task.RemoveKey := PtrInt( Self);
+  Task.OwnerControl := Edit;
+  QueueConfigReadTask(Task);
 end;
 
 procedure TFormTrainConfigEditor.WriteConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
@@ -642,6 +651,7 @@ var
   i: Integer;
   EventID: TEventID;
   HexArray: THexArray;
+  Task: TOlcbTaskBase;
 begin
   Stream := TMemoryStream.Create;
   try
@@ -671,11 +681,12 @@ begin
       cdt_Bit     : begin
                     end;
     end;
-    Edit.ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
-    Edit.ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    Edit.ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-    Edit.ConfigInfo.Task.RemoveKey := PtrInt( Self);
-    QueueConfigWriteTask(Edit.ConfigInfo.Task);
+    Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    Task.Tag := iPage or (iControl shl 16);
+    Task.RemoveKey := PtrInt( Self);
+    Task.OwnerControl := Edit;
+    QueueConfigWriteTask(Task);
   finally
     Stream.Free
   end;
@@ -686,6 +697,7 @@ var
   Stream: TMemoryStream;
   i: Integer;
   HexArray: THexArray;
+  Task: TOlcbTaskBase;
 begin
   Stream := TMemoryStream.Create;
   try
@@ -701,11 +713,12 @@ begin
                        // TODO
                     end;
     end;
-    Edit.ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
-    Edit.ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    Edit.ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-    Edit.ConfigInfo.Task.RemoveKey := PtrInt( Self);
-    QueueConfigWriteTask(Edit.ConfigInfo.Task);
+    Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    Task.Tag := iPage or (iControl shl 16);
+    Task.RemoveKey := PtrInt( Self);
+    Task.OwnerControl := Edit;
+    QueueConfigWriteTask(Task);
   finally
     Stream.Free
   end;
@@ -718,6 +731,7 @@ var
   Relation: TMapRelation;
   EventID: TEventID;
   HexArray: THexArray;
+  Task: TOlcbTaskBase;
 begin
   iComboBox := Edit.ItemIndex;
   if iComboBox > -1 then
@@ -762,11 +776,12 @@ begin
                         // TODO
                       end;
       end;
-      Edit.ConfigInfo.Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
-      Edit.ConfigInfo.Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-      Edit.ConfigInfo.Task.Tag := iPage or (iControl shl 16);
-      Edit.ConfigInfo.Task.RemoveKey := PtrInt( Self);
-      QueueConfigWriteTask(Edit.ConfigInfo.Task);
+      Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
+      Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+      Task.Tag := iPage or (iControl shl 16);
+      Task.RemoveKey := PtrInt( Self);
+      Task.OwnerControl := Edit;
+      QueueConfigWriteTask(Task);
     finally
       Stream.Free;
     end;
@@ -935,7 +950,7 @@ procedure TFormTrainConfigEditor.InitTransportLayers(AnEthernetHub: TEthernetHub
 begin
   FDispatchTask := ADispatchTaskFunc;
   FEthernetHub := AnEthernetHub;
-  FComPortThread := AComPortThread;
+  FComPortHub := AComPortThread;
 end;
 
 end.
