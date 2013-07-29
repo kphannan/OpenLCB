@@ -20,7 +20,7 @@ unit TCPStorage;
 
 {$I Options.inc}
 
-{$DEFINE TRACE_ETHERNET_OVERFLOW}
+{.$DEFINE TRACE_ETHERNET_OVERFLOW}
 {.$DEFINE TRACE_ETHERNET}
 
 uses
@@ -62,14 +62,22 @@ type
   end;
   PCANBuffer = ^TCANBuffer;
 
+ const
+   MAX_NMRANET_BUFFER_SIZE = 30;
+   
  type
   TCAN_Engine = record
     State: Byte;                                                                // See the CES_xxx constants (CAN Engine State)
     InterruptLockCount: Byte;
     TX_CANBuffer,
-    TX_NMRAnetBuffer,
     TX_AddressedErrorBuffer,
     TX_DatagramRejected: TCANBuffer;
+    TX_NMRAnetBuffer: array[MAX_NMRANET_BUFFER_SIZE] of TCANBuffer;
+    TX_NMRAnetBufferHead,
+    TX_NMRAnetBufferTail: Integer;
+    TX_NMRAnetBufferFull: Boolean;
+    TX_NMRAnetBufferSent, TX_NMRAnetBufferLoaded: DWord;
+    IsDoPacketCall: Boolean;
   end;
 
 
@@ -82,6 +90,11 @@ procedure StartCANMessageEngine;                                                
 procedure StartCANHighPriorityMessageEngine;
 function CANStorage_NextToSend: PCANBuffer;
 function CANStorage_NextHighPriorityToSend: PCANBuffer;
+function CANStorage_NMRAnetBufferAvailable: Boolean;
+procedure CANStorage_NMRAnetBufferStore(CANBuffer: PCANBuffer);
+function CANStorage_LowPriorityBufferReady: Boolean;
+function CANStorage_HighPriorityBufferReady: Boolean;
+procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
 
 procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
 function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
@@ -108,6 +121,8 @@ var
   TCP_Receive_State: word;     // Statemachine Index
 
 procedure CANStorage_Initialize;
+var
+  i: Integer;
 begin
   OlcbSocket := nil;
   TCP_Receive_State := TCP_STATE_SYNC_START;
@@ -119,9 +134,13 @@ begin
   CAN_Engine.TX_CANBuffer.DataCount := 0;
   CAN_Engine.TX_CANBuffer.State := 0;
 
-  CAN_Engine.TX_NMRAnetBuffer.ID := 0;
-  CAN_Engine.TX_NMRAnetBuffer.DataCount := 0;
-  CAN_Engine.TX_NMRAnetBuffer.State := 0;
+
+  for i := 0 to MAX_NMRANET_BUFFER_SIZE -1 do
+  begin
+    CAN_Engine.TX_NMRAnetBuffer[i].ID := 0;
+    CAN_Engine.TX_NMRAnetBuffer[i].DataCount := 0;
+    CAN_Engine.TX_NMRAnetBuffer[i].State := 0;
+  end;
 
   CAN_Engine.TX_AddressedErrorBuffer.ID := 0;
   CAN_Engine.TX_AddressedErrorBuffer.DataCount := 0;
@@ -130,41 +149,127 @@ begin
   CAN_Engine.TX_DatagramRejected.ID := 0;
   CAN_Engine.TX_DatagramRejected.DataCount := 0;
   CAN_Engine.TX_DatagramRejected.State := 0;
+  
+  CAN_Engine.TX_NMRAnetBufferHead := 0;
+  CAN_Engine.TX_NMRAnetBufferTail := 0;
+  CAN_Engine.TX_NMRAnetBufferFull := False;   
+  CAN_Engine.TX_NMRAnetBufferLoaded := 0;
+  CAN_Engine.TX_NMRAnetBufferSent := 0;
+  
+  CAN_Engine.IsDoPacketCall := False;
+end;
+
+procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
+begin
+  UART1_Write_Text('remoteIP:               ' + IPAddressToStr(Socket^.remoteIP) + LF);
+  UART1_Write_Text('remoteMAC:              ' + IPAddressToStr(Socket^.remoteMAC) + LF);
+  WordToStr(Socket^.remotePort, s1);
+  UART1_Write_Text('remote Port             ' + s1 + LF);
+  WordToStr(Socket^.destPort, s1);
+  UART1_Write_Text('destination Port        ' + s1 + LF);
+  WordToStr(Socket^.dataLength, s1);
+  UART1_Write_Text('TCP payload size (refers to the last received package) ' + s1 + LF);
+  WordToStr(Socket^.RemoteMSS, s1);
+  UART1_Write_Text('Remote Max Segment Size ' + s1 + LF);
+  WordToStr(Socket^.myWin, s1);
+  UART1_Write_Text('My Windows              ' + s1 + LF);
+  WordToStr(Socket^.myMSS, s1);
+  UART1_Write_Text('My Max Segement Size    ' + s1 + LF);
+  LongWordToStr(Socket^.MySeq, s1);
+  UART1_Write_Text('My Current Sequence     ' + s1 + LF);
+  LongWordToStr(Socket^.MyACK, s1);
+  UART1_Write_Text('ACK ' + s1 + LF);
+  
+  ByteToStr(Socket^.stateTimer, s1);
+  UART1_Write_Text('State Timer      ' + s1 + LF);
+  ByteToStr(Socket^.retransmitTimer, s1);
+  UART1_Write_Text('Retransmit Timer ' + s1 + LF);
+  WordToStr(Socket^.packetID, s1);
+  UART1_Write_Text('Packet ID        ' + s1 + LF);
+  
+  ByteToStr(Socket^.open, s1);
+  UART1_Write_Text('=0 -> Socket busy;  =1 -> Socket free ' + s1 + LF);
+  ByteToStr(Socket^.ID, s1);
+  UART1_Write_Text('Socket ID                             ' + s1 + LF);
+  ByteToStr(Socket^.broadcastMark, s1);
+  UART1_Write_Text('0 -> Not broadcast; =1 -> Broadcast   ' + s1 + LF);
+  ByteToStr(Socket^.state, s1);
+  UART1_Write_Text('State ' + s1 + LF);
+  
+  WordToStr(Socket^.nextSend, s1);
+  UART1_Write_Text('"Pointer" on first byte in buffer we want to send ' + s1 + LF);
+  WordToStr(Socket^.lastACK, s1);
+  UART1_Write_Text('"Pointer" on last acknowledged byte in buffer     ' + s1 + LF);
+  WordToStr(Socket^.lastSent, s1);
+  UART1_Write_Text('Pointer" on last sent byte in buffer              ' + s1 + LF);
+  WordToStr(Socket^.lastWritten, s1);
+  UART1_Write_Text('"Pointer" on last written byte in buffer which not sent yet ' + s1 + LF);
+  WordToStr(Socket^.numToSend, s1);
+  UART1_Write_Text('Number of bytes in buffer to be sent              ' + s1 + LF);
+  WordToStr(Socket^.buffState, s1);
+  UART1_Write_Text('Private variable                                  ' + s1 + LF);
+  ByteToHex(Socket^.txBuffer, s1);
+  UART1_Write_Text('Pointer on Tx Buffer                            0x' + s1 + LF);
+end;
+
+procedure PackNMRAnetBuffer;
+var
+  i: Integer;
+begin
+  // remove any state = 0 buffer and readjust head/tail pointer
 end;
 
 procedure CANStorage_FlushBuffers(AliasID: Word);
+var
+  i: Integer;
 begin
   LockCANInterrupt;
   if AliasID = 0 then
   begin
     CAN_Engine.TX_CANBuffer.State := 0;
-    CAN_Engine.TX_NMRAnetBuffer.State := 0;
+    for i := 0 to MAX_NMRANET_BUFFER_SIZE - 1 do
+      CAN_Engine.TX_NMRAnetBuffer[i].State := 0;
     CAN_Engine.TX_AddressedErrorBuffer.State := 0;
     CAN_Engine.TX_DatagramRejected.State := 0;
+    CAN_Engine.TX_NMRAnetBufferHead := 0;
+    CAN_Engine.TX_NMRAnetBufferTail := 0;
+    CAN_Engine.TX_NMRAnetBufferFull := False;
   end else
   begin
     if CAN_Engine.TX_CANBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
       CAN_Engine.TX_CANBuffer.State := 0;
-    if CAN_Engine.TX_NMRAnetBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
-      CAN_Engine.TX_NMRAnetBuffer.State := 0;
+    for i := 0 to MAX_NMRANET_BUFFER_SIZE - 1 do
+    begin
+      if CAN_Engine.TX_NMRAnetBuffer[i].ID and MASK_SOURCE_ALIAS = AliasID then
+        CAN_Engine.TX_NMRAnetBuffer[i].State := 0;
+    end;
     if CAN_Engine.TX_AddressedErrorBuffer.ID and MASK_SOURCE_ALIAS = AliasID then
       CAN_Engine.TX_AddressedErrorBuffer.State := 0;
     if CAN_Engine.TX_DatagramRejected.ID and MASK_SOURCE_ALIAS = AliasID then
       CAN_Engine.TX_DatagramRejected.State := 0;
+    PackNMRAnetBuffer;
   end;
   UnLockCANInterrupt
 end;
 
 function CANStorage_NextToSend: PCANBuffer;
+// the caller of the MUST USE THE BUFFER and clear the state flag immediatly before allowing any new
+// items to be placed in the buffer!!!!
 begin
   // High Priority to Low
-  if CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
-    Result := @CAN_Engine.TX_CANBuffer
-  else
-  if CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
-    Result := @CAN_Engine.TX_NMRAnetBuffer
-  else
-    Result := PCANBuffer( nil);
+  Result := PCANBuffer( nil);
+  if CANStorage_LowPriorityBufferReady then
+  begin
+    if CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = BS_ALLOCATED then
+      Result := @CAN_Engine.TX_CANBuffer
+    else begin
+      Result := @CAN_Engine.TX_NMRAnetBuffer[CAN_Engine.TX_NMRAnetBufferHead];
+      Inc(CAN_Engine.TX_NMRAnetBufferHead);
+      if CAN_Engine.TX_NMRAnetBufferHead >= MAX_NMRANET_BUFFER_SIZE then
+        CAN_Engine.TX_NMRAnetBufferHead := 0;
+      CAN_Engine.TX_NMRAnetBufferFull := False;      // By definition if we cleared one it can't be full!
+    end
+  end
 end;
 
 function CANStorage_NextHighPriorityToSend: PCANBuffer;
@@ -176,6 +281,32 @@ begin
     Result := @CAN_Engine.TX_DatagramRejected
   else
     Result := PCANBuffer( nil);
+end;
+
+function CANStorage_NMRAnetBufferAvailable: Boolean;
+begin
+  Result := not CAN_Engine.TX_NMRAnetBufferFull
+end;
+
+function CANStorage_LowPriorityBufferReady: Boolean;
+begin
+  Result := (CAN_Engine.TX_NMRAnetBufferHead <> CAN_Engine.TX_NMRAnetBufferTail) or CAN_Engine.TX_NMRAnetBufferFull or (CAN_Engine.TX_CANBuffer.State and BS_ALLOCATED = BS_ALLOCATED)
+end;
+
+function CANStorage_HighPriorityBufferReady: Boolean;
+begin
+  Result := (CAN_Engine.TX_AddressedErrorBuffer.State and BS_ALLOCATED = BS_ALLOCATED) or (CAN_Engine.TX_DatagramRejected.State and BS_ALLOCATED = BS_ALLOCATED)
+end;
+
+procedure CANStorage_NMRAnetBufferStore(CANBuffer: PCANBuffer);
+begin
+  Inc(CAN_Engine.TX_NMRAnetBufferLoaded);
+  CAN_Engine.TX_NMRAnetBuffer[CAN_Engine.TX_NMRAnetBufferTail] := CANBuffer^;
+  CAN_Engine.TX_NMRAnetBuffer[CAN_Engine.TX_NMRAnetBufferTail].State := CAN_Engine.TX_NMRAnetBuffer[CAN_Engine.TX_NMRAnetBufferTail].State or BS_ALLOCATED;
+  Inc(CAN_Engine.TX_NMRAnetBufferTail);
+  if CAN_Engine.TX_NMRAnetBufferTail >= MAX_NMRANET_BUFFER_SIZE then
+    CAN_Engine.TX_NMRAnetBufferTail := 0;
+  CAN_Engine.TX_NMRAnetBufferFull := CAN_Engine.TX_NMRAnetBufferTail = CAN_Engine.TX_NMRAnetBufferHead;  // If we overlap after adding we are full
 end;
 
 procedure LockCANInterrupt;
@@ -211,42 +342,114 @@ var
   sx1: string[16];
   BytesRead: Integer;
 begin
- // PrintSocket(socket);
   if socket^.State = SOCKET_STATE_ESTABLISHED then
   begin
-  
-    if Net_Ethernet_28J60_bufferEmptyTCP(socket) = 1 then
+ //   if not CAN_Engine.IsDoPacketCall then
     begin
-      TxBuffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
-      if TxBuffer <> nil then
+       // Look for the correct port and some data only during DoPacket calls
+      if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
       begin
-        CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-    
-        {$IFDEF TRACE_ETHERNET}
-        UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
-        {$ENDIF}
-
-        {$IFDEF TRACE_ETHERNET_OVERFLOW}
-        BytesRead := strlen(GridConnectBuffer);
-        if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
-          UART_Write_Text('Buffer overflow' +LF);
-        if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
-            UART_Write_Text('Buffer overflow' +LF);
-        {$ELSE}
-        Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-        Net_Ethernet_28j60_putByteTCP(#10, socket)
-        {$ENDIF}
-
-        TxBuffer^.State := BS_CLEAR;
-      end else
+        BytesRead := 0;
+        Receive_GridConnectBufferIndex := 0;
+        while not Done and (BytesRead < socket^.dataLength) do
+        begin
+          TCP_Receive_Char := Net_Ethernet_28j60_getByte();                       // Get the next byte from the stack
+          case TCP_Receive_State of
+            TCP_STATE_SYNC_START :                                                // Find a starting ':'
+              begin
+                if TCP_Receive_Char = ':' then
+                begin
+                  Receive_GridConnectBufferIndex := 0;
+                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
+                  Inc(Receive_GridConnectBufferIndex);
+                  TCP_Receive_State := TCP_STATE_SYNC_FIND_X
+                end
+              end;
+            TCP_STATE_SYNC_FIND_X :
+              begin
+                if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
+                begin
+                  if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
+                  begin
+                    Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
+                    Inc(Receive_GridConnectBufferIndex);
+                    TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
+                  end else
+                     TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
+                end
+              end;
+            TCP_STATE_SYNC_FIND_HEADER :
+              begin
+                if IsValidHexChar(TCP_Receive_Char) then
+                begin
+                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                  if Receive_GridConnectBufferIndex = 9 then
+                    TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
+                  Inc(Receive_GridConnectBufferIndex);
+                end else
+                  TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+              end;
+            TCP_STATE_SYNC_FIND_N :
+              begin
+                if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
+                begin
+                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
+                  Inc(Receive_GridConnectBufferIndex);
+                  TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
+                end else
+                  TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+              end;
+            TCP_STATE_SYNC_FIND_DATA :
+              begin
+                 if TCP_Receive_Char = ';'then
+                 begin
+                   if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
+                   begin
+                     Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
+                     Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
+                     GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
+                     if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
+                     begin
+                       {$IFDEF TRACE_ETHERNET}
+                       UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
+                       {$ENDIF}
+                       ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
+                     end else
+                     begin
+                       {$IFDEF TRACE_ETHERNET}
+                       UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
+                       {$ENDIF}
+                       ReceivedOnFilter0(@RxCANBuffer);
+                     end;
+                   end;
+                   TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
+                 end else
+                 begin
+                   if IsValidHexChar(TCP_Receive_Char) then
+                   begin
+                     Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                     Inc(Receive_GridConnectBufferIndex);
+                   end else
+                     TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
+                 end
+              end else
+                TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
+          end;
+          Inc(BytesRead);
+        end;
+      end;
+    end ; //else
+    begin
+    //  if Net_Ethernet_28j60_bufferEmptyTCP(socket) then
       begin
-        TxBuffer := CANStorage_NextToSend;
+        // Don't write to the Ethernet if in a DoPacket call
+        TxBuffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
         if TxBuffer <> nil then
         begin
           CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-          
+
           {$IFDEF TRACE_ETHERNET}
-          UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
+          UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
           {$ENDIF}
 
           {$IFDEF TRACE_ETHERNET_OVERFLOW}
@@ -254,108 +457,45 @@ begin
           if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
             UART_Write_Text('Buffer overflow' +LF);
           if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
-            UART_Write_Text('Buffer overflow' +LF);
+              UART_Write_Text('Buffer overflow' +LF);
           {$ELSE}
           Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-          Net_Ethernet_28j60_putByteTCP(#10, socket)
+          Net_Ethernet_28j60_putByteTCP(#10, socket);
           {$ENDIF}
-            
-          TxBuffer^.State := BS_CLEAR;
-        end;
-      end;
-    end; // else
-   //   UART_Write_Text('Buffer not Empty'+LF);
 
-    // Look for the correct port and some data
-    if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
-    begin
-      BytesRead := 0;
-      Receive_GridConnectBufferIndex := 0;
-      while not Done and (BytesRead < socket^.dataLength) do
-      begin
-        TCP_Receive_Char := Net_Ethernet_28j60_getByte();                       // Get the next byte from the stack
-        case TCP_Receive_State of
-          TCP_STATE_SYNC_START :                                                // Find a starting ':'
-            begin
-              if TCP_Receive_Char = ':' then
-              begin
-                Receive_GridConnectBufferIndex := 0;
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
-                Inc(Receive_GridConnectBufferIndex);
-                TCP_Receive_State := TCP_STATE_SYNC_FIND_X
-              end
-            end;
-          TCP_STATE_SYNC_FIND_X :
-            begin
-              if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
-              begin
-                if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
-                begin
-                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
-                  Inc(Receive_GridConnectBufferIndex);
-                  TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
-                end else
-                   TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
-              end
-            end;
-          TCP_STATE_SYNC_FIND_HEADER :
-            begin
-              if IsValidHexChar(TCP_Receive_Char) then
-              begin
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
-                if Receive_GridConnectBufferIndex = 9 then
-                  TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
-                Inc(Receive_GridConnectBufferIndex);
-              end else
-                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
-            end;
-          TCP_STATE_SYNC_FIND_N :
-            begin
-              if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
-              begin
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
-                Inc(Receive_GridConnectBufferIndex);
-                TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
-              end else
-                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
-            end;
-          TCP_STATE_SYNC_FIND_DATA :
-            begin
-               if TCP_Receive_Char = ';'then
-               begin
-                 if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
-                 begin
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
-                   GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
-                   if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
-                   begin
-                     {$IFDEF TRACE_ETHERNET}
-                     UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
-                     {$ENDIF}
-                     ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
-                   end else
-                   begin
-                     {$IFDEF TRACE_ETHERNET}
-                     UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
-                     {$ENDIF}
-                     ReceivedOnFilter0(@RxCANBuffer);
-                   end;
-                 end;
-                 TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
-               end else
-               begin
-                 if IsValidHexChar(TCP_Receive_Char) then
-                 begin
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
-                   Inc(Receive_GridConnectBufferIndex);
-                 end else
-                   TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
-               end
-            end else
-              TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
+          TxBuffer^.State := BS_CLEAR;
+        end else
+        begin
+          TxBuffer := CANStorage_NextToSend;
+          while TxBuffer <> nil do
+          begin
+          
+          LATA4_bit := not LATA4_bit;
+          
+            CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+
+            {$IFDEF TRACE_ETHERNET}
+            UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
+            {$ENDIF}
+
+            {$IFDEF TRACE_ETHERNET_OVERFLOW}
+            Inc(CAN_Engine.TX_NMRAnetBufferSent);
+            BytesRead := strlen(GridConnectBuffer);
+            if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
+              UART_Write_Text('Buffer overflow' +LF);
+            if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
+              UART_Write_Text('Buffer overflow' +LF);
+            {$ELSE}
+            Inc(CAN_Engine.TX_NMRAnetBufferSent);
+            Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
+            Net_Ethernet_28j60_putByteTCP(#10, socket);
+            {$ENDIF}
+
+            TxBuffer^.State := BS_CLEAR;
+            
+            TxBuffer := CANStorage_NextToSend;
+          end;
         end;
-        Inc(BytesRead);
       end;
     end;
   end;

@@ -1,7 +1,7 @@
 object FormTrainConfigEditor: TFormTrainConfigEditor
-  Left = 602
+  Left = 634
   Height = 434
-  Top = 201
+  Top = 211
   Width = 636
   Anchors = [akRight, akBottom]
   Caption = 'Configuration Editor'

@@ -23,8 +23,8 @@
         <UnitName Value="form_main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1277"/>
-        <CursorPos X="1" Y="1302"/>
+        <TopLine Value="1290"/>
+        <CursorPos X="69" Y="1298"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -182,13 +182,13 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="600"/>
-        <CursorPos X="1" Y="616"/>
+        <CursorPos X="29" Y="616"/>
         <UsageCount Value="223"/>
         <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit15>
       <Unit16>
         <Filename Value="unit_cdi_parser.pas"/>
@@ -261,7 +261,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="6"/>
-        <UsageCount Value="171"/>
+        <UsageCount Value="169"/>
       </Unit22>
       <Unit23>
         <Filename Value="..\Library\olcb_structure_helpers.pas"/>
@@ -269,7 +269,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="6"/>
-        <UsageCount Value="177"/>
+        <UsageCount Value="175"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\Library\snii.pas"/>
@@ -277,7 +277,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="50" Y="8"/>
-        <UsageCount Value="165"/>
+        <UsageCount Value="163"/>
       </Unit24>
       <Unit25>
         <Filename Value="..\Library\olcb_mem_protocol.pas"/>
@@ -285,7 +285,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="6" Y="1"/>
-        <UsageCount Value="166"/>
+        <UsageCount Value="164"/>
       </Unit25>
       <Unit26>
         <Filename Value="..\Library\statemachine_engine.pas"/>
@@ -293,7 +293,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="113"/>
         <CursorPos X="55" Y="115"/>
-        <UsageCount Value="166"/>
+        <UsageCount Value="164"/>
       </Unit26>
       <Unit27>
         <Filename Value="form_effects_editor.pas"/>
@@ -304,7 +304,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="95" Y="38"/>
-        <UsageCount Value="449"/>
+        <UsageCount Value="447"/>
       </Unit27>
       <Unit28>
         <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
@@ -312,15 +312,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="146"/>
         <CursorPos X="115" Y="3060"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="19"/>
       </Unit28>
       <Unit29>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="4447"/>
-        <CursorPos X="1" Y="4470"/>
+        <TopLine Value="2634"/>
+        <CursorPos X="1" Y="2650"/>
         <UsageCount Value="163"/>
         <Loaded Value="True"/>
       </Unit29>
@@ -329,14 +330,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="602"/>
         <CursorPos X="1" Y="616"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit30>
       <Unit31>
         <Filename Value="E:\Developer\lazarus\lcl\include\application.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1398"/>
         <CursorPos X="69" Y="1411"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit31>
       <Unit32>
         <Filename Value="..\NodeExplorer\serialport_thread.pas"/>
@@ -344,7 +345,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="61"/>
         <CursorPos X="62" Y="215"/>
-        <UsageCount Value="30"/>
+        <UsageCount Value="28"/>
       </Unit32>
       <Unit33>
         <Filename Value="..\NodeExplorer\olcb_utilities.pas"/>
@@ -352,7 +353,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="96"/>
         <CursorPos X="59" Y="115"/>
-        <UsageCount Value="30"/>
+        <UsageCount Value="28"/>
       </Unit33>
       <Unit34>
         <Filename Value="..\Components\synapse40\source\lib\synaser.pas"/>
@@ -360,14 +361,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1403"/>
         <CursorPos X="1" Y="1423"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit34>
       <Unit35>
         <Filename Value="C:\lazarus\lcl\include\wincontrol.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="6291"/>
         <CursorPos X="1" Y="6306"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit35>
       <Unit36>
         <Filename Value="C:\lazarus\lcl\interfaces\win32\win32callback.inc"/>
@@ -375,7 +376,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1085"/>
         <CursorPos X="1" Y="1099"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="26"/>
         <Loaded Value="True"/>
       </Unit36>
     </Units>
@@ -385,135 +386,124 @@
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="268" Column="1" TopLine="252"/>
+        <Caret Line="269" Column="1" TopLine="252"/>
       </Position1>
       <Position2>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="269" Column="1" TopLine="252"/>
+        <Caret Line="270" Column="1" TopLine="252"/>
       </Position2>
       <Position3>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="270" Column="1" TopLine="252"/>
+        <Caret Line="271" Column="1" TopLine="252"/>
       </Position3>
       <Position4>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="271" Column="1" TopLine="252"/>
+        <Caret Line="273" Column="1" TopLine="252"/>
       </Position4>
       <Position5>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="273" Column="1" TopLine="252"/>
+        <Caret Line="292" Column="1" TopLine="277"/>
       </Position5>
       <Position6>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="292" Column="1" TopLine="277"/>
+        <Caret Line="295" Column="1" TopLine="277"/>
       </Position6>
       <Position7>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="295" Column="1" TopLine="277"/>
+        <Caret Line="300" Column="1" TopLine="277"/>
       </Position7>
       <Position8>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="300" Column="1" TopLine="277"/>
+        <Caret Line="303" Column="1" TopLine="279"/>
       </Position8>
       <Position9>
-        <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="303" Column="1" TopLine="279"/>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="1847" Column="1" TopLine="1832"/>
       </Position9>
       <Position10>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1847" Column="1" TopLine="1832"/>
+        <Caret Line="1848" Column="1" TopLine="1832"/>
       </Position10>
       <Position11>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1848" Column="1" TopLine="1832"/>
+        <Caret Line="1849" Column="1" TopLine="1832"/>
       </Position11>
       <Position12>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1849" Column="1" TopLine="1832"/>
+        <Caret Line="1850" Column="1" TopLine="1832"/>
       </Position12>
       <Position13>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1850" Column="1" TopLine="1832"/>
+        <Caret Line="1851" Column="1" TopLine="1832"/>
       </Position13>
       <Position14>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1851" Column="1" TopLine="1832"/>
+        <Caret Line="1858" Column="1" TopLine="1833"/>
       </Position14>
       <Position15>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1858" Column="1" TopLine="1833"/>
+        <Caret Line="1860" Column="1" TopLine="1835"/>
       </Position15>
       <Position16>
-        <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="1860" Column="1" TopLine="1835"/>
-      </Position16>
-      <Position17>
         <Filename Value="..\Library\ethernet_hub.pas"/>
         <Caret Line="304" Column="1" TopLine="280"/>
+      </Position16>
+      <Position17>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="4444" Column="1" TopLine="4429"/>
       </Position17>
       <Position18>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4444" Column="1" TopLine="4429"/>
+        <Caret Line="4445" Column="1" TopLine="4429"/>
       </Position18>
       <Position19>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4445" Column="1" TopLine="4429"/>
+        <Caret Line="4446" Column="1" TopLine="4429"/>
       </Position19>
       <Position20>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4446" Column="1" TopLine="4429"/>
+        <Caret Line="4447" Column="1" TopLine="4429"/>
       </Position20>
       <Position21>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4447" Column="1" TopLine="4429"/>
+        <Caret Line="4449" Column="1" TopLine="4429"/>
       </Position21>
       <Position22>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4449" Column="1" TopLine="4429"/>
+        <Caret Line="4450" Column="1" TopLine="4429"/>
       </Position22>
       <Position23>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4450" Column="1" TopLine="4429"/>
+        <Caret Line="4461" Column="1" TopLine="4447"/>
       </Position23>
       <Position24>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4461" Column="1" TopLine="4447"/>
+        <Caret Line="4465" Column="1" TopLine="4447"/>
       </Position24>
       <Position25>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4465" Column="1" TopLine="4447"/>
+        <Caret Line="4470" Column="1" TopLine="4447"/>
       </Position25>
       <Position26>
-        <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <Caret Line="4470" Column="1" TopLine="4447"/>
+        <Filename Value="..\Library\ethernet_hub.pas"/>
+        <Caret Line="305" Column="1" TopLine="281"/>
       </Position26>
       <Position27>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="305" Column="1" TopLine="281"/>
+        <Caret Line="311" Column="1" TopLine="296"/>
       </Position27>
       <Position28>
         <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="311" Column="1" TopLine="296"/>
+        <Caret Line="267" Column="1" TopLine="252"/>
       </Position28>
       <Position29>
-        <Filename Value="..\Library\ethernet_hub.pas"/>
-        <Caret Line="267" Column="1" TopLine="252"/>
-      </Position29>
-      <Position30>
         <Filename Value="form_train_config_editor.pas"/>
         <Caret Line="354" Column="1" TopLine="339"/>
+      </Position29>
+      <Position30>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1298" Column="69" TopLine="1290"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
-  <Debugging>
-    <BreakPoints Count="1">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="..\Library\olcb_transport_layer.pas"/>
-        <Line Value="2650"/>
-      </Item1>
-    </BreakPoints>
-  </Debugging>
 </CONFIG>

@@ -394,6 +394,7 @@ begin
                                                                                                        BufferAllocFailed := True
                                                                                                    end;
                                                                MTI_TRACTION_PROTOCOL             : begin
+                                                                                                      DataBuffer := nil;
                                                                                                       if NMRAnetBufferPools_AllocateDataBuffer(DataBuffer) then
                                                                                                       begin
                                                                                                         NMRAnetUtilities_DataBufferLink(Node, DataBuffer);
