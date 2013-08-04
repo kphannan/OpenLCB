@@ -3090,6 +3090,8 @@ begin
   inherited CopyTo(Target);
   (Target as TWriteAddressSpaceMemoryRawTask).FAddressSpace := FAddressSpace;
   (Target as TWriteAddressSpaceMemoryRawTask).ForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TWriteAddressSpaceMemoryRawTask).FStream.Position := 0;
+  FStream.Position := 0;
   (Target as TWriteAddressSpaceMemoryRawTask).FStream.CopyFrom(FStream, FStream.Size);
   (Target as TWriteAddressSpaceMemoryRawTask).FWriteAddress := FWriteAddress;
 end;

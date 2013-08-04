@@ -89,6 +89,8 @@ procedure CANStorage_Initialize;
 procedure CANStorage_FlushBuffers(AliasID: Word);
 function CANStorage_NextToSend: PCANBuffer;
 function CANStorage_NextHighPriorityToSend: PCANBuffer;
+function CANStorage_NMRAnetBufferAvailable: Boolean;
+procedure CANStorage_NMRAnetBufferStore(CANBuffer: PCANBuffer);
 
 procedure LockCANInterrupt; external;
 procedure UnLockCANInterrupt; external;
@@ -164,6 +166,17 @@ begin
     Result := @CAN_Engine.TX_DatagramRejected
   else
     Result := PCANBuffer( nil);
+end;
+
+function CANStorage_NMRAnetBufferAvailable: Boolean;
+begin
+  Result := CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0
+end;
+
+procedure CANStorage_NMRAnetBufferStore(CANBuffer: PCANBuffer);
+begin
+  CAN_Engine.TX_NMRAnetBuffer := CANBuffer^;
+  CAN_Engine.TX_NMRAnetBuffer.State := CAN_Engine.TX_NMRAnetBuffer.State or BS_ALLOCATED;
 end;
 
 end.

@@ -21,7 +21,7 @@ unit dsPIC33_CAN;
 // ******************************************************************************
 {$I Options.inc}
 
-{$DEFINE TRACE_CAN}
+{.$DEFINE TRACE_CAN}
 
 
 uses

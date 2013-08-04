@@ -350,19 +350,41 @@ begin
   DCC_NMRA_Tranmitter_Lo_Direction := 0;                                        // Output
   DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
   
-  UART1_Write_Text('Starting 1'+LF);
+  UART1_Write_Text(LF+'Mustangpeak Engineering OpenLCB CommandStation Prototype v0.5'+LF);
 
  // TON_T3CON_bit := 1;       // Turn on current limit
   AD1IE_bit := 1;           // Turn on ADC1 interrupt
   TON_T2CON_bit := 1;       // Turn on the 100ms timer
   MCU_Setup_Enable_OlcbBus;
+  
+  UART1_Write_Text('Sending Initialization DCC Packets to Rails'+LF);
   {$IFNDEF DCCTIMER_DISABLE}
   TON_T1CON_bit := 1;                                                           // Start the DCC Timer
   Delay_ms(10);
   NMRA_DCC_Packet_Init;                                                         // Send our 20 Idle Packets per the spec, note we are not on the OLCB bus yet so this will block until done.
   {$ENDIF}
 
-  UART1_Write_Text('Starting 2'+LF);
+  UART1_Write_Text('Layout is ready to run'+LF);
+  if CommandStationRamData.EnableAutoAllocateProxy = 0 then
+    UART1_Write_Text(LF+'AutoAllocate virtual train nodes enabled (Change in Command Station Configuration)'+LF)
+  else
+    UART1_Write_Text(LF+'AutoAllocate virtual train nodes disabled (Change in Command Station Configuration)'+LF);
+  
+  WordToStr(MAX_NODE_COUNT - 1, s1);
+  UART1_Write_Text(LF+s1+' Train Nodes supported in this build.'+LF);
+  
+  UART1_Write_Text(LF+'***************************************************'+LF);
+  UART1_Write_Text('Menu:'+LF);
+  UART1_Write_Text('X : Send Global Node Verify message'+LF);
+  UART1_Write_Text('A (a) : Force allocation of a Train Node'+LF);
+  UART1_Write_Text('D (d) : Force deallocation of the first Train Node in the list'+LF);
+  UART1_Write_Text('Z (z) : Erase the EEPROM (looses all configruation customization'+LF);
+  UART1_Write_Text('V     : Dump EEPROM in ASCII (THIS CAN TAKE A LONG TIME)'+LF);
+  UART1_Write_Text('v     : Dump EEPROM in hex (THIS CAN TAKE A LONG TIME)'+LF);
+  UART1_Write_Text('M (m) : Dump RAM and Configuration Offsets for all Nodes'+LF);
+  UART1_Write_Text('3     : Dump allocated Node record data and RAM data '+LF);
+  UART1_Write_Text('4     : Dump all Node record data (THIS CAN TAKE A LONG TIME)'+LF);
+  UART1_Write_Text('***************************************************'+LF);
   
   while (TRUE) do
   begin
@@ -390,9 +412,6 @@ begin
       begin
         Cmd := UART1_Read;
         case Cmd of
-          'P' : begin
-               //PrintDMABuffers
-             end;
           'X' : begin
                 NMRAnetStateMachine_TrySendVerifyNodeID(ActiveNode, 0);
              end;

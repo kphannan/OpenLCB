@@ -218,6 +218,7 @@ if TargetOS = 'linux' then
     </CodeGeneration>
     <Linking>
       <Debugging>
+        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
       </Debugging>
       <Options>
@@ -246,4 +247,4 @@ if TargetOS = 'linux' then
       </Item3>
     </Exceptions>
   </Debugging>
-</CONFIG>
+</CONFIG>

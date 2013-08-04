@@ -7,7 +7,7 @@ Value=-1
 Value=0
 [ACTIVE_TAB]
 <<<<<<< .mine
-Value=NMRAnetAppDefines.mpas
+Value=..\Library\NMRAnet\NMRAnetNode.mpas
 =======
 Value=NMRAnetAppCallbacks.mpas
 >>>>>>> .r3258
@@ -52,23 +52,16 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=16
+Count=9
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=NMRAnetAppCallbacks.mpas
 File2=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 File3=..\Library\NMRAnetDCCSystem\TractionProtocol.mpas
-File4=..\Library\NMRAnet\NMRAnetCANReceive.mpas
-File5=..\Library\NMRAnetDCCSystem\DirectServiceMode.mpas
-File6=..\Library\NMRAnetDCCSystem\CommonServiceMode.mpas
-File7=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
+File4=..\Library\CANBus\CANStorage.mpas
+File5=..\Library\TCPBus\TCPStorage.mpas
+File6=..\Library\dsPIC33F\dsPIC33_CAN.mpas
+File7=..\Library\NMRAnet\NMRAnetNode.mpas
 File8=NMRAnetAppDefines.mpas
-File9=..\Library\NMRAnet\NMRAnetDefines.mpas
-File10=..\Library\NMRAnet\NMRAnetNode.mpas
-File11=..\Library\CANBus\CANStorage.mpas
-File12=..\Library\dsPIC33F\dsPIC33_CAN.mpas
-File13=MCU_Setup_dsPIC33EP64GP502.mpas
-File14=..\Library\CANBus\DMA_Buffers\dsPIC33EP64GP502\CANBuffers.mpas
-File15=..\Library\TCPBus\TCPStorage.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

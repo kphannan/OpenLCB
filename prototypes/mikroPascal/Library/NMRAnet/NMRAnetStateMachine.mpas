@@ -462,22 +462,12 @@ begin
     
     CANStorage_NMRAnetBufferStore(Buffer);
     StartCANMessageEngine();
+    
+    {$IFDEF ETHERNET_BUS}
+    CAN_Engine.TransmitImmediately := MTI = MTI_DATAGRAM_OK_REPLY;             // Turn around Datagram ACK fast
+    {$ENDIF}
   end else
    UART_Write_Text('ERROR: Can''t Transmit OLCB Layer'+LF);
-
- {
-  if CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0 then
-  begin
-    if AliasInHeader then
-      NMRAnetUtilities_CreateNMRABusMessageCANBufferWithDestInMTI(Node, Buffer, MTI, DestinationAlias, DataCount, DataBytes)
-    else
-      NMRAnetUtilities_CreateNMRABusMessageCANBuffer(Node, Buffer, MTI, DestinationAlias, DataCount, DataBytes, UpperNibbleFlagMask);
-
-    CAN_Engine.TX_NMRAnetBuffer := Buffer^;
-    CAN_Engine.TX_NMRAnetBuffer.State := CAN_Engine.TX_NMRAnetBuffer.State or BS_ALLOCATED;
-    StartCANMessageEngine();
-  end else
-    UART_Write_Text('ERROR: Can''t Transmit OLCB Layer'+LF)   }
 end;
 
 // *****************************************************************************
@@ -491,8 +481,6 @@ end;
 function NMRABusTxBufferAvailable: Boolean;
 begin
   Result := CANStorage_NMRAnetBufferAvailable;
-  
-  //Result := CAN_Engine.TX_NMRAnetBuffer.State and BS_ALLOCATED = 0
 end;
 
 // *****************************************************************************
@@ -893,6 +881,9 @@ begin
                             end;
                         STATE_ACDI_DONE :
                             begin      {$IFDEF TRACE_SNIP}UART1_Write_Text('STATE_ACDI_DONE'+LF); {$ENDIF}
+                              {$IFDEF ETHERNET_BUS}
+                              CAN_Engine.TransmitImmediately := True;
+                              {$ENDIF}
                             end;
                       end;
                     end;

@@ -453,8 +453,8 @@ begin
   ThrottleList.Clear;
   ConfigEditorList.Clear;
 
-  CanClose := TaskObjects = 0;
-  ShowMessage('TaskCount = ' + IntToStr(TaskObjects));
+ // CanClose := TaskObjects = 0;
+ // ShowMessage('TaskCount = ' + IntToStr(TaskObjects));
 end;
 
 procedure TFormOLCB_Commander.ActionHelpAboutShowExecute(Sender: TObject);
@@ -1289,8 +1289,10 @@ begin
   Result := False;
   if Task.DestinationAlias = 0 then
   begin
-    EthernetHub.AddTask(Task);
-    ComPortHub.AddTask(Task);
+    Result := EthernetHub.AddTask(Task);
+    if not Result then
+      Result := ComPortHub.AddTask(Task)
+    else ComPortHub.AddTask(Task)
   end else
   begin
     if EthernetHub.AddTask(Task) then
@@ -2096,4 +2098,4 @@ end;
 
 
 end.
-
+

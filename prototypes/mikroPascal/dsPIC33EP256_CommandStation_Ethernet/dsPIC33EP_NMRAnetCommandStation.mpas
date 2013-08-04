@@ -468,21 +468,27 @@ begin
       ActiveNode := NMRAnetNode_NextNode;
       if ActiveNode <> PNMRAnetNode( nil) then
         NMRAnetStateMachine_Process(ActiveNode);
-        
-      if Delay = 20 then
+
+      if CANStorage_HighPriorityBufferReady then
       begin
-        if CANStorage_LowPriorityBufferReady or CANStorage_HighPriorityBufferReady or (OlcbSocket^.lastWritten <> OlcbSocket^.lastACK) then
+        Net_Ethernet_28j60_startSendTCP(OlcbSocket)       // Send it NOW
+      end else 
+      begin
+        if (Delay = 20) or CAN_Engine.TransmitImmediately then
         begin
-          case Net_Ethernet_28j60_startSendTCP(OlcbSocket) of
-            0 : begin end;
-            1 : begin  end;
+          if CANStorage_LowPriorityBufferReady then
+          begin
+            case Net_Ethernet_28j60_startSendTCP(OlcbSocket) of
+              0 : begin end;
+              1 : begin  end;
+            end;
           end;
+          Delay := 0;
         end;
-        Delay := 0;
       end;
       Inc(Delay);
     end;
-    
+
     PrintSocketState(OlcbSocket);
     if OlcbSocket <> nil then
     begin
@@ -493,7 +499,6 @@ begin
       end;
     end;
     
-    CAN_Engine.IsDoPacketCall := True;
     case Net_Ethernet_28j60_doPacket of
       0 :
         begin
@@ -506,7 +511,6 @@ begin
     else
       UART1_Write_Text('doPacket: Unknown Error');
     end;
-    CAN_Engine.IsDoPacketCall := False;
 
   {  if (CAN_Engine.TX_NMRAnetBufferHead <> OldHead) or (CAN_Engine.TX_NMRAnetBufferTail <> OldTail) or (CAN_Engine.TX_NMRAnetBufferFull <> OldFull) then
     begin
@@ -526,7 +530,7 @@ begin
       OldHead := CAN_Engine.TX_NMRAnetBufferHead;
       OldTail := CAN_Engine.TX_NMRAnetBufferTail;
       OldFull := CAN_Engine.TX_NMRAnetBufferFull;
-    end; }
+    end;    }
 
     if UART1_Data_Ready = 1 then
     begin
