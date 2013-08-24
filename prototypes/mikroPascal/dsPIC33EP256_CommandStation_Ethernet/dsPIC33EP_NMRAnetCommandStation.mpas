@@ -59,7 +59,7 @@ uses
   ServiceModeDefines;
 
 const
-  MAX_CONNECT_TRY_COUNT = 2;
+  MAX_CONNECT_TRY_COUNT = 1;
   DEFAULT_SERVER_PORT = 12021;
 
 var
@@ -96,12 +96,9 @@ var
   TrapFlagPin                       : sbit at LATB3_bit;                  // OVERLOADING THE NMRA DCC TRANSMITTER CURRENT SENSE
   
   // Ethernet SPI Interface
-  Net_Ethernet_28j60_RST : sbit at LATB5_bit;  // for writing to output pin always use latch
-  Net_Ethernet_28j60_CS   : sbit at LATB6_bit;  // for writing to output pin always use latch
-  Net_Ethernet_28j60_RST_Direction : sbit at TRISB5_bit;
-  Net_Ethernet_28j60_CS_Direction  : sbit at TRISB6_bit;
+  ENC_CS: sbit at LATB6_bit;  // for writing to output pin always use latch
+  ENC_CS_dir: sbit at TRISB6_bit;
 
-  EthernetTimerCounter: Word;
   LastSocketState: Integer;
 // *****************************************************************************
 //  INTERRUPTS
@@ -211,18 +208,16 @@ var
   i: Integer;
 begin
   T2IF_bit := 0;                                                                // Clear the Flag
-  
-  Inc(EthernetTimerCounter);
-  if EthernetTimerCounter = 10 then
-  begin
-    Inc(Net_Ethernet_28j60_UserTimerSec);
-    EthernetTimerCounter := 0;
-  end;
-  
   for i := 0 to Nodes.AllocatedCount - 1 do
     NMRAnetStateMachine_100ms_Timer(Nodes.AllocatedList[i]);
   NMRAnetBufferPools_100ms_TimeTick;
   ServiceMode_100ms_TimeTick
+end;
+
+procedure INTERRUPT_1ms_Ethernet_Stack_Timer(); iv IVT_ADDR_T3INTERRUPT; ics ICS_AUTO;
+begin
+  T3IF_bit := 0;
+  CounterTask;
 end;
 
 procedure INTERRUPT_5ms_Timer(); iv IVT_ADDR_T5INTERRUPT;
@@ -287,13 +282,6 @@ begin
   end;
 end;
 
-procedure INTERRUPT_Timer_3(); iv IVT_ADDR_T3INTERRUPT;
-begin
-  T3IF_bit := 0;  // Clear the flag
-  // Unused
-end;
-
-
 function IsPrintableChar(C: Char): Boolean;
 begin
   Result := ((Ord( C) >= 32) and (Ord( C) <= 126))  or ((Ord( C) >= 128) and (Ord( C) <= 255))
@@ -328,43 +316,6 @@ begin
   end;    }
 end;
 
-procedure PrintSocketState(socket: ^SOCKET_28j60_Dsc);
-begin
- if LastSocketState <> socket^.State then
-  begin
-    LastSocketState := socket^.State;
-    case socket^.state of
-      SOCKET_STATE_CLOSED :
-        begin
-          UART_Write_Text('Connection is closed'+LF);
-        end;
-      SOCKET_STATE_SYN_REC_SYN_SENT_WAIT_ACK :
-        begin
-          UART_Write_Text('Remote SYN segment received, our SYN segment sent, and We wait for ACK (server mode)'+LF);
-        end;
-      SOCKET_STATE_ESTABLISHED :
-        begin
-          UART_Write_Text('Connection is established'+LF);
-        end;
-      SOCKET_STATE_SYN_SENT_WAIT_FOR_SYN_RESPONSE :
-        begin
-          UART_Write_Text('Our SYN segment sent, and We wait for SYN response (client mode)'+LF);
-        end;
-      SOCKET_STATE_FIN_SENT_WAIT_FOR_ACK :
-        begin
-          UART_Write_Text('FIN segment sent, wait for ACK.'+LF);
-        end;
-      SOCKET_STATE_FIN_ACK_REC_WAIT_FOR_REMOTE_FIN :
-        begin
-          UART_Write_Text('Received ACK on our FIN, wait for remote FIN.'+LF);
-        end;
-      SOCKET_STATE_EXPIRED_ACK_WAIT_TIME :
-        begin
-          UART_Write_Text('Expired ACK wait time. We retransmit last sent packet, and again set Wait-Timer. If this happen again connection close.'+LF);
-        end;
-     end;
-  end;
-end;
 
 procedure PrintMenu;
 begin
@@ -389,11 +340,13 @@ var
   str: string[6];
   ProxyData: PTrainProxyRamData;
   TempIP: TIPAddressStr;
-  TempIpServer: array[0..3] of byte;
+  TempIpServer: IPHeader;
   TempChar: char;
   ipPortClient, ipPortServer: Word;
   Delay, OldHead, OldTail: Integer;
   OldFull: Boolean;
+  OlcbSocketOpen: Boolean;
+  TempIPHeader: IpHeader;
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
@@ -406,6 +359,7 @@ begin
   OldTail := -1;
   OldFull := True;
   Delay := 0;
+  OlcbSocketOpen := False;
                                                // Output
  // _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, {MUSTANGPEAK_SERVICETRACK_NODE_ID_0_LO} MUSTANGPEAK_COMMANDSTATION_ID_0_LO);
@@ -429,7 +383,6 @@ begin
   DCC_NMRA_Tranmitter_Lo_Direction := 0;                                        // Output
   DCC_NMRA_Tranmitter_Hi_Direction := 0;                                        // Output
   
-  EthernetTimerCounter := 0;
   ipPortClient := 12022;
   
   UART1_Write_Text('Starting DCC Packets'+LF);
@@ -444,6 +397,8 @@ begin
   {$ENDIF}
   UART1_Write_Text('Initializing OlcbBus'+LF);
   MCU_Setup_Enable_OlcbBus;
+  SocketManager.TCP_Wait := 1000;
+  SocketManager.UDP_Wait := 1000;
 
   LastSocketState := -1;
   
@@ -451,7 +406,7 @@ begin
   
   while (TRUE) do
   begin
-    if OlcbSocket^.state = SOCKET_STATE_ESTABLISHED then
+    if OlcbSocketOpen then
     begin
       // Global updates
       // Allcoate a proxy if needed
@@ -469,69 +424,32 @@ begin
       if ActiveNode <> PNMRAnetNode( nil) then
         NMRAnetStateMachine_Process(ActiveNode);
 
-      if CANStorage_HighPriorityBufferReady then
+      if not CAN_Engine.IsTransmitting then
       begin
-        Net_Ethernet_28j60_startSendTCP(OlcbSocket)       // Send it NOW
-      end else 
-      begin
-        if (Delay = 20) or CAN_Engine.TransmitImmediately then
+        if CANStorage_HighPriorityBufferReady then
         begin
-          if CANStorage_LowPriorityBufferReady then
+    //      Net_Ethernet_28j60_startSendTCP(OlcbSocket)       // Send it NOW
+        end else
+        begin
+          if (Delay = 20) or CAN_Engine.TransmitImmediately then
           begin
-            case Net_Ethernet_28j60_startSendTCP(OlcbSocket) of
-              0 : begin end;
-              1 : begin  end;
+            if CANStorage_LowPriorityBufferReady then
+            begin
+     //         case Net_Ethernet_28j60_startSendTCP(OlcbSocket) of
+     //           0 : begin end;
+     //           1 : begin  end;
+     //         end;
             end;
+            Delay := 0;
           end;
-          Delay := 0;
         end;
-      end;
-      Inc(Delay);
-    end;
-
-    PrintSocketState(OlcbSocket);
-    if OlcbSocket <> nil then
-    begin
-      if OlcbSocket^.State = SOCKET_STATE_CLOSED then
-      begin
-        Net_Ethernet_28j60_disconnectTCP(OlcbSocket);
-        OlcbSocket := nil;
+        Inc(Delay);
       end;
     end;
     
-    case Net_Ethernet_28j60_doPacket of
-      0 :
-        begin
-          // Success
-        end;
-      1 : UART1_Write_Text('doPacket: upon reception error or receive buffer corruption. ENC28J60 controller needs to be restarted');
-      2 : UART1_Write_Text('doPacket: received packet was not sent to us (not our IP, nor IP broadcast address)');
-      3 : UART1_Write_Text('doPacket: received IP packet was not IPv4');
-      4 : UART1_Write_Text('doPacket: received packet was of type unknown to the library')
-    else
-      UART1_Write_Text('doPacket: Unknown Error');
-    end;
-
-  {  if (CAN_Engine.TX_NMRAnetBufferHead <> OldHead) or (CAN_Engine.TX_NMRAnetBufferTail <> OldTail) or (CAN_Engine.TX_NMRAnetBufferFull <> OldFull) then
-    begin
-      IntToStr(CAN_Engine.TX_NMRAnetBufferHead, s1);
-      UART1_Write_Text('Head = ' + s1 + LF);
-      IntToStr(CAN_Engine.TX_NMRAnetBufferTail, s1);
-      UART1_Write_Text('Tail = ' + s1 + LF);
-      if CAN_Engine.TX_NMRAnetBufferFull then
-        UART1_Write_Text('Buffer Full' + LF)
-      else
-        UART1_Write_Text('Buffer not Full' + LF);
-      LongWordToStr(CAN_Engine.TX_NMRAnetBufferLoaded, s1);
-      UART1_Write_Text('Loaded = ' + s1 + LF);
-      LongWordToStr(CAN_Engine.TX_NMRAnetBufferSent, s1);
-      UART1_Write_Text('Sent = ' + s1 + LF);
-      
-      OldHead := CAN_Engine.TX_NMRAnetBufferHead;
-      OldTail := CAN_Engine.TX_NMRAnetBufferTail;
-      OldFull := CAN_Engine.TX_NMRAnetBufferFull;
-    end;    }
-
+    Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
+    Process_DHCP;
+    
     if UART1_Data_Ready = 1 then
     begin
       UART_Read_Text(Cmd, ';', 128);
@@ -539,22 +457,22 @@ begin
       case Cmd[0] of
         'u', 'U' :
           begin
-            if OlcbSocket <> nil then
+            if OlcbSocketOpen then
             begin
               UART_Write_Text('Disconnecting' + LF);
-              case Net_Ethernet_28j60_disconnectTCP(OlcbSocket) of
-                0 : UART_Write_Text('unsuccessful FYN transmit' + LF);
-                1 : UART_Write_Text('successful FYN transmit' + LF)
-              else
-               UART_Write_Text('Unknown disconnect result' + LF);
-              end;
-              OlcbSocket := nil;
+              if Close_TCP_Connection(TempIPServer, ipPortServer) then
+              begin
+                TCP_Close_Port(ipPortClient);
+                OlcbSocketOpen := False;
+                UART1_Write_Text('Socket closed'+LF);
+              end else
+                UART1_Write_Text('Unable to close Socket'+LF);
             end else
               UART_Write_Text('Socket was not connected' + LF);
           end;
         's', 'S' :
           begin
-            if OlcbSocket = nil then
+            if not OlcbSocketOpen then
             begin
               TempIP := '';
               ipCount := 0;
@@ -580,20 +498,19 @@ begin
                   TrimValue(@s1);
                   WordToStr(ipPortClient, str);
                   TrimValue(@str);
-                  UART1_Write_Text('Connecting to IP Address: ' + IPAddressToStr(TempIpServer) + ':' + s1  + '  Client port: ' + str+ LF);
-                  while (OlcbSocket = nil) and (ConnectTryCount < MAX_CONNECT_TRY_COUNT) do
+                  TCP_Open_Port(ipPortClient);
+                  while not OlcbSocketOpen and (ConnectTryCount < MAX_CONNECT_TRY_COUNT) do
                   begin
-                    case Net_Ethernet_28j60_connectTCP(@TempIpServer, ipPortServer, ipPortClient, @OlcbSocket) of
-                      0 : UART_Write_Text('unsuccessful transmit SYN segment' + LF);
-                      1 : UART_Write_Text('successful transmit SYN segment' + LF);
-                      2 : UART_Write_Text('no available socket_28j60' + LF);
-                      3 : UART_Write_Text('no ARP resolve' + LF);
-                    end;
-                    Inc(ConnectTryCount);
+                    UART1_Write_Text('Connecting to IP Address: ' + IPAddressToStr(TempIpServer) + ':' + s1  + '  Client port: ' + str+ LF);
+                    OlcbSocketOpen := Open_TCP_Connection(TempIpServer, ipPortServer, ipPortClient);
+                    if not OlcbSocketOpen then
+                      Inc(ConnectTryCount);
                   end;
                   Inc(ipPortClient);
                   if ConnectTryCount = MAX_CONNECT_TRY_COUNT then
-                    UART_Write_Text('Failed to Connect'+LF);
+                    UART_Write_Text('Failed to Connect'+LF)
+                  else
+                    UART_Write_Text('Connected'+LF);
                 end else
                   UART_Write_Text('Invalid IP Address'+LF);
               end else
@@ -712,7 +629,8 @@ begin
           end;
         '6' :
           begin
-            CANStorage_DumpSocketData(OlcbSocket);
+            debugg_stack
+          //  CANStorage_DumpSocketData(OlcbSocket);
           end;
      end;
     end;

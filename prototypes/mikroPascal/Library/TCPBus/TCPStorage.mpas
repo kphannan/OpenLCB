@@ -26,7 +26,8 @@ unit TCPStorage;
 uses
   HelperFunctions,
   NMRAnetDefinesShared,
-  NMRAnetDefines;
+  NMRAnetDefines,
+  lib1_enc600_V3_5_b;
 
 const
   CAN_DIRECTION_READ = 1;
@@ -78,6 +79,7 @@ type
     TX_NMRAnetBufferFull: Boolean;
     TX_NMRAnetBufferSent, TX_NMRAnetBufferLoaded: DWord;
     TransmitImmediately: Boolean;
+    IsTransmitting: Boolean;
   end;
 
 
@@ -94,10 +96,18 @@ function CANStorage_NMRAnetBufferAvailable: Boolean;
 procedure CANStorage_NMRAnetBufferStore(CANBuffer: PCANBuffer);
 function CANStorage_LowPriorityBufferReady: Boolean;
 function CANStorage_HighPriorityBufferReady: Boolean;
-procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
+// Exported for the TCP Stack
+procedure Eth_UserProcess_Main;
+procedure Eth_UserProcess;
+procedure DisableInt;
+procedure EnableInt;
+procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; CC_Sock : byte);
+function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
 
-procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
-function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
+//procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
+
+//procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
+//function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
 
 procedure ReceivedOnFilter0(CANBuffer: PCANBuffer); external;                            // CAN Layer Message
 procedure ReceivedOnFilter1(CANBuffer: PCANBuffer); external;                            // NMRAnet Layer Message
@@ -105,7 +115,7 @@ procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGri
 procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer); external;
 
 var
-  OlcbSocket: ^SOCKET_28j60_Dsc;
+//  OlcbSocket: ^SOCKET_28j60_Dsc;
   CAN_Engine: TCAN_Engine;
 
 implementation
@@ -124,7 +134,7 @@ procedure CANStorage_Initialize;
 var
   i: Integer;
 begin
-  OlcbSocket := nil;
+//  OlcbSocket := nil;
   TCP_Receive_State := TCP_STATE_SYNC_START;
   
   CAN_Engine.State := 0;
@@ -157,8 +167,10 @@ begin
   CAN_Engine.TX_NMRAnetBufferSent := 0;
   
   CAN_Engine.TransmitImmediately := False;
+  CAN_Engine.IsTransmitting := False;
 end;
 
+{
 procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
 begin
   UART1_Write_Text('remoteIP:               ' + IPAddressToStr(Socket^.remoteIP) + LF);
@@ -211,6 +223,7 @@ begin
   ByteToHex(Socket^.txBuffer, s1);
   UART1_Write_Text('Pointer on Tx Buffer                            0x' + s1 + LF);
 end;
+}
 
 procedure PackNMRAnetBuffer;
 var
@@ -332,6 +345,38 @@ var
   Receive_GridConnectBuffer: TGridConnectString;
   RxCANBuffer: TCANBuffer;
   
+procedure Eth_UserProcess_Main;
+begin
+
+end;
+
+procedure Eth_UserProcess;
+begin
+
+end;
+
+procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; CC_Sock : byte);
+begin
+  UART1_Write_Text('TCP'+LF);
+end;
+
+function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
+begin
+  UART1_Write_Text('UDP'+LF);
+  result := 0;
+end;
+
+procedure DisableInt;
+begin
+  T3IE_bit := 0;
+end;
+
+procedure EnableInt;
+begin
+  T3IE_bit := 1;
+end;
+
+(*
 procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
 var
   TxBuffer: PCANBuffer;
@@ -342,9 +387,12 @@ var
   sx1: string[16];
   BytesRead: Integer;
 begin
+  CAN_Engine.IsTransmitting := False;  // Maybe, maybe not we will see...
+  
   if socket^.State = SOCKET_STATE_ESTABLISHED then
   begin
-     // Look for the correct port and some data only during DoPacket calls
+  
+    // Read something if we can
     if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
     begin
       BytesRead := 0;
@@ -435,61 +483,64 @@ begin
         end;
         Inc(BytesRead);
       end;
-    end else
+    end;
+    
+    // Send something if we can
+    TxBuffer := CANStorage_NextHighPriorityToSend;                              // Pull the next item to send out of the list
+    while TxBuffer <> nil do
     begin
-      TxBuffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
-      while TxBuffer <> nil do
-      begin
-        CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+      CAN_Engine.IsTransmitting := True;                                        // Yes, placed something in the buffer
+      
+      CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
 
-        {$IFDEF TRACE_ETHERNET}
-        UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
-        {$ENDIF}
+      {$IFDEF TRACE_ETHERNET}
+      UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
+      {$ENDIF}
 
-        {$IFDEF TRACE_ETHERNET_OVERFLOW}
-        BytesRead := strlen(GridConnectBuffer);
-        if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
+      {$IFDEF TRACE_ETHERNET_OVERFLOW}
+      BytesRead := strlen(GridConnectBuffer);
+      if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
+        UART_Write_Text('Buffer overflow' +LF);
+      if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
           UART_Write_Text('Buffer overflow' +LF);
-        if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
-            UART_Write_Text('Buffer overflow' +LF);
-        {$ELSE}
-        Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-        Net_Ethernet_28j60_putByteTCP(#10, socket);
-        {$ENDIF}
+      {$ELSE}
+      Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
+      Net_Ethernet_28j60_putByteTCP(#10, socket);
+      {$ENDIF}
 
-        TxBuffer^.State := BS_CLEAR;
-        
-        TxBuffer := CANStorage_NextHighPriorityToSend;
-      end;
+      TxBuffer^.State := BS_CLEAR;
+      
+      TxBuffer := CANStorage_NextHighPriorityToSend;
+    end;
+    
+    TxBuffer := CANStorage_NextToSend;
+    while TxBuffer <> nil do
+    begin
+      CAN_Engine.IsTransmitting := True;                                        // Yes, placed something in the buffer
+      CAN_Engine.TransmitImmediately := False;
+    
+      CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+
+      {$IFDEF TRACE_ETHERNET}
+      UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
+      {$ENDIF}
+
+      {$IFDEF TRACE_ETHERNET_OVERFLOW}
+      Inc(CAN_Engine.TX_NMRAnetBufferSent);
+      BytesRead := strlen(GridConnectBuffer);
+      if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
+        UART_Write_Text('Buffer overflow' +LF);
+      if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
+        UART_Write_Text('Buffer overflow' +LF);
+      {$ELSE}
+      Inc(CAN_Engine.TX_NMRAnetBufferSent);
+      Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
+      Net_Ethernet_28j60_putByteTCP(#10, socket);
+      {$ENDIF}
+
+      TxBuffer^.State := BS_CLEAR;
       
       TxBuffer := CANStorage_NextToSend;
-      while TxBuffer <> nil do
-      begin
-        CAN_Engine.TransmitImmediately := False;
-      
-        CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-
-        {$IFDEF TRACE_ETHERNET}
-        UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
-        {$ENDIF}
-
-        {$IFDEF TRACE_ETHERNET_OVERFLOW}
-        Inc(CAN_Engine.TX_NMRAnetBufferSent);
-        BytesRead := strlen(GridConnectBuffer);
-        if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
-          UART_Write_Text('Buffer overflow' +LF);
-        if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
-          UART_Write_Text('Buffer overflow' +LF);
-        {$ELSE}
-        Inc(CAN_Engine.TX_NMRAnetBufferSent);
-        Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-        Net_Ethernet_28j60_putByteTCP(#10, socket);
-        {$ENDIF}
-
-        TxBuffer^.State := BS_CLEAR;
-        
-        TxBuffer := CANStorage_NextToSend;
-      end;
     end;
   end;
 end;
@@ -498,5 +549,6 @@ function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
 begin
   Result := 0;
 end;
+*)
 
 end.

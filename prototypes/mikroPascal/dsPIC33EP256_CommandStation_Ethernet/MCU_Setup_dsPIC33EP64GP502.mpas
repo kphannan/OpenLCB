@@ -11,7 +11,9 @@ uses
   {$IFDEF ETHERNET_BUS}
   TCPStorage,
   {$ENDIF}
-  dsPIC33_DMA;
+  dsPIC33_DMA,
+  lib1_enc600_V3_5_b,
+  lib2_enc600_V3_5_b;
   
 const
  // ipServer: array[0..3] of byte = (192, 168, 0, 127);  // iMac
@@ -26,53 +28,39 @@ const
 
 implementation
 
-var 
-  myMacAddr   : array[6] of byte; // my MAC address
-  myIpAddr    : array[4] of byte; // my IP address
-  gwIpAddr    : array[4] of byte; // gateway (router) IP address
-  ipMask      : array[4] of byte; // network mask (for example : 255.255.255.0)
-  dnsIpAddr   : array[4] of byte; // DNS server IP address
-
 procedure MCU_Setup_Enable_OlcbBus;
 begin
   // set mac address
-  myMacAddr[0] := 0x00;
-  myMacAddr[1] := 0x14;
-  myMacAddr[2] := 0xA5;
-  myMacAddr[3] := 0x76;
-  myMacAddr[4] := 0x19;
-  myMacAddr[5] := 0x3F;
+  eth_mac[0] := 0x00;
+  eth_mac[1] := 0x14;
+  eth_mac[2] := 0xA5;
+  eth_mac[3] := 0x76;
+  eth_mac[4] := 0x19;
+  eth_mac[5] := 0x3F;
 
   // set IP address
-  myIpAddr[0] := 192;
-  myIpAddr[1] := 168;
-  myIpAddr[2] := 0;
-  myIpAddr[3] := 128;
+  eth_ip_addr[0] := 192;
+  eth_ip_addr[1] := 168;
+  eth_ip_addr[2] := 0;
+  eth_ip_addr[3] := 128;
  
- {
-  // set IP address
-  myIpAddr[0] := 10;
-  myIpAddr[1] := 211;
-  myIpAddr[2] := 55;
-  myIpAddr[3] := 128;
-                          }
   // set gateway address
-  gwIpAddr[0]  := 192;
-  gwIpAddr[1]  := 168;
-  gwIpAddr[2]  := 0;
-  gwIpAddr[3]  := 1;
+  eth_gateway[0]  := 192;
+  eth_gateway[1]  := 168;
+  eth_gateway[2]  := 0;
+  eth_gateway[3]  := 1;
 
   // set dns address
-  dnsIpAddr[0] := 208;
-  dnsIpAddr[1] := 67;
-  dnsIpAddr[2] := 222;
-  dnsIpAddr[3] := 222;
+  eth_dns_addr[0] := 208;
+  eth_dns_addr[1] := 67;
+  eth_dns_addr[2] := 222;
+  eth_dns_addr[3] := 222;
   
   // set subnet mask
-  ipMask[0]    := 255;
-  ipMask[1]    := 255;
-  ipMask[2]    := 255;
-  ipMask[3]    := 0;
+  eth_mask[0]    := 255;
+  eth_mask[1]    := 255;
+  eth_mask[2]    := 255;
+  eth_mask[3]    := 0;
   
   SPI1_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, _SPI_PRESCALE_SEC_1, _SPI_PRESCALE_PRI_4,
                      _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_LOW, _SPI_IDLE_2_ACTIVE);
@@ -80,9 +68,13 @@ begin
   SPI1CON := SPI1CON and $FFE0;  // Clear the prescaler bits
   SPI1CON := SPI1CON or $0003 or $0018;  // Setup for 5 Mhz (with the CAN plug in boards)     $10=5Mhz, $14=6.67Mhz, $18 = 10Mhz
   SPIEN_bit := 1;    // Enable the SPI
-  Net_Ethernet_28j60_stackInitTCP();
-  Net_Ethernet_28j60_Init(@myMacAddr, @myIpAddr, Net_Ethernet_28j60_FULLDUPLEX);  // init ethernet module
-  Net_Ethernet_28j60_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);
+  
+  Eth_Init_(False);  // Use the built in ENC464J600 MAC
+  Wait_for_LAN;
+
+//  Net_Ethernet_28j60_stackInitTCP();
+//  Net_Ethernet_28j60_Init(@myMacAddr, @myIpAddr, Net_Ethernet_28j60_FULLDUPLEX);  // init ethernet module
+//  Net_Ethernet_28j60_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);
 end;
 
 procedure MCU_Setup_Initialize;
@@ -158,10 +150,10 @@ begin
   T3IP_2_bit := 0;
   TCKPS_0_T3CON_bit := 1;   // 256 Prescaler
   TCKPS_1_T3CON_bit := 1;
-  PR3 := 1250;             // Clock ticks every 31.25ns * 256 * 1250 = 10ms interrupts
+  PR3 := 125;               // Clock ticks every 31.25ns * 256 * 125 = 1ms interrupts
   T3IF_bit := 0;            // Clear T3IF
   T3IE_bit := 1;            // Enable the Interrupt
- // TON_T3CON_bit := 1;       // Turn on
+  TON_T3CON_bit := 1;       // Turn on
   
   TCS_T5CON_bit := 0;       // Disable
   T5IP_0_bit := 1;          // Timer 5 Interrupt Priority = 5   (1 means off)
