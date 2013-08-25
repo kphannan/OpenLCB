@@ -1,6 +1,11 @@
 unit EthDNS;
 
+{.$DEFINE LOG_UART}
+
 uses
+
+NMRAnetDefinesShared,
+
   EthCommon,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
@@ -67,6 +72,7 @@ var
   data_len : word;
   pt1, pt2 : ^byte;
 begin
+  {$IFDEF LOG_UART}UART1_Write_Text('Dns_query_Internal text_in: ' + text_in + LF);{$ENDIF}
   if Str_Len(text_in) < 3 then 
     Exit;
   DNS_Manager.TransactionID := $00B5;
@@ -95,10 +101,7 @@ begin
       pt1 := pt1 + 1;
     end;
 
-  Result := False;
-  if UDP_Send(Settings.eth_dns_addr, UDP_DYNAMIC_NAME_SYSTEM_PORT, UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT, data_len, data_) = False then
-    Exit;
-  Result := True;
+  Result := UDP_Send(Settings.eth_dns_addr, UDP_DYNAMIC_NAME_SYSTEM_PORT, UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT, data_len, data_)
 end;
 
 //******************************************************************************
@@ -114,9 +117,9 @@ begin
   Result := False;
   i := 0;
   while i < 3 do
+  begin
+    if IsLinkUp then
     begin
-      if IsLinkUp = False then
-        Exit;
       DNS_Manager.Response := False;
       if Dns_Query_Internal(text_in_) = False then
         Exit;
@@ -133,8 +136,9 @@ begin
       UDP_Close_Port(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
       if DNS_Manager.Response <> 0 then
         Break;
-      inc(i);
     end;
+    inc(i);
+  end;
 
   if DNS_Manager.Response = False then
     Exit;
@@ -249,7 +253,7 @@ begin
   // Remove all Additional Records
   While DNS_Manager.Header.AdditionalRecords <> 0 do
   begin
-      Hi(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;                // Response name
+    Hi(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;                // Response name
     Lo(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;
     Hi(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;                // Response type
     Lo(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;

@@ -96,26 +96,29 @@ begin
   Eth_PutByte(Lo(CkSum_UDP));
   TotalLen := PacketLenA + 42;
   Eth_Send(TotalLen);
+  {$IFDEF LOG_UART}UART1_Write_Text('UDP_Send_Internal Complete'+ LF);{$ENDIF}
 end;
 
 //******************************************************************************
 //* Name    : UDP_Send                                                         *
 //* Purpose : Send UDP packet                                                  *
 //******************************************************************************
-function UDP_Send(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
+function UDP_Send(var dest_ip_addr: IpHeader; dest_port_S, source_port_S, len_data: word; var data_udp1: array[1472] of byte) : boolean;
 var 
   dest_mac : MacHeader;
 begin
   Result := False;
+  {$IFDEF LOG_UART}UART1_Write_Text('UDP_Send attempt, validating ARP'+ LF);{$ENDIF}
   if ARP_Validate_IP(dest_ip_addr, dest_mac) then
   begin
+    {$IFDEF LOG_UART}UART1_Write_Text('UDP_Send attempt ARP validated'+ LF);{$ENDIF}
     Result := True;
     CopyRamToEthMem(@dest_mac, TXSTART, 6);
     CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
     CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
     CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
-    WriteToEthMem(TXSTART+41,$00);
-    CopyRamToEthMem_CP(@dest_ip_addr, len_data);
+    WriteToEthMem(TXSTART + 41, $00);
+    CopyRamToEthMem_CP(@data_udp1, len_data);
     UDP_Send_Internal(dest_port_S, source_port_S, len_data);
   end;
 end;
@@ -142,7 +145,7 @@ begin
   CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
   CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
   WriteToEthMem(TXSTART+41,$00);
-  CopyRamToEthMem_CP(@dest_ip_addr, len_data);
+  CopyRamToEthMem_CP(@data_udp1, len_data);
   UDP_Send_Internal(dest_port_S, source_port_S, len_data);
 end;
 

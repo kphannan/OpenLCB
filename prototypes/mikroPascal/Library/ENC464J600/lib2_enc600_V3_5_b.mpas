@@ -1,7 +1,7 @@
 unit lib2_enc600_V3_5_b;
 
 //{$DEFINE RxInt}
-{$DEFINE LOG_UART}
+{.$DEFINE LOG_UART}
 
 uses 
 

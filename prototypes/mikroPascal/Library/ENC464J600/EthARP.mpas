@@ -1,6 +1,6 @@
 unit EthARP;
 
-{$DEFINE LOG_UART}
+{.$DEFINE LOG_UART}
 
 uses
 
@@ -115,6 +115,10 @@ begin
         if (EthMemCompareWithRam(EthMemAddressRequest + 28, @ArpCache[i].Ip[0], 4) <> 0) then
         begin
           CopyEthMemToRam(EthMemAddressRequest + 6, @ArpCache[i].Mac[0], 6);      // Yes, return ready to use MAC addr
+          {$IFDEF LOG_UART}
+          Ip2Str(ArpCache[i].Ip, s1);
+          UART1_Write_Text('ARP message received from IP = ' + s1 + LF);
+          {$ENDIF}
           ArpCache[i].WaitingForReply := False;
           DisableInt;
           ArpCache[i].ArpVerifyTime := ARP_100ms_Counter;  // Not an atomic operation
@@ -170,11 +174,11 @@ begin
       if not ArpCache[i].WaitingForReply then
         if (Mem_Cmp(@ArpCache[i].Ip[0], @ipArp, 4) = 0) then
         begin
-          Mem_Cpy(@dest_mac,@ArpCache[i].Mac[0], 6);                            // Yes, return ready to use MAC addr
+          Mem_Cpy(@dest_mac, @ArpCache[i].Mac[0], 6);                            // Yes, return ready to use MAC addr
           Result := True;                                                       // Return OK
           {$IFDEF LOG_UART}
-          Ip2Str(dest_ip, s1);
-          UART1_Write_Text('ARP message received from IP = ' + s1 + LF);
+          Ip2Str(ipArp, s1);
+          UART1_Write_Text('ARP message found in cache = ' + s1 + LF);
           {$ENDIF}
           Exit;
         end;
@@ -332,14 +336,14 @@ begin
     {$IFDEF LOG_UART}UART1_Write_Text('Sending ARP message to ENC'+ LF);{$ENDIF}
     EthMemSet(TXSTART, $FF, 6);             // Broadcast MAC for ARP
     CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
-    WriteToEthMem(TXSTART + 12, $08);
-    Eth_PutByte($06);                     // ETHType
+    WriteToEthMem(TXSTART + 12, $08);     // Protocol = $0806
+    Eth_PutByte($06);                     //
+    Eth_PutByte($00);                     // Hardware type = $0001
+    Eth_PutByte($01);                     //
+    Eth_PutByte($08);                     // IP verion 4  = $0800
     Eth_PutByte($00);                     //
-    Eth_PutByte($01);                     // ETHnet 10base
-    Eth_PutByte($08);                     //
-    Eth_PutByte($00);                     // IP verion 4
-    Eth_PutByte($06);                     // Hardware address length
-    Eth_PutByte($04);                     // Protocol address length
+    Eth_PutByte($06);                     // Hardware address length (6 bytes for a MAC)
+    Eth_PutByte($04);                     // Protocol address length (4 bytes for an IP)
     Eth_PutByte($00);
     Eth_PutByte($01);                     // ARP request
     CopyRamToEthMem(@Settings.eth_mac, TXSTART + 22, 6);
@@ -402,6 +406,12 @@ begin
     end;
     Inc(i);
   end;
+  {$IFDEF LOG_UART}
+  if Result then
+    UART1_Write_Text('ARP validation Successful.........' + LF)
+  else
+    UART1_Write_Text('ARP validation Unsuccessful.......' + LF)
+  {$ENDIF}
 end;
 
 end.
