@@ -1,20 +1,23 @@
 unit lib2_enc600_V3_5_b;
 
 //{$DEFINE RxInt}
+{$DEFINE LOG_UART}
 
-uses dspic_additional_string_library,
-     Lib_Delays_LIO,
-     definitions_ENC600,
-     lib1_enc600_V3_5_b,
-     EthPing,
-     EthARP,
-     EthDNS,
-     EthNTP,
-     EthDHCP,
-     EthCommon
-   {  enc_lib_user,
-     def_io,
-     df_lib_SPI1};
+uses 
+
+NMRAnetDefinesShared,
+
+
+  dspic_additional_string_library,
+  Lib_Delays_LIO,
+  definitions_ENC600,
+  lib1_enc600_V3_5_b,
+  EthPing,
+  EthARP,
+  EthDNS,
+  EthNTP,
+  EthDHCP,
+  EthCommon;
 
 procedure CounterTask;
 Procedure Eth_Init_(use_user_MAC: Boolean);
@@ -112,7 +115,7 @@ var buf : word;
 Begin
   DisableInt;
   NTP_Time := 3534364800; // 2012
-  ARP_100ms_Counter := 12001;
+  ARP_100ms_Counter := ARP_REFRESH_TIME + 1;
   EnableInt;
   NTP_Sync := False;
   Offset_Time := 0;
@@ -438,7 +441,6 @@ begin
     if (len = 48) then
     begin
       NTP_ProcessPacket_Internal(AddrPacket);
-      Close_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
       Exit;
     end;
   end;
@@ -478,7 +480,7 @@ var
   CkSum_TCP, CkSum_IP: Word;
 begin
 
-UART1_Write_Text('TCP Send');
+  {$IFDEF LOG_UART}UART1_Write_Text('TCP Send');{$ENDIF}
 
   WriteToEthMem(TXSTART+12,$08);    // Phy Layer Protocol HI
   Eth_PutByte($00);                 // Phy Layer Protocol LO
@@ -765,33 +767,49 @@ begin
 {$ENDIF}
   if (Eth_ReadReg(EIR_) and $0040) <> 0 then
     begin
+    
+    {$IFDEF LOG_UART}UART1_Write_Text('Have Packet' + LF);{$ENDIF}
+    
       broadcast_packet := False;
       case Eth_ReadPacket of
         ETH_ARP :
         begin
+          {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP' + LF);{$ENDIF}
           if EthMemCompareWithRam(AddrPacket + 38, @Options.eth_ip_addr, 4) then
             begin
               case ReadFromEthMem(AddrPacket+21) of
-                ETH_ARP_REQ : ARP_Reply_Internal(AddrPacket);
-                ETH_ARP_RES : ARP_Process_Internal(AddrPacket);
+                ETH_ARP_REQ :        // ARP Request
+                  begin
+                    ARP_Reply_Internal(AddrPacket);
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_REQ' + LF);{$ENDIF}
+                  end;
+                ETH_ARP_RES :       // ARP Response to a Request sent by us
+                  begin
+                    ARP_Process_Internal(AddrPacket);
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_RES' + LF);{$ENDIF}
+                  end;
               end;
             end;
         end;
         ETH_IP :
         begin
+          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP' + LF);{$ENDIF}
           if EthMemCompareWithRam(AddrPacket + 30, @Options.eth_ip_addr, 4) then
           begin
             case ReadFromEthMem(AddrPacket + 23) of
                 ETH_IP_ICMP :
                   begin
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP' + LF);{$ENDIF}
                     case ReadFromEthMem(AddrPacket + 34) of
                       ETH_IP_ICMP_ECHO :
                         begin
+                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_ECHO' + LF);{$ENDIF}
                           if FICMP = False then
                             Ping_Echo_Internal(AddrPacket)
                         end;
                       ETH_IP_ICMP_REPLY :
                         begin
+                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_REPLY' + LF);{$ENDIF}
                           Ping_Reply_Internal(AddrPacket);
                         end;
                     end;
@@ -800,11 +818,13 @@ begin
                   begin
                     if FUDP = False then
                       Eth_ProcessUDP;
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_UDP' + LF);{$ENDIF}
                   end;
                 ETH_IP_TCP :
                   begin
                     if FTCP = False then
                       Eth_ProcessTCP;
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_TCP' + LF);{$ENDIF}
                   end;
             end;
             Exit;
@@ -1236,12 +1256,12 @@ end;
 //******************************************************************************
 procedure Wait_for_LAN;
 var 
-  contorw : word;
+  Counter : word;
   dest_ip_addr: IpHeader;
   dest_mac: MacHeader;
 begin
-  contorw := 0;
-  while contorw < 60000 do
+  Counter := 0;
+  while Counter < 60000 do
   begin
     ClrWdt;
     Eth_UserProcess_Main;
@@ -1249,15 +1269,15 @@ begin
       Eth_ReadPacket;
     delay_100us_;
     delay_100us_;
-    if IsLinkUp <> 0 then
+    if IsLinkUp then
       Break;
-    inc(contorw);
+    inc(Counter);
   end;
   if Options.Announce <> 0 then
   begin
     Mem_Set(@dest_ip_addr, $FF, 4);
     Mem_Set(@dest_mac,$FF,6);
-    Ping_Send_Internal(dest_ip_addr, dest_mac, 8);
+    Ping_Send_Internal(dest_ip_addr, dest_mac, 0);
   end;
   if DHCP_Enable <> 0 then 
     DHCP_Request(AddrPacket);

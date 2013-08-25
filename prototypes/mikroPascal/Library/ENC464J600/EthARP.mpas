@@ -1,6 +1,12 @@
 unit EthARP;
 
+{$DEFINE LOG_UART}
+
 uses
+
+
+NMRAnetDefinesShared,
+
   EthCommon,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
@@ -11,10 +17,9 @@ const
   ETH_ARP_REQ                 : byte = $01;
   ETH_ARP_RES                 : byte = $02;
   
-  ARP_CACHE_LENGTH: byte = 2;                                                   // number of cached IPs to hold
+  ARP_CACHE_LENGTH: byte = 3;                                                   // number of cached IPs to hold
   MAX_ARP_VALIDATE_TRIES: byte = 3;                                             // number of times to try to validate an IP
-  
-  ARP_CACHE_FULL = $FFFF;
+  ARP_REFRESH_TIME = 12000;                                                     // number of 100ms ticks before refreshing cached ARP (1200 seconds = 20 minutes)
   
 type 
   TArpCache = record
@@ -153,7 +158,7 @@ end;
 Function Search_Arp_Cache_Internal(var dest_ip : IpHeader; var dest_mac: MacHeader) : boolean;
 var
   i: Byte;               // index of free slot in ARP cache
-  ipArp, ipa_masked, ip_masked: IpHeader;
+  ipArp: IpHeader;
 begin
   Result := False;
 
@@ -168,6 +173,10 @@ begin
         begin
           Mem_Cpy(@dest_mac,@ArpCache[i].Mac[0], 6);                            // Yes, return ready to use MAC addr
           Result := True;                                                       // Return OK
+          {$IFDEF LOG_UART}
+          Ip2Str(dest_ip, s1);
+          UART1_Write_Text('ARP message received from IP = ' + s1 + LF);
+          {$ENDIF}
           Exit;
         end;
     inc(i);
@@ -176,29 +185,70 @@ end;
 
 //******************************************************************************
 //* Name    : ARP_FindSlot
-//* Purpose : Finds the cached slot
-// Parameters: [IN] dest_ip : the IP address to find the arpCache slot for
-// Result: Returns the index of the slot or the index of an empty slot using a negative number or $FFFF if the cache it full
-//         note only Allocated is checked, if the slot is waiting for a reply with WaitingForReply = True it will return that slot
+//* Purpose : Finds the cached slot regardless if it is waiting for a reply or not
 //******************************************************************************
 function ARP_FindSlot(var ipArp: IpHeader): Integer;
 var
   i: Integer;
 begin
-  i := Integer( ARP_CACHE_FULL);
+  Result := -1;
+  i := 0;
   while i < ARP_CACHE_LENGTH do
   begin
     if ArpCache[i].Allocated then
-    begin
       if Mem_Cmp(@ArpCache[i].Ip[0], @ipArp, 4) = 0 then
       begin
         Result := i;
         Break
-      end
-    end else
-      Result := -i;          // Return the -empty slot
+      end;
     Inc(i);
   end;
+end;
+
+//******************************************************************************
+//* Name    : ARP_FindEmptySlot
+//* Purpose : Finds the next available slot
+//******************************************************************************
+function ARP_FindEmptySlot: Integer;
+var
+  i: Integer;
+  LastTime: longint;
+begin
+  Result := -1;
+  i := 0;
+  LastTime := 0;
+  while i < ARP_CACHE_LENGTH do
+  begin
+    if ArpCache[i].Allocated then
+    begin
+      if not ArpCache[i].WaitingForReply then
+      begin
+        if LastTime = 0 then
+        begin
+          LastTime := ArpCache[i].ArpVerifyTime;
+          Result := i
+        end else
+        begin
+          if ArpCache[i].ArpVerifyTime < LastTime then
+          begin
+            LastTime := ArpCache[i].ArpVerifyTime;
+            Result := i
+          end;
+        end;
+      end
+    end else
+    begin
+      Result := i;      // done, empty slot
+      Break
+    end;
+    Inc(i);
+  end;
+  
+  // If all slots are waiting for replies we will get there.  If so then just toss the first one
+  if Result < 0 then
+    Result := 0;
+
+  ARP_EraseSlot(ArpCache[Result]);                                              // Fresh Slot
 end;
 
 //******************************************************************************
@@ -209,66 +259,100 @@ end;
 //******************************************************************************
 Function ARP_Send(var dest_ip : IpHeader; var dest_mac: MacHeader) : boolean;
 var
-  CurrentVerifyingTime : Longint;          // oldest slot timer in ARP cache
-  ipArp, ip_target_masked : IpHeader;
+  CurrentVerifyingTime : Longint;          // 100ms ticks
+  ipArp : IpHeader;
   Slot: Integer;
 begin
+  {$IFDEF LOG_UART}UART1_Write_Text('ARP_Sending' + LF);{$ENDIF}
+
   Result := False;
   if IsLinkUp then                                                              // Make sure the Link is operating
   begin
+    {$IFDEF LOG_UART}UART1_Write_Text('ARP resolving gateway/segment' + LF);{$ENDIF}
+  
     ARP_Resolve_Segment_Gateway(dest_ip, ipArp);                                // Determine the correct IP depending on if we are on the same segment or need the gateway
 
+    {$IFDEF LOG_UART}
+    Ip2Str(ipARP, s1);
+    UART1_Write_Text('ARP IP = ' + s1 + LF);
+    {$ENDIF}
+    
     Slot := ARP_FindSlot(ipArp);
-    if Slot <> ARP_CACHE_FULL then
+    
+    {$IFDEF LOG_UART}
+    IntToStr(Slot, s1);
+    UART1_Write_Text('ARP FindSlot Slot = ' + s1 + LF);
+    {$ENDIF}
+    
+    if Slot < 0 then
     begin
-      DisableInt;
-      CurrentVerifyingTime := ARP_100ms_Counter;                                // Save LongTmr, NOT an atomic operation
-      EnableInt;
+      Slot := ARP_FindEmptySlot;                                                // Will always succeed
+      {$IFDEF LOG_UART}
+      IntToStr(Slot, s1);
+      UART1_Write_Text('ARP FindEmptySlot Slot = ' + s1 + LF);
+      {$ENDIF}
+    end;
+    
+    DisableInt;
+    CurrentVerifyingTime := ARP_100ms_Counter;                                // Save LongTmr, NOT an atomic operation
+    EnableInt;
 
-      if Slot < 0 then
-      begin
-        Slot := abs(Slot);                                                      // No match, empty slot index
-        ArpCache[Slot].Allocated := True;
-        ArpCache[Slot].WaitingForReply := True;
+    if ArpCache[Slot].Allocated then
+    begin
+      if ArpCache[Slot].WaitingForReply then                                  // Match
+      begin                                                                   // Allocated but not Valid yet
+        {$IFDEF LOG_UART}UART1_Write_Text('ARP Slot waiting for reply..'+ LF);{$ENDIF}
+        if (ArpCache[Slot].ArpVerifyTime + (SocketManager.UDP_Wait div 100)) > CurrentVerifyingTime then
+        begin
+          {$IFDEF LOG_UART}UART1_Write_Text('ARP Slot timed out..'+ LF);{$ENDIF}
+          ARP_EraseSlot(ArpCache[Slot]);
+        end;
+        Exit;                                                                   // Just keep waiting or we have timed out, just get out of here
       end else
       begin
-        if ArpCache[Slot].WaitingForReply then                                  // Match
-        begin                                                                   // Allocated but not Valid yet
-          if (ArpCache[Slot].ArpVerifyTime + (SocketManager.UDP_Wait div 100)) > CurrentVerifyingTime then
-            ARP_EraseSlot(ArpCache[Slot]);
-          Exit;
-        end else
-        begin
-          Mem_Cpy(@dest_mac, @ArpCache[Slot].Mac[0], 6);                        // Yes, return ready to use MAC addr
-          Result := True;                                                       // Return OK
-          if (ArpCache[Slot].ArpVerifyTime + 12000) < CurrentVerifyingTime then // too old ?  More than 1200 sec
-            Exit;                                                               // return the cached MAC address but don't need to refresh the ARP cache
-        end
-      end;
+        {$IFDEF LOG_UART}UART1_Write_Text('ARP Slot cached.........'+ LF);{$ENDIF}
+        Mem_Cpy(@dest_mac, @ArpCache[Slot].Mac[0], 6);                          // Yes, return ready to use MAC addr
+        Result := True;                                                         // Return OK
+        
+        {$IFDEF LOG_UART}
+        LongInttostr(ArpCache[Slot].ArpVerifyTime, s1);
+        UART1_Write_Text('ARP Slot Verify Time = ' + s1 + LF);
+        LongInttostr(CurrentVerifyingTime, s1);
+        UART1_Write_Text('ARP Current Verify Time = ' + s1 + LF);
+        {$ENDIF}
 
-      EthMemSet(TXSTART, $FF, 6);             // Broadcast MAC for ARP
-      CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
-      WriteToEthMem(TXSTART + 12, $08);
-      Eth_PutByte($06);                     // ETHType
-      Eth_PutByte($00);                     //
-      Eth_PutByte($01);                     // ETHnet 10base
-      Eth_PutByte($08);                     //
-      Eth_PutByte($00);                     // IP verion 4
-      Eth_PutByte($06);                     // Hardware address length
-      Eth_PutByte($04);                     // Protocol address length
-      Eth_PutByte($00);
-      Eth_PutByte($01);                     // ARP request
-      CopyRamToEthMem(@Options.eth_mac, TXSTART + 22, 6);
-      CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 28, 4);
-      EthMemSet(TXSTART + 32, 0, 6);
-      CopyRamToEthMem(@ipArp, TXSTART + 38, 4);
-      Eth_Send(42);
-      Mem_Cpy(@ArpCache[Slot].Ip[0], @ipArp, 4);
-      ArpCache[Slot].WaitingForReply := False;
-      ArpCache[Slot].ArpVerifyTime := CurrentVerifyingTime;
-    end
+        if (ArpCache[Slot].ArpVerifyTime + ARP_REFRESH_TIME) > CurrentVerifyingTime then   // too old ?  More than 1200 sec then refresh the cache in parallel
+          Exit;                                                                 // return the cached MAC address but don't need to refresh the ARP cache
+        {$IFDEF LOG_UART}UART1_Write_Text('Slot cached but old, resovling again..'+ LF);{$ENDIF}
+      end;
+    end else
+    begin
+      ArpCache[Slot].Allocated := True;                                         // Set to allocated and send the ARP message and wait for result
+    end;
+
+    {$IFDEF LOG_UART}UART1_Write_Text('Sending ARP message to ENC'+ LF);{$ENDIF}
+    EthMemSet(TXSTART, $FF, 6);             // Broadcast MAC for ARP
+    CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
+    WriteToEthMem(TXSTART + 12, $08);
+    Eth_PutByte($06);                     // ETHType
+    Eth_PutByte($00);                     //
+    Eth_PutByte($01);                     // ETHnet 10base
+    Eth_PutByte($08);                     //
+    Eth_PutByte($00);                     // IP verion 4
+    Eth_PutByte($06);                     // Hardware address length
+    Eth_PutByte($04);                     // Protocol address length
+    Eth_PutByte($00);
+    Eth_PutByte($01);                     // ARP request
+    CopyRamToEthMem(@Options.eth_mac, TXSTART + 22, 6);
+    CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 28, 4);
+    EthMemSet(TXSTART + 32, 0, 6);
+    CopyRamToEthMem(@ipArp, TXSTART + 38, 4);
+    Eth_Send(42);
+    Mem_Cpy(@ArpCache[Slot].Ip[0], @ipArp, 4);
+    ArpCache[Slot].WaitingForReply := True;
+    ArpCache[Slot].ArpVerifyTime := CurrentVerifyingTime;
   end else
-    ARP_EraseCache_Internal;   // Link is down, clear the cache and get out
+    ARP_EraseCache_Internal;  // Link is down
 End;
 
 //******************************************************************************
@@ -284,10 +368,16 @@ var
   CountBuf: word;
   i : byte;
 begin
+
+  {$IFDEF LOG_UART}UART1_Write_Text('ARP validate' + LF);{$ENDIF}
+
   Result := False;
   i := 0;
   while i < MAX_ARP_VALIDATE_TRIES do
   begin
+  
+  {$IFDEF LOG_UART}UART1_Write_Text('ARP validating loop' + LF);{$ENDIF}
+  
     if ARP_Send(ip_arp_target, mac_arp) then
     begin
       Result := True;
@@ -301,7 +391,7 @@ begin
         while CountBuf < SocketManager.UDP_Wait do
         begin
           Do_EthernetProc(1);                                                   // Sniff for the result
-          if Search_Arp_Cache_Internal(ip_arp_target, mac_arp) then             // Search in ARP cache for Result
+          if Search_Arp_Cache_Internal(ip_arp_target, mac_arp) then             // Search in ARP cache for Result that is updated in parallel (through the Do_EthernetProc call)
           begin
             Result := True;
             Break;

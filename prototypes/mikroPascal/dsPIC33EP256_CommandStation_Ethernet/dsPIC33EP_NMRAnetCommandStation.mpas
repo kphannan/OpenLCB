@@ -347,6 +347,8 @@ var
   OldFull: Boolean;
   OlcbSocketOpen: Boolean;
   TempIPHeader: IpHeader;
+  PingTime: word;
+  DNS_Path: string[64];
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
@@ -449,6 +451,18 @@ begin
     
     Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
     DHCP_Process(AddrPacket);
+    
+    LATA4_bit := not LATA4_bit;
+    
+    if NTP_Sync then
+    begin
+      if NTP_Sec = 0 then
+      begin
+        NTP_GetTime;
+        UART1_Write_Text('Time = ' + TTime.Str + LF);
+      end
+    end;
+
     
     if UART1_Data_Ready = 1 then
     begin
@@ -627,12 +641,82 @@ begin
             CAN_Engine.TX_NMRAnetBufferSent := 0;
             CAN_Engine.TX_NMRAnetBufferLoaded := 0;
           end;
-        '6' :
+        '7' :
           begin
-            debugg_stack
-          //  CANStorage_DumpSocketData(OlcbSocket);
+            Str2Ip('192.168.0.127', TempIPHeader);
+            PingTime := Ping_Send(TempIPHeader , 0);
+            case PingTime of
+              PING_SEND_RESULT_TIMEOUT :
+                begin
+                  UART1_Write_Text('Ping time for 192.168.0.127 = no response' + LF);
+                end;
+              PING_SEND_RESULT_INVALID_SLOT :
+                begin
+                  UART1_Write_Text('Invalid Ping Slot' + LF);
+                end
+            else begin
+              WordToStr(PingTime, s1);
+              UART1_Write_Text('Ping time for 192.168.0.127 = ' + s1 + 'ms' + LF);
+              end;
+            end;
+               
+            Str2Ip('192.168.0.8', TempIPHeader);
+            PingTime := Ping_Send(TempIPHeader , 0);
+            case PingTime of
+              PING_SEND_RESULT_TIMEOUT :
+                begin
+                  UART1_Write_Text('Ping time for 192.168.0.8 = no response' + LF);
+                end;
+              PING_SEND_RESULT_INVALID_SLOT :
+                begin
+                  UART1_Write_Text('Invalid Ping Slot' + LF);
+                end
+            else begin
+              WordToStr(PingTime, s1);
+              UART1_Write_Text('Ping time for 192.168.0.8 = ' + s1 + 'ms' + LF);
+              end;
+            end;
+               
+            Str2Ip('192.168.0.234', TempIPHeader);
+            PingTime := Ping_Send(TempIPHeader , 0);
+            case PingTime of
+              PING_SEND_RESULT_TIMEOUT :
+                begin
+                  UART1_Write_Text('Ping time for 192.168.0.234 = no response' + LF);
+                end;
+              PING_SEND_RESULT_INVALID_SLOT :
+                begin
+                  UART1_Write_Text('Invalid Ping Slot' + LF);
+                end
+            else begin
+              WordToStr(PingTime, s1);
+              UART1_Write_Text('Ping time for 192.168.0.234 = ' + s1 + 'ms' + LF);
+              end;
+            end;
+        end;
+        '8' :
+          begin
+            if NTP_Query then
+            begin
+              UART1_Write_Text('NTP_Query successful' + LF);
+            end;
           end;
-     end;
+        'k' :
+          begin
+            DNS_Path := 'www.mustangpeak.net';
+            UART1_Write_Text('DNS resolving: ' + DNS_Path + LF);
+            if Dns_Resolve(DNS_Path, TempIPHeader) then
+            begin
+              UART1_Write_Text('DNS Resolve successful' + LF);
+              Ip2Str(TempIPHeader, s1);
+              UART1_Write_Text(DNS_Path + ' = ' + s1 + LF);
+            end else
+              UART1_Write_Text('DNS Resolve failed' + LF);
+          end;
+      end;
+      
+      while UART1_Data_Ready = 1 do
+        UART1_Read;
     end;
   end;
 end.

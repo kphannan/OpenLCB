@@ -115,7 +115,8 @@ begin
       if IsLinkUp = False then
         Exit;
       DNS_Manager.Response := False;
-      if Dns_query_Internal(text_in_) = False then Exit;
+      if Dns_Query_Internal(text_in_) = False then
+        Exit;
       UDP_Open_Port(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
       TickCounter1 := 0;
       CountBuf := 0;

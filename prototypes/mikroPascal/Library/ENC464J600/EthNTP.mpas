@@ -1,6 +1,12 @@
 unit EthNTP;
 
+{.$DEFINE LOG_UART}
+
 uses
+
+NMRAnetDefinesShared,
+
+
   EthCommon,
   EthArp,
   dspic_additional_string_library,
@@ -51,22 +57,32 @@ var
 
 implementation
 
+//******************************************************************************
+//* Name    : NTP_ProcessPacket_Internal
+//* Purpose : Handles NTP Reply from the NTP Server
+//******************************************************************************
 procedure NTP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 var
   buft : dword;
 begin
+  {$IFDEF LOG_UART}UART1_Write_Text('NTP Reply received'+ LF);{$ENDIF}
   CopyEthMemToRam_Inv(AddrPacket+82, @buft, 4);
   DisableInt;
-  NTP_Time := buft + Offset_Time;
+  NTP_Time := buft + Offset_Time;   // NOT an atomic operation
   EnableInt;
   NTP_Sync := True;
   NTP_Sec := 0;
   NTP_ReSync := 0;
+  Close_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
 end;
 
 //******************************************************************************
 //* Name    : NTP_Process                                                      *
 //* Purpose : NTP Response for NTP Server                                      *
+//  Description:
+//      If creating a NTP server when clients call the Network Time Port for UDP (123)
+//  to your server you can use this function.  I don't know the specifics about NTP
+//  but this apparently is useful
 //******************************************************************************
 function NTP_Process(var data_in : array[48] of byte; len_ : byte) : byte;
 begin
@@ -112,30 +128,36 @@ var
   ntp_mac : MacHeader;
 begin
   Result := False;
-  if ARP_Validate_IP(Options.eth_ntp_addr, ntp_mac) = False then
-    Exit;
-  Result := True;
-  Open_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
-  CopyRamToEthMem(@ntp_mac, TXSTART, 6);
-  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
-  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
-  CopyRamToEthMem(@Options.eth_ntp_addr, TXSTART + 30, 4);
-  EthMemSet(TXSTART+42,0,48);
-  Put_UDPPointer;
-  Eth_PutByte($d9);
-  Eth_PutByte($00);
-  Eth_PutByte($0a);
-  Eth_PutByte($fa);
-  WriteToEthMem(TXSTART+42+9,$01);
-  Eth_PutByte($02);
-  Eth_PutByte($90);
-  Eth_SendUDP(UDP_NETWORK_TIME_PORT, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT, 48);
+  {$IFDEF LOG_UART}UART1_Write_Text('NTP_Query'+ LF);{$ENDIF}
+  if ARP_Validate_IP(Options.eth_ntp_addr, ntp_mac) then
+  begin
+    Result := True;
+    Open_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
+    CopyRamToEthMem(@ntp_mac, TXSTART, 6);
+    CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
+    CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
+    CopyRamToEthMem(@Options.eth_ntp_addr, TXSTART + 30, 4);
+    EthMemSet(TXSTART+42,0,48);
+    Put_UDPPointer;
+    Eth_PutByte($d9);
+    Eth_PutByte($00);
+    Eth_PutByte($0a);
+    Eth_PutByte($fa);
+    WriteToEthMem(TXSTART+42+9,$01);
+    Eth_PutByte($02);
+    Eth_PutByte($90);
+    Eth_SendUDP(UDP_NETWORK_TIME_PORT, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT, 48);
+  end else
+  begin
+    {$IFDEF LOG_UART}UART1_Write_Text('NTP_Query could not Validate ARP'+ LF);{$ENDIF}
+  end;
 end;
 
 procedure NTP_GetTime;
-var buf : dWord;
-    TempDay, TempMonth, buf_d : word;
-    text : string[3];
+var 
+  buf : dWord;
+  TempDay, TempMonth, buf_d : word;
+  text : string[3];
 begin
   DisableInt;
   TTime.Rfc := NTP_Time;
@@ -204,7 +226,8 @@ var year_, day_buf : word;
     str_buf : string[4];
 begin
   result := 3502828800;//2208988800;
-  if Str_Len(strin) <> 19 then exit;
+  if Str_Len(strin) <> 19 then 
+    exit;
 
   str_buf[0] := strin[6];
   str_buf[1] := strin[7];
@@ -245,8 +268,10 @@ begin
   sec_ := Str2Byte(str_buf);
 
   result := year_ - 1970;
-  if ((result-2) mod 4) = 0 then feb := 29
-  else feb := 28;
+  if ((result-2) mod 4) = 0 then 
+    feb := 29
+  else
+    feb := 28;
   result := result*365 + ((result-3) div 4);
 
   case month_ of

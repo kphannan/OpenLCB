@@ -30,7 +30,7 @@ implementation
 
 procedure MCU_Setup_Enable_OlcbBus;
 begin
-  // set mac address
+  // set mac address      This won't be used we set it to use the builtin chip MAC address later
   Options.eth_mac[0] := 0x00;
   Options.eth_mac[1] := 0x14;
   Options.eth_mac[2] := 0xA5;
@@ -61,6 +61,13 @@ begin
   Options.eth_mask[1]    := 255;
   Options.eth_mask[2]    := 255;
   Options.eth_mask[3]    := 0;
+  
+  // set nist ntp server
+  Options.eth_ntp_addr[0]    := 129;
+  Options.eth_ntp_addr[1]    := 6;
+  Options.eth_ntp_addr[2]    := 15;
+  Options.eth_ntp_addr[3]    := 29;
+
   
   SPI1_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, _SPI_PRESCALE_SEC_1, _SPI_PRESCALE_PRI_4,
                      _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_LOW, _SPI_IDLE_2_ACTIVE);

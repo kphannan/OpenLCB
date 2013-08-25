@@ -1,6 +1,12 @@
 unit EthPing;
 
+{.$DEFINE LOG_UART}
+
 uses
+
+
+NMRAnetDefinesShared,
+
   EthCommon,
   EthARP,
   dspic_additional_string_library,
@@ -10,8 +16,8 @@ uses
 const
   PING_CACHE_LENGTH: byte = 9;
   
-  PING_WAITING_FOR_REPLY = $FFFF;
-  
+  PING_TIME_WAITING_FOR_REPLY = $FFFF;
+
   PING_SEND_RESULT_INVALID_SLOT = $FFFF;
   PING_SEND_RESULT_TIMEOUT      = $FFFE;
   
@@ -26,7 +32,7 @@ type
   
 
 // User functions
-function Send_Ping(var ip_p: IpHeader; PingSlot: Byte) : word;
+function Ping_Send(var ip_p: IpHeader; PingSlot: Byte) : word;
 procedure Ping_CacheTimerTask;                                                  // Call from 1ms timer
 
 // Internal functions
@@ -37,10 +43,10 @@ procedure Ping_EraseCache_Internal;
 
 procedure Do_EthernetProc(n : word); external;
 
-implementation
-
 var
   PingCache : array[PING_CACHE_LENGTH] of TPingCache;
+
+implementation
 
 procedure Ping_EraseSlot(var Slot: TPingCache);
 begin
@@ -119,12 +125,13 @@ begin
   while i < PING_CACHE_LENGTH do
   begin
     // See if the Time = "in progress" $FFFF and the SOURCE IP of the received message is equal to one in the PingCache
-    if (PingCache[i].Time = PING_WAITING_FOR_REPLY) and (EthMemCompareWithRam(EthMemAddressRequest + 26, @PingCache[i].IpP[0], 4) <> 0) then
-    begin
-      PingCache[i].Time := PingCache[i].BackGroundCounter;                      // Set the time it took to receive it
-      PingCache[i].TimeToLive := ReadFromEthMem(EthMemAddressRequest + 22);     // Copy the Time to Live from the received message
-      Exit;
-    end;
+    if (PingCache[i].Time = PING_TIME_WAITING_FOR_REPLY) then
+      if EthMemCompareWithRam(EthMemAddressRequest + 26, @PingCache[i].IpP[0], 4) <> 0 then
+      begin
+        PingCache[i].Time := PingCache[i].BackGroundCounter;                      // Set the time it took to receive it
+        PingCache[i].TimeToLive := ReadFromEthMem(EthMemAddressRequest + 22);     // Copy the Time to Live from the received message
+        Exit;
+      end;
     inc(i);
   end;
 end;
@@ -139,7 +146,7 @@ var
 Begin
   // Setup the Ping slot
   Ping_EraseSlot(PingCache[PingSlot]);
-  PingCache[PingSlot].Time := PING_WAITING_FOR_REPLY;
+  PingCache[PingSlot].Time := PING_TIME_WAITING_FOR_REPLY;
   Mem_Cpy(@PingCache[PingSlot].IpP[0], @dest_ip_addr, 4);
   Mem_Cpy(@PingCache[PingSlot].MacP[0], @dest_mac, 6);
   
@@ -188,16 +195,15 @@ Begin
 End;
 
 //******************************************************************************
-//* Name    : Send_Ping                                                        *
+//* Name    : Ping_Send                                                        *
 //* Purpose : Send ICMP request
 // Return:  Ping time or PING_SEND_RESULT_TIMEOUT if Ping failed or PING_SEND_RESULT_INVALID_SLOT if the slot was not valid
 //******************************************************************************
-function Send_Ping(var ip_p : IpHeader; PingSlot: Byte) : word;
+function Ping_Send(var dest_ip : IpHeader; PingSlot: Byte) : word;
 var
   CountBuf : word;
   dest_mac : MacHeader;
-  TickCounter: Word;
-begin    
+begin
   Result := PING_SEND_RESULT_TIMEOUT;
   
   // Valid Ping slot?
@@ -207,20 +213,32 @@ begin
     Exit;
   end;
 
-  if ARP_Validate_IP(ip_p, dest_mac) = False then
-    Exit;
- 
-  Ping_Send_Internal(ip_p, dest_mac, PingSlot);
-  TickCounter := 0;
-  CountBuf := 0;
-  while CountBuf < 3000 do
+  if ARP_Validate_IP(dest_ip, dest_mac) then
   begin
-    Do_EthernetProc(1);
-    if PingCache[PingSlot].Time <> PING_WAITING_FOR_REPLY then
-      Break;
-    CountBuf := TickCounter;
+    {$IFDEF LOG_UART}UART1_Write_Text('Ping_Send Validated ARP'+ LF);{$ENDIF}
+    Ping_Send_Internal(dest_ip, dest_mac, PingSlot);
+    TickCounter1 := 0;
+    CountBuf := 0;
+    {$IFDEF LOG_UART}UART1_Write_Text('Ping waiting for reply'+ LF);{$ENDIF}
+    while CountBuf < 3000 do
+    begin
+      Do_EthernetProc(1);
+      if PingCache[PingSlot].Time <> PING_TIME_WAITING_FOR_REPLY then
+      begin
+        {$IFDEF LOG_UART}UART1_Write_Text('Ping reply detected'+ LF);{$ENDIF}
+        Break;
+      end;
+      CountBuf := TickCounter1;
+    end;
+    {$IFDEF LOG_UART}
+    if CountBuf >= 3000 then
+      UART1_Write_Text('Ping reply timed out'+ LF);
+    {$ENDIF}
+    Result := PingCache[PingSlot].Time;
+  end else
+  begin
+    {$IFDEF LOG_UART}UART1_Write_Text('Ping ARP Failed'+ LF);{$ENDIF}
   end;
-  Result := PingCache[PingSlot].Time;
 end;
 
 end.

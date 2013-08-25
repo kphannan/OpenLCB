@@ -1,5 +1,5 @@
 unit EthCommon;
-
+  
 type
   IpHeader = array[4] of byte;
   MacHeader = array[6] of byte;
