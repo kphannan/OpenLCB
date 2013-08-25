@@ -1,0 +1,236 @@
+unit EthUDP;
+
+{.$DEFINE LOG_UART}
+
+uses
+
+
+NMRAnetDefinesShared,
+
+  EthCommon,
+  EthARP,
+  EthNTP,
+  EthDNS,
+  EthDHCP,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+// User Functions
+function UDP_Send(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
+procedure UDP_Send_Broadcast(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
+procedure UDP_Init;
+
+// Internally used Functions
+procedure UDP_Process_Internal(EthMemAddressRequest: Word);
+procedure UDP_Send_Internal(dest_portA, source_portA, PacketLenA : word);
+
+// External functions
+function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word; external;
+
+var
+  broadcast_packet : boolean;
+
+implementation
+
+var
+  UDP_IdentificationCounter: word;
+
+procedure UDP_Init;
+begin
+  UDP_IdentificationCounter := 1000; // start UDP counter with this value
+  broadcast_packet := False;
+end;
+
+//******************************************************************************
+//* Name    : UDP_Send_Internal                                                      *
+//* Purpose : Send UDP packet, used by library                                 *
+//******************************************************************************
+procedure UDP_Send_Internal(dest_portA, source_portA, PacketLenA : word);
+var
+  TotalLen : word;
+  Align: byte;
+  CkSum_IP: word;
+  CkSum_UDP: word;
+begin
+  WriteToEthMem(TXSTART+12,$08);
+  Eth_PutByte($00);
+  Eth_PutByte($45);
+  Eth_PutByte($00);
+  inc(UDP_IdentificationCounter);
+  TotalLen := PacketLenA + 28;
+  Eth_PutByte(Hi(TotalLen));
+  Eth_PutByte(Lo(TotalLen));
+  Eth_PutByte(Hi(UDP_IdentificationCounter));
+  Eth_PutByte(Lo(UDP_IdentificationCounter));
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  Eth_PutByte($80);
+  Eth_PutByte($11);
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  CkSum_IP := Eth_Cksum(TXSTART+14,20);
+  WriteToEthMem(TXSTART+24,Hi(CkSum_IP));
+  Eth_PutByte(Lo(cksum_ip));
+  WriteToEthMem(TXSTART+34,Hi(source_portA));
+  Eth_PutByte(Lo(source_portA));
+  Eth_PutByte(Hi(dest_portA));
+  Eth_PutByte(Lo(dest_portA));
+  TotalLen := PacketLenA + 8;
+  Eth_PutByte(Hi(TotalLen));
+  Eth_PutByte(Lo(TotalLen));
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  Align := TotalLen and $01;
+  WriteToEthMem(TXSTART+PacketLenA+42,$00);
+  Eth_PutByte($00);
+  CopyEthMemToEthMem(TXSTART+26,TXSTART+PacketLenA+Align+42,8);
+  WriteToEthMem(TXSTART+PacketLenA+Align+42+8,$00);
+  Eth_PutByte($11);
+  Eth_PutByte(Hi(TotalLen));
+  Eth_PutByte(Lo(TotalLen));
+  CkSum_UDP := Eth_Cksum(TXSTART+34,TotalLen + Align + 12);
+  if CkSum_UDP = 0 then
+    CkSum_UDP := $FFFF;
+  WriteToEthMem(TXSTART+40,Hi(CkSum_UDP));
+  Eth_PutByte(Lo(CkSum_UDP));
+  TotalLen := PacketLenA + 42;
+  Eth_Send(TotalLen);
+end;
+
+//******************************************************************************
+//* Name    : UDP_Send                                                         *
+//* Purpose : Send UDP packet                                                  *
+//******************************************************************************
+function UDP_Send(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
+var 
+  dest_mac : MacHeader;
+begin
+  Result := False;
+  if ARP_Validate_IP(dest_ip_addr, dest_mac) then
+  begin
+    Result := True;
+    CopyRamToEthMem(@dest_mac, TXSTART, 6);
+    CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+    CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+    CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
+    WriteToEthMem(TXSTART+41,$00);
+    CopyRamToEthMem_CP(@dest_ip_addr, len_data);
+    UDP_Send_Internal(dest_port_S, source_port_S, len_data);
+  end;
+end;
+
+//******************************************************************************
+//* Name    : UDP_Send_Broadcast                                               *
+//* Purpose : Send UDP broadcast                                               *
+//******************************************************************************
+procedure UDP_Send_Broadcast(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
+var
+  dest_mac: MacHeader;
+  dest_ip: IpHeader;
+begin
+  dest_mac[0] := $FF;
+  dest_mac[1] := $FF;
+  dest_mac[2] := $FF;
+  dest_mac[3] := $FF;
+  dest_mac[4] := $FF;
+  dest_mac[5] := $FF;
+  dest_ip := dest_ip_addr;
+  dest_ip[3] := $FF;
+  CopyRamToEthMem(@dest_mac, TXSTART, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
+  WriteToEthMem(TXSTART+41,$00);
+  CopyRamToEthMem_CP(@dest_ip_addr, len_data);
+  UDP_Send_Internal(dest_port_S, source_port_S, len_data);
+end;
+
+//******************************************************************************
+//* Name    : UDP_Process_Internal                                                   *
+//* Purpose : Process incomming UDP packets                                    *
+//******************************************************************************
+procedure UDP_Process_Internal(EthMemAddressRequest: Word);
+var
+  PacketLen, source_port1, dest_port1 : word;
+  dest_ip_addr: IpHeader;
+  Align: Byte;
+  CkSum_IP: word;
+  CkSum_UDP: word;
+  len_data: Word;
+begin
+  Hi(source_port1) := ReadFromEthMem(EthMemAddressRequest+36);
+  Lo(source_port1) := Eth_GetByte;
+  if Search_Port(UDP, source_port1) = False then
+    begin
+      if Settings.Policy = POLICY_REJECT then
+        Common_Reject_Internal(EthMemAddressRequest);
+      Exit;
+    end;
+  Hi(CkSum_IP) := ReadFromEthMem(EthMemAddressRequest+24);
+  Lo(CkSum_IP) := Eth_GetByte;
+  Hi(CkSum_UDP) := ReadFromEthMem(EthMemAddressRequest+40);
+  Lo(CkSum_UDP) := Eth_GetByte;
+  Hi(len_data) := ReadFromEthMem(EthMemAddressRequest+16);
+  Lo(len_data) := Eth_GetByte;
+  CopyEthMemToEthMem(EthMemAddressRequest,TXSTART,len_data+14);
+  WriteToEthMem(TXSTART+24,$00);
+  Eth_PutByte($00);
+  if CkSum_IP <> Eth_Cksum(TXSTART+14,20) then
+    Exit;
+  if len_data <= 28 then Exit;
+  Align := len_data and $01;
+  WriteToEthMem(TXSTART+40,$00);
+  Eth_PutByte($00);
+  WriteToEthMem(TXSTART+len_data+14,$00);
+  Eth_PutByte($00);
+  CopyEthMemToEthMem(TXSTART+26,TXSTART+len_data+Align+14,8);
+  WriteToEthMem(TXSTART+len_data+Align+14+8,$00);
+  Eth_PutByte($11);
+  len_data := len_data - 20;
+  Eth_PutByte(Hi(len_data));
+  Eth_PutByte(Lo(len_data));
+  if CkSum_UDP <> Eth_Cksum(TXSTART+34,len_data + Align + 12) then
+    Exit;
+  len_data := len_data - 8;
+  Hi(dest_port1) := ReadFromEthMem(EthMemAddressRequest+34);
+  Lo(dest_port1) := Eth_GetByte;
+  CopyEthMemToRam(EthMemAddressRequest + 26, @dest_ip_addr, 4);
+
+  // Is it is Network Time Reply (NTP) to us
+  if (dest_port1 = UDP_NETWORK_TIME_PORT) and (source_port1 = UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT) then
+  begin
+    if (len_data = 48) then
+    begin
+      NTP_ProcessPacket_Internal(EthMemAddressRequest);
+      Exit;
+    end;
+  end;
+
+  // Is it a DHCP message to use?
+  if (dest_port1 = UDP_DHCP_BOOTPS_SEND_PORT) and (source_port1 = UDP_DHCP_BOOTPC_RECEIVE_PORT) then
+  begin
+    DHCP_ProcessPacket_Internal(EthMemAddressRequest);
+    Exit;
+  end;
+
+  if (dest_port1 = UDP_DYNAMIC_NAME_SYSTEM_PORT) and (source_port1 = UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT) then
+  begin
+    DNS_ProcessPacket_Internal(EthMemAddressRequest);
+    Exit
+  end;
+
+  // Not handled so callback to the user and see if it is custom packet
+  WriteToEthMem(TXSTART+41,$00); // put tx pointer
+  Align := ReadFromEthMem(EthMemAddressRequest + 41); // put rx pointer to start of UDP data.
+  PacketLen := Eth_UserUDP(dest_ip_addr, dest_port1, source_port1, len_data);
+  if PacketLen = 0 then
+    Exit;
+  CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+  CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+  UDP_Send_Internal(dest_port1, source_port1, len_data);
+end;
+
+end.

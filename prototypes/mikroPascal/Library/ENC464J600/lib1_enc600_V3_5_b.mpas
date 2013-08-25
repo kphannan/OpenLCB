@@ -52,7 +52,6 @@ procedure Put_UDPPointer;
 procedure Put_TCPPointer;
 
 procedure EraseSockets;
-procedure Firewall(F_ICMP, F_TCP, F_UDP : boolean);
 function Search_Port(protocol : byte; port_ : word) : boolean;
 function Close_Port(protocol : byte; port_ : word) : boolean;
 function Open_Port(protocol_ : byte; port__ : word) : boolean;
@@ -63,6 +62,9 @@ procedure TCP_Close_Port(port_t : word);
 procedure Eth_Policy(poli : byte);
 function debugg_stack : word;
 procedure Set_TCP_TimeOut_Interval(int_ : word);
+
+// Internally used functions
+Procedure Common_Reject_Internal(EthMemAddressRequest: Word);
 
 procedure DisableInt;  external;
 procedure EnableInt; external;
@@ -140,25 +142,12 @@ type
   end;
 
 var
-  resp_ip_addr : IpHeader;
-  
-  SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
-  UDP_IdentificationCounter, TCP_IdentificationCounter: word;
-  AddrPacket, NextPacket : word;
-
-  count_100 : byte;
-  Window : word;
-  TickCounter1, TickCounter2, TickCounter10 : word;
-
-  FICMP, FTCP, FUDP : boolean;
-
+  TickCounter1, TickCounter10 : word;                                           // The reason for 2 would be because of a inner spin timeout loop.  Have not verified this is true or correct
   TCP_Opened_Ports, 
   UDP_Opened_Ports : array[MAX_SOCKET] of word;
-
-  udp_broadcast, broadcast_packet : boolean;
   
 type
-  TOptions = record
+  TSettings = record
     eth_ip_addr : IpHeader;                                                     // Node IP address
     eth_mac : MacHeader;                                                        // Node MAC address
     eth_dns_addr : IpHeader;
@@ -167,11 +156,14 @@ type
     eth_mask : IpHeader;
     Announce : boolean;                                                         // Set to true to send a ping reply when connecting
     Policy : byte;                                                              // POLICY_REJECT or POLICY_DROP to send a reject message or drop unknown packets
+    UDP_Broadcast: Boolean;                                                     // Forces the UDP packet to be broadcast to all devices on the segment not to a target IP
+    DHCP_Enable : boolean;                                                      // Enabled DHCP
+    DHCP_Lease_Time : dword;                                                    // Time before renewing the IP
   end;
   
 var
   SocketManager: TSocketManager;
-  Options: TOptions;
+  Settings: TSettings;
     
 implementation
 
@@ -839,13 +831,6 @@ begin
     end;
 end;
 
-procedure Firewall(F_ICMP, F_TCP, F_UDP : boolean);
-begin
-  FICMP := F_ICMP;
-  FTCP := F_TCP;
-  FUDP := F_UDP;
-end;
-
 function Search_Port(protocol : byte; port_ : word) : boolean;
 var 
   i : byte;
@@ -941,7 +926,7 @@ end;
 
 procedure Eth_Policy(poli : byte);
 begin
-  Options.Policy := poli;
+  Settings.Policy := poli;
 end;
 
 function debugg_stack : word;
@@ -996,5 +981,52 @@ begin
       inc(j);
     end;
 end;
+
+//******************************************************************************
+//* Name    : Common_Reject_Internal                                                       *
+//* Purpose : Reject unwanted packets                                          *
+//******************************************************************************
+Procedure Common_Reject_Internal(EthMemAddressRequest: Word);
+var
+  cksum,PacketSize : word;
+Begin
+  Hi(PacketSize) := ReadFromEthMem(EthMemAddressRequest+16);
+  Lo(PacketSize) := Eth_GetByte;
+  PacketSize := PacketSize + 28;
+  CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+
+  WriteToEthMem(TXSTART+12,$08);            // ETHType
+  Eth_PutByte($00);                         // ETHType
+
+  Eth_PutByte($45);                         // Version
+  Eth_PutByte($C0);                         // Type of service
+  Eth_PutByte(Hi(PacketSize));              // Hi Total length
+  Eth_PutByte(Lo(PacketSize));              // Lo Total length
+  Eth_PutByte($AC);
+  Eth_PutByte($80);
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  Eth_PutByte($80);                         // Time to live
+  Eth_PutByte($01);                         // ICMP Protocol
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+  CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+  // fin checksum
+  cksum := Eth_Cksum(TXSTART+14,20);
+  WriteToEthMem(TXSTART+24,Hi(cksum));
+  Eth_PutByte(Lo(cksum));
+
+  WriteToEthMem(TXSTART+34,$03);
+  Eth_PutByte($03);
+  EthMemSet_CP(0,6);
+
+  CopyEthMemToEthMem(EthMemAddressRequest+14,TXSTART+42,PacketSize-28);
+  cksum := Eth_Cksum(TXSTART+34,PacketSize-20);
+  WriteToEthMem(TXSTART+36,Hi(cksum));
+  Eth_PutByte(Lo(cksum));
+  Eth_Send(PacketSize+14);
+End;
 
 end.

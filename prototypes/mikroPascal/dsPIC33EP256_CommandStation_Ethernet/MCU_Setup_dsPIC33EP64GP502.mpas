@@ -31,42 +31,42 @@ implementation
 procedure MCU_Setup_Enable_OlcbBus;
 begin
   // set mac address      This won't be used we set it to use the builtin chip MAC address later
-  Options.eth_mac[0] := 0x00;
-  Options.eth_mac[1] := 0x14;
-  Options.eth_mac[2] := 0xA5;
-  Options.eth_mac[3] := 0x76;
-  Options.eth_mac[4] := 0x19;
-  Options.eth_mac[5] := 0x3F;
+  Settings.eth_mac[0] := 0x00;
+  Settings.eth_mac[1] := 0x14;
+  Settings.eth_mac[2] := 0xA5;
+  Settings.eth_mac[3] := 0x76;
+  Settings.eth_mac[4] := 0x19;
+  Settings.eth_mac[5] := 0x3F;
 
   // set IP address
-  Options.eth_ip_addr[0] := 192;
-  Options.eth_ip_addr[1] := 168;
-  Options.eth_ip_addr[2] := 0;
-  Options.eth_ip_addr[3] := 128;
+  Settings.eth_ip_addr[0] := 192;
+  Settings.eth_ip_addr[1] := 168;
+  Settings.eth_ip_addr[2] := 0;
+  Settings.eth_ip_addr[3] := 128;
  
   // set gateway address
-  Options.eth_gateway[0]  := 192;
-  Options.eth_gateway[1]  := 168;
-  Options.eth_gateway[2]  := 0;
-  Options.eth_gateway[3]  := 1;
+  Settings.eth_gateway[0]  := 192;
+  Settings.eth_gateway[1]  := 168;
+  Settings.eth_gateway[2]  := 0;
+  Settings.eth_gateway[3]  := 1;
 
   // set dns address
-  Options.eth_dns_addr[0] := 208;
-  Options.eth_dns_addr[1] := 67;
-  Options.eth_dns_addr[2] := 222;
-  Options.eth_dns_addr[3] := 222;
+  Settings.eth_dns_addr[0] := 208;
+  Settings.eth_dns_addr[1] := 67;
+  Settings.eth_dns_addr[2] := 222;
+  Settings.eth_dns_addr[3] := 222;
   
   // set subnet mask
-  Options.eth_mask[0]    := 255;
-  Options.eth_mask[1]    := 255;
-  Options.eth_mask[2]    := 255;
-  Options.eth_mask[3]    := 0;
+  Settings.eth_mask[0]    := 255;
+  Settings.eth_mask[1]    := 255;
+  Settings.eth_mask[2]    := 255;
+  Settings.eth_mask[3]    := 0;
   
   // set nist ntp server
-  Options.eth_ntp_addr[0]    := 129;
-  Options.eth_ntp_addr[1]    := 6;
-  Options.eth_ntp_addr[2]    := 15;
-  Options.eth_ntp_addr[3]    := 29;
+  Settings.eth_ntp_addr[0]    := 129;
+  Settings.eth_ntp_addr[1]    := 6;
+  Settings.eth_ntp_addr[2]    := 15;
+  Settings.eth_ntp_addr[3]    := 29;
 
   
   SPI1_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, _SPI_PRESCALE_SEC_1, _SPI_PRESCALE_PRI_4,

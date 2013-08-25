@@ -31,14 +31,6 @@ const
   UDP_DHCP_BOOTPS_SEND_PORT = 67;
   UDP_DHCP_BOOTPC_RECEIVE_PORT = 68;
   
-var
-  DHCPServerID : IpHeader;
-  DHCP_State : byte;
-  tmp_dns_addr : IpHeader;
-  DHCP_count_1,DHCP_count_2 : word;
-  DHCP_count_3 : dword;
-  DHCP_Lease_Time : dword;
-  DHCP_Enable : boolean;
   
 // User Functions
 function DHCP_Request(EthMemAddressRequest: Word): boolean;
@@ -49,13 +41,20 @@ procedure DHCP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 
 // Externally defined functions
 function Eth_ReadPacket : word; external;
-procedure Eth_ProcessUDP; external;
-procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word); external;
+procedure UDP_Process_Internal(EthMemAddressRequest: Word); external;
+procedure UDP_Send_Internal(dest_portA, source_portA, PacketLenA : word); external;
 
+var
+  DHCP_count_1, DHCP_count_2 : word;
+  DHCP_State : byte;
+  DHCP_count_3 : dword;
+  
 implementation
 
 var
   Temp_Gateway_Address, Temp_Mask_Address, Temp_IP_Address: IpHeader;
+  DHCPServerID : IpHeader;
+  tmp_dns_addr : IpHeader;
 
 procedure DHCP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 var
@@ -183,8 +182,9 @@ begin
                  // Len must be 4.
                  if Align = 4 then
                    begin
-                     CopyEthMem_CPToRam_Inv(@DHCP_Lease_Time,4);
-                     if DHCP_Lease_Time > (3600*6) then DHCP_Lease_Time := (3600*6); // 6 ore
+                     CopyEthMem_CPToRam_Inv(@Settings.DHCP_Lease_Time, 4);
+                     if Settings.DHCP_Lease_Time > (3600*6) then
+                       Settings.DHCP_Lease_Time := (3600*6); // 6 ore
                    end
                  else Exit;
                end;
@@ -219,7 +219,7 @@ begin
       if Eth_ReadPacket = ETH_IP then
         begin
           if ReadFromEthMem(EthMemAddressRequest+23) = ETH_IP_UDP then
-            Eth_ProcessUDP;
+            UDP_Process_Internal(EthMemAddressRequest);
         end;
     end;
 end;
@@ -233,14 +233,14 @@ var
   len_data : word;
 begin
   EthMemSet(TXSTART, $FF, 6);
-  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
   EthMemSet(TXSTART + 26, 0, 4);
   EthMemSet(TXSTART + 30, $FF, 4);
 
   Put_UDPPointer;
 
   if msg_type <> DHCP_REQUEST_MESSAGE then
-    Mem_Cpy(@Temp_IP_Address, @Options.eth_ip_addr, 4);
+    Mem_Cpy(@Temp_IP_Address, @Settings.eth_ip_addr, 4);
 
   len_data := (12 + 16 + 6 + 202 + 6 + 1 + 5 + 1);
 
@@ -251,7 +251,7 @@ begin
   EthMemSet_CP(0,12);
 
   // my MAC address
-  CopyRamToEthMem_CP(@Options.eth_mac, 6);
+  CopyRamToEthMem_CP(@Settings.eth_mac, 6);
 
   // no server host name, no boot file name
   EthMemSet_CP(0,202);
@@ -283,7 +283,7 @@ begin
 
   Eth_PutByte(DHCP_END_OPTION);
 
-  Eth_SendUDP(UDP_DHCP_BOOTPS_SEND_PORT, UDP_DHCP_BOOTPC_RECEIVE_PORT, len_data);
+  UDP_Send_Internal(UDP_DHCP_BOOTPS_SEND_PORT, UDP_DHCP_BOOTPC_RECEIVE_PORT, len_data);
 end;
 
 //******************************************************************************
@@ -356,10 +356,10 @@ begin
       Exit;
     end;
 
-  Mem_Cpy(@Options.eth_ip_addr,@Temp_IP_Address,4);
-  Mem_Cpy(@Options.eth_gateway,@Temp_Gateway_Address,4);
-  Mem_Cpy(@Options.eth_mask,@Temp_Mask_Address,4);
-  Mem_Cpy(@Options.eth_dns_addr,@tmp_dns_addr,4);
+  Mem_Cpy(@Settings.eth_ip_addr,@Temp_IP_Address,4);
+  Mem_Cpy(@Settings.eth_gateway,@Temp_Gateway_Address,4);
+  Mem_Cpy(@Settings.eth_mask,@Temp_Mask_Address,4);
+  Mem_Cpy(@Settings.eth_dns_addr,@tmp_dns_addr,4);
   DHCP_count_3 := 0;
   Result := True;
 end;
@@ -380,7 +380,7 @@ begin
           ARP_EraseCache_Internal;
         end
       else
-      if (DHCP_State = 0) and (DHCP_Enable <> 0) then
+      if (DHCP_State = 0) and (Settings.DHCP_Enable <> 0) then
         begin
           if DHCP_count_2 > 299 then   // 5min
             begin

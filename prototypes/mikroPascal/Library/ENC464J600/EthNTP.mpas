@@ -45,7 +45,7 @@ procedure NTP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 procedure DisableInt; external;
 procedure EnableInt; external;
 procedure Do_EthernetProc(n : word); external;
-procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word); external;
+procedure UDP_Send_Internal(dest_portA, source_portA, PacketLenA : word); external;
 
 var
   NTP_Time : dWord;
@@ -66,7 +66,7 @@ var
   buft : dword;
 begin
   {$IFDEF LOG_UART}UART1_Write_Text('NTP Reply received'+ LF);{$ENDIF}
-  CopyEthMemToRam_Inv(AddrPacket+82, @buft, 4);
+  CopyEthMemToRam_Inv(EthMemAddressRequest+82, @buft, 4);
   DisableInt;
   NTP_Time := buft + Offset_Time;   // NOT an atomic operation
   EnableInt;
@@ -129,14 +129,14 @@ var
 begin
   Result := False;
   {$IFDEF LOG_UART}UART1_Write_Text('NTP_Query'+ LF);{$ENDIF}
-  if ARP_Validate_IP(Options.eth_ntp_addr, ntp_mac) then
+  if ARP_Validate_IP(Settings.eth_ntp_addr, ntp_mac) then
   begin
     Result := True;
     Open_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
     CopyRamToEthMem(@ntp_mac, TXSTART, 6);
-    CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
-    CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
-    CopyRamToEthMem(@Options.eth_ntp_addr, TXSTART + 30, 4);
+    CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+    CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+    CopyRamToEthMem(@Settings.eth_ntp_addr, TXSTART + 30, 4);
     EthMemSet(TXSTART+42,0,48);
     Put_UDPPointer;
     Eth_PutByte($d9);
@@ -146,7 +146,7 @@ begin
     WriteToEthMem(TXSTART+42+9,$01);
     Eth_PutByte($02);
     Eth_PutByte($90);
-    Eth_SendUDP(UDP_NETWORK_TIME_PORT, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT, 48);
+    UDP_Send_Internal(UDP_NETWORK_TIME_PORT, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT, 48);
   end else
   begin
     {$IFDEF LOG_UART}UART1_Write_Text('NTP_Query could not Validate ARP'+ LF);{$ENDIF}

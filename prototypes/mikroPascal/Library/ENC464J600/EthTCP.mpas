@@ -1,0 +1,527 @@
+unit EthTCP;
+
+{$DEFINE LOG_UART}
+
+uses
+
+
+NMRAnetDefinesShared,
+
+  EthCommon,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
+procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
+procedure Eth_ProcessTCP(EthMemAddressRequest: Word);
+procedure TCP_Init;
+
+// Internal functions
+function Send_TCP_R(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean;
+
+// External functions
+procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte); external;
+procedure Eth_DoPacket; external;
+
+implementation
+
+var
+  packet_size_ : word;
+  SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
+  TCP_IdentificationCounter: word;
+  Window : word;
+
+procedure TCP_Init;
+begin
+  TCP_IdentificationCounter := 1000;
+  ACK_No := $42844A80;
+  SEQ_No := $42844A80;
+end;
+
+//******************************************************************************
+//* Name    : Send_TCP                                                         *
+//* Purpose : Send TCP packet                                                  *
+//******************************************************************************
+function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
+var i : byte;
+begin
+  i := 0;
+  while i < MAX_SOCKET do  // search for opened socket
+    begin
+      if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port_S1) and (Mem_Cmp(@ip_t1, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+        Break; // if connected
+      inc(i);
+    end;
+  if i = MAX_SOCKET then // no sockets available
+    begin
+      Result := False;
+      Exit;
+    end;
+  SocketManager.Socket[i].RAM_ROM := 0;
+  SocketManager.Socket[i].Start_addr := @data_tcp2;
+  SocketManager.Socket[i].Stop_addr := @data_tcp2 + len_data1;
+  Result := Send_TCP_R(PSH_S + ACK_S, i, 1);
+  if Result = False then
+    begin
+      SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
+      SocketManager.Socket[i].Keep_Alive := False;
+    end;
+end;
+
+//******************************************************************************
+//* Name    : Eth_SendTCP                                                      *
+//* Purpose : Send TCP packet, used by library                                 *
+//******************************************************************************
+procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
+var
+  TotalLen : word;
+  Align : byte;
+  CkSum_TCP, CkSum_IP: Word;
+begin
+
+  {$IFDEF LOG_UART}UART1_Write_Text('TCP Send');{$ENDIF}
+
+  WriteToEthMem(TXSTART+12,$08);    // Phy Layer Protocol HI
+  Eth_PutByte($00);                 // Phy Layer Protocol LO
+  Eth_PutByte($45);                 // Version/IHL
+  Eth_PutByte($00);                 // DCP/ECN
+  TotalLen := 40 + PacketLenT;      // Does not count the physical layer MAC addresses or Protocol type
+  Eth_PutByte(Hi(TotalLen));        // Total Length HI
+  Eth_PutByte(Lo(TotalLen));        // Total Length LO
+  inc(TCP_IdentificationCounter);
+  Eth_PutByte(Hi(TCP_IdentificationCounter));     // Identification HI
+  Eth_PutByte(Lo(TCP_IdentificationCounter));     // Identification LO
+  Eth_PutByte($40);                 // Fragment Flags (DF, don't fragment) / Fragment Offset upper bits
+  Eth_PutByte($00);                 // Fragment Offset Lo
+  Eth_PutByte($80);                 // Time to Live in seconds (128 seconds)
+  Eth_PutByte($06);                 // Protocol = TCP
+  Eth_PutByte($00);                 // Checksum HI
+  Eth_PutByte($00);                 // Checksum LO
+  CkSum_IP := Eth_Cksum(TXSTART+14, 20); // Checksum the entire IP Header of 20 bytes
+  WriteToEthMem(TXSTART+24 ,Hi(CkSum_IP)); // Write check sum to Header Checksum offset in Header (with 0 for the Checksum we calculated)
+  Eth_PutByte(Lo(CkSum_IP));
+  WriteToEthMem(TXSTART+34, Hi(source_portT));  // TCP Source Port Hi
+  Eth_PutByte(Lo(source_portT));               // Lo
+  Eth_PutByte(Hi(dest_portT));                 // TCP Dest Port Hi
+  Eth_PutByte(Lo(dest_portT));                 // Lo
+  CopyRamToEthMem_Inv(@SEQ_NoT, TXSTART+38, 4);
+  CopyRamToEthMem_Inv(@ACK_NoT, TXSTART+42, 4);
+  if TCP_FlagT = $12 then                      // if [SYN, ACK] then
+    WriteToEthMem(TXSTART+46, $70)             // (upper nibble = 7 - 32 bit block or 8 bytes of options added)
+  else
+    WriteToEthMem(TXSTART+46, $50);            // (upper nibble = 5 so no options)
+
+  WriteToEthMem(TXSTART+47, TCP_FlagT);       // Flags
+  Window := 65200;
+  Eth_PutByte(Hi(Window));                    // Window HI
+  Eth_PutByte(Lo(Window));                    // Window LO
+
+  WriteToEthMem(TXSTART+50, $00);             // TCP checksum HI zeroed out
+  Eth_PutByte($00);                           // TCP checksum LO zeroed out
+  Eth_PutByte($00);                           // TCP Urgent Ptr Hi zeroed out
+  Eth_PutByte($00);                           // TCP Urgent Ptr Lo zeroed out
+  WriteToEthMem(TXSTART+14+TotalLen, $00);    // The 2 data bytes PAST the data write 0
+  Eth_PutByte($00);
+  Align := TotalLen and $01;
+  CopyEthMemToEthMem(TXSTART+26, TXSTART+14+TotalLen+Align, 8);
+  WriteToEthMem(TXSTART+22+TotalLen+Align, $00);
+  Eth_PutByte($06);
+  TotalLen := TotalLen - 20;
+  Eth_PutByte(Hi(TotalLen));
+  Eth_PutByte(Lo(TotalLen));
+  CkSum_TCP := Eth_Cksum(TXSTART+34, 12+TotalLen+Align);
+  WriteToEthMem(TXSTART+50, Hi(CkSum_TCP));
+  Eth_PutByte(Lo(CkSum_TCP));
+  Eth_Send(34+TotalLen);
+end;
+
+//******************************************************************************
+//* Name    : Eth_ProcessTCP                                                   *
+//* Purpose : Process incomming TCP packets                                    *
+//******************************************************************************
+procedure Eth_ProcessTCP(EthMemAddressRequest: Word);
+var
+  PacketLen, source_port2, dest_port2, len_ack, i : word;
+  Align, TCP_FlagReceive, TCP_FlagSend : byte;
+  dest_mac2 : MacHeader;
+  dest_ip_addr: IpHeader;
+  CkSum_TCP: word;
+  CkSum_IP: word;
+  len: word;
+label
+  next_phs;
+
+begin
+  Hi(source_port2) := ReadFromEthMem(EthMemAddressRequest+36);
+  Lo(source_port2) := Eth_GetByte;
+  if Search_Port(TCP, source_port2) = False then
+    begin
+      if Settings.Policy = POLICY_REJECT then
+        Common_Reject_Internal(EthMemAddressRequest);
+      Exit;
+    end;
+
+  Hi(CkSum_IP) :=  ReadFromEthMem(EthMemAddressRequest+24);
+  Lo(CkSum_IP) :=  Eth_GetByte;
+  Hi(CkSum_TCP) := ReadFromEthMem(EthMemAddressRequest+50);
+  Lo(CkSum_TCP) := Eth_GetByte;
+  Hi(len) := ReadFromEthMem(EthMemAddressRequest+16);
+  Lo(len) := Eth_GetByte;
+  len_ack := len;
+  PacketLen := len - 40;
+  CopyEthMemToEthMem(EthMemAddressRequest,TXSTART,len+14);
+  WriteToEthMem(TXSTART+24,$00);
+  Eth_PutByte($00);
+  if cksum_ip <> Eth_Cksum(TXSTART+14,20) then
+    Exit;
+  Align := len and $01;
+  WriteToEthMem(TXSTART+50,$00);
+  Eth_PutByte($00);
+  WriteToEthMem(TXSTART+len+14,$00);
+  Eth_PutByte($00);
+  CopyEthMemToEthMem(TXSTART+26,TXSTART+len+Align+14,8);
+  WriteToEthMem(TXSTART+len+Align+22,$00);
+  Eth_PutByte($06);
+  len := len - 20;
+  Eth_PutByte(Hi(len));
+  Eth_PutByte(Lo(len));
+  if CkSum_TCP <> Eth_Cksum(TXSTART+34,len + Align + 12) then
+    Exit;
+  Hi(dest_port2) := ReadFromEthMem(EthMemAddressRequest+34);
+  Lo(dest_port2) := Eth_GetByte;
+  TCP_FlagReceive := ReadFromEthMem(EthMemAddressRequest + 47);
+  CopyEthMemToRam_Inv(EthMemAddressRequest + 38,@SEQ_NoR,4);
+  CopyEthMemToRam_Inv(EthMemAddressRequest + 42,@ACK_NoR,4);
+  Hi(Window) := ReadFromEthMem(EthMemAddressRequest+48);
+  Lo(Window) := Eth_GetByte;
+  CopyEthMemToRam(EthMemAddressRequest + 26,@dest_ip_addr,4);
+  CopyEthMemToRam(EthMemAddressRequest + 6, @dest_mac2,6);
+
+  if TCP_FlagReceive.RST = 1 then
+  begin
+    i := 0;
+    while i < MAX_SOCKET do  // search for opened socket
+    begin
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+      begin
+        SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+        SocketManager.Socket[i].Keep_Alive := False;
+        SocketManager.Socket[i].Wait_ACK := 0;
+        Break;
+      end;
+      inc(i);
+    end;
+    Exit;
+  end;
+
+  if PacketLen = 0 then
+  begin
+    if TCP_FlagReceive.FIN = 1 then
+    begin
+      i := 0;
+      while i < MAX_SOCKET do  // search for opened socket
+      begin
+        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+        begin
+          SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+          SocketManager.Socket[i].Keep_Alive := False;
+          SocketManager.Socket[i].Wait_ACK := 0;
+          Break;
+        end;
+        inc(i);
+      end;
+
+      if TCP_FlagReceive.RST = 1 then
+        Exit; // Note that RST packets are not acknowledged.
+
+      SEQ_No := ACK_NoR;
+      ACK_No := SEQ_NoR + 1;
+
+      if TCP_FlagReceive.ACK = 1 then
+        TCP_FlagSend := ACK_S                 // FIN + ACK, response only with ACK
+      else begin
+        if TCP_FlagReceive.FIN = 1 then
+          TCP_FlagSend := ACK_S + FIN_S;   // FIN response with FIN + ACK
+      end;
+      CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+      CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+      CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+      CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+      Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
+      Exit;
+    end;
+  end;
+
+  if TCP_FlagReceive.SYN = 1 then // SYN
+  begin
+    i := 0;
+    while i < MAX_SOCKET do  // search for opened socket
+      begin
+        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+             Break; // if connected
+        inc(i);
+      end;
+    if i = MAX_SOCKET then
+      begin
+        i := 0;
+        while i < MAX_SOCKET do  // search for free socket
+          begin
+            if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
+              Break;
+            inc(i);
+          end;
+      end;
+    if i = MAX_SOCKET then Exit;
+
+    SEQ_No := ACK_NoR;
+    ACK_No := SEQ_NoR + 1;
+
+    if TCP_FlagReceive.ACK = 1 then // ACK
+    begin
+      TCP_FlagSend := ACK_S;
+      Align := 0;
+      SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
+    end else
+    begin
+      TCP_FlagSend := SYN_S + ACK_S;
+      Align := 8;
+      SocketManager.Socket[i].State_S := SOCKET_WAITING_FOR_CONNECTION; // Wait for Connection
+    end;
+
+    SocketManager.Socket[i].Wait_Ack := 0;
+    SocketManager.Socket[i].SEQ_No_S := SEQ_No;
+    SocketManager.Socket[i].ACK_No_S := ACK_No;
+    SocketManager.Socket[i].dest_port_S := dest_port2;
+    SocketManager.Socket[i].source_port_S := source_port2;
+    Mem_Cpy(@SocketManager.Socket[i].Dest_Ip, @dest_ip_addr, 4);
+    Mem_Cpy(@SocketManager.Socket[i].Dest_Mac, @dest_mac2, 6);
+    SocketManager.Socket[i].Exp_Time := 0;
+    SocketManager.Socket[i].Start_addr := 0;
+    SocketManager.Socket[i].Stop_addr := 0;
+    SocketManager.Socket[i].Keep_Alive := True; // Keep Alive
+
+    CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+    CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+    CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+    CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+    Eth_SendTCP(source_port2, dest_port2, Align, SEQ_No, ACK_No, TCP_FlagSend);
+
+    Exit;
+  end;
+
+  if TCP_FlagReceive.ACK = 1 then // ACK
+  begin
+    i := 0;
+    while i < MAX_SOCKET do  // search for connected socket
+    begin
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+        Break;
+      inc(i);
+    end;
+    if i < MAX_SOCKET then
+    begin
+      if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) or (SocketManager.Socket[i].Wait_ACK <> 0) then
+      begin
+        SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
+        SocketManager.Socket[i].Wait_ACK := 0;
+        SocketManager.Socket[i].ACK_No_S := SEQ_NoR;
+        SocketManager.Socket[i].SEQ_No_S := ACK_NoR;
+        SocketManager.Socket[i].Exp_Time := 0; // keep Alive
+        Exit;
+      end else
+      begin
+        SEQ_No := ACK_NoR;
+        ACK_No := SEQ_NoR + PacketLen;
+        TCP_FlagSend := ACK_S;
+
+        SocketManager.Socket[i].Wait_ACK := 0;
+        SocketManager.Socket[i].SEQ_No_S := SEQ_No;
+        SocketManager.Socket[i].ACK_No_S := ACK_No;
+        SocketManager.Socket[i].dest_port_S := dest_port2;
+        SocketManager.Socket[i].source_port_S := source_port2;
+        SocketManager.Socket[i].Exp_Time := 0; // keep Alive
+
+        CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+        CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+        CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+        CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+        Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
+
+        Align := ReadFromEthMem(EthMemAddressRequest + 53); // put rx pointer to start of TCP data.
+        if PacketLen <> 0 then
+          Eth_UserTCP(dest_ip_addr, source_port2, dest_port2, PacketLen, i);
+      end;
+    end;
+  end;
+end;
+
+//******************************************************************************
+//* Name    : Send_TCP_R1                                                      *
+//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
+//******************************************************************************
+function Send_TCP_R1(TCP_Flag_T: byte; iSocket: byte; jj : word) : word;
+var j : word;
+    Stop_addr_S, Start_addr_S : dword;
+    kk : dword;
+var
+  ptf : ^far const byte;
+begin
+  Result := 0;
+  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
+  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
+
+  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Mac, TXSTART, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART+6, 6);
+  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART+26, 4);
+  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Ip, TXSTART+30, 4);
+  Put_TCPPointer;
+
+  if SocketManager.Socket[iSocket].RAM_ROM = 0 then
+  begin
+    j := dword(Stop_addr_S - (Start_addr_S + jj));
+    if j >= packet_size_ then
+      j := packet_size_;
+    if j <> 0 then
+      CopyRamToEthMem_CP((Start_addr_S + jj), j);
+  end else
+  if SocketManager.Socket[iSocket].RAM_ROM = 1 then
+  begin
+    ptf := Start_addr_S + jj;
+    j := 0;
+    while dword(ptf) < Stop_addr_S do
+    begin
+      Eth_PutByte(ptf^);
+      ptf := ptf + 1;
+      if inc(j) >= packet_size_ then
+        Break;
+    end;
+    if j = 0 then
+      Exit;
+  end else
+  if SocketManager.Socket[iSocket].RAM_ROM = 2 then
+  begin
+
+    // Florin has this so it would copy data from an EEProm to the Ethernet for the webpage....
+
+    kk :=  dword(Stop_addr_S - (Start_addr_S + jj));
+    if kk >= packet_size_ then
+      j := packet_size_
+    else
+      j := kk;
+ //   DF_ContArrayToETH((Start_addr_S + jj),j);
+  end;
+
+  Eth_SendTCP(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, j, (SocketManager.Socket[iSocket].SEQ_No_S + jj), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
+
+  Result := j;
+end;
+
+//******************************************************************************
+//* Name    : Send_TCP_R                                                       *
+//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
+//******************************************************************************
+function Send_TCP_R(TCP_Flag_T: byte; iSocket, fragment: byte) : boolean;
+var
+  j, jj, mm, i : word;
+  Stop_addr_S, Start_addr_S, seq_buf : dword;
+  PacketAddressLen : dword;
+begin
+  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
+  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
+
+  Result := False;
+
+  i := 0;
+  while i < 3 do
+  begin
+    jj := 0;
+    j := 0;
+
+    Eth_DoPacket;
+    Eth_DoPacket;
+
+    packet_size_ := 1300;
+
+    seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
+
+    SocketManager.Socket[iSocket].Wait_ACK := 1;
+
+    mm := 1300;
+    PacketAddressLen := (Stop_addr_S - Start_addr_S);
+    if PacketAddressLen <= mm then
+    begin
+      if fragment <> 0 then
+      begin
+        if PacketAddressLen >= 4 then
+        begin
+          packet_size_ := PacketAddressLen div 2;
+          jj := Send_TCP_R1(ACK_S, iSocket, jj);
+        end;
+      end
+    end else
+      jj := Send_TCP_R1(ACK_S, iSocket, jj);
+
+    // Are we closing the Socket?
+    if TCP_Flag_T.FIN = 0 then
+      if TCP_Flag_T.SYN = 0 then
+        if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
+        begin
+          Result := False;
+          Exit;
+        end;
+
+    packet_size_ := 1300;
+
+    j := Send_TCP_R1(TCP_Flag_T, iSocket, jj);
+
+    TickCounter10 := 0;
+    while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
+    begin
+      Eth_DoPacket;
+      if SocketManager.Socket[iSocket].Wait_ACK = 0 then
+      begin
+        SocketManager.Socket[iSocket].Wait_ACK := 1;
+        if seq_buf <> SocketManager.Socket[iSocket].SEQ_No_S then
+          Break;
+      end;
+    end;
+    if TickCounter10 < SocketManager.TCP_Wait then
+      Break;
+    inc(i);
+  end;
+
+  if i = 3 then
+  begin
+    Exit;
+  end;
+
+  if TCP_Flag_T.FIN = 0 then
+    if TCP_Flag_T.SYN = 0 then
+      if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
+      begin
+        if (seq_buf + jj) = SocketManager.Socket[iSocket].SEQ_No_S then
+        begin
+          SocketManager.Socket[iSocket].Wait_ACK := 1;
+          TickCounter10 := 0;
+          while TickCounter10 < SocketManager.TCP_Wait do // wait for 2nd ack
+          begin
+            Eth_DoPacket;
+            if SocketManager.Socket[iSocket].Wait_ACK = 0 then // received
+            begin
+              if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
+                j := 0;
+              Break;
+            end;
+          end;
+        end else
+          Exit;
+      end;
+
+  if (SocketManager.Socket[iSocket].Start_addr = Start_addr_S) and (SocketManager.Socket[iSocket].Stop_addr = Stop_addr_S) then
+    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + j + jj;
+
+  Result := True;
+end;
+
+end.

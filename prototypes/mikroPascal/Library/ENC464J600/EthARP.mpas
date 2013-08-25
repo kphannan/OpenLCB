@@ -52,7 +52,6 @@ implementation
 
 var
   ArpCache : array[ARP_CACHE_LENGTH] of TArpCache;
-                                               // Ticks every 100ms and can last to 6.8 YEARS before rollover
  
 procedure ARP_EraseSlot(var Slot: TArpCache);
 begin
@@ -81,7 +80,7 @@ end;
 procedure ARP_Reply_Internal(EthMemAddressRequest: Word);
 begin
   CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
-  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
   WriteToEthMem(TXSTART + 12, $08);
   Eth_PutByte($06);
   Eth_PutByte($00);
@@ -92,7 +91,7 @@ begin
   Eth_PutByte($04);
   Eth_PutByte($00);
   Eth_PutByte($02);
-  CopyRamToEthMem(@Options.eth_mac,TXSTART + 22, 6);
+  CopyRamToEthMem(@Settings.eth_mac,TXSTART + 22, 6);
   CopyEthMemToEthMem(EthMemAddressRequest + 38,TXSTART + 28, 4);
   CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART + 32, 6);
   CopyEthMemToEthMem(EthMemAddressRequest + 28, TXSTART + 38, 4);
@@ -134,21 +133,21 @@ procedure ARP_Resolve_Segment_Gateway(var dest_ip: IpHeader; var ipArp: IpHeader
 var
   ip_target_masked, ip_masked: IpHeader;
 begin
-  ip_masked[0] := Options.eth_ip_addr[0] and Options.eth_mask[0];
-  ip_masked[1] := Options.eth_ip_addr[1] and Options.eth_mask[1];
-  ip_masked[2] := Options.eth_ip_addr[2] and Options.eth_mask[2];
-  ip_masked[3] := Options.eth_ip_addr[3] and Options.eth_mask[3];
+  ip_masked[0] := Settings.eth_ip_addr[0] and Settings.eth_mask[0];
+  ip_masked[1] := Settings.eth_ip_addr[1] and Settings.eth_mask[1];
+  ip_masked[2] := Settings.eth_ip_addr[2] and Settings.eth_mask[2];
+  ip_masked[3] := Settings.eth_ip_addr[3] and Settings.eth_mask[3];
 
-  ip_target_masked[0] := dest_ip[0] and Options.eth_mask[0];
-  ip_target_masked[1] := dest_ip[1] and Options.eth_mask[1];
-  ip_target_masked[2] := dest_ip[2] and Options.eth_mask[2];
-  ip_target_masked[3] := dest_ip[3] and Options.eth_mask[3];
+  ip_target_masked[0] := dest_ip[0] and Settings.eth_mask[0];
+  ip_target_masked[1] := dest_ip[1] and Settings.eth_mask[1];
+  ip_target_masked[2] := dest_ip[2] and Settings.eth_mask[2];
+  ip_target_masked[3] := dest_ip[3] and Settings.eth_mask[3];
 
   // If the target is on our segment then use the target for the ARP else use the gateway IP as the ARP
   if Mem_Cmp(@ip_masked, @ip_target_masked, 4) = 0 then
     Mem_Cpy(@ipArp, @dest_ip, 4)
   else
-    Mem_Cpy(@ipArp, @Options.eth_gateway, 4);
+    Mem_Cpy(@ipArp, @Settings.eth_gateway, 4);
 end;
 
 //******************************************************************************
@@ -332,7 +331,7 @@ begin
 
     {$IFDEF LOG_UART}UART1_Write_Text('Sending ARP message to ENC'+ LF);{$ENDIF}
     EthMemSet(TXSTART, $FF, 6);             // Broadcast MAC for ARP
-    CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
+    CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
     WriteToEthMem(TXSTART + 12, $08);
     Eth_PutByte($06);                     // ETHType
     Eth_PutByte($00);                     //
@@ -343,8 +342,8 @@ begin
     Eth_PutByte($04);                     // Protocol address length
     Eth_PutByte($00);
     Eth_PutByte($01);                     // ARP request
-    CopyRamToEthMem(@Options.eth_mac, TXSTART + 22, 6);
-    CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 28, 4);
+    CopyRamToEthMem(@Settings.eth_mac, TXSTART + 22, 6);
+    CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 28, 4);
     EthMemSet(TXSTART + 32, 0, 6);
     CopyRamToEthMem(@ipArp, TXSTART + 38, 4);
     Eth_Send(42);
