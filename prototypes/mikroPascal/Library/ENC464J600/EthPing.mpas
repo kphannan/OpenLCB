@@ -92,9 +92,9 @@ Begin
   PacketSize := PacketSize + 14;
   // Start building the Reply packet
   CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);                     // Move the requesting MAC address into the reply target MAC address
-  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);                                    // Message is from our MAC address
+  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);                                    // Message is from our MAC address
   CopyEthMemToEthMem(EthMemAddressRequest + 12, TXSTART + 12, 14);
-  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
   CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
   EthMemSet(TXSTART + 34, 0, 4);
   CopyEthMemToEthMem(EthMemAddressRequest + 38, TXSTART + 38, PacketSize - 38);
@@ -144,7 +144,7 @@ Begin
   Mem_Cpy(@PingCache[PingSlot].MacP[0], @dest_mac, 6);
   
   CopyRamToEthMem(@dest_mac, TXSTART, 6);
-  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
   i := 60;
   WriteToEthMem(TXSTART + 12, $08);      // ETHType
   Eth_PutByte($00);                      // ETHType
@@ -160,7 +160,7 @@ Begin
   Eth_PutByte($01);                      // ICMP Protocol
   Eth_PutByte($00);
   Eth_PutByte($00);
-  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
   CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
   // fin checksum
   cksum := Eth_Cksum(TXSTART + 14, 20);

@@ -31,36 +31,36 @@ implementation
 procedure MCU_Setup_Enable_OlcbBus;
 begin
   // set mac address
-  eth_mac[0] := 0x00;
-  eth_mac[1] := 0x14;
-  eth_mac[2] := 0xA5;
-  eth_mac[3] := 0x76;
-  eth_mac[4] := 0x19;
-  eth_mac[5] := 0x3F;
+  Options.eth_mac[0] := 0x00;
+  Options.eth_mac[1] := 0x14;
+  Options.eth_mac[2] := 0xA5;
+  Options.eth_mac[3] := 0x76;
+  Options.eth_mac[4] := 0x19;
+  Options.eth_mac[5] := 0x3F;
 
   // set IP address
-  eth_ip_addr[0] := 192;
-  eth_ip_addr[1] := 168;
-  eth_ip_addr[2] := 0;
-  eth_ip_addr[3] := 128;
+  Options.eth_ip_addr[0] := 192;
+  Options.eth_ip_addr[1] := 168;
+  Options.eth_ip_addr[2] := 0;
+  Options.eth_ip_addr[3] := 128;
  
   // set gateway address
-  eth_gateway[0]  := 192;
-  eth_gateway[1]  := 168;
-  eth_gateway[2]  := 0;
-  eth_gateway[3]  := 1;
+  Options.eth_gateway[0]  := 192;
+  Options.eth_gateway[1]  := 168;
+  Options.eth_gateway[2]  := 0;
+  Options.eth_gateway[3]  := 1;
 
   // set dns address
-  eth_dns_addr[0] := 208;
-  eth_dns_addr[1] := 67;
-  eth_dns_addr[2] := 222;
-  eth_dns_addr[3] := 222;
+  Options.eth_dns_addr[0] := 208;
+  Options.eth_dns_addr[1] := 67;
+  Options.eth_dns_addr[2] := 222;
+  Options.eth_dns_addr[3] := 222;
   
   // set subnet mask
-  eth_mask[0]    := 255;
-  eth_mask[1]    := 255;
-  eth_mask[2]    := 255;
-  eth_mask[3]    := 0;
+  Options.eth_mask[0]    := 255;
+  Options.eth_mask[1]    := 255;
+  Options.eth_mask[2]    := 255;
+  Options.eth_mask[3]    := 0;
   
   SPI1_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, _SPI_PRESCALE_SEC_1, _SPI_PRESCALE_PRI_4,
                      _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_LOW, _SPI_IDLE_2_ACTIVE);

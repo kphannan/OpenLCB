@@ -63,9 +63,6 @@ procedure TCP_Close_Port(port_t : word);
 procedure Eth_Policy(poli : byte);
 function debugg_stack : word;
 procedure Set_TCP_TimeOut_Interval(int_ : word);
-function String2NTP(var strin : string[32]) : dword;
-procedure NTP2String(buf : dWord; var TTime_Str : string[19]);
-
 
 procedure DisableInt;  external;
 procedure EnableInt; external;
@@ -108,8 +105,8 @@ const
   TCP                  : byte = 100;
   UDP                  : byte = 200;
 
-  REJECT               : byte = 1;
-  DROP                 : byte = 2;
+  POLICY_REJECT               : byte = 1;
+  POLICY_DROP                 : byte = 2;
 
   MAX_SOCKET           : byte = 8;
 
@@ -143,44 +140,38 @@ type
   end;
 
 var
-  eth_ip_addr : IpHeader;   
-  eth_mac : MacHeader;
-  
-  eth_dns_addr : IpHeader;
-  eth_ntp_addr : IpHeader;
-  eth_gateway : IpHeader;
-  eth_mask : IpHeader;
   resp_ip_addr : IpHeader;
-
-  source_port : word;
-  len,cksum_ip,cksum_udp,cksum_tcp,udp_counter : word;
-  AddrPacket, NextPacket : word;
+  
   SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
+  UDP_IdentificationCounter, TCP_IdentificationCounter: word;
+  AddrPacket, NextPacket : word;
+
   count_100 : byte;
-  Window,tcp_counter : word;
+  Window : word;
   TickCounter1, TickCounter2, TickCounter10 : word;
 
-  FICMP,FTCP,FUDP, NTP_Sync : boolean;
-  Offset_Time : longint;
-  offset_clock_err : short;
+  FICMP, FTCP, FUDP : boolean;
 
-  TCP_Opened_Ports, UDP_Opened_Ports : array[MAX_SOCKET] of word;
-  policy : byte;
+  TCP_Opened_Ports, 
+  UDP_Opened_Ports : array[MAX_SOCKET] of word;
 
-  portaddress_cs,portaddress_reset : word;
-  set_cs, set_reset : word;
-  clr_cs, clr_reset : word;
-
-  save_int : byte;
-
-  tmp_ip_addr, tmp_gat_addr, tmp_mask_addr : IpHeader;
-  announce : boolean;
-
-  hw_cksum,udp_broadcast,broadcast_packet : boolean;
-  dynamic_var_addr : word;
+  udp_broadcast, broadcast_packet : boolean;
+  
+type
+  TOptions = record
+    eth_ip_addr : IpHeader;                                                     // Node IP address
+    eth_mac : MacHeader;                                                        // Node MAC address
+    eth_dns_addr : IpHeader;
+    eth_ntp_addr : IpHeader;
+    eth_gateway : IpHeader;
+    eth_mask : IpHeader;
+    Announce : boolean;                                                         // Set to true to send a ping reply when connecting
+    Policy : byte;                                                              // POLICY_REJECT or POLICY_DROP to send a reject message or drop unknown packets
+  end;
   
 var
   SocketManager: TSocketManager;
+  Options: TOptions;
     
 implementation
 
@@ -950,7 +941,7 @@ end;
 
 procedure Eth_Policy(poli : byte);
 begin
-  policy := poli;
+  Options.Policy := poli;
 end;
 
 function debugg_stack : word;
@@ -1004,137 +995,6 @@ begin
       SocketManager.Socket[j].Exp_Time_Val := int_;
       inc(j);
     end;
-end;
-
-function String2NTP(var strin : string[32]) : dword;  // 26.11.2009 12:34:05
-var year_, day_buf : word;
-    month_, day_, hour_, min_, sec_, feb : byte;
-    str_buf : string[4];
-begin
-  result := 3502828800;//2208988800;
-  if Str_Len(strin) <> 19 then exit;
-
-  str_buf[0] := strin[6];
-  str_buf[1] := strin[7];
-  str_buf[2] := strin[8];
-  str_buf[3] := strin[9];
-  str_buf[4] := 0;
-
-  year_ := Str2Word(str_buf);
-
-  str_buf[0] := strin[3];
-  str_buf[1] := strin[4];
-  str_buf[2] := 0;
-
-  month_ := Str2Byte(str_buf);
-
-  str_buf[0] := strin[0];
-  str_buf[1] := strin[1];
-  str_buf[2] := 0;
-
-  day_ := Str2Byte(str_buf);
-
-  str_buf[0] := strin[11];
-  str_buf[1] := strin[12];
-  str_buf[2] := 0;
-
-  hour_ := Str2Byte(str_buf);
-
-  str_buf[0] := strin[14];
-  str_buf[1] := strin[15];
-  str_buf[2] := 0;
-
-  min_ := Str2Byte(str_buf);
-
-  str_buf[0] := strin[17];
-  str_buf[1] := strin[18];
-  str_buf[2] := 0;
-
-  sec_ := Str2Byte(str_buf);
-
-  result := year_ - 1970;
-  if ((result-2) mod 4) = 0 then feb := 29
-  else feb := 28;
-  result := result*365 + ((result-3) div 4);
-
-  case month_ of
-    1 : day_buf := day_;
-    2 : day_buf := day_ + 31;
-    3 : day_buf := day_ + (31 + feb);
-    4 : day_buf := day_ + (31 + feb + 31);
-    5 : day_buf := day_ + (31 + feb + 31 + 30);
-    6 : day_buf := day_ + (31 + feb + 31 + 30 + 31);
-    7 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30);
-    8 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31);
-    9 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31);
-    10 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31 + 30);
-    11 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31)
-    else  day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30);
-  end;
-
-  result := (result + day_buf) * 86400 + (hour_ * 3600) + (min_ * 60) + sec_ + 2208988800;
-end;
-
-procedure NTP2String(buf : dWord; var TTime_Str : string[19]);
-var TempDay, TempMonth, buf_d : word;
-    text : string[5];
-    TTime_Sec,TTime_Min,TTime_Hour,TTime_Month,TTime_Day : byte;
-    TTime_Year : word;
-begin
-  buf := buf - 2208988800;
-  TTime_Sec := dword(buf Mod 60);
-  buf := buf div 60;
-  TTime_Min := dword(buf Mod 60);
-  buf := buf div 60;
-  TTime_Hour := dword(buf Mod 24);
-  buf := buf div 24;
-  buf_d := Word(buf);
-  TTime_Year := (buf_d div 1461)*4 + 1970;
-  buf_d := buf_d Mod 1461;
-  While true do
-    begin
-      TempDay := 365;
-      If (TTime_Year And $03) = 0 Then TempDay := 366;
-      If TempDay > buf_d Then break;
-      buf_d := buf_d - TempDay;
-      Inc(TTime_Year);
-    end;
-  inc(buf_d);
-  For TTime_Month := 1 To 12 do
-    begin
-      TempMonth := Months_Days[TTime_Month];
-      if (TTime_Month = 2) and (TempDay = 366) then TempMonth := 29;
-      If buf_d <= TempMonth Then break;
-      buf_d := buf_d - TempMonth;
-    end;
-  TTime_Day := buf_d;
-
-  Byte2StrWithZeros(TTime_Day, TTime_Str);
-  Str_Cut_Left(TTime_Str,1);
-  Str_Cat(TTime_Str, '.');
-
-  Byte2StrWithZeros(TTime_Month, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime_Str, text);
-
-  Str_Cat(TTime_Str, '.');
-
-  Word2Str(TTime_Year,text);
-  Str_Cat(TTime_Str, text);
-
-  Str_Cat(TTime_Str, ' ');
-
-  Byte2StrWithZeros(TTime_Hour, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime_Str, text);
-  Str_Cat(TTime_Str, ':');
-  Byte2StrWithZeros(TTime_Min, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime_Str, text);
-  Str_Cat(TTime_Str, ':');
-  Byte2StrWithZeros(TTime_Sec, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime_Str, text);
 end;
 
 end.

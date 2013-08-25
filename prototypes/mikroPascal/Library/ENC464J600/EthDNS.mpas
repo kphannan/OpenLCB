@@ -93,7 +93,7 @@ begin
     end;
 
   Result := False;
-  if Send_UDP(eth_dns_addr, UDP_DYNAMIC_NAME_SYSTEM_PORT, UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT, data_len, data_) = False then
+  if Send_UDP(Options.eth_dns_addr, UDP_DYNAMIC_NAME_SYSTEM_PORT, UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT, data_len, data_) = False then
     Exit;
   Result := True;
 end;

@@ -54,6 +54,9 @@ procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word); external;
 
 implementation
 
+var
+  Temp_Gateway_Address, Temp_Mask_Address, Temp_IP_Address: IpHeader;
+
 procedure DHCP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 var
   Align, end_loop : byte;
@@ -61,7 +64,7 @@ begin
   Align := ReadFromEthMem(EthMemAddressRequest + 42);
   if (DHCP_State = 1) and (Align = BOOT_REPLY) then
     begin
-      CopyEthMemToRam(EthMemAddressRequest + (42 + 16),@tmp_ip_addr,4);
+      CopyEthMemToRam(EthMemAddressRequest + (42 + 16),@Temp_IP_Address,4);
       Align := ReadFromEthMem(EthMemAddressRequest + (41 + 240));
       end_loop := 0;
       while end_loop = 0 do
@@ -109,7 +112,7 @@ begin
   else
   if (DHCP_State = 2) and (Align = BOOT_REPLY) then
     begin
-      CopyEthMemToRam(EthMemAddressRequest + (42 + 16),@tmp_ip_addr,4);
+      CopyEthMemToRam(EthMemAddressRequest + (42 + 16),@Temp_IP_Address,4);
       Align := ReadFromEthMem(EthMemAddressRequest + (41 + 240));
       end_loop := 0;
       while end_loop = 0 do
@@ -134,7 +137,7 @@ begin
                begin
                  Align := Eth_GetByte;                     // Skip len
                  // Len must be 4.
-                 if Align = 4 then CopyEthMem_CPToRam(@tmp_mask_addr, 4)
+                 if Align = 4 then CopyEthMem_CPToRam(@Temp_Mask_Address, 4)
                  else Exit;
                end;
 
@@ -142,7 +145,7 @@ begin
                begin
                  Align := Eth_GetByte;
                  // Len must be >= 4.
-                 if Align >= 4 then CopyEthMem_CPToRam(@tmp_gat_addr, 4)
+                 if Align >= 4 then CopyEthMem_CPToRam(@Temp_Gateway_Address, 4)
                  else Exit;
 
                  {*
@@ -230,14 +233,14 @@ var
   len_data : word;
 begin
   EthMemSet(TXSTART, $FF, 6);
-  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
   EthMemSet(TXSTART + 26, 0, 4);
   EthMemSet(TXSTART + 30, $FF, 4);
 
   Put_UDPPointer;
 
   if msg_type <> DHCP_REQUEST_MESSAGE then
-    Mem_Cpy(@tmp_ip_addr, @eth_ip_addr, 4);
+    Mem_Cpy(@Temp_IP_Address, @Options.eth_ip_addr, 4);
 
   len_data := (12 + 16 + 6 + 202 + 6 + 1 + 5 + 1);
 
@@ -248,7 +251,7 @@ begin
   EthMemSet_CP(0,12);
 
   // my MAC address
-  CopyRamToEthMem_CP(@eth_mac, 6);
+  CopyRamToEthMem_CP(@Options.eth_mac, 6);
 
   // no server host name, no boot file name
   EthMemSet_CP(0,202);
@@ -264,7 +267,7 @@ begin
 
   Eth_PutByte(DHCP_PARAM_REQUEST_IP_ADDRESS);
   Eth_PutByte(DHCP_PARAM_REQUEST_IP_ADDRESS_LEN);
-  CopyRamToEthMem_CP(@tmp_ip_addr,4);
+  CopyRamToEthMem_CP(@Temp_IP_Address,4);
   len_data := len_data + 6;
 
   if msg_type = DHCP_REQUEST_MESSAGE then
@@ -353,10 +356,10 @@ begin
       Exit;
     end;
 
-  Mem_Cpy(@eth_ip_addr,@tmp_ip_addr,4);
-  Mem_Cpy(@eth_gateway,@tmp_gat_addr,4);
-  Mem_Cpy(@eth_mask,@tmp_mask_addr,4);
-  Mem_Cpy(@eth_dns_addr,@tmp_dns_addr,4);
+  Mem_Cpy(@Options.eth_ip_addr,@Temp_IP_Address,4);
+  Mem_Cpy(@Options.eth_gateway,@Temp_Gateway_Address,4);
+  Mem_Cpy(@Options.eth_mask,@Temp_Mask_Address,4);
+  Mem_Cpy(@Options.eth_dns_addr,@tmp_dns_addr,4);
   DHCP_count_3 := 0;
   Result := True;
 end;

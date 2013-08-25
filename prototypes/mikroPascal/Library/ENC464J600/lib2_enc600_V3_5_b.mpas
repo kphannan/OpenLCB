@@ -153,26 +153,26 @@ Begin
 
   if use_user_MAC <> 0 then
   begin
-    Lo(buf) := eth_mac[0];
-    Hi(buf) := eth_mac[1];
+    Lo(buf) := Options.eth_mac[0];
+    Hi(buf) := Options.eth_mac[1];
     Eth_WriteReg(MAADR1_,buf);
-    Lo(buf) := eth_mac[2];
-    Hi(buf) := eth_mac[3];
+    Lo(buf) := Options.eth_mac[2];
+    Hi(buf) := Options.eth_mac[3];
     Eth_WriteReg(MAADR2_,buf);
-    Lo(buf) := eth_mac[4];
-    Hi(buf) := eth_mac[5];
+    Lo(buf) := Options.eth_mac[4];
+    Hi(buf) := Options.eth_mac[5];
     Eth_WriteReg(MAADR3_,buf);
   end else
   begin
     buf := Eth_ReadReg(MAADR1_);
-    eth_mac[0] := Lo(buf);
-    eth_mac[1] := Hi(buf);
+    Options.eth_mac[0] := Lo(buf);
+    Options.eth_mac[1] := Hi(buf);
     buf := Eth_ReadReg(MAADR2_);
-    eth_mac[2] := Lo(buf);
-    eth_mac[3] := Hi(buf);
+    Options.eth_mac[2] := Lo(buf);
+    Options.eth_mac[3] := Hi(buf);
     buf := Eth_ReadReg(MAADR3_);
-    eth_mac[4] := Lo(buf);
-    eth_mac[5] := Hi(buf);
+    Options.eth_mac[4] := Lo(buf);
+    Options.eth_mac[5] := Hi(buf);
   end;
 
   buf := Eth_ReadReg(MACON2_);
@@ -189,8 +189,8 @@ Begin
   // enables reception
   Eth_BSF(ECON1_,0x0001);    //RXEN
   
-  udp_counter := 1000; // start UDP counter with this value
-  tcp_counter := 1000;
+  UDP_IdentificationCounter := 1000; // start UDP counter with this value
+  TCP_IdentificationCounter := 1000;
   ACK_No := $42844A80;
   SEQ_No := $42844A80;
   ARP_EraseCache_Internal;
@@ -199,7 +199,7 @@ Begin
   Firewall(False, False, False);
   Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
   Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
-  Eth_Policy(DROP);
+  Eth_Policy(POLICY_DROP);
   delayms(10);
 
   DHCP_count_1 := 10;
@@ -207,12 +207,11 @@ Begin
   DHCP_count_3 := 0;
   DHCP_Lease_Time := (3600*6); // 6 ore
   DHCP_State := 0;
-  announce := False;
+  Options.Announce := False;
   DHCP_Enable := False;
   
   udp_broadcast := False;
   broadcast_packet := False;
-  dynamic_var_addr := $1000;
 
   
   SocketManager.TCP_Wait := 500;
@@ -248,24 +247,24 @@ end;
 procedure Eth_MacSwap;
 begin
   CopyEthMemToEthMem(AddrPacket + 6, TXSTART, 6);
-  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
 end;
 
 procedure Eth_IpSwap;
 begin
-  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
   CopyEthMemToEthMem(AddrPacket + 26, TXSTART + 30, 4);
 end;
 
 procedure Eth_MacSwap_User;
 begin
 //  CopyRamToEthMem(@dest_mac, TXSTART, 6);
-  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
 end;
 
 procedure Eth_IpSwap_User;
 begin
-  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
 //  CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
 end;
 
@@ -321,25 +320,27 @@ procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word);
 var 
   TotalLen : word;
   Align: byte;
+  CkSum_IP: word;
+  CkSum_UDP: word;
 begin
   WriteToEthMem(TXSTART+12,$08);
   Eth_PutByte($00);
   Eth_PutByte($45);
   Eth_PutByte($00);
-  inc(udp_counter);
+  inc(UDP_IdentificationCounter);
   TotalLen := PacketLenA + 28;
   Eth_PutByte(Hi(TotalLen));
   Eth_PutByte(Lo(TotalLen));
-  Eth_PutByte(Hi(udp_counter));
-  Eth_PutByte(Lo(udp_counter));
+  Eth_PutByte(Hi(UDP_IdentificationCounter));
+  Eth_PutByte(Lo(UDP_IdentificationCounter));
   Eth_PutByte($00);
   Eth_PutByte($00);
   Eth_PutByte($80);
   Eth_PutByte($11);
   Eth_PutByte($00);
   Eth_PutByte($00);
-  cksum_ip := Eth_Cksum(TXSTART+14,20);
-  WriteToEthMem(TXSTART+24,Hi(cksum_ip));
+  CkSum_IP := Eth_Cksum(TXSTART+14,20);
+  WriteToEthMem(TXSTART+24,Hi(CkSum_IP));
   Eth_PutByte(Lo(cksum_ip));
   WriteToEthMem(TXSTART+34,Hi(source_portA));
   Eth_PutByte(Lo(source_portA));
@@ -358,10 +359,11 @@ begin
   Eth_PutByte($11);
   Eth_PutByte(Hi(TotalLen));
   Eth_PutByte(Lo(TotalLen));
-  cksum_udp := Eth_Cksum(TXSTART+34,TotalLen + Align + 12);
-  if cksum_udp = 0 then cksum_udp := $FFFF;
-  WriteToEthMem(TXSTART+40,Hi(cksum_udp));
-  Eth_PutByte(Lo(cksum_udp));
+  CkSum_UDP := Eth_Cksum(TXSTART+34,TotalLen + Align + 12);
+  if CkSum_UDP = 0 then 
+    CkSum_UDP := $FFFF;
+  WriteToEthMem(TXSTART+40,Hi(CkSum_UDP));
+  Eth_PutByte(Lo(CkSum_UDP));
   TotalLen := PacketLenA + 42;
   Eth_Send(TotalLen);
 end;
@@ -386,27 +388,31 @@ end;
 procedure Eth_ProcessUDP;
 var 
   PacketLen, source_port1, dest_port1 : word;
-  buft : dword;
   dest_ip_addr: IpHeader;
   Align: Byte;
+  CkSum_IP: word;
+  CkSum_UDP: word;
+  len: Word;
 begin
   Hi(source_port1) := ReadFromEthMem(AddrPacket+36);
   Lo(source_port1) := Eth_GetByte;
   if Search_Port(UDP, source_port1) = False then
     begin
-      if policy = Reject then Eth_Reject;
+      if Options.Policy = POLICY_REJECT then
+        Eth_Reject;
       Exit;
     end;
-  Hi(cksum_ip) := ReadFromEthMem(AddrPacket+24);
-  Lo(cksum_ip) := Eth_GetByte;
-  Hi(cksum_udp) := ReadFromEthMem(AddrPacket+40);
-  Lo(cksum_udp) := Eth_GetByte;
+  Hi(CkSum_IP) := ReadFromEthMem(AddrPacket+24);
+  Lo(CkSum_IP) := Eth_GetByte;
+  Hi(CkSum_UDP) := ReadFromEthMem(AddrPacket+40);
+  Lo(CkSum_UDP) := Eth_GetByte;
   Hi(len) := ReadFromEthMem(AddrPacket+16);
   Lo(len) := Eth_GetByte;
   CopyEthMemToEthMem(AddrPacket,TXSTART,len+14);
   WriteToEthMem(TXSTART+24,$00);
   Eth_PutByte($00);
-  if cksum_ip <> Eth_Cksum(TXSTART+14,20) then Exit;
+  if CkSum_IP <> Eth_Cksum(TXSTART+14,20) then 
+    Exit;
   if len <= 28 then Exit;
   Align := len and $01;
   WriteToEthMem(TXSTART+40,$00);
@@ -419,7 +425,8 @@ begin
   len := len - 20;
   Eth_PutByte(Hi(len));
   Eth_PutByte(Lo(len));
-  if cksum_udp <> Eth_Cksum(TXSTART+34,len + Align + 12) then Exit;
+  if CkSum_UDP <> Eth_Cksum(TXSTART+34,len + Align + 12) then 
+    Exit;
   len := len - 8;
   Hi(dest_port1) := ReadFromEthMem(AddrPacket+34);
   Lo(dest_port1) := Eth_GetByte;
@@ -430,13 +437,7 @@ begin
   begin
     if (len = 48) then
     begin
-      CopyEthMemToRam_Inv(AddrPacket+82, @buft, 4);
-      DisableInt;
-      NTP_Time := buft + Offset_Time;
-      EnableInt;
-      NTP_Sync := True;
-      NTP_Sec := 0;
-      NTP_ReSync := 0;
+      NTP_ProcessPacket_Internal(AddrPacket);
       Close_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
       Exit;
     end;
@@ -455,6 +456,7 @@ begin
     Exit
   end;
 
+  // Not handled so callback to the user and see if it is custom packet
   WriteToEthMem(TXSTART+41,$00); // put tx pointer
   Align := ReadFromEthMem(AddrPacket + 41); // put rx pointer to start of UDP data.
   PacketLen := Eth_UserUDP(dest_ip_addr, dest_port1, source_port1, len);
@@ -470,8 +472,10 @@ end;
 //* Purpose : Send TCP packet, used by library                                 *
 //******************************************************************************
 procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
-var TotalLen : word;
-    Align : byte;
+var 
+  TotalLen : word;
+  Align : byte;
+  CkSum_TCP, CkSum_IP: Word;
 begin
 
 UART1_Write_Text('TCP Send');
@@ -483,18 +487,18 @@ UART1_Write_Text('TCP Send');
   TotalLen := 40 + PacketLenT;      // Does not count the physical layer MAC addresses or Protocol type
   Eth_PutByte(Hi(TotalLen));        // Total Length HI
   Eth_PutByte(Lo(TotalLen));        // Total Length LO
-  inc(tcp_counter);
-  Eth_PutByte(Hi(tcp_counter));     // Identification HI
-  Eth_PutByte(Lo(tcp_counter));     // Identification LO
+  inc(TCP_IdentificationCounter);
+  Eth_PutByte(Hi(TCP_IdentificationCounter));     // Identification HI
+  Eth_PutByte(Lo(TCP_IdentificationCounter));     // Identification LO
   Eth_PutByte($40);                 // Fragment Flags (DF, don't fragment) / Fragment Offset upper bits
   Eth_PutByte($00);                 // Fragment Offset Lo
   Eth_PutByte($80);                 // Time to Live in seconds (128 seconds)
   Eth_PutByte($06);                 // Protocol = TCP
   Eth_PutByte($00);                 // Checksum HI
   Eth_PutByte($00);                 // Checksum LO
-  cksum_ip := Eth_Cksum(TXSTART+14, 20); // Checksum the entire IP Header of 20 bytes
-  WriteToEthMem(TXSTART+24 ,Hi(cksum_ip)); // Write check sum to Header Checksum offset in Header (with 0 for the Checksum we calculated)
-  Eth_PutByte(Lo(cksum_ip));
+  CkSum_IP := Eth_Cksum(TXSTART+14, 20); // Checksum the entire IP Header of 20 bytes
+  WriteToEthMem(TXSTART+24 ,Hi(CkSum_IP)); // Write check sum to Header Checksum offset in Header (with 0 for the Checksum we calculated)
+  Eth_PutByte(Lo(CkSum_IP));
   WriteToEthMem(TXSTART+34, Hi(source_portT));  // TCP Source Port Hi
   Eth_PutByte(Lo(source_portT));               // Lo
   Eth_PutByte(Hi(dest_portT));                 // TCP Dest Port Hi
@@ -524,9 +528,9 @@ UART1_Write_Text('TCP Send');
   TotalLen := TotalLen - 20;
   Eth_PutByte(Hi(TotalLen));
   Eth_PutByte(Lo(TotalLen));
-  cksum_tcp := Eth_Cksum(TXSTART+34, 12+TotalLen+Align);
-  WriteToEthMem(TXSTART+50, Hi(cksum_tcp));
-  Eth_PutByte(Lo(cksum_tcp));
+  CkSum_TCP := Eth_Cksum(TXSTART+34, 12+TotalLen+Align);
+  WriteToEthMem(TXSTART+50, Hi(CkSum_TCP));
+  Eth_PutByte(Lo(CkSum_TCP));
   Eth_Send(34+TotalLen);
 end;
 
@@ -540,7 +544,9 @@ var
   Align, TCP_FlagReceive, TCP_FlagSend : byte;
   dest_mac2 : MacHeader;
   dest_ip_addr: IpHeader;
-
+  CkSum_TCP: word;
+  CkSum_IP: word;
+  len: word;
 label 
   next_phs;
   
@@ -549,15 +555,15 @@ begin
   Lo(source_port2) := Eth_GetByte;
   if Search_Port(TCP, source_port2) = False then
     begin
-      if policy = REJECT then
+      if Options.Policy = POLICY_REJECT then
         Eth_Reject;
       Exit;
     end;
 
-  Hi(cksum_ip) :=  ReadFromEthMem(AddrPacket+24);
-  Lo(cksum_ip) :=  Eth_GetByte;
-  Hi(cksum_tcp) := ReadFromEthMem(AddrPacket+50);
-  Lo(cksum_tcp) := Eth_GetByte;
+  Hi(CkSum_IP) :=  ReadFromEthMem(AddrPacket+24);
+  Lo(CkSum_IP) :=  Eth_GetByte;
+  Hi(CkSum_TCP) := ReadFromEthMem(AddrPacket+50);
+  Lo(CkSum_TCP) := Eth_GetByte;
   Hi(len) := ReadFromEthMem(AddrPacket+16);
   Lo(len) := Eth_GetByte;
   len_ack := len;
@@ -565,7 +571,8 @@ begin
   CopyEthMemToEthMem(AddrPacket,TXSTART,len+14);
   WriteToEthMem(TXSTART+24,$00);
   Eth_PutByte($00);
-  if cksum_ip <> Eth_Cksum(TXSTART+14,20) then Exit;
+  if cksum_ip <> Eth_Cksum(TXSTART+14,20) then 
+    Exit;
   Align := len and $01;
   WriteToEthMem(TXSTART+50,$00);
   Eth_PutByte($00);
@@ -577,7 +584,8 @@ begin
   len := len - 20;
   Eth_PutByte(Hi(len));
   Eth_PutByte(Lo(len));
-  if cksum_tcp <> Eth_Cksum(TXSTART+34,len + Align + 12) then Exit;
+  if CkSum_TCP <> Eth_Cksum(TXSTART+34,len + Align + 12) then
+    Exit;
   Hi(dest_port2) := ReadFromEthMem(AddrPacket+34);
   Lo(dest_port2) := Eth_GetByte;
   TCP_FlagReceive := ReadFromEthMem(AddrPacket + 47);
@@ -761,7 +769,7 @@ begin
       case Eth_ReadPacket of
         ETH_ARP :
         begin
-          if EthMemCompareWithRam(AddrPacket + 38, @eth_ip_addr, 4) then
+          if EthMemCompareWithRam(AddrPacket + 38, @Options.eth_ip_addr, 4) then
             begin
               case ReadFromEthMem(AddrPacket+21) of
                 ETH_ARP_REQ : ARP_Reply_Internal(AddrPacket);
@@ -771,7 +779,7 @@ begin
         end;
         ETH_IP :
         begin
-          if EthMemCompareWithRam(AddrPacket + 30, @eth_ip_addr, 4) then
+          if EthMemCompareWithRam(AddrPacket + 30, @Options.eth_ip_addr, 4) then
           begin
             case ReadFromEthMem(AddrPacket + 23) of
                 ETH_IP_ICMP :
@@ -834,8 +842,8 @@ begin
   Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
 
   CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Mac, TXSTART, 6);
-  CopyRamToEthMem(@eth_mac, TXSTART+6, 6);
-  CopyRamToEthMem(@eth_ip_addr, TXSTART+26, 4);
+  CopyRamToEthMem(@Options.eth_mac, TXSTART+6, 6);
+  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART+26, 4);
   CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Ip, TXSTART+30, 4);
   Put_TCPPointer;
 
@@ -1015,8 +1023,8 @@ begin
                 SocketManager.Socket[i].Start_addr := 0;
                 SocketManager.Socket[i].Stop_addr := 0;
                 CopyRamToEthMem(@SocketManager.Socket[i].Dest_Mac,TXSTART,6);
-                CopyRamToEthMem(@eth_mac,TXSTART+6,6);
-                CopyRamToEthMem(@eth_ip_addr,TXSTART+26,4);
+                CopyRamToEthMem(@Options.eth_mac,TXSTART+6,6);
+                CopyRamToEthMem(@Options.eth_ip_addr,TXSTART+26,4);
                 CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip,TXSTART+30,4);
                 Eth_SendTCP(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
                 SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
@@ -1245,7 +1253,7 @@ begin
       Break;
     inc(contorw);
   end;
-  if announce <> 0 then
+  if Options.Announce <> 0 then
   begin
     Mem_Set(@dest_ip_addr, $FF, 4);
     Mem_Set(@dest_mac,$FF,6);

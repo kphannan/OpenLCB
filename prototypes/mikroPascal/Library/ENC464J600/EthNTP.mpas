@@ -29,6 +29,11 @@ type
 function NTP_Query() : boolean;
 procedure NTP_GetTime;
 function NTP_Process(var data_in : array[48] of byte; len_ : byte) : byte;
+function String2NTP(var strin : string[32]) : dword;
+procedure NTP2String(buf : dWord; var TTime_Str : string[19]);
+
+// Internally used functions
+procedure NTP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 
 // Externally defined functions
 procedure DisableInt; external;
@@ -40,8 +45,24 @@ var
   NTP_Time : dWord;
   NTP_Sec, NTP_ReSync : Word;
   TTime : TNtp;
+  NTP_Sync: Boolean;
+  Offset_Time : longint;
+  offset_clock_err : short;
 
 implementation
+
+procedure NTP_ProcessPacket_Internal(EthMemAddressRequest: Word);
+var
+  buft : dword;
+begin
+  CopyEthMemToRam_Inv(AddrPacket+82, @buft, 4);
+  DisableInt;
+  NTP_Time := buft + Offset_Time;
+  EnableInt;
+  NTP_Sync := True;
+  NTP_Sec := 0;
+  NTP_ReSync := 0;
+end;
 
 //******************************************************************************
 //* Name    : NTP_Process                                                      *
@@ -91,14 +112,14 @@ var
   ntp_mac : MacHeader;
 begin
   Result := False;
-  if ARP_Validate_IP(eth_ntp_addr, ntp_mac) = False then
+  if ARP_Validate_IP(Options.eth_ntp_addr, ntp_mac) = False then
     Exit;
   Result := True;
   Open_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
   CopyRamToEthMem(@ntp_mac, TXSTART, 6);
-  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
-  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
-  CopyRamToEthMem(@eth_ntp_addr, TXSTART + 30, 4);
+  CopyRamToEthMem(@Options.eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Options.eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@Options.eth_ntp_addr, TXSTART + 30, 4);
   EthMemSet(TXSTART+42,0,48);
   Put_UDPPointer;
   Eth_PutByte($d9);
@@ -175,6 +196,137 @@ begin
   Byte2StrWithZeros(TTime.Sec, text);
   Str_Cut_Left(text,1);
   Str_Cat(TTime.Str, text);
+end;
+
+function String2NTP(var strin : string[32]) : dword;  // 26.11.2009 12:34:05
+var year_, day_buf : word;
+    month_, day_, hour_, min_, sec_, feb : byte;
+    str_buf : string[4];
+begin
+  result := 3502828800;//2208988800;
+  if Str_Len(strin) <> 19 then exit;
+
+  str_buf[0] := strin[6];
+  str_buf[1] := strin[7];
+  str_buf[2] := strin[8];
+  str_buf[3] := strin[9];
+  str_buf[4] := 0;
+
+  year_ := Str2Word(str_buf);
+
+  str_buf[0] := strin[3];
+  str_buf[1] := strin[4];
+  str_buf[2] := 0;
+
+  month_ := Str2Byte(str_buf);
+
+  str_buf[0] := strin[0];
+  str_buf[1] := strin[1];
+  str_buf[2] := 0;
+
+  day_ := Str2Byte(str_buf);
+
+  str_buf[0] := strin[11];
+  str_buf[1] := strin[12];
+  str_buf[2] := 0;
+
+  hour_ := Str2Byte(str_buf);
+
+  str_buf[0] := strin[14];
+  str_buf[1] := strin[15];
+  str_buf[2] := 0;
+
+  min_ := Str2Byte(str_buf);
+
+  str_buf[0] := strin[17];
+  str_buf[1] := strin[18];
+  str_buf[2] := 0;
+
+  sec_ := Str2Byte(str_buf);
+
+  result := year_ - 1970;
+  if ((result-2) mod 4) = 0 then feb := 29
+  else feb := 28;
+  result := result*365 + ((result-3) div 4);
+
+  case month_ of
+    1 : day_buf := day_;
+    2 : day_buf := day_ + 31;
+    3 : day_buf := day_ + (31 + feb);
+    4 : day_buf := day_ + (31 + feb + 31);
+    5 : day_buf := day_ + (31 + feb + 31 + 30);
+    6 : day_buf := day_ + (31 + feb + 31 + 30 + 31);
+    7 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30);
+    8 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31);
+    9 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31);
+    10 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31 + 30);
+    11 : day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31)
+    else  day_buf := day_ + (31 + feb + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30);
+  end;
+
+  result := (result + day_buf) * 86400 + (hour_ * 3600) + (min_ * 60) + sec_ + 2208988800;
+end;
+
+procedure NTP2String(buf : dWord; var TTime_Str : string[19]);
+var TempDay, TempMonth, buf_d : word;
+    text : string[5];
+    TTime_Sec,TTime_Min,TTime_Hour,TTime_Month,TTime_Day : byte;
+    TTime_Year : word;
+begin
+  buf := buf - 2208988800;
+  TTime_Sec := dword(buf Mod 60);
+  buf := buf div 60;
+  TTime_Min := dword(buf Mod 60);
+  buf := buf div 60;
+  TTime_Hour := dword(buf Mod 24);
+  buf := buf div 24;
+  buf_d := Word(buf);
+  TTime_Year := (buf_d div 1461)*4 + 1970;
+  buf_d := buf_d Mod 1461;
+  While true do
+    begin
+      TempDay := 365;
+      If (TTime_Year And $03) = 0 Then TempDay := 366;
+      If TempDay > buf_d Then break;
+      buf_d := buf_d - TempDay;
+      Inc(TTime_Year);
+    end;
+  inc(buf_d);
+  For TTime_Month := 1 To 12 do
+    begin
+      TempMonth := Months_Days[TTime_Month];
+      if (TTime_Month = 2) and (TempDay = 366) then TempMonth := 29;
+      If buf_d <= TempMonth Then break;
+      buf_d := buf_d - TempMonth;
+    end;
+  TTime_Day := buf_d;
+
+  Byte2StrWithZeros(TTime_Day, TTime_Str);
+  Str_Cut_Left(TTime_Str,1);
+  Str_Cat(TTime_Str, '.');
+
+  Byte2StrWithZeros(TTime_Month, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime_Str, text);
+
+  Str_Cat(TTime_Str, '.');
+
+  Word2Str(TTime_Year,text);
+  Str_Cat(TTime_Str, text);
+
+  Str_Cat(TTime_Str, ' ');
+
+  Byte2StrWithZeros(TTime_Hour, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime_Str, text);
+  Str_Cat(TTime_Str, ':');
+  Byte2StrWithZeros(TTime_Min, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime_Str, text);
+  Str_Cat(TTime_Str, ':');
+  Byte2StrWithZeros(TTime_Sec, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime_Str, text);
 end;
 
 end.
