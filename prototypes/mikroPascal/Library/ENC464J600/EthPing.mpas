@@ -1,0 +1,226 @@
+unit EthPing;
+
+uses
+  EthCommon,
+  EthARP,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+const
+  PING_CACHE_LENGTH: byte = 9;
+  
+  PING_WAITING_FOR_REPLY = $FFFF;
+  
+  PING_SEND_RESULT_INVALID_SLOT = $FFFF;
+  PING_SEND_RESULT_TIMEOUT      = $FFFE;
+  
+type 
+  TPingCache = Record
+    IpP                : IpHeader;                                              // IP of the resource beging pinged
+    MacP               : MacHeader;                                             // MAC of the resource being pinged
+    Time               : word;                                                  // Time it took for the ping to be responded to
+    BackGroundCounter  : word;                                                  // Counter that is alway running regardless of if the slot is begin used or not
+    TimeToLive         : byte;                                                  // The value of TimeToLive of the resource being pinged
+  end;
+  
+
+// User functions
+function Send_Ping(var ip_p: IpHeader; PingSlot: Byte) : word;
+procedure Ping_CacheTimerTask;                                                  // Call from 1ms timer
+
+// Internal functions
+Procedure Ping_Echo_Internal(EthMemAddressRequest: Word);
+procedure Ping_Reply_Internal(EthMemAddressRequest: Word);
+procedure Ping_Send_Internal(var dest_ip_addr: IpHeader; var dest_mac: MacHeader; PingSlot : Byte);
+procedure Ping_EraseCache_Internal;
+
+procedure Do_EthernetProc(n : word); external;
+
+implementation
+
+var
+  PingCache : array[PING_CACHE_LENGTH] of TPingCache;
+
+procedure Ping_EraseSlot(var Slot: TPingCache);
+begin
+  Mem_Set(@Slot.IpP, 0, 4);
+  Mem_Set(@Slot.MacP, 0, 6);
+  Slot.Time := 0;
+  Slot.BackGroundCounter := 0;
+  Slot.TimeToLive := 0;
+end;
+
+procedure Ping_EraseCache_Internal;
+var j : byte;
+begin
+  j := 0;
+  while j < PING_CACHE_LENGTH do
+    begin
+      Ping_EraseSlot(PingCache[j]);
+      inc(j);
+    end;
+end;
+
+procedure Ping_CacheTimerTask;
+var
+  i: Integer;
+begin
+  i := 0;
+  while i < PING_CACHE_LENGTH do
+  begin
+    if PingCache[i].BackGroundCounter < PING_SEND_RESULT_TIMEOUT then
+      Inc(PingCache[i].BackGroundCounter);
+    Inc(i)
+  end
+end;
+
+//******************************************************************************
+//* Name    : Ping_Reply_Internal                                                 *
+//* Purpose : Response to ICMP request                                         *
+//  Description:
+//    This function expects that a Ping request message be at address EthMemAddressRequest
+//  within the ENC device memory
+//******************************************************************************
+Procedure Ping_Echo_Internal(EthMemAddressRequest: Word);
+var 
+  cksum, PacketSize : word;
+Begin
+  // Read in the size of the request packet
+  Hi(PacketSize) := ReadFromEthMem(EthMemAddressRequest + 16);
+  Lo(PacketSize) := Eth_GetByte;
+  PacketSize := PacketSize + 14;
+  // Start building the Reply packet
+  CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);                     // Move the requesting MAC address into the reply target MAC address
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);                                    // Message is from our MAC address
+  CopyEthMemToEthMem(EthMemAddressRequest + 12, TXSTART + 12, 14);
+  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+  EthMemSet(TXSTART + 34, 0, 4);
+  CopyEthMemToEthMem(EthMemAddressRequest + 38, TXSTART + 38, PacketSize - 38);
+  cksum := Eth_Cksum(TXSTART + 34, PacketSize - 34);
+  WriteToEthMem(TXSTART + 36, Hi(cksum));
+  Eth_PutByte(Lo(cksum));
+  Eth_Send(PacketSize);
+End;
+
+//******************************************************************************
+//* Name    : Ping_Reply_Internal
+//* Purpose : Process incomming ICMP response
+//  Description:
+//     We may have pinged an IP and that IP has responded.  All Ping replies come
+//  through this function if the ENC part does not filter the message out
+//******************************************************************************
+procedure Ping_Reply_Internal(EthMemAddressRequest: Word);
+var 
+  i : byte;
+begin
+  i := 0;
+  while i < PING_CACHE_LENGTH do
+  begin
+    // See if the Time = "in progress" $FFFF and the SOURCE IP of the received message is equal to one in the PingCache
+    if (PingCache[i].Time = PING_WAITING_FOR_REPLY) and (EthMemCompareWithRam(EthMemAddressRequest + 26, @PingCache[i].IpP[0], 4) <> 0) then
+    begin
+      PingCache[i].Time := PingCache[i].BackGroundCounter;                      // Set the time it took to receive it
+      PingCache[i].TimeToLive := ReadFromEthMem(EthMemAddressRequest + 22);     // Copy the Time to Live from the received message
+      Exit;
+    end;
+    inc(i);
+  end;
+end;
+
+//******************************************************************************
+//* Name    : Ping_Send_Internal                                                     *
+//* Purpose : Send ICMP request, used by library                               *
+//******************************************************************************
+Procedure Ping_Send_Internal(var dest_ip_addr: IpHeader; var dest_mac: MacHeader; PingSlot: Byte);
+var
+  i, cksum : word;
+Begin
+  // Setup the Ping slot
+  Ping_EraseSlot(PingCache[PingSlot]);
+  PingCache[PingSlot].Time := PING_WAITING_FOR_REPLY;
+  Mem_Cpy(@PingCache[PingSlot].IpP[0], @dest_ip_addr, 4);
+  Mem_Cpy(@PingCache[PingSlot].MacP[0], @dest_mac, 6);
+  
+  CopyRamToEthMem(@dest_mac, TXSTART, 6);
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  i := 60;
+  WriteToEthMem(TXSTART + 12, $08);      // ETHType
+  Eth_PutByte($00);                      // ETHType
+  Eth_PutByte($45);                      // Version
+  Eth_PutByte($00);                      // Type of service
+  Eth_PutByte(Hi(i));                    // Hi Total length
+  Eth_PutByte(Lo(i));                    // Lo Total length
+  Eth_PutByte($AC);
+  Eth_PutByte($80);
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  Eth_PutByte($80);                      // Time to live
+  Eth_PutByte($01);                      // ICMP Protocol
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
+  // fin checksum
+  cksum := Eth_Cksum(TXSTART + 14, 20);
+  WriteToEthMem(TXSTART + 24,Hi(cksum));
+  Eth_PutByte(Lo(cksum));
+  WriteToEthMem(TXSTART + 34, $08);
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  Eth_PutByte($00);
+  Eth_PutByte($03);
+  Eth_PutByte($00);
+  Eth_PutByte($14);
+  Eth_PutByte($0A);
+  i := 48;
+  while i < 80 do
+    begin
+      Eth_PutByte(i);
+      inc(i);
+    end;
+  cksum := Eth_Cksum(TXSTART + 34, 40);
+  WriteToEthMem(TXSTART + 36, Hi(cksum));
+  Eth_PutByte(Lo(cksum));
+  Eth_Send(74);
+  PingCache[PingSlot].BackGroundCounter := 0;                                   // Counter is always running so reset it after sending the request
+End;
+
+//******************************************************************************
+//* Name    : Send_Ping                                                        *
+//* Purpose : Send ICMP request
+// Return:  Ping time or PING_SEND_RESULT_TIMEOUT if Ping failed or PING_SEND_RESULT_INVALID_SLOT if the slot was not valid
+//******************************************************************************
+function Send_Ping(var ip_p : IpHeader; PingSlot: Byte) : word;
+var
+  CountBuf : word;
+  dest_mac : MacHeader;
+  TickCounter: Word;
+begin    
+  Result := PING_SEND_RESULT_TIMEOUT;
+  
+  // Valid Ping slot?
+  if PingSlot > (PING_CACHE_LENGTH - 1) then
+  begin
+    Result := PING_SEND_RESULT_INVALID_SLOT;
+    Exit;
+  end;
+
+  if ARP_Validate_IP(ip_p, dest_mac) = False then
+    Exit;
+ 
+  Ping_Send_Internal(ip_p, dest_mac, PingSlot);
+  TickCounter := 0;
+  CountBuf := 0;
+  while CountBuf < 3000 do
+  begin
+    Do_EthernetProc(1);
+    if PingCache[PingSlot].Time <> PING_WAITING_FOR_REPLY then
+      Break;
+    CountBuf := TickCounter;
+  end;
+  Result := PingCache[PingSlot].Time;
+end;
+
+end.

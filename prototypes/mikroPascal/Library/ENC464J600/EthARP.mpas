@@ -1,0 +1,318 @@
+unit EthARP;
+
+uses
+  EthCommon,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+const
+  ETH_ARP                     : word = $0806;
+  ETH_ARP_REQ                 : byte = $01;
+  ETH_ARP_RES                 : byte = $02;
+  
+  ARP_CACHE_LENGTH: byte = 2;                                                   // number of cached IPs to hold
+  MAX_ARP_VALIDATE_TRIES: byte = 3;                                             // number of times to try to validate an IP
+  
+  ARP_CACHE_FULL = $FFFF;
+  
+type 
+  TArpCache = record
+    Allocated         : boolean;
+    WaitingForReply    : boolean;
+    ArpVerifyTime     : longint;
+    Ip                : IpHeader;
+    Mac               : MacHeader;
+  end;
+  
+// User functions
+Function ARP_Send(var ipb : IpHeader; var dest_mac: MacHeader) : boolean;
+function ARP_Validate_IP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean;
+
+// Internally used functions
+Function Search_Arp_Cache_Internal(var ip_a : IpHeader; var dest_mac: MacHeader) : boolean;
+procedure ARP_Reply_Internal(EthMemAddressRequest: Word);
+procedure ARP_Process_Internal(EthMemAddressRequest: Word);   
+procedure ARP_EraseCache_Internal;
+
+// Externally defined functions
+procedure DisableInt; external;
+procedure EnableInt; external;
+procedure Do_EthernetProc(n : word); external;
+
+var
+  ARP_100ms_Counter: longint;    // Counts the number of 100ms ticks have occured since powerup.  The longint allows this to be 7 years between power ups before rollover
+  
+implementation
+
+var
+  ArpCache : array[ARP_CACHE_LENGTH] of TArpCache;
+                                               // Ticks every 100ms and can last to 6.8 YEARS before rollover
+ 
+procedure ARP_EraseSlot(var Slot: TArpCache);
+begin
+  Mem_Set(@Slot.Ip, 0, 4);
+  Mem_Set(@Slot.Mac, 0, 6);
+  Slot.WaitingForReply := False;
+  Slot.Allocated := False;
+  Slot.ArpVerifyTime := 0;
+end;
+
+procedure ARP_EraseCache_Internal;
+var j : byte;
+begin
+  j := 0;
+  while j < ARP_CACHE_LENGTH do
+  begin
+    ARP_EraseSlot(ArpCache[j]);
+    inc(j);
+  end;
+end;
+
+//******************************************************************************
+//* Name    : ARP_Reply_Internal                                                  *
+//* Purpose : Response to ARP request                                          *
+//******************************************************************************
+procedure ARP_Reply_Internal(EthMemAddressRequest: Word);
+begin
+  CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  WriteToEthMem(TXSTART + 12, $08);
+  Eth_PutByte($06);
+  Eth_PutByte($00);
+  Eth_PutByte($01);
+  Eth_PutByte($08);
+  Eth_PutByte($00);
+  Eth_PutByte($06);
+  Eth_PutByte($04);
+  Eth_PutByte($00);
+  Eth_PutByte($02);
+  CopyRamToEthMem(@eth_mac,TXSTART + 22, 6);
+  CopyEthMemToEthMem(EthMemAddressRequest + 38,TXSTART + 28, 4);
+  CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART + 32, 6);
+  CopyEthMemToEthMem(EthMemAddressRequest + 28, TXSTART + 38, 4);
+  Eth_Send(42);
+end;
+
+//******************************************************************************
+//* Name    : ARP_Process_Internal                                                   *
+//* Purpose : Process incomming ARP response                                   *
+//******************************************************************************
+procedure ARP_Process_Internal(EthMemAddressRequest: Word);
+var
+  i : byte;
+begin
+  i := 0;                        
+  // Run the Cache looking for slots that are not valid but have the IP we are waiting for a reply from
+  while i < ARP_CACHE_LENGTH do
+  begin
+    if ArpCache[i].Allocated then     // mP does not have short circuit boolean so don't do the compare unless necessary
+      if ArpCache[i].WaitingForReply then
+        if (EthMemCompareWithRam(EthMemAddressRequest + 28, @ArpCache[i].Ip[0], 4) <> 0) then
+        begin
+          CopyEthMemToRam(EthMemAddressRequest + 6, @ArpCache[i].Mac[0], 6);      // Yes, return ready to use MAC addr
+          ArpCache[i].WaitingForReply := False;
+          DisableInt;
+          ArpCache[i].ArpVerifyTime := ARP_100ms_Counter;  // Not an atomic operation
+          EnableInt;
+          Exit;
+        end;
+    inc(i);
+  end;
+end;
+
+//******************************************************************************
+//* Name    : ARP_Resolve_Segment_Gateway
+//* Purpose : Resolve the correct IP to send the ARP for
+//******************************************************************************
+procedure ARP_Resolve_Segment_Gateway(var dest_ip: IpHeader; var ipArp: IpHeader);
+var
+  ip_target_masked, ip_masked: IpHeader;
+begin
+  ip_masked[0] := eth_ip_addr[0] and eth_mask[0];
+  ip_masked[1] := eth_ip_addr[1] and eth_mask[1];
+  ip_masked[2] := eth_ip_addr[2] and eth_mask[2];
+  ip_masked[3] := eth_ip_addr[3] and eth_mask[3];
+
+  ip_target_masked[0] := dest_ip[0] and eth_mask[0];
+  ip_target_masked[1] := dest_ip[1] and eth_mask[1];
+  ip_target_masked[2] := dest_ip[2] and eth_mask[2];
+  ip_target_masked[3] := dest_ip[3] and eth_mask[3];
+
+  // If the target is on our segment then use the target for the ARP else use the gateway IP as the ARP
+  if Mem_Cmp(@ip_masked, @ip_target_masked, 4) = 0 then
+    Mem_Cpy(@ipArp, @dest_ip, 4)
+  else
+    Mem_Cpy(@ipArp, @eth_gateway, 4);
+end;
+
+//******************************************************************************
+//* Name    : Search_Arp_Cache_Internal                                                 *
+//* Purpose : Search for  IP in ARP cache                                     *
+//******************************************************************************
+Function Search_Arp_Cache_Internal(var dest_ip : IpHeader; var dest_mac: MacHeader) : boolean;
+var
+  i: Byte;               // index of free slot in ARP cache
+  ipArp, ipa_masked, ip_masked: IpHeader;
+begin
+  Result := False;
+
+  ARP_Resolve_Segment_Gateway(dest_ip, ipArp);                                  // Determine the correct IP depending on if we are on the same segment or need the gateway
+  // Step in ARP cache
+  i := 0;
+  while i < ARP_CACHE_LENGTH do
+  begin
+    if ArpCache[i].Allocated then                                               // Is it the address I want in a valid slot
+      if not ArpCache[i].WaitingForReply then
+        if (Mem_Cmp(@ArpCache[i].Ip[0], @ipArp, 4) = 0) then
+        begin
+          Mem_Cpy(@dest_mac,@ArpCache[i].Mac[0], 6);                            // Yes, return ready to use MAC addr
+          Result := True;                                                       // Return OK
+          Exit;
+        end;
+    inc(i);
+  end;
+end;
+
+//******************************************************************************
+//* Name    : ARP_FindSlot
+//* Purpose : Finds the cached slot
+// Parameters: [IN] dest_ip : the IP address to find the arpCache slot for
+// Result: Returns the index of the slot or the index of an empty slot using a negative number or $FFFF if the cache it full
+//         note only Allocated is checked, if the slot is waiting for a reply with WaitingForReply = True it will return that slot
+//******************************************************************************
+function ARP_FindSlot(var ipArp: IpHeader): Integer;
+var
+  i: Integer;
+begin
+  i := Integer( ARP_CACHE_FULL);
+  while i < ARP_CACHE_LENGTH do
+  begin
+    if ArpCache[i].Allocated then
+    begin
+      if Mem_Cmp(@ArpCache[i].Ip[0], @ipArp, 4) = 0 then
+      begin
+        Result := i;
+        Break
+      end
+    end else
+      Result := -i;          // Return the -empty slot
+    Inc(i);
+  end;
+end;
+
+//******************************************************************************
+//* Name    : ARP_Send
+//* Purpose : Send ARP Request
+// Parameters: [IN, OUT] dest_ip : the IP address to resolve the MAC for
+//             [OUT]     dest_mac : the MAC for the IP passed if the result is true
+//******************************************************************************
+Function ARP_Send(var dest_ip : IpHeader; var dest_mac: MacHeader) : boolean;
+var
+  CurrentVerifyingTime : Longint;          // oldest slot timer in ARP cache
+  ipArp, ip_target_masked : IpHeader;
+  Slot: Integer;
+begin
+  Result := False;
+  if IsLinkUp then                                                              // Make sure the Link is operating
+  begin
+    ARP_Resolve_Segment_Gateway(dest_ip, ipArp);                                // Determine the correct IP depending on if we are on the same segment or need the gateway
+
+    Slot := ARP_FindSlot(ipArp);
+    if Slot <> ARP_CACHE_FULL then
+    begin
+      DisableInt;
+      CurrentVerifyingTime := ARP_100ms_Counter;                                // Save LongTmr, NOT an atomic operation
+      EnableInt;
+
+      if Slot < 0 then
+      begin
+        Slot := abs(Slot);                                                      // No match, empty slot index
+        ArpCache[Slot].Allocated := True;
+        ArpCache[Slot].WaitingForReply := True;
+      end else
+      begin
+        if ArpCache[Slot].WaitingForReply then                                  // Match
+        begin                                                                   // Allocated but not Valid yet
+          if (ArpCache[Slot].ArpVerifyTime + (SocketManager.UDP_Wait div 100)) > CurrentVerifyingTime then
+            ARP_EraseSlot(ArpCache[Slot]);
+          Exit;
+        end else
+        begin
+          Mem_Cpy(@dest_mac, @ArpCache[Slot].Mac[0], 6);                        // Yes, return ready to use MAC addr
+          Result := True;                                                       // Return OK
+          if (ArpCache[Slot].ArpVerifyTime + 12000) < CurrentVerifyingTime then // too old ?  More than 1200 sec
+            Exit;                                                               // return the cached MAC address but don't need to refresh the ARP cache
+        end
+      end;
+
+      EthMemSet(TXSTART, $FF, 6);             // Broadcast MAC for ARP
+      CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+      WriteToEthMem(TXSTART + 12, $08);
+      Eth_PutByte($06);                     // ETHType
+      Eth_PutByte($00);                     //
+      Eth_PutByte($01);                     // ETHnet 10base
+      Eth_PutByte($08);                     //
+      Eth_PutByte($00);                     // IP verion 4
+      Eth_PutByte($06);                     // Hardware address length
+      Eth_PutByte($04);                     // Protocol address length
+      Eth_PutByte($00);
+      Eth_PutByte($01);                     // ARP request
+      CopyRamToEthMem(@eth_mac, TXSTART + 22, 6);
+      CopyRamToEthMem(@eth_ip_addr, TXSTART + 28, 4);
+      EthMemSet(TXSTART + 32, 0, 6);
+      CopyRamToEthMem(@ipArp, TXSTART + 38, 4);
+      Eth_Send(42);
+      Mem_Cpy(@ArpCache[Slot].Ip[0], @ipArp, 4);
+      ArpCache[Slot].WaitingForReply := False;
+      ArpCache[Slot].ArpVerifyTime := CurrentVerifyingTime;
+    end
+  end else
+    ARP_EraseCache_Internal;   // Link is down, clear the cache and get out
+End;
+
+//******************************************************************************
+//* Name    : ARP_Validate_IP
+//* Purpose : Send ARP request
+// Description:
+//   Checks the local ARP cache and if not found sends an ARP to validate the IP
+// address and update the local ARP cache.  If the IP is validated returns true, 
+// if the ARP is not replied to returns false and the IP can not be found
+//******************************************************************************
+function ARP_Validate_IP(var ip_arp_target : IpHeader; var mac_arp : MacHeader) : boolean;
+var
+  CountBuf: word;
+  i : byte;
+begin
+  Result := False;
+  i := 0;
+  while i < MAX_ARP_VALIDATE_TRIES do
+  begin
+    if ARP_Send(ip_arp_target, mac_arp) then
+    begin
+      Result := True;
+      Break;
+    end else
+    begin
+      if IsLinkUp then
+      begin
+        TickCounter1 := 0;
+        CountBuf := 0;
+        while CountBuf < SocketManager.UDP_Wait do
+        begin
+          Do_EthernetProc(1);                                                   // Sniff for the result
+          if Search_Arp_Cache_Internal(ip_arp_target, mac_arp) then             // Search in ARP cache for Result
+          begin
+            Result := True;
+            Break;
+          end;
+          CountBuf := TickCounter1;
+        end;
+      end else
+        Exit                                                                    // Link down get out of here
+    end;
+    Inc(i);
+  end;
+end;
+
+end.

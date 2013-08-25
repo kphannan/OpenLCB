@@ -2,6 +2,7 @@ unit lib1_enc600_V3_5_b;
 
 uses 
   dspic_additional_string_library,
+  EthCommon,
   Lib_Delays_LIO,
   definitions_ENC600;
   
@@ -19,7 +20,8 @@ Procedure Eth_BSF(register_address : byte; mask : word);
 Procedure Eth_BCF(register_address : byte; mask : word);
 Function Eth_ReadReg(register_address : byte) : word;
 Procedure Eth_WriteReg(register_address : byte; data_b : word);
-function Check_Link : boolean;
+procedure Eth_Send(length_w : word);
+function IsLinkUp : boolean;
 procedure Eth_PutByte(value : byte);
 function Eth_GetByte : byte;
 Procedure Eth_WritePHYReg(register_address : byte; data_b : word);
@@ -48,9 +50,7 @@ function EthMemCompareWithFlash(start_eth_address : word; start_Flash_address : 
 function Eth_Cksum(start_eth_address, length_w : word) : word;
 procedure Put_UDPPointer;
 procedure Put_TCPPointer;
-procedure Get_Time;
-procedure EraseArpCache;
-procedure ErasePingCache;
+
 procedure EraseSockets;
 procedure Firewall(F_ICMP, F_TCP, F_UDP : boolean);
 function Search_Port(protocol : byte; port_ : word) : boolean;
@@ -61,7 +61,6 @@ procedure TCP_Open_Port(port_t : word);
 procedure UDP_Close_Port(port_u : word);
 procedure TCP_Close_Port(port_t : word);
 procedure Eth_Policy(poli : byte);
-function Process_NTP(var data_in : array[48] of byte; len_ : byte) : byte;
 function debugg_stack : word;
 procedure Set_TCP_TimeOut_Interval(int_ : word);
 function String2NTP(var strin : string[32]) : dword;
@@ -81,20 +80,14 @@ const
   TXSTART              : word = $0000;
   GPSTART              : word = $0800;
 
-  ETH_ARP                     : word = $0806;
-  ETH_ARP_REQ                 : byte = $01;
-  ETH_ARP_RES                 : byte = $02;
-
   ETH_IP                     : word = $0800;
   ETH_IP_TCP                 : byte = $06;
   ETH_IP_UDP                 : byte = $11;
-  ETH_IP_ICMP                 : byte = $01;
+  ETH_IP_ICMP                : byte = $01;
   ETH_IP_ICMP_ECHO           : byte = $08;
-  ETH_IP_ICMP_REPLY           : byte = $00;
+  ETH_IP_ICMP_REPLY          : byte = $00;
 
   max_packet           : word = 1518;
-  CacheLength          : byte = 2;
-  PingCacheLength      : byte = 9;
 
   URG                  : byte = 5;
   ACK                  : byte = 4;
@@ -118,63 +111,9 @@ const
   REJECT               : byte = 1;
   DROP                 : byte = 2;
 
-  MAX_SOCKET              : byte = 8;
+  MAX_SOCKET           : byte = 8;
 
-const 
-  DHCP_DISCOVER_MESSAGE = 1;
-  DHCP_REQUEST_MESSAGE = 3;
-  DHCP_SERVER_IDENTIFIER = 54;
-  DHCP_SERVER_IDENTIFIER_LEN = 4;
-  DHCP_PARAM_REQUEST_IP_ADDRESS = 50;
-  DHCP_PARAM_REQUEST_IP_ADDRESS_LEN = 4;
-  BOOT_REPLY = 2;
-  DHCP_MESSAGE_TYPE = 53;
-  DHCP_SUBNET_MASK = 1;
-  DHCP_GATEWAY = 3;
-  DHCP_DNS = 6;
-  DHCP_END_OPTION = 255;
-  DHCP_IP_LEASE_TIME = 51;
-  DHCP_OFFER = 2;
-  DHCP_ACK = 5;
-
-  dhcp_c_1 : array[12] of byte = ($01,$01,$06,$00,$68,$BB,$2E,$23,$00,$00,$80,$00); far;
-  dhcp_c_2 : array[4] of byte = ($63,$82,$53,$63); far;
-  dhcp_c_3 : array[5] of byte = ($37,$03,$01,$03,$06); far;
-      
-type 
-  IpHeader = array[4] of byte;
-  MacHeader = array[6] of byte;
-
-type TPingCache = Record
-     IpP                : IpHeader;
-     MacP               : MacHeader;
-     Time               : word;
-     UserTime           : word;
-     T                  : word;
-     TTL                : byte;
-     UserTTL            : byte;
-end;
-
-type TArpCache = Record
-     Valid             : boolean;
-     tmr               : longint;
-     Ip                : IpHeader;
-     Mac               : MacHeader;
-end;
-
-type TNtp = Record
-     Rfc          : dWord;
-     Unix         : dWord;
-     Year         : word;
-     Month        : byte;
-     Day          : byte;
-     Hour         : byte;
-     Min          : byte;
-     Sec          : byte;
-     SSec         : byte;
-     Str          : string[24];
-end;
-
+// Socket Types
 type 
   TSocket = record
     State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
@@ -192,60 +131,36 @@ type
     RAM_ROM         : word;
     Keep_Alive      : boolean;
     TCP_buf         : string[1024];
+  //  TxBuffer,
+  //  RxBuffer        : array[1024] of Byte;
   end;
-
-type 
-  TDNS_Header = record
-    TransactionID        : word;
-    Flags                : word;
-    Questions            : word;
-    Answers              : word;
-    AuthoritativeRecords : word;
-    AdditionalRecords    : word;
+  
+  TSocketManager = record
+    TCP_Wait,
+    UDP_Wait : word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
+    Socket : array[MAX_SOCKET] of TSocket;
+    iLastOpenedSocked : word;                                                   // Last Socket index that was opened
   end;
-
-type
-  TDNS_Answer_Header = record
-    ResponseName        : word;
-    ResponseType        : word;
-    ResponseClass       : word;
-    ResponseTTL         : dword;
-    ResponseLen         : word;
-  end;
-
-var 
-  DNSHeader : TDNS_Header;
-  DNSAnswerHeader : TDNS_Answer_Header;
-  DNS_TR_ID : word;
 
 var
-  ip_masked : IpHeader;
-  eth_ip_addr : IpHeader;
+  eth_ip_addr : IpHeader;   
+  eth_mac : MacHeader;
+  
   eth_dns_addr : IpHeader;
   eth_ntp_addr : IpHeader;
   eth_gateway : IpHeader;
   eth_mask : IpHeader;
-  eth_mac : MacHeader;
-  dest_ip_addr : IpHeader;
-  dest_ip_addr1 : IpHeader;
-  dest_ip_addr2 : IpHeader;
   resp_ip_addr : IpHeader;
-  dest_mac : MacHeader;
+
   source_port : word;
   len,cksum_ip,cksum_udp,cksum_tcp,udp_counter : word;
   AddrPacket, NextPacket : word;
-  ArpCache : array[CacheLength] of TArpCache;
-  PingCache : array[PingCacheLength] of TPingCache;
-  LongTmr : longint;
   SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
   count_100 : byte;
   Window,tcp_counter : word;
   TickCounter1, TickCounter2, TickCounter10 : word;
 
-  FICMP,FTCP,FUDP, NTP_Sync, DNS_resp : boolean;
-  NTP_Time : dWord;
-  NTP_Sec, NTP_ReSync : Word;
-  TTime : TNtp;
+  FICMP,FTCP,FUDP, NTP_Sync : boolean;
   Offset_Time : longint;
   offset_clock_err : short;
 
@@ -256,34 +171,16 @@ var
   set_cs, set_reset : word;
   clr_cs, clr_reset : word;
 
-  link_status : boolean;
-
   save_int : byte;
 
-  DHCPServerID : IpHeader;
-  DHCP_State : byte;
-  tmp_ip_addr,tmp_gat_addr,tmp_mask_addr,tmp_dns_addr : IpHeader;
-  DHCP_count_1,DHCP_count_2 : word;
-  DHCP_count_3 : dword;
-  DHCP_Lease_Time : dword;
+  tmp_ip_addr, tmp_gat_addr, tmp_mask_addr : IpHeader;
   announce : boolean;
-  DHCP_Enable : boolean;
 
   hw_cksum,udp_broadcast,broadcast_packet : boolean;
   dynamic_var_addr : word;
-  DHCP_SEND_PORT,DHCP_RECEIVE_PORT : word;
-  
-type
-  TSocketManager = record
-    TCP_Wait,
-    UDP_Wait : word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
-    Socket : array[MAX_SOCKET] of TSocket;
-    iLastOpenedSocked : word;                                                   // Last Socket index that was opened
-  end;
   
 var
   SocketManager: TSocketManager;
-  
     
 implementation
 
@@ -412,6 +309,24 @@ Begin
   WCmd4(WCRUCMD_,register_address,data_b);
 End;
 
+procedure Eth_Send(length_w : word);
+var address : word;
+begin
+  ClrWdt;
+
+  Eth_WriteReg(ETXST_, TXSTART);    // Set the start of packet
+
+  Eth_WriteReg(ETXLEN_, length_w);
+
+  Eth_BSF(ECON1_,ECON1_TXRTS_);
+
+  address := 1;
+  while (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) <> 0 do
+    begin
+      if inc(address) = 0 then Break;
+    end;
+end;
+
 Procedure Eth_SendSystemReset;
 begin
   while true do
@@ -458,11 +373,11 @@ Begin
   result := Eth_ReadReg(MIRD_);
 End;
 
-function Check_Link : boolean;
+function IsLinkUp : boolean;
 begin
   result := true;
   if (Eth_ReadReg(ESTAT_) and $0100) = 0 then
-    if (Eth_ReadReg(ESTAT_) and $0100) = 0 then 
+    if (Eth_ReadReg(ESTAT_) and $0100) = 0 then
       result := false;
 end;
 
@@ -908,103 +823,6 @@ begin
   WriteToEthMem(TXSTART+53,$00);
 end;
 
-procedure Get_Time;
-var buf : dWord;
-    TempDay, TempMonth, buf_d : word;
-    text : string[3];
-begin
-  DisableInt;
-  TTime.Rfc := NTP_Time;
-  EnableInt;
-  TTime.Unix := TTime.Rfc - 2208988800;
-  buf := TTime.Unix;
-  TTime.SSec := word(NTP_Sec div 10);
-  TTime.Sec := dword(buf Mod 60);
-  buf := buf div 60;
-  TTime.Min := dword(buf Mod 60);
-  buf := buf div 60;
-  TTime.Hour := dword(buf Mod 24);
-  buf := buf div 24;
-  buf_d := Word(buf);
-  TTime.Year := (buf_d div 1461)*4 + 1970;
-  buf_d := buf_d Mod 1461;
-  While true do
-    begin
-      TempDay := 365;
-      If (TTime.Year And $03) = 0 Then TempDay := 366;
-      If TempDay > buf_d Then break;
-      buf_d := buf_d - TempDay;
-      Inc (TTime.Year);
-    end;
-  inc(buf_d);
-  For TTime.Month := 1 To 12 do
-    begin
-      TempMonth := Months_Days[TTime.Month];
-      if (TTime.Month = 2) and (TempDay = 366) then TempMonth := 29;
-      If buf_d <= TempMonth Then break;
-      buf_d := buf_d - TempMonth;
-    end;
-  TTime.Day := buf_d;
-  
-  Byte2StrWithZeros(TTime.Day, TTime.Str);
-  Str_Cut_Left(TTime.Str,1);
-  Str_Cat(TTime.Str, '.');
-
-  Byte2StrWithZeros(TTime.Month, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime.Str, text);
-
-  Str_Cat(TTime.Str, '.');
-
-  Word2Str(TTime.Year,text);
-  Str_Cat(TTime.Str, text);
-
-  Str_Cat(TTime.Str, ' ');
-
-  Byte2StrWithZeros(TTime.Hour, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime.Str, text);
-  Str_Cat(TTime.Str, ':');
-  Byte2StrWithZeros(TTime.Min, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime.Str, text);
-  Str_Cat(TTime.Str, ':');
-  Byte2StrWithZeros(TTime.Sec, text);
-  Str_Cut_Left(text,1);
-  Str_Cat(TTime.Str, text);
-end;
-
-procedure EraseArpCache;
-var j : byte;
-begin
-  j := 0;
-  while j < CacheLength do
-    begin
-      Mem_Set(@ArpCache[j].Ip, 0, 4);
-      Mem_Set(@ArpCache[j].Mac, 0, 6);
-      ArpCache[j].Valid := False;
-      ArpCache[j].Tmr := 0;
-      inc(j);
-    end;
-end;
-
-procedure ErasePingCache;
-var j : byte;
-begin
-  j := 0;
-  while j < PingCacheLength do
-    begin
-      Mem_Set(@PingCache[j].IpP, 0, 4);
-      Mem_Set(@PingCache[j].MacP, 0, 6);
-      PingCache[j].Time := 0;
-      PingCache[j].UserTime := 0;
-      PingCache[j].T := 0;
-      PingCache[j].TTL := 0;
-      PingCache[j].UserTTL := 0;
-      inc(j);
-    end;
-end;
-
 procedure EraseSockets;
 var j : byte;
 begin
@@ -1133,44 +951,6 @@ end;
 procedure Eth_Policy(poli : byte);
 begin
   policy := poli;
-end;
-
-//******************************************************************************
-//* Name    : Process_NTP                                                      *
-//* Purpose : NTP Response for NTP Server                                      *
-//******************************************************************************
-function Process_NTP(var data_in : array[48] of byte; len_ : byte) : byte;
-begin
-  result := 0;
-  if (len_ <> 48) or ((data_in[0] and $03) <> 1) then exit; // simmetric active
-
-  data_in[0] := $1A;
-  data_in[1] := $01;
-  data_in[2] := $08;
-  data_in[3] := $E3;
-  Mem_Set(@data_in[4], 0, 8);
-  data_in[12] := $41;
-  data_in[13] := $43;
-  data_in[14] := $54;
-  data_in[15] := $53;
-
-  Mem_Cpy(@data_in[24], @data_in[40], 8);
-
-  DisableInt;
-  data_in[32] := Highest(Ntp_Time);
-  data_in[33] := Higher(Ntp_Time);
-  data_in[34] := Hi(Ntp_Time);
-  data_in[35] := Lo(Ntp_Time);
-  EnableInt;
-  data_in[36] := 0;
-  data_in[37] := 0;
-  data_in[38] := 0;
-  data_in[39] := 0;
-
-  Mem_Cpy(@data_in[40], @data_in[32], 8);
-  Mem_Cpy(@data_in[16], @data_in[32], 8);
-
-  result := 48;
 end;
 
 function debugg_stack : word;

@@ -27,6 +27,7 @@ uses
   HelperFunctions,
   NMRAnetDefinesShared,
   NMRAnetDefines,
+  EthCommon,
   lib1_enc600_V3_5_b;
 
 const

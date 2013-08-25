@@ -1,0 +1,180 @@
+unit EthNTP;
+
+uses
+  EthCommon,
+  EthArp,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+const
+  UDP_NETWORK_TIME_PORT = 123;
+  UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT = 23455;   // Arbitrary Port
+  
+type 
+  TNtp = record
+    Rfc          : dWord;
+    Unix         : dWord;
+    Year         : word;
+    Month        : byte;
+    Day          : byte;
+    Hour         : byte;
+    Min          : byte;
+    Sec          : byte;
+    SSec         : byte;
+    Str          : string[24];
+  end;
+  
+// User Functions
+function NTP_Query() : boolean;
+procedure NTP_GetTime;
+function NTP_Process(var data_in : array[48] of byte; len_ : byte) : byte;
+
+// Externally defined functions
+procedure DisableInt; external;
+procedure EnableInt; external;
+procedure Do_EthernetProc(n : word); external;
+procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word); external;
+
+var
+  NTP_Time : dWord;
+  NTP_Sec, NTP_ReSync : Word;
+  TTime : TNtp;
+
+implementation
+
+//******************************************************************************
+//* Name    : NTP_Process                                                      *
+//* Purpose : NTP Response for NTP Server                                      *
+//******************************************************************************
+function NTP_Process(var data_in : array[48] of byte; len_ : byte) : byte;
+begin
+  result := 0;
+  if (len_ <> 48) or ((data_in[0] and $03) <> 1) then 
+    exit; // simmetric active
+
+  data_in[0] := $1A;
+  data_in[1] := $01;
+  data_in[2] := $08;
+  data_in[3] := $E3;
+  Mem_Set(@data_in[4], 0, 8);
+  data_in[12] := $41;
+  data_in[13] := $43;
+  data_in[14] := $54;
+  data_in[15] := $53;
+
+  Mem_Cpy(@data_in[24], @data_in[40], 8);
+
+  DisableInt;
+  data_in[32] := Highest(Ntp_Time);
+  data_in[33] := Higher(Ntp_Time);
+  data_in[34] := Hi(Ntp_Time);
+  data_in[35] := Lo(Ntp_Time);
+  EnableInt;
+  data_in[36] := 0;
+  data_in[37] := 0;
+  data_in[38] := 0;
+  data_in[39] := 0;
+
+  Mem_Cpy(@data_in[40], @data_in[32], 8);
+  Mem_Cpy(@data_in[16], @data_in[32], 8);
+
+  result := 48;
+end;
+
+//******************************************************************************
+//* Name    : NTP_Query                                                        *
+//* Purpose : Send NTP request                                                 *
+//******************************************************************************
+function NTP_Query : boolean;
+var
+  ntp_mac : MacHeader;
+begin
+  Result := False;
+  if ARP_Validate_IP(eth_ntp_addr, ntp_mac) = False then
+    Exit;
+  Result := True;
+  Open_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
+  CopyRamToEthMem(@ntp_mac, TXSTART, 6);
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@eth_ntp_addr, TXSTART + 30, 4);
+  EthMemSet(TXSTART+42,0,48);
+  Put_UDPPointer;
+  Eth_PutByte($d9);
+  Eth_PutByte($00);
+  Eth_PutByte($0a);
+  Eth_PutByte($fa);
+  WriteToEthMem(TXSTART+42+9,$01);
+  Eth_PutByte($02);
+  Eth_PutByte($90);
+  Eth_SendUDP(UDP_NETWORK_TIME_PORT, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT, 48);
+end;
+
+procedure NTP_GetTime;
+var buf : dWord;
+    TempDay, TempMonth, buf_d : word;
+    text : string[3];
+begin
+  DisableInt;
+  TTime.Rfc := NTP_Time;
+  EnableInt;
+  TTime.Unix := TTime.Rfc - 2208988800;
+  buf := TTime.Unix;
+  TTime.SSec := word(NTP_Sec div 10);
+  TTime.Sec := dword(buf Mod 60);
+  buf := buf div 60;
+  TTime.Min := dword(buf Mod 60);
+  buf := buf div 60;
+  TTime.Hour := dword(buf Mod 24);
+  buf := buf div 24;
+  buf_d := Word(buf);
+  TTime.Year := (buf_d div 1461)*4 + 1970;
+  buf_d := buf_d Mod 1461;
+  While true do
+    begin
+      TempDay := 365;
+      If (TTime.Year And $03) = 0 Then TempDay := 366;
+      If TempDay > buf_d Then break;
+      buf_d := buf_d - TempDay;
+      Inc (TTime.Year);
+    end;
+  inc(buf_d);
+  For TTime.Month := 1 To 12 do
+    begin
+      TempMonth := Months_Days[TTime.Month];
+      if (TTime.Month = 2) and (TempDay = 366) then TempMonth := 29;
+      If buf_d <= TempMonth Then break;
+      buf_d := buf_d - TempMonth;
+    end;
+  TTime.Day := buf_d;
+
+  Byte2StrWithZeros(TTime.Day, TTime.Str);
+  Str_Cut_Left(TTime.Str,1);
+  Str_Cat(TTime.Str, '.');
+
+  Byte2StrWithZeros(TTime.Month, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime.Str, text);
+
+  Str_Cat(TTime.Str, '.');
+
+  Word2Str(TTime.Year,text);
+  Str_Cat(TTime.Str, text);
+
+  Str_Cat(TTime.Str, ' ');
+
+  Byte2StrWithZeros(TTime.Hour, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime.Str, text);
+  Str_Cat(TTime.Str, ':');
+  Byte2StrWithZeros(TTime.Min, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime.Str, text);
+  Str_Cat(TTime.Str, ':');
+  Byte2StrWithZeros(TTime.Sec, text);
+  Str_Cut_Left(text,1);
+  Str_Cat(TTime.Str, text);
+end;
+
+end.

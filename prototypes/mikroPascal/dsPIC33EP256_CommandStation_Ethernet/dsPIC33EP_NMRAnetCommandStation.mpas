@@ -448,7 +448,7 @@ begin
     end;
     
     Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
-    Process_DHCP;
+    DHCP_Process(AddrPacket);
     
     if UART1_Data_Ready = 1 then
     begin

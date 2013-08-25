@@ -1,0 +1,391 @@
+unit EthDHCP;
+
+uses
+  EthCommon,
+  EthARP,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+const
+  DHCP_DISCOVER_MESSAGE = 1;
+  DHCP_REQUEST_MESSAGE = 3;
+  DHCP_SERVER_IDENTIFIER = 54;
+  DHCP_SERVER_IDENTIFIER_LEN = 4;
+  DHCP_PARAM_REQUEST_IP_ADDRESS = 50;
+  DHCP_PARAM_REQUEST_IP_ADDRESS_LEN = 4;
+  BOOT_REPLY = 2;
+  DHCP_MESSAGE_TYPE = 53;
+  DHCP_SUBNET_MASK = 1;
+  DHCP_GATEWAY = 3;
+  DHCP_DNS = 6;
+  DHCP_END_OPTION = 255;
+  DHCP_IP_LEASE_TIME = 51;
+  DHCP_OFFER = 2;
+  DHCP_ACK = 5;
+
+  dhcp_c_1 : array[12] of byte = ($01,$01,$06,$00,$68,$BB,$2E,$23,$00,$00,$80,$00); far;
+  dhcp_c_2 : array[4] of byte = ($63,$82,$53,$63); far;
+  dhcp_c_3 : array[5] of byte = ($37,$03,$01,$03,$06); far;
+  
+  UDP_DHCP_BOOTPS_SEND_PORT = 67;
+  UDP_DHCP_BOOTPC_RECEIVE_PORT = 68;
+  
+var
+  DHCPServerID : IpHeader;
+  DHCP_State : byte;
+  tmp_dns_addr : IpHeader;
+  DHCP_count_1,DHCP_count_2 : word;
+  DHCP_count_3 : dword;
+  DHCP_Lease_Time : dword;
+  DHCP_Enable : boolean;
+  
+// User Functions
+function DHCP_Request(EthMemAddressRequest: Word): boolean;
+procedure DHCP_Process(EthMemAddressRequest: Word);
+
+// Internally used functions
+procedure DHCP_ProcessPacket_Internal(EthMemAddressRequest: Word);
+
+// Externally defined functions
+function Eth_ReadPacket : word; external;
+procedure Eth_ProcessUDP; external;
+procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word); external;
+
+implementation
+
+procedure DHCP_ProcessPacket_Internal(EthMemAddressRequest: Word);
+var
+  Align, end_loop : byte;
+begin
+  Align := ReadFromEthMem(EthMemAddressRequest + 42);
+  if (DHCP_State = 1) and (Align = BOOT_REPLY) then
+    begin
+      CopyEthMemToRam(EthMemAddressRequest + (42 + 16),@tmp_ip_addr,4);
+      Align := ReadFromEthMem(EthMemAddressRequest + (41 + 240));
+      end_loop := 0;
+      while end_loop = 0 do
+        begin
+           Align := Eth_GetByte;
+
+           case Align of
+
+             DHCP_MESSAGE_TYPE :
+               begin
+                 Align := Eth_GetByte;                    // Skip len
+                 // Len must be 1.
+                 if Align = 1 then
+                   begin
+                     Align := Eth_GetByte;        // Get type
+                     if Align <> DHCP_OFFER then Exit;
+                   end
+                 else Exit;
+               end;
+
+             DHCP_SERVER_IDENTIFIER :
+               begin
+                 Align := Eth_GetByte;                         // Get len
+                 // Len must be 4.
+                 if Align = 4 then CopyEthMem_CPToRam(@DHCPServerID, 4)
+                 else Exit;
+               end;
+
+             DHCP_END_OPTION : end_loop := 1
+
+             else
+               begin
+                 // Ignore all unsupport tags.
+                 Align := Eth_GetByte;     // Get option len
+                 while Align <> 0 do       // Ignore option values
+                   begin
+                     Eth_GetByte;
+                     dec(Align);
+                   end;
+               end;
+           end;
+        end;
+      DHCP_State := 2;
+    end
+  else
+  if (DHCP_State = 2) and (Align = BOOT_REPLY) then
+    begin
+      CopyEthMemToRam(EthMemAddressRequest + (42 + 16),@tmp_ip_addr,4);
+      Align := ReadFromEthMem(EthMemAddressRequest + (41 + 240));
+      end_loop := 0;
+      while end_loop = 0 do
+        begin
+           Align := Eth_GetByte;
+
+           case Align of
+
+             DHCP_MESSAGE_TYPE :
+               begin
+                 Align := Eth_GetByte;                    // Skip len
+                 // Len must be 1.
+                 if Align = 1 then
+                   begin
+                     Align := Eth_GetByte;        // Get type
+                     if Align <> DHCP_ACK then Exit;
+                   end
+                 else Exit;
+               end;
+
+             DHCP_SUBNET_MASK :
+               begin
+                 Align := Eth_GetByte;                     // Skip len
+                 // Len must be 4.
+                 if Align = 4 then CopyEthMem_CPToRam(@tmp_mask_addr, 4)
+                 else Exit;
+               end;
+
+             DHCP_GATEWAY :
+               begin
+                 Align := Eth_GetByte;
+                 // Len must be >= 4.
+                 if Align >= 4 then CopyEthMem_CPToRam(@tmp_gat_addr, 4)
+                 else Exit;
+
+                 {*
+                  * Discard any other router addresses.
+                  *}
+                 Align := Align - 4;
+                 while Align <> 0 do
+                   begin
+                     Eth_getByte;
+                     dec(Align);
+                   end;
+               end;
+
+             DHCP_DNS :
+               begin
+                 Align := Eth_GetByte;
+                 // Len must be >= 4.
+                 if Align >= 4 then CopyEthMem_CPToRam(@tmp_dns_addr, 4)
+                 else Exit;
+
+                 {*
+                  * Discard any other router addresses.
+                  *}
+                 Align := Align - 4;
+                 while Align <> 0 do
+                   begin
+                     Eth_getByte;
+                     dec(Align);
+                   end;
+               end;
+
+             DHCP_IP_LEASE_TIME :
+               begin
+                 Align := Eth_GetByte;
+                 // Len must be 4.
+                 if Align = 4 then
+                   begin
+                     CopyEthMem_CPToRam_Inv(@DHCP_Lease_Time,4);
+                     if DHCP_Lease_Time > (3600*6) then DHCP_Lease_Time := (3600*6); // 6 ore
+                   end
+                 else Exit;
+               end;
+
+             DHCP_END_OPTION : end_loop := 1
+
+             else
+               begin
+                 // Ignore all unsupport tags.
+                 Align := Eth_GetByte;     // Get option len
+                 while Align <> 0 do       // Ignore option values
+                   begin
+                     Eth_GetByte;
+                     dec(Align);
+                   end;
+               end;
+           end;
+        end;
+      DHCP_State := 3;
+    end;
+end;
+
+//******************************************************************************
+//* Name    : Eth_DoDHCP                                                       *
+//* Purpose : Process incomming DHCP packets                                   *
+//******************************************************************************
+procedure Eth_DoDHCP(EthMemAddressRequest: Word);
+begin
+  clrwdt;
+  if (Eth_ReadReg(EIR_) and $0040) <> 0 then
+    begin
+      if Eth_ReadPacket = ETH_IP then
+        begin
+          if ReadFromEthMem(EthMemAddressRequest+23) = ETH_IP_UDP then
+            Eth_ProcessUDP;
+        end;
+    end;
+end;
+
+//******************************************************************************
+//* Name    : Send_DHCP                                                        *
+//* Purpose : Send DHCP request                                                *
+//******************************************************************************
+procedure Send_DHCP(msg_type : byte);
+var
+  len_data : word;
+begin
+  EthMemSet(TXSTART, $FF, 6);
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
+  EthMemSet(TXSTART + 26, 0, 4);
+  EthMemSet(TXSTART + 30, $FF, 4);
+
+  Put_UDPPointer;
+
+  if msg_type <> DHCP_REQUEST_MESSAGE then
+    Mem_Cpy(@tmp_ip_addr, @eth_ip_addr, 4);
+
+  len_data := (12 + 16 + 6 + 202 + 6 + 1 + 5 + 1);
+
+  CopyFlashToEthMem_CP(@dhcp_c_1, 12);
+
+  EthMemSet_CP(0,4);
+
+  EthMemSet_CP(0,12);
+
+  // my MAC address
+  CopyRamToEthMem_CP(@eth_mac, 6);
+
+  // no server host name, no boot file name
+  EthMemSet_CP(0,202);
+
+  // magic cookie
+  CopyFlashToEthMem_CP(@dhcp_c_2, 4) ;
+
+  Eth_PutByte($35);  // DHCP message type
+  Eth_PutByte($01);  // length 1
+
+  // first option is message type
+  Eth_PutByte(msg_type);
+
+  Eth_PutByte(DHCP_PARAM_REQUEST_IP_ADDRESS);
+  Eth_PutByte(DHCP_PARAM_REQUEST_IP_ADDRESS_LEN);
+  CopyRamToEthMem_CP(@tmp_ip_addr,4);
+  len_data := len_data + 6;
+
+  if msg_type = DHCP_REQUEST_MESSAGE then
+    begin
+    // if not discover message, add server identifier option
+      Eth_PutByte(DHCP_SERVER_IDENTIFIER);
+      Eth_PutByte(DHCP_SERVER_IDENTIFIER_LEN);
+      CopyRamToEthMem_CP(@DHCPServerID, 4);
+      len_data := len_data + 6;
+    end;
+
+  CopyFlashToEthMem_CP(@dhcp_c_3, 5);
+
+  Eth_PutByte(DHCP_END_OPTION);
+
+  Eth_SendUDP(UDP_DHCP_BOOTPS_SEND_PORT, UDP_DHCP_BOOTPC_RECEIVE_PORT, len_data);
+end;
+
+//******************************************************************************
+//* Name    : DHCP_Request                                                     *
+//* Purpose : Get IP through DHCP                                              *
+//******************************************************************************
+function DHCP_Request(EthMemAddressRequest: Word): boolean;
+var CountBuf : word;
+    i : byte;
+begin
+  Result := False;
+  DHCP_State := 0;
+  i := 0;
+  while i < 3 do
+    begin
+      if IsLinkUp = False then
+        Exit;
+      UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+      DHCP_State := 1;
+      Send_DHCP(DHCP_DISCOVER_MESSAGE);
+      TickCounter1 := 0;
+      CountBuf := 0;
+      while CountBuf < SocketManager.UDP_Wait do
+        begin
+          Eth_DoDHCP(EthMemAddressRequest);
+          if DHCP_State = 2 then 
+            Break;
+          CountBuf := TickCounter1;
+        end;
+      UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+      if DHCP_State = 2 then Break;
+      inc(i);
+    end;
+
+  if DHCP_State <> 2 then
+    begin
+      DHCP_State := 0;
+      Exit;
+    end;
+
+  i := 0;
+  while i < 3 do
+    begin
+      if IsLinkUp = False then
+        begin
+          DHCP_State := 0;
+          Exit;
+        end;
+      UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+      DHCP_State := 2;
+      Send_DHCP(DHCP_REQUEST_MESSAGE);
+      TickCounter1 := 0;
+      CountBuf := 0;
+      while CountBuf < SocketManager.UDP_Wait do
+      begin
+        Eth_DoDHCP(EthMemAddressRequest);
+        if DHCP_State = 3 then
+          Break;
+        CountBuf := TickCounter1;
+      end;
+      UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+      if DHCP_State = 3 then
+        Break;
+      inc(i);
+    end;
+
+  if DHCP_State <> 3 then
+    begin
+      DHCP_State := 0;
+      Exit;
+    end;
+
+  Mem_Cpy(@eth_ip_addr,@tmp_ip_addr,4);
+  Mem_Cpy(@eth_gateway,@tmp_gat_addr,4);
+  Mem_Cpy(@eth_mask,@tmp_mask_addr,4);
+  Mem_Cpy(@eth_dns_addr,@tmp_dns_addr,4);
+  DHCP_count_3 := 0;
+  Result := True;
+end;
+
+//******************************************************************************
+//* Name    : DHCP_Process                                                     *
+//* Purpose : Get IP through DHCP                                              *
+//******************************************************************************
+procedure DHCP_Process(EthMemAddressRequest: Word);
+begin
+  if DHCP_count_1 > 9 then  // 1sec
+    begin
+      DHCP_count_1 := 0;
+      if IsLinkUp = False then
+        begin
+          DHCP_State := 0;
+          DHCP_count_2 := 294;
+          ARP_EraseCache_Internal;
+        end
+      else
+      if (DHCP_State = 0) and (DHCP_Enable <> 0) then
+        begin
+          if DHCP_count_2 > 299 then   // 5min
+            begin
+              DHCP_count_2 := 0;
+              DHCP_Request(EthMemAddressRequest);
+            end;
+        end;
+    end;
+end;
+
+end.

@@ -235,24 +235,24 @@ end;
 // *****************************************************************************
 function BinarySearchAliasID(var LocalNodes: TNodes; AliasID: Word): Integer;
 var
-  Min, Max, Middle: Integer;
+  MinLocal, MaxLocal, Middle: Integer;
   MidAliasID: Word;
 begin
-  Min := 0;
-  Max := LocalNodes.AllocatedCount - 1;
-  while Min <= Max do
+  MinLocal := 0;
+  MaxLocal := LocalNodes.AllocatedCount - 1;
+  while MinLocal <= MaxLocal do
   begin
-    Middle := (Min + Max) shr 1;
+    Middle := (MinLocal + MaxLocal) shr 1;
     MidAliasID := LocalNodes.AllocatedList[Middle]^.Info.AliasID;
     if AliasID < MidAliasID then
-      Max := Middle - 1
+      MaxLocal := Middle - 1
     else
     if AliasID = MidAliasID then
     begin
       Result := Middle;
       Exit
     end else
-      Min := Middle + 1
+      MinLocal := Middle + 1
   end;
   Result := -1;
 end;

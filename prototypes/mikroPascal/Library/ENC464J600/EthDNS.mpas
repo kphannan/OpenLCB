@@ -1,0 +1,280 @@
+unit EthDNS;
+
+uses
+  EthCommon,
+  dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+const
+  UDP_DYNAMIC_NAME_SYSTEM_PORT = 53;
+  UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT = 23456;
+  
+// DNS Types
+type
+  TDNS_Header = record
+    TransactionID        : word;
+    Flags                : word;
+    Questions            : word;
+    Answers              : word;
+    AuthoritativeRecords : word;
+    AdditionalRecords    : word;
+  end;
+
+  TDNS_Answer_Header = record
+    ResponseName        : word;
+    ResponseType        : word;
+    ResponseClass       : word;
+    ResponseTTL         : dword;
+    ResponseLen         : word;
+  end;
+
+  TDNS_Manager = record
+    Header: TDNS_Header;
+    AnswerHeader: TDNS_Answer_Header;
+    TransactionID: word;
+    Response: Boolean;          // Cross method flag to detect response from DNS query
+  end;
+  
+// User functions
+
+function Dns_Resolve(var text_in_ : string[40]; var dns_ip : IpHeader) : boolean;
+
+// Internally used functions
+procedure DNS_ProcessPacket_Internal(EthMemAddressRequest: Word); 
+function Dns_query_Internal(var text_in : string[40]) : boolean;
+
+// Externally defined functions
+procedure Do_EthernetProc(n : word); external;
+function Send_UDP(var ip_u : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean; external;
+  
+var
+  DNS_Manager: TDNS_Manager;
+
+implementation
+
+//******************************************************************************
+//* Name    : Dns_query                                                        *
+//* Purpose : Send DNS request                                                 *
+//******************************************************************************
+function Dns_query_Internal(var text_in : string[40]) : boolean;
+var 
+  data_ : array[64] of byte;
+  i, j : byte;
+  data_len : word;
+  pt1, pt2 : ^byte;
+begin
+  if Str_Len(text_in) < 3 then 
+    Exit;
+  DNS_Manager.TransactionID := $00B5;
+  Mem_Set(@data_, 0, 64); // clear data
+  data_[1] := $B5;
+  data_[2] := $01;
+  data_[5] := $01;
+  data_[12] := '.';
+  i := Str_Len(text_in);
+  Mem_Cpy(@data_[13], @text_in, i);
+  data_[15+i] := $01;
+  data_[17+i] := $01;
+  data_len := 18 + i;
+  pt2 := @data_[12];
+  pt1 := pt2 + 1;
+  while pt2^ <> 0 do
+    begin
+      j := 0;
+      while (pt1^ <> '.') and (pt1^ <> 0) do
+        begin
+          inc(j);
+          pt1 := pt1 + 1;
+        end;
+      pt2^ := j;
+      pt2 := pt1;
+      pt1 := pt1 + 1;
+    end;
+
+  Result := False;
+  if Send_UDP(eth_dns_addr, UDP_DYNAMIC_NAME_SYSTEM_PORT, UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT, data_len, data_) = False then
+    Exit;
+  Result := True;
+end;
+
+//******************************************************************************
+//* Name    : Dns_Resolve                                                      *
+//* Purpose : Send DNS request                                                 *
+//******************************************************************************
+function Dns_Resolve(var text_in_ : string[40]; var dns_ip : IpHeader) : boolean;
+var 
+  CountBuf : word;
+  i : byte;
+begin
+  Mem_Set(@dns_ip, 0, 4);
+  Result := False;
+  i := 0;
+  while i < 3 do
+    begin
+      if IsLinkUp = False then
+        Exit;
+      DNS_Manager.Response := False;
+      if Dns_query_Internal(text_in_) = False then Exit;
+      UDP_Open_Port(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
+      TickCounter1 := 0;
+      CountBuf := 0;
+      while CountBuf < SocketManager.UDP_Wait do
+        begin
+          Do_EthernetProc(1);
+          if DNS_Manager.Response <> 0 then
+            Break;
+          CountBuf := TickCounter1;
+        end;
+      UDP_Close_Port(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
+      if DNS_Manager.Response <> 0 then
+        Break;
+      inc(i);
+    end;
+
+  if DNS_Manager.Response = False then
+    Exit;
+
+  Mem_Cpy(@dns_ip, @resp_ip_addr, 4);
+  Result := True;
+end;
+
+//******************************************************************************
+//* Name    : DNS_ProcessPacket_Internal                                                      *
+//* Purpose : Send DNS request                                                 *
+//******************************************************************************
+procedure DNS_ProcessPacket_Internal(EthMemAddressRequest: Word);
+begin
+  Hi(DNS_Manager.Header.TransactionID) := ReadFromEthMem(EthMemAddressRequest + 42);
+  Lo(DNS_Manager.Header.TransactionID) := Eth_GetByte;
+
+  // Throw this packet away if it isn't in response to our last query
+  If DNS_Manager.Header.TransactionID <> DNS_Manager.TransactionID Then
+    Exit;
+
+  Hi(DNS_Manager.Header.Flags) := Eth_GetByte;
+  Lo(DNS_Manager.Header.Flags) := Eth_GetByte;
+  Hi(DNS_Manager.Header.Questions) := Eth_GetByte;
+  Lo(DNS_Manager.Header.Questions) := Eth_GetByte;
+  Hi(DNS_Manager.Header.Answers) := Eth_GetByte;
+  Lo(DNS_Manager.Header.Answers) := Eth_GetByte;
+  Hi(DNS_Manager.Header.AuthoritativeRecords) := Eth_GetByte;
+  Lo(DNS_Manager.Header.AuthoritativeRecords) := Eth_GetByte;
+  Hi(DNS_Manager.Header.AdditionalRecords) := Eth_GetByte;
+  Lo(DNS_Manager.Header.AdditionalRecords) := Eth_GetByte;
+
+  // Remove all questions
+  While DNS_Manager.Header.Questions <> 0 do
+  begin
+    while Eth_GetByte <> 0 do ;
+    Eth_GetByte;
+    Eth_GetByte;
+    Eth_GetByte;// Question class
+    Eth_GetByte;
+    dec(DNS_Manager.Header.Questions);
+  end;
+
+  // Scan through answers
+  While DNS_Manager.Header.Answers <> 0 do
+  begin
+    Hi(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;                // Response name
+    Lo(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;                // Response type
+    Lo(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseClass):= Eth_GetByte;        // Response class
+    Lo(DNS_Manager.AnswerHeader.ResponseClass):= Eth_GetByte;
+    Highest(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;                // Time to live
+    Higher(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Lo(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseLen):= Eth_GetByte;                // Response length
+    Lo(DNS_Manager.AnswerHeader.ResponseLen):= Eth_GetByte;
+
+   // Make sure that this is a 4 byte IP address, response type A or MX, class 1
+           // Check if this is Type A or MX
+    If (DNS_Manager.AnswerHeader.ResponseType = $0001) And (DNS_Manager.AnswerHeader.ResponseClass = $0001) And (DNS_Manager.AnswerHeader.ResponseLen = $0004) Then
+    begin
+      CopyEthMem_CPToRam(@resp_ip_addr, 4);
+      DNS_Manager.Response := True;
+      Exit;
+    end Else
+    begin
+      While DNS_Manager.AnswerHeader.ResponseLen <> 0 do
+        begin
+          Eth_GetByte;
+          dec(DNS_Manager.AnswerHeader.ResponseLen);
+        end;
+    end;
+    dec(DNS_Manager.Header.Answers);
+  end;
+
+  // Remove all Authoritative Records
+  While DNS_Manager.Header.AuthoritativeRecords <> 0 do
+  begin
+      Hi(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;                // Response name
+    Lo(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;                // Response type
+    Lo(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseClass):= Eth_GetByte;        // Response class
+    Lo(DNS_Manager.AnswerHeader.ResponseClass):= Eth_GetByte;
+    Highest(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;                // Time to live
+    Higher(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Lo(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseLen):= Eth_GetByte;                // Response length
+    Lo(DNS_Manager.AnswerHeader.ResponseLen):= Eth_GetByte;
+
+   // Make sure that this is a 4 byte IP address, response type A or MX, class 1
+           // Check if this is Type A or MX
+    If (DNS_Manager.AnswerHeader.ResponseType = $0001) And (DNS_Manager.AnswerHeader.ResponseClass = $0001) And (DNS_Manager.AnswerHeader.ResponseLen = $0004) Then
+    begin
+      CopyEthMem_CPToRam(@resp_ip_addr, 4);
+      DNS_Manager.Response := True;
+      Exit;
+    end Else
+    begin
+      While DNS_Manager.AnswerHeader.ResponseLen <> 0 do
+        begin
+          Eth_GetByte;
+          dec(DNS_Manager.AnswerHeader.ResponseLen);
+        end;
+    end;
+    dec(DNS_Manager.Header.AuthoritativeRecords);
+  end;
+
+  // Remove all Additional Records
+  While DNS_Manager.Header.AdditionalRecords <> 0 do
+  begin
+      Hi(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;                // Response name
+    Lo(DNS_Manager.AnswerHeader.ResponseName):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;                // Response type
+    Lo(DNS_Manager.AnswerHeader.ResponseType):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseClass):= Eth_GetByte;        // Response class
+    Lo(DNS_Manager.AnswerHeader.ResponseClass):= Eth_GetByte;
+    Highest(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;                // Time to live
+    Higher(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Lo(DNS_Manager.AnswerHeader.ResponseTTL):= Eth_GetByte;
+    Hi(DNS_Manager.AnswerHeader.ResponseLen):= Eth_GetByte;                // Response length
+    Lo(DNS_Manager.AnswerHeader.ResponseLen):= Eth_GetByte;
+
+   // Make sure that this is a 4 byte IP address, response type A or MX, class 1
+           // Check if this is Type A or MX
+    If (DNS_Manager.AnswerHeader.ResponseType = $0001) And (DNS_Manager.AnswerHeader.ResponseClass = $0001) And (DNS_Manager.AnswerHeader.ResponseLen = $0004) Then
+    begin
+      CopyEthMem_CPToRam(@resp_ip_addr, 4);
+      DNS_Manager.Response := True;
+      Exit;
+    end else
+    begin
+      While DNS_Manager.AnswerHeader.ResponseLen <> 0 do
+        begin
+          Eth_GetByte;
+          dec(DNS_Manager.AnswerHeader.ResponseLen);
+        end;
+    end;
+    dec(DNS_Manager.Header.AdditionalRecords);
+  end;
+end;
+
+end.

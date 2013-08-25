@@ -5,7 +5,13 @@ unit lib2_enc600_V3_5_b;
 uses dspic_additional_string_library,
      Lib_Delays_LIO,
      definitions_ENC600,
-     lib1_enc600_V3_5_b
+     lib1_enc600_V3_5_b,
+     EthPing,
+     EthARP,
+     EthDNS,
+     EthNTP,
+     EthDHCP,
+     EthCommon
    {  enc_lib_user,
      def_io,
      df_lib_SPI1};
@@ -13,40 +19,25 @@ uses dspic_additional_string_library,
 procedure CounterTask;
 Procedure Eth_Init_(use_user_MAC: Boolean);
 function Eth_ReadPacket : word;
-procedure Eth_Send(length_w : word);
 procedure Eth_MacSwap;
 procedure Eth_IpSwap;
 procedure Eth_MacSwap_User;
 procedure Eth_IpSwap_User;
-procedure Eth_ARPResponse;
-procedure Eth_ProcessARP;
-Function Eth_SendARP(var ipb : IpHeader) : boolean;
-Procedure Eth_PingResponse;
 Procedure Eth_Reject;
-procedure Eth_ProcessPing;
-Procedure Eth_SendPing(SlotState : byte; PingSlot : Byte);
 procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word);
 procedure SendUDP(dest_port_S, source_port_S, len_data : word; var data_udp : array[1472] of byte);
 procedure Eth_ProcessUDP;
 procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 procedure Eth_ProcessTCP;
 procedure Eth_DoPacket;
-Function Search_Arp_Cache(var ip_a : IpHeader) : boolean;
 function Send_TCP_R(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean;
 procedure Do_Stack;
 procedure Do_EthernetProc(n : word);
-function Send_ARP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean;
-function Send_Ping(var ip_p : IpHeader) : word;
 function Send_UDP(var ip_u : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
 procedure Send_UDP_Broadcast(var ip_u : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
-function DHCP_Request : boolean;
-procedure Process_DHCP;
 function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
 function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
-function Ntp_query() : boolean;
-function Dns_query(var text_in : string[40]) : boolean;
-function Dns_Resolve(var text_in_ : string[40]; var dns_ip : IpHeader) : boolean;
 procedure Wait_for_LAN;
 procedure Wait_With_Eth(n : word);
 
@@ -75,21 +66,13 @@ implementation
 procedure CounterTask;
 var i : byte;
 begin
-  inc(PingCache[0].T);
-  inc(PingCache[1].T);
-  inc(PingCache[2].T);
-  inc(PingCache[3].T);
-  inc(PingCache[4].T);
-  inc(PingCache[5].T);
-  inc(PingCache[6].T);
-  inc(PingCache[7].T);
-  inc(PingCache[8].T);
+  Ping_CacheTimerTask;
   inc(TickCounter1);
   inc(TickCounter2);
   inc(TickCounter10);
   if inc(count_100) > 99 then
     begin
-      Inc(LongTmr);
+      Inc(ARP_100ms_Counter);
       inc(DHCP_count_1);
       count_100 := 0;
     end;
@@ -129,7 +112,7 @@ var buf : word;
 Begin
   DisableInt;
   NTP_Time := 3534364800; // 2012
-  LongTmr := 12001;
+  ARP_100ms_Counter := 12001;
   EnableInt;
   NTP_Sync := False;
   Offset_Time := 0;
@@ -140,7 +123,7 @@ Begin
   TickCounter10 := 0;
   count_100 := 0;
   offset_clock_err := 0;
-  DNS_resp := False;
+  DNS_Manager.Response := False;
   TTime.Str := ' ';
   
   {$IFDEF RxInt}
@@ -210,8 +193,8 @@ Begin
   tcp_counter := 1000;
   ACK_No := $42844A80;
   SEQ_No := $42844A80;
-  EraseArpCache;
-  ErasePingCache;
+  ARP_EraseCache_Internal;
+  Ping_EraseCache_Internal;
   EraseSockets;
   Firewall(False, False, False);
   Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
@@ -230,9 +213,7 @@ Begin
   udp_broadcast := False;
   broadcast_packet := False;
   dynamic_var_addr := $1000;
-  
-  DHCP_SEND_PORT := 67;
-  DHCP_RECEIVE_PORT := 68{DHCP_SEND_PORT + 1};
+
   
   SocketManager.TCP_Wait := 500;
   SocketManager.UDP_Wait := 500;
@@ -264,217 +245,29 @@ begin
   else Eth_WriteReg(ERXTAIL_,NextPacket - 2);
 end;
 
-//******************************************************************************
-//* Name    : Eth_Send                                                         *
-//* Purpose : Send Packet to Ethernet module                                   *
-//******************************************************************************
-procedure Eth_Send(length_w : word);
-var address : word;
-begin
-  ClrWdt;
-
-  Eth_WriteReg(ETXST_, TXSTART);    // Set the start of packet
-
-  Eth_WriteReg(ETXLEN_, length_w);
-
-  Eth_BSF(ECON1_,ECON1_TXRTS_);
-
-  address := 1;
-  while (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) <> 0 do
-    begin
-      if inc(address) = 0 then Break;
-    end;
-end;
-
 procedure Eth_MacSwap;
 begin
-  CopyEthMemToEthMem(AddrPacket+6,TXSTART,6);
-  CopyRamToEthMem(@eth_mac,TXSTART+6,6);
+  CopyEthMemToEthMem(AddrPacket + 6, TXSTART, 6);
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
 end;
 
 procedure Eth_IpSwap;
 begin
-  CopyRamToEthMem(@eth_ip_addr,TXSTART+26,4);
-  CopyEthMemToEthMem(AddrPacket+26,TXSTART+30,4);
+  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+  CopyEthMemToEthMem(AddrPacket + 26, TXSTART + 30, 4);
 end;
 
 procedure Eth_MacSwap_User;
 begin
-  CopyRamToEthMem(@dest_mac,TXSTART,6);
-  CopyRamToEthMem(@eth_mac,TXSTART+6,6);
+//  CopyRamToEthMem(@dest_mac, TXSTART, 6);
+  CopyRamToEthMem(@eth_mac, TXSTART + 6, 6);
 end;
 
 procedure Eth_IpSwap_User;
 begin
-  CopyRamToEthMem(@eth_ip_addr,TXSTART+26,4);
-  CopyRamToEthMem(@dest_ip_addr,TXSTART+30,4);
+  CopyRamToEthMem(@eth_ip_addr, TXSTART + 26, 4);
+//  CopyRamToEthMem(@dest_ip_addr, TXSTART + 30, 4);
 end;
-
-//******************************************************************************
-//* Name    : Eth_ARPResponse                                                  *
-//* Purpose : Response to ARP request                                          *
-//******************************************************************************
-procedure Eth_ARPResponse;
-begin
-  Eth_MacSwap;
-  WriteToEthMem(TXSTART+12,$08);
-  Eth_PutByte($06);
-  Eth_PutByte($00);
-  Eth_PutByte($01);
-  Eth_PutByte($08);
-  Eth_PutByte($00);
-  Eth_PutByte($06);
-  Eth_PutByte($04);
-  Eth_PutByte($00);
-  Eth_PutByte($02);
-  CopyRamToEthMem(@eth_mac,TXSTART+22,6);
-  CopyEthMemToEthMem(AddrPacket+38,TXSTART+28,4);
-  CopyEthMemToEthMem(AddrPacket+6,TXSTART+32,6);
-  CopyEthMemToEthMem(AddrPacket+28,TXSTART+38,4);
-  Eth_Send(42);
-end;
-
-//******************************************************************************
-//* Name    : Eth_ProcessARP                                                   *
-//* Purpose : Process incomming ARP response                                   *
-//******************************************************************************
-procedure Eth_ProcessARP;
-var 
-  i : byte;
-  buft : longint;
-begin
-  // Step in ARP cache
-  i := 0;
-  while i < CacheLength do
-  begin
-    if (not ArpCache[i].Valid) and (EthMemCompareWithRam(AddrPacket+28, @ArpCache[i].Ip[0], 4) <> 0) then
-    begin
-      CopyEthMemToRam(AddrPacket+6, @ArpCache[i].Mac[0], 6);      // Yes, return ready to use MAC addr
-      ArpCache[i].Valid := True;
-      DisableInt;
-      buft := LongTmr;
-      EnableInt;
-      ArpCache[i].Tmr := buft;
-      Exit;
-    end;
-    inc(i);
-  end;
-end;
-
-//******************************************************************************
-//* Name    : Eth_SendARP                                                      *
-//* Purpose : Send ARP Request                                                 *
-//******************************************************************************
-Function Eth_SendARP(var ipb : IpHeader) : boolean;
-var
-  FreeSlot, i : Byte;                     // index of free slot in ARP cache
-  TmrBuf : Longint;                       // oldest slot timer in ARP cache
-  ipArp,ipb_masked : IpHeader;
-begin
-  Result := False;
-
-  if Check_Link = False then
-  begin
-    link_status := False;
-    EraseArpCache;
-    Exit;
-  end else 
-    link_status := True;
-
-  Mem_Cpy(@dest_ip_addr, @ipb, 4);
-
-  ip_masked[0] := eth_ip_addr[0] and eth_mask[0];
-  ip_masked[1] := eth_ip_addr[1] and eth_mask[1];
-  ip_masked[2] := eth_ip_addr[2] and eth_mask[2];
-  ip_masked[3] := eth_ip_addr[3] and eth_mask[3];
-
-  ipb_masked[0] := ipb[0] and eth_mask[0];
-  ipb_masked[1] := ipb[1] and eth_mask[1];
-  ipb_masked[2] := ipb[2] and eth_mask[2];
-  ipb_masked[3] := ipb[3] and eth_mask[3];
-
-  if Mem_Cmp(@ip_masked, @ipb_masked, 4) = 0 then 
-    Mem_Cpy(@ipArp, @ipb, 4)
-  else 
-    Mem_Cpy(@ipArp, @eth_gateway, 4);
-      
-  FreeSlot := 0;
-  // Step in ARP cache
-  i := 0;
-  while i < CacheLength do
-  begin
-    DisableInt;
-    TmrBuf := LongTmr; // Save LongTmr
-    EnableInt;
-    // Is it the address I want in a valid slot ?
-    if ArpCache[i].Valid <> 0 then
-    begin
-      if Mem_Cmp(@ArpCache[i].Ip[0], @ipArp, 4) = 0 then
-      begin
-        Mem_Cpy(@dest_mac, @ArpCache[i].Mac[0], 6);      // Yes, return ready to use MAC addr
-        Result := True;                                 // Return OK
-        if (ArpCache[i].Tmr + 12000) < TmrBuf then // too old ?  More than 1200 sec
-        begin
-          FreeSlot := i;
-          Break;              // Exit from Step in ARP cache
-        end else
-          Exit;
-      end;
-    end else
-    if (not ArpCache[i].Valid) and ((ArpCache[i].Tmr + (SocketManager.UDP_Wait div 100)) > TmrBuf) then
-    begin
-      if Mem_Cmp(@ArpCache[i].Ip[0], @ipArp, 4) = 0 then
-        Exit;                                           // no response yet for my ip
-    end else
-    begin
-      FreeSlot := i;
-      Break;
-    end;
-    inc(i);
-  end;
-  EthMemSet(TXSTART,$FF,6);
-  CopyRamToEthMem(@eth_mac,TXSTART+6,6);
-  WriteToEthMem(TXSTART+12,$08);
-  Eth_PutByte($06);                     // ETHType
-  Eth_PutByte($00);                     //
-  Eth_PutByte($01);                     // ETHnet 10base
-  Eth_PutByte($08);                     //
-  Eth_PutByte($00);                     // IP verion 4
-  Eth_PutByte($06);                     // Hardware address length
-  Eth_PutByte($04);                     // Protocol address length
-  Eth_PutByte($00);
-  Eth_PutByte($01);                     // ARP request
-  CopyRamToEthMem(@eth_mac,TXSTART+22,6);
-  CopyRamToEthMem(@eth_ip_addr,TXSTART+28,4);
-  EthMemSet(TXSTART+32,0,6);
-  CopyRamToEthMem(@ipArp,TXSTART+38,4);
-  Eth_Send(42);
-  Mem_Cpy(@ArpCache[FreeSlot].Ip[0], @ipArp, 4);
-  ArpCache[FreeSlot].Valid := False;
-  ArpCache[FreeSlot].Tmr := TmrBuf;
-End;
-
-//******************************************************************************
-//* Name    : Eth_PingResponse                                                 *
-//* Purpose : Response to ICMP request                                         *
-//******************************************************************************
-Procedure Eth_PingResponse;
-var cksum,PacketSize : word;
-Begin
-  //PacketSize := ReadFromEthMem(AddrPacket+16)*256 + Eth_GetByte;
-  Hi(PacketSize) := ReadFromEthMem(AddrPacket+16);
-  Lo(PacketSize) := Eth_GetByte;
-  PacketSize := PacketSize + 14;
-  Eth_MacSwap;
-  CopyEthMemToEthMem(AddrPacket+12,TXSTART+12,14);
-  Eth_IpSwap;
-  EthMemSet(TXSTART+34,0,4);
-  CopyEthMemToEthMem(AddrPacket+38,TXSTART+38,PacketSize-38);
-  cksum := Eth_Cksum(TXSTART+34,PacketSize-34);
-  WriteToEthMem(TXSTART+36,Hi(cksum));
-  Eth_PutByte(Lo(cksum));
-  Eth_Send(PacketSize);
-End;
 
 //******************************************************************************
 //* Name    : Eth_Reject                                                       *
@@ -521,91 +314,13 @@ Begin
 End;
 
 //******************************************************************************
-//* Name    : Eth_ProcessPing                                                  *
-//* Purpose : Process incomming ICMP response                                  *
-//******************************************************************************
-procedure Eth_ProcessPing;
-var i : byte;
-begin
-  i := 0;
-  while i < PingCacheLength do
-    begin
-      if (PingCache[i].Time = $FFFF) and (EthMemCompareWithRam(AddrPacket+26,@PingCache[i].IpP[0],4) <> 0) then
-        begin
-          PingCache[i].Time := PingCache[i].T;
-          PingCache[i].TTL := ReadFromEthMem(AddrPacket+22);
-          Exit;
-        end;
-      inc(i);
-    end;
-end;
-
-//******************************************************************************
-//* Name    : Eth_SendPing                                                     *
-//* Purpose : Send ICMP request, used by library                               *
-//******************************************************************************
-Procedure Eth_SendPing(SlotState : byte; PingSlot : Byte);
-var i, cksum : word;
-Begin
-  if PingSlot > (PingCacheLength - 1) then Exit;
-  PingCache[PingSlot].UserTime := PingCache[PingSlot].Time;
-  PingCache[PingSlot].UserTTL := PingCache[PingSlot].TTL;
-  PingCache[PingSlot].Time := $FFFF;
-  PingCache[PingSlot].TTL := 0;
-  Mem_Set(@PingCache[PingSlot].IpP, 0, 4);
-  Mem_Set(@PingCache[PingSlot].MacP, 0, 6);
-  if SlotState = False then Exit;
-  Mem_Cpy(@PingCache[PingSlot].IpP[0], @dest_ip_addr, 4);
-  Mem_Cpy(@PingCache[PingSlot].MacP[0], @dest_mac, 6);
-  Eth_MacSwap_User;
-  i := 60;
-  WriteToEthMem(TXSTART+12,$08);         // ETHType
-  Eth_PutByte($00);                      // ETHType
-  Eth_PutByte($45);                      // Version
-  Eth_PutByte($00);                      // Type of service
-  Eth_PutByte(Hi(i));                    // Hi Total length
-  Eth_PutByte(Lo(i));                    // Lo Total length
-  Eth_PutByte($AC);
-  Eth_PutByte($80);
-  Eth_PutByte($00);
-  Eth_PutByte($00);
-  Eth_PutByte($80);                      // Time to live
-  Eth_PutByte($01);                      // ICMP Protocol
-  Eth_PutByte($00);
-  Eth_PutByte($00);
-  Eth_IpSwap_User;
-  // fin checksum
-  cksum := Eth_Cksum(TXSTART+14,20);
-  WriteToEthMem(TXSTART+24,Hi(cksum));
-  Eth_PutByte(Lo(cksum));
-  WriteToEthMem(TXSTART+34,$08);
-  Eth_PutByte($00);
-  Eth_PutByte($00);
-  Eth_PutByte($00);
-  Eth_PutByte($03);
-  Eth_PutByte($00);
-  Eth_PutByte($14);
-  Eth_PutByte($0A);
-  i := 48;
-  while i < 80 do
-    begin
-      Eth_PutByte(i);
-      inc(i);
-    end;
-  cksum := Eth_Cksum(TXSTART+34,40);
-  WriteToEthMem(TXSTART+36,Hi(cksum));
-  Eth_PutByte(Lo(cksum));
-  Eth_Send(74);
-  PingCache[PingSlot].T := 0;
-End;
-
-//******************************************************************************
 //* Name    : Eth_SendUDP                                                      *
 //* Purpose : Send UDP packet, used by library                                 *
 //******************************************************************************
 procedure Eth_SendUDP(dest_portA, source_portA, PacketLenA : word);
-var TotalLen : word;
-    Align : byte;
+var 
+  TotalLen : word;
+  Align: byte;
 begin
   WriteToEthMem(TXSTART+12,$08);
   Eth_PutByte($00);
@@ -669,9 +384,11 @@ end;
 //* Purpose : Process incomming UDP packets                                    *
 //******************************************************************************
 procedure Eth_ProcessUDP;
-var PacketLen,source_port1,dest_port1 : word;
-    Align,end_loop : byte;
-    buft : dword;
+var 
+  PacketLen, source_port1, dest_port1 : word;
+  buft : dword;
+  dest_ip_addr: IpHeader;
+  Align: Byte;
 begin
   Hi(source_port1) := ReadFromEthMem(AddrPacket+36);
   Lo(source_port1) := Eth_GetByte;
@@ -706,316 +423,43 @@ begin
   len := len - 8;
   Hi(dest_port1) := ReadFromEthMem(AddrPacket+34);
   Lo(dest_port1) := Eth_GetByte;
-  CopyEthMemToRam(AddrPacket + 26,@dest_ip_addr1,4);
-  if (dest_port1 = 123) and (source_port1 = 23455) then
+  CopyEthMemToRam(AddrPacket + 26, @dest_ip_addr, 4);
+  
+  // Is it is Network Time Reply (NTP) to us
+  if (dest_port1 = UDP_NETWORK_TIME_PORT) and (source_port1 = UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT) then
+  begin
+    if (len = 48) then
     begin
-      if (len = 48) then
-        begin
-          CopyEthMemToRam_Inv(AddrPacket+82, @buft, 4);
-          DisableInt;
-          NTP_Time := buft + Offset_Time;
-          EnableInt;
-          NTP_Sync := True;
-          NTP_Sec := 0;
-          NTP_ReSync := 0;
-          Close_Port(UDP, 23455);
-          Exit;
-        end;
-    end;
-  if (dest_port1 = DHCP_SEND_PORT) and (source_port1 = DHCP_RECEIVE_PORT) then
-    begin
-      Align := ReadFromEthMem(AddrPacket + 42);
-      if (DHCP_State = 1) and (Align = BOOT_REPLY) then
-        begin
-          CopyEthMemToRam(AddrPacket + (42 + 16),@tmp_ip_addr,4);
-          Align := ReadFromEthMem(AddrPacket + (41 + 240));
-          end_loop := 0;
-          while end_loop = 0 do
-            begin
-               Align := Eth_GetByte;
-
-               case Align of
-
-                 DHCP_MESSAGE_TYPE :
-                   begin
-                     Align := Eth_GetByte;                    // Skip len
-                     // Len must be 1.
-                     if Align = 1 then
-                       begin
-                         Align := Eth_GetByte;        // Get type
-                         if Align <> DHCP_OFFER then Exit;
-                       end
-                     else Exit;
-                   end;
-
-                 DHCP_SERVER_IDENTIFIER :
-                   begin
-                     Align := Eth_GetByte;                         // Get len
-                     // Len must be 4.
-                     if Align = 4 then CopyEthMem_CPToRam(@DHCPServerID, 4)
-                     else Exit;
-                   end;
-
-                 DHCP_END_OPTION : end_loop := 1
-
-                 else
-                   begin
-                     // Ignore all unsupport tags.
-                     Align := Eth_GetByte;     // Get option len
-                     while Align <> 0 do       // Ignore option values
-                       begin
-                         Eth_GetByte;
-                         dec(Align);
-                       end;
-                   end;
-               end;
-            end;
-          DHCP_State := 2;
-        end
-      else
-      if (DHCP_State = 2) and (Align = BOOT_REPLY) then
-        begin
-          CopyEthMemToRam(AddrPacket + (42 + 16),@tmp_ip_addr,4);
-          Align := ReadFromEthMem(AddrPacket + (41 + 240));
-          end_loop := 0;
-          while end_loop = 0 do
-            begin
-               Align := Eth_GetByte;
-
-               case Align of
-
-                 DHCP_MESSAGE_TYPE :
-                   begin
-                     Align := Eth_GetByte;                    // Skip len
-                     // Len must be 1.
-                     if Align = 1 then
-                       begin
-                         Align := Eth_GetByte;        // Get type
-                         if Align <> DHCP_ACK then Exit;
-                       end
-                     else Exit;
-                   end;
-
-                 DHCP_SUBNET_MASK :
-                   begin
-                     Align := Eth_GetByte;                     // Skip len
-                     // Len must be 4.
-                     if Align = 4 then CopyEthMem_CPToRam(@tmp_mask_addr, 4)
-                     else Exit;
-                   end;
-
-                 DHCP_GATEWAY :
-                   begin
-                     Align := Eth_GetByte;
-                     // Len must be >= 4.
-                     if Align >= 4 then CopyEthMem_CPToRam(@tmp_gat_addr, 4)
-                     else Exit;
-
-                     {*
-                      * Discard any other router addresses.
-                      *}
-                     Align := Align - 4;
-                     while Align <> 0 do
-                       begin
-                         Eth_getByte;
-                         dec(Align);
-                       end;
-                   end;
-
-                 DHCP_DNS :
-                   begin
-                     Align := Eth_GetByte;
-                     // Len must be >= 4.
-                     if Align >= 4 then CopyEthMem_CPToRam(@tmp_dns_addr, 4)
-                     else Exit;
-
-                     {*
-                      * Discard any other router addresses.
-                      *}
-                     Align := Align - 4;
-                     while Align <> 0 do
-                       begin
-                         Eth_getByte;
-                         dec(Align);
-                       end;
-                   end;
-
-                 DHCP_IP_LEASE_TIME :
-                   begin
-                     Align := Eth_GetByte;
-                     // Len must be 4.
-                     if Align = 4 then
-                       begin
-                         CopyEthMem_CPToRam_Inv(@DHCP_Lease_Time,4);
-                         if DHCP_Lease_Time > (3600*6) then DHCP_Lease_Time := (3600*6); // 6 ore
-                       end
-                     else Exit;
-                   end;
-
-                 DHCP_END_OPTION : end_loop := 1
-
-                 else
-                   begin
-                     // Ignore all unsupport tags.
-                     Align := Eth_GetByte;     // Get option len
-                     while Align <> 0 do       // Ignore option values
-                       begin
-                         Eth_GetByte;
-                         dec(Align);
-                       end;
-                   end;
-               end;
-            end;
-          DHCP_State := 3;
-        end;
+      CopyEthMemToRam_Inv(AddrPacket+82, @buft, 4);
+      DisableInt;
+      NTP_Time := buft + Offset_Time;
+      EnableInt;
+      NTP_Sync := True;
+      NTP_Sec := 0;
+      NTP_ReSync := 0;
+      Close_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
       Exit;
     end;
-  if (dest_port1 = 53) and (source_port1 = 23456) then
-    begin
-      Hi(DNSHeader.TransactionID) := ReadFromEthMem(AddrPacket + 42);
-      Lo(DNSHeader.TransactionID) := Eth_GetByte;
+  end;
+  
+  // Is it a DHCP message to use?
+  if (dest_port1 = UDP_DHCP_BOOTPS_SEND_PORT) and (source_port1 = UDP_DHCP_BOOTPC_RECEIVE_PORT) then
+  begin
+    DHCP_ProcessPacket_Internal(AddrPacket);
+    Exit;
+  end;
+  
+  if (dest_port1 = UDP_DYNAMIC_NAME_SYSTEM_PORT) and (source_port1 = UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT) then
+  begin
+    DNS_ProcessPacket_Internal(AddrPacket);
+    Exit
+  end;
 
-      // Throw this packet away if it isn't in response to our last query
-      If DNSHeader.TransactionID <> DNS_TR_ID Then Exit;
-
-      Hi(DNSHeader.Flags) := Eth_GetByte;
-      Lo(DNSHeader.Flags) := Eth_GetByte;
-      Hi(DNSHeader.Questions) := Eth_GetByte;
-      Lo(DNSHeader.Questions) := Eth_GetByte;
-      Hi(DNSHeader.Answers) := Eth_GetByte;
-      Lo(DNSHeader.Answers) := Eth_GetByte;
-      Hi(DNSHeader.AuthoritativeRecords) := Eth_GetByte;
-      Lo(DNSHeader.AuthoritativeRecords) := Eth_GetByte;
-      Hi(DNSHeader.AdditionalRecords) := Eth_GetByte;
-      Lo(DNSHeader.AdditionalRecords) := Eth_GetByte;
-
-      // Remove all questions
-      While DNSHeader.Questions <> 0 do
-        begin
-          while Eth_GetByte <> 0 do ;
-          Eth_GetByte;
-          Eth_GetByte;
-          Eth_GetByte;// Question class
-          Eth_GetByte;
-          dec(DNSHeader.Questions);
-        end;
-
-      // Scan through answers
-      While DNSHeader.Answers <> 0 do
-        begin
-            Hi(DNSAnswerHeader.ResponseName):= Eth_GetByte;                // Response name
-          Lo(DNSAnswerHeader.ResponseName):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseType):= Eth_GetByte;                // Response type
-          Lo(DNSAnswerHeader.ResponseType):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseClass):= Eth_GetByte;        // Response class
-          Lo(DNSAnswerHeader.ResponseClass):= Eth_GetByte;
-          Highest(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;                // Time to live
-          Higher(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Lo(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseLen):= Eth_GetByte;                // Response length
-          Lo(DNSAnswerHeader.ResponseLen):= Eth_GetByte;
-
-         // Make sure that this is a 4 byte IP address, response type A or MX, class 1
-                 // Check if this is Type A or MX
-          If (DNSAnswerHeader.ResponseType = $0001) And
-          (DNSAnswerHeader.ResponseClass = $0001) And
-          (DNSAnswerHeader.ResponseLen = $0004) Then
-            begin
-              CopyEthMem_CPToRam(@resp_ip_addr, 4);
-              DNS_resp := True;
-              Exit;
-            end
-          Else
-            begin
-              While DNSAnswerHeader.ResponseLen <> 0 do
-                begin
-                  Eth_GetByte;
-                  dec(DNSAnswerHeader.ResponseLen);
-                end;
-            end;
-          dec(DNSHeader.Answers);
-        end;
-
-      // Remove all Authoritative Records
-      While DNSHeader.AuthoritativeRecords <> 0 do
-        begin
-            Hi(DNSAnswerHeader.ResponseName):= Eth_GetByte;                // Response name
-          Lo(DNSAnswerHeader.ResponseName):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseType):= Eth_GetByte;                // Response type
-          Lo(DNSAnswerHeader.ResponseType):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseClass):= Eth_GetByte;        // Response class
-          Lo(DNSAnswerHeader.ResponseClass):= Eth_GetByte;
-          Highest(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;                // Time to live
-          Higher(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Lo(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseLen):= Eth_GetByte;                // Response length
-          Lo(DNSAnswerHeader.ResponseLen):= Eth_GetByte;
-
-         // Make sure that this is a 4 byte IP address, response type A or MX, class 1
-                 // Check if this is Type A or MX
-          If (DNSAnswerHeader.ResponseType = $0001) And
-          (DNSAnswerHeader.ResponseClass = $0001) And
-          (DNSAnswerHeader.ResponseLen = $0004) Then
-            begin
-              CopyEthMem_CPToRam(@resp_ip_addr, 4);
-              DNS_resp := True;
-              Exit;
-            end
-          Else
-            begin
-              While DNSAnswerHeader.ResponseLen <> 0 do
-                begin
-                  Eth_GetByte;
-                  dec(DNSAnswerHeader.ResponseLen);
-                end;
-            end;
-          dec(DNSHeader.AuthoritativeRecords);
-        end;
-
-      // Remove all Additional Records
-      While DNSHeader.AdditionalRecords <> 0 do
-        begin
-            Hi(DNSAnswerHeader.ResponseName):= Eth_GetByte;                // Response name
-          Lo(DNSAnswerHeader.ResponseName):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseType):= Eth_GetByte;                // Response type
-          Lo(DNSAnswerHeader.ResponseType):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseClass):= Eth_GetByte;        // Response class
-          Lo(DNSAnswerHeader.ResponseClass):= Eth_GetByte;
-          Highest(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;                // Time to live
-          Higher(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Lo(DNSAnswerHeader.ResponseTTL):= Eth_GetByte;
-          Hi(DNSAnswerHeader.ResponseLen):= Eth_GetByte;                // Response length
-          Lo(DNSAnswerHeader.ResponseLen):= Eth_GetByte;
-
-         // Make sure that this is a 4 byte IP address, response type A or MX, class 1
-                 // Check if this is Type A or MX
-          If (DNSAnswerHeader.ResponseType = $0001) And
-          (DNSAnswerHeader.ResponseClass = $0001) And
-          (DNSAnswerHeader.ResponseLen = $0004) Then
-            begin
-              CopyEthMem_CPToRam(@resp_ip_addr, 4);
-              DNS_resp := True;
-              Exit;
-            end
-          Else
-            begin
-              While DNSAnswerHeader.ResponseLen <> 0 do
-                begin
-                  Eth_GetByte;
-                  dec(DNSAnswerHeader.ResponseLen);
-                end;
-            end;
-          dec(DNSHeader.AdditionalRecords);
-        end;
-      Exit;
-    end;
   WriteToEthMem(TXSTART+41,$00); // put tx pointer
   Align := ReadFromEthMem(AddrPacket + 41); // put rx pointer to start of UDP data.
-  PacketLen := Eth_UserUDP(dest_ip_addr1, dest_port1, source_port1, len);
-  if PacketLen = 0 then Exit;
+  PacketLen := Eth_UserUDP(dest_ip_addr, dest_port1, source_port1, len);
+  if PacketLen = 0 then 
+    Exit;
   Eth_MacSwap;
   Eth_IpSwap;
   Eth_SendUDP(dest_port1, source_port1, PacketLen);
@@ -1095,6 +539,7 @@ var
   PacketLen, source_port2, dest_port2, len_ack, i : word;
   Align, TCP_FlagReceive, TCP_FlagSend : byte;
   dest_mac2 : MacHeader;
+  dest_ip_addr: IpHeader;
 
 label 
   next_phs;
@@ -1140,7 +585,7 @@ begin
   CopyEthMemToRam_Inv(AddrPacket + 42,@ACK_NoR,4);
   Hi(Window) := ReadFromEthMem(AddrPacket+48);
   Lo(Window) := Eth_GetByte;
-  CopyEthMemToRam(AddrPacket + 26,@dest_ip_addr2,4);
+  CopyEthMemToRam(AddrPacket + 26,@dest_ip_addr,4);
   CopyEthMemToRam(AddrPacket + 6, @dest_mac2,6);
 
   if TCP_FlagReceive.RST = 1 then
@@ -1148,7 +593,7 @@ begin
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
     begin
-      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
       begin
         SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
         SocketManager.Socket[i].Keep_Alive := False;
@@ -1167,7 +612,7 @@ begin
       i := 0;
       while i < MAX_SOCKET do  // search for opened socket
       begin
-        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
         begin
           SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
           SocketManager.Socket[i].Keep_Alive := False;
@@ -1203,7 +648,7 @@ begin
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
       begin
-        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
              Break; // if connected
         inc(i);
       end;
@@ -1239,7 +684,7 @@ begin
     SocketManager.Socket[i].ACK_No_S := ACK_No;
     SocketManager.Socket[i].dest_port_S := dest_port2;
     SocketManager.Socket[i].source_port_S := source_port2;
-    Mem_Cpy(@SocketManager.Socket[i].Dest_Ip, @dest_ip_addr2, 4);
+    Mem_Cpy(@SocketManager.Socket[i].Dest_Ip, @dest_ip_addr, 4);
     Mem_Cpy(@SocketManager.Socket[i].Dest_Mac, @dest_mac2, 6);
     SocketManager.Socket[i].Exp_Time := 0;
     SocketManager.Socket[i].Start_addr := 0;
@@ -1258,7 +703,7 @@ begin
     i := 0;
     while i < MAX_SOCKET do  // search for connected socket
     begin
-      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
         Break;
       inc(i);
     end;
@@ -1292,7 +737,7 @@ begin
         
         Align := ReadFromEthMem(AddrPacket + 53); // put rx pointer to start of TCP data.
         if PacketLen <> 0 then 
-          Eth_UserTCP(dest_ip_addr2, source_port2, dest_port2, PacketLen, i);
+          Eth_UserTCP(dest_ip_addr, source_port2, dest_port2, PacketLen, i);
       end;
     end;
   end;
@@ -1316,25 +761,31 @@ begin
       case Eth_ReadPacket of
         ETH_ARP :
         begin
-          if EthMemCompareWithRam(AddrPacket+38,@eth_ip_addr,4) then
+          if EthMemCompareWithRam(AddrPacket + 38, @eth_ip_addr, 4) then
             begin
               case ReadFromEthMem(AddrPacket+21) of
-                ETH_ARP_REQ : Eth_ARPResponse;
-                ETH_ARP_RES : Eth_ProcessARP;
+                ETH_ARP_REQ : ARP_Reply_Internal(AddrPacket);
+                ETH_ARP_RES : ARP_Process_Internal(AddrPacket);
               end;
             end;
         end;
         ETH_IP :
         begin
-          if EthMemCompareWithRam(AddrPacket+30,@eth_ip_addr,4) then
-            begin
-              case ReadFromEthMem(AddrPacket+23) of
+          if EthMemCompareWithRam(AddrPacket + 30, @eth_ip_addr, 4) then
+          begin
+            case ReadFromEthMem(AddrPacket + 23) of
                 ETH_IP_ICMP :
                   begin
-                    case ReadFromEthMem(AddrPacket+34) of
-                      ETH_IP_ICMP_ECHO : if FICMP = False then
-                                           Eth_PingResponse;
-                      ETH_IP_ICMP_REPLY : Eth_ProcessPing;
+                    case ReadFromEthMem(AddrPacket + 34) of
+                      ETH_IP_ICMP_ECHO :
+                        begin
+                          if FICMP = False then
+                            Ping_Echo_Internal(AddrPacket)
+                        end;
+                      ETH_IP_ICMP_REPLY :
+                        begin
+                          Ping_Reply_Internal(AddrPacket);
+                        end;
                     end;
                   end;
                 ETH_IP_UDP :
@@ -1342,63 +793,25 @@ begin
                     if FUDP = False then
                       Eth_ProcessUDP;
                   end;
-                ETH_IP_TCP : 
+                ETH_IP_TCP :
                   begin
                     if FTCP = False then
                       Eth_ProcessTCP;
                   end;
-              end;
-              Exit;
             end;
+            Exit;
+          end;
           if udp_broadcast <> 0 then
 //          if EthMemCompareWithRam(AddrPacket+30,@eth_ip_addr,3) then
           if ReadFromEthMem(AddrPacket+33) = 255 then
-          if ReadFromEthMem(AddrPacket+23) = ETH_IP_UDP then
-          if FUDP = False then
-            begin
-              broadcast_packet := True;
-              Eth_ProcessUDP;
-            end;
+            if ReadFromEthMem(AddrPacket+23) = ETH_IP_UDP then
+              if FUDP = False then
+              begin
+                broadcast_packet := True;
+                Eth_ProcessUDP;
+              end;
         end;
       end;
-    end;
-end;
-
-//******************************************************************************
-//* Name    : Search_Arp_Cache                                                 *
-//* Purpose : Search for  MAC in ARP cache                                     *
-//******************************************************************************
-Function Search_Arp_Cache(var ip_a : IpHeader) : boolean;
-var i : Byte;               // index of free slot in ARP cache
-    ipArp1,ipa_masked : IpHeader;
-begin
-  Result := False;
-
-  ip_masked[0] := eth_ip_addr[0] and eth_mask[0];
-  ip_masked[1] := eth_ip_addr[1] and eth_mask[1];
-  ip_masked[2] := eth_ip_addr[2] and eth_mask[2];
-  ip_masked[3] := eth_ip_addr[3] and eth_mask[3];
-
-  ipa_masked[0] := ip_a[0] and eth_mask[0];
-  ipa_masked[1] := ip_a[1] and eth_mask[1];
-  ipa_masked[2] := ip_a[2] and eth_mask[2];
-  ipa_masked[3] := ip_a[3] and eth_mask[3];
-
-  if Mem_Cmp(@ip_masked, @ipa_masked, 4) = 0 then Mem_Cpy(@ipArp1,@ip_a,4)
-  else Mem_Cpy(@ipArp1,@eth_gateway,4);
-
-  // Step in ARP cache
-  i := 0;
-  while i < CacheLength do
-    begin
-      // Is it the address I want in a valid slot ?
-      if (ArpCache[i].Valid <> 0) and (Mem_Cmp(@ArpCache[i].Ip[0],@ipArp1,4) = 0) then
-        begin
-          Mem_Cpy(@dest_mac,@ArpCache[i].Mac[0],6);      // Yes, return ready to use MAC addr
-          Result := True;                                      // Return OK
-          Exit;
-        end;
-      inc(i);
     end;
 end;
 
@@ -1643,67 +1056,6 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Send_ARP                                                         *
-//* Purpose : Send ARP request                                                 *
-//******************************************************************************
-function Send_ARP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean;
-var 
-  CountBuf : word;
-  i : byte;
-begin
-  i := 0;
-  while i < 3 do
-    begin
-      Result := Eth_SendARP(ip_arp1);
-      
-      if Result = False then
-      begin
-        if link_status = False then
-          Exit;
-        TickCounter1 := 0;
-        CountBuf := 0;
-        while CountBuf < SocketManager.UDP_Wait do
-        begin
-          Do_EthernetProc(1);
-          Result := Search_Arp_Cache(ip_arp1); // Search in ARP cache for Result
-          if Result <> 0 then 
-            Break;
-          CountBuf := TickCounter1;
-        end;
-      end;
-      
-      if Result <> 0 then
-      begin
-        Mem_Cpy(@mac_arp, @dest_mac, 6);
-        Break;
-      end;
-      inc(i);
-    end;
-end;
-
-//******************************************************************************
-//* Name    : Send_Ping                                                        *
-//* Purpose : Send ICMP request                                                *
-//******************************************************************************
-function Send_Ping(var ip_p : IpHeader) : word;
-var CountBuf : word;
-    dummy_mac : MacHeader;
-begin
-  Result := $FFFF;
-  if Send_ARP(ip_p, dummy_mac) = False then Exit;
-  Eth_SendPing(True, 8);
-  TickCounter1 := 0;
-  CountBuf := 0;
-  while CountBuf < 3000 do
-    begin
-      Do_EthernetProc(1);
-      if PingCache[8].Time <> $FFFF then Break;
-      CountBuf := TickCounter1;
-    end;
-  Result := PingCache[8].Time;
-end;
-
-//******************************************************************************
 //* Name    : Send_UDP                                                         *
 //* Purpose : Send UDP packet                                                  *
 //******************************************************************************
@@ -1711,7 +1063,8 @@ function Send_UDP(var ip_u : IpHeader; dest_port_S, source_port_S, len_data : wo
 var dummy_mac : MacHeader;
 begin
   Result := False;
-  if Send_ARP(ip_u, dummy_mac) = False then Exit;
+  if ARP_Validate_IP(ip_u, dummy_mac) = False then
+    Exit;
   Result := True;
   SendUDP(dest_port_S, source_port_S, len_data, data_udp1);
 end;
@@ -1722,194 +1075,13 @@ end;
 //******************************************************************************
 procedure Send_UDP_Broadcast(var ip_u : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
 begin
-  dest_mac[0] := $FF;
+  {dest_mac[0] := $FF;
   dest_mac[1] := $FF;
   dest_mac[2] := $FF;
   dest_mac[3] := $FF;
   dest_mac[4] := $FF;
-  dest_mac[5] := $FF;
-  dest_ip_addr[0] := ip_u[0];
-  dest_ip_addr[1] := ip_u[1];
-  dest_ip_addr[2] := ip_u[2];
-  dest_ip_addr[3] := $FF;
+  dest_mac[5] := $FF;   }          // JDK
   SendUDP(dest_port_S, source_port_S, len_data, data_udp1);
-end;
-
-//******************************************************************************
-//* Name    : Eth_DoDHCP                                                       *
-//* Purpose : Process incomming DHCP packets                                   *
-//******************************************************************************
-procedure Eth_DoDHCP;
-begin
-  clrwdt;
-  if (Eth_ReadReg(EIR_) and $0040) <> 0 then
-    begin
-      if Eth_ReadPacket = ETH_IP then
-        begin
-          if ReadFromEthMem(AddrPacket+23) = ETH_IP_UDP then Eth_ProcessUDP;
-        end;
-    end;
-end;
-
-//******************************************************************************
-//* Name    : Send_DHCP                                                        *
-//* Purpose : Send DHCP request                                                *
-//******************************************************************************
-procedure Send_DHCP(msg_type : byte);
-var len_data : word;
-begin
-  EthMemSet(TXSTART,$FF,6);
-  CopyRamToEthMem(@eth_mac,TXSTART+6,6);
-  EthMemSet(TXSTART+26,0,4);
-  EthMemSet(TXSTART+30,$FF,4);
-
-  Put_UDPPointer;
-
-  if msg_type <> DHCP_REQUEST_MESSAGE then Mem_Cpy(@tmp_ip_addr,@eth_ip_addr,4);
-
-  len_data := (12 + 16 + 6 + 202 + 6 + 1 + 5 + 1);
-
-  CopyFlashToEthMem_CP(@dhcp_c_1, 12);
-
-  EthMemSet_CP(0,4);
-
-  EthMemSet_CP(0,12);
-
-  // my MAC address
-  CopyRamToEthMem_CP(@eth_mac, 6);
-
-  // no server host name, no boot file name
-  EthMemSet_CP(0,202);
-
-  // magic cookie
-  CopyFlashToEthMem_CP(@dhcp_c_2, 4) ;
-
-  Eth_PutByte($35);  // DHCP message type
-  Eth_PutByte($01);  // length 1
-
-  // first option is message type
-  Eth_PutByte(msg_type);
-
-  Eth_PutByte(DHCP_PARAM_REQUEST_IP_ADDRESS);
-  Eth_PutByte(DHCP_PARAM_REQUEST_IP_ADDRESS_LEN);
-  CopyRamToEthMem_CP(@tmp_ip_addr,4);
-  len_data := len_data + 6;
-
-  if msg_type = DHCP_REQUEST_MESSAGE then
-    begin
-    // if not discover message, add server identifier option
-      Eth_PutByte(DHCP_SERVER_IDENTIFIER);
-      Eth_PutByte(DHCP_SERVER_IDENTIFIER_LEN);
-      CopyRamToEthMem_CP(@DHCPServerID, 4);
-      len_data := len_data + 6;
-    end;
-
-  CopyFlashToEthMem_CP(@dhcp_c_3, 5);
-
-  Eth_PutByte(DHCP_END_OPTION);
-
-  Eth_SendUDP(DHCP_SEND_PORT, DHCP_RECEIVE_PORT, len_data);
-end;
-
-//******************************************************************************
-//* Name    : DHCP_Request                                                     *
-//* Purpose : Get IP through DHCP                                              *
-//******************************************************************************
-function DHCP_Request : boolean;
-var CountBuf : word;
-    i : byte;
-begin
-  Result := False;
-  DHCP_State := 0;
-  i := 0;
-  while i < 3 do
-    begin
-      if Check_Link = False then Exit;
-      UDP_Open_Port(DHCP_RECEIVE_PORT);
-      DHCP_State := 1;
-      Send_DHCP(DHCP_DISCOVER_MESSAGE);
-      TickCounter1 := 0;
-      CountBuf := 0;
-      while CountBuf < SocketManager.UDP_Wait do
-        begin
-          Eth_DoDHCP;
-          if DHCP_State = 2 then Break;
-          CountBuf := TickCounter1;
-        end;
-      UDP_Close_Port(DHCP_RECEIVE_PORT);
-      if DHCP_State = 2 then Break;
-      inc(i);
-    end;
-
-  if DHCP_State <> 2 then
-    begin
-      DHCP_State := 0;
-      Exit;
-    end;
-
-  i := 0;
-  while i < 3 do
-    begin
-      if Check_Link = False then
-        begin
-          DHCP_State := 0;
-          Exit;
-        end;
-      UDP_Open_Port(DHCP_RECEIVE_PORT);
-      DHCP_State := 2;
-      Send_DHCP(DHCP_REQUEST_MESSAGE);
-      TickCounter1 := 0;
-      CountBuf := 0;
-      while CountBuf < SocketManager.UDP_Wait do
-        begin
-          Eth_DoDHCP;
-          if DHCP_State = 3 then Break;
-          CountBuf := TickCounter1;
-        end;
-      UDP_Close_Port(DHCP_RECEIVE_PORT);
-      if DHCP_State = 3 then Break;
-      inc(i);
-    end;
-
-  if DHCP_State <> 3 then
-    begin
-      DHCP_State := 0;
-      Exit;
-    end;
-
-  Mem_Cpy(@eth_ip_addr,@tmp_ip_addr,4);
-  Mem_Cpy(@eth_gateway,@tmp_gat_addr,4);
-  Mem_Cpy(@eth_mask,@tmp_mask_addr,4);
-  Mem_Cpy(@eth_dns_addr,@tmp_dns_addr,4);
-  DHCP_count_3 := 0;
-  Result := True;
-end;
-
-//******************************************************************************
-//* Name    : Process_DHCP                                                     *
-//* Purpose : Get IP through DHCP                                              *
-//******************************************************************************
-procedure Process_DHCP;
-begin
-  if DHCP_count_1 > 9 then  // 1sec
-    begin
-      DHCP_count_1 := 0;
-      if Check_Link = False then
-        begin
-          DHCP_State := 0;
-          DHCP_count_2 := 294;
-          EraseArpCache;
-        end
-      else
-      if (DHCP_State = 0) and (DHCP_Enable <> 0) then
-        begin
-          if DHCP_count_2 > 299 then   // 5min
-            begin
-              DHCP_count_2 := 0;
-              DHCP_Request;
-            end;
-        end;
-    end;
 end;
 
 //******************************************************************************
@@ -1949,9 +1121,9 @@ end;
 function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
 var 
   i : byte;
-  dummy_mac: MacHeader;
+  dest_mac: MacHeader;
 begin
-  Result := Send_ARP(ip_t2, dummy_mac);
+  Result := ARP_Validate_IP(ip_t2, dest_mac);
   if Result = False then
     Exit;
 
@@ -2051,114 +1223,14 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Ntp_query                                                        *
-//* Purpose : Send NTP request                                                 *
-//******************************************************************************
-function Ntp_query : boolean;
-var dummy_mac : MacHeader;
-begin
-  Result := False;
-  if Send_ARP(eth_ntp_addr, dummy_mac) = False then Exit;
-  Result := True;
-  Open_Port(UDP, 23455);
-  Eth_MacSwap_User;
-  Eth_IpSwap_User;
-  EthMemSet(TXSTART+42,0,48);
-  Put_UDPPointer;
-  Eth_PutByte($d9);
-  Eth_PutByte($00);
-  Eth_PutByte($0a);
-  Eth_PutByte($fa);
-  WriteToEthMem(TXSTART+42+9,$01);
-  Eth_PutByte($02);
-  Eth_PutByte($90);
-  Eth_SendUDP(123, 23455, 48);
-end;
-
-//******************************************************************************
-//* Name    : Dns_query                                                        *
-//* Purpose : Send DNS request                                                 *
-//******************************************************************************
-function Dns_query(var text_in : string[40]) : boolean;
-var data_ : array[64] of byte;
-    i, j : byte;
-    data_len : word;
-    pt1, pt2 : ^byte;
-begin
-  if Str_Len(text_in) < 3 then Exit;
-  DNS_TR_ID := $00B5;
-  Mem_Set(@data_, 0, 64); // clear data
-  data_[1] := $B5;
-  data_[2] := $01;
-  data_[5] := $01;
-  data_[12] := '.';
-  i := Str_Len(text_in);
-  Mem_Cpy(@data_[13], @text_in, i);
-  data_[15+i] := $01;
-  data_[17+i] := $01;
-  data_len := 18 + i;
-  pt2 := @data_[12];
-  pt1 := pt2 + 1;
-  while pt2^ <> 0 do
-    begin
-      j := 0;
-      while (pt1^ <> '.') and (pt1^ <> 0) do
-        begin
-          inc(j);
-          pt1 := pt1 + 1;
-        end;
-      pt2^ := j;
-      pt2 := pt1;
-      pt1 := pt1 + 1;
-    end;
-
-  Result := False;
-  if Send_UDP(eth_dns_addr, 53, 23456, data_len, data_) = False then Exit;
-  Result := True;
-end;
-
-//******************************************************************************
-//* Name    : Dns_Resolve                                                      *
-//* Purpose : Send DNS request                                                 *
-//******************************************************************************
-function Dns_Resolve(var text_in_ : string[40]; var dns_ip : IpHeader) : boolean;
-var CountBuf : word;
-    i : byte;
-begin
-  Mem_Set(@dns_ip, 0, 4);
-  Result := False;
-  i := 0;
-  while i < 3 do
-    begin
-      if Check_Link = False then Exit;
-      DNS_resp := False;
-      if Dns_query(text_in_) = False then Exit;
-      UDP_Open_Port(23456);
-      TickCounter1 := 0;
-      CountBuf := 0;
-      while CountBuf < SocketManager.UDP_Wait do
-        begin
-          Do_EthernetProc(1);
-          if DNS_resp <> 0 then Break;
-          CountBuf := TickCounter1;
-        end;
-      UDP_Close_Port(23456);
-      if DNS_resp <> 0 then Break;
-      inc(i);
-    end;
-
-  if DNS_resp = False then Exit;
-
-  Mem_Cpy(@dns_ip, @resp_ip_addr, 4);
-  Result := True;
-end;
-
-//******************************************************************************
 //* Name    : Wait_for_LAN                                                     *
 //* Purpose : Wait for LAN                                                     *
 //******************************************************************************
 procedure Wait_for_LAN;
-var contorw : word;
+var 
+  contorw : word;
+  dest_ip_addr: IpHeader;
+  dest_mac: MacHeader;
 begin
   contorw := 0;
   while contorw < 60000 do
@@ -2169,18 +1241,18 @@ begin
       Eth_ReadPacket;
     delay_100us_;
     delay_100us_;
-    if Check_Link <> 0 then 
+    if IsLinkUp <> 0 then
       Break;
     inc(contorw);
   end;
   if announce <> 0 then
   begin
-    Mem_Set(@dest_ip_addr,$FF,4);
+    Mem_Set(@dest_ip_addr, $FF, 4);
     Mem_Set(@dest_mac,$FF,6);
-    Eth_SendPing(True,8);
+    Ping_Send_Internal(dest_ip_addr, dest_mac, 8);
   end;
   if DHCP_Enable <> 0 then 
-    DHCP_Request;
+    DHCP_Request(AddrPacket);
 end;
 
 procedure Wait_With_Eth(n : word);
