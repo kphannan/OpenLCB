@@ -1,6 +1,12 @@
 unit EthDHCP;
 
+{.$DEFINE LOG_UART}
+
 uses
+
+NMRAnetDefinesShared,
+
+
   EthCommon,
   EthARP,
   dspic_additional_string_library,
@@ -216,10 +222,15 @@ begin
   clrwdt;
   if (Eth_ReadReg(EIR_) and $0040) <> 0 then
     begin
+      {$IFDEF LOG_UART}UART1_Write_Text('DCHP Packet Available' + LF);{$ENDIF}
       if Eth_ReadPacket = ETH_IP then
         begin
+          {$IFDEF LOG_UART}UART1_Write_Text('DCHP Packet is IP' + LF);{$ENDIF}
           if ReadFromEthMem(EthMemAddressRequest+23) = ETH_IP_UDP then
+          begin
+            {$IFDEF LOG_UART}UART1_Write_Text('DCHP Packet is IP -> UDP' + LF);{$ENDIF}
             UDP_Process_Internal(EthMemAddressRequest);
+          end;
         end;
     end;
 end;
@@ -232,12 +243,12 @@ procedure Send_DHCP(msg_type : byte);
 var
   len_data : word;
 begin
-  EthMemSet(TXSTART, $FF, 6);
+  EthMemSet(TXSTART, $FF, 6);                          // Broadcast
   CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
   EthMemSet(TXSTART + 26, 0, 4);
   EthMemSet(TXSTART + 30, $FF, 4);
 
-  Put_UDPPointer;
+  WriteToEthMem(TXSTART+41,$00);
 
   if msg_type <> DHCP_REQUEST_MESSAGE then
     Mem_Cpy(@Temp_IP_Address, @Settings.eth_ip_addr, 4);
@@ -291,70 +302,75 @@ end;
 //* Purpose : Get IP through DHCP                                              *
 //******************************************************************************
 function DHCP_Request(EthMemAddressRequest: Word): boolean;
-var CountBuf : word;
-    i : byte;
+var 
+  CountBuf : word;
+  i : byte;
 begin
+  {$IFDEF LOG_UART}UART1_Write_Text('DCHP_Request' + LF);{$ENDIF}
   Result := False;
   DHCP_State := 0;
   i := 0;
   while i < 3 do
-    begin
-      if IsLinkUp = False then
-        Exit;
-      UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
-      DHCP_State := 1;
-      Send_DHCP(DHCP_DISCOVER_MESSAGE);
-      TickCounter1 := 0;
-      CountBuf := 0;
-      while CountBuf < SocketManager.UDP_Wait do
-        begin
-          Eth_DoDHCP(EthMemAddressRequest);
-          if DHCP_State = 2 then 
-            Break;
-          CountBuf := TickCounter1;
-        end;
-      UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
-      if DHCP_State = 2 then Break;
-      inc(i);
-    end;
-
-  if DHCP_State <> 2 then
-    begin
-      DHCP_State := 0;
+  begin
+    if IsLinkUp = False then
       Exit;
-    end;
-
-  i := 0;
-  while i < 3 do
-    begin
-      if IsLinkUp = False then
-        begin
-          DHCP_State := 0;
-          Exit;
-        end;
-      UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
-      DHCP_State := 2;
-      Send_DHCP(DHCP_REQUEST_MESSAGE);
-      TickCounter1 := 0;
-      CountBuf := 0;
-      while CountBuf < SocketManager.UDP_Wait do
+    UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    DHCP_State := 1;
+    {$IFDEF LOG_UART}UART1_Write_Text('DHCP sending DHCP_DISCOVER_MESSAGE' + LF);{$ENDIF}
+    Send_DHCP(DHCP_DISCOVER_MESSAGE);
+    TickCounter1 := 0;
+    CountBuf := 0;
+    while CountBuf < SocketManager.UDP_Wait do
       begin
         Eth_DoDHCP(EthMemAddressRequest);
-        if DHCP_State = 3 then
+        if DHCP_State = 2 then 
           Break;
         CountBuf := TickCounter1;
       end;
-      UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    if DHCP_State = 2 then 
+      Break;
+    inc(i);
+  end;
+
+  if DHCP_State <> 2 then
+  begin
+    DHCP_State := 0;
+    Exit;
+  end;
+
+  i := 0;
+  while i < 3 do
+  begin
+    if IsLinkUp = False then
+      begin
+        DHCP_State := 0;
+        Exit;
+      end;
+    UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    DHCP_State := 2;
+    {$IFDEF LOG_UART}UART1_Write_Text('DHCP sending DHCP_REQUEST_MESSAGE' + LF);{$ENDIF}
+    Send_DHCP(DHCP_REQUEST_MESSAGE);
+    TickCounter1 := 0;
+    CountBuf := 0;
+    while CountBuf < SocketManager.UDP_Wait do
+    begin
+      Eth_DoDHCP(EthMemAddressRequest);
       if DHCP_State = 3 then
         Break;
-      inc(i);
+      CountBuf := TickCounter1;
     end;
+    UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    if DHCP_State = 3 then
+      Break;
+    inc(i);
+  end;
 
   if DHCP_State <> 3 then
-    begin
-      DHCP_State := 0;
-      Exit;
-    end;
+  begin
+    DHCP_State := 0;
+    Exit;
+  end;
 
   Mem_Cpy(@Settings.eth_ip_addr,@Temp_IP_Address,4);
   Mem_Cpy(@Settings.eth_gateway,@Temp_Gateway_Address,4);
@@ -367,6 +383,7 @@ end;
 //******************************************************************************
 //* Name    : DHCP_Process                                                     *
 //* Purpose : Get IP through DHCP                                              *
+//  Poll this from the mainloop
 //******************************************************************************
 procedure DHCP_Process(EthMemAddressRequest: Word);
 begin

@@ -30,6 +30,7 @@ implementation
 
 procedure MCU_Setup_Enable_OlcbBus;
 begin
+
   // set mac address      This won't be used we set it to use the builtin chip MAC address later
   Settings.eth_mac[0] := 0x00;
   Settings.eth_mac[1] := 0x14;

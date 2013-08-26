@@ -1,6 +1,6 @@
 unit EthTCP;
 
-{$DEFINE LOG_UART}
+{.$DEFINE LOG_UART}
 
 uses
 
@@ -15,10 +15,11 @@ NMRAnetDefinesShared,
 function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 procedure Eth_ProcessTCP(EthMemAddressRequest: Word);
-procedure TCP_Init;
+
 
 // Internal functions
-function Send_TCP_R(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean;
+function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean;
+procedure TCP_Init_Internal;
 
 // External functions
 procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte); external;
@@ -32,11 +33,179 @@ var
   TCP_IdentificationCounter: word;
   Window : word;
 
-procedure TCP_Init;
+procedure TCP_Init_Internal;
 begin
   TCP_IdentificationCounter := 1000;
   ACK_No := $42844A80;
   SEQ_No := $42844A80;
+end;
+
+//******************************************************************************
+//* Name    : Send_TCP_R_Internal1                                                      *
+//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
+//******************************************************************************
+function Send_TCP_R_Internal1(TCP_Flag_T: byte; iSocket: byte; jj : word) : word;
+var j : word;
+    Stop_addr_S, Start_addr_S : dword;
+    kk : dword;
+var
+  ptf : ^far const byte;
+begin
+  Result := 0;
+  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
+  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
+
+  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Mac, TXSTART, 6);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART+6, 6);
+  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART+26, 4);
+  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Ip, TXSTART+30, 4);
+  WriteToEthMem(TXSTART+53,$00);
+
+  if SocketManager.Socket[iSocket].RAM_ROM = 0 then
+  begin
+    j := dword(Stop_addr_S - (Start_addr_S + jj));
+    if j >= packet_size_ then
+      j := packet_size_;
+    if j <> 0 then
+      CopyRamToEthMem_CP((Start_addr_S + jj), j);
+  end else
+  if SocketManager.Socket[iSocket].RAM_ROM = 1 then
+  begin
+    ptf := Start_addr_S + jj;
+    j := 0;
+    while dword(ptf) < Stop_addr_S do
+    begin
+      Eth_PutByte(ptf^);
+      ptf := ptf + 1;
+      if inc(j) >= packet_size_ then
+        Break;
+    end;
+    if j = 0 then
+      Exit;
+  end else
+  if SocketManager.Socket[iSocket].RAM_ROM = 2 then
+  begin
+
+    // Florin has this so it would copy data from an EEProm to the Ethernet for the webpage....
+
+    kk :=  dword(Stop_addr_S - (Start_addr_S + jj));
+    if kk >= packet_size_ then
+      j := packet_size_
+    else
+      j := kk;
+ //   DF_ContArrayToETH((Start_addr_S + jj),j);
+  end;
+
+  Eth_SendTCP(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, j, (SocketManager.Socket[iSocket].SEQ_No_S + jj), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
+
+  Result := j;
+end;
+
+//******************************************************************************
+//* Name    : Send_TCP_R_Internal                                                       *
+//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
+//******************************************************************************
+function Send_TCP_R_Internal(TCP_Flag_T: byte; iSocket, fragment: byte) : boolean;
+var
+  j, jj, mm, i : word;
+  Stop_addr_S, Start_addr_S, seq_buf : dword;
+  PacketAddressLen : dword;
+begin
+  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
+  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
+
+  Result := False;
+
+  i := 0;
+  while i < 3 do
+  begin
+    jj := 0;
+    j := 0;
+
+    Eth_DoPacket;
+    Eth_DoPacket;
+
+    packet_size_ := 1300;
+
+    seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
+
+    SocketManager.Socket[iSocket].Wait_ACK := 1;
+
+    mm := 1300;
+    PacketAddressLen := (Stop_addr_S - Start_addr_S);
+    if PacketAddressLen <= mm then
+    begin
+      if fragment <> 0 then
+      begin
+        if PacketAddressLen >= 4 then
+        begin
+          packet_size_ := PacketAddressLen div 2;
+          jj := Send_TCP_R_Internal1(ACK_S, iSocket, jj);
+        end;
+      end
+    end else
+      jj := Send_TCP_R_Internal1(ACK_S, iSocket, jj);
+
+    // Are we closing the Socket?
+    if TCP_Flag_T.FIN = 0 then
+      if TCP_Flag_T.SYN = 0 then
+        if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
+        begin
+          Result := False;
+          Exit;
+        end;
+
+    packet_size_ := 1300;
+
+    j := Send_TCP_R_Internal1(TCP_Flag_T, iSocket, jj);
+
+    TickCounter10 := 0;
+    while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
+    begin
+      Eth_DoPacket;
+      if SocketManager.Socket[iSocket].Wait_ACK = 0 then
+      begin
+        SocketManager.Socket[iSocket].Wait_ACK := 1;
+        if seq_buf <> SocketManager.Socket[iSocket].SEQ_No_S then
+          Break;
+      end;
+    end;
+    if TickCounter10 < SocketManager.TCP_Wait then
+      Break;
+    inc(i);
+  end;
+
+  if i = 3 then
+  begin
+    Exit;
+  end;
+
+  if TCP_Flag_T.FIN = 0 then
+    if TCP_Flag_T.SYN = 0 then
+      if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
+      begin
+        if (seq_buf + jj) = SocketManager.Socket[iSocket].SEQ_No_S then
+        begin
+          SocketManager.Socket[iSocket].Wait_ACK := 1;
+          TickCounter10 := 0;
+          while TickCounter10 < SocketManager.TCP_Wait do // wait for 2nd ack
+          begin
+            Eth_DoPacket;
+            if SocketManager.Socket[iSocket].Wait_ACK = 0 then // received
+            begin
+              if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
+                j := 0;
+              Break;
+            end;
+          end;
+        end else
+          Exit;
+      end;
+
+  if (SocketManager.Socket[iSocket].Start_addr = Start_addr_S) and (SocketManager.Socket[iSocket].Stop_addr = Stop_addr_S) then
+    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + j + jj;
+
+  Result := True;
 end;
 
 //******************************************************************************
@@ -61,7 +230,7 @@ begin
   SocketManager.Socket[i].RAM_ROM := 0;
   SocketManager.Socket[i].Start_addr := @data_tcp2;
   SocketManager.Socket[i].Stop_addr := @data_tcp2 + len_data1;
-  Result := Send_TCP_R(PSH_S + ACK_S, i, 1);
+  Result := Send_TCP_R_Internal(PSH_S + ACK_S, i, 1);
   if Result = False then
     begin
       SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
@@ -354,174 +523,6 @@ begin
       end;
     end;
   end;
-end;
-
-//******************************************************************************
-//* Name    : Send_TCP_R1                                                      *
-//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
-//******************************************************************************
-function Send_TCP_R1(TCP_Flag_T: byte; iSocket: byte; jj : word) : word;
-var j : word;
-    Stop_addr_S, Start_addr_S : dword;
-    kk : dword;
-var
-  ptf : ^far const byte;
-begin
-  Result := 0;
-  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
-  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
-
-  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Mac, TXSTART, 6);
-  CopyRamToEthMem(@Settings.eth_mac, TXSTART+6, 6);
-  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART+26, 4);
-  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Ip, TXSTART+30, 4);
-  Put_TCPPointer;
-
-  if SocketManager.Socket[iSocket].RAM_ROM = 0 then
-  begin
-    j := dword(Stop_addr_S - (Start_addr_S + jj));
-    if j >= packet_size_ then
-      j := packet_size_;
-    if j <> 0 then
-      CopyRamToEthMem_CP((Start_addr_S + jj), j);
-  end else
-  if SocketManager.Socket[iSocket].RAM_ROM = 1 then
-  begin
-    ptf := Start_addr_S + jj;
-    j := 0;
-    while dword(ptf) < Stop_addr_S do
-    begin
-      Eth_PutByte(ptf^);
-      ptf := ptf + 1;
-      if inc(j) >= packet_size_ then
-        Break;
-    end;
-    if j = 0 then
-      Exit;
-  end else
-  if SocketManager.Socket[iSocket].RAM_ROM = 2 then
-  begin
-
-    // Florin has this so it would copy data from an EEProm to the Ethernet for the webpage....
-
-    kk :=  dword(Stop_addr_S - (Start_addr_S + jj));
-    if kk >= packet_size_ then
-      j := packet_size_
-    else
-      j := kk;
- //   DF_ContArrayToETH((Start_addr_S + jj),j);
-  end;
-
-  Eth_SendTCP(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, j, (SocketManager.Socket[iSocket].SEQ_No_S + jj), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
-
-  Result := j;
-end;
-
-//******************************************************************************
-//* Name    : Send_TCP_R                                                       *
-//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
-//******************************************************************************
-function Send_TCP_R(TCP_Flag_T: byte; iSocket, fragment: byte) : boolean;
-var
-  j, jj, mm, i : word;
-  Stop_addr_S, Start_addr_S, seq_buf : dword;
-  PacketAddressLen : dword;
-begin
-  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
-  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
-
-  Result := False;
-
-  i := 0;
-  while i < 3 do
-  begin
-    jj := 0;
-    j := 0;
-
-    Eth_DoPacket;
-    Eth_DoPacket;
-
-    packet_size_ := 1300;
-
-    seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
-
-    SocketManager.Socket[iSocket].Wait_ACK := 1;
-
-    mm := 1300;
-    PacketAddressLen := (Stop_addr_S - Start_addr_S);
-    if PacketAddressLen <= mm then
-    begin
-      if fragment <> 0 then
-      begin
-        if PacketAddressLen >= 4 then
-        begin
-          packet_size_ := PacketAddressLen div 2;
-          jj := Send_TCP_R1(ACK_S, iSocket, jj);
-        end;
-      end
-    end else
-      jj := Send_TCP_R1(ACK_S, iSocket, jj);
-
-    // Are we closing the Socket?
-    if TCP_Flag_T.FIN = 0 then
-      if TCP_Flag_T.SYN = 0 then
-        if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
-        begin
-          Result := False;
-          Exit;
-        end;
-
-    packet_size_ := 1300;
-
-    j := Send_TCP_R1(TCP_Flag_T, iSocket, jj);
-
-    TickCounter10 := 0;
-    while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
-    begin
-      Eth_DoPacket;
-      if SocketManager.Socket[iSocket].Wait_ACK = 0 then
-      begin
-        SocketManager.Socket[iSocket].Wait_ACK := 1;
-        if seq_buf <> SocketManager.Socket[iSocket].SEQ_No_S then
-          Break;
-      end;
-    end;
-    if TickCounter10 < SocketManager.TCP_Wait then
-      Break;
-    inc(i);
-  end;
-
-  if i = 3 then
-  begin
-    Exit;
-  end;
-
-  if TCP_Flag_T.FIN = 0 then
-    if TCP_Flag_T.SYN = 0 then
-      if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
-      begin
-        if (seq_buf + jj) = SocketManager.Socket[iSocket].SEQ_No_S then
-        begin
-          SocketManager.Socket[iSocket].Wait_ACK := 1;
-          TickCounter10 := 0;
-          while TickCounter10 < SocketManager.TCP_Wait do // wait for 2nd ack
-          begin
-            Eth_DoPacket;
-            if SocketManager.Socket[iSocket].Wait_ACK = 0 then // received
-            begin
-              if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
-                j := 0;
-              Break;
-            end;
-          end;
-        end else
-          Exit;
-      end;
-
-  if (SocketManager.Socket[iSocket].Start_addr = Start_addr_S) and (SocketManager.Socket[iSocket].Stop_addr = Stop_addr_S) then
-    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + j + jj;
-
-  Result := True;
 end;
 
 end.

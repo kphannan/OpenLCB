@@ -399,6 +399,19 @@ begin
   {$ENDIF}
   UART1_Write_Text('Initializing OlcbBus'+LF);
   MCU_Setup_Enable_OlcbBus;
+  while not DHCP_Request(AddrPacket) do;
+
+  UART1_Write_Text('DHCP Results' + LF);
+  Ip2Str(Settings.eth_ip_addr, s1);
+  UART1_Write_Text('Ip Address: ' + s1 + LF);
+  Ip2Str(Settings.eth_gateway, s1);
+  UART1_Write_Text('Gateway Address: ' + s1 + LF);
+  Ip2Str(Settings.eth_mask, s1);
+  UART1_Write_Text('Mask: ' + s1 + LF);
+  Ip2Str(Settings.eth_dns_addr, s1);
+  UART1_Write_Text('DNS Address: ' + s1 + LF);
+
+  
   SocketManager.TCP_Wait := 1000;
   SocketManager.UDP_Wait := 1000;
 

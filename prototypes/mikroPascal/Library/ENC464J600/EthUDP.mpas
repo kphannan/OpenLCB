@@ -19,11 +19,11 @@ NMRAnetDefinesShared,
 // User Functions
 function UDP_Send(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
 procedure UDP_Send_Broadcast(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
-procedure UDP_Init;
 
 // Internally used Functions
 procedure UDP_Process_Internal(EthMemAddressRequest: Word);
 procedure UDP_Send_Internal(dest_portA, source_portA, PacketLenA : word);
+procedure UDP_Init_Internal;
 
 // External functions
 function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word; external;
@@ -36,7 +36,7 @@ implementation
 var
   UDP_IdentificationCounter: word;
 
-procedure UDP_Init;
+procedure UDP_Init_Internal;
 begin
   UDP_IdentificationCounter := 1000; // start UDP counter with this value
   broadcast_packet := False;
@@ -205,6 +205,7 @@ begin
   begin
     if (len_data = 48) then
     begin
+      {$IFDEF LOG_UART}UART1_Write_Text('UDP NTP Packet' + LF);{$ENDIF}
       NTP_ProcessPacket_Internal(EthMemAddressRequest);
       Exit;
     end;
@@ -213,16 +214,19 @@ begin
   // Is it a DHCP message to use?
   if (dest_port1 = UDP_DHCP_BOOTPS_SEND_PORT) and (source_port1 = UDP_DHCP_BOOTPC_RECEIVE_PORT) then
   begin
+    {$IFDEF LOG_UART}UART1_Write_Text('UDP_DHCP Packet' + LF);{$ENDIF}
     DHCP_ProcessPacket_Internal(EthMemAddressRequest);
     Exit;
   end;
 
   if (dest_port1 = UDP_DYNAMIC_NAME_SYSTEM_PORT) and (source_port1 = UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT) then
   begin
+    {$IFDEF LOG_UART}UART1_Write_Text('UDP_DNS Packet' + LF);{$ENDIF}
     DNS_ProcessPacket_Internal(EthMemAddressRequest);
     Exit
   end;
 
+  {$IFDEF LOG_UART}UART1_Write_Text('UDP User Packet' + LF);{$ENDIF}
   // Not handled so callback to the user and see if it is custom packet
   WriteToEthMem(TXSTART+41,$00); // put tx pointer
   Align := ReadFromEthMem(EthMemAddressRequest + 41); // put rx pointer to start of UDP data.

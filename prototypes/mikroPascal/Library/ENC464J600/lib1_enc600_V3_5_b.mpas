@@ -48,8 +48,6 @@ function ReadFromEthMem(start_eth_address : word) : byte;
 function EthMemCompareWithRam(start_eth_address, start_ram_address, length_w : word) : boolean;
 function EthMemCompareWithFlash(start_eth_address : word; start_Flash_address : ^far const byte; length_w : word) : boolean;
 function Eth_Cksum(start_eth_address, length_w : word) : word;
-procedure Put_UDPPointer;
-procedure Put_TCPPointer;
 
 procedure EraseSockets;
 function Search_Port(protocol : byte; port_ : word) : boolean;
@@ -157,7 +155,7 @@ type
     Announce : boolean;                                                         // Set to true to send a ping reply when connecting
     Policy : byte;                                                              // POLICY_REJECT or POLICY_DROP to send a reject message or drop unknown packets
     UDP_Broadcast: Boolean;                                                     // Forces the UDP packet to be broadcast to all devices on the segment not to a target IP
-    DHCP_Enable : boolean;                                                      // Enabled DHCP
+    DHCP_Enable : Boolean;                                                      // Enabled DHCP
     DHCP_Lease_Time : dword;                                                    // Time before renewing the IP
   end;
   
@@ -794,16 +792,6 @@ begin
   i := Eth_ReadReg(EDMACS_);
   Lo(result) := Hi(i);
   Hi(result) := Lo(i);
-end;
-
-procedure Put_UDPPointer;
-begin
-  WriteToEthMem(TXSTART+41,$00);
-end;
-
-procedure Put_TCPPointer;
-begin
-  WriteToEthMem(TXSTART+53,$00);
 end;
 
 procedure EraseSockets;

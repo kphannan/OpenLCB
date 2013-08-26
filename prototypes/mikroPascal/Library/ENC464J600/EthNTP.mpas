@@ -138,7 +138,7 @@ begin
     CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
     CopyRamToEthMem(@Settings.eth_ntp_addr, TXSTART + 30, 4);
     EthMemSet(TXSTART+42,0,48);
-    Put_UDPPointer;
+    WriteToEthMem(TXSTART+41,$00);
     Eth_PutByte($d9);
     Eth_PutByte($00);
     Eth_PutByte($0a);

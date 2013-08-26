@@ -190,8 +190,8 @@ Begin
 
   // enables reception
   Eth_BSF(ECON1_,0x0001);    //RXEN
-  TCP_Init;
-  UDP_Init;
+  TCP_Init_Internal;
+  UDP_Init_Internal;
   
   ARP_EraseCache_Internal;
   Ping_EraseCache_Internal;
@@ -225,7 +225,7 @@ End;
 //******************************************************************************
 function Eth_ReadPacket : word;
 begin
-  CopyEthMemToEthMem(NextPacket,GPSTART,1600);
+  CopyEthMemToEthMem(NextPacket, GPSTART, 1600);
   
   Eth_WriteReg(EGPRDPT_, NextPacket);    // Set the write pointer
   Lo(NextPacket) := Eth_GetByte;
@@ -239,8 +239,10 @@ begin
 
   Eth_BSF(ECON1_,ECON1_PKTDEC_);               // Decrement the number of packets
 
-  if NextPacket = RXSTART then Eth_WriteReg(ERXTAIL_, $5FFE)
-  else Eth_WriteReg(ERXTAIL_,NextPacket - 2);
+  if NextPacket = RXSTART then 
+    Eth_WriteReg(ERXTAIL_, $5FFE)
+  else 
+    Eth_WriteReg(ERXTAIL_,NextPacket - 2);
 end;
 
 //******************************************************************************
@@ -346,7 +348,7 @@ begin
         begin
           if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
             begin
-              if Send_TCP_R(PSH_S + ACK_S, i, 1) = False then
+              if Send_TCP_R_Internal(PSH_S + ACK_S, i, 1) = False then
                 begin
                   SocketManager.Socket[i].Keep_Alive := False;
                   SocketManager.Socket[i].Start_addr := 0;
@@ -450,7 +452,7 @@ begin
   SocketManager.Socket[i].Keep_Alive := True;
   SocketManager.iLastOpenedSocked := i;
   
-  Result := Send_TCP_R(SYN_S, i, 0);
+  Result := Send_TCP_R_Internal(SYN_S, i, 0);
   if Result = False then
   begin
     SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
@@ -477,7 +479,7 @@ begin
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
-        Result := Send_TCP_R(FIN_S + ACK_S, i, 0);
+        Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, 0);
       end else
       begin
         Result := True;
