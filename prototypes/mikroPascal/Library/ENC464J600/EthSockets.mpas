@@ -1,0 +1,317 @@
+unit EthSockets;
+
+{.$DEFINE LOG_UART}
+
+uses
+
+
+NMRAnetDefinesShared,
+
+  EthCommon,
+  dspic_additional_string_library,
+ // lib1_enc600_V3_5_b,
+  definitions_ENC600;
+  
+const
+  SOCKET_DISCONNECTED             = 0;
+  SOCKET_WAITING_FOR_CONNECTION   = 1;
+  SOCKET_CONNECTED                = 2;
+  
+  MAX_SOCKET: byte                = 8;
+  
+  TCP: byte                       = 100;
+  UDP: byte                       = 200;
+  
+type
+  TSocket = record
+    State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
+    source_port_S   : word;        // Port of the source (us)
+    Dest_Ip         : IpHeader;
+    Dest_Mac        : MacHeader;
+    dest_port_S     : word;
+    Seq_No_S        : dword;
+    Ack_No_S        : dword;
+    Wait_ACK        : word;
+    Exp_Time        : word;
+    Exp_Time_Val    : word;
+    Start_addr      : dword;
+    Stop_addr       : dword;
+    RAM_ROM         : word;
+    Keep_Alive      : boolean;
+    TCP_buf         : string[1024];
+  //  TxBuffer,
+  //  RxBuffer        : array[1024] of Byte;
+  end;
+
+  TSocketManager = record
+    TCP_Wait,
+    UDP_Wait : word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
+    Socket : array[MAX_SOCKET] of TSocket;
+    iLastOpenedSocked : word;                                                   // Last Socket index that was opened
+  end;
+  
+// User functions
+function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
+function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
+procedure EraseSockets;
+function Search_Port(protocol : byte; port_ : word) : boolean;
+function UDP_Open_Port(port_u : word): boolean;
+function TCP_Open_Port(port_t : word): boolean;
+function UDP_Close_Port(port_u : word): boolean;
+function TCP_Close_Port(port_t : word): boolean;
+procedure Set_TCP_TimeOut_Interval(int_ : word);
+
+// External functions
+function ARP_Validate_IP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean; external;
+function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean; external;
+procedure Do_EthernetProc(n : word); external;
+procedure DisableInt; external;
+procedure EnableInt; external;
+  
+var
+  SocketManager: TSocketManager;
+  TCP_Opened_Ports,
+  UDP_Opened_Ports : array[MAX_SOCKET] of word;
+
+implementation
+
+//******************************************************************************
+//* Name    : Open_TCP_Connection                                              *
+//* Purpose : Open TCP Connection and Socket                                   *
+//******************************************************************************
+function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
+var
+  i : byte;
+  dest_mac: MacHeader;
+begin
+  Result := ARP_Validate_IP(ip_t2, dest_mac);
+  if Result = False then
+    Exit;
+
+  i := 0;
+  while i < MAX_SOCKET do  // search for opened socket
+  begin
+    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port_S2) and (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+      Break; // if connected
+    inc(i);
+  end;
+
+  if i = MAX_SOCKET then
+  begin
+    i := 0;
+    while i < MAX_SOCKET do  // search for free socket
+    begin
+      if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
+        Break;
+      inc(i);
+    end;
+  end;
+
+  if i = MAX_SOCKET then
+    Exit;                                                // Out of sockets
+
+  SocketManager.Socket[i].State_S := SOCKET_WAITING_FOR_CONNECTION;   // Wait for Connection
+  SocketManager.Socket[i].SEQ_No_S := 12345;
+  SocketManager.Socket[i].ACK_No_S := 0;
+  SocketManager.Socket[i].dest_port_S := dest_port_S2;
+  SocketManager.Socket[i].source_port_S := source_port_S2;
+  Mem_Cpy(@SocketManager.Socket[i].Dest_Ip, @ip_t2, 4);
+  Mem_Cpy(@SocketManager.Socket[i].Dest_Mac, @dest_mac, 6);
+  SocketManager.Socket[i].RAM_ROM := 0;
+  SocketManager.Socket[i].Exp_Time := 0;
+  SocketManager.Socket[i].Start_addr := 0;
+  SocketManager.Socket[i].Stop_addr := 0;
+  SocketManager.Socket[i].Keep_Alive := True;
+  SocketManager.iLastOpenedSocked := i;
+
+  Result := Send_TCP_R_Internal(SYN_S, i, 0);
+  if Result = False then
+  begin
+    SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
+    SocketManager.iLastOpenedSocked := 255;
+  end;
+end;
+
+//******************************************************************************
+//* Name    : Close_TCP_Connection                                             *
+//* Purpose : Close TCP Connection and Socket                                  *
+//******************************************************************************
+function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
+var
+  CountBuf : word;
+  i : byte;
+begin
+  i := 0;
+  while i < MAX_SOCKET do  // search for opened socket
+  begin
+    if (SocketManager.Socket[i].dest_port_S = dest_port_S2) and (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+    begin
+      if SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED then
+      begin
+        SocketManager.Socket[i].RAM_ROM := 0;
+        SocketManager.Socket[i].Start_addr := 0;
+        SocketManager.Socket[i].Stop_addr := 0;
+        Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, 0);
+      end else
+      begin
+        Result := True;
+        Exit;
+      end;
+      Break; // if connected
+    end;
+    inc(i);
+  end;
+
+  if i = MAX_SOCKET then // no sockets available
+    begin
+      Result := False;
+      Exit;
+    end;
+
+  TickCounter10 := 0;
+  CountBuf := 0;
+  while CountBuf < SocketManager.TCP_Wait do
+  begin
+    Do_EthernetProc(1);
+    if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
+      Break;
+    DisableInt;
+    CountBuf := TickCounter10;
+    EnableInt;
+  end;
+  SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
+  SocketManager.Socket[i].Keep_Alive := False;
+end;
+
+  
+procedure EraseSockets;
+var j : byte;
+begin
+  j := 0;
+  while j < MAX_SOCKET do
+    begin
+      SocketManager.Socket[j].State_S := SOCKET_DISCONNECTED;
+      SocketManager.Socket[j].source_port_S := 0;
+      Mem_Set(@SocketManager.Socket[j].Dest_Ip, 0, 4);
+      Mem_Set(@SocketManager.Socket[j].Dest_Mac, 0, 6);
+      SocketManager.Socket[j].dest_port_S := 0;
+      SocketManager.Socket[j].SEQ_No_S := 0;
+      SocketManager.Socket[j].ACK_No_S := 0;
+      SocketManager.Socket[j].Wait_ACK := 0;
+      SocketManager.Socket[j].Exp_Time := 0;
+      SocketManager.Socket[j].Exp_Time_Val := 12;
+      SocketManager.Socket[j].Start_addr := 0;
+      SocketManager.Socket[j].Stop_addr := 0;
+      SocketManager.Socket[j].RAM_ROM := 0;
+      SocketManager.Socket[j].Keep_Alive := false;
+      SocketManager.Socket[j].TCP_buf := '';
+      inc(j);
+    end;
+end;
+
+function Search_Port(protocol : byte; port_ : word) : boolean;
+var
+  i : byte;
+  pt : ^word;
+begin
+  result := false;
+  if port_ = 0 then exit;
+  if protocol = TCP then
+    pt := @TCP_Opened_Ports
+  else
+    pt := @UDP_Opened_Ports;
+  i := 0;
+  while i < MAX_SOCKET do
+    begin
+      if pt^ = port_ then
+        begin
+          result := true;
+          exit;
+        end;
+      pt := pt + 1;
+      inc(i);
+    end;
+end;
+
+function Close_Port(protocol : byte; port_ : word) : boolean;
+var i : byte;
+    pt : ^word;
+begin
+  result := false;
+  if port_ = 0 then exit;
+  if protocol = TCP then pt := @TCP_Opened_Ports
+  else pt := @UDP_Opened_Ports;
+  i := 0;
+  while i < MAX_SOCKET do
+    begin
+      if pt^ = port_ then
+        begin
+          pt^ := 0;
+          result := true;
+          exit;
+        end;
+      pt := pt + 1;
+      inc(i);
+    end;
+end;
+
+function Open_Port(protocol_ : byte; port__ : word) : boolean;
+var i : byte;
+    pt : ^word;
+begin
+  result := false;
+  if port__ = 0 then exit;
+  if Search_Port(protocol_, port__) <> 0 then
+    begin
+      result := true;
+      exit;
+    end;
+  if protocol_ = TCP then pt := @TCP_Opened_Ports
+  else pt := @UDP_Opened_Ports;
+  i := 0;
+  while i < MAX_SOCKET do
+    begin
+      if pt^ = 0 then
+        begin
+          pt^ := port__;
+          result := true;
+          exit;
+        end;
+      pt := pt + 1;
+      inc(i);
+    end;
+end;
+
+function UDP_Open_Port(port_u : word): boolean;
+begin
+  Result := Open_Port(UDP, port_u);
+end;
+
+function TCP_Open_Port(port_t : word): boolean;
+begin
+  Result := Open_Port(TCP, port_t);
+end;
+
+function UDP_Close_Port(port_u : word): boolean;
+begin
+  Result := Close_Port(UDP, port_u);
+end;
+
+function TCP_Close_Port(port_t : word): boolean;
+begin
+  Result := Close_Port(TCP, port_t);
+end;
+  
+procedure Set_TCP_TimeOut_Interval(int_ : word);
+var 
+  j : byte;
+begin
+  j := 0;
+  while j < MAX_SOCKET do
+    begin
+      SocketManager.Socket[j].Exp_Time_Val := int_;
+      inc(j);
+    end;
+end;
+
+end.

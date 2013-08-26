@@ -8,6 +8,7 @@ uses
 NMRAnetDefinesShared,
 
   EthCommon,
+  EthSockets,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
@@ -317,11 +318,16 @@ var
   dest_ip_addr: IpHeader;
   CkSum_TCP: word;
   CkSum_IP: word;
-  len: word;
+  len_data: word;
 label
   next_phs;
 
 begin
+  source_port2 := 0;
+  CkSum_IP := 0;
+  CkSum_TCP := 0;
+  len_data := 0;
+  dest_port2 := 0;
   Hi(source_port2) := ReadFromEthMem(EthMemAddressRequest+36);
   Lo(source_port2) := Eth_GetByte;
   if Search_Port(TCP, source_port2) = False then
@@ -335,27 +341,27 @@ begin
   Lo(CkSum_IP) :=  Eth_GetByte;
   Hi(CkSum_TCP) := ReadFromEthMem(EthMemAddressRequest+50);
   Lo(CkSum_TCP) := Eth_GetByte;
-  Hi(len) := ReadFromEthMem(EthMemAddressRequest+16);
-  Lo(len) := Eth_GetByte;
-  len_ack := len;
-  PacketLen := len - 40;
-  CopyEthMemToEthMem(EthMemAddressRequest,TXSTART,len+14);
+  Hi(len_data) := ReadFromEthMem(EthMemAddressRequest+16);
+  Lo(len_data) := Eth_GetByte;
+  len_ack := len_data;
+  PacketLen := len_data - 40;
+  CopyEthMemToEthMem(EthMemAddressRequest,TXSTART,len_data+14);
   WriteToEthMem(TXSTART+24,$00);
   Eth_PutByte($00);
   if cksum_ip <> Eth_Cksum(TXSTART+14,20) then
     Exit;
-  Align := len and $01;
+  Align := len_data and $01;
   WriteToEthMem(TXSTART+50,$00);
   Eth_PutByte($00);
-  WriteToEthMem(TXSTART+len+14,$00);
+  WriteToEthMem(TXSTART+len_data+14,$00);
   Eth_PutByte($00);
-  CopyEthMemToEthMem(TXSTART+26,TXSTART+len+Align+14,8);
-  WriteToEthMem(TXSTART+len+Align+22,$00);
+  CopyEthMemToEthMem(TXSTART+26,TXSTART+len_data+Align+14,8);
+  WriteToEthMem(TXSTART+len_data+Align+22,$00);
   Eth_PutByte($06);
-  len := len - 20;
-  Eth_PutByte(Hi(len));
-  Eth_PutByte(Lo(len));
-  if CkSum_TCP <> Eth_Cksum(TXSTART+34,len + Align + 12) then
+  len_data := len_data - 20;
+  Eth_PutByte(Hi(len_data));
+  Eth_PutByte(Lo(len_data));
+  if CkSum_TCP <> Eth_Cksum(TXSTART+34,len_data + Align + 12) then
     Exit;
   Hi(dest_port2) := ReadFromEthMem(EthMemAddressRequest+34);
   Lo(dest_port2) := Eth_GetByte;

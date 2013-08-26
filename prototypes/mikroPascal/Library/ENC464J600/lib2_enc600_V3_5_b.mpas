@@ -18,22 +18,25 @@ NMRAnetDefinesShared,
   EthNTP,
   EthDHCP,
   EthUDP,
+  EthSockets,
   EthTCP,
   EthCommon;
 
+// User functions
 procedure CounterTask;
 Procedure Eth_Init_(use_user_MAC: Boolean);
+procedure Do_EthernetProc(n : word);
+procedure Firewall(F_ICMP, F_TCP, F_UDP : boolean);
+procedure Wait_for_LAN;
+procedure Wait_With_Eth(n : word);
+function debugg_stack : word;
+
+// Internally used functions
 function Eth_ReadPacket : word;
 procedure Eth_DoPacket;
 procedure Do_Stack;
-procedure Do_EthernetProc(n : word);
-procedure Firewall(F_ICMP, F_TCP, F_UDP : boolean);
-function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
-function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
-procedure Wait_for_LAN;
-procedure Wait_With_Eth(n : word);
 
-
+// External functions
 procedure Eth_UserProcess_Main; external;
 procedure Eth_UserProcess; external;
 procedure DisableInt;  external;
@@ -225,6 +228,7 @@ End;
 //******************************************************************************
 function Eth_ReadPacket : word;
 begin
+  Result := 0;
   CopyEthMemToEthMem(NextPacket, GPSTART, 1600);
   
   Eth_WriteReg(EGPRDPT_, NextPacket);    // Set the write pointer
@@ -343,47 +347,46 @@ var i : byte;
 begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
+  begin
+    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) then  // if connected
     begin
-      if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) then  // if connected
+      if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
+      begin
+        if Send_TCP_R_Internal(PSH_S + ACK_S, i, 1) = False then
         begin
-          if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
-            begin
-              if Send_TCP_R_Internal(PSH_S + ACK_S, i, 1) = False then
-                begin
-                  SocketManager.Socket[i].Keep_Alive := False;
-                  SocketManager.Socket[i].Start_addr := 0;
-                  SocketManager.Socket[i].Stop_addr := 0;
-                end
-              else SocketManager.Socket[i].Exp_Time := 0;
-            end
-          else
-            if (SocketManager.Socket[i].Keep_Alive = False) or (SocketManager.Socket[i].Exp_Time > SocketManager.Socket[i].Exp_Time_Val) then // 1 minutes without activity (60 * 1) sec
-              begin
-                SocketManager.Socket[i].RAM_ROM := 0;
-                SocketManager.Socket[i].Start_addr := 0;
-                SocketManager.Socket[i].Stop_addr := 0;
-                CopyRamToEthMem(@SocketManager.Socket[i].Dest_Mac,TXSTART,6);
-                CopyRamToEthMem(@Settings.eth_mac,TXSTART+6,6);
-                CopyRamToEthMem(@Settings.eth_ip_addr,TXSTART+26,4);
-                CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip,TXSTART+30,4);
-                Eth_SendTCP(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
-                SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
-                SocketManager.Socket[i].Keep_Alive := False;
-              end;
-        end
-      else if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then // waiting for connection
-        begin
-          if (SocketManager.Socket[i].Exp_Time > 9) then // 10 sec without response at SYN
-            begin
-              SocketManager.Socket[i].RAM_ROM := 0;
-              SocketManager.Socket[i].Start_addr := 0;
-              SocketManager.Socket[i].Stop_addr := 0;
-              SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
-              SocketManager.Socket[i].Keep_Alive := False;
-            end;
-        end;
-      inc(i);
+          SocketManager.Socket[i].Keep_Alive := False;
+          SocketManager.Socket[i].Start_addr := 0;
+          SocketManager.Socket[i].Stop_addr := 0;
+        end else 
+          SocketManager.Socket[i].Exp_Time := 0;
+      end else
+      if (SocketManager.Socket[i].Keep_Alive = False) or (SocketManager.Socket[i].Exp_Time > SocketManager.Socket[i].Exp_Time_Val) then // 1 minutes without activity (60 * 1) sec
+      begin
+        SocketManager.Socket[i].RAM_ROM := 0;
+        SocketManager.Socket[i].Start_addr := 0;
+        SocketManager.Socket[i].Stop_addr := 0;
+        CopyRamToEthMem(@SocketManager.Socket[i].Dest_Mac,TXSTART,6);
+        CopyRamToEthMem(@Settings.eth_mac,TXSTART+6,6);
+        CopyRamToEthMem(@Settings.eth_ip_addr,TXSTART+26,4);
+        CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip,TXSTART+30,4);
+        Eth_SendTCP(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
+        SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+        SocketManager.Socket[i].Keep_Alive := False;
+      end;
+    end else 
+    if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then // waiting for connection
+    begin
+      if (SocketManager.Socket[i].Exp_Time > 9) then // 10 sec without response at SYN
+      begin
+        SocketManager.Socket[i].RAM_ROM := 0;
+        SocketManager.Socket[i].Start_addr := 0;
+        SocketManager.Socket[i].Stop_addr := 0;
+        SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+        SocketManager.Socket[i].Keep_Alive := False;
+      end;
     end;
+    inc(i);
+  end;
 end;
 
 //******************************************************************************
@@ -401,114 +404,6 @@ begin
       Do_Stack;
       inc(i);
   end;
-end;
-
-//******************************************************************************
-//* Name    : Open_TCP_Connection                                              *
-//* Purpose : Open TCP Connection and Socket                                   *
-//******************************************************************************
-function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
-var 
-  i : byte;
-  dest_mac: MacHeader;
-begin
-  Result := ARP_Validate_IP(ip_t2, dest_mac);
-  if Result = False then
-    Exit;
-
-  i := 0;
-  while i < MAX_SOCKET do  // search for opened socket
-  begin
-    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port_S2) and (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-      Break; // if connected
-    inc(i);
-  end;
-
-  if i = MAX_SOCKET then
-  begin
-    i := 0;
-    while i < MAX_SOCKET do  // search for free socket
-    begin
-      if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
-        Break;
-      inc(i);
-    end;
-  end;
-
-  if i = MAX_SOCKET then
-    Exit;                                                // Out of sockets
-
-  SocketManager.Socket[i].State_S := SOCKET_WAITING_FOR_CONNECTION;   // Wait for Connection
-  SocketManager.Socket[i].SEQ_No_S := 12345;
-  SocketManager.Socket[i].ACK_No_S := 0;
-  SocketManager.Socket[i].dest_port_S := dest_port_S2;
-  SocketManager.Socket[i].source_port_S := source_port_S2;
-  Mem_Cpy(@SocketManager.Socket[i].Dest_Ip, @ip_t2, 4);
-  Mem_Cpy(@SocketManager.Socket[i].Dest_Mac, @dest_mac, 6);
-  SocketManager.Socket[i].RAM_ROM := 0;
-  SocketManager.Socket[i].Exp_Time := 0;
-  SocketManager.Socket[i].Start_addr := 0;
-  SocketManager.Socket[i].Stop_addr := 0;
-  SocketManager.Socket[i].Keep_Alive := True;
-  SocketManager.iLastOpenedSocked := i;
-  
-  Result := Send_TCP_R_Internal(SYN_S, i, 0);
-  if Result = False then
-  begin
-    SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
-    SocketManager.iLastOpenedSocked := 255;
-  end;
-end;
-
-//******************************************************************************
-//* Name    : Close_TCP_Connection                                             *
-//* Purpose : Close TCP Connection and Socket                                  *
-//******************************************************************************
-function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
-var 
-  CountBuf : word;
-  i : byte;
-begin
-  i := 0;
-  while i < MAX_SOCKET do  // search for opened socket
-  begin
-    if (SocketManager.Socket[i].dest_port_S = dest_port_S2) and (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-    begin
-      if SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED then
-      begin
-        SocketManager.Socket[i].RAM_ROM := 0;
-        SocketManager.Socket[i].Start_addr := 0;
-        SocketManager.Socket[i].Stop_addr := 0;
-        Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, 0);
-      end else
-      begin
-        Result := True;
-        Exit;
-      end;
-      Break; // if connected
-    end;
-    inc(i);
-  end;
-  
-  if i = MAX_SOCKET then // no sockets available
-    begin
-      Result := False;
-      Exit;
-    end;
-
-  TickCounter10 := 0;
-  CountBuf := 0;
-  while CountBuf < SocketManager.TCP_Wait do
-  begin
-    Do_EthernetProc(1);
-    if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
-      Break;
-    DisableInt;
-    CountBuf := TickCounter10;
-    EnableInt;
-  end;
-  SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
-  SocketManager.Socket[i].Keep_Alive := False;
 end;
 
 //******************************************************************************
@@ -552,6 +447,49 @@ begin
     begin
       delay_1ms_;
       Do_EthernetProc(1);
+      inc(i);
+    end;
+end;
+
+function debugg_stack : word;
+var
+  i : byte;
+  txt31 : string[32];
+begin
+  Eth_PutByte($0D);
+  Eth_PutByte($0A);
+  result := 2;
+
+  i := 0;
+  while i < MAX_SOCKET do
+    begin
+      result := result + CopyRamStringToEthMem_CP('Sock_No: ');
+      Byte2StrWithZeros(i,txt31);
+      Str_Cut_Left(txt31,1);
+      result := result + CopyRamStringToEthMem_CP(txt31);
+
+      result := result + CopyRamStringToEthMem_CP(', State: ');
+      Byte2StrWithZeros(SocketManager.Socket[i].State_S,txt31);
+      Str_Cut_Left(txt31,2);
+      result := result + CopyRamStringToEthMem_CP(txt31);
+
+      result := result + CopyRamStringToEthMem_CP(', Keep_Alive: ');
+      if SocketManager.Socket[i].Keep_Alive <> 0 then txt31 := 'True '
+      else txt31 := 'False';
+      result := result + CopyRamStringToEthMem_CP(txt31);
+
+      result := result + CopyRamStringToEthMem_CP(', Dest_Port: ');
+      Word2StrWithZeros(SocketManager.Socket[i].dest_port_S,txt31);
+      result := result + CopyRamStringToEthMem_CP(txt31);
+
+      result := result + CopyRamStringToEthMem_CP(', Ip: ');
+      Ip2Str(SocketManager.Socket[i].Dest_Ip,txt31);
+      result := result + CopyRamStringToEthMem_CP(txt31);
+
+      Eth_PutByte($0D);
+      Eth_PutByte($0A);
+      result := result + 2;
+
       inc(i);
     end;
 end;

@@ -1,8 +1,46 @@
 unit EthCommon;
+
+const
+  RXSTART              : word = $1000;
+  RXEND                : word = $5FFF;
+  TXSTART              : word = $0000;
+  GPSTART              : word = $0800;
+
+  ETH_IP                     : word = $0800;
+  ETH_IP_TCP                 : byte = $06;
+  ETH_IP_UDP                 : byte = $11;
+  ETH_IP_ICMP                : byte = $01;
+  ETH_IP_ICMP_ECHO           : byte = $08;
+  ETH_IP_ICMP_REPLY          : byte = $00;
+
+  max_packet           : word = 1518;
+
+  URG                  : byte = 5;
+  ACK                  : byte = 4;
+  PSH                  : byte = 3;
+  RST                  : byte = 2;
+  SYN                  : byte = 1;
+  FIN                  : byte = 0;
+
+  URG_S                : byte = $20;
+  ACK_S                : byte = $10;
+  PSH_S                : byte = $08;
+  RST_S                : byte = $04;
+  SYN_S                : byte = $02;
+  FIN_S                : byte = $01;
+
+  Months_Days          : array[13] of Byte = ( 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31); far;
+
+  POLICY_REJECT               : byte = 1;
+  POLICY_DROP                 : byte = 2;
   
 type
   IpHeader = array[4] of byte;
   MacHeader = array[6] of byte;
+  
+var
+  TickCounter1, TickCounter10 : word;                                           // The reason for 2 would be because of a inner spin timeout loop.  Have not verified this is true or correct
+
 
 implementation
 

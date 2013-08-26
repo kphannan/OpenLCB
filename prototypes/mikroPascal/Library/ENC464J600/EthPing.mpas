@@ -92,6 +92,7 @@ Procedure Ping_Echo_Internal(EthMemAddressRequest: Word);
 var 
   cksum, PacketSize : word;
 Begin
+  PacketSize := 0;
   // Read in the size of the request packet
   Hi(PacketSize) := ReadFromEthMem(EthMemAddressRequest + 16);
   Lo(PacketSize) := Eth_GetByte;

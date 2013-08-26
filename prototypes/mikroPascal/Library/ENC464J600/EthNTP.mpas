@@ -9,6 +9,7 @@ NMRAnetDefinesShared,
 
   EthCommon,
   EthArp,
+  EthSockets,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
@@ -65,6 +66,7 @@ procedure NTP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 var
   buft : dword;
 begin
+  buft := 0;
   {$IFDEF LOG_UART}UART1_Write_Text('NTP Reply received'+ LF);{$ENDIF}
   CopyEthMemToRam_Inv(EthMemAddressRequest+82, @buft, 4);
   DisableInt;
@@ -73,7 +75,7 @@ begin
   NTP_Sync := True;
   NTP_Sec := 0;
   NTP_ReSync := 0;
-  Close_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
+  UDP_Close_Port(UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
 end;
 
 //******************************************************************************
@@ -132,7 +134,7 @@ begin
   if ARP_Validate_IP(Settings.eth_ntp_addr, ntp_mac) then
   begin
     Result := True;
-    Open_Port(UDP, UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
+    UDP_Open_Port(UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
     CopyRamToEthMem(@ntp_mac, TXSTART, 6);
     CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
     CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);

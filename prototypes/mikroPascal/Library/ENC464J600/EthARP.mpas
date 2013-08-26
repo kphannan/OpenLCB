@@ -8,6 +8,7 @@ uses
 NMRAnetDefinesShared,
 
   EthCommon,
+  EthSockets,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
   definitions_ENC600;

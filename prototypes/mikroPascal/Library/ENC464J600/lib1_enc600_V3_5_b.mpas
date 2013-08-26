@@ -5,11 +5,6 @@ uses
   EthCommon,
   Lib_Delays_LIO,
   definitions_ENC600;
-  
-const
-  SOCKET_DISCONNECTED             = 0;
-  SOCKET_WAITING_FOR_CONNECTION   = 1;
-  SOCKET_CONNECTED                = 2;
 
 procedure delayms(n : word);
 Procedure Eth_Select;
@@ -49,17 +44,7 @@ function EthMemCompareWithRam(start_eth_address, start_ram_address, length_w : w
 function EthMemCompareWithFlash(start_eth_address : word; start_Flash_address : ^far const byte; length_w : word) : boolean;
 function Eth_Cksum(start_eth_address, length_w : word) : word;
 
-procedure EraseSockets;
-function Search_Port(protocol : byte; port_ : word) : boolean;
-function Close_Port(protocol : byte; port_ : word) : boolean;
-function Open_Port(protocol_ : byte; port__ : word) : boolean;
-procedure UDP_Open_Port(port_u : word);
-procedure TCP_Open_Port(port_t : word);
-procedure UDP_Close_Port(port_u : word);
-procedure TCP_Close_Port(port_t : word);
 procedure Eth_Policy(poli : byte);
-function debugg_stack : word;
-procedure Set_TCP_TimeOut_Interval(int_ : word);
 
 // Internally used functions
 Procedure Common_Reject_Internal(EthMemAddressRequest: Word);
@@ -70,80 +55,7 @@ procedure EnableInt; external;
 var 
   ENC_CS : sbit; sfr; external;
   ENC_CS_dir : sbit; sfr; external;
-    
-const
-  RXSTART              : word = $1000;
-  RXEND                : word = $5FFF;
-  TXSTART              : word = $0000;
-  GPSTART              : word = $0800;
 
-  ETH_IP                     : word = $0800;
-  ETH_IP_TCP                 : byte = $06;
-  ETH_IP_UDP                 : byte = $11;
-  ETH_IP_ICMP                : byte = $01;
-  ETH_IP_ICMP_ECHO           : byte = $08;
-  ETH_IP_ICMP_REPLY          : byte = $00;
-
-  max_packet           : word = 1518;
-
-  URG                  : byte = 5;
-  ACK                  : byte = 4;
-  PSH                  : byte = 3;
-  RST                  : byte = 2;
-  SYN                  : byte = 1;
-  FIN                  : byte = 0;
-
-  URG_S                : byte = $20;
-  ACK_S                : byte = $10;
-  PSH_S                : byte = $08;
-  RST_S                : byte = $04;
-  SYN_S                : byte = $02;
-  FIN_S                : byte = $01;
-
-  Months_Days          : array[13] of Byte = ( 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31); far;
-
-  TCP                  : byte = 100;
-  UDP                  : byte = 200;
-
-  POLICY_REJECT               : byte = 1;
-  POLICY_DROP                 : byte = 2;
-
-  MAX_SOCKET           : byte = 8;
-
-// Socket Types
-type 
-  TSocket = record
-    State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
-    source_port_S   : word;        // Port of the source (us)
-    Dest_Ip         : IpHeader;
-    Dest_Mac        : MacHeader;
-    dest_port_S     : word;
-    Seq_No_S        : dword;
-    Ack_No_S        : dword;
-    Wait_ACK        : word;
-    Exp_Time        : word;
-    Exp_Time_Val    : word;
-    Start_addr      : dword;
-    Stop_addr       : dword;
-    RAM_ROM         : word;
-    Keep_Alive      : boolean;
-    TCP_buf         : string[1024];
-  //  TxBuffer,
-  //  RxBuffer        : array[1024] of Byte;
-  end;
-  
-  TSocketManager = record
-    TCP_Wait,
-    UDP_Wait : word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
-    Socket : array[MAX_SOCKET] of TSocket;
-    iLastOpenedSocked : word;                                                   // Last Socket index that was opened
-  end;
-
-var
-  TickCounter1, TickCounter10 : word;                                           // The reason for 2 would be because of a inner spin timeout loop.  Have not verified this is true or correct
-  TCP_Opened_Ports, 
-  UDP_Opened_Ports : array[MAX_SOCKET] of word;
-  
 type
   TSettings = record
     eth_ip_addr : IpHeader;                                                     // Node IP address
@@ -160,7 +72,6 @@ type
   end;
   
 var
-  SocketManager: TSocketManager;
   Settings: TSettings;
     
 implementation
@@ -794,180 +705,9 @@ begin
   Hi(result) := Lo(i);
 end;
 
-procedure EraseSockets;
-var j : byte;
-begin
-  j := 0;
-  while j < MAX_SOCKET do
-    begin
-      SocketManager.Socket[j].State_S := SOCKET_DISCONNECTED;
-      SocketManager.Socket[j].source_port_S := 0;
-      Mem_Set(@SocketManager.Socket[j].Dest_Ip, 0, 4);
-      Mem_Set(@SocketManager.Socket[j].Dest_Mac, 0, 6);
-      SocketManager.Socket[j].dest_port_S := 0;
-      SocketManager.Socket[j].SEQ_No_S := 0;
-      SocketManager.Socket[j].ACK_No_S := 0;
-      SocketManager.Socket[j].Wait_ACK := 0;
-      SocketManager.Socket[j].Exp_Time := 0;
-      SocketManager.Socket[j].Exp_Time_Val := 12;
-      SocketManager.Socket[j].Start_addr := 0;
-      SocketManager.Socket[j].Stop_addr := 0;
-      SocketManager.Socket[j].RAM_ROM := 0;
-      SocketManager.Socket[j].Keep_Alive := false;
-      SocketManager.Socket[j].TCP_buf := '';
-      inc(j);
-    end;
-end;
-
-function Search_Port(protocol : byte; port_ : word) : boolean;
-var 
-  i : byte;
-  pt : ^word;
-begin
-  result := false;
-  if port_ = 0 then exit;
-  if protocol = TCP then 
-    pt := @TCP_Opened_Ports
-  else 
-    pt := @UDP_Opened_Ports;
-  i := 0;
-  while i < MAX_SOCKET do
-    begin
-      if pt^ = port_ then
-        begin
-          result := true;
-          exit;
-        end;
-      pt := pt + 1;
-      inc(i);
-    end;
-end;
-
-function Close_Port(protocol : byte; port_ : word) : boolean;
-var i : byte;
-    pt : ^word;
-begin
-  result := false;
-  if port_ = 0 then exit;
-  if protocol = TCP then pt := @TCP_Opened_Ports
-  else pt := @UDP_Opened_Ports;
-  i := 0;
-  while i < MAX_SOCKET do
-    begin
-      if pt^ = port_ then
-        begin
-          pt^ := 0;
-          result := true;
-          exit;
-        end;
-      pt := pt + 1;
-      inc(i);
-    end;
-end;
-
-function Open_Port(protocol_ : byte; port__ : word) : boolean;
-var i : byte;
-    pt : ^word;
-begin
-  result := false;
-  if port__ = 0 then exit;
-  if Search_Port(protocol_, port__) <> 0 then
-    begin
-      result := true;
-      exit;
-    end;
-  if protocol_ = TCP then pt := @TCP_Opened_Ports
-  else pt := @UDP_Opened_Ports;
-  i := 0;
-  while i < MAX_SOCKET do
-    begin
-      if pt^ = 0 then
-        begin
-          pt^ := port__;
-          result := true;
-          exit;
-        end;
-      pt := pt + 1;
-      inc(i);
-    end;
-end;
-
-procedure UDP_Open_Port(port_u : word);
-begin
-  Open_Port(UDP, port_u);
-end;
-
-procedure TCP_Open_Port(port_t : word);
-begin
-  Open_Port(TCP, port_t);
-end;
-
-procedure UDP_Close_Port(port_u : word);
-begin
-  Close_Port(UDP, port_u);
-end;
-
-procedure TCP_Close_Port(port_t : word);
-begin
-  Close_Port(TCP, port_t);
-end;
-
 procedure Eth_Policy(poli : byte);
 begin
   Settings.Policy := poli;
-end;
-
-function debugg_stack : word;
-var i : byte;
-    txt31 : string[32];
-begin
-  Eth_PutByte($0D);
-  Eth_PutByte($0A);
-  result := 2;
-
-  i := 0;
-  while i < MAX_SOCKET do
-    begin
-      result := result + CopyRamStringToEthMem_CP('Sock_No: ');
-      Byte2StrWithZeros(i,txt31);
-      Str_Cut_Left(txt31,1);
-      result := result + CopyRamStringToEthMem_CP(txt31);
-
-      result := result + CopyRamStringToEthMem_CP(', State: ');
-      Byte2StrWithZeros(SocketManager.Socket[i].State_S,txt31);
-      Str_Cut_Left(txt31,2);
-      result := result + CopyRamStringToEthMem_CP(txt31);
-
-      result := result + CopyRamStringToEthMem_CP(', Keep_Alive: ');
-      if SocketManager.Socket[i].Keep_Alive <> 0 then txt31 := 'True '
-      else txt31 := 'False';
-      result := result + CopyRamStringToEthMem_CP(txt31);
-
-      result := result + CopyRamStringToEthMem_CP(', Dest_Port: ');
-      Word2StrWithZeros(SocketManager.Socket[i].dest_port_S,txt31);
-      result := result + CopyRamStringToEthMem_CP(txt31);
-
-      result := result + CopyRamStringToEthMem_CP(', Ip: ');
-      Ip2Str(SocketManager.Socket[i].Dest_Ip,txt31);
-      result := result + CopyRamStringToEthMem_CP(txt31);
-
-      Eth_PutByte($0D);
-      Eth_PutByte($0A);
-      result := result + 2;
-
-      inc(i);
-    end;
-end;
-
-procedure Set_TCP_TimeOut_Interval(int_ : word);
-var j : byte;
-begin
-  j := 0;
-  while j < MAX_SOCKET do
-    begin
-      SocketManager.Socket[j].Exp_Time_Val := int_;
-      inc(j);
-    end;
 end;
 
 //******************************************************************************

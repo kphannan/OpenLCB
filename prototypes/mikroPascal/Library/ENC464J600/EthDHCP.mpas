@@ -9,6 +9,7 @@ NMRAnetDefinesShared,
 
   EthCommon,
   EthARP,
+  EthSockets,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
@@ -214,10 +215,10 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Eth_DoDHCP                                                       *
+//* Name    : DHCP_Process_Local                                                       *
 //* Purpose : Process incomming DHCP packets                                   *
 //******************************************************************************
-procedure Eth_DoDHCP(EthMemAddressRequest: Word);
+procedure DHCP_DoPacket(EthMemAddressRequest: Word);
 begin
   clrwdt;
   if (Eth_ReadReg(EIR_) and $0040) <> 0 then
@@ -322,7 +323,7 @@ begin
     CountBuf := 0;
     while CountBuf < SocketManager.UDP_Wait do
       begin
-        Eth_DoDHCP(EthMemAddressRequest);
+        DHCP_DoPacket(EthMemAddressRequest);
         if DHCP_State = 2 then 
           Break;
         CountBuf := TickCounter1;
@@ -355,7 +356,7 @@ begin
     CountBuf := 0;
     while CountBuf < SocketManager.UDP_Wait do
     begin
-      Eth_DoDHCP(EthMemAddressRequest);
+      DHCP_DoPacket(EthMemAddressRequest);
       if DHCP_State = 3 then
         Break;
       CountBuf := TickCounter1;

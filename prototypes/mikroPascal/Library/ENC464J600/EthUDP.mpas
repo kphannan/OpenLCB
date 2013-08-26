@@ -12,6 +12,7 @@ NMRAnetDefinesShared,
   EthNTP,
   EthDNS,
   EthDHCP,
+  EthSockets,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
@@ -162,6 +163,11 @@ var
   CkSum_UDP: word;
   len_data: Word;
 begin
+  source_port1 := 0;
+  CkSum_IP := 0;
+  CkSum_UDP := 0;
+  len_data := 0;
+  dest_port1 := 0;
   Hi(source_port1) := ReadFromEthMem(EthMemAddressRequest+36);
   Lo(source_port1) := Eth_GetByte;
   if Search_Port(UDP, source_port1) = False then
