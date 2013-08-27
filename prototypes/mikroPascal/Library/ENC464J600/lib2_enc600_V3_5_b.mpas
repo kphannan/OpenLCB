@@ -358,7 +358,7 @@ begin
     begin
       if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
       begin
-        if Send_TCP_R_Internal(PSH_S + ACK_S, i, 1) = False then
+        if Send_TCP_R_Internal(PSH_S + ACK_S, i, True) = False then
         begin
           SocketManager.Socket[i].Keep_Alive := False;
           SocketManager.Socket[i].Start_addr := 0;

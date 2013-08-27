@@ -66,7 +66,7 @@ procedure Sockets_Init_Internal;
 
 // External functions
 function ARP_Validate_IP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean; external;
-function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean; external;
+function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, Fragment : Boolean) : boolean; external;
 procedure Do_EthernetProc(n : word); external;
 procedure DisableInt; external;
 procedure EnableInt; external;
@@ -160,7 +160,7 @@ begin
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
-        Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, 0);
+        Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, False);
       end else
       begin
         Result := True;

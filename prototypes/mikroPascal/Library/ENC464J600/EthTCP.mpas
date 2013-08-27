@@ -19,7 +19,7 @@ procedure Eth_ProcessTCP(EthMemAddressRequest: Word);
 
 
 // Internal functions
-function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean;
+function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, Fragment: Boolean) : boolean;
 procedure TCP_Init_Internal;
 
 // External functions
@@ -29,7 +29,6 @@ procedure Eth_DoPacket; external;
 implementation
 
 var
-  packet_size_ : word;
   SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
   TCP_IdentificationCounter: word;
   Window : word;
@@ -45,43 +44,44 @@ end;
 //* Name    : Send_TCP_R_Internal1                                                      *
 //* Purpose : Send TCP packets, used by TCP/IP Stack                           *
 //******************************************************************************
-function Send_TCP_R_Internal1(TCP_Flag_T: byte; iSocket: byte; jj : word) : word;
-var j : word;
-    Stop_addr_S, Start_addr_S : dword;
-    kk : dword;
-var
+function Send_TCP_R_Internal1(TCP_Flag_T: byte; iSocket: byte; AddressOffset : word; MaxPacketDataSize: Word) : word;
+var 
+  BytesToWrite : word;
+  Stop_addr_S, Start_addr_S : dword;
+  kk : dword;
   ptf : ^far const byte;
+  
 begin
   Result := 0;
   Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
   Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
 
   CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Mac, TXSTART, 6);
-  CopyRamToEthMem(@Settings.eth_mac, TXSTART+6, 6);
-  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART+26, 4);
-  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Ip, TXSTART+30, 4);
-  WriteToEthMem(TXSTART+53,$00);
+  CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+  CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+  CopyRamToEthMem(@SocketManager.Socket[iSocket].Dest_Ip, TXSTART + 30, 4);
+  WriteToEthMem(TXSTART + 53, $00);
 
   if SocketManager.Socket[iSocket].RAM_ROM = 0 then
   begin
-    j := dword(Stop_addr_S - (Start_addr_S + jj));
-    if j >= packet_size_ then
-      j := packet_size_;
-    if j <> 0 then
-      CopyRamToEthMem_CP((Start_addr_S + jj), j);
+    BytesToWrite := dword(Stop_addr_S - (Start_addr_S + AddressOffset));
+    if BytesToWrite >= MaxPacketDataSize then
+      BytesToWrite := MaxPacketDataSize;
+    if BytesToWrite <> 0 then
+      CopyRamToEthMem_CP((Start_addr_S + AddressOffset), BytesToWrite);
   end else
   if SocketManager.Socket[iSocket].RAM_ROM = 1 then
   begin
-    ptf := Start_addr_S + jj;
-    j := 0;
+    ptf := Start_addr_S + AddressOffset;
+    BytesToWrite := 0;
     while dword(ptf) < Stop_addr_S do
     begin
       Eth_PutByte(ptf^);
       ptf := ptf + 1;
-      if inc(j) >= packet_size_ then
+      if inc(BytesToWrite) >= MaxPacketDataSize then
         Break;
     end;
-    if j = 0 then
+    if BytesToWrite = 0 then
       Exit;
   end else
   if SocketManager.Socket[iSocket].RAM_ROM = 2 then
@@ -89,28 +89,28 @@ begin
 
     // Florin has this so it would copy data from an EEProm to the Ethernet for the webpage....
 
-    kk :=  dword(Stop_addr_S - (Start_addr_S + jj));
-    if kk >= packet_size_ then
-      j := packet_size_
+    kk :=  dword(Stop_addr_S - (Start_addr_S + AddressOffset));
+    if kk >= MaxPacketDataSize then
+      BytesToWrite := MaxPacketDataSize
     else
-      j := kk;
- //   DF_ContArrayToETH((Start_addr_S + jj),j);
+      BytesToWrite := kk;
+ //   DF_ContArrayToETH((Start_addr_S + AddressOffset),BytesToWrite);
   end;
 
-  Eth_SendTCP(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, j, (SocketManager.Socket[iSocket].SEQ_No_S + jj), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
+  Eth_SendTCP(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, BytesToWrite, (SocketManager.Socket[iSocket].SEQ_No_S + AddressOffset), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
 
-  Result := j;
+  Result := BytesToWrite;
 end;
 
 //******************************************************************************
 //* Name    : Send_TCP_R_Internal                                                       *
 //* Purpose : Send TCP packets, used by TCP/IP Stack                           *
 //******************************************************************************
-function Send_TCP_R_Internal(TCP_Flag_T: byte; iSocket, fragment: byte) : boolean;
+function Send_TCP_R_Internal(TCP_Flag_T: byte; iSocket, Fragment: Boolean) : boolean;
 var
-  j, jj, mm, i : word;
+  AddressOffsetSecondPacket, AddressOffset, i, MaxPacketDataSize : word;
   Stop_addr_S, Start_addr_S, seq_buf : dword;
-  PacketAddressLen : dword;
+  AddressDelta : dword;
 begin
   Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
   Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
@@ -120,35 +120,34 @@ begin
   i := 0;
   while i < 3 do
   begin
-    jj := 0;
-    j := 0;
+    AddressOffset := 0;
+    AddressOffsetSecondPacket := 0;
 
     Eth_DoPacket;
     Eth_DoPacket;
 
-    packet_size_ := 1300;
+    MaxPacketDataSize := 1300;
 
     seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
 
     SocketManager.Socket[iSocket].Wait_ACK := 1;
 
-    mm := 1300;
-    PacketAddressLen := (Stop_addr_S - Start_addr_S);
-    if PacketAddressLen <= mm then
+    AddressDelta := (Stop_addr_S - Start_addr_S);
+    
+    if AddressDelta <= MaxPacketDataSize then
     begin
-      if fragment <> 0 then
+      if Fragment then                                                          // Force two packets to be sent if enough data is being sent
       begin
-        if PacketAddressLen >= 4 then
+        if AddressDelta >= 4 then                                               // If less than 4 databytes then it will be sent in the second call to Send_TCP_R_Internal1
         begin
-          packet_size_ := PacketAddressLen div 2;
-          jj := Send_TCP_R_Internal1(ACK_S, iSocket, jj);
+          MaxPacketDataSize := AddressDelta div 2;                              // Only send 1/2 of the data byte available in this packet
+          AddressOffset := Send_TCP_R_Internal1(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);
         end;
       end
     end else
-      jj := Send_TCP_R_Internal1(ACK_S, iSocket, jj);
+      AddressOffset := Send_TCP_R_Internal1(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);   // more bytes to send than allowed, Send_TCP_R_Internal1 will truncate the databytds and send only the max
 
-    // Are we closing the Socket?
-    if TCP_Flag_T.FIN = 0 then
+    if TCP_Flag_T.FIN = 0 then                                                  // Validate the the socket before going on
       if TCP_Flag_T.SYN = 0 then
         if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
         begin
@@ -156,15 +155,15 @@ begin
           Exit;
         end;
 
-    packet_size_ := 1300;
+    MaxPacketDataSize := 1300;                                                  // Fragement does not apply here
 
-    j := Send_TCP_R_Internal1(TCP_Flag_T, iSocket, jj);
+    AddressOffsetSecondPacket := Send_TCP_R_Internal1(TCP_Flag_T, iSocket, AddressOffset, MaxPacketDataSize);   // Send the rest of the data bytes, if there are any
 
     TickCounter10 := 0;
     while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
     begin
-      Eth_DoPacket;
-      if SocketManager.Socket[iSocket].Wait_ACK = 0 then
+      Eth_DoPacket;                                                             // Local spin looking for the ACK reply
+      if SocketManager.Socket[iSocket].Wait_ACK = 0 then                        // Not waiting anymore, received
       begin
         SocketManager.Socket[iSocket].Wait_ACK := 1;
         if seq_buf <> SocketManager.Socket[iSocket].SEQ_No_S then
@@ -183,9 +182,9 @@ begin
 
   if TCP_Flag_T.FIN = 0 then
     if TCP_Flag_T.SYN = 0 then
-      if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
+      if (seq_buf + AddressOffset + AddressOffsetSecondPacket) <> SocketManager.Socket[iSocket].SEQ_No_S then
       begin
-        if (seq_buf + jj) = SocketManager.Socket[iSocket].SEQ_No_S then
+        if (seq_buf + AddressOffset) = SocketManager.Socket[iSocket].SEQ_No_S then
         begin
           SocketManager.Socket[iSocket].Wait_ACK := 1;
           TickCounter10 := 0;
@@ -194,8 +193,8 @@ begin
             Eth_DoPacket;
             if SocketManager.Socket[iSocket].Wait_ACK = 0 then // received
             begin
-              if (seq_buf + jj + j) <> SocketManager.Socket[iSocket].SEQ_No_S then
-                j := 0;
+              if (seq_buf + AddressOffset + AddressOffsetSecondPacket) <> SocketManager.Socket[iSocket].SEQ_No_S then
+                AddressOffsetSecondPacket := 0;
               Break;
             end;
           end;
@@ -204,7 +203,7 @@ begin
       end;
 
   if (SocketManager.Socket[iSocket].Start_addr = Start_addr_S) and (SocketManager.Socket[iSocket].Stop_addr = Stop_addr_S) then
-    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + j + jj;
+    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + AddressOffsetSecondPacket + AddressOffset;
 
   Result := True;
 end;
@@ -231,7 +230,7 @@ begin
   SocketManager.Socket[i].RAM_ROM := 0;
   SocketManager.Socket[i].Start_addr := @data_tcp2;
   SocketManager.Socket[i].Stop_addr := @data_tcp2 + len_data1;
-  Result := Send_TCP_R_Internal(PSH_S + ACK_S, i, 1);
+  Result := Send_TCP_R_Internal(PSH_S + ACK_S, i, True);
   if Result = False then
     begin
       SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
@@ -242,6 +241,8 @@ end;
 //******************************************************************************
 //* Name    : Eth_SendTCP                                                      *
 //* Purpose : Send TCP packet, used by library                                 *
+//  Descriptions:
+//     The data has already been written to the ENC by the time this is called
 //******************************************************************************
 procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 var
@@ -303,7 +304,7 @@ begin
   CkSum_TCP := Eth_Cksum(TXSTART+34, 12+TotalLen+Align);
   WriteToEthMem(TXSTART+50, Hi(CkSum_TCP));
   Eth_PutByte(Lo(CkSum_TCP));
-  Eth_Send(34+TotalLen);
+  Eth_Send(34+TotalLen);                                                        // Blocks until sent
 end;
 
 //******************************************************************************
