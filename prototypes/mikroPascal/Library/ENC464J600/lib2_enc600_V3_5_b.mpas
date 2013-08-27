@@ -76,37 +76,44 @@ begin
   Ping_CacheTimerTask;
   inc(TickCounter1);
   inc(TickCounter10);
+  
   if inc(count_100) > 99 then
-    begin
-      Inc(ARP_100ms_Counter);
-      inc(DHCP_count_1);
-      count_100 := 0;
-    end;
+  begin
+    Inc(ARP_100ms_Counter);
+    inc(DHCP_count_1);
+    count_100 := 0;
+  end;
+    
   if inc(NTP_Sec) > (999 + offset_clock_err) then  // 1 sec
-    begin
-      NTP_Sec := 0;
-      i := 0;
-      while i < MAX_SOCKET do
-        begin
-          inc(SocketManager.Socket[i].Exp_Time);
-          inc(i);
-        end;
-      inc(NTP_Time);
-      inc(NTP_ReSync);
-      inc(DHCP_count_2);
-      if DHCP_State = 3 then
+  begin
+    NTP_Sec := 0;
+    
+    i := 0;
+    while i < MAX_SOCKET do
+      begin
+        inc(SocketManager.Socket[i].Exp_Time);
+        inc(i);
+      end;
+      
+    inc(NTP_Time);
+    inc(NTP_ReSync);
+    inc(DHCP_count_2);
+    
+    if DHCP_State = 3 then
       if inc(DHCP_count_3) > Settings.DHCP_Lease_Time then
         begin
           DHCP_count_3 := 0;
           DHCP_state := 0;
           DHCP_count_2 := 294;
         end;
-      if NTP_ReSync > 1230 then
-        begin
-          NTP_Sync := False; // resyncronizations at 20 min
-          NTP_ReSync := 0;
-        end;
-    end;
+        
+    if NTP_ReSync > 1230 then
+      begin
+        NTP_Sync := False; // resyncronizations at 20 min
+        NTP_ReSync := 0;
+      end;
+      
+  end;
 end;
 
 //******************************************************************************
@@ -200,8 +207,7 @@ Begin
   Ping_EraseCache_Internal;
   EraseSockets;
   Firewall(False, False, False);
-  Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
-  Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
+  Sockets_Init_Internal;
   Eth_Policy(POLICY_DROP);
   delayms(10);
 
@@ -365,10 +371,10 @@ begin
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
-        CopyRamToEthMem(@SocketManager.Socket[i].Dest_Mac,TXSTART,6);
-        CopyRamToEthMem(@Settings.eth_mac,TXSTART+6,6);
-        CopyRamToEthMem(@Settings.eth_ip_addr,TXSTART+26,4);
-        CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip,TXSTART+30,4);
+        CopyRamToEthMem(@SocketManager.Socket[i].Dest_Mac, TXSTART, 6);
+        CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+        CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+        CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip, TXSTART + 30, 4);
         Eth_SendTCP(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
         SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
         SocketManager.Socket[i].Keep_Alive := False;

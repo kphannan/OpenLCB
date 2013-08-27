@@ -26,18 +26,18 @@ type
   TSocket = record
     State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
     source_port_S   : word;        // Port of the source (us)
-    Dest_Ip         : IpHeader;
-    Dest_Mac        : MacHeader;
-    dest_port_S     : word;
-    Seq_No_S        : dword;
-    Ack_No_S        : dword;
-    Wait_ACK        : word;
-    Exp_Time        : word;
-    Exp_Time_Val    : word;
-    Start_addr      : dword;
-    Stop_addr       : dword;
+    Dest_Ip         : IpHeader;    // Ip of the resource to send the data to
+    Dest_Mac        : MacHeader;   // MAC of the resource to send the data to
+    dest_port_S     : word;        // Port of the resource to send the data to
+    Seq_No_S        : dword;       // Sequence number for the TCP conversation with the other resource
+    Ack_No_S        : dword;       // Ack sequence number for the TCP conversation with the other resource
+    Wait_ACK        : word;        // Set to 1 if the socket is waiting for an ACK from the client (I think)
+    Exp_Time        : word;        // Counter increments every 1s to allow auto destruction of socket after Exp_Time_Val has expired
+    Exp_Time_Val    : word;        // Default set to 12 seconds, global set this value with the Set_TCP_TimeOut_Interval function
+    Start_addr      : dword;       // The start of the valid data in the TCP_buf
+    Stop_addr       : dword;       // The end of the valid data in the TCP_buf
     RAM_ROM         : word;
-    Keep_Alive      : boolean;
+    Keep_Alive      : boolean;     // [DEFAULT] = True; Keeps the socket alive (until the Exp_Time_Val expires at least) when it is empty.  If false then once the data is sent the socket is released.
     TCP_buf         : string[1024];
   //  TxBuffer,
   //  RxBuffer        : array[1024] of Byte;
@@ -61,6 +61,9 @@ function UDP_Close_Port(port_u : word): boolean;
 function TCP_Close_Port(port_t : word): boolean;
 procedure Set_TCP_TimeOut_Interval(int_ : word);
 
+// Internally used functions
+procedure Sockets_Init_Internal;
+
 // External functions
 function ARP_Validate_IP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean; external;
 function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, fragment : byte) : boolean; external;
@@ -74,6 +77,12 @@ var
   UDP_Opened_Ports : array[MAX_SOCKET] of word;
 
 implementation
+
+procedure Sockets_Init_Internal;
+begin
+  Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
+  Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
+end;
 
 //******************************************************************************
 //* Name    : Open_TCP_Connection                                              *

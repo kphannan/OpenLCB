@@ -33,7 +33,7 @@ var
   SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
   TCP_IdentificationCounter: word;
   Window : word;
-
+  
 procedure TCP_Init_Internal;
 begin
   TCP_IdentificationCounter := 1000;
