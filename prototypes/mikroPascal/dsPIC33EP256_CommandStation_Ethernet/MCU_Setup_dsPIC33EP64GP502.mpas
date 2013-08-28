@@ -10,10 +10,13 @@ uses
   {$ENDIF}
   {$IFDEF ETHERNET_BUS}
   TCPStorage,
-  {$ENDIF}
-  dsPIC33_DMA,
+  EthCommon,
   lib1_enc600_V3_5_b,
-  lib2_enc600_V3_5_b;
+  lib2_enc600_V3_5_b,
+  EthSockets,
+  dspic_additional_string_library,
+  {$ENDIF}
+  dsPIC33_DMA;
   
 const
  // ipServer: array[0..3] of byte = (192, 168, 0, 127);  // iMac
@@ -84,11 +87,8 @@ begin
   SPIEN_bit := 1;    // Enable the SPI
   
   Eth_Init_(False);  // Use the built in ENC464J600 MAC
+  SocketManager.TCP_Wait := 500;
   Wait_for_LAN;
-
-//  Net_Ethernet_28j60_stackInitTCP();
-//  Net_Ethernet_28j60_Init(@myMacAddr, @myIpAddr, Net_Ethernet_28j60_FULLDUPLEX);  // init ethernet module
-//  Net_Ethernet_28j60_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);
 end;
 
 procedure MCU_Setup_Initialize;

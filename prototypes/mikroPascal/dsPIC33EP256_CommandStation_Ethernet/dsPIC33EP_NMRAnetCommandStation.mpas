@@ -345,10 +345,11 @@ var
   ipPortClient, ipPortServer: Word;
   Delay, OldHead, OldTail: Integer;
   OldFull: Boolean;
-  OlcbSocketOpen: Boolean;
   TempIPHeader: IpHeader;
   PingTime: word;
   DNS_Path: string[64];
+  ipDest: ipHeader;
+  Running: Boolean;
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
@@ -361,7 +362,8 @@ begin
   OldTail := -1;
   OldFull := True;
   Delay := 0;
-  OlcbSocketOpen := False;
+  
+  Running := False;
                                                // Output
  // _25AAxxxx_Initialize;
   NMRAnetStateMachine_Initialize(MUSTANGPEAK_ID_0_HI, {MUSTANGPEAK_SERVICETRACK_NODE_ID_0_LO} MUSTANGPEAK_COMMANDSTATION_ID_0_LO);
@@ -399,7 +401,27 @@ begin
   {$ENDIF}
   UART1_Write_Text('Initializing OlcbBus'+LF);
   MCU_Setup_Enable_OlcbBus;
+  
+
+  delay_ms(1000);
   while not DHCP_Request(AddrPacket) do;
+  delay_ms(1000);
+
+  if TCP_Open_Port(12022) then
+    UART1_Write_Text('Port Opened' +LF)
+  else
+    UART1_Write_Text('Port Open failed'+LF);
+
+  Str2IP(OLCB_SERVER_IP, ipDest);
+
+  case Open_TCP_Connection(ipDest, OLCB_SERVER_PORT, 12022) of
+    RESULT_OPEN_TCP_CONNECTION_OK         : UART1_Write_Text('TCP Connection Opened'+LF);
+    RESULT_OPEN_TCP_CONNECTION_ARP_FAILED : UART1_Write_Text('TCP Connection ARP failed'+LF);
+    RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS : UART1_Write_Text('TCP Connection No Sockets'+LF);
+    RESULT_OPEN_TCP_CONNECTION_SEND_FAILED : UART1_Write_Text('TCP Connection Send Failed'+LF)
+  else
+    UART1_Write_Text('TCP Connection unknown Result'+LF);
+  end;
 
   UART1_Write_Text('DHCP Results' + LF);
   Ip2Str(Settings.eth_ip_addr, s1);
@@ -421,7 +443,7 @@ begin
   
   while (TRUE) do
   begin
-    if OlcbSocketOpen then
+    if Running then
     begin
       // Global updates
       // Allcoate a proxy if needed
@@ -443,25 +465,20 @@ begin
       begin
         if CANStorage_HighPriorityBufferReady then
         begin
-    //      Net_Ethernet_28j60_startSendTCP(OlcbSocket)       // Send it NOW
+          DoSendTCP;       // Send it NOW
         end else
         begin
           if (Delay = 20) or CAN_Engine.TransmitImmediately then
           begin
             if CANStorage_LowPriorityBufferReady then
-            begin
-     //         case Net_Ethernet_28j60_startSendTCP(OlcbSocket) of
-     //           0 : begin end;
-     //           1 : begin  end;
-     //         end;
-            end;
+              DoSendTCP;
             Delay := 0;
           end;
         end;
         Inc(Delay);
       end;
-    end;
-    
+   end;
+
     Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
     DHCP_Process(AddrPacket);
     
@@ -484,7 +501,7 @@ begin
       case Cmd[0] of
         'u', 'U' :
           begin
-            if OlcbSocketOpen then
+        {    if OlcbSocketOpen then
             begin
               UART_Write_Text('Disconnecting' + LF);
               if Close_TCP_Connection(TempIPServer, ipPortServer) then
@@ -495,11 +512,13 @@ begin
               end else
                 UART1_Write_Text('Unable to close Socket'+LF);
             end else
-              UART_Write_Text('Socket was not connected' + LF);
+              UART_Write_Text('Socket was not connected' + LF);    }
           end;
         's', 'S' :
-          begin
-            if not OlcbSocketOpen then
+          begin  
+          
+            Running := True;
+      {      if not OlcbSocketOpen then
             begin
               TempIP := '';
               ipCount := 0;
@@ -543,7 +562,7 @@ begin
               end else
                 UART_Write_Text('Please enter a IP Address'+LF);
             end else
-              UART_Write_Text('Already Connected' + LF);
+              UART_Write_Text('Already Connected' + LF);   }
           end;
         'P' : begin
              //PrintDMABuffers

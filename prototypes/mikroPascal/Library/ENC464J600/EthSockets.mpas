@@ -16,6 +16,11 @@ const
   SOCKET_DISCONNECTED             = 0;
   SOCKET_WAITING_FOR_CONNECTION   = 1;
   SOCKET_CONNECTED                = 2;
+
+  RESULT_OPEN_TCP_CONNECTION_OK = 0;
+  RESULT_OPEN_TCP_CONNECTION_ARP_FAILED = 1;
+  RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS = 2;
+  RESULT_OPEN_TCP_CONNECTION_SEND_FAILED = 3;
   
   MAX_SOCKET: byte                = 8;
   
@@ -51,7 +56,7 @@ type
   end;
   
 // User functions
-function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
+function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : Word;
 function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
 procedure EraseSockets;
 function Search_Port(protocol : byte; port_ : word) : boolean;
@@ -83,25 +88,31 @@ begin
   Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
   Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
 end;
-
+  
 //******************************************************************************
 //* Name    : Open_TCP_Connection                                              *
 //* Purpose : Open TCP Connection and Socket                                   *
 //******************************************************************************
-function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : boolean;
+function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : Word;
 var
   i : byte;
   dest_mac: MacHeader;
 begin
-  Result := ARP_Validate_IP(ip_t2, dest_mac);
-  if Result = False then
+  Result := RESULT_OPEN_TCP_CONNECTION_OK;
+  
+  if not ARP_Validate_IP(ip_t2, dest_mac) then
+  begin
+    Result := RESULT_OPEN_TCP_CONNECTION_ARP_FAILED;
     Exit;
+  end;
 
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port_S2) and (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-      Break; // if connected
+    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) then
+      if (SocketManager.Socket[i].dest_port_S = dest_port_S2) then
+        if  (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+          Break; // if connected
     inc(i);
   end;
 
@@ -117,8 +128,11 @@ begin
   end;
 
   if i = MAX_SOCKET then
+  begin
+    Result := RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS;
     Exit;                                                // Out of sockets
-
+  end;
+  
   SocketManager.Socket[i].State_S := SOCKET_WAITING_FOR_CONNECTION;   // Wait for Connection
   SocketManager.Socket[i].SEQ_No_S := 12345;
   SocketManager.Socket[i].ACK_No_S := 0;
@@ -133,9 +147,9 @@ begin
   SocketManager.Socket[i].Keep_Alive := True;
   SocketManager.iLastOpenedSocked := i;
 
-  Result := Send_TCP_R_Internal(SYN_S, i, 0);
-  if Result = False then
+  if not Send_TCP_R_Internal(SYN_S, i, 0) then
   begin
+    Result := RESULT_OPEN_TCP_CONNECTION_SEND_FAILED;
     SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
     SocketManager.iLastOpenedSocked := 255;
   end;
@@ -153,21 +167,22 @@ begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].dest_port_S = dest_port_S2) and (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-    begin
-      if SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED then
+    if (SocketManager.Socket[i].dest_port_S = dest_port_S2) then
+      if (Mem_Cmp(@ip_t2, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
       begin
-        SocketManager.Socket[i].RAM_ROM := 0;
-        SocketManager.Socket[i].Start_addr := 0;
-        SocketManager.Socket[i].Stop_addr := 0;
-        Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, False);
-      end else
-      begin
-        Result := True;
-        Exit;
+        if SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED then
+        begin
+          SocketManager.Socket[i].RAM_ROM := 0;
+          SocketManager.Socket[i].Start_addr := 0;
+          SocketManager.Socket[i].Stop_addr := 0;
+          Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, False);
+        end else
+        begin
+          Result := True;
+          Exit;
+        end;
+        Break; // if connected
       end;
-      Break; // if connected
-    end;
     inc(i);
   end;
 

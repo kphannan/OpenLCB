@@ -20,19 +20,23 @@ unit TCPStorage;
 
 {$I Options.inc}
 
-{.$DEFINE TRACE_ETHERNET_OVERFLOW}
-{.$DEFINE TRACE_ETHERNET}
+{$DEFINE TRACE_ETHERNET}
 
 uses
   HelperFunctions,
   NMRAnetDefinesShared,
   NMRAnetDefines,
   EthCommon,
+  EthSockets,
+  dspic_additional_string_library,
   lib1_enc600_V3_5_b;
 
 const
   CAN_DIRECTION_READ = 1;
   CAN_DIRECTION_WRITE = 0;
+  
+  OLCB_SERVER_IP = '192.168.0.8';
+  OLCB_SERVER_PORT = 12021;
 
 const
   CES_TRANSMITTING = $0001;                                                     // CAN Engine State constants
@@ -42,14 +46,14 @@ const
   BS_EXTENDED     = $01;                                                       // CAN Buffer State constants, Buffer is extended
   BS_ALLOCATED    = $02;                                                       // Buffer Slot contains valid data to send
 
-const
+{const
   SOCKET_STATE_CLOSED                          = 0;
   SOCKET_STATE_SYN_REC_SYN_SENT_WAIT_ACK       = 1;
   SOCKET_STATE_ESTABLISHED                     = 3;
   SOCKET_STATE_SYN_SENT_WAIT_FOR_SYN_RESPONSE  = 4;
   SOCKET_STATE_FIN_SENT_WAIT_FOR_ACK           = 5;
   SOCKET_STATE_FIN_ACK_REC_WAIT_FOR_REMOTE_FIN = 6;
-  SOCKET_STATE_EXPIRED_ACK_WAIT_TIME           = 7;
+  SOCKET_STATE_EXPIRED_ACK_WAIT_TIME           = 7;     }
 
 type
  // ***************************************************************************
@@ -86,6 +90,7 @@ type
 
 procedure CANStorage_Initialize;
 procedure CANStorage_FlushBuffers(AliasID: Word);
+procedure DoSendTCP;
 
 procedure LockCANInterrupt;
 procedure UnLockCANInterrupt;
@@ -102,7 +107,7 @@ procedure Eth_UserProcess_Main;
 procedure Eth_UserProcess;
 procedure DisableInt;
 procedure EnableInt;
-procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; CC_Sock : byte);
+procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte);
 function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
 
 //procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
@@ -114,6 +119,7 @@ procedure ReceivedOnFilter0(CANBuffer: PCANBuffer); external;                   
 procedure ReceivedOnFilter1(CANBuffer: PCANBuffer); external;                            // NMRAnet Layer Message
 procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString); external;
 procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer); external;
+function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean; external;
 
 var
 //  OlcbSocket: ^SOCKET_28j60_Dsc;
@@ -356,51 +362,100 @@ begin
 
 end;
 
-procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; CC_Sock : byte);
-begin
-  UART1_Write_Text('TCP'+LF);
-end;
-
-function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
-begin
-  UART1_Write_Text('UDP'+LF);
-  result := 0;
-end;
-
-procedure DisableInt;
-begin
-  T3IE_bit := 0;
-end;
-
-procedure EnableInt;
-begin
-  T3IE_bit := 1;
-end;
-
-(*
-procedure Net_Ethernet_28j60_UserTCP(socket : ^SOCKET_28j60_Dsc);
+procedure DoSendTCP;
 var
   TxBuffer: PCANBuffer;
   GridConnectBuffer: array[MAX_GRID_CONNECT_LEN] of char;
-  TCP_Receive_Char: char;
-  Receive_GridConnectBufferIndex, i: Integer;
-  sx: string[16];
-  sx1: string[16];
-  BytesRead: Integer;
+  ipDest: IPHeader;
+  portDest: Word;
+  TCP_buf: array[1472] of byte;
+  TCP_buf_start: ^byte;
+  TCP_buf_size: word;
+  OlcbPacketLength: Word;
 begin
-  CAN_Engine.IsTransmitting := False;  // Maybe, maybe not we will see...
+  TCP_buf_start := @TCP_buf[0];
+  TCP_buf_size := 0;
   
-  if socket^.State = SOCKET_STATE_ESTABLISHED then
+    // Send something if we can
+  TxBuffer := CANStorage_NextHighPriorityToSend;                              // Pull the next item to send out of the list
+  while (TxBuffer <> nil) and (TCP_buf_size < (1300 - MAX_GRID_CONNECT_LEN)) do
   begin
+    CAN_Engine.IsTransmitting := True;                                        // Yes, placed something in the buffer
+
+    CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+
+    {$IFDEF TRACE_ETHERNET}
+    UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
+    {$ENDIF}
+
+    OlcbPacketLength := strlen(GridConnectBuffer);
+    memCpy(@GridConnectBuffer, TCP_buf_start, OlcbPacketLength);
+    TCP_buf_start := TCP_buf_start + OlcbPacketLength;
+    TCP_buf_start^ := #10;
+    Inc(TCP_buf_start);
+    TCP_buf_size := TCP_buf_size + OlcbPacketLength + 1;
+
+    TxBuffer^.State := BS_CLEAR;
+
+    TxBuffer := CANStorage_NextHighPriorityToSend;
+  end;
+
+  TxBuffer := CANStorage_NextToSend;
+  while (TxBuffer <> nil) and (TCP_buf_size < (1300 - MAX_GRID_CONNECT_LEN)) do
+  begin
+    CAN_Engine.IsTransmitting := True;                                        // Yes, placed something in the buffer
+    CAN_Engine.TransmitImmediately := False;
+
+    CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
+
+    {$IFDEF TRACE_ETHERNET}
+    UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
+    {$ENDIF}
+    
+    OlcbPacketLength := strlen(GridConnectBuffer);
+    memCpy(@GridConnectBuffer, TCP_buf_start, OlcbPacketLength);
+    TCP_buf_start := TCP_buf_start + OlcbPacketLength;
+    TCP_buf_start^ := #10;
+    Inc(TCP_buf_start);
+    TCP_buf_size := TCP_buf_size + OlcbPacketLength + 1;
+
+    TxBuffer^.State := BS_CLEAR;
+
+    TxBuffer := CANStorage_NextToSend;
+  end;
   
+  if TCP_buf_size > 0 then
+  begin
+    Str2IP(OLCB_SERVER_IP, ipDest);
+    portDest := OLCB_SERVER_PORT;
+    UART1_Write_Text('Sending TCP');
+    if Send_TCP(ipDest, portDest, TCP_buf_size, TCP_buf) then
+      UART1_Write_Text('Sending TCP Failed' + LF)
+    else
+      UART1_Write_Text('Sending TCP Succeeded' + LF);
+  end;
+end;
+
+procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte);
+var
+  Receive_GridConnectBufferIndex: Integer;
+  TCP_Receive_Char: char;
+  Socket: ^TSocket;
+begin
+  // Socket will be released after this call
+  
+  CAN_Engine.IsTransmitting := False;  // Maybe, maybe not we will see...
+
+  Socket := @SocketManager.Socket[iSocket];
+  if Socket^.State_S = SOCKET_CONNECTED then
+  begin
     // Read something if we can
-    if (socket^.remotePort = 12021) and (socket^.dataLength > 0) then
+    if (Socket^.dest_port_S = 12021) and (Socket^.Stop_addr - Socket^.Start_addr > 0) then
     begin
-      BytesRead := 0;
       Receive_GridConnectBufferIndex := 0;
-      while not Done and (BytesRead < socket^.dataLength) do
+      while not Done and (Socket^.Stop_addr - Socket^.Start_addr > 0) do
       begin
-        TCP_Receive_Char := Net_Ethernet_28j60_getByte();                       // Get the next byte from the stack
+        TCP_Receive_Char := Socket^.TCP_buf[Socket^.Start_addr];                // Get the next byte from the stack
         case TCP_Receive_State of
           TCP_STATE_SYNC_START :                                                // Find a starting ':'
             begin
@@ -482,74 +537,27 @@ begin
             end else
               TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
         end;
-        Inc(BytesRead);
+        Inc(Socket^.Start_addr);        // Next char
       end;
     end;
-    
-    // Send something if we can
-    TxBuffer := CANStorage_NextHighPriorityToSend;                              // Pull the next item to send out of the list
-    while TxBuffer <> nil do
-    begin
-      CAN_Engine.IsTransmitting := True;                                        // Yes, placed something in the buffer
-      
-      CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-
-      {$IFDEF TRACE_ETHERNET}
-      UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);
-      {$ENDIF}
-
-      {$IFDEF TRACE_ETHERNET_OVERFLOW}
-      BytesRead := strlen(GridConnectBuffer);
-      if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
-        UART_Write_Text('Buffer overflow' +LF);
-      if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
-          UART_Write_Text('Buffer overflow' +LF);
-      {$ELSE}
-      Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-      Net_Ethernet_28j60_putByteTCP(#10, socket);
-      {$ENDIF}
-
-      TxBuffer^.State := BS_CLEAR;
-      
-      TxBuffer := CANStorage_NextHighPriorityToSend;
-    end;
-    
-    TxBuffer := CANStorage_NextToSend;
-    while TxBuffer <> nil do
-    begin
-      CAN_Engine.IsTransmitting := True;                                        // Yes, placed something in the buffer
-      CAN_Engine.TransmitImmediately := False;
-    
-      CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
-
-      {$IFDEF TRACE_ETHERNET}
-      UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);
-      {$ENDIF}
-
-      {$IFDEF TRACE_ETHERNET_OVERFLOW}
-      Inc(CAN_Engine.TX_NMRAnetBufferSent);
-      BytesRead := strlen(GridConnectBuffer);
-      if Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket) < BytesRead then
-        UART_Write_Text('Buffer overflow' +LF);
-      if Net_Ethernet_28j60_putByteTCP(#10, socket) < 1 then
-        UART_Write_Text('Buffer overflow' +LF);
-      {$ELSE}
-      Inc(CAN_Engine.TX_NMRAnetBufferSent);
-      Net_Ethernet_28j60_putStringTCP(@GridConnectBuffer[0], socket);
-      Net_Ethernet_28j60_putByteTCP(#10, socket);
-      {$ENDIF}
-
-      TxBuffer^.State := BS_CLEAR;
-      
-      TxBuffer := CANStorage_NextToSend;
-    end;
   end;
+  UART1_Write_Text('TCP'+LF);
 end;
-  
-function Net_Ethernet_28j60_UserUDP(udpDsc : ^UDP_28j60_Dsc) : word;
+
+function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
 begin
-  Result := 0;
+  UART1_Write_Text('UDP'+LF);
+  result := 0;
 end;
-*)
+
+procedure DisableInt;
+begin
+  T3IE_bit := 0;
+end;
+
+procedure EnableInt;
+begin
+  T3IE_bit := 1;
+end;
 
 end.
