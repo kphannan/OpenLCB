@@ -376,16 +376,20 @@ begin
 
   if TCP_FlagReceive.RST = 1 then
   begin
+    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx RST'+LF});{ENDIF}
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
     begin
-      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-      begin
-        SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
-        SocketManager.Socket[i].Keep_Alive := False;
-        SocketManager.Socket[i].Wait_ACK := 0;
-        Break;
-      end;
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) 
+        if (SocketManager.Socket[i].dest_port_S = dest_port2) then
+          if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+          begin
+            {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx RST: Disconnected'+LF});{ENDIF}
+            SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+            SocketManager.Socket[i].Keep_Alive := False;
+            SocketManager.Socket[i].Wait_ACK := 0;
+            Break;
+          end;
       inc(i);
     end;
     Exit;
@@ -395,30 +399,43 @@ begin
   begin
     if TCP_FlagReceive.FIN = 1 then
     begin
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN'+LF});{ENDIF}
       i := 0;
       while i < MAX_SOCKET do  // search for opened socket
       begin
-        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-        begin
-          SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
-          SocketManager.Socket[i].Keep_Alive := False;
-          SocketManager.Socket[i].Wait_ACK := 0;
-          Break;
-        end;
+        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) then
+          if (SocketManager.Socket[i].dest_port_S = dest_port2) then
+            if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+            begin
+              {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN: Disconnected'+LF});{ENDIF}
+              SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+              SocketManager.Socket[i].Keep_Alive := False;
+              SocketManager.Socket[i].Wait_ACK := 0;
+              Break;
+            end;
         inc(i);
       end;
 
       if TCP_FlagReceive.RST = 1 then
+      begin
+        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN|RST: Done'+LF});{ENDIF}
         Exit; // Note that RST packets are not acknowledged.
+      end;
 
       SEQ_No := ACK_NoR;
       ACK_No := SEQ_NoR + 1;
 
       if TCP_FlagReceive.ACK = 1 then
+      begin
+        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN|ACK, reply with ACK'+LF});{ENDIF}
         TCP_FlagSend := ACK_S                 // FIN + ACK, response only with ACK
-      else begin
+      end else 
+      begin
         if TCP_FlagReceive.FIN = 1 then
+        begin
+          {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN|ACK, reply with ACK|FIN'+LF});{ENDIF}
           TCP_FlagSend := ACK_S + FIN_S;   // FIN response with FIN + ACK
+        end
       end;
       CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
       CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
@@ -433,22 +450,27 @@ begin
   begin
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
+    begin
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) then
+        if (SocketManager.Socket[i].dest_port_S = dest_port2) then
+          if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+            Break; // if connected
+      inc(i);
+    end;
+    
+    if i = MAX_SOCKET then
+    begin
+      i := 0;
+      while i < MAX_SOCKET do  // search for free socket
       begin
-        if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-             Break; // if connected
+        if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
+          Break;
         inc(i);
       end;
-    if i = MAX_SOCKET then
-      begin
-        i := 0;
-        while i < MAX_SOCKET do  // search for free socket
-          begin
-            if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
-              Break;
-            inc(i);
-          end;
-      end;
-    if i = MAX_SOCKET then Exit;
+    end;
+      
+    if i = MAX_SOCKET then 
+      Exit;
 
     SEQ_No := ACK_NoR;
     ACK_No := SEQ_NoR + 1;
@@ -491,10 +513,13 @@ begin
     i := 0;
     while i < MAX_SOCKET do  // search for connected socket
     begin
-      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port2) and (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-        Break;
+      if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) then
+        if (SocketManager.Socket[i].dest_port_S = dest_port2) then
+          if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+            Break;
       inc(i);
     end;
+    
     if i < MAX_SOCKET then
     begin
       if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) or (SocketManager.Socket[i].Wait_ACK <> 0) then
