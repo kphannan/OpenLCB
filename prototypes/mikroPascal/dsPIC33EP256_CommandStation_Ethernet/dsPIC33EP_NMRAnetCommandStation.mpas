@@ -413,12 +413,14 @@ begin
     UART1_Write_Text('Port Open failed'+LF);
 
   Str2IP(OLCB_SERVER_IP, ipDest);
+  WordToStr(OLCB_SERVER_PORT, s1);
+  UART1_Write_Text('Connecting to IP: '+ OLCB_SERVER_IP + ' Port: ' + s1 + LF);
 
   case Open_TCP_Connection(ipDest, OLCB_SERVER_PORT, 12022) of
     RESULT_OPEN_TCP_CONNECTION_OK         : UART1_Write_Text('TCP Connection Opened'+LF);
     RESULT_OPEN_TCP_CONNECTION_ARP_FAILED : UART1_Write_Text('TCP Connection ARP failed'+LF);
     RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS : UART1_Write_Text('TCP Connection No Sockets'+LF);
-    RESULT_OPEN_TCP_CONNECTION_SEND_FAILED : UART1_Write_Text('TCP Connection Send Failed'+LF)
+    RESULT_OPEN_TCP_CONNECTION_SEND_FAILED : UART1_Write_Text('TCP Connection "Send" Failed'+LF)
   else
     UART1_Write_Text('TCP Connection unknown Result'+LF);
   end;

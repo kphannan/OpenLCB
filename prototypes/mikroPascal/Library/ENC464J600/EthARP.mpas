@@ -1,6 +1,6 @@
 unit EthARP;
 
-{.$DEFINE LOG_UART}
+{$DEFINE LOG_UART}
 
 uses
 
