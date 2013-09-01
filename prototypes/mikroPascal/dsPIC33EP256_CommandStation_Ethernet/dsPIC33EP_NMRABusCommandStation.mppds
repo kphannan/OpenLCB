@@ -7,7 +7,7 @@ Value=-1
 Value=0
 [ACTIVE_TAB]
 <<<<<<< .mine
-Value=..\Library\ENC464J600\lib2_enc600_V3_5_b.mpas
+Value=..\Library\TCPBus\TCPStorage.mpas
 =======
 Value=dsPIC33EP_NMRAnetCommandStation.mpas
 >>>>>>> .r3259
@@ -64,17 +64,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=10
+Count=8
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=..\Library\ENC464J600\lib2_enc600_V3_5_b.mpas
 File2=..\Library\ENC464J600\EthTCP.mpas
 File3=..\Library\ENC464J600\lib1_enc600_V3_5_b.mpas
 File4=..\Library\ENC464J600\EthSockets.mpas
-File5=..\Library\ENC464J600\EthCommon.mpas
-File6=..\Library\TCPBus\TCPStorage.mpas
-File7=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
-File8=MCU_Setup_dsPIC33EP64GP502.mpas
-File9=..\Library\ENC464J600\EthARP.mpas
+File5=..\Library\TCPBus\TCPStorage.mpas
+File6=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File7=MCU_Setup_dsPIC33EP64GP502.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

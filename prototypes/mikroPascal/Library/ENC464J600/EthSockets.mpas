@@ -1,6 +1,6 @@
 unit EthSockets;
 
-{.$DEFINE LOG_UART}
+{$DEFINE LOG_UART}
 
 uses
 
@@ -98,6 +98,7 @@ var
   i : byte;
   dest_mac: MacHeader;
 begin
+  {$IFDEF LOG_UART}UART1_Write_Text('Opening TCP Connection'+LF);{$ENDIF}
   Result := RESULT_OPEN_TCP_CONNECTION_OK;
   
   if not ARP_Validate_IP(ip_t2, dest_mac) then
@@ -165,6 +166,7 @@ var
   i : byte;
 begin
   i := 0;
+  {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP Connection'+LF);{$ENDIF}
   while i < MAX_SOCKET do  // search for opened socket
   begin
     if (SocketManager.Socket[i].dest_port_S = dest_port_S2) then

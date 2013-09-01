@@ -382,11 +382,26 @@ begin
   CopyEthMemToRam(EthMemAddressRequest + 26,@dest_ip_addr,4);
   CopyEthMemToRam(EthMemAddressRequest + 6, @dest_mac2,6);
 
-  {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx'+LF);{ENDIF}
+  {$IFDEF LOG_UART}
+  s1 := 'TCP Flags: |';
+  if TCP_FlagReceive.FIN = 1 then
+    s1 := s1 + 'FIN|';
+  if TCP_FlagReceive.SYN = 1 then
+    s1 := s1 + 'SYN|';
+  if TCP_FlagReceive.RST = 1 then
+    s1 := s1 + 'RST|';
+  if TCP_FlagReceive.PSH = 1 then
+    s1 := s1 + 'PSH|';
+  if TCP_FlagReceive.ACK = 1 then
+    s1 := s1 + 'ACK|';
+  if TCP_FlagReceive.URG = 1 then
+    s1 := s1 + 'URG|';
+  UART1_Write_Text(+s1+LF);
+  {$ENDIF}
 
   if TCP_FlagReceive.RST = 1 then
   begin
-    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx RST'+LF);{ENDIF}
+    {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx RST = True Handling.....'+LF);{$ENDIF}
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
     begin
@@ -394,7 +409,7 @@ begin
         if (SocketManager.Socket[i].dest_port_S = dest_port2) then
           if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
           begin
-            {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx RST: Disconnected'+LF);{ENDIF}
+            {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx RST: Reseting and Exiting'+LF);{$ENDIF}
             SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
             SocketManager.Socket[i].Keep_Alive := False;
             SocketManager.Socket[i].Wait_ACK := 0;
@@ -405,11 +420,14 @@ begin
     Exit;
   end;
 
+  // Data = 0 is a special case
   if PacketLen = 0 then
   begin
+    {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Packet Length = 0 Handling....'+LF);{$ENDIF}
+    
     if TCP_FlagReceive.FIN = 1 then
     begin
-      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN'+LF);{ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx FIN = True Handling'+LF);{$ENDIF}
       i := 0;
       while i < MAX_SOCKET do  // search for opened socket
       begin
@@ -417,7 +435,7 @@ begin
           if (SocketManager.Socket[i].dest_port_S = dest_port2) then
             if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
             begin
-              {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN: Disconnected'+LF);{ENDIF}
+              {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx FIN = True: Disconnecting'+LF);{$ENDIF}
               SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
               SocketManager.Socket[i].Keep_Alive := False;
               SocketManager.Socket[i].Wait_ACK := 0;
@@ -428,7 +446,7 @@ begin
 
       if TCP_FlagReceive.RST = 1 then
       begin
-        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN|RST: Done'+LF);{ENDIF}
+        {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx RST = True Handling and Exiting'+LF);{$ENDIF}
         Exit; // Note that RST packets are not acknowledged.
       end;
 
@@ -437,13 +455,13 @@ begin
 
       if TCP_FlagReceive.ACK = 1 then
       begin
-        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN|ACK, reply with ACK'+LF);{ENDIF}
+        {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK = True, Send an ACK then Exit'+LF);{$ENDIF}
         TCP_FlagSend := ACK_S                 // FIN + ACK, response only with ACK
       end else 
       begin
         if TCP_FlagReceive.FIN = 1 then
         begin
-          {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx FIN|ACK, reply with ACK|FIN'+LF);{ENDIF}
+          {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx FIN = True, Send an ACK and FIN then Exit'+LF);{$ENDIF}
           TCP_FlagSend := ACK_S + FIN_S;   // FIN response with FIN + ACK
         end
       end;
@@ -456,9 +474,10 @@ begin
     end;
   end;
 
+  // Someone wants to connect to us
   if TCP_FlagReceive.SYN = 1 then // SYN
   begin
-    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx SYN'+LF);{ENDIF}
+    {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx SYN Handling.....'+LF);{$ENDIF}
     
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
@@ -483,7 +502,7 @@ begin
       
     if i = MAX_SOCKET then 
     begin
-      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx SYN, no socket found'+LF);{ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx SYN, no socket found'+LF);{$ENDIF}
       Exit;
     end;
 
@@ -492,13 +511,13 @@ begin
 
     if TCP_FlagReceive.ACK = 1 then // ACK
     begin
-      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx SYN|ACK'+LF);{ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK = True, send an ACK then Exit'+LF);{$ENDIF}
       TCP_FlagSend := ACK_S;
       Align := 0;
       SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
     end else
     begin
-      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx RST|NO ACK'+LF);{ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx ACK = False, send an ACK and SYN then Exit'+LF);{$ENDIF}
       TCP_FlagSend := SYN_S + ACK_S;
       Align := 8;
       SocketManager.Socket[i].State_S := SOCKET_WAITING_FOR_CONNECTION; // Wait for Connection
@@ -525,8 +544,10 @@ begin
     Exit;
   end;
 
+  //
   if TCP_FlagReceive.ACK = 1 then // ACK
   begin
+    {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx ACK Handling.....'+LF);{$ENDIF}
     i := 0;
     while i < MAX_SOCKET do  // search for connected socket
     begin
@@ -539,8 +560,16 @@ begin
     
     if i < MAX_SOCKET then
     begin
+      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK Handling found Socket'+LF);{$ENDIF}
+      
       if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) or (SocketManager.Socket[i].Wait_ACK <> 0) then
       begin
+        {$IFDEF LOG_UART}
+        if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then
+          UART1_Write_Text('  TCP Rx ACK Handling found Socket = Waiting for Connection'+LF)
+        else
+          UART1_Write_Text('  TCP Rx ACK Handling found Socket = Waiting for server ACK'+LF);
+        {$ENDIF}
         SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
         SocketManager.Socket[i].Wait_ACK := 0;
         SocketManager.Socket[i].ACK_No_S := SEQ_NoR;
@@ -548,7 +577,9 @@ begin
         SocketManager.Socket[i].Exp_Time := 0; // keep Alive
         Exit;
       end else
-      begin
+      begin                                       
+        {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx Calling User TCP'+LF);{$ENDIF}
+        
         SEQ_No := ACK_NoR;
         ACK_No := SEQ_NoR + PacketLen;
         TCP_FlagSend := ACK_S;
@@ -565,13 +596,19 @@ begin
         CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
         CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
         Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
-
-        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx User TCP'+LF);{ENDIF}
         
         Align := ReadFromEthMem(EthMemAddressRequest + 53); // put rx pointer to start of TCP data.
         if PacketLen <> 0 then
+        begin
+          CopyEthMem_CPToRam(word(@SocketManager.Socket[i].TCP_buf), PacketLen);
+          SocketManager.Socket[i].Start_addr := 0;
+          SocketManager.Socket[i].Stop_addr := PacketLen;
           Eth_UserTCP(dest_ip_addr, source_port2, dest_port2, PacketLen, i);
+        end
       end;
+    end else
+    begin
+      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK Handling Socket not found'+LF);{$ENDIF}
     end;
   end;
 end;

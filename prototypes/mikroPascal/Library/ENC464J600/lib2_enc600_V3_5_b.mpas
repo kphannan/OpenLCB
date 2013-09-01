@@ -270,67 +270,82 @@ begin
   if (Eth_ReadReg(EIR_) and $0040) <> 0 then
     begin
     
-    {$IFDEF LOG_UART}UART1_Write_Text('Have Packet' + LF);{$ENDIF}
+    {$IFDEF LOG_UART}UART1_Write_Text(LF + 'Received a Packet............<START>' + LF);{$ENDIF}
     
       broadcast_packet := False;
       case Eth_ReadPacket of
         ETH_ARP :
         begin
-          {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP' + LF);{$ENDIF}
           if EthMemCompareWithRam(AddrPacket + 38, @Settings.eth_ip_addr, 4) then
-            begin
-              case ReadFromEthMem(AddrPacket+21) of
-                ETH_ARP_REQ :        // ARP Request
-                  begin
-                    ARP_Reply_Internal(AddrPacket);
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_REQ' + LF);{$ENDIF}
-                  end;
-                ETH_ARP_RES :       // ARP Response to a Request sent by us
-                  begin
-                    ARP_Process_Internal(AddrPacket);
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_RES' + LF);{$ENDIF}
-                  end;
+          begin
+            case ReadFromEthMem(AddrPacket+21) of
+              ETH_ARP_REQ :        // ARP Request
+                begin
+                  ARP_Reply_Internal(AddrPacket);
+                  {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_REQ for our IP' + LF);{$ENDIF}
+                end;
+              ETH_ARP_RES :       // ARP Response to a Request sent by us
+                begin
+                  ARP_Process_Internal(AddrPacket);
+                  {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_RES for our IP' + LF);{$ENDIF}
+                end
+            else begin
+              {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP Message sent to our IP but unknown code' + LF);{$ENDIF}
               end;
             end;
+          end else
+          begin
+            {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP for Unknown IP' + LF);{$ENDIF}
+          end;
         end;
         ETH_IP :
         begin
-          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP' + LF);{$ENDIF}
           if EthMemCompareWithRam(AddrPacket + 30, @Settings.eth_ip_addr, 4) then
           begin
             case ReadFromEthMem(AddrPacket + 23) of
                 ETH_IP_ICMP :
                   begin
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP' + LF);{$ENDIF}
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP for our IP' + LF);{$ENDIF}
                     case ReadFromEthMem(AddrPacket + 34) of
                       ETH_IP_ICMP_ECHO :
                         begin
-                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_ECHO' + LF);{$ENDIF}
+                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_ECHO for our IP' + LF);{$ENDIF}
                           if FICMP = False then
                             Ping_Echo_Internal(AddrPacket)
                         end;
                       ETH_IP_ICMP_REPLY :
                         begin
-                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_REPLY' + LF);{$ENDIF}
+                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_REPLY for our IP' + LF);{$ENDIF}
                           Ping_Reply_Internal(AddrPacket);
-                        end;
+                        end
+                    else begin
+                        {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP Message for our IP with unknown code' + LF);{$ENDIF}
+                      end;
                     end;
                   end;
                 ETH_IP_UDP :
                   begin
                     if FUDP = False then
                       UDP_Process_Internal(AddrPacket);
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_UDP' + LF);{$ENDIF}
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_UDP for our IP' + LF);{$ENDIF}
                   end;
                 ETH_IP_TCP :
                   begin
                     if FTCP = False then
                       Eth_ProcessTCP(AddrPacket);
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_TCP' + LF);{$ENDIF}
-                  end;
+                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_TCP for our IP' + LF);{$ENDIF}
+                  end
+            else begin
+                {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP Message for our IP but unknown code' + LF);{$ENDIF}
+              end;
             end;
+            {$IFDEF LOG_UART}UART1_Write_Text('Received a Packet............<END>' + LF +LF);{$ENDIF}
             Exit;
+          end else
+          begin
+            {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP Message for unknown IP' + LF);{$ENDIF}
           end;
+          
           if Settings.UDP_Broadcast <> 0 then
             if ReadFromEthMem(AddrPacket+33) = 255 then
               if ReadFromEthMem(AddrPacket+23) = ETH_IP_UDP then
@@ -339,8 +354,12 @@ begin
                   broadcast_packet := True;
                   UDP_Process_Internal(AddrPacket);
                 end;
+        end else
+        begin
+          {$IFDEF LOG_UART}UART1_Write_Text('Unhandled Message Type' + LF);{$ENDIF}
         end;
       end;
+      {$IFDEF LOG_UART}UART1_Write_Text('Received a Packet............<END>' + LF +LF);{$ENDIF}
     end;
 end;
 
@@ -358,6 +377,7 @@ begin
     begin
       if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
       begin
+        {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Connected with data.............<START>' + LF);{$ENDIF}
         if Send_TCP_R_Internal(PSH_S + ACK_S, i, True) = False then
         begin
           SocketManager.Socket[i].Keep_Alive := False;
@@ -365,9 +385,11 @@ begin
           SocketManager.Socket[i].Stop_addr := 0;
         end else 
           SocketManager.Socket[i].Exp_Time := 0;
+        {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Connected with data.............<END>' + LF);{$ENDIF}
       end else
       if (SocketManager.Socket[i].Keep_Alive = False) or (SocketManager.Socket[i].Exp_Time > SocketManager.Socket[i].Exp_Time_Val) then // 1 minutes without activity (60 * 1) sec
       begin
+         {$IFDEF LOG_UART}UART1_Write_Text('Do_Stack: Socket Connected and killing.............<END>' + LF+LF);{$ENDIF}
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
@@ -378,18 +400,22 @@ begin
         Eth_SendTCP(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
         SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
         SocketManager.Socket[i].Keep_Alive := False;
+       {$IFDEF LOG_UART}UART1_Write_Text('Do_Stack: Socket Connected and killing.............<END>' + LF+LF);{$ENDIF}
       end;
     end else 
     if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then // waiting for connection
     begin
+      {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
       if (SocketManager.Socket[i].Exp_Time > 9) then // 10 sec without response at SYN
       begin
+        {$IFDEF LOG_UART}UART1_Write_Text('Do_Stack: Socket waiting for Connection Expired' + LF);{$ENDIF}
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
         SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
         SocketManager.Socket[i].Keep_Alive := False;
       end;
+      {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
     end;
     inc(i);
   end;
