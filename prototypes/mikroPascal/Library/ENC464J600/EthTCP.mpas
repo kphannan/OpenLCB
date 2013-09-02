@@ -581,7 +581,12 @@ begin
 
       if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) or (SocketManager.Socket[i].Wait_ACK <> 0) then
       begin
-        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to a SYN (us) - SYN+ACK (them) OR a general Wait_ACK, connection is complete'+LF);{ENDIF}
+        {IFDEF TRACE_TCP_RX}
+        if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then
+          UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to a SYN (us) - SYN+ACK (them), connection is complete'+LF)
+        else
+          UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to general Wait_ACK'+LF);
+        {ENDIF}
         SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
         SocketManager.Socket[i].Wait_ACK := 0;
         SocketManager.Socket[i].ACK_No_S := SEQ_NoR;
@@ -590,8 +595,6 @@ begin
         Exit;
       end else
       begin                                       
-        {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx Calling User TCP'+LF);{$ENDIF}
-        
         {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, this is a data packet being sent to us'+LF);{ENDIF}
         SEQ_No := ACK_NoR;
         ACK_No := SEQ_NoR + PacketLen;
@@ -624,7 +627,7 @@ begin
       end;
     end else
     begin
-      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK Handling Socket not found'+LF);{$ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx ACK Handling Socket not found'+LF);{$ENDIF}
     end;
     {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, done we are out of here'+LF);{ENDIF}
   end;
