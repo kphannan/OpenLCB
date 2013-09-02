@@ -332,7 +332,7 @@ begin
                 ETH_IP_TCP :
                   begin
                     if FTCP = False then
-                      Eth_ProcessTCP(AddrPacket);
+                      TCP_Process_Internal(AddrPacket);
                     {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_TCP for our IP' + LF);{$ENDIF}
                   end
             else begin
@@ -378,7 +378,7 @@ begin
       if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
       begin
         {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Connected with data.............<START>' + LF);{$ENDIF}
-        if Send_TCP_R_Internal(PSH_S + ACK_S, i, True) = False then
+        if TCP_Send_Internal(PSH_S + ACK_S, i, True) = False then
         begin
           SocketManager.Socket[i].Keep_Alive := False;
           SocketManager.Socket[i].Start_addr := 0;
@@ -397,7 +397,7 @@ begin
         CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
         CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
         CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip, TXSTART + 30, 4);
-        Eth_SendTCP(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
+        TCP_WriteToWire_Internal(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
         SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
         SocketManager.Socket[i].Keep_Alive := False;
        {$IFDEF LOG_UART}UART1_Write_Text('Do_Stack: Socket Connected and killing.............<END>' + LF+LF);{$ENDIF}
@@ -445,8 +445,8 @@ end;
 procedure Wait_for_LAN;
 var 
   Counter : word;
-  dest_ip_addr: IpHeader;
-  dest_mac: MacHeader;
+  dest_ip_addr: TipHeader;
+  dest_mac: TmacHeader;
 begin
   Counter := 0;
   while Counter < 60000 do

@@ -35,8 +35,8 @@ const
   POLICY_DROP                 : byte = 2;
   
 type
-  IpHeader = array[4] of byte;
-  MacHeader = array[6] of byte;
+  TipHeader = array[4] of byte;
+  TmacHeader = array[6] of byte;
   
 var
   TickCounter1, TickCounter10 : word;                                           // The reason for 2 would be because of a inner spin timeout loop.  Have not verified this is true or correct

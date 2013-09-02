@@ -58,12 +58,12 @@ var
 
 type
   TSettings = record
-    eth_ip_addr : IpHeader;                                                     // Node IP address
-    eth_mac : MacHeader;                                                        // Node MAC address
-    eth_dns_addr : IpHeader;
-    eth_ntp_addr : IpHeader;
-    eth_gateway : IpHeader;
-    eth_mask : IpHeader;
+    eth_ip_addr : TipHeader;                                                     // Node IP address
+    eth_mac : tmacHeader;                                                        // Node MAC address
+    eth_dns_addr : TipHeader;
+    eth_ntp_addr : TipHeader;
+    eth_gateway : TipHeader;
+    eth_mask : TipHeader;
     Announce : boolean;                                                         // Set to true to send a ping reply when connecting
     Policy : byte;                                                              // POLICY_REJECT or POLICY_DROP to send a reject message or drop unknown packets
     UDP_Broadcast: Boolean;                                                     // Forces the UDP packet to be broadcast to all devices on the segment not to a target IP

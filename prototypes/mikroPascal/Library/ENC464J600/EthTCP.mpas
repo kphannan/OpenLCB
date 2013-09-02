@@ -13,17 +13,16 @@ NMRAnetDefinesShared,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
   
-function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
-procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
-procedure Eth_ProcessTCP(EthMemAddressRequest: Word);
-
+function TCP_UserSend(var ip_t1 : TipHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 
 // Internal functions
-function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, Fragment: Boolean) : boolean;
+function TCP_Send_Internal(TCP_Flag_T : byte; iSocket, Fragment: Boolean) : boolean;
+procedure TCP_WriteToWire_Internal(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 procedure TCP_Init_Internal;
+procedure TCP_Process_Internal(EthMemAddressRequest: Word);
 
 // External functions
-procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte); external;
+procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte); external;
 procedure Eth_DoPacket; external;
 
 implementation
@@ -41,10 +40,15 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Send_TCP_R_Internal1                                                      *
-//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
+//* Name    : TCP_Send_Load_Addresses_And_Data_Internal
+//* Purpose : Send TCP packets, used by TCP/IP Stack
+//  Description: This is only called by TCP_Send_Internal to move the MAC and
+//               IP addresses to the ENC device, then decode if the data is RAM
+//               or ROM and move that to the device.  It then calls the function
+//               to load the rest of the IP/TCP header info to the device and send
+//               the packet
 //******************************************************************************
-function Send_TCP_R_Internal1(TCP_Flag_T: byte; iSocket: byte; AddressOffset : word; MaxPacketDataSize: Word) : word;
+function TCP_Send_LoadAddressesAndDataThenSend_Internal(TCP_Flag_T: byte; iSocket: byte; AddressOffset : word; MaxPacketDataSize: Word) : word;
 var 
   BytesToWrite : word;
   Stop_addr_S, Start_addr_S : dword;
@@ -83,35 +87,46 @@ begin
     end;
     if BytesToWrite = 0 then
       Exit;
-  end else
-  if SocketManager.Socket[iSocket].RAM_ROM = 2 then
-  begin
-
-    // Florin has this so it would copy data from an EEProm to the Ethernet for the webpage....
-
-    kk :=  dword(Stop_addr_S - (Start_addr_S + AddressOffset));
-    if kk >= MaxPacketDataSize then
-      BytesToWrite := MaxPacketDataSize
-    else
-      BytesToWrite := kk;
- //   DF_ContArrayToETH((Start_addr_S + AddressOffset),BytesToWrite);
   end;
 
-  Eth_SendTCP(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, BytesToWrite, (SocketManager.Socket[iSocket].SEQ_No_S + AddressOffset), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
+  TCP_WriteToWire_Internal(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, BytesToWrite, (SocketManager.Socket[iSocket].SEQ_No_S + AddressOffset), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
 
   Result := BytesToWrite;
 end;
 
 //******************************************************************************
-//* Name    : Send_TCP_R_Internal                                                       *
-//* Purpose : Send TCP packets, used by TCP/IP Stack                           *
+//* Name    : TCP_Send_Internal
+//* Purpose : Send TCP packets, used by TCP/IP Stack
+//  Description:  This is the internal equivalent to the TCP_UserSend function.
+//                When the library wants to send a packet it usees this function.
+//                It allows other packet flag to be st for other packets than
+//                sending data. TCP_UserSend comes through this after it sets
+//                up the variables property
 //******************************************************************************
-function Send_TCP_R_Internal(TCP_Flag_T: byte; iSocket, Fragment: Boolean) : boolean;
+function TCP_Send_Internal(TCP_Flag: byte; iSocket, Fragment: Boolean) : boolean;
 var
   AddressOffsetSecondPacket, AddressOffset, i, MaxPacketDataSize : word;
   Stop_addr_S, Start_addr_S, seq_buf : dword;
   AddressDelta : dword;
 begin
+  {$IFDEF LOG_UART}UART1_Write_Text('TCP Tx: Transmission of Packet................<START>'+LF);{$ENDIF}
+  {$IFDEF LOG_UART}
+  s1 := 'TCP Flags: |';
+  if TCP_Flag.FIN = 1 then
+    s1 := s1 + 'FIN|';
+  if TCP_Flag.SYN = 1 then
+    s1 := s1 + 'SYN|';
+  if TCP_Flag.RST = 1 then
+    s1 := s1 + 'RST|';
+  if TCP_Flag.PSH = 1 then
+    s1 := s1 + 'PSH|';
+  if TCP_Flag.ACK = 1 then
+    s1 := s1 + 'ACK|';
+  if TCP_Flag.URG = 1 then
+    s1 := s1 + 'URG|';
+  UART1_Write_Text(+s1+LF);
+  {$ENDIF}
+  
   Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
   Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
 
@@ -127,38 +142,35 @@ begin
     Eth_DoPacket;
 
     MaxPacketDataSize := 1300;
-
     seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
-
     SocketManager.Socket[iSocket].Wait_ACK := 1;
-
     AddressDelta := (Stop_addr_S - Start_addr_S);
     
     if AddressDelta <= MaxPacketDataSize then
     begin
       if Fragment then                                                          // Force two packets to be sent if enough data is being sent
       begin
-        if AddressDelta >= 4 then                                               // If less than 4 databytes then it will be sent in the second call to Send_TCP_R_Internal1
+        if AddressDelta >= 4 then                                               // If less than 4 databytes then it will be sent in the second call to TCP_Send_LoadAddressesAndDataThenSend_Internal
         begin
           MaxPacketDataSize := AddressDelta div 2;                              // Only send 1/2 of the data byte available in this packet
-          AddressOffset := Send_TCP_R_Internal1(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);
+          AddressOffset := TCP_Send_LoadAddressesAndDataThenSend_Internal(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);
         end;
       end
     end else
-      AddressOffset := Send_TCP_R_Internal1(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);   // more bytes to send than allowed, Send_TCP_R_Internal1 will truncate the databytds and send only the max
+      AddressOffset := TCP_Send_LoadAddressesAndDataThenSend_Internal(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);   // more bytes to send than allowed, TCP_Send_LoadAddressesAndDataThenSend_Internal will truncate the databytds and send only the max
 
-    if TCP_Flag_T.FIN = 0 then                                                  // Validate the the socket before going on
-      if TCP_Flag_T.SYN = 0 then
+    // If a packet with FIN or SYN is sent and the Socket is not yet connected we are done as we need to wait for the reply in the Process function
+    if TCP_Flag.FIN = 0 then
+      if TCP_Flag.SYN = 0 then
         if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
         begin
-          {$IFDEF LOG_UART}UART1_Write_Text('Send_TCP_R_Internal Failed, no FIN, no SYN, no socket'+LF);{$ENDIF}
           Result := False;
+          {$IFDEF LOG_UART}UART1_Write_Text('TCP Tx: The socket is not connected and the request was not a FIN or SYN, we are out of here...'+LF);{$ENDIF}
           Exit;
         end;
 
     MaxPacketDataSize := 1300;                                                  // Fragement does not apply here
-
-    AddressOffsetSecondPacket := Send_TCP_R_Internal1(TCP_Flag_T, iSocket, AddressOffset, MaxPacketDataSize);   // Send the rest of the data bytes, if there are any
+    AddressOffsetSecondPacket := TCP_Send_LoadAddressesAndDataThenSend_Internal(TCP_Flag, iSocket, AddressOffset, MaxPacketDataSize);   // Send the rest of the data bytes, if there are any
 
     TickCounter10 := 0;
     while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
@@ -178,12 +190,13 @@ begin
 
   if i = 3 then
   begin
-    {$IFDEF LOG_UART}UART1_Write_Text('Send_TCP_R_Internal Failed, wait for ACK timed out'+LF);{$ENDIF}
+    {$IFDEF LOG_UART}UART1_Write_Text('TCP Tx: Packets sent 3 times but timed out waiting for the first ACK from the receiver, we are out of here...'+LF);{$ENDIF}
     Exit;
   end;
 
-  if TCP_Flag_T.FIN = 0 then
-    if TCP_Flag_T.SYN = 0 then
+  // FIN and SYN packets do not expect a reply??? Don't understand this
+  if TCP_Flag.FIN = 0 then
+    if TCP_Flag.SYN = 0 then
       if (seq_buf + AddressOffset + AddressOffsetSecondPacket) <> SocketManager.Socket[iSocket].SEQ_No_S then
       begin
         if (seq_buf + AddressOffset) = SocketManager.Socket[iSocket].SEQ_No_S then
@@ -202,30 +215,33 @@ begin
           end;
         end else
         begin
-          {$IFDEF LOG_UART}UART1_Write_Text('Send_TCP_R_Internal Failed, no FIN, no SYN, SEQ invalid'+LF);{$ENDIF}
+          {$IFDEF LOG_UART}UART1_Write_Text('TCP Tx: The first ACK from the receiver had a messed up Seq Number, we are out of here...'+LF);{$ENDIF}
           Exit;
         end
       end;
 
+  // Increment the sliding address for the data window
   if (SocketManager.Socket[iSocket].Start_addr = Start_addr_S) and (SocketManager.Socket[iSocket].Stop_addr = Stop_addr_S) then
     SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + AddressOffsetSecondPacket + AddressOffset;
 
-  {$IFDEF LOG_UART}UART1_Write_Text('Send_TCP_R_Internal Succeeded'+LF);{$ENDIF}
   Result := True;
+  {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Transmission of Packet................<END>'+LF);{$ENDIF}
 end;
 
 //******************************************************************************
-//* Name    : Send_TCP                                                         *
+//* Name    : TCP_UserSend                                                         *
 //* Purpose : Send TCP packet                                                  *
 //******************************************************************************
-function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
+function TCP_UserSend(var ip_t1 : TipHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 var i : byte;
 begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
     begin
-      if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) and (SocketManager.Socket[i].dest_port_S = dest_port_S1) and (Mem_Cmp(@ip_t1, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
-        Break; // if connected
+      if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) then
+        if (SocketManager.Socket[i].dest_port_S = dest_port_S1) then
+          if (Mem_Cmp(@ip_t1, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+            Break; // if connected
       inc(i);
     end;
   if i = MAX_SOCKET then // no sockets available
@@ -236,7 +252,7 @@ begin
   SocketManager.Socket[i].RAM_ROM := 0;
   SocketManager.Socket[i].Start_addr := @data_tcp2;
   SocketManager.Socket[i].Stop_addr := @data_tcp2 + len_data1;
-  Result := Send_TCP_R_Internal(PSH_S + ACK_S, i, True);
+  Result := TCP_Send_Internal(PSH_S + ACK_S, i, True);
   if Result = False then
     begin
       SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
@@ -245,12 +261,12 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Eth_SendTCP                                                      *
+//* Name    : TCP_WriteToWire_Internal                                                      *
 //* Purpose : Send TCP packet, used by library                                 *
 //  Descriptions:
 //     The data has already been written to the ENC by the time this is called
 //******************************************************************************
-procedure Eth_SendTCP(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
+procedure TCP_WriteToWire_Internal(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 var
   TotalLen : word;
   Align : byte;
@@ -314,15 +330,15 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Eth_ProcessTCP                                                   *
+//* Name    : TCP_Process_Internal                                                   *
 //* Purpose : Process incomming TCP packets                                    *
 //******************************************************************************
-procedure Eth_ProcessTCP(EthMemAddressRequest: Word);
+procedure TCP_Process_Internal(EthMemAddressRequest: Word);
 var
   PacketLen, source_port2, dest_port2, len_ack, i : word;
   Align, TCP_FlagReceive, TCP_FlagSend : byte;
-  dest_mac2 : MacHeader;
-  dest_ip_addr: IpHeader;
+  dest_mac2 : TmacHeader;
+  dest_ip_addr: TipHeader;
   CkSum_TCP: word;
   CkSum_IP: word;
   len_data: word;
@@ -479,7 +495,7 @@ begin
       CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
       CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
       CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
-      Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
+      TCP_WriteToWire_Internal(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
       {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling FIN done, we are out of here'+LF);{ENDIF}
       Exit;
     end;
@@ -555,7 +571,7 @@ begin
     CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
     CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
     CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
-    Eth_SendTCP(source_port2, dest_port2, Align, SEQ_No, ACK_No, TCP_FlagSend);
+    TCP_WriteToWire_Internal(source_port2, dest_port2, Align, SEQ_No, ACK_No, TCP_FlagSend);
     {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling SYN done, we are out of here'+LF);{ENDIF}
     Exit;
   end;
@@ -611,7 +627,7 @@ begin
         CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
         CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
         CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
-        Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
+        TCP_WriteToWire_Internal(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
         Align := ReadFromEthMem(EthMemAddressRequest + 53); // put rx pointer to start of TCP data.
         if PacketLen <> 0 then
         begin

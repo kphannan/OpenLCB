@@ -107,8 +107,8 @@ procedure Eth_UserProcess_Main;
 procedure Eth_UserProcess;
 procedure DisableInt;
 procedure EnableInt;
-procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte);
-function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
+procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte);
+function Eth_UserUDP(var dest_ip_addr_U : TipHeader; var dest_port_U, source_port_U, len_U : word) : word;
 
 //procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
 
@@ -119,7 +119,7 @@ procedure ReceivedOnFilter0(CANBuffer: PCANBuffer); external;                   
 procedure ReceivedOnFilter1(CANBuffer: PCANBuffer); external;                            // NMRAnet Layer Message
 procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString); external;
 procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer); external;
-function Send_TCP(var ip_t1 : IpHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean; external;
+function TCP_UserSend(var ip_t1 : TipHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean; external;
 
 var
 //  OlcbSocket: ^SOCKET_28j60_Dsc;
@@ -366,7 +366,7 @@ procedure DoSendTCP;
 var
   TxBuffer: PCANBuffer;
   GridConnectBuffer: array[MAX_GRID_CONNECT_LEN] of char;
-  ipDest: IPHeader;
+  ipDest: TipHeader;
   portDest: Word;
   TCP_buf: array[1472] of byte;
   TCP_buf_start: ^byte;
@@ -432,7 +432,7 @@ begin
       RESULT_OPEN_TCP_CONNECTION_OK         : 
           begin
             UART1_Write_Text('  TCP Connection Opened'+LF);
-            if Send_TCP(ipDest, portDest, TCP_buf_size, TCP_buf) then
+            if TCP_UserSend(ipDest, portDest, TCP_buf_size, TCP_buf) then
               UART1_Write_Text('  Sending TCP Succeeded' + LF)
             else
               UART1_Write_Text('  Sending TCP Failed' + LF);
@@ -447,7 +447,7 @@ begin
     {$ELSE}
       if Open_TCP_Connection(ipDest, portDest, 12022) = RESULT_OPEN_TCP_CONNECTION_OK then
       begin
-        Send_TCP(ipDest, portDest, TCP_buf_size, TCP_buf);
+        TCP_UserSend(ipDest, portDest, TCP_buf_size, TCP_buf);
         Close_TCP_Connection(ipDest, portDest);
       end;
     {$ENDIF}
@@ -455,7 +455,7 @@ begin
   end;
 end;
 
-procedure Eth_UserTCP(var dest_ip_addr_T : IpHeader; var source_port_T, dest_port_T, PacketLen : word; iSocket : byte);
+procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, PacketLen : word; iSocket : byte);
 var
   Receive_GridConnectBufferIndex: Integer;
   TCP_Receive_Char: char;
@@ -577,7 +577,7 @@ begin
   end;
 end;
 
-function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word;
+function Eth_UserUDP(var dest_ip_addr_U : TipHeader; var dest_port_U, source_port_U, len_U : word) : word;
 begin
   UART1_Write_Text('UDP'+LF);
   result := 0;

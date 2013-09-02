@@ -31,8 +31,8 @@ type
   TSocket = record
     State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
     source_port_S   : word;        // Port of the source (us)
-    Dest_Ip         : IpHeader;    // Ip of the resource to send the data to
-    Dest_Mac        : MacHeader;   // MAC of the resource to send the data to
+    Dest_Ip         : TipHeader;    // Ip of the resource to send the data to
+    Dest_Mac        : TmacHeader;   // MAC of the resource to send the data to
     dest_port_S     : word;        // Port of the resource to send the data to
     Seq_No_S        : dword;       // Sequence number for the TCP conversation with the other resource
     Ack_No_S        : dword;       // Ack sequence number for the TCP conversation with the other resource
@@ -56,8 +56,8 @@ type
   end;
   
 // User functions
-function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : Word;
-function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
+function Open_TCP_Connection(var ip_t2 : TipHeader; dest_port_S2, source_port_S2 : word) : Word;
+function Close_TCP_Connection(var ip_t2 : TipHeader; dest_port_S2 : word) : boolean;
 procedure EraseSockets;
 function Search_Port(protocol : byte; port_ : word) : boolean;
 function UDP_Open_Port(port_u : word): boolean;
@@ -70,8 +70,8 @@ procedure Set_TCP_TimeOut_Interval(int_ : word);
 procedure Sockets_Init_Internal;
 
 // External functions
-function ARP_Validate_IP(var ip_arp1 : IpHeader; var mac_arp : MacHeader) : boolean; external;
-function Send_TCP_R_Internal(TCP_Flag_T : byte; iSocket, Fragment : Boolean) : boolean; external;
+function ARP_Validate_IP(var ip_arp1 : TipHeader; var mac_arp : TmacHeader) : boolean; external;
+function TCP_Send_Internal(TCP_Flag_T : byte; iSocket, Fragment : Boolean) : boolean; external;
 procedure Do_EthernetProc(n : word); external;
 procedure DisableInt; external;
 procedure EnableInt; external;
@@ -93,10 +93,10 @@ end;
 //* Name    : Open_TCP_Connection                                              *
 //* Purpose : Open TCP Connection and Socket                                   *
 //******************************************************************************
-function Open_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2, source_port_S2 : word) : Word;
+function Open_TCP_Connection(var ip_t2 : TipHeader; dest_port_S2, source_port_S2 : word) : Word;
 var
   i : byte;
-  dest_mac: MacHeader;
+  dest_mac: TmacHeader;
 begin
   {$IFDEF LOG_UART}UART1_Write_Text('Opening TCP Connection'+LF);{$ENDIF}
   Result := RESULT_OPEN_TCP_CONNECTION_OK;
@@ -148,7 +148,7 @@ begin
   SocketManager.Socket[i].Keep_Alive := True;
   SocketManager.iLastOpenedSocked := i;
 
-  if not Send_TCP_R_Internal(SYN_S, i, 0) then
+  if not TCP_Send_Internal(SYN_S, i, 0) then
   begin
     Result := RESULT_OPEN_TCP_CONNECTION_SEND_FAILED;
     SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED;
@@ -160,7 +160,7 @@ end;
 //* Name    : Close_TCP_Connection                                             *
 //* Purpose : Close TCP Connection and Socket                                  *
 //******************************************************************************
-function Close_TCP_Connection(var ip_t2 : IpHeader; dest_port_S2 : word) : boolean;
+function Close_TCP_Connection(var ip_t2 : TipHeader; dest_port_S2 : word) : boolean;
 var
   CountBuf : word;
   i : byte;
@@ -177,7 +177,7 @@ begin
           SocketManager.Socket[i].RAM_ROM := 0;
           SocketManager.Socket[i].Start_addr := 0;
           SocketManager.Socket[i].Stop_addr := 0;
-          Result := Send_TCP_R_Internal(FIN_S + ACK_S, i, False);
+          Result := TCP_Send_Internal(FIN_S + ACK_S, i, False);
         end else
         begin
           Result := True;

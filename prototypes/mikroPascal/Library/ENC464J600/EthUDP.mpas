@@ -18,8 +18,8 @@ NMRAnetDefinesShared,
   definitions_ENC600;
   
 // User Functions
-function UDP_Send(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
-procedure UDP_Send_Broadcast(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
+function UDP_Send(var dest_ip_addr : TipHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean;
+procedure UDP_Send_Broadcast(var dest_ip_addr : TipHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
 
 // Internally used Functions
 procedure UDP_Process_Internal(EthMemAddressRequest: Word);
@@ -27,7 +27,7 @@ procedure UDP_Send_Internal(dest_portA, source_portA, PacketLenA : word);
 procedure UDP_Init_Internal;
 
 // External functions
-function Eth_UserUDP(var dest_ip_addr_U : IpHeader; var dest_port_U, source_port_U, len_U : word) : word; external;
+function Eth_UserUDP(var dest_ip_addr_U : TipHeader; var dest_port_U, source_port_U, len_U : word) : word; external;
 
 var
   broadcast_packet : boolean;
@@ -104,9 +104,9 @@ end;
 //* Name    : UDP_Send                                                         *
 //* Purpose : Send UDP packet                                                  *
 //******************************************************************************
-function UDP_Send(var dest_ip_addr: IpHeader; dest_port_S, source_port_S, len_data: word; var data_udp1: array[1472] of byte) : boolean;
+function UDP_Send(var dest_ip_addr: TipHeader; dest_port_S, source_port_S, len_data: word; var data_udp1: array[1472] of byte) : boolean;
 var 
-  dest_mac : MacHeader;
+  dest_mac : TmacHeader;
 begin
   Result := False;
   {$IFDEF LOG_UART}UART1_Write_Text('UDP_Send attempt, validating ARP'+ LF);{$ENDIF}
@@ -128,10 +128,10 @@ end;
 //* Name    : UDP_Send_Broadcast                                               *
 //* Purpose : Send UDP broadcast                                               *
 //******************************************************************************
-procedure UDP_Send_Broadcast(var dest_ip_addr : IpHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
+procedure UDP_Send_Broadcast(var dest_ip_addr : TipHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte);
 var
-  dest_mac: MacHeader;
-  dest_ip: IpHeader;
+  dest_mac: TmacHeader;
+  dest_ip: TipHeader;
 begin
   dest_mac[0] := $FF;
   dest_mac[1] := $FF;
@@ -157,7 +157,7 @@ end;
 procedure UDP_Process_Internal(EthMemAddressRequest: Word);
 var
   PacketLen, source_port1, dest_port1 : word;
-  dest_ip_addr: IpHeader;
+  dest_ip_addr: TipHeader;
   Align: Byte;
   CkSum_IP: word;
   CkSum_UDP: word;

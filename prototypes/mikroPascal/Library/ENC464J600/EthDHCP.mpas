@@ -59,9 +59,9 @@ var
 implementation
 
 var
-  Temp_Gateway_Address, Temp_Mask_Address, Temp_IP_Address: IpHeader;
-  DHCPServerID : IpHeader;
-  tmp_dns_addr : IpHeader;
+  Temp_Gateway_Address, Temp_Mask_Address, Temp_IP_Address: TipHeader;
+  DHCPServerID : TipHeader;
+  tmp_dns_addr : TipHeader;
 
 procedure DHCP_ProcessPacket_Internal(EthMemAddressRequest: Word);
 var

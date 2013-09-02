@@ -23,8 +23,8 @@ const
   
 type 
   TPingCache = Record
-    IpP                : IpHeader;                                              // IP of the resource beging pinged
-    MacP               : MacHeader;                                             // MAC of the resource being pinged
+    IpP                : TipHeader;                                              // IP of the resource beging pinged
+    MacP               : TmacHeader;                                             // MAC of the resource being pinged
     Time               : word;                                                  // Time it took for the ping to be responded to
     BackGroundCounter  : word;                                                  // Counter that is alway running regardless of if the slot is begin used or not
     TimeToLive         : byte;                                                  // The value of TimeToLive of the resource being pinged
@@ -32,13 +32,13 @@ type
   
 
 // User functions
-function Ping_Send(var ip_p: IpHeader; PingSlot: Byte) : word;
+function Ping_Send(var ip_p: TipHeader; PingSlot: Byte) : word;
 procedure Ping_CacheTimerTask;                                                  // Call from 1ms timer
 
 // Internal functions
 Procedure Ping_Echo_Internal(EthMemAddressRequest: Word);
 procedure Ping_Reply_Internal(EthMemAddressRequest: Word);
-procedure Ping_Send_Internal(var dest_ip_addr: IpHeader; var dest_mac: MacHeader; PingSlot : Byte);
+procedure Ping_Send_Internal(var dest_ip_addr: TipHeader; var dest_mac: TmacHeader; PingSlot : Byte);
 procedure Ping_EraseCache_Internal;
 
 procedure Do_EthernetProc(n : word); external;
@@ -141,7 +141,7 @@ end;
 //* Name    : Ping_Send_Internal                                                     *
 //* Purpose : Send ICMP request, used by library                               *
 //******************************************************************************
-Procedure Ping_Send_Internal(var dest_ip_addr: IpHeader; var dest_mac: MacHeader; PingSlot: Byte);
+Procedure Ping_Send_Internal(var dest_ip_addr: TipHeader; var dest_mac: TmacHeader; PingSlot: Byte);
 var
   i, cksum : word;
 Begin
@@ -200,10 +200,10 @@ End;
 //* Purpose : Send ICMP request
 // Return:  Ping time or PING_SEND_RESULT_TIMEOUT if Ping failed or PING_SEND_RESULT_INVALID_SLOT if the slot was not valid
 //******************************************************************************
-function Ping_Send(var dest_ip : IpHeader; PingSlot: Byte) : word;
+function Ping_Send(var dest_ip : TipHeader; PingSlot: Byte) : word;
 var
   CountBuf : word;
-  dest_mac : MacHeader;
+  dest_mac : TmacHeader;
 begin
   Result := PING_SEND_RESULT_TIMEOUT;
   

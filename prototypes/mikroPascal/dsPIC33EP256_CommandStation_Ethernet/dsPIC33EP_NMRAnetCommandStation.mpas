@@ -340,15 +340,15 @@ var
   str: string[6];
   ProxyData: PTrainProxyRamData;
   TempIP: TIPAddressStr;
-  TempIpServer: IPHeader;
+  TempIpServer: TipHeader;
   TempChar: char;
   ipPortClient, ipPortServer: Word;
   Delay, OldHead, OldTail: Integer;
   OldFull: Boolean;
-  TempIPHeader: IpHeader;
+  TempIPHeader: TipHeader;
   PingTime: word;
   DNS_Path: string[64];
-  ipDest: ipHeader;
+  ipDest: TipHeader;
   Running: Boolean;
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
