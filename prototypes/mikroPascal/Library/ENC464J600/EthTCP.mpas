@@ -330,8 +330,6 @@ label
   next_phs;
 
 begin
-
-
   source_port2 := 0;
   CkSum_IP := 0;
   CkSum_TCP := 0;
@@ -399,9 +397,10 @@ begin
   UART1_Write_Text(+s1+LF);
   {$ENDIF}
 
+  // Handle RST..................................................................
   if TCP_FlagReceive.RST = 1 then
   begin
-    {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx RST = True Handling.....'+LF);{$ENDIF}
+    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling RST'+LF);{ENDIF}
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
     begin
@@ -409,25 +408,31 @@ begin
         if (SocketManager.Socket[i].dest_port_S = dest_port2) then
           if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
           begin
-            {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx RST: Reseting and Exiting'+LF);{$ENDIF}
+            {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Found the Socket to Reset'+LF);{ENDIF}
             SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
             SocketManager.Socket[i].Keep_Alive := False;
             SocketManager.Socket[i].Wait_ACK := 0;
             Break;
           end;
       inc(i);
-    end;
+    end;   
+    {IFDEF TRACE_TCP_RX}
+    if i = MAX_SOCKET then
+      UART1_Write_Text('TCP Rx: Count not find the Socket to Reset'+LF);
+    {ENDIF}
+    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a RST, done we are out of here'+LF);{ENDIF}
     Exit;
   end;
+  // Handle RST..................................................................
 
-  // Data = 0 is a special case
+  // Handle FIN..................................................................
   if PacketLen = 0 then
   begin
     {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Packet Length = 0 Handling....'+LF);{$ENDIF}
     
     if TCP_FlagReceive.FIN = 1 then
     begin
-      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx FIN = True Handling'+LF);{$ENDIF}
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling FIN'+LF);{ENDIF}
       i := 0;
       while i < MAX_SOCKET do  // search for opened socket
       begin
@@ -435,7 +440,7 @@ begin
           if (SocketManager.Socket[i].dest_port_S = dest_port2) then
             if (Mem_Cmp(@dest_ip_addr, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
             begin
-              {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx FIN = True: Disconnecting'+LF);{$ENDIF}
+              {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling FIN and found Socket'+LF);{ENDIF}
               SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
               SocketManager.Socket[i].Keep_Alive := False;
               SocketManager.Socket[i].Wait_ACK := 0;
@@ -443,10 +448,15 @@ begin
             end;
         inc(i);
       end;
+      
+      {IFDEF TRACE_TCP_RX}
+      if i = MAX_SOCKET then
+        UART1_Write_Text('TCP Rx: Handling FIN and could not find Socket'+LF);
+      {ENDIF}
 
-      if TCP_FlagReceive.RST = 1 then
+      if TCP_FlagReceive.RST = 1 then    // This should have been detected above and there is no way this block of code should ever get called
       begin
-        {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx RST = True Handling and Exiting'+LF);{$ENDIF}
+        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling FIN with a RST we are out of here'+LF);{ENDIF}
         Exit; // Note that RST packets are not acknowledged.
       end;
 
@@ -455,13 +465,13 @@ begin
 
       if TCP_FlagReceive.ACK = 1 then
       begin
-        {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK = True, Send an ACK then Exit'+LF);{$ENDIF}
+        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Hanlding FIN with an ACK, asking for a 3 step finish (FIN+ACK), just send and ACK'+LF);{ENDIF}
         TCP_FlagSend := ACK_S                 // FIN + ACK, response only with ACK
       end else 
       begin
-        if TCP_FlagReceive.FIN = 1 then
+        if TCP_FlagReceive.FIN = 1 then      // We have already established this is true here...
         begin
-          {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx FIN = True, Send an ACK and FIN then Exit'+LF);{$ENDIF}
+          {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling FIN by itself, normal dual question/answer finish (FIN+ACK) send an ACK+FIN to ACK the FIN and send our own FIN'+LF);{ENDIF}
           TCP_FlagSend := ACK_S + FIN_S;   // FIN response with FIN + ACK
         end
       end;
@@ -470,14 +480,16 @@ begin
       CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
       CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
       Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling FIN done, we are out of here'+LF);{ENDIF}
       Exit;
     end;
   end;
+  // Handle FIN..................................................................
 
-  // Someone wants to connect to us
+  // Handle SYN..................................................................
   if TCP_FlagReceive.SYN = 1 then // SYN
   begin
-    {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx SYN Handling.....'+LF);{$ENDIF}
+    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a SYN'+LF);{ENDIF}
     
     i := 0;
     while i < MAX_SOCKET do  // search for opened socket
@@ -491,6 +503,7 @@ begin
     
     if i = MAX_SOCKET then
     begin
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a SYN, could not find allocated Socket'+LF);{ENDIF}
       i := 0;
       while i < MAX_SOCKET do  // search for free socket
       begin
@@ -498,26 +511,29 @@ begin
           Break;
         inc(i);
       end;
+    end else
+    begin
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a SYN, found allocated Socket'+LF);{ENDIF}
     end;
       
     if i = MAX_SOCKET then 
     begin
-      {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx SYN, no socket found'+LF);{$ENDIF}
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a SYN, could not find free Socket we are out of here'+LF);{ENDIF}
       Exit;
     end;
 
     SEQ_No := ACK_NoR;
     ACK_No := SEQ_NoR + 1;
 
-    if TCP_FlagReceive.ACK = 1 then // ACK
+    if TCP_FlagReceive.ACK = 1 then // If we opened the connection and the other node has replied with a SYN+ACK
     begin
-      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK = True, send an ACK then Exit'+LF);{$ENDIF}
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a SYN with and ACK, we opened the connection and the other node has replied with a SYN+ACK, reply with an ACK'+LF);{ENDIF}
       TCP_FlagSend := ACK_S;
       Align := 0;
       SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
     end else
-    begin
-      {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx ACK = False, send an ACK and SYN then Exit'+LF);{$ENDIF}
+    begin                           // If we are listening and a client asks to open a connection by sending just a ACK
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a SYN by itself, we are listening and a client asks to open a connection by sending just a ACK, reply with a SYN+ACK'+LF);{ENDIF}
       TCP_FlagSend := SYN_S + ACK_S;
       Align := 8;
       SocketManager.Socket[i].State_S := SOCKET_WAITING_FOR_CONNECTION; // Wait for Connection
@@ -540,11 +556,12 @@ begin
     CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
     CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
     Eth_SendTCP(source_port2, dest_port2, Align, SEQ_No, ACK_No, TCP_FlagSend);
-
+    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling SYN done, we are out of here'+LF);{ENDIF}
     Exit;
   end;
+  // Handle SYN..................................................................
 
-  //
+  // Handle ACK..................................................................
   if TCP_FlagReceive.ACK = 1 then // ACK
   begin
     {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx ACK Handling.....'+LF);{$ENDIF}
@@ -560,16 +577,11 @@ begin
     
     if i < MAX_SOCKET then
     begin
-      {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK Handling found Socket'+LF);{$ENDIF}
-      
+      {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, found allocated Socket'+LF);{ENDIF}
+
       if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) or (SocketManager.Socket[i].Wait_ACK <> 0) then
       begin
-        {$IFDEF LOG_UART}
-        if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then
-          UART1_Write_Text('  TCP Rx ACK Handling found Socket = Waiting for Connection'+LF)
-        else
-          UART1_Write_Text('  TCP Rx ACK Handling found Socket = Waiting for server ACK'+LF);
-        {$ENDIF}
+        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to a SYN (us) - SYN+ACK (them) OR a general Wait_ACK, connection is complete'+LF);{ENDIF}
         SocketManager.Socket[i].State_S := SOCKET_CONNECTED; // Connected
         SocketManager.Socket[i].Wait_ACK := 0;
         SocketManager.Socket[i].ACK_No_S := SEQ_NoR;
@@ -580,6 +592,7 @@ begin
       begin                                       
         {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx Calling User TCP'+LF);{$ENDIF}
         
+        {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, this is a data packet being sent to us'+LF);{ENDIF}
         SEQ_No := ACK_NoR;
         ACK_No := SEQ_NoR + PacketLen;
         TCP_FlagSend := ACK_S;
@@ -596,7 +609,6 @@ begin
         CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
         CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
         Eth_SendTCP(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
-        
         Align := ReadFromEthMem(EthMemAddressRequest + 53); // put rx pointer to start of TCP data.
         if PacketLen <> 0 then
         begin
@@ -604,13 +616,19 @@ begin
           SocketManager.Socket[i].Start_addr := 0;
           SocketManager.Socket[i].Stop_addr := PacketLen;
           Eth_UserTCP(dest_ip_addr, source_port2, dest_port2, PacketLen, i);
+          {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, data packet, sent to Eth_UserTCP'+LF);{ENDIF}
+        end else
+        begin
+          {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, data packet but data length was 0???'+LF);{ENDIF}
         end
       end;
     end else
     begin
       {$IFDEF LOG_UART}UART1_Write_Text('  TCP Rx ACK Handling Socket not found'+LF);{$ENDIF}
     end;
+    {IFDEF TRACE_TCP_RX}UART1_Write_Text('TCP Rx: Handling a ACK, done we are out of here'+LF);{ENDIF}
   end;
+  // Handle ACK..................................................................
 end;
 
 end.
