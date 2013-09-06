@@ -9,6 +9,10 @@ uses
   olcb_app_common_settings, math_float16, Forms, blcksock, synsock, contnrs,
   Controls;
 
+
+var
+  LoopTime: DWord; // debugging global
+
 const
   ERROR_NO_MEMORY_CONFIG_PROTOCOL = $00000001;
   ERROR_NO_CDI_PROTOCOL           = $00000002;
@@ -619,6 +623,7 @@ end;
     FCurrentSendSize: Byte;
     FDataStream: TMemoryStream;
     FForceOptionalSpaceByte: Boolean;
+    FLocalLoopTime: DWord;
     FMaxAddress: DWord;
     FMinAddress: DWord;
     FTerminator: Char;
@@ -628,6 +633,7 @@ end;
   protected
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
     property CurrentSendSize: Byte read FCurrentSendSize write FCurrentSendSize;
+    property LocalLoopTime: DWord read FLocalLoopTime write FLocalLoopTime;
     property UsingTerminator: Boolean read FUsingTerminator write FUsingTerminator;
     property MaxPayloadSize: DWord read GetMaxPayloadSize;
     property WritingToAddress: Boolean read FWritingToAddress write FWritingToAddress;
@@ -4054,6 +4060,7 @@ begin
   FWritingToAddress := False;
   FDataStream := TMemoryStream.Create;
   FUsingTerminator := UseTerminatorChar;
+  FLocalLoopTime := 0;
 end;
 
 destructor TBaseAddressSpaceMemoryTask.Destroy;
@@ -4222,6 +4229,9 @@ begin
        end;
     STATE_READ_START : begin
          // Calculate how many bytes to read in this frame (depends on if the address space is carried in the frame or if at the end of the mem space)
+
+         LocalLoopTime := GetTickCount;
+
          if MaxAddress - CurrentAddress > MaxPayloadSize then
             CurrentSendSize := MaxPayloadSize
           else
@@ -4278,6 +4288,11 @@ begin
               begin
                 Sending := True;
                 iState := STATE_READ_START;
+
+                LocalLoopTime := GetTickCount - LoopTime;
+                if LocalLoopTime > LoopTime then
+                  LoopTime := LocalLoopTime;
+
               end;
             end
           end

@@ -121,6 +121,7 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionShowLoopTime: TAction;
     ActionToolsEthernetHubDisconnect: TAction;
     ActionToolsEthernetHubMessageLogShow: TAction;
     ActionToolsEthernetHubConnect: TAction;
@@ -164,6 +165,7 @@ type
     ListBoxLog: TListBox;
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
+    MenuItemHelpLoopTime: TMenuItem;
     MenuItemToolsEthernetHubConnect: TMenuItem;
     MenuItemToolsEthernetHubDisconnect: TMenuItem;
     MenuItemToolsEthernetMessageLog: TMenuItem;
@@ -221,6 +223,7 @@ type
     procedure ActionConfigEditorsCreateExecute(Sender: TObject);
     procedure ActionConfigEditorsHideAllExecute(Sender: TObject);
     procedure ActionConfigEditorsShowAllExecute(Sender: TObject);
+    procedure ActionShowLoopTimeExecute(Sender: TObject);
     procedure ActionToolsEthernetHubDisconnectExecute(Sender: TObject);
     procedure ActionToolsEthernetHubMessageLogShowExecute(Sender: TObject);
     procedure ActionHelpAboutShowExecute(Sender: TObject);
@@ -504,6 +507,11 @@ end;
 procedure TFormOLCB_Commander.ActionConfigEditorsShowAllExecute(Sender: TObject);
 begin
   ConfigEditorList.ShowAll;
+end;
+
+procedure TFormOLCB_Commander.ActionShowLoopTimeExecute(Sender: TObject);
+begin
+  ShowMessage('LoopTime = ' + IntToStr(LoopTime));
 end;
 
 procedure TFormOLCB_Commander.ActionToolsEthernetHubDisconnectExecute(Sender: TObject);

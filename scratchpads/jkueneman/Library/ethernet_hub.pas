@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs,
-  common_utilities, olcb_utilities, olcb_transport_layer, olcb_defines;
+  common_utilities, olcb_utilities, olcb_transport_layer, olcb_defines, strutils;
 
 type
   TClientSocketThread = class;
@@ -67,6 +67,7 @@ type
   private
     FConnectedSocket: TTCPBlockSocket;
     FhSocketLocal: TSocket;
+    FMaxLoopTime: DWord;
     FOnStatusReason: THookSocketReason;
     FOnStatusValue: string;
     FOnSyncStatus: TOnSyncStatus;
@@ -84,6 +85,7 @@ type
     constructor Create(CreateSuspended: Boolean); override;
     destructor Destroy; override;
     property OnSyncStatus: TOnSyncStatus read FOnSyncStatus write FOnSyncStatus;
+    property MaxLoopTime: DWord read FMaxLoopTime write FMaxLoopTIme;
   end;
 
 
@@ -247,24 +249,32 @@ var
 //  PacketIndex, i: Integer;
 //  Done: Boolean;
   i: Integer;
+  iSplit: Integer;
   List: TList;
-  SendStr: AnsiString;
+  SendStr, SendStr2: AnsiString;
   Helper: TOpenLCBMessageHelper;
  // TCP_Receive_Char: char;
  // GridConnectMsg: TTCPMessage;
   SyncSendMessageList: TStringList;
+//  NoDelay: Boolean;
+  StrLen: Integer;
 begin
   ExecuteBegin;
   FConnectedSocket := TTCPBlockSocket.Create;
+ // setsockopt(FConnectedSocket.Socket,IPPROTO_TCP,TCP_NODELAY,@NoDelay,SizeOf(NoDelay));    // disable the Nagle algorithm
   ConnectedSocket.OnStatus := @OnStatus;
   ConnectedSocket.ConvertLineEnd := True;      // User #10, #13, or both to be a "string"
+  ConnectedSocket.SetLinger(False, 0);
+  ConnectedSocket.SetSendTimeout(0);
+  ConnectedSocket.SetRecvTimeout(0);
+  ConnectedSocket.SetTimeout(0);
   try
     Helper := TOpenLCBMessageHelper.Create;
     ConnectedSocket.Socket := hSocketLocal;
     ConnectedSocket.GetSins;                     // Back load the IP's / Ports information from the handle
+    SyncSendMessageList := TStringList.Create;
     while not Terminated do
     begin
-      SyncSendMessageList := TStringList.Create;
       ThreadSwitch;
       List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
       try
@@ -346,6 +356,7 @@ begin
   inherited Create(True);
   FConnectedSocket := nil;
   FOnSyncStatus := nil;
+  FMaxLoopTime := 0;
 end;
 
 destructor TClientSocketThread.Destroy;

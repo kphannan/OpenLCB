@@ -20,7 +20,8 @@ unit TCPStorage;
 
 {$I Options.inc}
 
-{$DEFINE LOG_UART}
+{.$DEFINE LOG_UART}
+{.$DEFINE LOG_GRIDCONNECT_UART}
 
 uses
   HelperFunctions,
@@ -107,7 +108,7 @@ procedure Eth_UserProcess_Main;
 procedure Eth_UserProcess;
 procedure DisableInt;
 procedure EnableInt;
-procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, len_T : word; iSocket : byte);
+procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, len_T : word; iSocket : Integer);
 function Eth_UserUDP(var dest_ip_addr_U : TipHeader; var dest_port_U, source_port_U, len_U : word) : word;
 
 //procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
@@ -349,7 +350,8 @@ end;
 
 
 var
-  Receive_GridConnectBuffer: TGridConnectString;
+  Receive_GridConnectBuffer: TGridConnectString;   // Needs to persist between receptions
+  Receive_GridConnectBufferIndex: Integer;
   RxCANBuffer: TCANBuffer;
   
 procedure Eth_UserProcess_Main;
@@ -422,42 +424,19 @@ begin
   
   if TCP_buf_size > 0 then
   begin
-    {$IFDEF LOG_UART}UART_Write_Text('Sending a Packet................<START>' + LF);{$ENDIF}
     Str2IP(OLCB_SERVER_IP, ipDest);
     portDest := OLCB_SERVER_PORT;
     
-    {$IFDEF LOG_UART}
-    // Make sure a TCP Socket is opened to the server
-    case Open_TCP_Connection(ipDest, portDest, 12022) of
-      RESULT_OPEN_TCP_CONNECTION_OK         : 
-          begin
-            UART1_Write_Text('  TCP Connection Opened'+LF);
-            if TCP_UserSend(ipDest, portDest, TCP_buf_size, TCP_buf) then
-              UART1_Write_Text('  Sending TCP Succeeded' + LF)
-            else
-              UART1_Write_Text('  Sending TCP Failed' + LF);
-            Close_TCP_Connection(ipDest, portDest);
-          end;
-      RESULT_OPEN_TCP_CONNECTION_ARP_FAILED : UART1_Write_Text('  TCP Connection ARP failed'+LF);
-      RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS : UART1_Write_Text('  TCP Connection No Sockets'+LF);
-      RESULT_OPEN_TCP_CONNECTION_SEND_FAILED : UART1_Write_Text('  TCP Connection "Send" Failed'+LF)
-    else
-      UART1_Write_Text('  TCP Connection unknown Result'+LF);
+ //   if Open_TCP_Connection(ipDest, portDest, 12022) = RESULT_OPEN_TCP_CONNECTION_OK then
+    begin
+      TCP_UserSend(ipDest, portDest, TCP_buf_size, TCP_buf);
+   //   Close_TCP_Connection(ipDest, portDest);
     end;
-    {$ELSE}
-      if Open_TCP_Connection(ipDest, portDest, 12022) = RESULT_OPEN_TCP_CONNECTION_OK then
-      begin
-        TCP_UserSend(ipDest, portDest, TCP_buf_size, TCP_buf);
-        Close_TCP_Connection(ipDest, portDest);
-      end;
-    {$ENDIF}
-    {$IFDEF LOG_UART}UART_Write_Text('Sending a Packet................<END>'+ LF);{$ENDIF}
   end;
 end;
 
-procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, PacketLen : word; iSocket : byte);
+procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, PacketLen : word; iSocket : Integer);
 var
-  Receive_GridConnectBufferIndex: Integer;
   TCP_Receive_Char: char;
   Socket: ^TSocket;
 begin
@@ -482,7 +461,7 @@ begin
     if (Socket^.dest_port_S = 12021) and (PacketLen) then
     begin
       Receive_GridConnectBufferIndex := 0;
-      while not Done and (Socket^.Stop_addr - Socket^.Start_addr > 0) do
+      while (Socket^.Stop_addr - Socket^.Start_addr > 0) do
       begin
         TCP_Receive_Char := Socket^.TCP_buf[Socket^.Start_addr];                // Get the next byte from the stack
         case TCP_Receive_State of
@@ -541,13 +520,13 @@ begin
                    GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
                    if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
                    begin
-                     {$IFDEF LOG_UART}
+                     {$IFDEF LOG_GRIDCONNECT_UART}
                      UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
                      {$ENDIF}
                      ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
                    end else
                    begin
-                     {$IFDEF LOG_UART}
+                     {$IFDEF LOG_GRIDCONNECT_UART}
                      UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
                      {$ENDIF}
                      ReceivedOnFilter0(@RxCANBuffer);

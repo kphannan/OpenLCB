@@ -466,6 +466,9 @@ object FormOLCB_Commander: TFormOLCB_Commander
     end
     object MenuItemHelp: TMenuItem
       Caption = 'Help'
+      object MenuItemHelpLoopTime: TMenuItem
+        Action = ActionShowLoopTime
+      end
     end
   end
   object ImageListMainSmall: TImageList
@@ -2005,6 +2008,11 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Caption = 'Ethernet Message Log...'
       ImageIndex = 39
       OnExecute = ActionToolsEthernetHubMessageLogShowExecute
+    end
+    object ActionShowLoopTime: TAction
+      Category = 'Tools'
+      Caption = 'Show LoopTime (Debug)'
+      OnExecute = ActionShowLoopTimeExecute
     end
   end
   object PopupMenuTreeNode: TPopupMenu
