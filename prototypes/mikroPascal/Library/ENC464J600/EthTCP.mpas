@@ -179,7 +179,7 @@ begin
     TickCounter10 := 0;
     while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
     begin
-      Eth_DoPacket;                                                             // Local spin looking for the ACK reply
+      Eth_DoPacket;                                                             // Local spin looking for the ACK reply.  The rub is the ACK may come with a PSH and data that can cause recursion....
       if SocketManager.Socket[iSocket].Wait_ACK = 0 then                        // Not waiting anymore, received
       begin
     //    SocketManager.Socket[iSocket].Wait_ACK := 1;
@@ -578,7 +578,7 @@ begin
     if iSocket >= 0 then
     begin
       {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, found allocated Socket'+LF);{$ENDIF}
-      if (SocketManager.Socket[iSocket].State_S = SOCKET_WAITING_FOR_CONNECTION) or (SocketManager.Socket[iSocket].Wait_ACK <> 0) then
+      if (SocketManager.Socket[iSocket].State_S = SOCKET_WAITING_FOR_CONNECTION) {or (SocketManager.Socket[iSocket].Wait_ACK <> 0)} then
       begin
         {$IFDEF LOG_UART}
         if (SocketManager.Socket[iSocket].State_S = SOCKET_WAITING_FOR_CONNECTION) then
@@ -603,17 +603,20 @@ begin
         SocketManager.Socket[iSocket].Wait_ACK := 0;
         SocketManager.Socket[iSocket].SEQ_No_S := SEQ_No;
         SocketManager.Socket[iSocket].ACK_No_S := ACK_No;
-        SocketManager.Socket[iSocket].dest_port_S := dest_port2;
-        SocketManager.Socket[iSocket].source_port_S := source_port2;
         SocketManager.Socket[iSocket].Exp_Time := 0; // keep Alive
-
-        CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
-        CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
-        CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
-        CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
-        TCP_WriteToWire_Internal(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);      // Send an ACK for this packet of data
         
-        Align := ReadFromEthMem(EthMemAddressRequest + 53); // put rx pointer to start of TCP data.
+        if (SocketManager.Socket[iSocket].Wait_ACK <> 0) then
+        begin
+          SocketManager.Socket[iSocket].dest_port_S := dest_port2;
+          SocketManager.Socket[iSocket].source_port_S := source_port2;
+          CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
+          CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
+          CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
+          CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
+          TCP_WriteToWire_Internal(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);      // Send an ACK for this packet of data
+        end;
+        
+        Align := ReadFromEthMem(EthMemAddressRequest + 53); // dummy read puts rx pointer to start of TCP data.
         if PacketLen <> 0 then
         begin
           CopyEthMem_CPToRam(word(@SocketManager.Socket[iSocket].TCP_buf), PacketLen);

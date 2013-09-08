@@ -77,9 +77,7 @@ type
     FDatagramReceiveManager: TDatagramReceiveManager;
     FDatagramSendManager: TDatagramSendManager;
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
-    FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sent
-    FLooptime: DWord;
-    FMaxLoopTime: DWord;
+    FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sen
     FOlcbTaskManager: TOlcbTaskEngine;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
     FRunning: Boolean;
@@ -120,8 +118,6 @@ type
     property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
     property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
     property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
-    property LoopTime: DWord read FLoopTime write FLoopTime;
-    property MaxLoopTime: DWord read FMaxLoopTime write FMAxLoopTime;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
     property Running: Boolean read FRunning;
     property SourceAlias: Word read GetSourceAlias;
@@ -1181,8 +1177,6 @@ begin
   FSyncErrorMessageFunc := nil;
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
-  FLoopTime := 0;
-  FMaxLoopTime := 0;
   OnBeforeDestroyTask := nil;
 end;
 
@@ -4510,6 +4504,7 @@ end;
 
 initialization
   TaskObjects := 0;
+  LoopTime := 0;
 
 finalization
 

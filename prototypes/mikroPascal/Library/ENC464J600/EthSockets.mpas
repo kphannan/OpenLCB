@@ -23,7 +23,7 @@ const
   RESULT_OPEN_TCP_CONNECTION_SEND_FAILED = 3;
   
   MAX_SOCKET: byte                = 8;
-  SOCKET_EXPIRE_TIME              = 120;   // In 100ms chuncks
+  SOCKET_EXPIRE_TIME              = $FFFF;   // In 100ms chunks
   
   TCP: byte                       = 100;
   UDP: byte                       = 200;
@@ -37,7 +37,7 @@ type
     dest_port_S     : word;        // Port of the resource to send the data to
     Seq_No_S        : dword;       // Sequence number for the TCP conversation with the other resource
     Ack_No_S        : dword;       // Ack sequence number for the TCP conversation with the other resource
-    Wait_ACK        : word;        // Set to 1 if the socket is waiting for an ACK from the client (I think)
+    Wait_ACK        : word;        // Set to 1 if the socket is waiting for an ACK from the client
     Exp_Time        : word;        // Counter increments every 1s to allow auto destruction of socket after Exp_Time_Val has expired
     Exp_Time_Val    : word;        // Default set to 12 seconds, global set this value with the Set_TCP_TimeOut_Interval function
     Start_addr      : dword;       // The start of the valid data in the TCP_buf

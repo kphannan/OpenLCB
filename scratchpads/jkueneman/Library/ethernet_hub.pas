@@ -243,20 +243,12 @@ end;
 
 procedure TClientSocketThread.Execute;
 var
-//  ReceivedData: AnsiString;
-//  Receive_GridConnectBufferIndex: Integer;
-//  Receive_GridConnectBuffer: array[0..MAX_GRID_CONNECT_LEN-1] of char;
-//  PacketIndex, i: Integer;
-//  Done: Boolean;
   i: Integer;
   iSplit: Integer;
   List: TList;
-  SendStr, SendStr2: AnsiString;
+  SendStr, RcvStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
- // TCP_Receive_Char: char;
- // GridConnectMsg: TTCPMessage;
   SyncSendMessageList: TStringList;
-//  NoDelay: Boolean;
   StrLen: Integer;
 begin
   ExecuteBegin;
@@ -314,11 +306,28 @@ begin
       OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
       if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
       begin
-        ConnectedSocket.SendString(SendStr + LF);
+        ConnectedSocket.ResetLastError;
+        ConnectedSocket.SendString(SendStr + LF);                               // Try to send the message
+        if ConnectedSocket.LastError <> 0 then
+        begin
+          BufferRawMessage := 'Socket Error: ' + ConnectedSocket.LastErrorDesc;
+          Synchronize(@SyncErrorMessage);
+          ConnectedSocket.ResetLastError;
+        end;
         SendStr := '';
       end;
 
-      DecomposeAndDispatchGridConnectString(ConnectedSocket.RecvString(1), Helper);
+      ConnectedSocket.ResetLastError;
+      RcvStr := ConnectedSocket.RecvString(1);
+      case ConnectedSocket.LastError of
+        S_OK         : DecomposeAndDispatchGridConnectString(RcvStr, Helper);
+        WSAETIMEDOUT : begin end; // Normal if nothing to read
+      else begin
+        BufferRawMessage := 'Socket Error: ' + ConnectedSocket.LastErrorDesc;
+        Synchronize(@SyncErrorMessage);
+        ConnectedSocket.ResetLastError;
+        end;
+      end;
 
    {    if not ConnectedSocket.CanRead(0) and (ConnectedSocket.WaitingData = 0)  and Assigned(OwnerHub) then
        begin
