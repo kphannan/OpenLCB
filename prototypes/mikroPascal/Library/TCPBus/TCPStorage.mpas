@@ -21,6 +21,7 @@ unit TCPStorage;
 {$I Options.inc}
 
 {.$DEFINE LOG_UART}
+{$DEFINE LOG_UART1}
 {.$DEFINE LOG_GRIDCONNECT_UART}
 
 uses
@@ -386,7 +387,7 @@ begin
 
     CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
 
-    {$IFDEF LOG_UART}UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);{$ENDIF}
+    {$IFDEF LOG_UART1}UART_Write_Text('High Priority Tx: ' + GridConnectBuffer + LF);{$ENDIF}
 
     OlcbPacketLength := strlen(GridConnectBuffer);
     memCpy(TCP_buf_start, @GridConnectBuffer, OlcbPacketLength);
@@ -408,7 +409,7 @@ begin
 
     CANBufferToGridConnect(TxBuffer, GridConnectBuffer);
 
-    {$IFDEF LOG_UART}UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);{$ENDIF}
+    {$IFDEF LOG_UART1}UART_Write_Text('Low Priority Tx: ' + GridConnectBuffer + LF);{$ENDIF}
     
     OlcbPacketLength := strlen(GridConnectBuffer);
     memCpy(TCP_buf_start, @GridConnectBuffer, OlcbPacketLength);

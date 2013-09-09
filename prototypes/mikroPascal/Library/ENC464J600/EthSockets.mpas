@@ -75,7 +75,7 @@ procedure Sockets_Init_Internal;
 
 // External functions
 function ARP_Validate_IP(var ip_arp1 : TipHeader; var mac_arp : TmacHeader) : boolean; external;
-function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer; Fragment : Boolean) : boolean; external;
+function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : boolean; external;
 procedure Do_EthernetProc(n : word); external;
 procedure DisableInt; external;
 procedure EnableInt; external;
@@ -141,7 +141,7 @@ begin
   SocketManager.Socket[iSocket].Keep_Alive := True;
   SocketManager.iLastOpenedSocked := iSocket;
 
-  if not TCP_Send_Internal(SYN_S, iSocket, False) then
+  if not TCP_Send_Internal(SYN_S, iSocket) then
   begin
     Result := RESULT_OPEN_TCP_CONNECTION_SEND_FAILED;
     SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED;
@@ -168,7 +168,7 @@ begin
       SocketManager.Socket[iSocket].RAM_ROM := 0;
       SocketManager.Socket[iSocket].Start_addr := 0;
       SocketManager.Socket[iSocket].Stop_addr := 0;
-      Result := TCP_Send_Internal(FIN_S + ACK_S, iSocket, False);      // Sets Wait_ACK = 1
+      Result := TCP_Send_Internal(FIN_S + ACK_S, iSocket);      // Sets Wait_ACK = 1
     end else
     begin
       {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: Found Socket, it was already Closed we are out of here'+LF);{$ENDIF}

@@ -378,7 +378,7 @@ begin
       if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
       begin
         {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Connected with data.............<START>' + LF);{$ENDIF}
-        if TCP_Send_Internal(PSH_S + ACK_S, i, True) = False then
+        if TCP_Send_Internal(PSH_S + ACK_S, i) = False then
         begin
           SocketManager.Socket[i].Keep_Alive := False;
           SocketManager.Socket[i].Start_addr := 0;

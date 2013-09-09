@@ -38,7 +38,7 @@ type
   TipHeader = array[4] of byte;
   TmacHeader = array[6] of byte;
   
-var                       /
+var
   TickCounter1,           // Used: ARP_Validate_IP, DHCP_Request, Dns_Resolve, Ping_Send,
   TickCounter10 : word;   // Used: Close_TCP_Connection, TCP_Send_Internal
 

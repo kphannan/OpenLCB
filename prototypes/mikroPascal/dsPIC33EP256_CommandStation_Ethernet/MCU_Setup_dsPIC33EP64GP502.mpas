@@ -46,7 +46,7 @@ begin
   Settings.eth_ip_addr[0] := 192;
   Settings.eth_ip_addr[1] := 168;
   Settings.eth_ip_addr[2] := 0;
-  Settings.eth_ip_addr[3] := 128;
+  Settings.eth_ip_addr[3] := 127;
  
   // set gateway address
   Settings.eth_gateway[0]  := 192;

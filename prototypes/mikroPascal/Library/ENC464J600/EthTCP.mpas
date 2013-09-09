@@ -16,7 +16,7 @@ NMRAnetDefinesShared,
 function TCP_UserSend(var ip_t1 : TipHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 
 // Internal functions
-function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer; Fragment: Boolean) : boolean;
+function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : boolean;
 procedure TCP_WriteToWire_Internal(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 procedure TCP_Init_Internal;
 procedure TCP_Process_Internal(EthMemAddressRequest: Word);
@@ -103,9 +103,9 @@ end;
 //                sending data. TCP_UserSend comes through this after it sets
 //                up the variables property
 //******************************************************************************
-function TCP_Send_Internal(TCP_Flag: byte; iSocket: Integer; Fragment: Boolean) : boolean;
+function TCP_Send_Internal(TCP_Flag: byte; iSocket: Integer) : boolean;
 var
-  AddressOffsetSecondPacket, AddressOffset, iReTransmit, MaxPacketDataSize : word;
+  AddressOffset, iReTransmit, MaxPacketDataSize : word;
   Stop_addr_S, Start_addr_S, seq_buf : dword;
   AddressDelta : dword;
 begin
@@ -126,43 +126,16 @@ begin
     s1 := s1 + 'URG|';
   UART1_Write_Text(+s1+LF);
   {$ENDIF}
-  
-  Fragment := False;
-  
-  Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
-  Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
 
   Result := False;
 
   iReTransmit := 0;
   while iReTransmit < 3 do
   begin
-    AddressOffset := 0;
-    AddressOffsetSecondPacket := 0;
-
-    Eth_DoPacket;
-    Eth_DoPacket;
-
-    MaxPacketDataSize := 1300;
-    seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
-    SocketManager.Socket[iSocket].Wait_ACK := 1;
-    AddressDelta := (Stop_addr_S - Start_addr_S);
+  //  Eth_DoPacket;
+ //   Eth_DoPacket;
     
-    // If the Data size is not over the max and Fragment is false then NOTHING is sent in this block of code....
-    if AddressDelta <= MaxPacketDataSize then
-    begin
-      if Fragment then                                                          // Force two packets to be sent if enough data is being sent
-      begin
-        if AddressDelta >= 4 then                                               // If less than 4 databytes then it will be sent in the second call to TCP_Send_LoadAddressesAndDataThenSend_Internal
-        begin
-          MaxPacketDataSize := AddressDelta div 2;                              // Only send 1/2 of the data byte available in this packet
-          AddressOffset := TCP_Send_LoadAddressesAndDataThenSend_Internal(ACK_S, iSocket, AddressOffset, MaxPacketDataSize);
-        end;
-      end
-    end;
-    
-    // If this is SYN or FIN then it would not have sent any data yet (Fragment MUST be false for these calls)
-    // If the Socket is not connected then if the call is not a FIN or SYN then exit without having done anything
+    // If not connected then only allow sends that have FIN or SYN as they are the only calls that are valid in this state
     if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
       if TCP_Flag.FIN = 0 then
         if TCP_Flag.SYN = 0 then
@@ -172,9 +145,16 @@ begin
           {$IFDEF LOG_UART}UART1_Write_Text('Transmitting a TCP Packet...............<END>'+LF+LF);{$ENDIF}
           Exit;
         end;
-
+    
+    AddressOffset := 0;
     MaxPacketDataSize := 1300;
-    AddressOffsetSecondPacket := TCP_Send_LoadAddressesAndDataThenSend_Internal(TCP_Flag, iSocket, AddressOffset, MaxPacketDataSize);   // Send the rest of the data bytes, if there are any
+    Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
+    Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
+    seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
+    AddressDelta := (Stop_addr_S - Start_addr_S);
+    
+    SocketManager.Socket[iSocket].Wait_ACK := 1;
+    AddressOffset := TCP_Send_LoadAddressesAndDataThenSend_Internal(TCP_Flag, iSocket, AddressOffset, MaxPacketDataSize);   // Send the rest of the data bytes, if there are any
 
     TickCounter10 := 0;
     while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
@@ -200,38 +180,10 @@ begin
     {$IFDEF LOG_UART}UART1_Write_Text('Transmitting a TCP Packet................<END>'+LF+LF);{$ENDIF}
     Exit;
   end;
-
-  (*
-  if TCP_Flag.FIN = 0 then
-    if TCP_Flag.SYN = 0 then
-      if (seq_buf + AddressOffset + AddressOffsetSecondPacket) <> SocketManager.Socket[iSocket].SEQ_No_S then
-      begin
-        if (seq_buf + AddressOffset) = SocketManager.Socket[iSocket].SEQ_No_S then
-        begin
-          SocketManager.Socket[iSocket].Wait_ACK := 1;
-          TickCounter10 := 0;
-          while TickCounter10 < SocketManager.TCP_Wait do
-          begin
-            Eth_DoPacket;
-            if SocketManager.Socket[iSocket].Wait_ACK = 0 then // received
-            begin
-              if (seq_buf + AddressOffset + AddressOffsetSecondPacket) <> SocketManager.Socket[iSocket].SEQ_No_S then
-                AddressOffsetSecondPacket := 0;
-              Break;
-            end;
-          end;
-        end else
-        begin
-          {$IFDEF LOG_UART}UART1_Write_Text('TCP Tx: The first ACK from the receiver had a messed up Seq Number, we are out of here...'+LF);{$ENDIF}
-          {$IFDEF LOG_UART}UART1_Write_Text('Transmitting a TCP Packet................<END>'+LF+LF);{$ENDIF}
-          Exit;
-        end
-      end;
-   *)
-   
+  
   // Increment the sliding address for the data window
   if (SocketManager.Socket[iSocket].Start_addr = Start_addr_S) and (SocketManager.Socket[iSocket].Stop_addr = Stop_addr_S) then
-    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + AddressOffsetSecondPacket + AddressOffset;
+    SocketManager.Socket[iSocket].Start_addr := SocketManager.Socket[iSocket].Start_addr + AddressOffset;
 
   Result := True;
   {$IFDEF LOG_UART}UART1_Write_Text('Transmitting a TCP Packet................<END>'+LF+LF);{$ENDIF}
@@ -256,7 +208,7 @@ begin
   SocketManager.Socket[iSocket].RAM_ROM := 0;
   SocketManager.Socket[iSocket].Start_addr := @data_tcp2;
   SocketManager.Socket[iSocket].Stop_addr := @data_tcp2 + len_data1;
-  Result := TCP_Send_Internal(PSH_S + ACK_S, iSocket, True);
+  Result := TCP_Send_Internal(PSH_S + ACK_S, iSocket);
   if Result = False then
     begin
       SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED;
@@ -580,12 +532,7 @@ begin
       {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, found allocated Socket'+LF);{$ENDIF}
       if (SocketManager.Socket[iSocket].State_S = SOCKET_WAITING_FOR_CONNECTION) {or (SocketManager.Socket[iSocket].Wait_ACK <> 0)} then
       begin
-        {$IFDEF LOG_UART}
-        if (SocketManager.Socket[iSocket].State_S = SOCKET_WAITING_FOR_CONNECTION) then
-          UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to a SYN (us) - SYN+ACK (them), connection is complete'+LF)
-        else
-          UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to general Wait_ACK'+LF);
-        {$ENDIF}
+        {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to a SYN (us) - SYN+ACK (them), connection is complete'+LF);{$ENDIF}
         SocketManager.Socket[iSocket].State_S := SOCKET_CONNECTED; // Connected
         SocketManager.Socket[iSocket].Wait_ACK := 0;
         SocketManager.Socket[iSocket].ACK_No_S := SEQ_NoR;
@@ -594,28 +541,34 @@ begin
         Exit;
       end else
       begin                                       
-        {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, this is a data packet being sent to us'+LF);{$ENDIF}
+        {$IFDEF LOG_UART}
+        if PacketLen > 0 then
+          UART1_Write_Text('TCP Rx: Handling a ACK, this is a data packet being sent to us'+LF)
+        else
+          UART1_Write_Text('TCP Rx: Handling a ACK, this is a reply for something we sent'+LF);
+        {$ENDIF}
 
         SEQ_No := ACK_NoR;
         ACK_No := SEQ_NoR + PacketLen;
         TCP_FlagSend := ACK_S;
 
-        SocketManager.Socket[iSocket].Wait_ACK := 0;
         SocketManager.Socket[iSocket].SEQ_No_S := SEQ_No;
         SocketManager.Socket[iSocket].ACK_No_S := ACK_No;
         SocketManager.Socket[iSocket].Exp_Time := 0; // keep Alive
-        
-        if (SocketManager.Socket[iSocket].Wait_ACK <> 0) then
+
+        if PacketLen <> 0 then                                                // We were sent data so we must ACK back
         begin
+          // Can combine the needed reply ACKs
           SocketManager.Socket[iSocket].dest_port_S := dest_port2;
           SocketManager.Socket[iSocket].source_port_S := source_port2;
           CopyEthMemToEthMem(EthMemAddressRequest + 6, TXSTART, 6);
           CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
           CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
           CopyEthMemToEthMem(EthMemAddressRequest + 26, TXSTART + 30, 4);
-          TCP_WriteToWire_Internal(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);      // Send an ACK for this packet of data
+          TCP_WriteToWire_Internal(source_port2, dest_port2, 0, SEQ_No, ACK_No, TCP_FlagSend);
         end;
-        
+
+        SocketManager.Socket[iSocket].Wait_ACK := 0; // Handled above
         Align := ReadFromEthMem(EthMemAddressRequest + 53); // dummy read puts rx pointer to start of TCP data.
         if PacketLen <> 0 then
         begin
@@ -624,9 +577,6 @@ begin
           SocketManager.Socket[iSocket].Stop_addr := PacketLen;
           Eth_UserTCP(dest_ip_addr, source_port2, dest_port2, PacketLen, iSocket);
           {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, data packet, sent to Eth_UserTCP'+LF);{$ENDIF}
-        end else
-        begin
-          {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, data packet but data length was 0???'+LF);{$ENDIF}
         end
       end;
     end else
