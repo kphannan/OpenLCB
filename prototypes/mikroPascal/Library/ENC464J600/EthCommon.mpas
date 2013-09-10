@@ -34,9 +34,71 @@ const
   POLICY_REJECT               : byte = 1;
   POLICY_DROP                 : byte = 2;
   
+  IPV4 = 4;
+
+
+const
+  PHYSICAL_LAYER_HEADER_OFFSET = 0;
+  PHYSICAL_LAYER_HEADER_SIZE = 14;
 type
-  TipHeader = array[4] of byte;
-  TmacHeader = array[6] of byte;
+  TPhysicalLayerHeader = record
+    SourceMacAddress,
+    DestMacAddress: DWord;
+    Protocol: Word;
+  end;
+
+const
+  IP_HEADER_OFFSET = 14;
+  IP_HEADER_SIZE = 20;
+type
+  TIPHeader = record
+    Version,
+    IHL,
+    DSCP,
+    ECN:  Byte;
+    TotalLength: Word;
+    Identification: Word;
+    Flags: Byte;
+    FragmentOffset: Word;
+    TimeToLive: Byte;
+    Protocol: Byte;
+    HeaderCheckSum: Word;
+    SourceIPAddress,
+    DestIPAddress: DWord;
+  end;
+  
+const
+  TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;
+  TCP_HEADER_SIZE = 20;
+type
+  TTCPHeader = record
+    SourcePort,
+    DestPort:  Word;
+    SequenceNumber: DWord;
+    AckNumber: DWord;
+    DataOffset: Byte;
+    Flags: Word;
+    WindowSize: Word;
+    Checksum: Word;
+    UrgentPtr: Word;
+  end;
+
+  TRawHeader = record
+    Offset0,
+    Offset1,
+    Offset2,
+    Offset3,
+    Offset4,
+    Offset5,
+    Offset6: DWord;
+  end;
+
+const
+  IP_ADDRESS_LEN = 4;
+  MAC_ADDRESS_LEN = 6;
+type
+  TIPAddress = array[IP_ADDRESS_LEN] of byte;
+  TMACAddress = array[MAC_ADDRESS_LEN] of byte;
   
 var
   TickCounter1,           // Used: ARP_Validate_IP, DHCP_Request, Dns_Resolve, Ping_Send,

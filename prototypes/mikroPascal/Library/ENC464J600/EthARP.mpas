@@ -27,16 +27,16 @@ type
     Allocated         : boolean;
     WaitingForReply    : boolean;
     ArpVerifyTime     : longint;
-    Ip                : TipHeader;
-    Mac               : TmacHeader;
+    Ip                : TIPAddress;
+    Mac               : TMACAddress;
   end;
   
 // User functions
-Function ARP_Send(var ipb : TipHeader; var dest_mac: TmacHeader) : boolean;
-function ARP_Validate_IP(var ip_arp1 : TipHeader; var mac_arp : TmacHeader) : boolean;
+Function ARP_Send(var ipb : TIPAddress; var dest_mac: TMACAddress) : boolean;
+function ARP_Validate_IP(var ip_arp1 : TIPAddress; var mac_arp : TMACAddress) : boolean;
 
 // Internally used functions
-Function Search_Arp_Cache_Internal(var ip_a : TipHeader; var dest_mac: TmacHeader) : boolean;
+Function Search_Arp_Cache_Internal(var ip_a : TIPAddress; var dest_mac: TMACAddress) : boolean;
 procedure ARP_Reply_Internal(EthMemAddressRequest: Word);
 procedure ARP_Process_Internal(EthMemAddressRequest: Word);   
 procedure ARP_EraseCache_Internal;
@@ -134,9 +134,9 @@ end;
 //* Name    : ARP_Resolve_Segment_Gateway
 //* Purpose : Resolve the correct IP to send the ARP for
 //******************************************************************************
-procedure ARP_Resolve_Segment_Gateway(var dest_ip: TipHeader; var ipArp: TipHeader);
+procedure ARP_Resolve_Segment_Gateway(var dest_ip: TIPAddress; var ipArp: TIPAddress);
 var
-  ip_target_masked, ip_masked: TipHeader;
+  ip_target_masked, ip_masked: TIPAddress;
 begin
   ip_masked[0] := Settings.eth_ip_addr[0] and Settings.eth_mask[0];
   ip_masked[1] := Settings.eth_ip_addr[1] and Settings.eth_mask[1];
@@ -159,10 +159,10 @@ end;
 //* Name    : Search_Arp_Cache_Internal                                                 *
 //* Purpose : Search for  IP in ARP cache                                     *
 //******************************************************************************
-Function Search_Arp_Cache_Internal(var dest_ip : TipHeader; var dest_mac: TmacHeader) : boolean;
+Function Search_Arp_Cache_Internal(var dest_ip : TIPAddress; var dest_mac: TMACAddress) : boolean;
 var
   i: Byte;               // index of free slot in ARP cache
-  ipArp: TipHeader;
+  ipArp: TIPAddress;
 begin
   Result := False;
 
@@ -191,7 +191,7 @@ end;
 //* Name    : ARP_FindSlot
 //* Purpose : Finds the cached slot regardless if it is waiting for a reply or not
 //******************************************************************************
-function ARP_FindSlot(var ipArp: TipHeader): Integer;
+function ARP_FindSlot(var ipArp: TIPAddress): Integer;
 var
   i: Integer;
 begin
@@ -261,10 +261,10 @@ end;
 // Parameters: [IN, OUT] dest_ip : the IP address to resolve the MAC for
 //             [OUT]     dest_mac : the MAC for the IP passed if the result is true
 //******************************************************************************
-Function ARP_Send(var dest_ip : TipHeader; var dest_mac: TmacHeader) : boolean;
+Function ARP_Send(var dest_ip : TIPAddress; var dest_mac: TMACAddress) : boolean;
 var
   CurrentVerifyingTime : Longint;          // 100ms ticks
-  ipArp : TipHeader;
+  ipArp : TIPAddress;
   Slot: Integer;
 begin
   {$IFDEF LOG_UART}UART1_Write_Text('ARP_Sending' + LF);{$ENDIF}
@@ -367,7 +367,7 @@ End;
 // address and update the local ARP cache.  If the IP is validated returns true, 
 // if the ARP is not replied to returns false and the IP can not be found
 //******************************************************************************
-function ARP_Validate_IP(var ip_arp_target : TipHeader; var mac_arp : TmacHeader) : boolean;
+function ARP_Validate_IP(var ip_arp_target : TIPAddress; var mac_arp : TMACAddress) : boolean;
 var
   CountBuf: word;
   i : byte;

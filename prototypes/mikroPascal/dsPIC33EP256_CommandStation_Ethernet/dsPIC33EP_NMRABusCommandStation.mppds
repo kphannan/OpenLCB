@@ -7,7 +7,7 @@ Value=-1
 Value=0
 [ACTIVE_TAB]
 <<<<<<< .mine
-Value=..\Library\TCPBus\TCPStorage.mpas
+Value=..\Library\ENC464J600\EthSockets.mpas
 =======
 Value=dsPIC33EP_NMRAnetCommandStation.mpas
 >>>>>>> .r3259
@@ -64,16 +64,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=8
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=..\Library\ENC464J600\lib2_enc600_V3_5_b.mpas
 File2=..\Library\ENC464J600\lib1_enc600_V3_5_b.mpas
 File3=..\Library\ENC464J600\EthSockets.mpas
 File4=..\Library\TCPBus\TCPStorage.mpas
-File5=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
-File6=MCU_Setup_dsPIC33EP64GP502.mpas
-File7=..\Library\ENC464J600\EthCommon.mpas
-File8=..\Library\ENC464J600\EthTCP.mpas
+File5=..\Library\ENC464J600\EthCommon.mpas
+File6=..\Library\ENC464J600\EthTCP.mpas
+File7=..\Library\Common\dspic_additional_string_library.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -82,18 +81,26 @@ Count=0
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=11
+Count=19
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
-Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path4=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path6=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path7=E:\trunk\prototypes\mikroPascal\Library\Math\
-Path8=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
-Path9=E:\trunk\prototypes\mikroPascal\Library\Common\
-Path10=E:\trunk\prototypes\mikroPascal\Library\ENC464J600\
+Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
+Path3=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path6=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path7=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path8=E:\trunk\prototypes\mikroPascal\Library\Math\
+Path9=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path10=E:\trunk\prototypes\mikroPascal\Library\Common\
+Path11=E:\trunk\prototypes\mikroPascal\Library\ENC464J600\
+Path12=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path13=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path14=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path15=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
+Path16=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path17=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
+Path18=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\
 [HEADER_PATH]
 Count=0
 [HEADERS]

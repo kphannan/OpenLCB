@@ -22,7 +22,10 @@ const
   RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS = 2;
   RESULT_OPEN_TCP_CONNECTION_SEND_FAILED = 3;
   
-  MAX_SOCKET: byte                = 8;
+  MAX_SOCKET: byte                = 4;
+  MAX_DATA_BUFFER_LENGTH          = 1024;
+  MAX_TCP_RETRANSMIT_COUNT        = 3;                                          // Number of times to try to retransmit the TCP packet waiting for an ACK
+  
   SOCKET_EXPIRE_TIME              = $FFFF;   // In 100ms chunks
   
   TCP: byte                       = 100;
@@ -32,8 +35,8 @@ type
   TSocket = record
     State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
     source_port_S   : word;        // Port of the source (us)
-    Dest_Ip         : TipHeader;    // Ip of the resource to send the data to
-    Dest_Mac        : TmacHeader;   // MAC of the resource to send the data to
+    Dest_Ip         : TIPAddress;    // Ip of the resource to send the data to
+    Dest_Mac        : TMACAddress;   // MAC of the resource to send the data to
     dest_port_S     : word;        // Port of the resource to send the data to
     Seq_No_S        : dword;       // Sequence number for the TCP conversation with the other resource
     Ack_No_S        : dword;       // Ack sequence number for the TCP conversation with the other resource
@@ -44,25 +47,43 @@ type
     Stop_addr       : dword;       // The end of the valid data in the TCP_buf
     RAM_ROM         : word;
     Keep_Alive      : boolean;     // [DEFAULT] = True; Keeps the socket alive (until the Exp_Time_Val expires at least) when it is empty.  If false then once the data is sent the socket is released.
-    TCP_buf         : string[1024];
-  //  TxBuffer,
-  //  RxBuffer        : array[1024] of Byte;
+    TCP_buf         : string[MAX_DATA_BUFFER_LENGTH];
+  end;
+  
+const
+  TCP_TX_STATE_LOADED       = 0;                                                // Bit 0, 0 = transmitter has nothing to transmit; 1 = transmitter is loaded and ready (or already) transmitting
+  TCP_TX_STATE_TRANSMITTING = 1;                                                // Bit 1, 0 = not in the middle of a transmission; 1 = in the middle of a transmission
+  TCP_TX_WAITING_FOR_ACK    = 2;                                                // Bit 2, 0 = ACK received; 1 = Waiting for an ACK from the other device
+  TCP_TX_ACK_FAILED         = 3;                                                // Bit 3, 0 = ack/Seq in reply is in sync; 1 = ack/Seq in reply is wrong so resend
+
+type
+  TSocketTransmitter = record
+    State: Word;                                                                // State of the TCP Transmitter see TX_STATE_xxxx constants
+    PhysicalLayerHeader: TPhysicalLayerHeader;                                  // Current info for the Physical Layer of  the current transmission
+    IPHeader: TIPHeader;                                                        // Current info for the IP Layer of the current transmission
+    TCPHeader: TTCPHeader;                                                      // Current info for the TCP Layer of the current transmission
+    DataLength: Word;                                                           // Length of the data Buffer
+    DataBuffer: string[MAX_DATA_BUFFER_LENGTH];                                 // Raw data to send, note this does not have to be a string
+    TimeOutCount: Word;                                                         // Timeout counter waiting for the TCP_Wait time to be met or an ACK to be received
+    RetransmitCount: Word;                                                      // Number of times the Data has been retransmitted up to MAX_TCP_RETRANSMIT_COUNT
+    Watchdog: Word;                                                             // Increments each time the Do Transmit function is called, detects if the ENC never signals the packet was sent.  Allows us to not get hungup if a glitch occurs in the ENC
   end;
 
   TSocketManager = record
     TCP_Wait,
     UDP_Wait : word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
     Socket : array[MAX_SOCKET] of TSocket;
+    Transmitter: TSocketTransmitter;
     iLastOpenedSocked : word;                                                   // Last Socket index that was opened
   end;
   
 // User functions
-function Open_TCP_Connection(var DestIP : TipHeader; dest_port_S2, source_port_S2 : word) : Word;
-function Close_TCP_Connection(var DestIP : TipHeader; dest_port_S2 : word) : boolean;
+function Open_TCP_Connection(var DestIP : TIPAddress; dest_port_S2, source_port_S2 : word) : Word;
+function Close_TCP_Connection(var DestIP : TIPAddress; dest_port_S2 : word) : boolean;
 procedure EraseSockets;
 function Search_Port(protocol : byte; port_ : word) : boolean;
-function TCP_Find_Connection(var DestIP: TipHeader; DestPort: Word): Integer;
-function TCP_Find_Any_Connection(var DestIP: TipHeader; DestPort: Word): Integer;
+function TCP_Find_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
+function TCP_Find_Any_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 function TCP_Find_Free_Socket: Integer;
 function UDP_Open_Port(port_u : word): boolean;
 function TCP_Open_Port(port_t : word): boolean;
@@ -74,7 +95,7 @@ procedure Set_TCP_TimeOut_Interval(int_ : word);
 procedure Sockets_Init_Internal;
 
 // External functions
-function ARP_Validate_IP(var ip_arp1 : TipHeader; var mac_arp : TmacHeader) : boolean; external;
+function ARP_Validate_IP(var ip_arp1 : TIPAddress; var mac_arp : TMACAddress) : boolean; external;
 function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : boolean; external;
 procedure Do_EthernetProc(n : word); external;
 procedure DisableInt; external;
@@ -97,10 +118,10 @@ end;
 //* Name    : Open_TCP_Connection                                              *
 //* Purpose : Open TCP Connection and Socket                                   *
 //******************************************************************************
-function Open_TCP_Connection(var DestIP : TipHeader; dest_port_S2, source_port_S2 : word) : Word;
+function Open_TCP_Connection(var DestIP : TIPAddress; dest_port_S2, source_port_S2 : word) : Word;
 var
   iSocket : Integer;
-  dest_mac: TmacHeader;
+  dest_mac: TMACAddress;
 begin
   {$IFDEF LOG_UART}UART1_Write_Text('Opening TCP Connection'+LF);{$ENDIF}
   Result := RESULT_OPEN_TCP_CONNECTION_OK;
@@ -153,7 +174,7 @@ end;
 //* Name    : Close_TCP_Connection                                             *
 //* Purpose : Close TCP Connection and Socket                                  *
 //******************************************************************************
-function Close_TCP_Connection(var DestIP : TipHeader; dest_port_S2 : word) : boolean;
+function Close_TCP_Connection(var DestIP : TIPAddress; dest_port_S2 : word) : boolean;
 var
   CountBuf : word;
   iSocket : byte;
@@ -253,7 +274,7 @@ begin
   end;
 end;
 
-function TCP_Find_Connection(var DestIP: TipHeader; DestPort: Word): Integer;
+function TCP_Find_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 var
   i: Integer;
 begin
@@ -272,7 +293,7 @@ begin
   end;
 end;
 
-function TCP_Find_Any_Connection(var DestIP: TipHeader; DestPort: Word): Integer;
+function TCP_Find_Any_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 var
   i: Integer;
 begin

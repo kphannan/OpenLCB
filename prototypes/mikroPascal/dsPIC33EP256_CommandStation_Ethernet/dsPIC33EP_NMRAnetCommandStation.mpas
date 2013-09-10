@@ -339,15 +339,15 @@ var
   str: string[6];
   ProxyData: PTrainProxyRamData;
   TempIP: TIPAddressStr;
-  TempIpServer: TipHeader;
+  TempIpServer: TIPAddress;
   TempChar: char;
   ipPortClient, ipPortServer: Word;
   Delay, OldHead, OldTail: Integer;
   OldFull: Boolean;
-  TempIPHeader: TipHeader;
+  TempIPHeader: TIPAddress;
   PingTime: word;
   DNS_Path: string[64];
-  ipDest: TipHeader;
+  ipDest: TIPAddress;
   Running: Boolean;
 begin
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
@@ -449,27 +449,22 @@ begin
       if ActiveNode <> PNMRAnetNode( nil) then
         NMRAnetStateMachine_Process(ActiveNode);
 
-  //    if not CAN_Engine.IsTransmitting then
+      if CANStorage_HighPriorityBufferReady then
       begin
-        if CANStorage_HighPriorityBufferReady then
+        Do_Storage_Send;       // Send it NOW
+      end else
+      begin
+        if (Delay = 20) or CAN_Engine.TransmitImmediately then
         begin
-          DoSendTCP;       // Send it NOW
-        end else
-        begin
-          if (Delay = 20) or CAN_Engine.TransmitImmediately then
-          begin
-            if CANStorage_LowPriorityBufferReady then
-              DoSendTCP;
-            Delay := 0;
-          end;
+          if CANStorage_LowPriorityBufferReady then
+            Do_Storage_Send;
+          Delay := 0;
         end;
-        Inc(Delay);
       end;
-   end;
-
+      Inc(Delay);
+    end;
     Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
     DHCP_Process(AddrPacket);
-    //  LATA4_bit := not LATA4_bit;
     
     if NTP_Sync then
     begin

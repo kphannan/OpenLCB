@@ -13,17 +13,18 @@ NMRAnetDefinesShared,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
   
-function TCP_UserSend(var ip_t1 : TipHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
+function TCP_UserSend(var ip_t1 : TIPAddress; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 
 // Internal functions
 function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : boolean;
 procedure TCP_WriteToWire_Internal(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
 procedure TCP_Init_Internal;
 procedure TCP_Process_Internal(EthMemAddressRequest: Word);
+function TCP_LoadBuffer(var PhysicalLayerHeader: TPhysicalLayerHeader; var IPHeader: TIPHeader; var TCPHeader: TTCPHeader): Boolean;
 
 // External functions
-procedure Eth_UserTCP(var dest_ip_addr_T : TipHeader; var source_port_T, dest_port_T, len_T : word; iSocket : Integer); external;
-procedure Eth_DoPacket; external;
+procedure Eth_UserTCP(var dest_ip_addr_T : TIPAddress; var source_port_T, dest_port_T, len_T : word; iSocket : Integer); external;
+procedure Do_Ethernet_Receive; external;
 
 implementation
 
@@ -37,6 +38,7 @@ begin
   TCP_IdentificationCounter := 1000;
   ACK_No := $42844A80;
   SEQ_No := $42844A80;
+  SocketManager.Transmitter.State := 0;
 end;
 
 //******************************************************************************
@@ -132,8 +134,8 @@ begin
   iReTransmit := 0;
   while iReTransmit < 3 do
   begin
-  //  Eth_DoPacket;
- //   Eth_DoPacket;
+  //  Do_Ethernet_Receive;
+ //   Do_Ethernet_Receive;
     
     // If not connected then only allow sends that have FIN or SYN as they are the only calls that are valid in this state
     if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
@@ -159,7 +161,7 @@ begin
     TickCounter10 := 0;
     while TickCounter10 < SocketManager.TCP_Wait do // wait for ack
     begin
-      Eth_DoPacket;                                                             // Local spin looking for the ACK reply.  The rub is the ACK may come with a PSH and data that can cause recursion....
+      Do_Ethernet_Receive;                                                             // Local spin looking for the ACK reply.  The rub is the ACK may come with a PSH and data that can cause recursion....
       if SocketManager.Socket[iSocket].Wait_ACK = 0 then                        // Not waiting anymore, received
       begin
     //    SocketManager.Socket[iSocket].Wait_ACK := 1;
@@ -193,7 +195,7 @@ end;
 //* Name    : TCP_UserSend                                                         *
 //* Purpose : Send TCP packet                                                  *
 //******************************************************************************
-function TCP_UserSend(var ip_t1 : TipHeader; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
+function TCP_UserSend(var ip_t1 : TIPAddress; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 var 
   iSocket : Integer;
 begin
@@ -214,6 +216,42 @@ begin
       SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED;
       SocketManager.Socket[iSocket].Keep_Alive := False;
     end;
+end;
+
+function TCP_LoadBuffer(var PhysicalLayerHeader: TPhysicalLayerHeader; var IPHeader: TIPHeader; var TCPHeader: TTCPHeader): Boolean;
+var
+  Header: TRawHeader;
+begin
+  Result := False;
+  if SocketManager.Transmitter.State.TCP_TX_STATE_LOADED = 0 then
+  begin
+    CopyRamToEthMem(@PhysicalLayerHeader, TXSTART + PHYSICAL_LAYER_HEADER_OFFSET, PHYSICAL_LAYER_HEADER_SIZE);
+    Header.Offset0 := IPHeader.Version shl 28;
+    Header.Offset0 := Header.Offset0 or DWord(IPHeader.IHL shl 24);
+    Header.Offset0 := Header.Offset0 or DWord(IPHeader.DSCP shl 18);
+    Header.Offset0 := Header.Offset0 or DWord(IPHeader.ECN shl 16);
+    Header.Offset0 := Header.Offset0 or IPHeader.TotalLength;
+    Header.Offset1 := IPHeader.Identification shl 16;
+    Header.Offset1 := Header.Offset1 or DWord(IPHeader.Flags shl 19);
+    Header.Offset1 := Header.Offset1 or IPHeader.FragmentOffset;
+    Header.Offset2 := IPHeader.TimeToLive shl 24;
+    Header.Offset2 := Header.Offset2 or DWord(IPHeader.Protocol shl 16);
+    Header.Offset2 := Header.Offset2 or IPHeader.HeaderCheckSum;
+    memcpy(@Header.Offset3, @IPHeader.SourceIPAddress, IP_ADDRESS_LEN);
+    memcpy(@Header.Offset4, @IPHeader.DestIPAddress, IP_ADDRESS_LEN);
+    CopyRamToEthMem(@Header, TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);
+    Header.Offset0 := TCPHeader.SourcePort shl 16;
+    Header.Offset0 := Header.Offset0 or TCPHeader.DestPort;
+    Header.Offset1 := TCPHeader.SequenceNumber;
+    Header.Offset2 := TCPHeader.AckNumber;
+    Header.Offset3 := TCPHeader.DataOffset shl 28;
+    Header.Offset3 := Header.Offset3 or DWord(TCPHeader.Flags shl 16);
+    Header.Offset3 := Header.Offset3 or TCPHeader.WindowSize;
+    Header.Offset4 := TCPHeader.Checksum shl 16;
+    Header.Offset4 := Header.Offset4 or TCPHeader.UrgentPtr;
+    CopyRamToEthMem(@Header, TXSTART + PHYSICAL_LAYER_HEADER_SIZE + IP_HEADER_SIZE, TCP_HEADER_SIZE);
+    Result := True;
+  end;
 end;
 
 //******************************************************************************
@@ -309,8 +347,8 @@ var
   PacketLen, source_port2, dest_port2, len_ack : word;
   iSocket: Integer;
   Align, TCP_FlagReceive, TCP_FlagSend : byte;
-  dest_mac2 : TmacHeader;
-  dest_ip_addr: TipHeader;
+  dest_mac2 : TMACAddress;
+  dest_ip_addr: TIPAddress;
   CkSum_TCP: word;
   CkSum_IP: word;
   len_data: word;

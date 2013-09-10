@@ -44,7 +44,7 @@ type
   
 // User functions
 
-function Dns_Resolve(var text_in_ : string[40]; var dns_ip : TipHeader) : boolean;
+function Dns_Resolve(var text_in_ : string[40]; var dns_ip : TIPAddress) : boolean;
 
 // Internally used functions
 procedure DNS_ProcessPacket_Internal(EthMemAddressRequest: Word); 
@@ -52,7 +52,7 @@ function Dns_query_Internal(var text_in : string[40]) : boolean;
 
 // Externally defined functions
 procedure Do_EthernetProc(n : word); external;
-function UDP_Send(var dest_ip_addr : TipHeader; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean; external;
+function UDP_Send(var dest_ip_addr : TIPAddress; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean; external;
   
 var
   DNS_Manager: TDNS_Manager;
@@ -60,7 +60,7 @@ var
 implementation
 
 var
-  resp_ip_addr : TipHeader;
+  resp_ip_addr : TIPAddress;
 
 //******************************************************************************
 //* Name    : Dns_query                                                        *
@@ -109,7 +109,7 @@ end;
 //* Name    : Dns_Resolve                                                      *
 //* Purpose : Send DNS request                                                 *
 //******************************************************************************
-function Dns_Resolve(var text_in_ : string[40]; var dns_ip : TipHeader) : boolean;
+function Dns_Resolve(var text_in_ : string[40]; var dns_ip : TIPAddress) : boolean;
 var 
   CountBuf : word;
   i : byte;

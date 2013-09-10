@@ -3,7 +3,7 @@ unit lib2_enc600_V3_5_b;
 //{$DEFINE RxInt}
 {.$DEFINE LOG_UART}
 
-uses 
+uses
 
 NMRAnetDefinesShared,
 
@@ -33,12 +33,10 @@ function debugg_stack : word;
 
 // Internally used functions
 function Eth_ReadPacket : word;
-procedure Eth_DoPacket;
-procedure Do_Stack;
+procedure Do_Ethernet_Receive;
+procedure Do_TCP_Stack;
 
 // External functions
-procedure Eth_UserProcess_Main; external;
-procedure Eth_UserProcess; external;
 procedure DisableInt;  external;
 procedure EnableInt; external;
 
@@ -256,13 +254,12 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Eth_DoPacket                                                     *
+//* Name    : Do_Ethernet_Receive                                                     *
 //* Purpose : Process incomming Ethernet packets, without TCP/IP Stack         *
 //******************************************************************************
-procedure Eth_DoPacket;
+procedure Do_Ethernet_Receive;
 begin
   ClrWdt;
-  Eth_UserProcess_Main;
 {$IFDEF RxInt}
   if ENC_INT <> 0 then 
     Exit;
@@ -364,10 +361,73 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Do_Stack                                                         *
+//* Name    : Start_TCP_Transmit
+//* Purpose : Process TCP Transmtter
+//******************************************************************************
+procedure Start_TCP_Transmit;
+begin
+  Eth_WriteReg(ETXST_, TXSTART);                                            // Set the start of packet
+  Eth_WriteReg(ETXLEN_, 34 + 40 + SocketManager.Transmitter.DataLength);    // DOUBLE CHECK THE LENGTH CALCULATION>>>>>>>>>>>>
+  Eth_BSF(ECON1_, ECON1_TXRTS_);                                            // Enable the Transmit
+  SocketManager.Transmitter.TimeOutCount := 0;
+end;
+
+//******************************************************************************
+//* Name    : Do_TCP_Transmit
+//* Purpose : Process TCP Transmtter
+//******************************************************************************
+procedure Do_TCP_Transmit;
+begin
+  if SocketManager.Transmitter.State.TCP_TX_STATE_LOADED = 1 then               // Are we ready to send a packet?
+  begin
+    if SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING = 0 then       // If we are ready to send but not sending yet kick it off
+    begin
+      Start_TCP_Transmit;
+      SocketManager.Transmitter.RetransmitCount := 0;
+      SocketManager.Transmitter.Watchdog := 0;
+      SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 1;
+      SocketManager.Transmitter.State.TCP_TX_WAITING_FOR_ACK := 1;
+      SocketManager.Transmitter.State.TCP_TX_ACK_FAILED := 0;
+    end else
+    begin
+      if (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) = 0 then                        // Has the device sent the packet out the wire yet?
+      begin
+        if (SocketManager.Transmitter.State.TCP_TX_ACK_FAILED = 1) or (SocketManager.Transmitter.TimeOutCount > SocketManager.TCP_Wait) then
+        begin
+          SocketManager.Transmitter.State.TCP_TX_ACK_FAILED := 0;
+          Inc(SocketManager.Transmitter.RetransmitCount);
+          if SocketManager.Transmitter.RetransmitCount < MAX_TCP_RETRANSMIT_COUNT then   // Try it a few times
+            Start_TCP_Transmit
+          else begin
+            SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;
+            SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
+          end
+        end else
+        begin
+          if SocketManager.Transmitter.State.TCP_TX_WAITING_FOR_ACK = 0 then      // Done, move on
+          begin
+            SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;
+            SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
+          end
+        end;
+      end else
+      begin
+        Inc(SocketManager.Transmitter.Watchdog);                                      // Make sure we don't get hung if the ENC fails to send the packet
+        if SocketManager.Transmitter.Watchdog = $FFFF then
+        begin
+          SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;
+          SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
+        end;
+      end
+    end
+  end
+end;
+
+//******************************************************************************
+//* Name    : Do_TCP_Stack                                                         *
 //* Purpose : Process packets from TCP/IP Stack                                *
 //******************************************************************************
-procedure Do_Stack;
+procedure Do_TCP_Stack;
 var i : byte;
 begin
   i := 0;
@@ -377,7 +437,7 @@ begin
     begin
       if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
       begin
-        {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Connected with data.............<START>' + LF);{$ENDIF}
+        {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Connected with data.............<START>' + LF);{$ENDIF}
         if TCP_Send_Internal(PSH_S + ACK_S, i) = False then
         begin
           SocketManager.Socket[i].Keep_Alive := False;
@@ -385,15 +445,15 @@ begin
           SocketManager.Socket[i].Stop_addr := 0;
         end else 
           SocketManager.Socket[i].Exp_Time := 0;
-        {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Connected with data.............<END>' + LF);{$ENDIF}
+        {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Connected with data.............<END>' + LF);{$ENDIF}
       end else
       if (SocketManager.Socket[i].Keep_Alive = False) or (SocketManager.Socket[i].Exp_Time > SocketManager.Socket[i].Exp_Time_Val) then // 1 minutes without activity (60 * 1) sec
       begin
         {$IFDEF LOG_UART}
         if (SocketManager.Socket[i].Keep_Alive = False) then
-          UART1_Write_Text('Do_Stack: Socket Connected and KeepAlive = False, killing socket.............<END>' + LF)
+          UART1_Write_Text('Do_TCP_Stack: Socket Connected and KeepAlive = False, killing socket.............<END>' + LF)
         else
-          UART1_Write_Text('Do_Stack: Socket Connected Timeout = True, killing socket.............<END>' + LF);
+          UART1_Write_Text('Do_TCP_Stack: Socket Connected Timeout = True, killing socket.............<END>' + LF);
         {$ENDIF}
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
@@ -409,17 +469,17 @@ begin
     end else 
     if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then // waiting for connection
     begin
-      {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
       if (SocketManager.Socket[i].Exp_Time > 9) then // 10 sec without response at SYN
       begin
-        {$IFDEF LOG_UART}UART1_Write_Text('Do_Stack: Socket waiting for Connection Expired, killing socket' + LF);{$ENDIF}
+        {$IFDEF LOG_UART}UART1_Write_Text('Do_TCP_Stack: Socket waiting for Connection Expired, killing socket' + LF);{$ENDIF}
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
         SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
         SocketManager.Socket[i].Keep_Alive := False;
       end;
-      {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
+      {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
     end;
     inc(i);
   end;
@@ -435,9 +495,9 @@ begin
   i := 0;
   while i < n do
     begin
-      Eth_DoPacket;
-      Eth_UserProcess;
-      Do_Stack;
+      Do_Ethernet_Receive;           // Look for incoming
+      Do_TCP_Stack;             // Process Sockets
+      Do_TCP_Transmit;
       inc(i);
   end;
 end;
@@ -449,14 +509,13 @@ end;
 procedure Wait_for_LAN;
 var 
   Counter : word;
-  dest_ip_addr: TipHeader;
-  dest_mac: TmacHeader;
+  dest_ip_addr: TIPAddress;
+  dest_mac: TMACAddress;
 begin
   Counter := 0;
   while Counter < 60000 do
   begin
     ClrWdt;
-    Eth_UserProcess_Main;
     if (Eth_ReadReg(EIR_) and $0040) <> 0 then
       Eth_ReadPacket;
     delay_100us_;

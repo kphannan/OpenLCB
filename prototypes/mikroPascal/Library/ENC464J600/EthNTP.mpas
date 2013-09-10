@@ -127,7 +127,7 @@ end;
 //******************************************************************************
 function NTP_Query : boolean;
 var
-  ntp_mac : TmacHeader;
+  ntp_mac : TMACAddress;
 begin
   Result := False;
   {$IFDEF LOG_UART}UART1_Write_Text('NTP_Query'+ LF);{$ENDIF}
