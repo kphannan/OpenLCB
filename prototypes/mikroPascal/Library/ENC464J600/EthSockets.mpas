@@ -13,9 +13,6 @@ NMRAnetDefinesShared,
   definitions_ENC600;
   
 const
-  SOCKET_DISCONNECTED             = 0;
-  SOCKET_WAITING_FOR_CONNECTION   = 1;
-  SOCKET_CONNECTED                = 2;
 
   RESULT_OPEN_TCP_CONNECTION_OK = 0;
   RESULT_OPEN_TCP_CONNECTION_ARP_FAILED = 1;
@@ -31,9 +28,16 @@ const
   TCP: byte                       = 100;
   UDP: byte                       = 200;
   
+const
+  SOCKET_STATE_DISCONNECTED           = 0;   // Bit 0
+  SOCKET_STATE_WAITING_FOR_CONNECTION = 1;   // Bit 1
+  SOCKET_STATE_CONNECTED              = 2;   // Bit 2
+  SOCKET_STATE_WAITING_FOR_ACK        = 3;   // Bit 3, 0 if not waiting for an ACK; 1 if Waiting for an ACK
+  SOCKET_STATE_ACK_FAILED             = 4;   // Bit 4, Seq or Ack was not correct in return call
+  
 type
   TSocket = record
-    State_S         : word;        // 0 = Disconnected; 1 = Waiting for Connection; 2 = Connected
+    State           : Word;        // See SOCKET_STATE_xxxx contants
     source_port_S   : word;        // Port of the source (us)
     Dest_Ip         : TIPAddress;    // Ip of the resource to send the data to
     Dest_Mac        : TMACAddress;   // MAC of the resource to send the data to
@@ -53,8 +57,6 @@ type
 const
   TCP_TX_STATE_LOADED       = 0;                                                // Bit 0, 0 = transmitter has nothing to transmit; 1 = transmitter is loaded and ready (or already) transmitting
   TCP_TX_STATE_TRANSMITTING = 1;                                                // Bit 1, 0 = not in the middle of a transmission; 1 = in the middle of a transmission
-  TCP_TX_WAITING_FOR_ACK    = 2;                                                // Bit 2, 0 = ACK received; 1 = Waiting for an ACK from the other device
-  TCP_TX_ACK_FAILED         = 3;                                                // Bit 3, 0 = ack/Seq in reply is in sync; 1 = ack/Seq in reply is wrong so resend
 
 type
   TSocketTransmitter = record
@@ -90,6 +92,7 @@ function TCP_Open_Port(port_t : word): boolean;
 function UDP_Close_Port(port_u : word): boolean;
 function TCP_Close_Port(port_t : word): boolean;
 procedure Set_TCP_TimeOut_Interval(int_ : word);
+procedure TCP_ClearTransmitter;
 
 // Internally used functions
 procedure Sockets_Init_Internal;
@@ -112,6 +115,12 @@ procedure Sockets_Init_Internal;
 begin
   Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
   Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
+end;
+
+procedure TCP_ClearTransmitter;
+begin
+  SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;       // Can't find a matching Socket
+  SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
 end;
   
 //******************************************************************************
@@ -148,7 +157,9 @@ begin
     Exit;                                                // Out of sockets
   end;
   
-  SocketManager.Socket[iSocket].State_S := SOCKET_WAITING_FOR_CONNECTION;   // Wait for Connection
+  SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 0;
+  SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 1;
+  SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
   SocketManager.Socket[iSocket].SEQ_No_S := 12345;
   SocketManager.Socket[iSocket].ACK_No_S := 0;
   SocketManager.Socket[iSocket].dest_port_S := dest_port_S2;
@@ -165,7 +176,9 @@ begin
   if not TCP_Send_Internal(SYN_S, iSocket) then
   begin
     Result := RESULT_OPEN_TCP_CONNECTION_SEND_FAILED;
-    SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED;
+    SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
+    SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+    SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
     SocketManager.iLastOpenedSocked := 255;
   end;
 end;
@@ -183,7 +196,7 @@ begin
   if iSocket >= 0 then
   begin
     {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: Found Socket'+LF);{$ENDIF}
-    if SocketManager.Socket[iSocket].State_S <> SOCKET_DISCONNECTED then
+    if SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED = 0 then
     begin
       {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: Found Open or Waiting Socket, sending termination FIN+ACK'+LF);{$ENDIF}
       SocketManager.Socket[iSocket].RAM_ROM := 0;
@@ -226,8 +239,9 @@ begin
   {$ENDIF}
   
   // Per the Spec we are suppose to wait 4 seconds before opening again....
-  
-  SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED;
+  SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
+  SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+  SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
   SocketManager.Socket[iSocket].Keep_Alive := False;
 end;
 
@@ -238,7 +252,9 @@ begin
   j := 0;
   while j < MAX_SOCKET do
     begin
-      SocketManager.Socket[j].State_S := SOCKET_DISCONNECTED;
+      SocketManager.Socket[j].State.SOCKET_STATE_DISCONNECTED := 1;
+      SocketManager.Socket[j].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+      SocketManager.Socket[j].State.SOCKET_STATE_CONNECTED := 0;
       SocketManager.Socket[j].source_port_S := 0;
       Mem_Set(@SocketManager.Socket[j].Dest_Ip, 0, 4);
       Mem_Set(@SocketManager.Socket[j].Dest_Mac, 0, 6);
@@ -265,7 +281,7 @@ begin
   i := 0;
   while i < MAX_SOCKET do  // search for free socket
   begin
-    if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then
+    if SocketManager.Socket[i].State.SOCKET_STATE_DISCONNECTED = 1 then
     begin
       Result := i;
       Break;
@@ -282,7 +298,7 @@ begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) then
+    if (SocketManager.Socket[i].State.SOCKET_STATE_CONNECTED = 1) then
       if (SocketManager.Socket[i].dest_port_S = DestPort) then
         if (Mem_Cmp(@DestIP, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
         begin
@@ -301,7 +317,7 @@ begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].State_S <> SOCKET_DISCONNECTED) then
+    if (SocketManager.Socket[i].State.SOCKET_STATE_DISCONNECTED = 0) then
       if (SocketManager.Socket[i].dest_port_S = DestPort) then
         if (Mem_Cmp(@DestIP, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
         begin

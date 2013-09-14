@@ -377,47 +377,51 @@ end;
 //* Purpose : Process TCP Transmtter
 //******************************************************************************
 procedure Do_TCP_Transmit;
+var
+  iSocket: Integer;
 begin
   if SocketManager.Transmitter.State.TCP_TX_STATE_LOADED = 1 then               // Are we ready to send a packet?
   begin
     if SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING = 0 then       // If we are ready to send but not sending yet kick it off
     begin
-      Start_TCP_Transmit;
-      SocketManager.Transmitter.RetransmitCount := 0;
-      SocketManager.Transmitter.Watchdog := 0;
-      SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 1;
-      SocketManager.Transmitter.State.TCP_TX_WAITING_FOR_ACK := 1;
-      SocketManager.Transmitter.State.TCP_TX_ACK_FAILED := 0;
+      iSocket := TCP_Find_Connection(SocketManager.Transmitter.IPHeader.DestIPAddress, SocketManager.Transmitter.TCPHeader.DestPort);
+      if iSocket > -1 then
+      begin
+        Start_TCP_Transmit;
+        SocketManager.Transmitter.RetransmitCount := 0;
+        SocketManager.Transmitter.Watchdog := 0;
+        SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 1;
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_ACK := 1;
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_ACK_FAILED := 0;
+      end else
+        TCP_ClearTransmitter
     end else
     begin
       if (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) = 0 then                        // Has the device sent the packet out the wire yet?
       begin
-        if (SocketManager.Transmitter.State.TCP_TX_ACK_FAILED = 1) or (SocketManager.Transmitter.TimeOutCount > SocketManager.TCP_Wait) then
+        iSocket := TCP_Find_Connection(SocketManager.Transmitter.IPHeader.DestIPAddress, SocketManager.Transmitter.TCPHeader.DestPort);
+        if iSocket > -1 then
         begin
-          SocketManager.Transmitter.State.TCP_TX_ACK_FAILED := 0;
-          Inc(SocketManager.Transmitter.RetransmitCount);
-          if SocketManager.Transmitter.RetransmitCount < MAX_TCP_RETRANSMIT_COUNT then   // Try it a few times
-            Start_TCP_Transmit
-          else begin
-            SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;
-            SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
+          if (SocketManager.Socket[iSocket].State.SOCKET_STATE_ACK_FAILED = 1) or (SocketManager.Transmitter.TimeOutCount > SocketManager.TCP_Wait) then
+          begin
+            SocketManager.Socket[iSocket].State.SOCKET_STATE_ACK_FAILED := 0;
+            Inc(SocketManager.Transmitter.RetransmitCount);
+            if SocketManager.Transmitter.RetransmitCount < MAX_TCP_RETRANSMIT_COUNT then   // Try it a few times
+              Start_TCP_Transmit
+            else 
+              TCP_ClearTransmitter
+          end else
+          begin
+            if SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_ACK = 0 then    // Done, move on
+              TCP_ClearTransmitter
           end
         end else
-        begin
-          if SocketManager.Transmitter.State.TCP_TX_WAITING_FOR_ACK = 0 then      // Done, move on
-          begin
-            SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;
-            SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
-          end
-        end;
+          TCP_ClearTransmitter
       end else
       begin
-        Inc(SocketManager.Transmitter.Watchdog);                                      // Make sure we don't get hung if the ENC fails to send the packet
+        Inc(SocketManager.Transmitter.Watchdog);                                // Make sure we don't get hung if the ENC fails to send the packet
         if SocketManager.Transmitter.Watchdog = $FFFF then
-        begin
-          SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;
-          SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
-        end;
+          TCP_ClearTransmitter
       end
     end
   end
@@ -433,7 +437,7 @@ begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].State_S = SOCKET_CONNECTED) then  // if connected
+    if (SocketManager.Socket[i].State.SOCKET_STATE_CONNECTED = 1) then  // if connected
     begin
       if (SocketManager.Socket[i].Start_addr <> SocketManager.Socket[i].Stop_addr) then
       begin
@@ -463,11 +467,13 @@ begin
         CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);
         CopyRamToEthMem(@SocketManager.Socket[i].Dest_Ip, TXSTART + 30, 4);
         TCP_WriteToWire_Internal(SocketManager.Socket[i].source_port_S, SocketManager.Socket[i].dest_port_S, 0, SocketManager.Socket[i].SEQ_No_S, SocketManager.Socket[i].ACK_No_S, FIN_S + ACK_S);
-        SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+        SocketManager.Socket[i].State.SOCKET_STATE_DISCONNECTED := 1;
+        SocketManager.Socket[i].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+        SocketManager.Socket[i].State.SOCKET_STATE_CONNECTED := 0;
         SocketManager.Socket[i].Keep_Alive := False;
       end;
     end else 
-    if (SocketManager.Socket[i].State_S = SOCKET_WAITING_FOR_CONNECTION) then // waiting for connection
+    if (SocketManager.Socket[i].State.SOCKET_STATE_WAITING_FOR_CONNECTION = 1) then // waiting for connection
     begin
       {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
       if (SocketManager.Socket[i].Exp_Time > 9) then // 10 sec without response at SYN
@@ -476,7 +482,9 @@ begin
         SocketManager.Socket[i].RAM_ROM := 0;
         SocketManager.Socket[i].Start_addr := 0;
         SocketManager.Socket[i].Stop_addr := 0;
-        SocketManager.Socket[i].State_S := SOCKET_DISCONNECTED; // disconnect
+        SocketManager.Socket[i].State.SOCKET_STATE_DISCONNECTED := 1;
+        SocketManager.Socket[i].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+        SocketManager.Socket[i].State.SOCKET_STATE_CONNECTED := 0;
         SocketManager.Socket[i].Keep_Alive := False;
       end;
       {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
@@ -495,7 +503,7 @@ begin
   i := 0;
   while i < n do
     begin
-      Do_Ethernet_Receive;           // Look for incoming
+      Do_Ethernet_Receive;      // Look for incoming
       Do_TCP_Stack;             // Process Sockets
       Do_TCP_Transmit;
       inc(i);
@@ -564,7 +572,7 @@ begin
       result := result + CopyRamStringToEthMem_CP(txt31);
 
       result := result + CopyRamStringToEthMem_CP(', State: ');
-      Byte2StrWithZeros(SocketManager.Socket[i].State_S,txt31);
+      Byte2StrWithZeros(SocketManager.Socket[i].State,txt31);
       Str_Cut_Left(txt31,2);
       result := result + CopyRamStringToEthMem_CP(txt31);
 

@@ -136,9 +136,9 @@ begin
   begin
   //  Do_Ethernet_Receive;
  //   Do_Ethernet_Receive;
-    
+  
     // If not connected then only allow sends that have FIN or SYN as they are the only calls that are valid in this state
-    if SocketManager.Socket[iSocket].State_S <> SOCKET_CONNECTED then
+    if SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED = 0 then
       if TCP_Flag.FIN = 0 then
         if TCP_Flag.SYN = 0 then
         begin
@@ -213,7 +213,9 @@ begin
   Result := TCP_Send_Internal(PSH_S + ACK_S, iSocket);
   if Result = False then
     begin
-      SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
       SocketManager.Socket[iSocket].Keep_Alive := False;
     end;
 end;
@@ -378,7 +380,7 @@ begin
   Lo(len_data) := Eth_GetByte;
   len_ack := len_data;
   PacketLen := len_data - 40;
-  CopyEthMemToEthMem(EthMemAddressRequest,TXSTART,len_data+14);
+  CopyEthMemToEthMem(EthMemAddressRequest,TXSTART,len_data+14); // Total Length does not include physical layer information
   WriteToEthMem(TXSTART+24,$00);
   Eth_PutByte($00);
   if cksum_ip <> Eth_Cksum(TXSTART+14,20) then
@@ -431,7 +433,9 @@ begin
     if iSocket >= 0 then
     begin
       {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Found the Socket to Reset'+LF);{$ENDIF}
-      SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED; // disconnect
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
       SocketManager.Socket[iSocket].Keep_Alive := False;
       SocketManager.Socket[iSocket].Wait_ACK := 0;
     end;
@@ -458,7 +462,9 @@ begin
       if iSocket >= 0 then
       begin
         {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling FIN and found Socket'+LF);{$ENDIF}
-        SocketManager.Socket[iSocket].State_S := SOCKET_DISCONNECTED; // disconnect
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
         SocketManager.Socket[iSocket].Keep_Alive := False;
         SocketManager.Socket[iSocket].Wait_ACK := 0;
       end;
@@ -528,13 +534,17 @@ begin
       {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a SYN with and ACK, we opened the connection and the other node has replied with a SYN+ACK, our connection is now OPEN. reply with an ACK'+LF);{$ENDIF}
       TCP_FlagSend := ACK_S;
       Align := 0;
-      SocketManager.Socket[iSocket].State_S := SOCKET_CONNECTED; // Connected
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 0;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 1;
     end else
     begin                           // If we are listening and a client asks to open a connection by sending just a ACK
       {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a SYN by itself, we are listening and a client asks to open a connection by sending just a ACK, reply with a SYN+ACK'+LF);{$ENDIF}
       TCP_FlagSend := SYN_S + ACK_S;
       Align := 8;
-      SocketManager.Socket[iSocket].State_S := SOCKET_WAITING_FOR_CONNECTION; // Wait for Connection
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 0;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 1;
+      SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
     end;
 
     SocketManager.Socket[iSocket].Wait_Ack := 0;
@@ -568,10 +578,12 @@ begin
     if iSocket >= 0 then
     begin
       {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, found allocated Socket'+LF);{$ENDIF}
-      if (SocketManager.Socket[iSocket].State_S = SOCKET_WAITING_FOR_CONNECTION) {or (SocketManager.Socket[iSocket].Wait_ACK <> 0)} then
+      if (SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION = 1) {or (SocketManager.Socket[iSocket].Wait_ACK <> 0)} then
       begin
         {$IFDEF LOG_UART}UART1_Write_Text('TCP Rx: Handling a ACK, this was an ACK in response to a SYN (us) - SYN+ACK (them), connection is complete'+LF);{$ENDIF}
-        SocketManager.Socket[iSocket].State_S := SOCKET_CONNECTED; // Connected
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 0;
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
+        SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 1;
         SocketManager.Socket[iSocket].Wait_ACK := 0;
         SocketManager.Socket[iSocket].ACK_No_S := SEQ_NoR;
         SocketManager.Socket[iSocket].SEQ_No_S := ACK_NoR;

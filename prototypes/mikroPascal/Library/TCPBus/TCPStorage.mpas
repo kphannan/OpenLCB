@@ -488,7 +488,7 @@ begin
   CAN_Engine.IsTransmitting := False;  // Maybe, maybe not we will see...
 
   Socket := @SocketManager.Socket[iSocket];
-  if Socket^.State_S = SOCKET_CONNECTED then
+  if Socket^.State.SOCKET_STATE_CONNECTED = 1 then
   begin
     {$IFDEF LOG_UART}
     UART1_Write_Text('TCP Rx User Entered'+LF);

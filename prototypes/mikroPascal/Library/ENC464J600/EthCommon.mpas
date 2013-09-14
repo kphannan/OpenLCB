@@ -35,6 +35,13 @@ const
   POLICY_DROP                 : byte = 2;
   
   IPV4 = 4;
+  
+const
+  IP_ADDRESS_LEN = 4;
+  MAC_ADDRESS_LEN = 6;
+type
+  TIPAddress = array[IP_ADDRESS_LEN] of byte;
+  TMACAddress = array[MAC_ADDRESS_LEN] of byte;
 
 
 const
@@ -64,7 +71,7 @@ type
     Protocol: Byte;
     HeaderCheckSum: Word;
     SourceIPAddress,
-    DestIPAddress: DWord;
+    DestIPAddress: TIPAddress;
   end;
   
 const
@@ -92,13 +99,6 @@ type
     Offset5,
     Offset6: DWord;
   end;
-
-const
-  IP_ADDRESS_LEN = 4;
-  MAC_ADDRESS_LEN = 6;
-type
-  TIPAddress = array[IP_ADDRESS_LEN] of byte;
-  TMACAddress = array[MAC_ADDRESS_LEN] of byte;
   
 var
   TickCounter1,           // Used: ARP_Validate_IP, DHCP_Request, Dns_Resolve, Ping_Send,
