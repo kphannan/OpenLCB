@@ -34,7 +34,7 @@ function debugg_stack : word;
 // Internally used functions
 function Eth_ReadPacket : word;
 procedure Do_Ethernet_Receive;
-procedure Do_TCP_Stack;
+//procedure Do_TCP_Stack;
 
 // External functions
 procedure DisableInt;  external;
@@ -49,7 +49,7 @@ var
   {$ENDIF}
   
 var
-  AddrPacket, NextPacket : word;
+  ENC_ReceivedPacketAddr, ENC_NextReceivedPacketAddr : word;
     
 implementation
 
@@ -153,7 +153,7 @@ Begin
   Eth_WriteReg(EUDAND_,$6001);
 
   Eth_WriteReg(ERXRDPT_,RXSTART);
-  NextPacket := RXSTART;
+  ENC_NextReceivedPacketAddr := RXSTART;
   Eth_WriteReg(ETXST_,TXSTART);
 
   Eth_WriteReg(EGPRDPT_, GPSTART);
@@ -198,12 +198,12 @@ Begin
 
   // enables reception
   Eth_BSF(ECON1_,0x0001);    //RXEN
+  Sockets_Init_Internal;
   TCP_Init_Internal;
   UDP_Init_Internal;
   
   ARP_EraseCache_Internal;
   Ping_EraseCache_Internal;
-  EraseSockets;
   Firewall(False, False, False);
   Sockets_Init_Internal;
   Eth_Policy(POLICY_DROP);
@@ -233,24 +233,24 @@ End;
 function Eth_ReadPacket : word;
 begin
   Result := 0;
-  CopyEthMemToEthMem(NextPacket, GPSTART, 1600);
+  CopyEthMemToEthMem(ENC_NextReceivedPacketAddr, GPSTART, 1600);
   
-  Eth_WriteReg(EGPRDPT_, NextPacket);    // Set the write pointer
-  Lo(NextPacket) := Eth_GetByte;
-  Hi(NextPacket) := Eth_GetByte;
+  Eth_WriteReg(EGPRDPT_, ENC_NextReceivedPacketAddr);    // Set the write pointer
+  Lo(ENC_NextReceivedPacketAddr) := Eth_GetByte;
+  Hi(ENC_NextReceivedPacketAddr) := Eth_GetByte;
 
   Eth_WriteReg(EGPRDPT_, (GPSTART + 20));    // Set the lower write pointer
   Hi(Result) := Eth_GetByte;
   Lo(Result) := Eth_GetByte;
   
-  AddrPacket := (GPSTART + 8);
+  ENC_ReceivedPacketAddr := (GPSTART + 8);
 
   Eth_BSF(ECON1_,ECON1_PKTDEC_);               // Decrement the number of packets
 
-  if NextPacket = RXSTART then 
+  if ENC_NextReceivedPacketAddr = RXSTART then
     Eth_WriteReg(ERXTAIL_, $5FFE)
   else 
-    Eth_WriteReg(ERXTAIL_,NextPacket - 2);
+    Eth_WriteReg(ERXTAIL_,ENC_NextReceivedPacketAddr - 2);
 end;
 
 //******************************************************************************
@@ -266,173 +266,134 @@ begin
 {$ENDIF}
   if (Eth_ReadReg(EIR_) and $0040) <> 0 then
     begin
-    
-    {$IFDEF LOG_UART}UART1_Write_Text(LF + 'Received a Packet............<START>' + LF);{$ENDIF}
-    
       broadcast_packet := False;
       case Eth_ReadPacket of
         ETH_ARP :
         begin
-          if EthMemCompareWithRam(AddrPacket + 38, @Settings.eth_ip_addr, 4) then
+          if EthMemCompareWithRam(ENC_ReceivedPacketAddr + 38, @Settings.eth_ip_addr, 4) then
           begin
-            case ReadFromEthMem(AddrPacket+21) of
-              ETH_ARP_REQ :        // ARP Request
-                begin    
-                  {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_REQ for our IP' + LF);{$ENDIF}
-                  ARP_Reply_Internal(AddrPacket);
-                end;
-              ETH_ARP_RES :       // ARP Response to a Request sent by us
-                begin    
-                 {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP_RES for our IP' + LF);{$ENDIF}
-                  ARP_Process_Internal(AddrPacket);
-                end
-            else begin
-              {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP Message sent to our IP but unknown code' + LF);{$ENDIF}
-              end;
+            case ReadFromEthMem(ENC_ReceivedPacketAddr+21) of
+              ETH_ARP_REQ :   ARP_Reply_Internal(ENC_ReceivedPacketAddr);     // ARP Request
+              ETH_ARP_RES :   ARP_Process_Internal(ENC_ReceivedPacketAddr);    // ARP Response to a Request sent by us
             end;
-          end else
-          begin
-            {$IFDEF LOG_UART}UART1_Write_Text('ETH_ARP for Unknown IP' + LF);{$ENDIF}
-          end;
+          end
         end;
         ETH_IP :
         begin
-          if EthMemCompareWithRam(AddrPacket + 30, @Settings.eth_ip_addr, 4) then
+          if EthMemCompareWithRam(ENC_ReceivedPacketAddr + 30, @Settings.eth_ip_addr, 4) then
           begin
-            case ReadFromEthMem(AddrPacket + 23) of
+            case ReadFromEthMem(ENC_ReceivedPacketAddr + 23) of
                 ETH_IP_ICMP :
                   begin
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP for our IP' + LF);{$ENDIF}
-                    case ReadFromEthMem(AddrPacket + 34) of
+                    case ReadFromEthMem(ENC_ReceivedPacketAddr + 34) of
                       ETH_IP_ICMP_ECHO :
                         begin
-                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_ECHO for our IP' + LF);{$ENDIF}
                           if FICMP = False then
-                            Ping_Echo_Internal(AddrPacket)
+                            Ping_Echo_Internal(ENC_ReceivedPacketAddr)
                         end;
                       ETH_IP_ICMP_REPLY :
                         begin
-                          {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP_REPLY for our IP' + LF);{$ENDIF}
-                          Ping_Reply_Internal(AddrPacket);
-                        end
-                    else begin
-                        {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_ICMP Message for our IP with unknown code' + LF);{$ENDIF}
-                      end;
+                          Ping_Reply_Internal(ENC_ReceivedPacketAddr);
+                        end;
                     end;
                   end;
                 ETH_IP_UDP :
                   begin   
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_UDP for our IP' + LF);{$ENDIF}
                     if FUDP = False then
-                      UDP_Process_Internal(AddrPacket);
+                      UDP_Process_Internal(ENC_ReceivedPacketAddr);
                   end;
                 ETH_IP_TCP :
                   begin    
-                    {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP_TCP for our IP' + LF);{$ENDIF}
                     if FTCP = False then
-                      TCP_Process_Internal(AddrPacket);
-                  end
-            else begin
-                {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP Message for our IP but unknown code' + LF);{$ENDIF}
-              end;
+                      TCP_Process_Receive(ENC_ReceivedPacketAddr)
+                  end;
             end;
-            {$IFDEF LOG_UART}UART1_Write_Text('Received a Packet............<END>' + LF +LF);{$ENDIF}
             Exit;
-          end else
-          begin
-            {$IFDEF LOG_UART}UART1_Write_Text('ETH_IP Message for unknown IP' + LF);{$ENDIF}
           end;
           
           if Settings.UDP_Broadcast <> 0 then
-            if ReadFromEthMem(AddrPacket+33) = 255 then
-              if ReadFromEthMem(AddrPacket+23) = ETH_IP_UDP then
+            if ReadFromEthMem(ENC_ReceivedPacketAddr+33) = 255 then
+              if ReadFromEthMem(ENC_ReceivedPacketAddr+23) = ETH_IP_UDP then
                 if FUDP = False then
                 begin
                   broadcast_packet := True;
-                  UDP_Process_Internal(AddrPacket);
+                  UDP_Process_Internal(ENC_ReceivedPacketAddr);
                 end;
-        end else
-        begin
-          {$IFDEF LOG_UART}UART1_Write_Text('Unhandled Message Type' + LF);{$ENDIF}
         end;
       end;
-      {$IFDEF LOG_UART}UART1_Write_Text('Received a Packet............<END>' + LF +LF);{$ENDIF}
     end;
 end;
 
 //******************************************************************************
-//* Name    : Start_TCP_Transmit
-//* Purpose : Process TCP Transmtter
+//* Name    : Do_EthernetProc                                                  *
+//* Purpose : Process all Ethernet packets                                     *
 //******************************************************************************
-procedure Start_TCP_Transmit;
+procedure Do_EthernetProc(n : word);
+var i : word;
 begin
-  Eth_WriteReg(ETXST_, TXSTART);                                            // Set the start of packet
-  Eth_WriteReg(ETXLEN_, 34 + 40 + SocketManager.Transmitter.DataLength);    // DOUBLE CHECK THE LENGTH CALCULATION>>>>>>>>>>>>
-  Eth_BSF(ECON1_, ECON1_TXRTS_);                                            // Enable the Transmit
-  SocketManager.Transmitter.TimeOutCount := 0;
+  i := 0;
+  while i < n do
+    begin
+      Do_Ethernet_Receive;      // Look for incoming
+      TCP_Process_Stack;        // Process Sockets
+      TCP_Process_Transmit;
+      inc(i);
+  end;
 end;
 
 //******************************************************************************
-//* Name    : Do_TCP_Transmit
-//* Purpose : Process TCP Transmtter
+//* Name    : Wait_for_LAN                                                     *
+//* Purpose : Wait for LAN                                                     *
 //******************************************************************************
-procedure Do_TCP_Transmit;
+procedure Wait_for_LAN;
 var
-  iSocket: Integer;
+  Counter : word;
+  dest_ip_addr: TIPAddress;
+  dest_mac: TMACAddress;
 begin
-  if SocketManager.Transmitter.State.TCP_TX_STATE_LOADED = 1 then               // Are we ready to send a packet?
+  Counter := 0;
+  while Counter < 60000 do
   begin
-    if SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING = 0 then       // If we are ready to send but not sending yet kick it off
-    begin
-      iSocket := TCP_Find_Connection(SocketManager.Transmitter.IPHeader.DestIPAddress, SocketManager.Transmitter.TCPHeader.DestPort);
-      if iSocket > -1 then
-      begin
-        Start_TCP_Transmit;
-        SocketManager.Transmitter.RetransmitCount := 0;
-        SocketManager.Transmitter.Watchdog := 0;
-        SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 1;
-        SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_ACK := 1;
-        SocketManager.Socket[iSocket].State.SOCKET_STATE_ACK_FAILED := 0;
-      end else
-        TCP_ClearTransmitter
-    end else
-    begin
-      if (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) = 0 then                        // Has the device sent the packet out the wire yet?
-      begin
-        iSocket := TCP_Find_Connection(SocketManager.Transmitter.IPHeader.DestIPAddress, SocketManager.Transmitter.TCPHeader.DestPort);
-        if iSocket > -1 then
-        begin
-          if (SocketManager.Socket[iSocket].State.SOCKET_STATE_ACK_FAILED = 1) or (SocketManager.Transmitter.TimeOutCount > SocketManager.TCP_Wait) then
-          begin
-            SocketManager.Socket[iSocket].State.SOCKET_STATE_ACK_FAILED := 0;
-            Inc(SocketManager.Transmitter.RetransmitCount);
-            if SocketManager.Transmitter.RetransmitCount < MAX_TCP_RETRANSMIT_COUNT then   // Try it a few times
-              Start_TCP_Transmit
-            else 
-              TCP_ClearTransmitter
-          end else
-          begin
-            if SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_ACK = 0 then    // Done, move on
-              TCP_ClearTransmitter
-          end
-        end else
-          TCP_ClearTransmitter
-      end else
-      begin
-        Inc(SocketManager.Transmitter.Watchdog);                                // Make sure we don't get hung if the ENC fails to send the packet
-        if SocketManager.Transmitter.Watchdog = $FFFF then
-          TCP_ClearTransmitter
-      end
-    end
-  end
+    ClrWdt;
+    if (Eth_ReadReg(EIR_) and $0040) <> 0 then
+      Eth_ReadPacket;
+    delay_100us_;
+    delay_100us_;
+    if IsLinkUp then
+      Break;
+    inc(Counter);
+  end;
+  if Settings.Announce <> 0 then
+  begin
+    Mem_Set(@dest_ip_addr, $FF, 4);
+    Mem_Set(@dest_mac,$FF,6);
+    Ping_Send_Internal(dest_ip_addr, dest_mac, 0);
+  end;
+  if Settings.DHCP_Enable <> 0 then
+    DHCP_Request(ENC_ReceivedPacketAddr);
 end;
 
+procedure Wait_With_Eth(n : word);
+var i : word;
+begin
+  i := 0;
+  while i < n do
+    begin
+      delay_1ms_;
+      Do_EthernetProc(1);
+      inc(i);
+    end;
+end;
+
+
+(*
 //******************************************************************************
 //* Name    : Do_TCP_Stack                                                         *
 //* Purpose : Process packets from TCP/IP Stack                                *
 //******************************************************************************
 procedure Do_TCP_Stack;
-var i : byte;
+var
+  i: Integer;
 begin
   i := 0;
   while i < MAX_SOCKET do  // search for opened socket
@@ -492,67 +453,8 @@ begin
     inc(i);
   end;
 end;
+   *)
 
-//******************************************************************************
-//* Name    : Do_EthernetProc                                                  *
-//* Purpose : Process all Ethernet packets                                     *
-//******************************************************************************
-procedure Do_EthernetProc(n : word);
-var i : word;
-begin
-  i := 0;
-  while i < n do
-    begin
-      Do_Ethernet_Receive;      // Look for incoming
-      Do_TCP_Stack;             // Process Sockets
-      Do_TCP_Transmit;
-      inc(i);
-  end;
-end;
-
-//******************************************************************************
-//* Name    : Wait_for_LAN                                                     *
-//* Purpose : Wait for LAN                                                     *
-//******************************************************************************
-procedure Wait_for_LAN;
-var 
-  Counter : word;
-  dest_ip_addr: TIPAddress;
-  dest_mac: TMACAddress;
-begin
-  Counter := 0;
-  while Counter < 60000 do
-  begin
-    ClrWdt;
-    if (Eth_ReadReg(EIR_) and $0040) <> 0 then
-      Eth_ReadPacket;
-    delay_100us_;
-    delay_100us_;
-    if IsLinkUp then
-      Break;
-    inc(Counter);
-  end;
-  if Settings.Announce <> 0 then
-  begin
-    Mem_Set(@dest_ip_addr, $FF, 4);
-    Mem_Set(@dest_mac,$FF,6);
-    Ping_Send_Internal(dest_ip_addr, dest_mac, 0);
-  end;
-  if Settings.DHCP_Enable <> 0 then
-    DHCP_Request(AddrPacket);
-end;
-
-procedure Wait_With_Eth(n : word);
-var i : word;
-begin
-  i := 0;
-  while i < n do
-    begin
-      delay_1ms_;
-      Do_EthernetProc(1);
-      inc(i);
-    end;
-end;
 
 function debugg_stack : word;
 var
@@ -571,8 +473,8 @@ begin
       Str_Cut_Left(txt31,1);
       result := result + CopyRamStringToEthMem_CP(txt31);
 
-      result := result + CopyRamStringToEthMem_CP(', State: ');
-      Byte2StrWithZeros(SocketManager.Socket[i].State,txt31);
+      result := result + CopyRamStringToEthMem_CP(', Flags: ');
+      Byte2StrWithZeros(SocketManager.Socket[i].Flags,txt31);
       Str_Cut_Left(txt31,2);
       result := result + CopyRamStringToEthMem_CP(txt31);
 
@@ -582,11 +484,11 @@ begin
       result := result + CopyRamStringToEthMem_CP(txt31);
 
       result := result + CopyRamStringToEthMem_CP(', Dest_Port: ');
-      Word2StrWithZeros(SocketManager.Socket[i].dest_port_S,txt31);
+      Word2StrWithZeros(SocketManager.Socket[i].DestPort,txt31);
       result := result + CopyRamStringToEthMem_CP(txt31);
 
       result := result + CopyRamStringToEthMem_CP(', Ip: ');
-      Ip2Str(SocketManager.Socket[i].Dest_Ip,txt31);
+      Ip2Str(SocketManager.Socket[i].DestIP,txt31);
       result := result + CopyRamStringToEthMem_CP(txt31);
 
       Eth_PutByte($0D);

@@ -75,7 +75,7 @@ begin
   NTP_Sync := True;
   NTP_Sec := 0;
   NTP_ReSync := 0;
-  UDP_Close_Port(UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
+  Port_Close_UDP(UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
 end;
 
 //******************************************************************************
@@ -134,7 +134,7 @@ begin
   if ARP_Validate_IP(Settings.eth_ntp_addr, ntp_mac) then
   begin
     Result := True;
-    UDP_Open_Port(UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
+    Port_Open_UDP(UDP_NETWORK_TIME_ARBITRARY_REPLY_PORT);
     CopyRamToEthMem(@ntp_mac, TXSTART, 6);
     CopyRamToEthMem(@Settings.eth_mac, TXSTART + 6, 6);
     CopyRamToEthMem(@Settings.eth_ip_addr, TXSTART + 26, 4);

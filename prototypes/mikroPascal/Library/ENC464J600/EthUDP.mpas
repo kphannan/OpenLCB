@@ -170,7 +170,7 @@ begin
   dest_port1 := 0;
   Hi(source_port1) := ReadFromEthMem(EthMemAddressRequest+36);
   Lo(source_port1) := Eth_GetByte;
-  if Search_Port(UDP, source_port1) = False then
+  if Port_Find(PROTOCOL_UDP, source_port1) = False then
     begin
       if Settings.Policy = POLICY_REJECT then
         Common_Reject_Internal(EthMemAddressRequest);

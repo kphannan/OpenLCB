@@ -124,7 +124,7 @@ begin
       DNS_Manager.Response := False;
       if Dns_Query_Internal(text_in_) = False then
         Exit;
-      UDP_Open_Port(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
+      Port_Open_UDP(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
       TickCounter1 := 0;
       CountBuf := 0;
       while CountBuf < SocketManager.UDP_Wait do
@@ -134,7 +134,7 @@ begin
             Break;
           CountBuf := TickCounter1;
         end;
-      UDP_Close_Port(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
+      Port_Close_UDP(UDP_DYNAMIC_NAME_SYSTEM_ARBITRARY_REPLY_PORT);
       if DNS_Manager.Response <> 0 then
         Break;
     end;

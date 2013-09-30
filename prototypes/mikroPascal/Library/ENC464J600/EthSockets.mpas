@@ -9,6 +9,7 @@ NMRAnetDefinesShared,
 
   EthCommon,
   dspic_additional_string_library,
+  lib1_enc600_V3_5_b,
  // lib1_enc600_V3_5_b,
   definitions_ENC600;
   
@@ -25,43 +26,55 @@ const
   
   SOCKET_EXPIRE_TIME              = $FFFF;   // In 100ms chunks
   
-  TCP: byte                       = 100;
-  UDP: byte                       = 200;
+  PROTOCOL_ICMP                  = 1;
+  PROTOCOL_IGMP                  = 2;
+  PROTOCOL_TCP                   = 6;
+  PROTOCOL_UDP                   = 17;
   
 const
-  SOCKET_STATE_DISCONNECTED           = 0;   // Bit 0
-  SOCKET_STATE_WAITING_FOR_CONNECTION = 1;   // Bit 1
-  SOCKET_STATE_CONNECTED              = 2;   // Bit 2
-  SOCKET_STATE_WAITING_FOR_ACK        = 3;   // Bit 3, 0 if not waiting for an ACK; 1 if Waiting for an ACK
-  SOCKET_STATE_ACK_FAILED             = 4;   // Bit 4, Seq or Ack was not correct in return call
+  SOCKET_STATE_DISCONNECTED           = 0;
+  SOCKET_STATE_SENDING_SYN            = 1;
+  SOCKET_STATE_WAITING_FOR_SYN_ACK    = 2;
+  SOCKET_STATE_CONNECTED              = 3;
+  SOCKET_STATE_FINISH                 = 4;
+  SOCKET_STATE_WAITING_FOR_FIN_ACK    = 5;
+  SOCKET_STATE_RESET                  = 6;
+  
+  SOCKET_FLAG_ALLOCATED               = 0;
+  SOCKET_FLAG_CONNECTED               = 1;   // Bit 1
+  SOCKET_FLAG_WAITING_FOR_ACK         = 2;   // Bit 2, 0 if not waiting for an ACK; 1 if Waiting for an ACK
+  SOCKET_FLAG_FINISH                  = 3;   // Bit 3, Flagged to finish and disconnect
+  SOCKET_FLAG_ACK_ERROR               = 4;   // Bit 4, Returned ACK had an invalid SEQ value
+  
   
 type
   TSocket = record
-    State           : Word;        // See SOCKET_STATE_xxxx contants
-    source_port_S   : word;        // Port of the source (us)
-    Dest_Ip         : TIPAddress;    // Ip of the resource to send the data to
-    Dest_Mac        : TMACAddress;   // MAC of the resource to send the data to
-    dest_port_S     : word;        // Port of the resource to send the data to
-    Seq_No_S        : dword;       // Sequence number for the TCP conversation with the other resource
-    Ack_No_S        : dword;       // Ack sequence number for the TCP conversation with the other resource
-    Wait_ACK        : word;        // Set to 1 if the socket is waiting for an ACK from the client
-    Exp_Time        : word;        // Counter increments every 1s to allow auto destruction of socket after Exp_Time_Val has expired
-    Exp_Time_Val    : word;        // Default set to 12 seconds, global set this value with the Set_TCP_TimeOut_Interval function
-    Start_addr      : dword;       // The start of the valid data in the TCP_buf
-    Stop_addr       : dword;       // The end of the valid data in the TCP_buf
-    RAM_ROM         : word;
-    Keep_Alive      : boolean;     // [DEFAULT] = True; Keeps the socket alive (until the Exp_Time_Val expires at least) when it is empty.  If false then once the data is sent the socket is released.
+    iStateMachine   : Word;           // See SOCKET_STATE_xxxx constants
+    Flags           : Word;          // See SOCKET_FLAG_xxxx contants
+    SourcePort      : Word;        // Port of the source (us)
+    DestIP          : TIPAddress;    // Ip of the resource to send the data to
+    DestMAC         : TMACAddress;   // MAC of the resource to send the data to
+    DestPort        : Word;        // Port of the resource to send the data to
+    Seq_No_S        : DWord;       // Sequence number for the TCP conversation with the other resource
+    Ack_No_S        : DWord;       // Ack sequence number for the TCP conversation with the other resource
+    Wait_ACK        : Word;        // Set to 1 if the socket is waiting for an ACK from the client
+    Exp_Time        : Word;        // Counter increments every 1s to allow auto destruction of socket after Exp_Time_Val has expired
+    Exp_Time_Val    : Word;        // Default set to 12 seconds, global set this value with the Set_TCP_TimeOut_Interval function
+    Start_addr      : DWord;       // The start of the valid data in the TCP_buf
+    Stop_addr       : DWord;       // The end of the valid data in the TCP_buf
+    RAM_ROM         : Word;
+    Keep_Alive      : Boolean;     // [DEFAULT] = True; Keeps the socket alive (until the Exp_Time_Val expires at least) when it is empty.  If false then once the data is sent the socket is released.
     TCP_buf         : string[MAX_DATA_BUFFER_LENGTH];
   end;
   
 const
-  TCP_TX_STATE_LOADED       = 0;                                                // Bit 0, 0 = transmitter has nothing to transmit; 1 = transmitter is loaded and ready (or already) transmitting
-  TCP_TX_STATE_TRANSMITTING = 1;                                                // Bit 1, 0 = not in the middle of a transmission; 1 = in the middle of a transmission
+  SOCKET_TX_FLAG_LOADED       = 0;                                              // Bit 0, 0 = transmitter has nothing to transmit; 1 = transmitter is loaded and ready (or already) transmitting
+  SOCKET_TX_FLAG_TRANSMITTING = 1;                                              // Bit 1, 0 = not in the middle of a transmission; 1 = in the middle of a transmission
 
 type
   TSocketTransmitter = record
-    State: Word;                                                                // State of the TCP Transmitter see TX_STATE_xxxx constants
-    PhysicalLayerHeader: TPhysicalLayerHeader;                                  // Current info for the Physical Layer of  the current transmission
+    Flags: Word;                                                                // State of the TCP Transmitter see TX_FLAG_xxxx constants
+    PhysicalLayerHeader: TPhysicalLayerHeader;                                  // Current info for the Physical Layer of the current transmission
     IPHeader: TIPHeader;                                                        // Current info for the IP Layer of the current transmission
     TCPHeader: TTCPHeader;                                                      // Current info for the TCP Layer of the current transmission
     DataLength: Word;                                                           // Length of the data Buffer
@@ -73,364 +86,397 @@ type
 
   TSocketManager = record
     TCP_Wait,
-    UDP_Wait : word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
+    UDP_Wait : Word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
     Socket : array[MAX_SOCKET] of TSocket;
     Transmitter: TSocketTransmitter;
-    iLastOpenedSocked : word;                                                   // Last Socket index that was opened
+    IdentificationCounter: Word;                                                // Unique ID for fragments
+    iLastProcessedSocket: Integer;                                              // Last index of the Socket that was processed in the process loop
+    iLastOpenedSocked : Word;                                                   // Last Socket index that was opened
   end;
   
 // User functions
-function Open_TCP_Connection(var DestIP : TIPAddress; dest_port_S2, source_port_S2 : word) : Word;
-function Close_TCP_Connection(var DestIP : TIPAddress; dest_port_S2 : word) : boolean;
-procedure EraseSockets;
-function Search_Port(protocol : byte; port_ : word) : boolean;
+function TCP_Open_Connection(var DestIP : TIPAddress; DestPort, SourcePort : Word) : Word;
+function TCP_Close_Connection(var DestIP : TIPAddress; DestPort : Word) : Boolean;
 function TCP_Find_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 function TCP_Find_Any_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 function TCP_Find_Free_Socket: Integer;
-function UDP_Open_Port(port_u : word): boolean;
-function TCP_Open_Port(port_t : word): boolean;
-function UDP_Close_Port(port_u : word): boolean;
-function TCP_Close_Port(port_t : word): boolean;
-procedure Set_TCP_TimeOut_Interval(int_ : word);
 procedure TCP_ClearTransmitter;
+procedure TCP_Set_TimeOut_Interval_Global(NewTimeOut : Word);
+
+function Port_Find(Protocol: Word; Port: Word) : Boolean;
+function Port_Open_UDP(Port: Word): Boolean;
+function Port_Open_TCP(Port: Word): Boolean;
+function Port_Close_UDP(Port: Word): Boolean;
+function Port_Close_TCP(Port: Word): Boolean;
+
+procedure TCP_LoadPhysicalLayerHeader(var PhyBuffer: TPhysicalLayerHeader; var SourceMAC: TMACAddress; var DestMAC: TMACAddress);
+procedure TCP_LoadIPLayerHeader(var IPBuffer: TIPHeader; var SourceIP: TIPAddress; var DestIP: TIPAddress; DataLen: Word; Protocol: Word);
+procedure TCP_LoadTCPLayerHeader(var TCPBuffer: TTCPHeader; SourcePort, DestPort: Word; SequenceNumber, AckNumber: DWord; Flags: Word);
+procedure TCP_LoadTransmitter(var Socket: TSocket; IPFlags: Word; DataLen: Word; SendData: ^Byte; Protocol: Word);
+
+function TransmitterEmpty: Boolean;
 
 // Internally used functions
 procedure Sockets_Init_Internal;
 
 // External functions
-function ARP_Validate_IP(var ip_arp1 : TIPAddress; var mac_arp : TMACAddress) : boolean; external;
-function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : boolean; external;
-procedure Do_EthernetProc(n : word); external;
+function ARP_Validate_IP(var ip_arp1 : TIPAddress; var mac_arp : TMACAddress) : Boolean; external;
+function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : Boolean; external;
+procedure Do_EthernetProc(n : Word); external;
 procedure DisableInt; external;
 procedure EnableInt; external;
   
 var
   SocketManager: TSocketManager;
   TCP_Opened_Ports,
-  UDP_Opened_Ports : array[MAX_SOCKET] of word;
+  UDP_Opened_Ports : array[MAX_SOCKET] of Word;
 
 implementation
 
-procedure Sockets_Init_Internal;
+procedure InitSocket(iSocket: Integer);
 begin
-  Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
-  Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports word format
+  SocketManager.Socket[iSocket].Flags := 0;
+  SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_DISCONNECTED;
+  SocketManager.Socket[iSocket].SourcePort := 0;
+  Mem_Set(@SocketManager.Socket[iSocket].DestIP, 0, 4);
+  Mem_Set(@SocketManager.Socket[iSocket].DestMAC, 0, 6);
+  SocketManager.Socket[iSocket].DestPort := 0;
+  SocketManager.Socket[iSocket].SEQ_No_S := 0;
+  SocketManager.Socket[iSocket].ACK_No_S := 0;
+  SocketManager.Socket[iSocket].Wait_ACK := 0;
+  SocketManager.Socket[iSocket].Exp_Time := 0;
+  SocketManager.Socket[iSocket].Exp_Time_Val := SOCKET_EXPIRE_TIME;
+  SocketManager.Socket[iSocket].Start_addr := 0;
+  SocketManager.Socket[iSocket].Stop_addr := 0;
+  SocketManager.Socket[iSocket].RAM_ROM := 0;
+  SocketManager.Socket[iSocket].Keep_Alive := false;
+  SocketManager.Socket[iSocket].TCP_buf := '';
+end;
+
+function TransmitterEmpty: Boolean;
+begin
+  Result := SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED = 0
+end;
+
+procedure Sockets_Init_Internal;
+var
+  iSocket: Integer;
+begin
+  Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports Word format
+  Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports Word format
+  SocketManager.iLastProcessedSocket := 0;
+  SocketManager.Transmitter.Flags := 0;
+  SocketManager.IdentificationCounter := 1000;
+  iSocket := 0;
+  while iSocket < MAX_SOCKET do
+  begin
+    InitSocket(iSocket);
+    Inc(iSocket)
+  end
 end;
 
 procedure TCP_ClearTransmitter;
 begin
-  SocketManager.Transmitter.State.TCP_TX_STATE_TRANSMITTING := 0;       // Can't find a matching Socket
-  SocketManager.Transmitter.State.TCP_TX_STATE_LOADED := 0;
+  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_TRANSMITTING := 0;       // Can't find a matching Socket
+  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED := 0;
 end;
   
 //******************************************************************************
-//* Name    : Open_TCP_Connection                                              *
-//* Purpose : Open TCP Connection and Socket                                   *
+// Name    : TCP_Open_Connection
+// Purpose : Start the opening process.  The caller must poll the Connection to find
+//           when it actually becomes open
 //******************************************************************************
-function Open_TCP_Connection(var DestIP : TIPAddress; dest_port_S2, source_port_S2 : word) : Word;
+function TCP_Open_Connection(var DestIP : TIPAddress; DestPort, SourcePort : Word) : Word;
 var
   iSocket : Integer;
-  dest_mac: TMACAddress;
+  DestMAC: TMACAddress;
 begin
   {$IFDEF LOG_UART}UART1_Write_Text('Opening TCP Connection'+LF);{$ENDIF}
   Result := RESULT_OPEN_TCP_CONNECTION_OK;
   
-  if not ARP_Validate_IP(DestIP, dest_mac) then
+  if ARP_Validate_IP(DestIP, DestMAC) then                                      // Does the node exist on the network?
   begin
-    Result := RESULT_OPEN_TCP_CONNECTION_ARP_FAILED;
-    Exit;
-  end;
-  
-  iSocket := TCP_Find_Connection(DestIP, dest_port_S2);
-
-  if iSocket < 0 then
-    iSocket := TCP_Find_Free_Socket;
-  
-  {$IFDEF LOG_UART}
-  IntToStr(iSocket, s1);
-  UART1_Write_Text('Socket = ' + s1 +LF);
-  {$ENDIF}
-
-  if iSocket < 0 then
-  begin
-    Result := RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS;
-    Exit;                                                // Out of sockets
-  end;
-  
-  SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 0;
-  SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 1;
-  SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
-  SocketManager.Socket[iSocket].SEQ_No_S := 12345;
-  SocketManager.Socket[iSocket].ACK_No_S := 0;
-  SocketManager.Socket[iSocket].dest_port_S := dest_port_S2;
-  SocketManager.Socket[iSocket].source_port_S := source_port_S2;
-  Mem_Cpy(@SocketManager.Socket[iSocket].Dest_Ip, @DestIP, 4);
-  Mem_Cpy(@SocketManager.Socket[iSocket].Dest_Mac, @dest_mac, 6);
-  SocketManager.Socket[iSocket].RAM_ROM := 0;
-  SocketManager.Socket[iSocket].Exp_Time := 0;
-  SocketManager.Socket[iSocket].Start_addr := 0;
-  SocketManager.Socket[iSocket].Stop_addr := 0;
-  SocketManager.Socket[iSocket].Keep_Alive := True;
-  SocketManager.iLastOpenedSocked := iSocket;
-
-  if not TCP_Send_Internal(SYN_S, iSocket) then
-  begin
-    Result := RESULT_OPEN_TCP_CONNECTION_SEND_FAILED;
-    SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
-    SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
-    SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
-    SocketManager.iLastOpenedSocked := 255;
-  end;
+    iSocket := TCP_Find_Connection(DestIP, DestPort);                           // Look for an open socket
+    if iSocket < 0 then                                                         // Can't find one, so begin the open process
+    begin
+      iSocket := TCP_Find_Free_Socket;
+      if iSocket >= 0 then
+      begin
+        InitSocket(iSocket);
+        SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ALLOCATED := 1;
+        SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_SENDING_SYN;
+        SocketManager.Socket[iSocket].SEQ_No_S := 12345;
+        SocketManager.Socket[iSocket].DestPort := DestPort;
+        SocketManager.Socket[iSocket].SourcePort := SourcePort;
+        Mem_Cpy(@SocketManager.Socket[iSocket].DestIP, @DestIP, 4);
+        Mem_Cpy(@SocketManager.Socket[iSocket].DestMAC, @DestMAC, 6);
+        SocketManager.Socket[iSocket].Keep_Alive := True;
+      end else
+        Result := RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS;  // Out of sockets
+    end
+  end else
+    Result := RESULT_OPEN_TCP_CONNECTION_ARP_FAILED;    // ARP Failed
 end;
 
 //******************************************************************************
-//* Name    : Close_TCP_Connection                                             *
-//* Purpose : Close TCP Connection and Socket                                  *
+// Name    : TCP_Close_Connection
+// Purpose : Signals the TCP Connection and Socket to finish and close, note the
+//            actual closing happens when it can
 //******************************************************************************
-function Close_TCP_Connection(var DestIP : TIPAddress; dest_port_S2 : word) : boolean;
+function TCP_Close_Connection(var DestIP : TIPAddress; DestPort : Word) : Boolean;
 var
-  CountBuf : word;
-  iSocket : byte;
+  iSocket : Integer;
 begin
-  iSocket := TCP_Find_Connection(DestIP, dest_port_s2);
+  iSocket := TCP_Find_Any_Connection(DestIP, DestPort);
   if iSocket >= 0 then
   begin
-    {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: Found Socket'+LF);{$ENDIF}
-    if SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED = 0 then
-    begin
-      {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: Found Open or Waiting Socket, sending termination FIN+ACK'+LF);{$ENDIF}
-      SocketManager.Socket[iSocket].RAM_ROM := 0;
-      SocketManager.Socket[iSocket].Start_addr := 0;
-      SocketManager.Socket[iSocket].Stop_addr := 0;
-      Result := TCP_Send_Internal(FIN_S + ACK_S, iSocket);      // Sets Wait_ACK = 1
-    end else
-    begin
-      {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: Found Socket, it was already Closed we are out of here'+LF);{$ENDIF}
-      Result := True;
-      Exit;
-    end;
-  end else  // no sockets available
-  begin
-    {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: No matching Sockets found, we are out of here'+LF);{$ENDIF}
-    Result := False;
-    Exit;
-  end;
-
-  // Wait for the ACK
-  TickCounter10 := 0;
-  CountBuf := 0;
-  while CountBuf < SocketManager.TCP_Wait do
-  begin
-    Do_EthernetProc(1);
-    if SocketManager.Socket[iSocket].Wait_Ack = 0 then
-  //  if SocketManager.Socket[i].State_S = SOCKET_DISCONNECTED then       // THIS WILL NEVER WORK AS THE RECEIVE SIDE HAS WAIT_ACK SET BUT IT HAS NOT FLAG TO UNDERSTAND THIS IS A REPONSE TO A SHUT DOWN>>>>>>>
-    begin
-      {$IFDEF LOG_UART}UART1_Write_Text('Closing TCP: ACK reply detected and Socket is Disconnected'+LF);{$ENDIF}
-      Break;
-    end;
-    DisableInt;
-    CountBuf := TickCounter10;
-    EnableInt;
-  end;
-  
-  {$IFDEF LOG_UART}
-  if CountBuf >= SocketManager.TCP_Wait then
-    UART1_Write_Text('Closing TCP: Did not detect ACK reply, closing Socket anyway'+LF);
-  {$ENDIF}
-  
-  // Per the Spec we are suppose to wait 4 seconds before opening again....
-  SocketManager.Socket[iSocket].State.SOCKET_STATE_DISCONNECTED := 1;
-  SocketManager.Socket[iSocket].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
-  SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 0;
-  SocketManager.Socket[iSocket].Keep_Alive := False;
+    SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_FINISH := 1;
+    Result := True
+  end
 end;
 
-  
-procedure EraseSockets;
-var j : byte;
-begin
-  j := 0;
-  while j < MAX_SOCKET do
-    begin
-      SocketManager.Socket[j].State.SOCKET_STATE_DISCONNECTED := 1;
-      SocketManager.Socket[j].State.SOCKET_STATE_WAITING_FOR_CONNECTION := 0;
-      SocketManager.Socket[j].State.SOCKET_STATE_CONNECTED := 0;
-      SocketManager.Socket[j].source_port_S := 0;
-      Mem_Set(@SocketManager.Socket[j].Dest_Ip, 0, 4);
-      Mem_Set(@SocketManager.Socket[j].Dest_Mac, 0, 6);
-      SocketManager.Socket[j].dest_port_S := 0;
-      SocketManager.Socket[j].SEQ_No_S := 0;
-      SocketManager.Socket[j].ACK_No_S := 0;
-      SocketManager.Socket[j].Wait_ACK := 0;
-      SocketManager.Socket[j].Exp_Time := 0;
-      SocketManager.Socket[j].Exp_Time_Val := SOCKET_EXPIRE_TIME;
-      SocketManager.Socket[j].Start_addr := 0;
-      SocketManager.Socket[j].Stop_addr := 0;
-      SocketManager.Socket[j].RAM_ROM := 0;
-      SocketManager.Socket[j].Keep_Alive := false;
-      SocketManager.Socket[j].TCP_buf := '';
-      inc(j);
-    end;
-end;
-
+//******************************************************************************
+// Name    : TCP_Find_Free_Socket
+// Purpose : Searches for a free socket, returns the index into the Socket Array
+//           or -1 if none can be found
+//******************************************************************************
 function TCP_Find_Free_Socket: Integer;
 var
-  i: Integer;
+  iSocket: Integer;
 begin
   Result := -1;
-  i := 0;
-  while i < MAX_SOCKET do  // search for free socket
+  iSocket := 0;
+  while iSocket < MAX_SOCKET do  // search for free socket
   begin
-    if SocketManager.Socket[i].State.SOCKET_STATE_DISCONNECTED = 1 then
+    if SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ALLOCATED = 0 then
     begin
-      Result := i;
+      Result := iSocket;
       Break;
     end;
-    inc(i);
+    Inc(iSocket);
   end;
 end;
 
+//******************************************************************************
+// Name    : TCP_Find_Connection
+// Purpose : Searches for a connected socket (does NOT include sockets in the
+//           process of a SYN volley
+//******************************************************************************
 function TCP_Find_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 var
-  i: Integer;
+  iSocket: Integer;
 begin
   Result := -1;
-  i := 0;
-  while i < MAX_SOCKET do  // search for opened socket
+  iSocket := 0;
+  while iSocket < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].State.SOCKET_STATE_CONNECTED = 1) then
-      if (SocketManager.Socket[i].dest_port_S = DestPort) then
-        if (Mem_Cmp(@DestIP, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+    if (SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_CONNECTED = 1) then           // is the socket connected?
+      if (SocketManager.Socket[iSocket].DestPort = DestPort) then                     // do the destination ports match
+        if (Mem_Cmp(@DestIP, @SocketManager.Socket[iSocket].DestIP, 4) = 0) then      // does the destination IP addresses match?
         begin
-          Result := i;
+          Result := iSocket;
           Break; // if connected
         end;
-    inc(i);
+    Inc(iSocket);
   end;
 end;
 
+//******************************************************************************
+// Name    : TCP_Find_Any_Connection
+// Purpose : Searches for a socket that is in any state of connection and allocated
+//******************************************************************************
 function TCP_Find_Any_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 var
-  i: Integer;
+  iSocket: Integer;
 begin
   Result := -1;
-  i := 0;
-  while i < MAX_SOCKET do  // search for opened socket
+  iSocket := 0;
+  while iSocket < MAX_SOCKET do  // search for opened socket
   begin
-    if (SocketManager.Socket[i].State.SOCKET_STATE_DISCONNECTED = 0) then
-      if (SocketManager.Socket[i].dest_port_S = DestPort) then
-        if (Mem_Cmp(@DestIP, @SocketManager.Socket[i].Dest_Ip, 4) = 0) then
+    if (SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ALLOCATED = 1) then
+      if (SocketManager.Socket[iSocket].DestPort = DestPort) then
+        if (Mem_Cmp(@DestIP, @SocketManager.Socket[iSocket].DestIP, 4) = 0) then
         begin
-          Result := i;
+          Result := iSocket;
           Break; // if connected
         end;
-    inc(i);
+    Inc(iSocket);
   end;
 end;
 
-function Search_Port(protocol : byte; port_ : word) : boolean;
+//******************************************************************************
+// Name    : TCP_Set_TimeOut_Interval_Global
+// Purpose : Sets the timeout for all connections
+//******************************************************************************
+procedure TCP_Set_TimeOut_Interval_Global(NewTimeout : Word);
 var
-  i : byte;
-  pt : ^word;
+  iSocket: Integer;
 begin
-  result := false;
-  if port_ = 0 then exit;
-  if protocol = TCP then
-    pt := @TCP_Opened_Ports
-  else
-    pt := @UDP_Opened_Ports;
-  i := 0;
-  while i < MAX_SOCKET do
+  iSocket := 0;
+  while iSocket < MAX_SOCKET do
     begin
-      if pt^ = port_ then
-        begin
-          result := true;
-          exit;
-        end;
-      pt := pt + 1;
-      inc(i);
+      SocketManager.Socket[iSocket].Exp_Time_Val := NewTimeout;
+      Inc(iSocket)
     end;
 end;
 
-function Close_Port(protocol : byte; port_ : word) : boolean;
-var i : byte;
-    pt : ^word;
+//******************************************************************************
+// Name    : Port_Find
+// Purpose : Searches for a Port that is allocated to a protocol (TCP or UDP)
+//******************************************************************************
+function Port_Find(Protocol: Word; Port: Word) : Boolean;
+var
+  iPort : Integer;
+  PortPtr : ^Word;
 begin
-  result := false;
-  if port_ = 0 then exit;
-  if protocol = TCP then pt := @TCP_Opened_Ports
-  else pt := @UDP_Opened_Ports;
-  i := 0;
-  while i < MAX_SOCKET do
+  Result := false;
+  if Port > 0  then
+  begin
+    if Protocol = PROTOCOL_TCP then
+      PortPtr := @TCP_Opened_Ports
+    else
+      PortPtr := @UDP_Opened_Ports;
+    iPort := 0;
+    while iPort < MAX_SOCKET do
     begin
-      if pt^ = port_ then
-        begin
-          pt^ := 0;
-          result := true;
-          exit;
-        end;
-      pt := pt + 1;
-      inc(i);
-    end;
+      if PortPtr^ = Port then
+      begin
+        Result := true;
+        Exit;
+      end;
+      PortPtr := PortPtr + 1;
+      Inc(iPort);
+    end
+  end
 end;
 
-function Open_Port(protocol_ : byte; port__ : word) : boolean;
-var i : byte;
-    pt : ^word;
-begin
-  result := false;
-  if port__ = 0 then exit;
-  if Search_Port(protocol_, port__) <> 0 then
-    begin
-      result := true;
-      exit;
-    end;
-  if protocol_ = TCP then pt := @TCP_Opened_Ports
-  else pt := @UDP_Opened_Ports;
-  i := 0;
-  while i < MAX_SOCKET do
-    begin
-      if pt^ = 0 then
-        begin
-          pt^ := port__;
-          result := true;
-          exit;
-        end;
-      pt := pt + 1;
-      inc(i);
-    end;
-end;
-
-function UDP_Open_Port(port_u : word): boolean;
-begin
-  Result := Open_Port(UDP, port_u);
-end;
-
-function TCP_Open_Port(port_t : word): boolean;
-begin
-  Result := Open_Port(TCP, port_t);
-end;
-
-function UDP_Close_Port(port_u : word): boolean;
-begin
-  Result := Close_Port(UDP, port_u);
-end;
-
-function TCP_Close_Port(port_t : word): boolean;
-begin
-  Result := Close_Port(TCP, port_t);
-end;
-  
-procedure Set_TCP_TimeOut_Interval(int_ : word);
+//******************************************************************************
+// Name    : Port_Close
+// Purpose : Closes a TCP or UDP Port
+//******************************************************************************
+function Port_Close(Protocol : byte; Port : Word) : Boolean;
 var 
-  j : byte;
+  iPort : Integer;
+  PortPtr : ^Word;
 begin
-  j := 0;
-  while j < MAX_SOCKET do
+  Result := false;
+  if Port > 0 then
+  begin
+    if Protocol = PROTOCOL_TCP then
+      PortPtr := @TCP_Opened_Ports
+    else
+      PortPtr := @UDP_Opened_Ports;
+    iPort := 0;
+    while iPort < MAX_SOCKET do
     begin
-      SocketManager.Socket[j].Exp_Time_Val := int_;
-      inc(j);
+      if PortPtr^ = Port then
+      begin
+        PortPtr^ := 0;
+        Result := true;
+        Exit;
+      end;
+      PortPtr := PortPtr + 1;
+      Inc(iPort);
     end;
+  end
+end;
+
+//******************************************************************************
+// Name    : Port_Open
+// Purpose : Opens a TCP or UDP Port
+//******************************************************************************
+function Port_Open(Protocol : Word; Port : Word) : Boolean;
+var 
+  iPort: Integer;
+  PortPtr : ^Word;
+begin
+  Result := False;
+  if Port_Find(Protocol, Port) = 0 then
+  begin
+    if Protocol = PROTOCOL_TCP then
+      PortPtr := @TCP_Opened_Ports
+    else
+      PortPtr := @UDP_Opened_Ports;
+    iPort := 0;
+    while iPort < MAX_SOCKET do                                                     // Look for the first empty (Port = 0) slot
+    begin
+      if PortPtr^ = 0 then
+      begin
+        PortPtr^ := Port;
+        Result := true;
+        Exit;
+      end;
+      PortPtr := PortPtr + 1;
+      Inc(iPort);
+    end;
+  end else
+    Result := True
+end;
+
+function Port_Open_UDP(Port : Word): Boolean;
+begin
+  Result := Port_Open(PROTOCOL_UDP, Port);
+end;
+
+function Port_Open_TCP(Port : Word): Boolean;
+begin
+  Result := Port_Open(PROTOCOL_TCP, Port);
+end;
+
+function Port_Close_UDP(Port : Word): Boolean;
+begin
+  Result := Port_Close(PROTOCOL_UDP, Port);
+end;
+
+function Port_Close_TCP(Port : Word): Boolean;
+begin
+  Result := Port_Close(PROTOCOL_TCP, Port);
+end;
+
+procedure TCP_LoadPhysicalLayerHeader(var PhyBuffer: TPhysicalLayerHeader; var SourceMAC: TMACAddress; var DestMAC: TMACAddress);
+begin
+  memcpy(@PhyBuffer.SourceMacAddress, @SourceMAC, MAC_ADDRESS_LEN);
+  memcpy(@PhyBuffer.DestMacAddress, @DestMAC, MAC_ADDRESS_LEN);
+  PhyBuffer.Protocol := $0800;              // IP
+end;
+
+procedure TCP_LoadIPLayerHeader(var IPBuffer: TIPHeader; var SourceIP: TIPAddress; var DestIP: TIPAddress; DataLength: Word; Protocol: Word);
+begin
+  IPBuffer.Version := 4;                                                        // IPv4
+  IPBuffer.IHL := 5;                                                            // Internet Header Length, 5 - 32bit blocks = no options
+  IPBuffer.DSCP := 0 ;                                                          // Differentiated Services Code Point
+  IPBuffer.ECN := 0;                                                            // Explicit Congestion Notification
+  IPBuffer.TotalLength := DataLength + IP_HEADER_SIZE + TCP_HEADER_SIZE;
+  Inc(SocketManager.IdentificationCounter);
+  IPBuffer.Identification := SocketManager.IdentificationCounter;
+  IPBuffer.Flags := %010;                                                       // Don't Fragment (DF)
+  IPBuffer.FragmentOffset := 0;
+  IPBuffer.TimeToLive := 128;                                                   // 128 Seconds
+  IPBuffer.Protocol := Protocol;
+  memcpy(@IPBuffer.SourceIPAddress, @SourceIP, IP_ADDRESS_LEN);
+  memcpy(@IPBuffer.DestIPAddress, @DestIP, IP_ADDRESS_LEN);
+end;
+
+procedure TCP_LoadTCPLayerHeader(var TCPBuffer: TTCPHeader; SourcePort, DestPort: Word; SequenceNumber, AckNumber: DWord; Flags: Word);
+begin
+  TCPBuffer.SourcePort := SourcePort;
+  TCPBuffer.DestPort := DestPort;
+  TCPBuffer.SequenceNumber := SequenceNumber;
+  TCPBuffer.AckNumber := AckNumber;
+  TCPBuffer.Flags := Flags;
+  TCPBuffer.WindowSize := 0;
+  TCPBuffer.UrgentPtr := 0;
+end;
+
+procedure TCP_LoadTransmitter(var Socket: TSocket; IPFlags: Word; DataLen: Word; SendData: ^Byte; Protocol: Word);
+begin
+  TCP_LoadPhysicalLayerHeader(SocketManager.Transmitter.PhysicalLayerHeader, Settings.eth_mac, Socket.DestMAC);
+  TCP_LoadIPLayerHeader(SocketManager.Transmitter.IPHeader, Settings.eth_ip_addr, Socket.DestIP, DataLen, Protocol);
+  TCP_LoadTCPLayerHeader(SocketManager.Transmitter.TCPHeader, Socket.SourcePort, Socket.DestPort, Socket.Seq_No_S, Socket.Ack_No_S, IPFlags);
+  if SendData <> nil then
+    memcpy(@SocketManager.Transmitter.DataBuffer, SendData, DataLen);
+  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED := 1;
+  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_TRANSMITTING := 0;
 end;
 
 end.

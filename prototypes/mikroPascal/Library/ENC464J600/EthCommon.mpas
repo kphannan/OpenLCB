@@ -1,5 +1,7 @@
 unit EthCommon;
 
+{$I Options.inc}
+
 const
   RXSTART              : word = $1000;
   RXEND                : word = $5FFF;
@@ -69,14 +71,14 @@ type
     FragmentOffset: Word;
     TimeToLive: Byte;
     Protocol: Byte;
-    HeaderCheckSum: Word;
     SourceIPAddress,
     DestIPAddress: TIPAddress;
   end;
   
 const
-  TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;
+  TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;  
   TCP_HEADER_SIZE = 20;
+  TCP_DATA_OFFSET = TCP_HEADER_OFFSET + TCP_HEADER_SIZE;
 type
   TTCPHeader = record
     SourcePort,
@@ -86,19 +88,40 @@ type
     DataOffset: Byte;
     Flags: Word;
     WindowSize: Word;
-    Checksum: Word;
     UrgentPtr: Word;
   end;
 
+  {$IFDEF ETHERNET_16_BIT_PROCESSOR}
   TRawHeader = record
-    Offset0,
-    Offset1,
-    Offset2,
-    Offset3,
-    Offset4,
-    Offset5,
-    Offset6: DWord;
+    Offset0Hi,
+    Offset0Lo,
+    Offset1Hi,
+    Offset1Lo,
+    Offset2Hi,
+    Offset2Lo,
+    Offset3Hi,
+    Offset3Lo,
+    Offset4Hi,
+    Offset4Lo,
+    Offset5Hi,
+    Offset5Lo: Word;
   end;
+  {$ELSE}
+    {$IFDEF ETHERNET_32_BIT_PROCESSOR}
+    TRawHeader = record
+      Offset0,
+      Offset1,
+      Offset2,
+      Offset3,
+      Offset4,
+      Offset5: DWord;
+    end;
+    {$ELSE}
+    TRawHeader = record
+      Error: TError;    // Must define the number of Bits in the Options file
+    end;
+    {$ENDIF}
+  {$ENDIF}
   
 var
   TickCounter1,           // Used: ARP_Validate_IP, DHCP_Request, Dns_Resolve, Ping_Send,

@@ -350,6 +350,10 @@ var
   ipDest: TIPAddress;
   Running: Boolean;
 begin
+
+TCP_Process_Receive(0);
+
+
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
   ANSELB := 0;
@@ -403,10 +407,10 @@ begin
   
 
   delay_ms(1000);
-  while not DHCP_Request(AddrPacket) do;
+  while not DHCP_Request(ENC_ReceivedPacketAddr) do;
   delay_ms(1000);
 
-  if TCP_Open_Port(12022) then
+  if Port_Open_TCP(12022) then
     UART1_Write_Text('Port Opened' +LF)
   else
     UART1_Write_Text('Port Open failed'+LF);
@@ -464,7 +468,7 @@ begin
       Inc(Delay);
     end;
     Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
-    DHCP_Process(AddrPacket);
+    DHCP_Process(ENC_ReceivedPacketAddr);
     
     if NTP_Sync then
     begin
@@ -483,7 +487,7 @@ begin
       case Cmd[0] of
         'u', 'U' :
           begin
-            Close_TCP_Connection(ipDest, OLCB_SERVER_PORT);
+            TCP_Close_Connection(ipDest, OLCB_SERVER_PORT);
         {    if OlcbSocketOpen then
             begin
               UART_Write_Text('Disconnecting' + LF);
@@ -507,7 +511,7 @@ begin
 
             UART1_Write_Text('Connecting to IP: '+ OLCB_SERVER_IP + ' Port: ' + s1 + LF);
 
-            case Open_TCP_Connection(ipDest, OLCB_SERVER_PORT, 12022) of
+            case TCP_Open_Connection(ipDest, OLCB_SERVER_PORT, 12022) of
               RESULT_OPEN_TCP_CONNECTION_OK         :
                 begin
                   UART1_Write_Text('TCP Connection Opened'+LF);

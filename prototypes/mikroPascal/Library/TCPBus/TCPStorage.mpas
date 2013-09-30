@@ -366,7 +366,7 @@ var
   TCP_buf_size: word;
   OlcbPacketLength: Word;
 begin
-  if SocketManager.Transmitter.State.TCP_TX_STATE_LOADED = 0 then               // Is the transmitter empty?
+  if SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED = 0 then               // Is the transmitter empty?
   begin
     TCP_buf_start := @SocketManager.Transmitter.DataBuffer;
     SocketManager.Transmitter.DataLength := 0;
@@ -413,7 +413,7 @@ begin
 
       TxBuffer := CANStorage_NextToSend;
     end;
-    TCP_LoadBuffer(SocketManager.Transmitter.PhysicalLayerHeader, SocketManager.Transmitter.IPHeader, SocketManager.Transmitter.TCPHeader);
+   // TCP_LoadBuffer(SocketManager.Transmitter.PhysicalLayerHeader, SocketManager.Transmitter.IPHeader, SocketManager.Transmitter.TCPHeader);
   end;
 
     (*
@@ -488,7 +488,7 @@ begin
   CAN_Engine.IsTransmitting := False;  // Maybe, maybe not we will see...
 
   Socket := @SocketManager.Socket[iSocket];
-  if Socket^.State.SOCKET_STATE_CONNECTED = 1 then
+  if Socket^.Flags.SOCKET_FLAG_CONNECTED = 1 then
   begin
     {$IFDEF LOG_UART}
     UART1_Write_Text('TCP Rx User Entered'+LF);
@@ -501,7 +501,7 @@ begin
     {$ENDIF}
     
     // Read something if we can
-    if (Socket^.dest_port_S = 12021) and (PacketLen) then
+    if (Socket^.DestPort = 12021) and (PacketLen) then
     begin
       Receive_GridConnectBufferIndex := 0;
       while (Socket^.Stop_addr - Socket^.Start_addr > 0) do

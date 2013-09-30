@@ -315,7 +315,7 @@ begin
   begin
     if IsLinkUp = False then
       Exit;
-    UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    Port_Open_UDP(UDP_DHCP_BOOTPC_RECEIVE_PORT);
     DHCP_State := 1;
     {$IFDEF LOG_UART}UART1_Write_Text('DHCP sending DHCP_DISCOVER_MESSAGE' + LF);{$ENDIF}
     Send_DHCP(DHCP_DISCOVER_MESSAGE);
@@ -328,7 +328,7 @@ begin
           Break;
         CountBuf := TickCounter1;
       end;
-    UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    Port_Close_UDP(UDP_DHCP_BOOTPC_RECEIVE_PORT);
     if DHCP_State = 2 then 
       Break;
     inc(i);
@@ -348,7 +348,7 @@ begin
         DHCP_State := 0;
         Exit;
       end;
-    UDP_Open_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    Port_Open_UDP(UDP_DHCP_BOOTPC_RECEIVE_PORT);
     DHCP_State := 2;
     {$IFDEF LOG_UART}UART1_Write_Text('DHCP sending DHCP_REQUEST_MESSAGE' + LF);{$ENDIF}
     Send_DHCP(DHCP_REQUEST_MESSAGE);
@@ -361,7 +361,7 @@ begin
         Break;
       CountBuf := TickCounter1;
     end;
-    UDP_Close_Port(UDP_DHCP_BOOTPC_RECEIVE_PORT);
+    Port_Close_UDP(UDP_DHCP_BOOTPC_RECEIVE_PORT);
     if DHCP_State = 3 then
       Break;
     inc(i);
