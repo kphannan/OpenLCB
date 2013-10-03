@@ -44,7 +44,7 @@ procedure ARP_EraseCache_Internal;
 // Externally defined functions
 procedure DisableInt; external;
 procedure EnableInt; external;
-procedure Do_EthernetProc(n : word); external;
+procedure EthernetProcess(n : word); external;
 
 var
   ARP_100ms_Counter: longint;    // Counts the number of 100ms ticks have occured since powerup.  The longint allows this to be 7 years between power ups before rollover
@@ -394,8 +394,8 @@ begin
         CountBuf := 0;
         while CountBuf < SocketManager.UDP_Wait do
         begin
-          Do_EthernetProc(1);                                                   // Sniff for the result
-          if Search_Arp_Cache_Internal(ip_arp_target, mac_arp) then             // Search in ARP cache for Result that is updated in parallel (through the Do_EthernetProc call)
+          EthernetProcess(1);                                                   // Sniff for the result
+          if Search_Arp_Cache_Internal(ip_arp_target, mac_arp) then             // Search in ARP cache for Result that is updated in parallel (through the EthernetProcess call)
           begin
             Result := True;
             Break;

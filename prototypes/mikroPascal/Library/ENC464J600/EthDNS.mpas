@@ -51,7 +51,7 @@ procedure DNS_ProcessPacket_Internal(EthMemAddressRequest: Word);
 function Dns_query_Internal(var text_in : string[40]) : boolean;
 
 // Externally defined functions
-procedure Do_EthernetProc(n : word); external;
+procedure EthernetProcess(n : word); external;
 function UDP_Send(var dest_ip_addr : TIPAddress; dest_port_S, source_port_S, len_data : word; var data_udp1 : array[1472] of byte) : boolean; external;
   
 var
@@ -129,7 +129,7 @@ begin
       CountBuf := 0;
       while CountBuf < SocketManager.UDP_Wait do
         begin
-          Do_EthernetProc(1);
+          EthernetProcess(1);
           if DNS_Manager.Response <> 0 then
             Break;
           CountBuf := TickCounter1;

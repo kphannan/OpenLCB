@@ -351,7 +351,7 @@ var
   Running: Boolean;
 begin
 
-TCP_Process_Receive(0);
+//TCP_Process_Receive(0);
 
 
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
@@ -467,7 +467,7 @@ TCP_Process_Receive(0);
       end;
       Inc(Delay);
     end;
-    Do_EthernetProc(1);  // Do the Ethernet Procedure one iteration
+    EthernetProcess(1);  // Do the Ethernet Procedure one iteration
     DHCP_Process(ENC_ReceivedPacketAddr);
     
     if NTP_Sync then

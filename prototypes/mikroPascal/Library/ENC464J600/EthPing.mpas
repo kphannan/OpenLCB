@@ -41,7 +41,7 @@ procedure Ping_Reply_Internal(EthMemAddressRequest: Word);
 procedure Ping_Send_Internal(var dest_ip_addr: TIPAddress; var dest_mac: TMACAddress; PingSlot : Byte);
 procedure Ping_EraseCache_Internal;
 
-procedure Do_EthernetProc(n : word); external;
+procedure EthernetProcess(n : word); external;
 
 implementation
 
@@ -223,7 +223,7 @@ begin
     {$IFDEF LOG_UART}UART1_Write_Text('Ping waiting for reply'+ LF);{$ENDIF}
     while CountBuf < 3000 do
     begin
-      Do_EthernetProc(1);
+      EthernetProcess(1);
       if PingCache[PingSlot].Time <> PING_TIME_WAITING_FOR_REPLY then
       begin
         {$IFDEF LOG_UART}UART1_Write_Text('Ping reply detected'+ LF);{$ENDIF}

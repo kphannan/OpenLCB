@@ -25,7 +25,7 @@ NMRAnetDefinesShared,
 // User functions
 procedure CounterTask;
 Procedure Eth_Init_(use_user_MAC: Boolean);
-procedure Do_EthernetProc(n : word);
+procedure EthernetProcess(n : word);
 procedure Firewall(F_ICMP, F_TCP, F_UDP : boolean);
 procedure Wait_for_LAN;
 procedure Wait_With_Eth(n : word);
@@ -325,11 +325,12 @@ begin
 end;
 
 //******************************************************************************
-//* Name    : Do_EthernetProc                                                  *
+//* Name    : EthernetProcess                                                  *
 //* Purpose : Process all Ethernet packets                                     *
 //******************************************************************************
-procedure Do_EthernetProc(n : word);
-var i : word;
+procedure EthernetProcess(n : word);
+var 
+  i : word;
 begin
   i := 0;
   while i < n do
@@ -380,7 +381,7 @@ begin
   while i < n do
     begin
       delay_1ms_;
-      Do_EthernetProc(1);
+      EthernetProcess(1);
       inc(i);
     end;
 end;

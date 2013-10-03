@@ -101,14 +101,14 @@ End;
 
 function Spi_Read_(dummy : byte) : byte;
 begin
-//  result := SPI1BUF;
+//  Result := SPI1BUF;
   asm
     MOV SPI1BUF,W0
   end;
   while SPI1STAT.1 = 1 do ;
   SPI1BUF := dummy;
   while SPI1STAT.0 = 0 do ;
-  result := SPI1BUF;
+  Result := SPI1BUF;
 end;
 
 Procedure WCmd1(cmd1 : byte);
@@ -130,7 +130,7 @@ Function RCmd2(cmd1 : byte) : byte;
 Begin
   Eth_Select;
   Spi_Read_(cmd1);
-  result := Spi_Read_(0);
+  Result := Spi_Read_(0);
   Eth_UnSelect;
 End;
 
@@ -138,8 +138,8 @@ Function RCmd2W(cmd1 : byte) : word;
 Begin
   Eth_Select;
   Spi_Read_(cmd1);
-  Lo(result) := Spi_Read_(0);
-  Hi(result) := Spi_Read_(0);
+  Lo(Result) := Spi_Read_(0);
+  Hi(Result) := Spi_Read_(0);
   Eth_UnSelect;
 End;
 
@@ -157,7 +157,7 @@ Begin
   Eth_Select;
   Spi_Read_(cmd1);
   Spi_Read_(cmd2);
-  result := Spi_Read_(0);
+  Result := Spi_Read_(0);
   Eth_UnSelect;
 End;
 
@@ -166,8 +166,8 @@ Begin
   Eth_Select;
   Spi_Read_(cmd1);
   Spi_Read_(cmd2);
-  Lo(result) := Spi_Read_(0);
-  Hi(result) := Spi_Read_(0);
+  Lo(Result) := Spi_Read_(0);
+  Hi(Result) := Spi_Read_(0);
   Eth_UnSelect;
 End;
 
@@ -193,7 +193,7 @@ End;
 
 Function Eth_ReadReg(register_address : byte) : word;
 Begin
-  result := RCmd3W(RCRUCMD_,register_address);
+  Result := RCmd3W(RCRUCMD_,register_address);
 End;
 
 Procedure Eth_WriteReg(register_address : byte; data_b : word);
@@ -246,7 +246,7 @@ end;
 
 function Eth_GetByte : byte;
 begin
-  result := RCmd2(RGPDATA_);
+  Result := RCmd2(RGPDATA_);
 end;
 
 Procedure Eth_WritePHYReg(register_address : byte; data_b : word);
@@ -262,15 +262,15 @@ Begin
   Eth_WriteReg(MICMD_,$0001);
   while (Eth_ReadReg(MISTAT_) and $0001) <> 0 do ;
   Eth_WriteReg(MICMD_,$0000);
-  result := Eth_ReadReg(MIRD_);
+  Result := Eth_ReadReg(MIRD_);
 End;
 
 function IsLinkUp : boolean;
 begin
-  result := true;
+  Result := true;
   if (Eth_ReadReg(ESTAT_) and $0100) = 0 then
     if (Eth_ReadReg(ESTAT_) and $0100) = 0 then
-      result := false;
+      Result := false;
 end;
 
 procedure CopyEthMemToRam(start_eth_address, dest_ram_address, length_w : word);
@@ -497,7 +497,7 @@ function CopyRamStringToEthMem_CP(var s : string[1472]): word;
 var pt : ^byte;
     buf : byte;
 begin
-  result := 0;
+  Result := 0;
   
   Eth_Select;
   Spi_Read_(WGPDATA_);
@@ -509,7 +509,7 @@ begin
       if buf = 0 then break;
       Spi_Read_(buf);
       pt := pt + 1;
-      inc(result);
+      inc(Result);
     end;
     
   Eth_UnSelect;
@@ -519,7 +519,7 @@ function CopyRamStringToEthMem_CP_a(s_addr : word): word;
 var pt : ^byte;
     buf : byte;
 begin
-  result := 0;
+  Result := 0;
   
   Eth_Select;
   Spi_Read_(WGPDATA_);
@@ -531,7 +531,7 @@ begin
       if buf = 0 then break;
       Spi_Read_(buf);
       pt := pt + 1;
-      inc(result);
+      inc(Result);
     end;
     
   Eth_UnSelect;
@@ -579,7 +579,7 @@ end;
 function CopyFlashStringToEthMem(start_Flash_address : ^far const byte;  dest_eth_address : word): word;
 var buf : byte;
 begin
-  result := 0;
+  Result := 0;
   Eth_WriteReg(EGPWRPT_, dest_eth_address);
   
   Eth_Select;
@@ -591,7 +591,7 @@ begin
       if buf = 0 then break;
       Spi_Read_(buf);
       start_Flash_address := start_Flash_address + 1;
-      inc(result);
+      inc(Result);
     end;
     
   Eth_UnSelect;
@@ -600,7 +600,7 @@ end;
 function CopyFlashStringToEthMem_CP(start_Flash_address : ^far const byte): word;
 var buf : byte;
 begin
-  result := 0;
+  Result := 0;
   
   Eth_Select;
   Spi_Read_(WGPDATA_);
@@ -611,7 +611,7 @@ begin
       if buf = 0 then break;
       Spi_Read_(buf);
       start_Flash_address := start_Flash_address + 1;
-      inc(result);
+      inc(Result);
     end;
     
   Eth_UnSelect;
@@ -631,7 +631,7 @@ begin
   Eth_WriteReg(EGPRDPT_, start_eth_address);
   Eth_Select;
   Spi_Read_(RGPDATA_);
-  result := Spi_Read_(0);
+  Result := Spi_Read_(0);
   Eth_UnSelect;
 end;
 
@@ -639,7 +639,7 @@ function EthMemCompareWithRam(start_eth_address, start_ram_address, length_w : w
 var i : word;
     pt : ^byte;
 begin
-  result := false;
+  Result := false;
   if length_w = 0 then exit;
   Eth_WriteReg(EGPRDPT_, start_eth_address);
   
@@ -660,13 +660,13 @@ begin
     end;
     
   Eth_UnSelect;
-  result := true;
+  Result := true;
 end;
 
 function EthMemCompareWithFlash(start_eth_address : word; start_Flash_address : ^far const byte; length_w : word) : boolean;
 var i : word;
 begin
-  result := false;
+  Result := false;
   if length_w = 0 then exit;
   Eth_WriteReg(EGPRDPT_, start_eth_address);
   
@@ -686,23 +686,26 @@ begin
     end;
     
   Eth_UnSelect;
-  result := true;
+  Result := true;
 end;
 
 function Eth_Cksum(start_eth_address, length_w : word) : word;
-var i : word;
+var 
+  i : word;
 begin
-  result := 0;
-  if length_w = 0 then exit;
-  while (Eth_ReadReg(ECON1_) and ECON1_DMAST_) <> 0 do;
-  Eth_WriteReg(EDMAST_, start_eth_address);
-  Eth_WriteReg(EDMALEN_, length_w);
-  Eth_BCF(ECON1_, ECON1_DMACPY_ or ECON1_DMANOCS_ or ECON1_DMACSSD_);
-  Eth_BSF(ECON1_, ECON1_DMAST_);
-  while (Eth_ReadReg(ECON1_) and ECON1_DMAST_) <> 0 do;  // wait for DMA complete checksum calculation, but NO more than 500 us
-  i := Eth_ReadReg(EDMACS_);
-  Lo(result) := Hi(i);
-  Hi(result) := Lo(i);
+  Result := 0;
+  if length_w > 0 then
+  begin
+    while (Eth_ReadReg(ECON1_) and ECON1_DMAST_) <> 0 do;
+    Eth_WriteReg(EDMAST_, start_eth_address);
+    Eth_WriteReg(EDMALEN_, length_w);
+    Eth_BCF(ECON1_, ECON1_DMACPY_ or ECON1_DMANOCS_ or ECON1_DMACSSD_);
+    Eth_BSF(ECON1_, ECON1_DMAST_);
+    while (Eth_ReadReg(ECON1_) and ECON1_DMAST_) <> 0 do;  // wait for DMA complete checksum calculation, but NO more than 500 us
+    i := Eth_ReadReg(EDMACS_);
+    Lo(Result) := Hi(i);
+    Hi(Result) := Lo(i);
+  end
 end;
 
 procedure Eth_Policy(poli : byte);

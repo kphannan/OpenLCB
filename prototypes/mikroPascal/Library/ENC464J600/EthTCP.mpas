@@ -79,8 +79,14 @@ var
   CheckSum: Word;
 begin
   Result := False;
+  
+  UART1_Write_Text('Trying to Load XMTR');
+  
   if TransmitterEmpty then             // Only load if the transmitter is empty
   begin
+  
+    UART1_Write_Text('Empty, loading XMTR');
+  
     ZeroRawHeader(Header);
 
     // This is a direct mapping from the record to the Phy Layer
