@@ -33,24 +33,33 @@ const
   
 const
   SOCKET_STATE_DISCONNECTED           = 0;
-  SOCKET_STATE_SENDING_SYN            = 1;
+  SOCKET_STATE_CONNECT                = 1;
   SOCKET_STATE_WAITING_FOR_SYN_ACK    = 2;
-  SOCKET_STATE_CONNECTED              = 3;
-  SOCKET_STATE_FINISH                 = 4;
-  SOCKET_STATE_WAITING_FOR_FIN_ACK    = 5;
-  SOCKET_STATE_RESET                  = 6;
+  SOCKET_STATE_WAITING_FOR_SYN        = 3;
+  SOCKET_STATE_CONNECTED              = 4;
+  SOCKET_STATE_DISCONNECT             = 5;
+  SOCKET_STATE_WAITING_FOR_FIN_ACK    = 6;
+  SOCKET_STATE_WAITING_FOR_FIN        = 7;
+  SOCKET_STATE_RESET                  = 8;
   
-  SOCKET_FLAG_ALLOCATED               = 0;
-  SOCKET_FLAG_CONNECTED               = 1;   // Bit 1
-  SOCKET_FLAG_WAITING_FOR_ACK         = 2;   // Bit 2, 0 if not waiting for an ACK; 1 if Waiting for an ACK
-  SOCKET_FLAG_FINISH                  = 3;   // Bit 3, Flagged to finish and disconnect
-  SOCKET_FLAG_ACK_ERROR               = 4;   // Bit 4, Returned ACK had an invalid SEQ value
+  SOCKET_FLAG_RECEIVED_FIN            = 0;  // Order matters it maps to the TCP Flags
+  SOCKET_FLAG_RECEIVED_SYN            = 1;
+  SOCKET_FLAG_RECEIVED_RST            = 2;
+  SOCKET_FLAG_RECEIVED_PSH            = 3;
+  SOCKET_FLAG_RECEIVED_ACK            = 4;
+  SOCKET_FLAG_RECEIVED_URG            = 5;
+  
+  SOCKET_FLAG_ALLOCATED               = 6;
+  SOCKET_FLAG_CONNECTED               = 7;   // Bit 1
+  SOCKET_FLAG_WAITING_FOR_ACK         = 8;   // Bit 2, 0 if not waiting for an ACK; 1 if Waiting for an ACK
+  SOCKET_FLAG_FINISH                  = 9;   // Bit 3, Flagged to finish and disconnect
+  SOCKET_FLAG_ACK_ERROR               = 10;   // Bit 4, Returned ACK had an invalid SEQ value
   
   
 type
   TSocket = record
-    iStateMachine   : Word;           // See SOCKET_STATE_xxxx constants
-    Flags           : Word;          // See SOCKET_FLAG_xxxx contants
+    iStateMachine   : Word;        // See SOCKET_STATE_xxxx constants
+    Flags           : Word;        // See SOCKET_FLAG_xxxx contants
     SourcePort      : Word;        // Port of the source (us)
     DestIP          : TIPAddress;    // Ip of the resource to send the data to
     DestMAC         : TMACAddress;   // MAC of the resource to send the data to
@@ -92,6 +101,7 @@ type
     IdentificationCounter: Word;                                                // Unique ID for fragments
     iLastProcessedSocket: Integer;                                              // Last index of the Socket that was processed in the process loop
     iLastOpenedSocked : Word;                                                   // Last Socket index that was opened
+    OpenedSockets: Word;                                                        // Number of Opened Sockets
   end;
   
 // User functions
@@ -115,6 +125,8 @@ procedure TCP_LoadTCPLayerHeader(var TCPBuffer: TTCPHeader; SourcePort, DestPort
 procedure TCP_LoadTransmitter(var Socket: TSocket; IPFlags: Word; DataLen: Word; SendData: ^Byte; Protocol: Word);
 
 function TransmitterEmpty: Boolean;
+
+procedure PrintTransmitterHeaders;
 
 // Internally used functions
 procedure Sockets_Init_Internal;
@@ -151,6 +163,17 @@ begin
   SocketManager.Socket[iSocket].RAM_ROM := 0;
   SocketManager.Socket[iSocket].Keep_Alive := false;
   SocketManager.Socket[iSocket].TCP_buf := '';
+  SocketManager.OpenedSockets := 0;
+end;
+
+procedure PrintTransmitterHeaders;
+begin
+  Mac2Str(SocketManager.Transmitter.PhysicalLayerHeader.SourceMacAddress, s1);
+  UART1_Write_Text('Source MAC Address: ' + s1);
+  Mac2Str(SocketManager.Transmitter.PhysicalLayerHeader.DestMacAddress, s1);
+  UART1_Write_Text('Destination MAC Address: ' + s1);
+  WordToStr( SocketManager.Transmitter.PhysicalLayerHeader.Protocol, s1);
+  UART1_Write_Text('Phy Protocol: ' + s1);
 end;
 
 function TransmitterEmpty: Boolean;
@@ -204,13 +227,14 @@ begin
       begin
         InitSocket(iSocket);
         SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ALLOCATED := 1;
-        SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_SENDING_SYN;
+        SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_CONNECT;
         SocketManager.Socket[iSocket].SEQ_No_S := 12345;
         SocketManager.Socket[iSocket].DestPort := DestPort;
         SocketManager.Socket[iSocket].SourcePort := SourcePort;
         Mem_Cpy(@SocketManager.Socket[iSocket].DestIP, @DestIP, 4);
         Mem_Cpy(@SocketManager.Socket[iSocket].DestMAC, @DestMAC, 6);
         SocketManager.Socket[iSocket].Keep_Alive := True;
+        Inc(SocketManager.OpenedSockets);
       end else
         Result := RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS;  // Out of sockets
     end

@@ -1,6 +1,7 @@
 unit EthTCP;
 
 {.$DEFINE LOG_UART}
+{$DEFINE TRACE_SOCKET_STATE}
 
 {$I Options.inc}
 
@@ -167,6 +168,7 @@ var
   TCPHeader: TTCPHeader;
   IP_Checksum, TCP_Checksum: Word;
   iSocket: Integer;
+  Socket: ^TSocket;
 begin
   ZeroRawHeader(Header);
   
@@ -248,6 +250,8 @@ begin
       iSocket := TCP_Find_Any_Connection(IPHeader.DestIPAddress, TCPHeader.DestPort);
       if iSocket > -1 then
       begin
+        Socket := @SocketManager.Socket[iSocket];
+        Socket^.Flags := Socket^.Flags or (TCPHeader.Flags and $003F);  // Only support first 6 bits of flags
       end
     end
   end
@@ -262,15 +266,19 @@ var
   Socket: ^TSocket;
 begin
   Socket := @SocketManager.Socket[SocketManager.iLastProcessedSocket];
+  
+  if Socket^.Flags.SOCKET_FLAG_RECEIVED_RST then
+    Socket^.iStateMachine := SOCKET_STATE_RESET;
+    
   case Socket^.iStateMachine of
     SOCKET_STATE_DISCONNECTED :
         begin
-          Socket^.Flags.SOCKET_FLAG_ALLOCATED := 0;                             // A disconnected Socket is not allocated by definition
+
         end;
-    SOCKET_STATE_SENDING_SYN :
-        begin
+    SOCKET_STATE_CONNECT :
+        begin   {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_SYN');{$ENDIF}
           if TransmitterEmpty then
-          begin
+          begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Loaded to Send');{$ENDIF}
             // Load up the transmitter with a SYN message
             TCP_LoadTransmitter(Socket^, SYN_S, 0, nil, PROTOCOL_TCP);
             Socket^.Flags.SOCKET_FLAG_WAITING_FOR_ACK := 1;
@@ -278,8 +286,20 @@ begin
           end;
         end;
     SOCKET_STATE_WAITING_FOR_SYN_ACK :
-        begin
-          // This will be exited asyncronously from the TCP Receive call when it receives an ACK
+        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN_ACK');{$ENDIF}
+          if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
+          begin
+            // Update the Acknowledge field here
+            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_SYN;
+          end
+        end;
+    SOCKET_STATE_WAITING_FOR_SYN :
+        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN');{$ENDIF}
+          if Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN = 1 then
+          begin
+            Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN := 0;
+            Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
+          end
         end;
     SOCKET_STATE_CONNECTED :
         begin
@@ -293,23 +313,44 @@ begin
           end else
           begin
             if (Socket^.Flags.SOCKET_FLAG_FINISH = 1) or (Socket^.Exp_Time > Socket^.Exp_Time_Val) then
-              Socket^.iStateMachine := SOCKET_STATE_FINISH
+              Socket^.iStateMachine := SOCKET_STATE_DISCONNECT
           end;
         end;
-    SOCKET_STATE_FINISH :
+    SOCKET_STATE_DISCONNECT :
         begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_DISCONNECT');{$ENDIF}
           if TransmitterEmpty then
-          begin
-            // Send FIN flag here
+          begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Disconnect Loaded');{$ENDIF}
+            Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN := 0;
+            Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK := 0;
+            TCP_LoadTransmitter(Socket^, FIN_S, 0, nil, PROTOCOL_TCP);
+            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN_ACK;
           end
         end;
     SOCKET_STATE_WAITING_FOR_FIN_ACK :
-        begin
-          // This will be exited asyncronously from the TCP Receive call when it receives an ACK
+        begin  {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN_ACK');{$ENDIF}
+          // We have FIN'ed so we can't send anymore but we can receive until we receive and ACK and a FIN
+          if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
+          begin
+            // Update the Acknowledge field here
+            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN;
+          end
+        end;
+    SOCKET_STATE_WAITING_FOR_FIN :
+        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN');{$ENDIF}
+          if Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN = 1 then
+          begin
+            Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
+            Socket^.Flags := 0;
+            Dec(SocketManager.OpenedSockets);
+          end
         end;
     SOCKET_STATE_RESET :
-        begin
+        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET');{$ENDIF}
           // This will have been set asyncronously from the TCP Receive call
+          Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
+          Socket^.Flags := 0;
+          Dec(SocketManager.OpenedSockets);
         end;
   end;
 
