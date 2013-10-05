@@ -16,14 +16,17 @@ NMRAnetDefinesShared,
   lib1_enc600_V3_5_b,
   definitions_ENC600;
   
+const
+  MAX_TCP_RESEND_ATTEMPTS = 5;      // Attempt to resend 5 times before giving up
+  MAX_TCP_RESEND_TIMEOUT = 1000;    // Resend TCP packet if no response within 1000ms
+  
 // User Functions
-function TCP_TryLoadTransmitter(var PhysicalLayerHeader: TPhysicalLayerHeader; var IPHeader: TIPHeader; var TCPHeader: TTCPHeader): Boolean;
+function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte): Boolean;
 
 // Internal functions
 procedure TCP_Init_Internal;
 
 procedure TCP_Process_Stack;
-procedure TCP_Process_Transmit;
 procedure TCP_Process_Receive(ENC_MemoryOffset: Word);
 
 //function TCP_UserSend(var ip_t1 : TIPAddress; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
@@ -48,133 +51,166 @@ begin
   SEQ_No := $42844A80;
 end;
 
-procedure ZeroRawHeader(var RawHeader: TRawHeader);
+procedure LoadIPHeaderLine0(var HeaderLine: TEthernetHeaderLine; IP_Version, IHL, DSCP, ECN: Byte; PacketLength: Word);
 begin
-  {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-  RawHeader.Offset0Hi := 0;
-  Rawheader.Offset0Lo := 0;
-  RawHeader.Offset1Hi := 0;
-  RawHeader.Offset1Lo := 0;
-  RawHeader.Offset2Hi := 0;
-  RawHeader.Offset2Lo := 0;
-  RawHeader.Offset3Hi := 0;
-  RawHeader.Offset3Lo := 0;
-  RawHeader.Offset4Hi := 0;
-  RawHeader.Offset4Lo := 0;
-  RawHeader.Offset5Hi := 0;
-  RawHeader.Offset5Lo := 0;
-  {$ENDIF}
-  {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-  RawHeader.Offset0 := 0;
-  RawHeader.Offset1 := 0;
-  RawHeader.Offset2 := 0;
-  RawHeader.Offset3 := 0;
-  RawHeader.Offset4 := 0;
-  RawHeader.Offset5 := 0;
-  {$ENDIF}
+  HeaderLine[0] := (IP_Version shl 4) or IHL;
+  HeaderLine[1] := (DSCP shl 2) or ECN;
+  HeaderLine[2] := Hi(PacketLength);
+  HeaderLine[3] := Lo(PacketLength);
 end;
 
-function TCP_TryLoadTransmitter(var PhysicalLayerHeader: TPhysicalLayerHeader; var IPHeader: TIPHeader; var TCPHeader: TTCPHeader): Boolean;
+procedure LoadIPHeaderLine1(var HeaderLine: TEthernetHeaderLine; Identification: Word; FragmentationFlags: Byte; FragmentationOffset: Word);
+begin
+  HeaderLine[0] := Hi(Identification);
+  HeaderLine[1] := Lo(Identification);
+  HeaderLine[2] := (FragmentationFlags shl 5) or (Hi(FragmentationOffset) shr 3);
+  HeaderLine[3] := Lo(FragmentationOffset)
+end;
+
+procedure LoadIPHeaderLine2(var HeaderLine: TEthernetHeaderLine; TimeToLive, Protocol: Byte);
+begin
+  HeaderLine[0] := TimeToLive;
+  HeaderLine[1] := Protocol;
+  HeaderLine[2] := 0;                                                           // Checksum comes after all of the header is filled in
+  HeaderLine[3] := 0
+end;
+
+procedure LoadIPHeaderLine3(var HeaderLine: TEthernetHeaderLine; var SourceIP: TIPAddress);
+begin
+  HeaderLine := SourceIP;
+end;
+
+procedure LoadIPHeaderLine4(var HeaderLine: TEthernetHeaderLine; var DestIP: TIPAddress);
+begin
+  HeaderLine := DestIP;
+end;
+
+procedure LoadTCPHeaderLine0(var HeaderLine: TEthernetHeaderLine; SourcePort, DestPort: Word);
+begin
+  HeaderLine[0] := Hi(SourcePort);
+  HeaderLine[1] := Lo(SourcePort);
+  HeaderLine[2] := Hi(DestPort);
+  HeaderLine[3] := Lo(DestPort);
+end;
+
+procedure LoadTCPHeaderLine1(var HeaderLine: TEthernetHeaderLine; SequenceNumber: DWord);
+begin
+  MemCpy(@HeaderLine[0], @SequenceNumber, 4);
+end;
+
+procedure LoadTCPHeaderLine2(var HeaderLine: TEthernetHeaderLine; AckNumber: DWord);
+begin
+  MemCpy(@HeaderLine[0], @AckNumber, 4);
+end;
+
+procedure LoadTCPHeaderLine3(var HeaderLine: TEthernetHeaderLine; DataOffset: Byte; TCP_Flags, WindowSize: Word);
+begin
+  HeaderLine[0] := (DataOffset shl 4) or (Hi(TCP_Flags) and $0001);
+  HeaderLine[1] := Lo(TCP_Flags);
+  HeaderLine[2] := Hi(WindowSize);
+  HeaderLine[3] := Lo(WindowSize);
+end;
+
+procedure LoadTCPHeaderLine4(var HeaderLine: TEthernetHeaderLine; UrgentPtr: Word);
+begin
+  HeaderLine[0] := 0;               // Calcuate Checksum later
+  HeaderLine[1] := 0;               // Calcuate Checksum later
+  HeaderLine[2] := Hi(UrgentPtr);
+  HeaderLine[3] := Lo(UrgentPtr);
+end;
+
+
+function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte;): Boolean;
 var
-  Header: TRawHeader;
-  CheckSum: Word;
+  Header: TEthernetHeader;
+  PhyHeader: TPhysicalLayerHeader;
+  CheckSum, MessageLength: Word;
 begin
   Result := False;
   
   UART1_Write_Text('Trying to Load XMTR');
   
-  if TransmitterEmpty then             // Only load if the transmitter is empty
+  if not EthernetTransmitting then       // Only load if the ethernet chip transmitter is empty
   begin
   
     UART1_Write_Text('Empty, loading XMTR');
   
-    ZeroRawHeader(Header);
-
-    // This is a direct mapping from the record to the Phy Layer
-    CopyRamToEthMem(@PhysicalLayerHeader, TXSTART + PHYSICAL_LAYER_HEADER_OFFSET, PHYSICAL_LAYER_HEADER_SIZE);
-    
-    {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-    Header.Offset0Hi := IPHeader.Version shl 12;
-    Header.Offset0Hi := Header.Offset0Hi or Word(IPHeader.IHL shl 8);
-    Header.Offset0Lo := IPHeader.DSCP shl 2;
-    Header.Offset0Lo := Header.Offset0Lo or Word(IPHeader.ECN);
-    Header.Offset1Hi := IPHeader.Identification;
-    Header.Offset1Lo := IPHeader.Flags shl 13;
-    Header.Offset1Lo := Header.Offset1Lo or (IPHeader.FragmentOffset);
-    Header.Offset2Hi := IPHeader.TimeToLive shl 8;
-    Header.Offset2Hi := Header.Offset2Hi or IPHeader.Protocol;
-    Header.Offset2Lo := $0000;   // Checksum = 0 for now
-    memcpy(@Header.Offset3Hi, @IPHeader.SourceIPAddress, IP_ADDRESS_LEN);         // Is this right? or does it end at the last bit of Offset3Lo?
-    memcpy(@Header.Offset4Lo, @IPHeader.DestIPAddress, IP_ADDRESS_LEN);
-    {$ENDIF}
-    
-    {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-    Header.Offset0 := IPHeader.Version shl 28;                                 // this would be better for a 32 bit processor
-    Header.Offset0 := Header.Offset0 or DWord(IPHeader.IHL shl 24);
-    Header.Offset0 := Header.Offset0 or DWord(IPHeader.DSCP shl 18);
-    Header.Offset0 := Header.Offset0 or DWord(IPHeader.ECN shl 16);
-    Header.Offset0 := Header.Offset0 or IPHeader.TotalLength;
-    Header.Offset1 := IPHeader.Identification shl 16;
-    Header.Offset1 := Header.Offset1 or DWord(IPHeader.Flags shl 19);
-    Header.Offset1 := Header.Offset1 or IPHeader.FragmentOffset;
-    Header.Offset2 := IPHeader.TimeToLive shl 24;
-    Header.Offset2 := Header.Offset2 or DWord(IPHeader.Protocol shl 16);        // Checksum is $0000 as it needs to be
-    memcpy(@Header.Offset3, @IPHeader.SourceIPAddress, IP_ADDRESS_LEN);
-    memcpy(@Header.Offset4, @IPHeader.DestIPAddress, IP_ADDRESS_LEN);
-    {$ENDIF}
-    
-    CopyRamToEthMem(@Header, TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);
-    CheckSum := Eth_Cksum(TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);    // Let ENC calculate the Checksum
-    CopyRamToEthMem(@Checksum, TXSTART + 24, 2);                                    // Store the Checksum
+    PhyHeader.SourceMacAddress := Settings.eth_mac;
+    PhyHeader.DestMacAddress := Socket.DestMAC;
+    PhyHeader.Protocol := $0800;                   // IP
+    CopyRamToEthMem(@PhyHeader, TXSTART + PHYSICAL_LAYER_HEADER_OFFSET, PHYSICAL_LAYER_HEADER_SIZE);
   
-    {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-    Header.Offset0Hi := TCPHeader.SourcePort;
-    Header.Offset0Lo := TCPHeader.DestPort;
-    Header.Offset1Hi := HiWord(TCPHeader.SequenceNumber);
-    Header.Offset1Lo := LoWord(TCPHeader.SequenceNumber);
-    Header.Offset2Hi := HiWord(TCPHeader.AckNumber);
-    Header.Offset2Lo := LoWord(TCPHeader.AckNumber);
-    Header.Offset3Hi := TCPHeader.DataOffset shl 12;
-    Header.Offset3Hi := Header.Offset3Hi and TCPHeader.Flags;
-    Header.Offset3Lo := TCPHeader.WindowSize;
-    Header.Offset4Hi := $0000;  // Checksum set to zero to calculate header checksum
-    Header.Offset4Lo := TCPHeader.UrgentPtr;
-    {$ENDIF}
-    
-    {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-    Header.Offset0 := TCPHeader.SourcePort shl 16;
-    Header.Offset0 := Header.Offset0 or TCPHeader.DestPort;
-    Header.Offset1 := TCPHeader.SequenceNumber;
-    Header.Offset2 := TCPHeader.AckNumber;
-    Header.Offset3 := TCPHeader.DataOffset shl 28;
-    Header.Offset3 := Header.Offset3 or DWord(TCPHeader.Flags shl 16);
-    Header.Offset3 := Header.Offset3 or TCPHeader.WindowSize;
-    Header.Offset4 := TCPHeader.UrgentPtr;
-    {$ENDIF}
-    
+    MessageLength := TCP_IP_HEADER_SIZE + Socket.Stop_addr - Socket.Stop_addr;
+    LoadIPHeaderLine0(Header[0], Settings.IP_Version, 5, Settings.IP_DSCP, Settings.IP_ECN, MessageLength);
+    LoadIPHeaderLine1(Header[1], Socket.Identification, Settings.IP_FragmentationFlags, 0);
+    LoadIPHeaderLine2(Header[2], Settings.IP_TimeToLive, PROTOCOL_TCP);
+    LoadIPHeaderLine3(Header[3], Settings.eth_ip_addr);
+    LoadIPHeaderLine4(Header[4], Socket.DestIP);
+    CopyRamToEthMem(@Header, TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);
+    CheckSum := Eth_Cksum(TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);    // Let ENC calculate the Checksum for the IP Header data
+    CopyRamToEthMem(@Checksum, TXSTART + IP_CHECKSUM_OFFSET, 2);                                    // Store the Checksum
+  
+    LoadTCPHeaderLine0(Header[0], Socket.SourcePort, Socket.DestPort);
+    LoadTCPHeaderLine1(Header[1], Socket.SequenceNumber);
+    LoadTCPHeaderLine2(Header[2], Socket.Identification);
+    LoadTCPHeaderLine3(Header[3], 5, TCP_Flags, 1024);
+    LoadTCPHeaderLine4(Header[4], 0);
     CopyRamToEthMem(@Header, TXSTART + TCP_HEADER_OFFSET, TCP_HEADER_SIZE);
-    CopyRamToEthMem(@SocketManager.Transmitter.DataBuffer, TXSTART + TCP_DATA_OFFSET, SocketManager.Transmitter.DataLength);
-    CheckSum := Eth_Cksum(TXSTART + TCP_HEADER_OFFSET, TCP_HEADER_SIZE + SocketManager.Transmitter.DataLength);    // Let ENC calculate the Checksum
-    CopyRamToEthMem(@CheckSum, TXSTART + 50, 2);                                           // Store the Checksum
+    CopyRamToEthMem(Socket.Start_addr, TXSTART + TCP_DATA_OFFSET, Socket.Stop_addr - Socket.Stop_addr);
+    CheckSum := Eth_Cksum(TXSTART + TCP_HEADER_OFFSET, TCP_HEADER_SIZE + Socket.Stop_addr - Socket.Stop_addr);    // Let ENC calculate the Checksum
+    CopyRamToEthMem(@CheckSum, TXSTART + TCP_CHECKSUM_OFFSET, 2);                                           // Store the Checksum
+    
+    Eth_WriteReg(ETXST_, TXSTART);                                              // Set the start of packet
+    Eth_WriteReg(ETXLEN_, MessageLength);                                       // DOUBLE CHECK THE LENGTH CALCULATION>>>>>>>>>>>>
+    Eth_BSF(ECON1_, ECON1_TXRTS_);                                              // Enable the Transmit
+    
     Result := True;
   end;
 end;
 
 procedure TCP_Process_Receive(ENC_MemoryOffset: Word);
 var
-  Header: TRawHeader;
+  Header: TEthernetHeader;
   PhysicalLayerHeader: TPhysicalLayerHeader;                                  // Current info for the Physical Layer of the current transmission
-  IPHeader: TIPHeader;                                                        // Current info for the IP Layer of the current transmission
-  TCPHeader: TTCPHeader;
   IP_Checksum, TCP_Checksum: Word;
   iSocket: Integer;
   Socket: ^TSocket;
 begin
-  ZeroRawHeader(Header);
+
+  CopyEthMemToRam(ENC_MemoryOffset, @Header, PHYSICAL_LAYER_HEADER_SIZE);     // 1 to 1 mapping overlay for the phy header, easy
   
-  //  DON'T DO THIS WITH 32 BIT BLOCKS, USE NATIVE 16 BIT BLOCKS SO IT IS LESS INTENSIVE
+  {$IFDEF ETHERNET_16_BIT_PROCESSOR}
+  PhysicalLayerHeader.SourceMacAddress[0] := Header.Offset0Hi shr 12;
+  PhysicalLayerHeader.SourceMacAddress[1] := Header.Offset0Hi shr 8;
+  PhysicalLayerHeader.SourceMacAddress[2] := Header.Offset0Hi shr 4;
+  PhysicalLayerHeader.SourceMacAddress[3] := Header.Offset0Hi;
+  PhysicalLayerHeader.SourceMacAddress[4] := Header.Offset0Lo shr 12;
+  PhysicalLayerHeader.SourceMacAddress[5] := Header.Offset0Lo shr 8;
+  PhysicalLayerHeader.DestMacAddress[0] := Header.Offset1Hi shr 12;
+  PhysicalLayerHeader.DestMacAddress[1] := Header.Offset1Hi shr 8;
+  PhysicalLayerHeader.DestMacAddress[2] := Header.Offset1Hi shr 4;
+  PhysicalLayerHeader.DestMacAddress[3] := Header.Offset1Hi;
+  PhysicalLayerHeader.DestMacAddress[4] := Header.Offset1Lo shr 12;
+  PhysicalLayerHeader.DestMacAddress[5] := Header.Offset1Lo shr 8;
+  PhysicalLayerHeader.Protocol := Header.Offset3Hi;
+  {$ENDIF}
   
-  CopyEthMemToRam(ENC_MemoryOffset, @PhysicalLayerHeader, PHYSICAL_LAYER_HEADER_SIZE);     // 1 to 1 mapping overlay for the phy header, easy
+  {$IFDEF ETHERNET_32_BIT_PROCESSOR}
+  PhysicalLayerHeader.SourceMacAddress[0] := Header.Offset0 shr 28;
+  PhysicalLayerHeader.SourceMacAddress[1] := Header.Offset0 shr 24;
+  PhysicalLayerHeader.SourceMacAddress[2] := Header.Offset0 shr 20;
+  PhysicalLayerHeader.SourceMacAddress[3] := Header.Offset0 shr 16;
+  PhysicalLayerHeader.SourceMacAddress[4] := Header.Offset0 shr 12;
+  PhysicalLayerHeader.SourceMacAddress[5] := Header.Offset0 shr 8;
+  PhysicalLayerHeader.DestMacAddress[0] := Header.Offset1 shr 28;
+  PhysicalLayerHeader.DestMacAddress[1] := Header.Offset1 shr 24;
+  PhysicalLayerHeader.DestMacAddress[2] := Header.Offset1 shr 20;
+  PhysicalLayerHeader.DestMacAddress[3] := Header.Offset1 shr 16
+  PhysicalLayerHeader.DestMacAddress[4] := Header.Offset1 shr 12;
+  PhysicalLayerHeader.DestMacAddress[5] := Header.Offset1 shr 8;
+  PhysicalLayerHeader.Protocol := Header.Offset3Hi;
+  {$ENDIF}
+  
   CopyEthMemToRam(ENC_MemoryOffset + PHYSICAL_LAYER_HEADER_SIZE, @Header, IP_HEADER_SIZE); // Read in the entire IP Header
   
   {$IFDEF ETHERNET_16_BIT_PROCESSOR}
@@ -214,7 +250,8 @@ begin
   Eth_PutByte($00);
   if IP_CheckSum = Eth_Cksum(ENC_MemoryOffset + IP_HEADER_OFFSET, IP_HEADER_SIZE) then
   begin
-    CopyEthMemToRam(ENC_MemoryOffset + PHYSICAL_LAYER_HEADER_SIZE + IP_HEADER_SIZE + (IPHeader.IHL - 5), @Header, TCP_HEADER_SIZE);
+
+ //   CopyEthMemToRam(ENC_MemoryOffset + PHYSICAL_LAYER_HEADER_SIZE + IP_HEADER_SIZE + (IPHeader.IHL - 5), @Header, TCP_HEADER_SIZE);
     
     {$IFDEF ETHERNET_16_BIT_PROCESSOR}
     TCPHeader.SourcePort := Header.Offset0Hi;
@@ -245,16 +282,42 @@ begin
     WriteToEthMem(ENC_MemoryOffset + 50, $00);      // Put $0000 in for the Checksum
     Eth_PutByte($00);
 
-    if TCP_Checksum = Eth_Cksum(ENC_MemoryOffset + TCP_HEADER_OFFSET, IPHeader.TotalLength - IP_HEADER_SIZE) then
+  //  if TCP_Checksum = Eth_Cksum(ENC_MemoryOffset + TCP_HEADER_OFFSET, IPHeader.TotalLength - IP_HEADER_SIZE) then
     begin
-      iSocket := TCP_Find_Any_Connection(IPHeader.DestIPAddress, TCPHeader.DestPort);
+  //    iSocket := TCP_Find_Any_Connection(IPHeader.DestIPAddress, TCPHeader.DestPort);
       if iSocket > -1 then
       begin
         Socket := @SocketManager.Socket[iSocket];
-        Socket^.Flags := Socket^.Flags or (TCPHeader.Flags and $003F);  // Only support first 6 bits of flags
+    //    Socket^.Flags := Socket^.Flags or (TCPHeader.Flags and $003F);  // Only support first 6 bits of flags
       end
     end
   end
+end;
+
+procedure TCP_Process_TestForResend(var Socket: TSocket; ResendState: Word);
+begin
+  if Socket.ResendTimeCount > MAX_TCP_RESEND_TIMEOUT then
+    if Socket.ResendAttempts < MAX_TCP_RESEND_ATTEMPTS then
+    begin
+      Socket.ExpireTimeCount := 0;
+      Socket.ResendTimeCount := 0;
+      Inc(Socket.ResendAttempts);
+      Socket.iStateMachine := ResendState                   // Resend
+    end else
+      Socket.iStateMachine := SOCKET_STATE_RESET            // IF CONNECTED THIS SHOULD SEND A FIN-ACK AND GIVE UP
+end;
+
+procedure TCP_Process_ClearTimers(var Socket: TSocket);
+begin
+  Socket.ExpireTimeCount := 0;
+  Socket.ResendTimeCount := 0;
+end;
+
+procedure TCP_Process_ClearTimersAndResendAttempts(var Socket: TSocket);
+begin
+  Socket.ExpireTimeCount := 0;
+  Socket.ResendTimeCount := 0;
+  Socket.ResendAttempts := 0;
 end;
 
 //******************************************************************************
@@ -276,81 +339,107 @@ begin
 
         end;
     SOCKET_STATE_CONNECT :
-        begin   {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_SYN');{$ENDIF}
-          if TransmitterEmpty then
-          begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Loaded to Send');{$ENDIF}
-            // Load up the transmitter with a SYN message
-            TCP_LoadTransmitter(Socket^, SYN_S, 0, nil, PROTOCOL_TCP);
-            Socket^.Flags.SOCKET_FLAG_WAITING_FOR_ACK := 1;
+        begin   
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_SYN');{$ENDIF}
+          if TCP_TryLoadTransmitterAndSend(Socket^, SYN_S) then
+          begin 
+            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Loaded to Send');{$ENDIF}
+            TCP_Process_ClearTimersAndResendAttempts(Socket^);
             Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_SYN_ACK;
           end;
         end;
     SOCKET_STATE_WAITING_FOR_SYN_ACK :
-        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN_ACK');{$ENDIF}
-          if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
+        begin 
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN_ACK');{$ENDIF}
+          if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then                    // Client will send an ACK then a SYN flag (or both at the same time)
           begin
-            // Update the Acknowledge field here
+            Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK := 0;                        // Clear the ACK flag
+            TCP_Process_ClearTimersAndResendAttempts(Socket^);
             Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_SYN;
-          end
+          end else
+            TCP_Process_TestForResend(Socket^, SOCKET_STATE_CONNECT);
         end;
     SOCKET_STATE_WAITING_FOR_SYN :
-        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN');{$ENDIF}
+        begin 
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN');{$ENDIF}
           if Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN = 1 then
           begin
             Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN := 0;
+            TCP_Process_ClearTimersAndResendAttempts(Socket^);
             Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
-          end
+          end else
+            TCP_Process_TestForResend(Socket^, SOCKET_STATE_CONNECT);
         end;
     SOCKET_STATE_CONNECTED :
         begin
           if Socket^.Stop_addr - Socket^.Start_addr > 0 then                    // Do we have some data to send?
           begin
-            Socket^.Exp_Time := 0;                                              // Reset Expiration time
-            if TransmitterEmpty then
+            Socket^.ExpireTimeCount := 0;                                              // Reset Expiration time
+            if TCP_TryLoadTransmitterAndSend(Socket^, PSH_S + ACK_S) then
             begin
               // Send the data here.....
+              if not Socket^.Keep_Alive then
+              begin
+                TCP_Process_ClearTimersAndResendAttempts(Socket^);
+                Socket^.iStateMachine := SOCKET_STATE_DISCONNECT;
+              end
             end
           end else
           begin
-            if (Socket^.Flags.SOCKET_FLAG_FINISH = 1) or (Socket^.Exp_Time > Socket^.Exp_Time_Val) then
-              Socket^.iStateMachine := SOCKET_STATE_DISCONNECT
+            if (Socket^.Flags.SOCKET_FLAG_FINISH = 1) or (Socket^.ExpireTimeCount > Socket^.ExpireTimeMax) then
+            begin
+              TCP_Process_ClearTimersAndResendAttempts(Socket^);
+              Socket^.iStateMachine := SOCKET_STATE_DISCONNECT;
+            end
           end;
         end;
     SOCKET_STATE_DISCONNECT :
         begin
           {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_DISCONNECT');{$ENDIF}
-          if TransmitterEmpty then
-          begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Disconnect Loaded');{$ENDIF}
+          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S) then
+          begin 
+            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Disconnect Sent');{$ENDIF}
             Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN := 0;
             Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK := 0;
-            TCP_LoadTransmitter(Socket^, FIN_S, 0, nil, PROTOCOL_TCP);
+            Socket^.ResendTimeCount := 0;
+            Socket^.ResendAttempts := 0;
             Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN_ACK;
           end
         end;
     SOCKET_STATE_WAITING_FOR_FIN_ACK :
-        begin  {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN_ACK');{$ENDIF}
-          // We have FIN'ed so we can't send anymore but we can receive until we receive and ACK and a FIN
+        begin  
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN_ACK');{$ENDIF}
+          // We have FIN'ed so we can't send anymore but we can receive until we receive a FIN
           if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
           begin
             // Update the Acknowledge field here
             Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN;
-          end
+          end else
+            TCP_Process_TestForResend(Socket^, SOCKET_STATE_DISCONNECT);
         end;
     SOCKET_STATE_WAITING_FOR_FIN :
-        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN');{$ENDIF}
+        begin 
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN');{$ENDIF}
           if Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN = 1 then
           begin
             Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
             Socket^.Flags := 0;
-            Dec(SocketManager.OpenedSockets);
           end
         end;
+    SOCKET_STATE_ERROR :
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_ERROR');{$ENDIF}
+          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S + ACK_S) then
+          begin
+            Socket^.iStateMachine := SOCKET_STATE_RESET;
+          end;
+        end;
     SOCKET_STATE_RESET :
-        begin {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET');{$ENDIF}
+        begin 
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET');{$ENDIF}
           // This will have been set asyncronously from the TCP Receive call
           Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
           Socket^.Flags := 0;
-          Dec(SocketManager.OpenedSockets);
         end;
   end;
 
@@ -358,71 +447,6 @@ begin
   Inc(SocketManager.iLastProcessedSocket);
   if SocketManager.iLastProcessedSocket >= MAX_SOCKET then
     SocketManager.iLastProcessedSocket := 0;
-end;
-
-//******************************************************************************
-//* Name    : Start_TCP_Transmit
-//* Purpose : Process TCP Transmtter
-//******************************************************************************
-procedure Start_TCP_Transmit;
-begin
-  Eth_WriteReg(ETXST_, TXSTART);                                            // Set the start of packet
-  Eth_WriteReg(ETXLEN_, 34 + 40 + SocketManager.Transmitter.DataLength);    // DOUBLE CHECK THE LENGTH CALCULATION>>>>>>>>>>>>
-  Eth_BSF(ECON1_, ECON1_TXRTS_);                                            // Enable the Transmit
-  SocketManager.Transmitter.TimeOutCount := 0;
-end;
-
-//******************************************************************************
-//* Name    : TCP_Process_Transmit
-//* Purpose : Process TCP Transmtter
-//******************************************************************************
-procedure TCP_Process_Transmit;
-var
-  iSocket: Integer;
-begin
-  if SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED = 1 then               // Are we ready to send a packet?
-  begin
-    if SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_TRANSMITTING = 0 then       // If we are ready to send but not sending yet kick it off
-    begin
-      iSocket := TCP_Find_Connection(SocketManager.Transmitter.IPHeader.DestIPAddress, SocketManager.Transmitter.TCPHeader.DestPort);
-      if iSocket > -1 then
-      begin
-        Start_TCP_Transmit;
-        SocketManager.Transmitter.RetransmitCount := 0;
-        SocketManager.Transmitter.Watchdog := 0;
-        SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_TRANSMITTING := 1;
-      end else
-        TCP_ClearTransmitter
-    end else
-    begin
-      if (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) = 0 then                        // Has the device sent the packet out the wire yet?
-      begin
-        iSocket := TCP_Find_Connection(SocketManager.Transmitter.IPHeader.DestIPAddress, SocketManager.Transmitter.TCPHeader.DestPort);
-        if iSocket > -1 then
-        begin
-          if (SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ACK_ERROR = 1) or (SocketManager.Transmitter.TimeOutCount > SocketManager.TCP_Wait) then
-          begin
-            SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ACK_ERROR := 0;
-            Inc(SocketManager.Transmitter.RetransmitCount);
-            if SocketManager.Transmitter.RetransmitCount < MAX_TCP_RETRANSMIT_COUNT then   // Try it a few times
-              Start_TCP_Transmit
-            else
-              TCP_ClearTransmitter
-          end else
-          begin
-            if SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_WAITING_FOR_ACK = 0 then    // Done, move on
-              TCP_ClearTransmitter
-          end
-        end else
-          TCP_ClearTransmitter
-      end else
-      begin
-        Inc(SocketManager.Transmitter.Watchdog);                                // Make sure we don't get hung if the ENC fails to send the packet
-        if SocketManager.Transmitter.Watchdog = $FFFF then
-          TCP_ClearTransmitter
-      end
-    end
-  end
 end;
 
 (*
@@ -477,7 +501,7 @@ begin
       Exit;
   end;
 
-  TCP_WriteToWire_Internal(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, BytesToWrite, (SocketManager.Socket[iSocket].SEQ_No_S + AddressOffset), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
+  TCP_WriteToWire_Internal(SocketManager.Socket[iSocket].source_port_S, SocketManager.Socket[iSocket].dest_port_S, BytesToWrite, (SocketManager.Socket[iSocket].SequenceNumber + AddressOffset), SocketManager.Socket[iSocket].ACK_No_S, TCP_Flag_T);
 
   Result := BytesToWrite;
 end;
@@ -538,7 +562,7 @@ begin
     MaxPacketDataSize := 1300;
     Stop_addr_S := SocketManager.Socket[iSocket].Stop_addr;
     Start_addr_S := SocketManager.Socket[iSocket].Start_addr;
-    seq_buf := SocketManager.Socket[iSocket].SEQ_No_S;
+    seq_buf := SocketManager.Socket[iSocket].SequenceNumber;
     AddressDelta := (Stop_addr_S - Start_addr_S);
 
     SocketManager.Socket[iSocket].Wait_ACK := 1;
@@ -551,7 +575,7 @@ begin
       if SocketManager.Socket[iSocket].Wait_ACK = 0 then                        // Not waiting anymore, received
       begin
     //    SocketManager.Socket[iSocket].Wait_ACK := 1;
-    //    if seq_buf <> SocketManager.Socket[iSocket].SEQ_No_S then               // The SEQ_No_S is updated in the receive of the ACK, needs to be better for error detection
+    //    if seq_buf <> SocketManager.Socket[iSocket].SequenceNumber then               // The SequenceNumber is updated in the receive of the ACK, needs to be better for error detection
           Break;
       end;
     end;
@@ -904,13 +928,13 @@ begin
     end;
 
     SocketManager.Socket[iSocket].Wait_Ack := 0;
-    SocketManager.Socket[iSocket].SEQ_No_S := SEQ_No;
+    SocketManager.Socket[iSocket].SequenceNumber := SEQ_No;
     SocketManager.Socket[iSocket].ACK_No_S := ACK_No;
     SocketManager.Socket[iSocket].dest_port_S := dest_port2;
     SocketManager.Socket[iSocket].source_port_S := source_port2;
     Mem_Cpy(@SocketManager.Socket[iSocket].Dest_Ip, @dest_ip_addr, 4);
     Mem_Cpy(@SocketManager.Socket[iSocket].Dest_Mac, @dest_mac2, 6);
-    SocketManager.Socket[iSocket].Exp_Time := 0;
+    SocketManager.Socket[iSocket].ExpireTimeCount := 0;
     SocketManager.Socket[iSocket].Start_addr := 0;
     SocketManager.Socket[iSocket].Stop_addr := 0;
     SocketManager.Socket[iSocket].Keep_Alive := True; // Keep Alive
@@ -942,8 +966,8 @@ begin
         SocketManager.Socket[iSocket].State.SOCKET_STATE_CONNECTED := 1;
         SocketManager.Socket[iSocket].Wait_ACK := 0;
         SocketManager.Socket[iSocket].ACK_No_S := SEQ_NoR;
-        SocketManager.Socket[iSocket].SEQ_No_S := ACK_NoR;
-        SocketManager.Socket[iSocket].Exp_Time := 0; // keep Alive
+        SocketManager.Socket[iSocket].SequenceNumber := ACK_NoR;
+        SocketManager.Socket[iSocket].ExpireTimeCount := 0; // keep Alive
         Exit;
       end else
       begin                                       
@@ -958,9 +982,9 @@ begin
         ACK_No := SEQ_NoR + PacketLen;
         TCP_FlagSend := ACK_S;
 
-        SocketManager.Socket[iSocket].SEQ_No_S := SEQ_No;
+        SocketManager.Socket[iSocket].SequenceNumber := SEQ_No;
         SocketManager.Socket[iSocket].ACK_No_S := ACK_No;
-        SocketManager.Socket[iSocket].Exp_Time := 0; // keep Alive
+        SocketManager.Socket[iSocket].ExpireTimeCount := 0; // keep Alive
 
         if PacketLen <> 0 then                                                // We were sent data so we must ACK back
         begin

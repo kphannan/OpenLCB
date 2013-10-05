@@ -365,7 +365,7 @@ var
   TCP_buf_start: ^byte;
   TCP_buf_size: word;
   OlcbPacketLength: Word;
-begin
+begin           (*
   if SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED = 0 then               // Is the transmitter empty?
   begin
     TCP_buf_start := @SocketManager.Transmitter.DataBuffer;
@@ -415,7 +415,7 @@ begin
     end;
    // TCP_LoadBuffer(SocketManager.Transmitter.PhysicalLayerHeader, SocketManager.Transmitter.IPHeader, SocketManager.Transmitter.TCPHeader);
   end;
-
+        *)
     (*
   TCP_buf_start := @TCP_buf[0];
   TCP_buf_size := 0;

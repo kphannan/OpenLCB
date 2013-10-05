@@ -47,81 +47,37 @@ type
 
 
 const
-  PHYSICAL_LAYER_HEADER_OFFSET = 0;
-  PHYSICAL_LAYER_HEADER_SIZE = 14;
+  PHYSICAL_LAYER_HEADER_OFFSET = 0;                                             // Where the Physical Layer Header starts with respect to the beginning of the message
+  PHYSICAL_LAYER_HEADER_SIZE = 14;                                              // Number of bytes in the Physical Layer Header
 type
   TPhysicalLayerHeader = record
     SourceMacAddress,
-    DestMacAddress: DWord;
+    DestMacAddress: TMacAddress;
     Protocol: Word;
   end;
 
 const
-  IP_HEADER_OFFSET = 14;
-  IP_HEADER_SIZE = 20;
-type
-  TIPHeader = record
-    Version,
-    IHL,
-    DSCP,
-    ECN:  Byte;
-    TotalLength: Word;
-    Identification: Word;
-    Flags: Byte;
-    FragmentOffset: Word;
-    TimeToLive: Byte;
-    Protocol: Byte;
-    SourceIPAddress,
-    DestIPAddress: TIPAddress;
-  end;
+  IP_HEADER_OFFSET = 14;                                                        // Where the IP Header starts with respect to the beginning of the message
+  IP_HEADER_SIZE = 20;                                                          // Number of bytes in the IP Header
+  IP_CHECKSUM_OFFSET = IP_HEADER_OFFSET + 10;
   
 const
-  TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;  
-  TCP_HEADER_SIZE = 20;
-  TCP_DATA_OFFSET = TCP_HEADER_OFFSET + TCP_HEADER_SIZE;
+  TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;                                    // Where the TCP Header starts with respect to the beginning of the message
+  TCP_HEADER_SIZE = 20;                                                         // Number of bytes in the TCP Header
+  TCP_DATA_OFFSET = TCP_HEADER_OFFSET + TCP_HEADER_SIZE;                        // Were the TCP data is with respect to the beginning of the message
+  TCP_IP_HEADER_SIZE = TCP_HEADER_SIZE + IP_HEADER_SIZE;
+  TCP_CHECKSUM_OFFSET = TCP_HEADER_OFFSET + 16;
+  
+const
+  MAX_ETHERNET_HEADERLINE_BYTES = 4;
 type
-  TTCPHeader = record
-    SourcePort,
-    DestPort:  Word;
-    SequenceNumber: DWord;
-    AckNumber: DWord;
-    DataOffset: Byte;
-    Flags: Word;
-    WindowSize: Word;
-    UrgentPtr: Word;
-  end;
+  TEthernetHeaderLine = array[MAX_ETHERNET_HEADERLINE_BYTES] of Byte;                             // Header "Line" is 32 bits for Ethernet
+  
+const
+  MAX_ETHERNET_HEADERLINE = 5;
+type
+  TEthernetHeader = array[MAX_ETHERNET_HEADERLINE] of TEthernetHeaderLine;
 
-  {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-  TRawHeader = record
-    Offset0Hi,
-    Offset0Lo,
-    Offset1Hi,
-    Offset1Lo,
-    Offset2Hi,
-    Offset2Lo,
-    Offset3Hi,
-    Offset3Lo,
-    Offset4Hi,
-    Offset4Lo,
-    Offset5Hi,
-    Offset5Lo: Word;
-  end;
-  {$ELSE}
-    {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-    TRawHeader = record
-      Offset0,
-      Offset1,
-      Offset2,
-      Offset3,
-      Offset4,
-      Offset5: DWord;
-    end;
-    {$ELSE}
-    TRawHeader = record
-      Error: TError;    // Must define the number of Bits in the Options file
-    end;
-    {$ENDIF}
-  {$ENDIF}
   
 var
   TickCounter1,           // Used: ARP_Validate_IP, DHCP_Request, Dns_Resolve, Ping_Send,

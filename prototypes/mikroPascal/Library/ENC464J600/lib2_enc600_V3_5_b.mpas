@@ -89,7 +89,8 @@ begin
     i := 0;
     while i < MAX_SOCKET do
       begin
-        inc(SocketManager.Socket[i].Exp_Time);
+        inc(SocketManager.Socket[i].ExpireTimeCount);
+        inc(SocketManager.Socket[i].ResendTimeCount);
         inc(i);
       end;
       
@@ -337,7 +338,6 @@ begin
     begin
       Do_Ethernet_Receive;      // Look for incoming
       TCP_Process_Stack;        // Process Sockets
-      TCP_Process_Transmit;
       inc(i);
   end;
 end;
@@ -410,10 +410,10 @@ begin
           SocketManager.Socket[i].Start_addr := 0;
           SocketManager.Socket[i].Stop_addr := 0;
         end else 
-          SocketManager.Socket[i].Exp_Time := 0;
+          SocketManager.Socket[i].ExpireTimeCount := 0;
         {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Connected with data.............<END>' + LF);{$ENDIF}
       end else
-      if (SocketManager.Socket[i].Keep_Alive = False) or (SocketManager.Socket[i].Exp_Time > SocketManager.Socket[i].Exp_Time_Val) then // 1 minutes without activity (60 * 1) sec
+      if (SocketManager.Socket[i].Keep_Alive = False) or (SocketManager.Socket[i].ExpireTimeCount > SocketManager.Socket[i].Exp_Time_Val) then // 1 minutes without activity (60 * 1) sec
       begin
         {$IFDEF LOG_UART}
         if (SocketManager.Socket[i].Keep_Alive = False) then
@@ -438,7 +438,7 @@ begin
     if (SocketManager.Socket[i].State.SOCKET_STATE_WAITING_FOR_CONNECTION = 1) then // waiting for connection
     begin
       {$IFDEF LOG_UART}UART1_Write_Text(LF+'Do_TCP_Stack: Socket Waiting for Connection.............<START>' + LF);{$ENDIF}
-      if (SocketManager.Socket[i].Exp_Time > 9) then // 10 sec without response at SYN
+      if (SocketManager.Socket[i].ExpireTimeCount > 9) then // 10 sec without response at SYN
       begin
         {$IFDEF LOG_UART}UART1_Write_Text('Do_TCP_Stack: Socket waiting for Connection Expired, killing socket' + LF);{$ENDIF}
         SocketManager.Socket[i].RAM_ROM := 0;

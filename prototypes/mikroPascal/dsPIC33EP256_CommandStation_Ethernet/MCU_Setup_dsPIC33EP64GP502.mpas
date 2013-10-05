@@ -77,6 +77,12 @@ begin
   Settings.eth_ntp_addr[1]    := 6;
   Settings.eth_ntp_addr[2]    := 15;
   Settings.eth_ntp_addr[3]    := 29;
+  
+  Settings.IP_Version := 4; // IPv4
+  Settings.IP_DSCP := 0;
+  Settings.IP_ECN := 0;
+  Settings.IP_FragmentationFlags := %010;  // don't allow fragmentation
+  Settings.IP_TimeToLive := 128;
 
   
   SPI1_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, _SPI_PRESCALE_SEC_1, _SPI_PRESCALE_PRI_4,

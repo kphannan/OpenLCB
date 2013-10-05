@@ -40,7 +40,8 @@ const
   SOCKET_STATE_DISCONNECT             = 5;
   SOCKET_STATE_WAITING_FOR_FIN_ACK    = 6;
   SOCKET_STATE_WAITING_FOR_FIN        = 7;
-  SOCKET_STATE_RESET                  = 8;
+  SOCKET_STATE_ERROR                  = 8;
+  SOCKET_STATE_RESET                  = 9;
   
   SOCKET_FLAG_RECEIVED_FIN            = 0;  // Order matters it maps to the TCP Flags
   SOCKET_FLAG_RECEIVED_SYN            = 1;
@@ -50,58 +51,40 @@ const
   SOCKET_FLAG_RECEIVED_URG            = 5;
   
   SOCKET_FLAG_ALLOCATED               = 6;
-  SOCKET_FLAG_CONNECTED               = 7;   // Bit 1
-  SOCKET_FLAG_WAITING_FOR_ACK         = 8;   // Bit 2, 0 if not waiting for an ACK; 1 if Waiting for an ACK
-  SOCKET_FLAG_FINISH                  = 9;   // Bit 3, Flagged to finish and disconnect
+  SOCKET_FLAG_CONNECTED               = 7;    // Bit 1
+//  SOCKET_FLAG_WAITING_FOR_ACK         = 8;    // Bit 2, 0 if not waiting for an ACK; 1 if Waiting for an ACK
+  SOCKET_FLAG_FINISH                  = 9;    // Bit 3, Flagged to finish and disconnect
   SOCKET_FLAG_ACK_ERROR               = 10;   // Bit 4, Returned ACK had an invalid SEQ value
   
   
 type
   TSocket = record
-    iStateMachine   : Word;        // See SOCKET_STATE_xxxx constants
-    Flags           : Word;        // See SOCKET_FLAG_xxxx contants
-    SourcePort      : Word;        // Port of the source (us)
+    iStateMachine   : Word;          // See SOCKET_STATE_xxxx constants
+    Flags           : Word;          // See SOCKET_FLAG_xxxx contants
+    SourcePort      : Word;          // Port of the source (us)
     DestIP          : TIPAddress;    // Ip of the resource to send the data to
     DestMAC         : TMACAddress;   // MAC of the resource to send the data to
-    DestPort        : Word;        // Port of the resource to send the data to
-    Seq_No_S        : DWord;       // Sequence number for the TCP conversation with the other resource
-    Ack_No_S        : DWord;       // Ack sequence number for the TCP conversation with the other resource
-    Wait_ACK        : Word;        // Set to 1 if the socket is waiting for an ACK from the client
-    Exp_Time        : Word;        // Counter increments every 1s to allow auto destruction of socket after Exp_Time_Val has expired
-    Exp_Time_Val    : Word;        // Default set to 12 seconds, global set this value with the Set_TCP_TimeOut_Interval function
-    Start_addr      : DWord;       // The start of the valid data in the TCP_buf
-    Stop_addr       : DWord;       // The end of the valid data in the TCP_buf
+    DestPort        : Word;          // Port of the resource to send the data to
+    SequenceNumber  : DWord;         // Sequence number for the TCP conversation with the other resource
+    AckNumber       : DWord;         // Ack sequence number for the TCP conversation with the other resource
+    Identification  : Word;          // ID of the packet to handle fragmentation (if allowed)
+    ExpireTimeCount : Word;          // Counter increments every 1s to allow auto destruction of socket after ExpireTimeMax has expired
+    ExpireTimeMax   : Word;          // Default set to 12 seconds, global set this value with the Set_TCP_TimeOut_Interval function
+    ResendAttempts  : Word;          // Number of times the Socket has tried to send it payload
+    ResendTimeCount : Word;          // counter increments every Nms waiting for a reply (if needed), if the timer times out and the Resend Count is less than MAX_RESEND_TRIES the packet is resetn
+    Start_addr      : DWord;         // The start of the valid data in the TCP_buf
+    Stop_addr       : DWord;         // The end of the valid data in the TCP_buf
     RAM_ROM         : Word;
-    Keep_Alive      : Boolean;     // [DEFAULT] = True; Keeps the socket alive (until the Exp_Time_Val expires at least) when it is empty.  If false then once the data is sent the socket is released.
+    Keep_Alive      : Boolean;       // [DEFAULT] = True; Keeps the socket alive (until the ExpireTimeMax expires at least) when it is empty.  If false then once the data is sent the socket is released.
     TCP_buf         : string[MAX_DATA_BUFFER_LENGTH];
-  end;
-  
-const
-  SOCKET_TX_FLAG_LOADED       = 0;                                              // Bit 0, 0 = transmitter has nothing to transmit; 1 = transmitter is loaded and ready (or already) transmitting
-  SOCKET_TX_FLAG_TRANSMITTING = 1;                                              // Bit 1, 0 = not in the middle of a transmission; 1 = in the middle of a transmission
-
-type
-  TSocketTransmitter = record
-    Flags: Word;                                                                // State of the TCP Transmitter see TX_FLAG_xxxx constants
-    PhysicalLayerHeader: TPhysicalLayerHeader;                                  // Current info for the Physical Layer of the current transmission
-    IPHeader: TIPHeader;                                                        // Current info for the IP Layer of the current transmission
-    TCPHeader: TTCPHeader;                                                      // Current info for the TCP Layer of the current transmission
-    DataLength: Word;                                                           // Length of the data Buffer
-    DataBuffer: string[MAX_DATA_BUFFER_LENGTH];                                 // Raw data to send, note this does not have to be a string
-    TimeOutCount: Word;                                                         // Timeout counter waiting for the TCP_Wait time to be met or an ACK to be received
-    RetransmitCount: Word;                                                      // Number of times the Data has been retransmitted up to MAX_TCP_RETRANSMIT_COUNT
-    Watchdog: Word;                                                             // Increments each time the Do Transmit function is called, detects if the ENC never signals the packet was sent.  Allows us to not get hungup if a glitch occurs in the ENC
   end;
 
   TSocketManager = record
     TCP_Wait,
     UDP_Wait : Word;                                                            // milliSeconds to wait for replies to TCP or UDP calls
     Socket : array[MAX_SOCKET] of TSocket;
-    Transmitter: TSocketTransmitter;
-    IdentificationCounter: Word;                                                // Unique ID for fragments
     iLastProcessedSocket: Integer;                                              // Last index of the Socket that was processed in the process loop
     iLastOpenedSocked : Word;                                                   // Last Socket index that was opened
-    OpenedSockets: Word;                                                        // Number of Opened Sockets
   end;
   
 // User functions
@@ -110,7 +93,6 @@ function TCP_Close_Connection(var DestIP : TIPAddress; DestPort : Word) : Boolea
 function TCP_Find_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 function TCP_Find_Any_Connection(var DestIP: TIPAddress; DestPort: Word): Integer;
 function TCP_Find_Free_Socket: Integer;
-procedure TCP_ClearTransmitter;
 procedure TCP_Set_TimeOut_Interval_Global(NewTimeOut : Word);
 
 function Port_Find(Protocol: Word; Port: Word) : Boolean;
@@ -118,13 +100,6 @@ function Port_Open_UDP(Port: Word): Boolean;
 function Port_Open_TCP(Port: Word): Boolean;
 function Port_Close_UDP(Port: Word): Boolean;
 function Port_Close_TCP(Port: Word): Boolean;
-
-procedure TCP_LoadPhysicalLayerHeader(var PhyBuffer: TPhysicalLayerHeader; var SourceMAC: TMACAddress; var DestMAC: TMACAddress);
-procedure TCP_LoadIPLayerHeader(var IPBuffer: TIPHeader; var SourceIP: TIPAddress; var DestIP: TIPAddress; DataLen: Word; Protocol: Word);
-procedure TCP_LoadTCPLayerHeader(var TCPBuffer: TTCPHeader; SourcePort, DestPort: Word; SequenceNumber, AckNumber: DWord; Flags: Word);
-procedure TCP_LoadTransmitter(var Socket: TSocket; IPFlags: Word; DataLen: Word; SendData: ^Byte; Protocol: Word);
-
-function TransmitterEmpty: Boolean;
 
 procedure PrintTransmitterHeaders;
 
@@ -153,32 +128,71 @@ begin
   Mem_Set(@SocketManager.Socket[iSocket].DestIP, 0, 4);
   Mem_Set(@SocketManager.Socket[iSocket].DestMAC, 0, 6);
   SocketManager.Socket[iSocket].DestPort := 0;
-  SocketManager.Socket[iSocket].SEQ_No_S := 0;
-  SocketManager.Socket[iSocket].ACK_No_S := 0;
-  SocketManager.Socket[iSocket].Wait_ACK := 0;
-  SocketManager.Socket[iSocket].Exp_Time := 0;
-  SocketManager.Socket[iSocket].Exp_Time_Val := SOCKET_EXPIRE_TIME;
+  SocketManager.Socket[iSocket].SequenceNumber := 0;
+  SocketManager.Socket[iSocket].AckNumber := 0;
+  SocketManager.Socket[iSocket].ExpireTimeCount := 0;
+  SocketManager.Socket[iSocket].ExpireTimeMax := SOCKET_EXPIRE_TIME;
+  SocketManager.Socket[iSocket].ResendAttempts := 0;
+  SocketManager.Socket[iSocket].ResendTimeCount := 0;
   SocketManager.Socket[iSocket].Start_addr := 0;
   SocketManager.Socket[iSocket].Stop_addr := 0;
   SocketManager.Socket[iSocket].RAM_ROM := 0;
   SocketManager.Socket[iSocket].Keep_Alive := false;
   SocketManager.Socket[iSocket].TCP_buf := '';
-  SocketManager.OpenedSockets := 0;
 end;
 
 procedure PrintTransmitterHeaders;
 begin
+{
   Mac2Str(SocketManager.Transmitter.PhysicalLayerHeader.SourceMacAddress, s1);
-  UART1_Write_Text('Source MAC Address: ' + s1);
+  UART1_Write_Text('Source MAC Address: ' + s1 + LF);
   Mac2Str(SocketManager.Transmitter.PhysicalLayerHeader.DestMacAddress, s1);
-  UART1_Write_Text('Destination MAC Address: ' + s1);
+  UART1_Write_Text('Destination MAC Address: ' + s1 + LF);
   WordToStr( SocketManager.Transmitter.PhysicalLayerHeader.Protocol, s1);
-  UART1_Write_Text('Phy Protocol: ' + s1);
-end;
-
-function TransmitterEmpty: Boolean;
-begin
-  Result := SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED = 0
+  UART1_Write_Text('Phy Protocol: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.Version, s1);
+  UART1_Write_Text('IP Version: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.IHL, s1);
+  UART1_Write_Text('IP IHL: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.DSCP, s1);
+  UART1_Write_Text('IP DSCP: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.ECN, s1);
+  UART1_Write_Text('IP ENC: ' + s1 + LF);
+  WordToStr( SocketManager.Transmitter.IPHeader.TotalLength, s1);
+  UART1_Write_Text('IP TotalLength: ' + s1 + LF);
+  WordToStr( SocketManager.Transmitter.IPHeader.Identification, s1);
+  UART1_Write_Text('IP Identification: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.Flags, s1);
+  UART1_Write_Text('IP Flags: ' + s1 + LF);
+  WordToStr( SocketManager.Transmitter.IPHeader.FragmentOffset, s1);
+  UART1_Write_Text('IP Fragement Offset: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.TimeToLive, s1);
+  UART1_Write_Text('IP Time To Live: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.IPHeader.Protocol, s1);
+  UART1_Write_Text('IP Protocol: ' + s1 + LF);
+  IP2Str(SocketManager.Transmitter.IPHeader.SourceIPAddress, s1);
+  UART1_Write_Text('IP Source Address: ' + s1 + LF);
+  IP2Str(SocketManager.Transmitter.IPHeader.DestIPAddress, s1);
+  UART1_Write_Text('IP Dest Address: ' + s1 + LF);
+  
+  WordToStr( SocketManager.Transmitter.TCPHeader.SourcePort, s1);
+  UART1_Write_Text('TCP Source Port: ' + s1 + LF);
+  WordToStr( SocketManager.Transmitter.TCPHeader.DestPort, s1);
+  UART1_Write_Text('TCP Dest Port: ' + s1 + LF);
+  LongWordToStr( SocketManager.Transmitter.TCPHeader.SequenceNumber, s1);
+  UART1_Write_Text('TCP Sequence Number: ' + s1 + LF);
+  LongWordToStr( SocketManager.Transmitter.TCPHeader.SequenceNumber, s1);
+  UART1_Write_Text('TCP Ack Number: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.TCPHeader.DataOffset, s1);
+  UART1_Write_Text('TCP Data Offset: ' + s1 + LF);
+  ByteToStr( SocketManager.Transmitter.TCPHeader.Flags, s1);
+  UART1_Write_Text('TCP Flags: ' + s1 + LF);
+  WordToStr( SocketManager.Transmitter.TCPHeader.WindowSize, s1);
+  UART1_Write_Text('TCP Window Size: ' + s1 + LF);
+  WordToStr( SocketManager.Transmitter.TCPHeader.UrgentPtr, s1);
+  UART1_Write_Text('TCP Urgent Ptr: ' + s1 + LF);
+  
+  }
 end;
 
 procedure Sockets_Init_Internal;
@@ -188,20 +202,12 @@ begin
   Mem_Set(@TCP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports Word format
   Mem_Set(@UDP_Opened_Ports, 0, MAX_SOCKET*2); // clear ports Word format
   SocketManager.iLastProcessedSocket := 0;
-  SocketManager.Transmitter.Flags := 0;
-  SocketManager.IdentificationCounter := 1000;
   iSocket := 0;
   while iSocket < MAX_SOCKET do
   begin
     InitSocket(iSocket);
     Inc(iSocket)
   end
-end;
-
-procedure TCP_ClearTransmitter;
-begin
-  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_TRANSMITTING := 0;       // Can't find a matching Socket
-  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED := 0;
 end;
   
 //******************************************************************************
@@ -228,13 +234,12 @@ begin
         InitSocket(iSocket);
         SocketManager.Socket[iSocket].Flags.SOCKET_FLAG_ALLOCATED := 1;
         SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_CONNECT;
-        SocketManager.Socket[iSocket].SEQ_No_S := 12345;
+        SocketManager.Socket[iSocket].SequenceNumber := 12345;
         SocketManager.Socket[iSocket].DestPort := DestPort;
         SocketManager.Socket[iSocket].SourcePort := SourcePort;
         Mem_Cpy(@SocketManager.Socket[iSocket].DestIP, @DestIP, 4);
         Mem_Cpy(@SocketManager.Socket[iSocket].DestMAC, @DestMAC, 6);
         SocketManager.Socket[iSocket].Keep_Alive := True;
-        Inc(SocketManager.OpenedSockets);
       end else
         Result := RESULT_OPEN_TCP_CONNECTION_NO_SOCKETS;  // Out of sockets
     end
@@ -339,7 +344,7 @@ begin
   iSocket := 0;
   while iSocket < MAX_SOCKET do
     begin
-      SocketManager.Socket[iSocket].Exp_Time_Val := NewTimeout;
+      SocketManager.Socket[iSocket].ExpireTimeMax := NewTimeout;
       Inc(iSocket)
     end;
 end;
@@ -455,52 +460,6 @@ end;
 function Port_Close_TCP(Port : Word): Boolean;
 begin
   Result := Port_Close(PROTOCOL_TCP, Port);
-end;
-
-procedure TCP_LoadPhysicalLayerHeader(var PhyBuffer: TPhysicalLayerHeader; var SourceMAC: TMACAddress; var DestMAC: TMACAddress);
-begin
-  memcpy(@PhyBuffer.SourceMacAddress, @SourceMAC, MAC_ADDRESS_LEN);
-  memcpy(@PhyBuffer.DestMacAddress, @DestMAC, MAC_ADDRESS_LEN);
-  PhyBuffer.Protocol := $0800;              // IP
-end;
-
-procedure TCP_LoadIPLayerHeader(var IPBuffer: TIPHeader; var SourceIP: TIPAddress; var DestIP: TIPAddress; DataLength: Word; Protocol: Word);
-begin
-  IPBuffer.Version := 4;                                                        // IPv4
-  IPBuffer.IHL := 5;                                                            // Internet Header Length, 5 - 32bit blocks = no options
-  IPBuffer.DSCP := 0 ;                                                          // Differentiated Services Code Point
-  IPBuffer.ECN := 0;                                                            // Explicit Congestion Notification
-  IPBuffer.TotalLength := DataLength + IP_HEADER_SIZE + TCP_HEADER_SIZE;
-  Inc(SocketManager.IdentificationCounter);
-  IPBuffer.Identification := SocketManager.IdentificationCounter;
-  IPBuffer.Flags := %010;                                                       // Don't Fragment (DF)
-  IPBuffer.FragmentOffset := 0;
-  IPBuffer.TimeToLive := 128;                                                   // 128 Seconds
-  IPBuffer.Protocol := Protocol;
-  memcpy(@IPBuffer.SourceIPAddress, @SourceIP, IP_ADDRESS_LEN);
-  memcpy(@IPBuffer.DestIPAddress, @DestIP, IP_ADDRESS_LEN);
-end;
-
-procedure TCP_LoadTCPLayerHeader(var TCPBuffer: TTCPHeader; SourcePort, DestPort: Word; SequenceNumber, AckNumber: DWord; Flags: Word);
-begin
-  TCPBuffer.SourcePort := SourcePort;
-  TCPBuffer.DestPort := DestPort;
-  TCPBuffer.SequenceNumber := SequenceNumber;
-  TCPBuffer.AckNumber := AckNumber;
-  TCPBuffer.Flags := Flags;
-  TCPBuffer.WindowSize := 0;
-  TCPBuffer.UrgentPtr := 0;
-end;
-
-procedure TCP_LoadTransmitter(var Socket: TSocket; IPFlags: Word; DataLen: Word; SendData: ^Byte; Protocol: Word);
-begin
-  TCP_LoadPhysicalLayerHeader(SocketManager.Transmitter.PhysicalLayerHeader, Settings.eth_mac, Socket.DestMAC);
-  TCP_LoadIPLayerHeader(SocketManager.Transmitter.IPHeader, Settings.eth_ip_addr, Socket.DestIP, DataLen, Protocol);
-  TCP_LoadTCPLayerHeader(SocketManager.Transmitter.TCPHeader, Socket.SourcePort, Socket.DestPort, Socket.Seq_No_S, Socket.Ack_No_S, IPFlags);
-  if SendData <> nil then
-    memcpy(@SocketManager.Transmitter.DataBuffer, SendData, DataLen);
-  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_LOADED := 1;
-  SocketManager.Transmitter.Flags.SOCKET_TX_FLAG_TRANSMITTING := 0;
 end;
 
 end.

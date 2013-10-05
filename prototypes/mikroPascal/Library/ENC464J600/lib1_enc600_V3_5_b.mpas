@@ -46,6 +46,8 @@ function Eth_Cksum(start_eth_address, length_w : word) : word;
 
 procedure Eth_Policy(poli : byte);
 
+function EthernetTransmitting: Boolean;
+
 // Internally used functions
 Procedure Common_Reject_Internal(EthMemAddressRequest: Word);
 
@@ -69,6 +71,11 @@ type
     UDP_Broadcast: Boolean;                                                     // Forces the UDP packet to be broadcast to all devices on the segment not to a target IP
     DHCP_Enable : Boolean;                                                      // Enabled DHCP
     DHCP_Lease_Time : dword;                                                    // Time before renewing the IP
+    IP_Version: Byte;
+    IP_DSCP: Byte;
+    IP_ECN: Byte;
+    IP_FragmentationFlags: Byte;                                                // Bit 0 = Reserved, Bit 1 = Don't Fragment, Bit 2 = More Fragments are comming (until the last then this is cleared)
+    IP_TimeToLive: Byte;
   end;
   
 var
@@ -759,5 +766,10 @@ Begin
   Eth_PutByte(Lo(cksum));
   Eth_Send(PacketSize+14);
 End;
+
+function EthernetTransmitting: Boolean;
+begin
+  Result := (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) = 0   // Transmit Request to Send and Status bit check
+end;
 
 end.
