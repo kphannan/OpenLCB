@@ -71,12 +71,14 @@ end;
 procedure CounterTask;
 var i : byte;
 begin
+  // THESE INCREASE EVERY 1ms
   Ping_CacheTimerTask;
   inc(TickCounter1);
   inc(TickCounter10);
   
   if inc(count_100) > 99 then
   begin
+    // THESE INCREASE EVER 100ms
     Inc(ARP_100ms_Counter);
     inc(DHCP_count_1);
     count_100 := 0;
@@ -84,6 +86,7 @@ begin
     
   if inc(NTP_Sec) > (999 + offset_clock_err) then  // 1 sec
   begin
+    // THESE INCREASE EVERY 1 SECOND
     NTP_Sec := 0;
     
     i := 0;

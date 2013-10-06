@@ -51,22 +51,23 @@ const
   PHYSICAL_LAYER_HEADER_SIZE = 14;                                              // Number of bytes in the Physical Layer Header
 type
   TPhysicalLayerHeader = record
-    SourceMacAddress,
-    DestMacAddress: TMacAddress;
-    Protocol: Word;
+    DestMacAddress,
+    SourceMacAddress: TMacAddress;
+    Protocol: array[2] of Byte;                                                 // This is because if we make it a word mPascal stores it in little endian so it is backwards. This forces correct ordering of bytes when assigned
   end;
 
 const
   IP_HEADER_OFFSET = 14;                                                        // Where the IP Header starts with respect to the beginning of the message
   IP_HEADER_SIZE = 20;                                                          // Number of bytes in the IP Header
   IP_CHECKSUM_OFFSET = IP_HEADER_OFFSET + 10;
+  IP_SOURCE_ADDRESS_OFFSET = IP_HEADER_OFFSET + 12;
   
 const
   TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;                                    // Where the TCP Header starts with respect to the beginning of the message
   TCP_HEADER_SIZE = 20;                                                         // Number of bytes in the TCP Header
   TCP_DATA_OFFSET = TCP_HEADER_OFFSET + TCP_HEADER_SIZE;                        // Were the TCP data is with respect to the beginning of the message
-  TCP_IP_HEADER_SIZE = TCP_HEADER_SIZE + IP_HEADER_SIZE;
-  TCP_CHECKSUM_OFFSET = TCP_HEADER_OFFSET + 16;
+  TCP_CHECKSUM_OFFSET = TCP_HEADER_OFFSET + 16;                                 // Offset into the TCP Header for the Checksum field
+  PSUDO_HEADER_SIZE = 12;                                                       // Used to build the TCP Checksum
   
 const
   MAX_ETHERNET_HEADERLINE_BYTES = 4;

@@ -46,7 +46,7 @@ function Eth_Cksum(start_eth_address, length_w : word) : word;
 
 procedure Eth_Policy(poli : byte);
 
-function EthernetTransmitting: Boolean;
+function EthernetTransmitIdle: Boolean;
 
 // Internally used functions
 Procedure Common_Reject_Internal(EthMemAddressRequest: Word);
@@ -767,7 +767,7 @@ Begin
   Eth_Send(PacketSize+14);
 End;
 
-function EthernetTransmitting: Boolean;
+function EthernetTransmitIdle: Boolean;
 begin
   Result := (Eth_ReadReg(ECON1_) and ECON1_TXRTS_) = 0   // Transmit Request to Send and Status bit check
 end;

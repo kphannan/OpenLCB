@@ -24,7 +24,9 @@ const
   MAX_DATA_BUFFER_LENGTH          = 1024;
   MAX_TCP_RETRANSMIT_COUNT        = 3;                                          // Number of times to try to retransmit the TCP packet waiting for an ACK
   
-  SOCKET_EXPIRE_TIME              = $FFFF;   // In 100ms chunks
+  SOCKET_EXPIRE_TIME_DEFAULT      = $000A;   // Release the Socket after 10 seconds
+  MAX_TCP_RESEND_ATTEMPTS = 5;               // Attempt to resend 5 times before giving up
+  MAX_TCP_RESEND_TIMEOUT = 2;                // Resend TCP packet if no response within 2 seconds
   
   PROTOCOL_ICMP                  = 1;
   PROTOCOL_IGMP                  = 2;
@@ -34,14 +36,15 @@ const
 const
   SOCKET_STATE_DISCONNECTED           = 0;
   SOCKET_STATE_CONNECT                = 1;
-  SOCKET_STATE_WAITING_FOR_SYN_ACK    = 2;
-  SOCKET_STATE_WAITING_FOR_SYN        = 3;
-  SOCKET_STATE_CONNECTED              = 4;
-  SOCKET_STATE_DISCONNECT             = 5;
-  SOCKET_STATE_WAITING_FOR_FIN_ACK    = 6;
-  SOCKET_STATE_WAITING_FOR_FIN        = 7;
-  SOCKET_STATE_ERROR                  = 8;
-  SOCKET_STATE_RESET                  = 9;
+  SOCKET_STATE_CONNECT_SEND           = 2;
+  SOCKET_STATE_WAITING_FOR_SYN_ACK    = 3;
+  SOCKET_STATE_WAITING_FOR_SYN        = 4;
+  SOCKET_STATE_CONNECTED              = 5;
+  SOCKET_STATE_DISCONNECT             = 6;
+  SOCKET_STATE_WAITING_FOR_FIN_ACK    = 7;
+  SOCKET_STATE_WAITING_FOR_FIN        = 8;
+  SOCKET_STATE_ERROR                  = 9;
+  SOCKET_STATE_RESET                  = 10;
   
   SOCKET_FLAG_RECEIVED_FIN            = 0;  // Order matters it maps to the TCP Flags
   SOCKET_FLAG_RECEIVED_SYN            = 1;
@@ -101,7 +104,7 @@ function Port_Open_TCP(Port: Word): Boolean;
 function Port_Close_UDP(Port: Word): Boolean;
 function Port_Close_TCP(Port: Word): Boolean;
 
-procedure PrintTransmitterHeaders;
+procedure PrintSocket(var Socket: TSocket);
 
 // Internally used functions
 procedure Sockets_Init_Internal;
@@ -130,8 +133,8 @@ begin
   SocketManager.Socket[iSocket].DestPort := 0;
   SocketManager.Socket[iSocket].SequenceNumber := 0;
   SocketManager.Socket[iSocket].AckNumber := 0;
-  SocketManager.Socket[iSocket].ExpireTimeCount := 0;
-  SocketManager.Socket[iSocket].ExpireTimeMax := SOCKET_EXPIRE_TIME;
+  SocketManager.Socket[iSocket].ExpireTimeCount := 0;                           // In Seconds
+  SocketManager.Socket[iSocket].ExpireTimeMax := SOCKET_EXPIRE_TIME_DEFAULT;    // In Seconds
   SocketManager.Socket[iSocket].ResendAttempts := 0;
   SocketManager.Socket[iSocket].ResendTimeCount := 0;
   SocketManager.Socket[iSocket].Start_addr := 0;
@@ -141,58 +144,44 @@ begin
   SocketManager.Socket[iSocket].TCP_buf := '';
 end;
 
-procedure PrintTransmitterHeaders;
+procedure PrintSocket(var Socket: TSocket);
 begin
-{
-  Mac2Str(SocketManager.Transmitter.PhysicalLayerHeader.SourceMacAddress, s1);
-  UART1_Write_Text('Source MAC Address: ' + s1 + LF);
-  Mac2Str(SocketManager.Transmitter.PhysicalLayerHeader.DestMacAddress, s1);
-  UART1_Write_Text('Destination MAC Address: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.PhysicalLayerHeader.Protocol, s1);
-  UART1_Write_Text('Phy Protocol: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.Version, s1);
-  UART1_Write_Text('IP Version: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.IHL, s1);
-  UART1_Write_Text('IP IHL: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.DSCP, s1);
-  UART1_Write_Text('IP DSCP: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.ECN, s1);
-  UART1_Write_Text('IP ENC: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.IPHeader.TotalLength, s1);
-  UART1_Write_Text('IP TotalLength: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.IPHeader.Identification, s1);
-  UART1_Write_Text('IP Identification: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.Flags, s1);
-  UART1_Write_Text('IP Flags: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.IPHeader.FragmentOffset, s1);
-  UART1_Write_Text('IP Fragement Offset: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.TimeToLive, s1);
-  UART1_Write_Text('IP Time To Live: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.IPHeader.Protocol, s1);
-  UART1_Write_Text('IP Protocol: ' + s1 + LF);
-  IP2Str(SocketManager.Transmitter.IPHeader.SourceIPAddress, s1);
-  UART1_Write_Text('IP Source Address: ' + s1 + LF);
-  IP2Str(SocketManager.Transmitter.IPHeader.DestIPAddress, s1);
-  UART1_Write_Text('IP Dest Address: ' + s1 + LF);
-  
-  WordToStr( SocketManager.Transmitter.TCPHeader.SourcePort, s1);
-  UART1_Write_Text('TCP Source Port: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.TCPHeader.DestPort, s1);
-  UART1_Write_Text('TCP Dest Port: ' + s1 + LF);
-  LongWordToStr( SocketManager.Transmitter.TCPHeader.SequenceNumber, s1);
-  UART1_Write_Text('TCP Sequence Number: ' + s1 + LF);
-  LongWordToStr( SocketManager.Transmitter.TCPHeader.SequenceNumber, s1);
-  UART1_Write_Text('TCP Ack Number: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.TCPHeader.DataOffset, s1);
-  UART1_Write_Text('TCP Data Offset: ' + s1 + LF);
-  ByteToStr( SocketManager.Transmitter.TCPHeader.Flags, s1);
-  UART1_Write_Text('TCP Flags: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.TCPHeader.WindowSize, s1);
-  UART1_Write_Text('TCP Window Size: ' + s1 + LF);
-  WordToStr( SocketManager.Transmitter.TCPHeader.UrgentPtr, s1);
-  UART1_Write_Text('TCP Urgent Ptr: ' + s1 + LF);
-  
-  }
+  WordToStr(Socket.iStateMachine, s1);
+  UART1_Write_Text('iStateMachine: ' + s1 + LF);
+  WordToHex(Socket.Flags, s1);
+  UART1_Write_Text('Flags: 0x' + s1 + LF);
+  WordToStr(Socket.SourcePort, s1);
+  UART1_Write_Text('SourcePort: ' + s1 + LF);
+  Mac2Str(Socket.DestMAC, s1);
+  UART1_Write_Text('DestMac: ' + s1 + LF);
+  ip2Str(Socket.DestIP, s1);
+  UART1_Write_Text('DestIP: ' + s1 + LF);
+  WordToStr(Socket.DestPort, s1);
+  UART1_Write_Text('DestPort: ' + s1 + LF);
+  LongWordToStr(Socket.SequenceNumber, s1);
+  UART1_Write_Text('Seq Number: ' + s1 + LF);
+  LongWordToStr(Socket.AckNumber, s1);
+  UART1_Write_Text('Ack Number: ' + s1 + LF);
+  WordToStr(Socket.Identification, s1);
+  UART1_Write_Text('Identification: ' + s1 + LF);
+  WordToStr(Socket.ExpireTimeCount, s1);
+  UART1_Write_Text('Expire Time Count: ' + s1 + LF);
+  WordToStr(Socket.ExpireTimeMax, s1);
+  UART1_Write_Text('Expire Time Max: ' + s1 + LF);
+  WordToStr(Socket.ResendAttempts, s1);
+  UART1_Write_Text('Resend Attempts: ' + s1 + LF);
+  WordToStr(Socket.ResendTimeCount, s1);
+  UART1_Write_Text('Resend Time Count: ' + s1 + LF);
+  LongWordToStr(Socket.Start_addr, s1);
+  UART1_Write_Text('Start Addresss: ' + s1 + LF);
+  LongWordToStr(Socket.Stop_addr, s1);
+  UART1_Write_Text('Stop Address: ' + s1 + LF);
+  WordToStr(Socket.RAM_ROM, s1);
+  UART1_Write_Text('Ram or Rom: ' + s1 + LF);
+  if Socket.Keep_Alive then
+    UART1_Write_Text('Keep Alive : True' + s1 + LF)
+  else
+    UART1_Write_Text('Keep Alive : False' + s1 + LF);
 end;
 
 procedure Sockets_Init_Internal;
