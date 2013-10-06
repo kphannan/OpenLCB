@@ -2,6 +2,8 @@ unit EthTCP;
 
 {.$DEFINE LOG_UART}
 {$DEFINE TRACE_SOCKET_STATE}
+{.$DEFINE TRACE_ETHERNET_TX}
+{$DEFINE TRACE_ETHERNET_RX}
 
 {$I Options.inc}
 
@@ -14,19 +16,20 @@ NMRAnetDefinesShared,
   EthSockets,
   dspic_additional_string_library,
   lib1_enc600_V3_5_b,
-  definitions_ENC600;
+  definitions_ENC600,
+  ENCJ600;
 
 
 
   
 // User Functions
-function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte): Boolean;
+function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte; TxMemoryAddress: Word): Boolean;
 
 // Internal functions
 procedure TCP_Init_Internal;
 
 procedure TCP_Process_Stack;
-procedure TCP_Process_Receive(ENC_MemoryOffset: Word);
+procedure TCP_Process_Receive(RxMemoryAddress: Word);
 
 //function TCP_UserSend(var ip_t1 : TIPAddress; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
 
@@ -48,6 +51,32 @@ procedure TCP_Init_Internal;
 begin
   ACK_No := $42844A80;
   SEQ_No := $42844A80;
+end;
+
+procedure PrintHeader(var Header: TEthernetHeader);
+var
+  i, j: Integer;
+begin
+  for i := 0 to 4 do
+  begin
+    UART1_Write_Text('0x');
+    for j := 0 to 3 do
+    begin
+      ByteToHex( Header[i][j], s1);
+      UART1_Write_Text(s1);
+    end;
+    UART1_Write_Text(LF);
+  end;
+end;
+
+procedure PrintPhysicalHeader(var PhyHeader: TPhysicalLayerHeader);
+begin
+  Mac2Str(PhyHeader.DestMacAddress, s1);
+  UART1_Write_Text('0x' + s1 + ' [Physical Header Dest MAC]' + LF);
+  Mac2Str(PhyHeader.SourceMacAddress, s1);
+  UART1_Write_Text('0x' + s1 + ' [Physical Header Source MAC]' + LF);
+  ByteToHex(PhyHeader.Protocol[0], s1);
+  UART1_Write_Text('0x' + s1 + ' [Phy Protocol]' + LF);
 end;
 
 procedure LoadIPHeaderLine0(var HeaderLine: TEthernetHeaderLine; IP_Version, IHL, DSCP, ECN: Byte; PacketLength: Word);
@@ -134,38 +163,29 @@ begin
   HeaderLine[3] := Lo(UrgentPtr);
 end;
 
-
-function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte;): Boolean;
+function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte; TxMemoryAddress: Word): Boolean;
 var
   Header: TEthernetHeader;
   PhyHeader: TPhysicalLayerHeader;
   CheckSum, MessageLength, TcpHeaderAndDataLength: Word;
   TcpDataLength: DWord;
-  i, j: Integer;
 begin
   Result := False;
   if EthernetTransmitIdle then       // Only load if the ethernet chip transmitter is empty
   begin
   
-    PrintSocket(Socket);
+   {$IFDEF TRACE_ETHERNET_TX}PrintSocket(Socket);{$ENDIF}
     
     CheckSum := 0;
     MessageLength := 0;
-  
-    UART1_Write_Text('Empty, loading XMTR' + LF);
     
     PhyHeader.DestMacAddress := Socket.DestMAC;
     PhyHeader.SourceMacAddress := Settings.eth_mac;
-    PhyHeader.Protocol[0] := $08;                   // IP
+    PhyHeader.Protocol[0] := $08;                   // IP Protocol
     PhyHeader.Protocol[1] := $00;
-    CopyRamToEthMem(@PhyHeader, TXSTART + PHYSICAL_LAYER_HEADER_OFFSET, PHYSICAL_LAYER_HEADER_SIZE);
+    CopyRamToEthMem(@PhyHeader, TxMemoryAddress + PHYSICAL_LAYER_HEADER_OFFSET, PHYSICAL_LAYER_HEADER_SIZE);
     
-    Mac2Str(PhyHeader.DestMacAddress, s1);
-    UART1_Write_Text('0x' + s1 + ' [Physical Header Dest MAC]' + LF);
-    Mac2Str(PhyHeader.SourceMacAddress, s1);
-    UART1_Write_Text('0x' + s1 + ' [Physical Header Source MAC]' + LF);
-    ByteToHex(PhyHeader.Protocol[0], s1);
-    UART1_Write_Text('0x' + s1 + ' [Phy Protocol]' + LF);
+    {$IFDEF TRACE_ETHERNET_TX}PrintPhysicalHeader(PhyHeader);{$ENDIF}
     
     TcpDataLength := Socket.Stop_addr - Socket.Stop_addr;
     MessageLength := TCP_HEADER_SIZE + IP_HEADER_SIZE + TcpDataLength;
@@ -175,27 +195,12 @@ begin
     LoadIPHeaderLine2(Header[2], Settings.IP_TimeToLive, PROTOCOL_TCP);
     LoadIPHeaderLine3(Header[3], Settings.eth_ip_addr);
     LoadIPHeaderLine4(Header[4], Socket.DestIP);
-    CopyRamToEthMem(@Header, TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);
-    CheckSum := Eth_Cksum(TXSTART + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);    // Let ENC calculate the Checksum for the IP Header data
-    WriteToEthMem(TXSTART + IP_CHECKSUM_OFFSET ,Hi(CheckSum)); // Stored in little endian form so Copying Ram puts the bytes backwards
+    CopyRamToEthMem(@Header, TxMemoryAddress + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);
+    CheckSum := Eth_Cksum(TxMemoryAddress + PHYSICAL_LAYER_HEADER_SIZE, IP_HEADER_SIZE);    // Let ENC calculate the Checksum for the IP Header data
+    WriteToEthMem(TxMemoryAddress + IP_CHECKSUM_OFFSET ,Hi(CheckSum)); // Stored in little endian form so Copying Ram puts the bytes backwards
     Eth_PutByte(Lo(CheckSum));
     
-    UART1_Write_Text('IP Header: ' + LF);
-    for i := 0 to 4 do
-    begin
-      UART1_Write_Text('0x');
-      for j := 0 to 3 do
-      begin
-        ByteToHex( Header[i][j], s1);
-        UART1_Write_Text(s1);
-      end;
-      UART1_Write_Text(LF);
-    end;
-    
-    WordToHex(CheckSum, s1);
-    UART1_Write_Text('IP Checksum: 0x' + s1 + LF);
-    WordToStr(MessageLength, s1);
-    UART1_Write_Text('MessageLength: ' + s1 + LF);
+    {$IFDEF TRACE_ETHERNET_TX}UART1_Write_Text('IP Header: ' + LF); PrintHeader(Header); WordToHex(CheckSum, s1); UART1_Write_Text('IP Checksum: 0x' + s1 + LF); WordToStr(MessageLength, s1); UART1_Write_Text('MessageLength: ' + s1 + LF);{$ENDIF}
   
     LoadTCPHeaderLine0(Header[0], Socket.SourcePort, Socket.DestPort);
     LoadTCPHeaderLine1(Header[1], Socket.SequenceNumber);                       // This needs to be updated once we know the message was sent
@@ -205,169 +210,91 @@ begin
       LoadTCPHeaderLine2(Header[2], 0);
     LoadTCPHeaderLine3(Header[3], 5, TCP_Flags, 1024);
     LoadTCPHeaderLine4(Header[4], 0);
-    CopyRamToEthMem(@Header, TXSTART + TCP_HEADER_OFFSET, TCP_HEADER_SIZE);
-    CopyRamToEthMem(Socket.Start_addr, TXSTART + TCP_DATA_OFFSET, TcpDataLength);
+    CopyRamToEthMem(@Header, TxMemoryAddress + TCP_HEADER_OFFSET, TCP_HEADER_SIZE);
+    CopyRamToEthMem(Socket.Start_addr, TxMemoryAddress + TCP_DATA_OFFSET, TcpDataLength);
     
     // Need to add the Psudo header per the standard, this include Source IP, Dest IP, 8 bits of zeros, Protocol from the IP header, 
     // TCP Length (header + data) all added to the TCP Header and data
-    CopyEthMemToEthMem(TXSTART + IP_SOURCE_ADDRESS_OFFSET, TXSTART + TCP_DATA_OFFSET + TcpDataLength, 8); // Copy the IP Source and Destination Addresses after the Tcp Data to calculate the Psudo Header
-    WriteToEthMem(TXSTART + TCP_DATA_OFFSET + TcpDataLength + 8, $00);
+    CopyEthMemToEthMem(TxMemoryAddress + IP_SOURCE_ADDRESS_OFFSET, TxMemoryAddress + TCP_DATA_OFFSET + TcpDataLength, 8); // Copy the IP Source and Destination Addresses after the Tcp Data to calculate the Psudo Header
+    WriteToEthMem(TxMemoryAddress + TCP_DATA_OFFSET + TcpDataLength + 8, $00);
     Eth_PutByte(PROTOCOL_TCP);
     TcpHeaderAndDataLength := TCP_HEADER_SIZE + TcpDataLength;
     Eth_PutByte(Hi( TcpHeaderAndDataLength));
     Eth_PutByte(Lo( TcpHeaderAndDataLength));
-    CheckSum := Eth_Cksum(TXSTART + TCP_HEADER_OFFSET, TCP_HEADER_SIZE + TcpDataLength + PSUDO_HEADER_SIZE);    // Let ENC calculate the Checksum
-    WriteToEthMem(TXSTART + TCP_CHECKSUM_OFFSET ,Hi(CheckSum)); // Stored in little endian form so Copying Ram puts the bytes backwards
+    CheckSum := Eth_Cksum(TxMemoryAddress + TCP_HEADER_OFFSET, TCP_HEADER_SIZE + TcpDataLength + PSUDO_HEADER_SIZE);    // Let ENC calculate the Checksum
+    WriteToEthMem(TxMemoryAddress + TCP_CHECKSUM_OFFSET ,Hi(CheckSum)); // Stored in little endian form so Copying Ram puts the bytes backwards
     Eth_PutByte(Lo(CheckSum));
    
-    UART1_Write_Text('TCP Header: ' + LF);
-    for i := 0 to 4 do
-    begin
-      UART1_Write_Text('0x');
-      for j := 0 to 3 do
-      begin
-        ByteToHex( Header[i][j], s1);
-        UART1_Write_Text(s1);
-      end;
-      UART1_Write_Text(LF);
-    end;
-    
-    for i := 0 to 4 do
-      for j := 0 to 3 do
-        Header[i][j] := 0;
-        
-    WordToHex(CheckSum, s1);
-    UART1_Write_Text('TCP Checksum: 0x' + s1 + LF);
+   {$IFDEF TRACE_ETHERNET_TX}UART1_Write_Text('TCP Header: ' + LF); PrintHeader(Header); WordToHex(CheckSum, s1); UART1_Write_Text('TCP Checksum: 0x' + s1 + LF);{$ENDIF}
 
-    Eth_WriteReg(ETXST_, TXSTART);                                              // Set the start of packet
-    Eth_WriteReg(ETXLEN_, MessageLength + PHYSICAL_LAYER_HEADER_SIZE);          // Total Bytes for the device to put on the wire
-    Eth_BSF(ECON1_, ECON1_TXRTS_);                                              // Enable the Transmit
+    Ethernet_Send(TxMemoryAddress, MessageLength + PHYSICAL_LAYER_HEADER_SIZE);          // Enable the data transmit
     
     Result := True;
   end;
 end;
 
-procedure TCP_Process_Receive(ENC_MemoryOffset: Word);
+procedure TCP_Process_Receive(RxMemoryAddress: Word);
 var
   Header: TEthernetHeader;
-  PhysicalLayerHeader: TPhysicalLayerHeader;                                  // Current info for the Physical Layer of the current transmission
-  IP_Checksum, TCP_Checksum: Word;
+  PhysicalLayerHeader: TPhysicalLayerHeader;                                              // Current info for the Physical Layer of the current transmission
+  Checksum: Word;
   iSocket: Integer;
   Socket: ^TSocket;
+  Local_IP_HeaderSize, Local_TCP_HeaderSize, Local_TCP_HeaderStart, Local_IP_HeaderStart, Local_Total_TCP_Length, Local_TCP_DataSize: Word;
+  TargetAddress, SourceAddress: TIPAddress;
+  TargetPort, SourcePort: Word;
+  Local_IP_Protocol: Byte;
 begin
-
-  CopyEthMemToRam(ENC_MemoryOffset, @Header, PHYSICAL_LAYER_HEADER_SIZE);     // 1 to 1 mapping overlay for the phy header, easy
-  
-  {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-  PhysicalLayerHeader.SourceMacAddress[0] := Header.Offset0Hi shr 12;
-  PhysicalLayerHeader.SourceMacAddress[1] := Header.Offset0Hi shr 8;
-  PhysicalLayerHeader.SourceMacAddress[2] := Header.Offset0Hi shr 4;
-  PhysicalLayerHeader.SourceMacAddress[3] := Header.Offset0Hi;
-  PhysicalLayerHeader.SourceMacAddress[4] := Header.Offset0Lo shr 12;
-  PhysicalLayerHeader.SourceMacAddress[5] := Header.Offset0Lo shr 8;
-  PhysicalLayerHeader.DestMacAddress[0] := Header.Offset1Hi shr 12;
-  PhysicalLayerHeader.DestMacAddress[1] := Header.Offset1Hi shr 8;
-  PhysicalLayerHeader.DestMacAddress[2] := Header.Offset1Hi shr 4;
-  PhysicalLayerHeader.DestMacAddress[3] := Header.Offset1Hi;
-  PhysicalLayerHeader.DestMacAddress[4] := Header.Offset1Lo shr 12;
-  PhysicalLayerHeader.DestMacAddress[5] := Header.Offset1Lo shr 8;
-  PhysicalLayerHeader.Protocol := Header.Offset3Hi;
-  {$ENDIF}
-  
-  {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-  PhysicalLayerHeader.SourceMacAddress[0] := Header.Offset0 shr 28;
-  PhysicalLayerHeader.SourceMacAddress[1] := Header.Offset0 shr 24;
-  PhysicalLayerHeader.SourceMacAddress[2] := Header.Offset0 shr 20;
-  PhysicalLayerHeader.SourceMacAddress[3] := Header.Offset0 shr 16;
-  PhysicalLayerHeader.SourceMacAddress[4] := Header.Offset0 shr 12;
-  PhysicalLayerHeader.SourceMacAddress[5] := Header.Offset0 shr 8;
-  PhysicalLayerHeader.DestMacAddress[0] := Header.Offset1 shr 28;
-  PhysicalLayerHeader.DestMacAddress[1] := Header.Offset1 shr 24;
-  PhysicalLayerHeader.DestMacAddress[2] := Header.Offset1 shr 20;
-  PhysicalLayerHeader.DestMacAddress[3] := Header.Offset1 shr 16
-  PhysicalLayerHeader.DestMacAddress[4] := Header.Offset1 shr 12;
-  PhysicalLayerHeader.DestMacAddress[5] := Header.Offset1 shr 8;
-  PhysicalLayerHeader.Protocol := Header.Offset3Hi;
-  {$ENDIF}
-  
-  CopyEthMemToRam(ENC_MemoryOffset + PHYSICAL_LAYER_HEADER_SIZE, @Header, IP_HEADER_SIZE); // Read in the entire IP Header
-  
-  {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-  IPHeader.Version := (Header.Offset0Hi shr 12) and $000F;
-  IPHeader.IHL := (Header.Offset0Hi shr 8) and $000F;
-  IPHeader.DSCP := (Header.Offset0Hi shr 3) and $003F;
-  IPHeader.ECN := Header.Offset0Hi and $00000002;
-  IPHeader.TotalLength := Header.Offset0Lo;
-  IPHeader.Identification := Header.Offset1Hi;
-  IPHeader.Flags := (Header.Offset1Lo shr 13) and $0003;
-  IPHeader.FragmentOffset := Header.Offset1Lo and $1FFF;
-  IPHeader.TimeToLive := (Header.Offset2Hi shr 8) and $00FF;
-  IPHeader.Protocol := Header.Offset2Hi and $00FF;
-  IP_CheckSum := Header.Offset2Lo;
-  memcpy(@IPHeader.SourceIPAddress, @Header.Offset3Hi, IP_ADDRESS_LEN);
-  memcpy(@IPHeader.DestIPAddress, @Header.Offset4Hi, IP_ADDRESS_LEN);
-  {$ENDIF}
-  
-  {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-  IPHeader.Version := (Header.Offset0 shr 28) and $0000000F;
-  IPHeader.IHL := (Header.Offset0 shr 24) and $0000000F;
-  IPHeader.DSCP := (Header.Offset0 shr 18) and $0000003F;
-  IPHeader.ECN := (Header.Offset0 shr 16) and $00000002;
-  IPHeader.TotalLength := Header.Offset0 and $0000FFFF;
-  IPHeader.Identification := (Header.Offset1 shr 16) and $0000FFFF;
-  IPHeader.Flags := (Header.Offset1 shr 19) and $00000003;
-  IPHeader.FragmentOffset := Header.Offset1 and $00001FFF;
-  IPHeader.TimeToLive := (Header.Offset2 shr 24) and $000000FF;
-  IPHeader.Protocol := (Header.Offset2 shr 16) and $000000FF;
-  IP_CheckSum := Header.Offset2 and $0000FFFF;
-  memcpy(@IPHeader.SourceIPAddress, @Header.Offset3, IP_ADDRESS_LEN);
-  memcpy(@IPHeader.DestIPAddress, @Header.Offset4, IP_ADDRESS_LEN);
-  {$ENDIF}
-
-  
-  WriteToEthMem(ENC_MemoryOffset + 24, $00);      // Put $0000 in for the Checksum
+  // We already know this is a TCP packet when it enters this procedure
+  CopyEthMemToRam(RxMemoryAddress, @PhysicalLayerHeader, PHYSICAL_LAYER_HEADER_SIZE);            // 1 to 1 mapping overlay for the phy header, easy
+  Local_IP_HeaderStart := RxMemoryAddress + PHYSICAL_LAYER_HEADER_SIZE;
+  Local_IP_HeaderSize := (ReadFromEthMem(Local_IP_HeaderStart + IP_IHL_RELATIVE_OFFSET) and $0F) * MAX_ETHERNET_HEADERLINE_BYTES;
+  {$IFDEF TRACE_ETHERNET_RX}WordToStr(Local_IP_HeaderStart, s1); UART1_Write_Text('Calcualted IP Header Start: ' + s1 + LF);{$ENDIF}
+  {$IFDEF TRACE_ETHERNET_RX}WordToStr(Local_IP_HeaderSize, s1); UART1_Write_Text('Calcualted IP Header Size: ' + s1 + LF);{$ENDIF}
+  CopyEthMemToRam(Local_IP_HeaderStart, @Header, Local_IP_HeaderSize);          // Read in the entire IP Header
+  Hi(CheckSum) := Header[2][2];                                                 // Extract the Checksum from the Header we read
+  Lo(CheckSum) := Header[2][3];
+  MemCpy(@SourceAddress, @Header[3], 4);
+  MemCpy(@TargetAddress, @Header[4], 4);
+  Local_IP_Protocol := Header[2][1];
+  Hi(Local_TCP_DataSize) := Header[0][2];                                       // Extract the total message size to back calculate the Data Size
+  Lo(Local_TCP_DataSize) := Header[0][3];
+  Local_TCP_DataSize := Local_TCP_DataSize - Local_IP_HeaderSize;               // Still need to subtract the TCP Header Size
+  {$IFDEF TRACE_ETHERNET_RX}WordToStr(CheckSum, s1); UART1_Write_Text('CheckSum: ' + s1 + LF);{$ENDIF}
+  {$IFDEF TRACE_ETHERNET_RX}Ip2Str(SourceAddress, s1); UART1_Write_Text('Source IP Address: ' + s1 + LF);{$ENDIF}
+  {$IFDEF TRACE_ETHERNET_RX}Ip2Str(TargetAddress, s1); UART1_Write_Text('Target IP Address: ' + s1 + LF);{$ENDIF}
+  WriteToEthMem(Local_IP_HeaderStart + IP_CHECKSUM_RELATIVE_OFFSET, $00);       // Put $0000 in for the Checksum to calculate
   Eth_PutByte($00);
-  if IP_CheckSum = Eth_Cksum(ENC_MemoryOffset + IP_HEADER_OFFSET, IP_HEADER_SIZE) then
+  if CheckSum = Eth_Cksum(Local_IP_HeaderStart, Local_IP_HeaderSize) then       // Calcuate the checksum in the Header data in the chip and compare
   begin
-
- //   CopyEthMemToRam(ENC_MemoryOffset + PHYSICAL_LAYER_HEADER_SIZE + IP_HEADER_SIZE + (IPHeader.IHL - 5), @Header, TCP_HEADER_SIZE);
-    
-    {$IFDEF ETHERNET_16_BIT_PROCESSOR}
-    TCPHeader.SourcePort := Header.Offset0Hi;
-    TCPHeader.DestPort := Header.Offset0Lo;
-    Hi(TCPHeader.SequenceNumber) := Header.Offset1Hi;
-    Lo(TCPHeader.SequenceNumber) := Header.Offset1Lo;
-    Hi(TCPHeader.AckNumber) := Header.Offset2Hi;
-    Lo(TCPHeader.AckNumber) := Header.Offset2Lo;
-    TCPHeader.DataOffset := (Header.Offset3Hi shr 12) and $000F;
-    TCPHeader.Flags := Header.Offset3Hi and $00FF;
-    TCPHeader.WindowSize := Header.Offset3Lo;
-    TCP_Checksum := Header.Offset4Hi;
-    TCPHeader.UrgentPtr := Header.Offset4Lo;
-    {$ENDIF}
-    
-    {$IFDEF ETHERNET_32_BIT_PROCESSOR}
-    TCPHeader.SourcePort := (Header.Offset0 shr 16) and $0000FFFF;
-    TCPHeader.DestPort := (Header.Offset0 and $0000FFFF);
-    TCPHeader.SequenceNumber := Header.Offset1;
-    TCPHeader.AckNumber := Header.Offset2;
-    TCPHeader.DataOffset := (Header.Offset3 shr 28) and $0000000F;
-    TCPHeader.Flags := (Header.Offset3 shr 16) and $000000FF;
-    TCPHeader.WindowSize := (Header.Offset3 and $0000FFFF);
-    TCP_Checksum := (Header.Offset4 shr 16) and $0000FFFF;
-    TCPHeader.UrgentPtr := Header.Offset4 and $0000FFFF;
-    {$ENDIF}
-
-    WriteToEthMem(ENC_MemoryOffset + 50, $00);      // Put $0000 in for the Checksum
+    Local_TCP_HeaderStart := Local_IP_HeaderStart + Local_IP_HeaderSize;
+    {$IFDEF TRACE_ETHERNET_RX}WordToStr(Local_TCP_HeaderStart, s1); UART1_Write_Text('Calcualted TCP Header Start: ' + s1 + LF);{$ENDIF}
+    Local_TCP_HeaderSize := ((ReadFromEthMem(Local_TCP_HeaderStart + TCP_HEADER_LENGTH_RELATIVE_OFFSET)) shr 4) * MAX_ETHERNET_HEADERLINE_BYTES;
+    {$IFDEF TRACE_ETHERNET_RX}WordToStr(Local_TCP_HeaderSize, s1); UART1_Write_Text('Calcualted TCP Header Size: ' + s1 + LF);{$ENDIF}
+    CopyEthMemToRam(Local_TCP_HeaderStart, @Header, Local_TCP_HeaderSize);
+    Hi(CheckSum) := Header[4][0];                                               // Extract TCP CheckSum
+    Lo(CheckSum) := Header[4][1];
+    Local_TCP_DataSize := Local_TCP_DataSize - Local_TCP_HeaderSize;            // Calculate the Data Size in the TCP Payload
+    {$IFDEF TRACE_ETHERNET_RX}WordToStr(Local_TCP_DataSize, s1); UART1_Write_Text('Calcualted TCP Data Size: ' + s1 + LF);{$ENDIF}
+    // Need to corrupt the receive buffer by packing the data in front of the TCP header to create the Psudo Header to calcuate the Checksum
+    CopyEthMemToEthMem(Local_IP_HeaderStart + IP_SOURCE_ADDRESS_RELATIVE_OFFSET, Local_TCP_HeaderStart - 12, 8);
+    Eth_WriteReg(Local_TCP_HeaderStart - 4, 0);
+    Eth_PutByte(Local_IP_Protocol);
+    Local_Total_TCP_Length := Local_TCP_HeaderSize + Local_TCP_DataSize;
+    {$IFDEF TRACE_ETHERNET_RX}WordToStr(Local_Total_TCP_Length, s1); UART1_Write_Text('Calcualted TCP Total Payload Size: ' + s1 + LF);{$ENDIF}
+    Eth_PutByte( Hi(Local_Total_TCP_Length));
+    Eth_PutByte( Lo(Local_Total_TCP_Length));
+    WriteToEthMem(Local_TCP_HeaderStart + TCP_CHECKSUM_RELATIVE_OFFSET, $00);      // Put $0000 in for the Checksum
     Eth_PutByte($00);
-
-  //  if TCP_Checksum = Eth_Cksum(ENC_MemoryOffset + TCP_HEADER_OFFSET, IPHeader.TotalLength - IP_HEADER_SIZE) then
+    if Checksum = Eth_Cksum(Local_TCP_HeaderStart - 12, 12 + Local_Total_TCP_Length + Local_IP_HeaderSize) then
     begin
-  //    iSocket := TCP_Find_Any_Connection(IPHeader.DestIPAddress, TCPHeader.DestPort);
+      {$IFDEF TRACE_ETHERNET_RX}UART1_Write_Text('TCP Checksum Valid' + LF);{$ENDIF}
+      iSocket := TCP_Find_Any_Connection(SourceAddress, SourcePort);                 // This is with respect to the source that sent this message
       if iSocket > -1 then
       begin
+        {$IFDEF TRACE_ETHERNET_RX}UART1_Write_Text('Found Socket!' + LF);{$ENDIF}
         Socket := @SocketManager.Socket[iSocket];
-    //    Socket^.Flags := Socket^.Flags or (TCPHeader.Flags and $003F);  // Only support first 6 bits of flags
+        Socket^.Flags := Socket^.Flags or (Header[3][1] and $003F);  // Only support first 6 bits of flags
       end
     end
   end
@@ -432,7 +359,7 @@ begin
         end;
     SOCKET_STATE_CONNECT_SEND :
         begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, SYN_S) then
+          if TCP_TryLoadTransmitterAndSend(Socket^, SYN_S, TXSTART) then
           begin
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_CONNECT_SEND' + LF);{$ENDIF}
             TCP_Process_ClearTimers(Socket^);
@@ -467,7 +394,7 @@ begin
           if Socket^.Stop_addr - Socket^.Start_addr > 0 then                    // Do we have some data to send?
           begin
             Socket^.ExpireTimeCount := 0;                                              // Reset Expiration time
-            if TCP_TryLoadTransmitterAndSend(Socket^, PSH_S + ACK_S) then
+            if TCP_TryLoadTransmitterAndSend(Socket^, PSH_S + ACK_S, TXSTART) then
             begin
               // Send the data here.....
               if not Socket^.Keep_Alive then
@@ -487,7 +414,7 @@ begin
         end;
     SOCKET_STATE_DISCONNECT :
         begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S) then
+          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S, TXSTART) then
           begin 
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_DISCONNECT' + LF);{$ENDIF}
             Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN := 0;
@@ -519,7 +446,7 @@ begin
         end;
     SOCKET_STATE_ERROR :
         begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S + ACK_S) then
+          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S + ACK_S, TXSTART) then
           begin
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_ERROR' + LF);{$ENDIF}
             Socket^.iStateMachine := SOCKET_STATE_RESET;

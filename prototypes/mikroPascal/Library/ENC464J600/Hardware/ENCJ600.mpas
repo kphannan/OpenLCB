@@ -1,0 +1,19 @@
+unit ENCJ600;
+
+uses
+  lib1_enc600_V3_5_b,
+  definitions_ENC600;
+
+procedure Ethernet_Send(TransmitStartAddress, NumberOfBytesToSend : word);
+
+implementation
+
+
+procedure Ethernet_Send(TransmitStartAddress, NumberOfBytesToSend : word);
+begin
+  Eth_WriteReg(ETXST_, TransmitStartAddress);                                   // Set the start of packet
+  Eth_WriteReg(ETXLEN_, NumberOfBytesToSend);                                   // Total Bytes for the device to put on the wire
+  Eth_BSF(ECON1_, ECON1_TXRTS_);
+end;
+
+end.
