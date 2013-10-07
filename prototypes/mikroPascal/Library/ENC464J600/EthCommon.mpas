@@ -70,7 +70,7 @@ const
   TCP_HEADER_OFFSET = IP_HEADER_OFFSET + 20;                                    // Where the TCP Header starts with respect to the beginning of the message
   TCP_HEADER_SIZE = 20;                                                         // Number of bytes in the TCP Header
   TCP_DATA_OFFSET = TCP_HEADER_OFFSET + TCP_HEADER_SIZE;                        // Were the TCP data is with respect to the beginning of the message
-  TCP_HEADER_LENGTH_RELATIVE_OFFSET = 13;                                       // Offset from the beginning of the TCP Block of the Data Offset field that tells us how many 32 bit lines are in the TCP header
+  TCP_HEADER_LENGTH_RELATIVE_OFFSET = 12;                                       // Offset from the beginning of the TCP Block of the Data Offset field that tells us how many 32 bit lines are in the TCP header
   TCP_CHECKSUM_RELATIVE_OFFSET = 16;                                            // Offset into the TCP Header
   TCP_CHECKSUM_OFFSET = TCP_HEADER_OFFSET + TCP_CHECKSUM_RELATIVE_OFFSET;       // Offset into the TCP Header for the Checksum field from the start of the message
   PSUDO_HEADER_SIZE = 12;                                                       // Used to build the TCP Checksum
