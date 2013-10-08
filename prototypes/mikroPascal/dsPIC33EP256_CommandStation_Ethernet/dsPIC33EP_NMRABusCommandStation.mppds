@@ -61,7 +61,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=7
+Count=8
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=..\Library\ENC464J600\EthSockets.mpas
 File2=..\Library\TCPBus\TCPStorage.mpas
@@ -69,6 +69,7 @@ File3=..\Library\ENC464J600\EthTCP.mpas
 File4=..\Library\ENC464J600\EthCommon.mpas
 File5=..\Library\ENC464J600\lib1_enc600_V3_5_b.mpas
 File6=..\Library\ENC464J600\Hardware\ENCJ600.mpas
+File7=..\Library\ENC464J600\lib2_enc600_V3_5_b.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -78,18 +79,18 @@ Count=1
 File0=Options.inc
 [SEARCH_PATH]
 Count=12
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
+Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path4=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path6=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path7=E:\trunk\prototypes\mikroPascal\Library\Math\
-Path8=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
-Path9=E:\trunk\prototypes\mikroPascal\Library\Common\
-Path10=E:\trunk\prototypes\mikroPascal\Library\ENC464J600\
-Path11=E:\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
+Path4=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path5=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path6=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path7=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
+Path8=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path9=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
+Path10=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\
+Path11=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
 [HEADER_PATH]
 Count=0
 [HEADERS]

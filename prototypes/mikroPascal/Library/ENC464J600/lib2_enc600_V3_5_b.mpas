@@ -203,7 +203,6 @@ Begin
   // enables reception
   Eth_BSF(ECON1_,0x0001);    //RXEN
   Sockets_Init_Internal;
-  TCP_Init_Internal;
   UDP_Init_Internal;
   
   ARP_EraseCache_Internal;
@@ -478,7 +477,7 @@ begin
       result := result + CopyRamStringToEthMem_CP(txt31);
 
       result := result + CopyRamStringToEthMem_CP(', Flags: ');
-      Byte2StrWithZeros(SocketManager.Socket[i].Flags,txt31);
+      Byte2StrWithZeros(SocketManager.Socket[i].StateFlags,txt31);
       Str_Cut_Left(txt31,2);
       result := result + CopyRamStringToEthMem_CP(txt31);
 

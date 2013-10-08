@@ -1,10 +1,10 @@
 unit EthTCP;
 
 {.$DEFINE LOG_UART}
-{$DEFINE TRACE_SOCKET_STATE}
+{.$DEFINE TRACE_SOCKET_STATE}
 {.$DEFINE TRACE_ETHERNET_TX}
 {.$DEFINE TRACE_ETHERNET_RX}
-{$DEFINE TRACE_ETHERNET_SOCKET_RX}
+{.$DEFINE TRACE_ETHERNET_SOCKET_RX}
 
 {$I Options.inc}
 
@@ -26,34 +26,19 @@ NMRAnetDefinesShared,
 // User Functions
 function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte; TxMemoryAddress: Word): Boolean;
 
-// Internal functions
-procedure TCP_Init_Internal;
-
+// Internally used Functions
 procedure TCP_Process_Stack;
 procedure TCP_Process_Receive(RxMemoryAddress: Word);
 
-//function TCP_UserSend(var ip_t1 : TIPAddress; dest_port_S1, len_data1 : word; var data_tcp2 : array[1472] of byte) : boolean;
-
-//function TCP_Send_Internal(TCP_Flag_T : byte; iSocket: Integer) : boolean;
-//procedure TCP_WriteToWire_Internal(source_portT, dest_portT, PacketLenT : word; SEQ_NoT, ACK_NoT : dWord; TCP_FlagT : byte);
-//procedure TCP_Process_Internal(EthMemAddressRequest: Word);
-
-// External functions
-//procedure Eth_UserTCP(var dest_ip_addr_T : TIPAddress; var source_port_T, dest_port_T, len_T : word; iSocket : Integer); external;
-//procedure Do_Ethernet_Receive; external;
-
 implementation
 
-var
-  SEQ_No, ACK_No, SEQ_NoR, ACK_NoR : dWord;
-  Window : word;
-  
-procedure TCP_Init_Internal;
-begin
-  ACK_No := $42844A80;
-  SEQ_No := $42844A80;
-end;
-
+// *****************************************************************************
+// PrintHeader
+//   Parmeters: Header: The data to print
+//              LineCount: The number of 32 bit lines to print from the Header
+//   Results:
+//   Description: Prints the contents of the Header to UART1
+// *****************************************************************************
 procedure PrintHeader(var Header: TEthernetHeader; LineCount: Integer);
 var
   i, j: Integer;
@@ -70,6 +55,12 @@ begin
   end;
 end;
 
+// *****************************************************************************
+// PrintPhysicalHeader
+//   Parmeters: PhyHeader: The data to print
+//   Results:
+//   Description: Prints the contents of the Header to UART1
+// *****************************************************************************
 procedure PrintPhysicalHeader(var PhyHeader: TPhysicalLayerHeader);
 begin
   UART1_Write_Text(LF+LF+'....Printing Physical Layer Header.... '+LF);
@@ -81,6 +72,17 @@ begin
   UART1_Write_Text('0x' + s1 + ' [Phy Protocol]' + LF);
 end;
 
+// *****************************************************************************
+// LoadIPHeaderLine0
+//   Parmeters: HeaderLine: The first 4 Byte structure in the IP Header
+//              IP_Version: The version of IP (typcically 4);
+//              IHL: Number of these 4 Byte lines in this structure
+//              DSCP: See the IP Header for details, not used often
+//              ECN: See the IP Header for details, not used often
+//              PacketLength: The Total Length of the packet (not just the IP Header) including any headers and the data
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadIPHeaderLine0(var HeaderLine: TEthernetHeaderLine; IP_Version, IHL, DSCP, ECN: Byte; PacketLength: Word);
 begin
   HeaderLine[0] := (IP_Version shl 4) or IHL;
@@ -89,6 +91,15 @@ begin
   HeaderLine[3] := Lo(PacketLength);
 end;
 
+// *****************************************************************************
+// LoadIPHeaderLine1
+//   Parmeters: HeaderLine: The second 4 Byte structure in the IP Header
+//              Identification: The ID number of the stream (useful in reconstucting fragmented packets if supported)
+//              FragmentationFlags: Does the packet support Fragmentation or just drop it
+//              FragmentationOffset: If fragmented then this is the offset from start of the first packet to allow reconstruction
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadIPHeaderLine1(var HeaderLine: TEthernetHeaderLine; Identification: Word; FragmentationFlags: Byte; FragmentationOffset: Word);
 begin
   HeaderLine[0] := Hi(Identification);
@@ -97,6 +108,13 @@ begin
   HeaderLine[3] := Lo(FragmentationOffset)
 end;
 
+// *****************************************************************************
+// LoadIPHeaderLine2
+//   Parmeters: HeaderLine: The third 4 Byte structure in the IP Header
+//              Protocol: The Protocol of the message, for TCP this is $06
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadIPHeaderLine2(var HeaderLine: TEthernetHeaderLine; TimeToLive, Protocol: Byte);
 begin
   HeaderLine[0] := TimeToLive;
@@ -105,16 +123,38 @@ begin
   HeaderLine[3] := 0
 end;
 
+// *****************************************************************************
+// LoadIPHeaderLine3
+//   Parmeters: HeaderLine: The fourth 4 Byte structure in the IP Header
+//              SourceIP: IP Address of this node
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadIPHeaderLine3(var HeaderLine: TEthernetHeaderLine; var SourceIP: TIPAddress);
 begin
   HeaderLine := SourceIP;
 end;
 
+// *****************************************************************************
+// LoadIPHeaderLine3
+//   Parmeters: HeaderLine: The fifth 4 Byte structure in the IP Header
+//              SourceIP: IP Address of the node we are sending the packet to
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadIPHeaderLine4(var HeaderLine: TEthernetHeaderLine; var DestIP: TIPAddress);
 begin
   HeaderLine := DestIP;
 end;
 
+// *****************************************************************************
+// LoadTCPHeaderLine0
+//   Parmeters: HeaderLine: The first 4 Byte structure in the TCP Header
+//              SourcePort: Port we are assigned for this socket
+//              DestPort: Port assigned to the destination IP for this socket
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadTCPHeaderLine0(var HeaderLine: TEthernetHeaderLine; SourcePort, DestPort: Word);
 begin
   HeaderLine[0] := Hi(SourcePort);
@@ -123,6 +163,13 @@ begin
   HeaderLine[3] := Lo(DestPort);
 end;
 
+// *****************************************************************************
+// LoadTCPHeaderLine1
+//   Parmeters: HeaderLine: The second 4 Byte structure in the TCP Header
+//              SequenceNumber: The number of bytes we have sent (relative to a random start number)
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadTCPHeaderLine1(var HeaderLine: TEthernetHeaderLine; SequenceNumber: DWord);
 var
   TempHi, TempLo: Word;
@@ -136,6 +183,13 @@ begin
   HeaderLine[3] := Lo(TempLo);
 end;
 
+// *****************************************************************************
+// LoadTCPHeaderLine2
+//   Parmeters: HeaderLine: The third 4 Byte structure in the TCP Header
+//              AckNumber: The number of bytes we acknowledged we have received from the destination
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadTCPHeaderLine2(var HeaderLine: TEthernetHeaderLine; AckNumber: DWord);
 var
   TempHi, TempLo: Word;
@@ -149,6 +203,15 @@ begin
   HeaderLine[3] := Lo(TempLo);
 end;
 
+// *****************************************************************************
+// LoadTCPHeaderLine3
+//   Parmeters: HeaderLine: The fourth 4 Byte structure in the TCP Header
+//              DataOffset: Number of 4 Byte Lines in this Header
+//              TCP_Flags: The TCP Flags (SYN, FIN, ACK, FIN, ect)
+//              WindowSize: Sliding window size for our reception
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadTCPHeaderLine3(var HeaderLine: TEthernetHeaderLine; DataOffset: Byte; TCP_Flags, WindowSize: Word);
 begin
   HeaderLine[0] := (DataOffset shl 4) or (Hi(TCP_Flags) and $0001);
@@ -157,6 +220,13 @@ begin
   HeaderLine[3] := Lo(WindowSize);
 end;
 
+// *****************************************************************************
+// LoadTCPHeaderLine4
+//   Parmeters: HeaderLine: The fifth 4 Byte structure in the TCP Header
+//              UrgentPtr: Address to the urgent data, not used often
+//   Results:
+//   Description: Helper function for TCP_TryLoadTransmitterAndSend
+// *****************************************************************************
 procedure LoadTCPHeaderLine4(var HeaderLine: TEthernetHeaderLine; UrgentPtr: Word);
 begin
   HeaderLine[0] := 0;               // Calcuate Checksum later
@@ -165,6 +235,34 @@ begin
   HeaderLine[3] := Lo(UrgentPtr);
 end;
 
+// *****************************************************************************
+// HeaderLineToDWord
+//   Parmeters: HeaderLine: A 4 Byte structure in the TCP Header
+//   Results: The 4 Bytes contacted in to a DWord
+//   Description: Helper function for TCP_Process_Receive
+// *****************************************************************************
+function HeaderLineToDWord(var HeaderLine: TEthernetHeaderLine): DWord;
+var
+  TempHi, TempLo: Word;
+begin
+  Hi( TempHi) := HeaderLine[0];
+  Lo( TempHi) := HeaderLine[1];
+  Hi( TempLo) := HeaderLine[2];
+  Lo( TempLo) := HeaderLine[3];
+  Hi( Result) := TempHi;
+  Lo( Result) := TempLo;
+end;
+
+// *****************************************************************************
+// TCP_TryLoadTransmitterAndSend
+//   Parmeters: Socket: Socket to send the data for
+//              TCP_Flags: The TCP Flags (SYN, FIN, ACK, FIN, ect)
+//              TxMemoryAddress: Where in the Ethernet memory space to create the Transmit Packet
+//   Results:
+//   Description: Load up a complient Ethernet packet and enables the Ehternet IC to transmit.
+//                It does NOT wait for the transmit to occur, poll EthernetTransmitIdle to
+//                determine if the transmission is complete
+// *****************************************************************************
 function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte; TxMemoryAddress: Word): Boolean;
 var
   Header: TEthernetHeader;
@@ -175,6 +273,8 @@ begin
   Result := False;
   if EthernetTransmitIdle then       // Only load if the ethernet chip transmitter is empty
   begin
+  
+  // NOT SENDING AN ACK (EXCEPT FOR DURING A SYN) IS AN ERROR, MUST ALWAYS SEND AN ACK
   
    {$IFDEF TRACE_ETHERNET_TX}PrintSocket(Socket);{$ENDIF}
     
@@ -205,14 +305,21 @@ begin
     {$IFDEF TRACE_ETHERNET_TX}UART1_Write_Text('IP Header: ' + LF); PrintHeader(Header, IP_HEADER_SIZE div MAX_ETHERNET_HEADERLINE_BYTES); WordToHex(CheckSum, s1); UART1_Write_Text('IP Checksum: 0x' + s1 + LF); WordToStr(MessageLength, s1); UART1_Write_Text('MessageLength: ' + s1 + LF);{$ENDIF}
   
     LoadTCPHeaderLine0(Header[0], Socket.SourcePort, Socket.DestPort);
-    if Socket.Flags.SOCKET_FLAG_RECEIVED_SYN = 1 then
-      LoadTCPHeaderLine2(Header[1], Socket.SequenceNumber)
-    else
+
+    if TCP_Flags and SYN_S <> 0 then                                            // Special case
+    begin
+      LoadTCPHeaderLine2(Header[1], Socket.SequenceNumber);                     // Our initial Sequence Number of SYN is set or the total number of bytes we have sent to the other node of not SYN
+      LoadTCPHeaderLine2(Header[2], 0)                                          // Ack Number = 0 by definition
+    end else 
+    begin
+      Socket.SequenceNumber := Socket.SequenceNumber + TcpDataLength;           // Update the sequence to data sent THIS IS NOT RIGHT FOR A SLIDING WINDOW
       LoadTCPHeaderLine2(Header[1], Socket.SequenceNumber);
-    if Socket.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
-      LoadTCPHeaderLine2(Header[2], Socket.AckNumber)
-    else
-      LoadTCPHeaderLine2(Header[2], 0);
+      if TCP_Flags and ACK_S <> 0 then
+        LoadTCPHeaderLine2(Header[2], Socket.AckNumber)                         // Tell the other socket how many bytes we have received from it so far
+      else
+        LoadTCPHeaderLine2(Header[2], 0);                                       // If the flag is not set then send 0 (per the spec)
+    end;
+      
     LoadTCPHeaderLine3(Header[3], 5, TCP_Flags, 1024);
     LoadTCPHeaderLine4(Header[4], 0);
     CopyRamToEthMem(@Header, TxMemoryAddress + TCP_HEADER_OFFSET, TCP_HEADER_SIZE);
@@ -238,6 +345,13 @@ begin
   end;
 end;
 
+// *****************************************************************************
+// TCP_Process_Receive
+//   Parmeters: RxMemoryAddress: Where in the Ethernet memory space the received Packet is
+//   Results:
+//   Description: Reads and Decodes the Ehternet packet to allow the application
+//                to handle the received data, or automatically hanldles SYN, FIN, RST, etc
+// *****************************************************************************
 procedure TCP_Process_Receive(RxMemoryAddress: Word);
 var
   Header: TEthernetHeader;
@@ -249,7 +363,6 @@ var
   TargetAddress, SourceAddress: TIPAddress;
   TargetPort, SourcePort: Word;
   Local_IP_Protocol: Byte;
-  ReceivedAckNumber, ReceivedSeqNumber: DWord;
 begin
   // We already know this is a TCP packet when it enters this procedure   
   {$IFDEF TRACE_ETHERNET_RX}UART1_Write_Text(LF+LF+'....Reading Physical Layer Header.... '+LF);{$ENDIF}
@@ -311,7 +424,7 @@ begin
     WriteToEthMem(Local_TCP_HeaderStart + TCP_CHECKSUM_RELATIVE_OFFSET, $00);      // Put $0000 in for the Checksum
     Eth_PutByte($00);
     
-     {$IFDEF TRACE_ETHERNET_RX}
+    {$IFDEF TRACE_ETHERNET_RX}
     WordToStr(Local_TCP_HeaderStart, s1);
     UART1_Write_Text('TCP Header Start: ' + s1 + LF);
     WordToStr(Local_TCP_HeaderSize, s1);
@@ -336,22 +449,24 @@ begin
       begin
         {$IFDEF TRACE_ETHERNET_SOCKET_RX}UART1_Write_Text('Found Socket!' + LF);{$ENDIF}
         Socket := @SocketManager.Socket[iSocket];
-        Socket^.Flags := Socket^.Flags or (Header[3][1] and $003F);  // Only support first 6 bits of flags
-        if Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN = 1 then
-        begin
-          ReceivedSeqNumber := (Header[1][0] shl 24) or (Header[1][1] shl 16) or (Header[1][2] shl 8) or Header[1][3];
-          Socket^.AckNumber := ReceivedSeqNumber + 1;
-        end;
-        if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
-        begin
-          ReceivedAckNumber := (Header[2][0] shl 24) or (Header[2][1] shl 16) or (Header[2][2] shl 8) or Header[2][3];
-          Socket^.SequenceNumber := Socket^.SequenceNumber + ReceivedAckNumber;
-        end;
+        Socket^.TCPReceivedFlags := Socket^.TCPReceivedFlags or (Header[3][1] and $003F);  // Only support first 6 bits of flags
+        Socket^.SequenceReceived := HeaderLineToDWord(Header[1]);               // The other end tells us how many bytes it has sent, statemachine will handle it.
+        Socket^.AckReceived := HeaderLineToDWord(Header[2]);                    // The other end tells us how many bytes it has received from us
+        // Make the decision here if we call the User TCP Handler
+        // if IsUserTCPCall then
+        //    Call UserTCP
       end
     end
   end
 end;
 
+// *****************************************************************************
+// TCP_Process_TestForResend
+//   Parmeters: Socket: Connection that is being handled in the statemachine
+//              ResendState: The state to jump to if the socket needs to resend the message
+//   Results:
+//   Description: Helper function for TCP_Process_Stack
+// *****************************************************************************
 procedure TCP_Process_TestForResend(var Socket: TSocket; ResendState: Word);
 begin
   if Socket.ResendTimeCount > MAX_TCP_RESEND_TIMEOUT then
@@ -369,32 +484,47 @@ begin
     end;
 end;
 
+// *****************************************************************************
+// TCP_Process_ClearTimers
+//   Parmeters: Socket: Connection that is being handled in the statemachine
+//   Results:
+//   Description: Helper function for TCP_Process_Stack, clears the Timers in the Socket
+// *****************************************************************************
 procedure TCP_Process_ClearTimers(var Socket: TSocket);
 begin
-  UART1_Write_Text('TCP_Process_ClearTimers' + LF);
+  {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('TCP_Process_ClearTimers' + LF);{$ENDIF}
   Socket.ExpireTimeCount := 0;
   Socket.ResendTimeCount := 0;
 end;
 
+// *****************************************************************************
+// TCP_Process_ClearTimersAndResendAttempts
+//   Parmeters: Socket: Connection that is being handled in the statemachine
+//   Results:
+//   Description: Helper function for TCP_Process_Stack, clears the Timers in the Socket
+//                and resets the Resend Attempts field
+// *****************************************************************************
 procedure TCP_Process_ClearTimersAndResendAttempts(var Socket: TSocket);
 begin
-  UART1_Write_Text('TCP_Process_ClearTimersAndResendAttempts' + LF);
+  {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('TCP_Process_ClearTimersAndResendAttempts' + LF);{$ENDIF}
   Socket.ExpireTimeCount := 0;
   Socket.ResendTimeCount := 0;
   Socket.ResendAttempts := 0;
 end;
 
-//******************************************************************************
-//* Name    : TCP_Process_Stack                                                         *
-//* Purpose : Process packets from TCP/IP Stack                                *
-//******************************************************************************
+// *****************************************************************************
+// TCP_Process_Stack
+//   Parmeters:
+//   Results:
+//   Description: Runs the Statemachine for each Socket in the Socket Stack
+// *****************************************************************************
 procedure TCP_Process_Stack;
 var
   Socket: ^TSocket;
 begin
   Socket := @SocketManager.Socket[SocketManager.iLastProcessedSocket];
   
-  if Socket^.Flags.SOCKET_FLAG_RECEIVED_RST then
+  if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_RST then
     Socket^.iStateMachine := SOCKET_STATE_RESET;
     
   case Socket^.iStateMachine of
@@ -420,10 +550,11 @@ begin
         end;
     SOCKET_STATE_WAITING_FOR_SYN_ACK :
         begin 
-          if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then                    // Client will send an ACK then a SYN flag (or both at the same time)
+          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK = 1 then                    // Client will send an ACK then a SYN flag (or both at the same time)
           begin
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN_ACK' + LF);{$ENDIF}
-            Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK := 0;                        // Clear the ACK flag
+            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK := 0;                        // Clear the ACK flag
+          //  Socket^.AckReceived should be equal to Socket^.SequenceNumber + 1 here,  what to do if not??????
             TCP_Process_ClearTimersAndResendAttempts(Socket^);
             Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_SYN;
           end else
@@ -431,10 +562,11 @@ begin
         end;
     SOCKET_STATE_WAITING_FOR_SYN :
         begin 
-          if Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN = 1 then
+          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN = 1 then
           begin
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN' + LF);{$ENDIF}
-            Socket^.Flags.SOCKET_FLAG_RECEIVED_SYN := 0;
+            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN := 0;
+            Socket^.AckNumber := Socket^.SequenceReceived + 1;                  // Get in syn with the destination nodes sequence number then add one and reply
             TCP_Process_ClearTimersAndResendAttempts(Socket^);
             Socket^.iStateMachine := SOCKET_STATE_SENDING_SYN_ACK;
           end else
@@ -446,6 +578,7 @@ begin
           begin
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_SYN_ACK' + LF);{$ENDIF}
             TCP_Process_ClearTimers(Socket^);
+            Socket^.StateFlags.SOCKET_FLAG_CONNECTED := 1;
             Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
           end;
         end;
@@ -465,7 +598,7 @@ begin
             end
           end else
           begin
-            if (Socket^.Flags.SOCKET_FLAG_FINISH = 1) or (Socket^.ExpireTimeCount > Socket^.ExpireTimeMax) then
+            if (Socket^.StateFlags.SOCKET_FLAG_FINISH = 1) or (Socket^.ExpireTimeCount > Socket^.ExpireTimeMax) then
             begin
               TCP_Process_ClearTimersAndResendAttempts(Socket^);
               Socket^.iStateMachine := SOCKET_STATE_DISCONNECT;
@@ -477,17 +610,15 @@ begin
           if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S, TXSTART) then
           begin 
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_DISCONNECT' + LF);{$ENDIF}
-            Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN := 0;
-            Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK := 0;
-            Socket^.ResendTimeCount := 0;
-            Socket^.ResendAttempts := 0;
+            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN := 0;
+            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK := 0;
             Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN_ACK;
           end
         end;
     SOCKET_STATE_WAITING_FOR_FIN_ACK :
         begin
           // We have FIN'ed so we can't send anymore but we can receive until we receive a FIN
-          if Socket^.Flags.SOCKET_FLAG_RECEIVED_ACK = 1 then
+          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK = 1 then
           begin    
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN_ACK' + LF);{$ENDIF}
             // Update the Acknowledge field here
@@ -497,11 +628,27 @@ begin
         end;
     SOCKET_STATE_WAITING_FOR_FIN :
         begin 
-          if Socket^.Flags.SOCKET_FLAG_RECEIVED_FIN = 1 then
+          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN = 1 then
           begin         
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN');{$ENDIF}
+            Socket^.iStateMachine := SOCKET_STATE_SENDING_FIN_ACK;
+          end
+        end;
+    SOCKET_STATE_SENDING_FIN_ACK :
+        begin
+          if TCP_TryLoadTransmitterAndSend(Socket^, ACK_S, TXSTART) then
+          begin
+            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_FIN_ACK' + LF);{$ENDIF}
+            Socket^.TCPReceivedFlags := 0;
+            Socket^.Start_addr := 0;
+            Socket^.Stop_addr := 0;
+            Socket^.SequenceNumber := 0;
+            Socket^.AckReceived := 0;
+            Socket^.SequenceReceived := 0;
+            Socket^.AckNumber := 0;
+            Socket^.StateFlags.SOCKET_FLAG_CONNECTED := 0;
+            Socket^.TCPReceivedFlags := 0;
             Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
-            Socket^.Flags := 0;
           end
         end;
     SOCKET_STATE_ERROR :
@@ -514,10 +661,11 @@ begin
         end;
     SOCKET_STATE_RESET :
         begin 
-          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET' + LF);{$ENDIF}
-          // This will have been set asyncronously from the TCP Receive call
-          Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
-          Socket^.Flags := 0;
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET' + LF);{$ENDIF}     
+          Socket^.TCPReceivedFlags := 0;                                        // Reset any flags to start over
+          Socket^.Start_addr := 0;
+          Socket^.Stop_addr := 0;
+          Socket^.iStateMachine := SOCKET_STATE_CONNECT;
         end;
   end;
 
