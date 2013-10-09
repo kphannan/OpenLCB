@@ -35,18 +35,24 @@ const
   
 const
   SOCKET_STATE_DISCONNECTED           = 0;
-  SOCKET_STATE_CONNECT                = 1;
-  SOCKET_STATE_CONNECT_SEND           = 2;
-  SOCKET_STATE_WAITING_FOR_SYN_ACK    = 3;
-  SOCKET_STATE_WAITING_FOR_SYN        = 4;
-  SOCKET_STATE_SENDING_SYN_ACK        = 5;
-  SOCKET_STATE_CONNECTED              = 6;
-  SOCKET_STATE_DISCONNECT             = 7;
-  SOCKET_STATE_WAITING_FOR_FIN_ACK    = 8;
-  SOCKET_STATE_WAITING_FOR_FIN        = 9;
-  SOCKET_STATE_SENDING_FIN_ACK        = 10;
-  SOCKET_STATE_ERROR                  = 11;
-  SOCKET_STATE_RESET                  = 12;
+  SOCKET_STATE_CONNECT_AS_CLIENT      = 1;
+  SOCKET_STATE_CONNECT_AS_SERVER      = 2;
+  SOCKET_STATE_CONNECTED              = 3;
+  SOCKET_STATE_TEAR_OURSELVES_DOWN    = 4;
+  SOCKET_STATE_BEING_TORN_DOWN        = 5;
+  SOCKET_STATE_RESET                  = 6;
+  
+  SOCKET_SUBSTATE_EMPTY                                         = 0;
+  SOCKET_SUBSTATE_CLIENT_CONNECTING_SEND                        = 1;
+  SOCKET_SUBSTATE_CLIENT_CONNECTING_WAITING_FOR_SYN_ACK         = 2;
+  SOCKET_SUBSTATE_CLIENT_CONNECTING_WAITING_FOR_SYN             = 3;
+  SOCKET_SUBSTATE_CLIENT_CONNECTING_SENDING_SYN_ACK             = 4;
+  SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_SENDING_FIN            = 10;
+  SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_WAITING_FOR_FIN_ACK    = 11;
+  SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_WAITING_FOR_FIN        = 12;
+  SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_SENDING_FIN_ACK        = 13;
+  SOCKET_SUBSTATE_BEING_TORN_DOWN_SENDING_FIN_ACK               = 20;
+  SOCKET_SUBSTATE_BEING_TORN_DOWN_WAITING_FOR_ACK               = 21;
   
   SOCKET_FLAG_RECEIVED_FIN            = 0;  // Order matters it maps to the TCP Flags
   SOCKET_FLAG_RECEIVED_SYN            = 1;
@@ -58,12 +64,14 @@ const
   SOCKET_FLAG_ALLOCATED               = 0;
   SOCKET_FLAG_CONNECTED               = 1;    // Bit 1
   SOCKET_FLAG_FINISH                  = 2;    // Bit 2, Flagged to finish and disconnect
+  SOCKET_FLAG_IS_SERVER               = 3;    // If set then the statemachine will trigger Server (Listener) type connections, teardowns else it will be a client
 
   
   
 type
   TSocket = record
     iStateMachine    : Word;          // See SOCKET_STATE_xxxx constants
+    iSubStateMachine : Word;          // See SOCKET_SUBSTATE_xxx constants
     StateFlags       : Word;          // See SOCKET_FLAG_xxxx contants
     TCPReceivedFlags : Word;          // See SOCKET_FLAG_RECEIVED contants
     SourcePort       : Word;          // Port of the source (us)
@@ -132,6 +140,7 @@ begin
   SocketManager.Socket[iSocket].StateFlags := 0;
   SocketManager.Socket[iSocket].TCPReceivedFlags := 0;
   SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_DISCONNECTED;
+  SocketManager.Socket[iSocket].iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
   SocketManager.Socket[iSocket].SourcePort := 0;
   Mem_Set(@SocketManager.Socket[iSocket].DestIP, 0, 4);
   Mem_Set(@SocketManager.Socket[iSocket].DestMAC, 0, 6);
@@ -236,7 +245,8 @@ begin
       begin
         InitSocket(iSocket);
         SocketManager.Socket[iSocket].StateFlags.SOCKET_FLAG_ALLOCATED := 1;
-        SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_CONNECT;
+        SocketManager.Socket[iSocket].iStateMachine := SOCKET_STATE_CONNECT_AS_CLIENT;
+        SocketManager.Socket[iSocket].iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
         SocketManager.Socket[iSocket].SequenceNumber := $AAAA;                  // This should be Random
         SocketManager.Socket[iSocket].DestPort := DestPort;
         SocketManager.Socket[iSocket].SourcePort := SourcePort;

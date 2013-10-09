@@ -456,7 +456,7 @@ end;
 //   Results:
 //   Description: Helper function for TCP_Process_Stack
 // *****************************************************************************
-procedure TCP_Process_TestForResend(var Socket: TSocket; ResendState: Word);
+procedure TCP_Process_TestForResend(var Socket: TSocket; ResendState, ResendSubState: Word);
 begin
   if Socket.ResendTimeCount > MAX_TCP_RESEND_TIMEOUT then
     if Socket.ResendAttempts < MAX_TCP_RESEND_ATTEMPTS then
@@ -465,7 +465,8 @@ begin
       Socket.ExpireTimeCount := 0;
       Socket.ResendTimeCount := 0;
       Inc(Socket.ResendAttempts);
-      Socket.iStateMachine := ResendState                   // Resend
+      Socket.iStateMachine := ResendState;
+      Socket.iSubStateMachine := ResendSubState
     end else
     begin
       {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('Out of Resends giving up' + LF);{$ENDIF}
@@ -502,6 +503,278 @@ begin
 end;
 
 // *****************************************************************************
+// TCP_Process_ConnectingAsClient
+//   Parmeters: Socket: Socket that is trying to connect
+//   Results:
+//   Description: Runs the SubStatemachine for a Socket that is trying to create a TCP
+//                connection as a client (we send the initial ACK flag)
+// *****************************************************************************
+procedure TCP_Process_ConnectingAsClient(Socket: ^TSocket);
+begin
+  case Socket^.iSubStateMachine of
+    SOCKET_SUBSTATE_EMPTY :
+      begin
+        {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text(LF+ 'TCP_Process_ConnectingAsClient' + LF);{$ENDIF}
+        TCP_Process_ClearTimersAndResendAttempts(Socket^);
+        Socket^.ResendAttempts := 1;                                          // First Try
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_CLIENT_CONNECTING_SEND;
+      end;
+    SOCKET_SUBSTATE_CLIENT_CONNECTING_SEND :
+      begin
+        if TCP_TryLoadTransmitterAndSend(Socket^, SYN_S, TXSTART) then
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_CONNECT_SEND' + LF);{$ENDIF}
+          TCP_Process_ClearTimers(Socket^);
+          Socket^.iStateMachine := SOCKET_SUBSTATE_CLIENT_CONNECTING_WAITING_FOR_SYN_ACK;
+        end;
+      end;
+    SOCKET_SUBSTATE_CLIENT_CONNECTING_WAITING_FOR_SYN_ACK :
+      begin
+        if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK = 1 then                    // Client will send an ACK then a SYN flag (or both at the same time)
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN_ACK' + LF);{$ENDIF}
+          Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK := 0;                        // Clear the ACK flag
+        //  Socket^.AckReceived should be equal to Socket^.SequenceNumber + 1 here,  what to do if not??????
+          TCP_Process_ClearTimersAndResendAttempts(Socket^);
+          Socket^.iStateMachine := SOCKET_SUBSTATE_CLIENT_CONNECTING_WAITING_FOR_SYN;
+        end else
+          TCP_Process_TestForResend(Socket^, SOCKET_STATE_CONNECT_AS_CLIENT, SOCKET_SUBSTATE_CLIENT_CONNECTING_SEND);
+      end;
+    SOCKET_SUBSTATE_CLIENT_CONNECTING_WAITING_FOR_SYN :
+      begin
+        if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN = 1 then
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN' + LF);{$ENDIF}
+          Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN := 0;
+
+     {     if Socket^.SequenceReceived = Socket^.SequenceNumber + 1 then
+          begin
+            // The other end thinks we still have a link and won't send a SYN back
+            Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
+          end else
+          begin
+          end;   }
+
+          Socket^.AckNumber := Socket^.SequenceReceived + 1;                  // Get in syn with the destination nodes sequence number then add one and reply
+          Socket^.SequenceNumber := Socket^.SequenceNumber + 1;
+          TCP_Process_ClearTimersAndResendAttempts(Socket^);
+          Socket^.iStateMachine := SOCKET_SUBSTATE_CLIENT_CONNECTING_SENDING_SYN_ACK;
+        end else
+          TCP_Process_TestForResend(Socket^, SOCKET_STATE_CONNECT_AS_CLIENT, SOCKET_SUBSTATE_CLIENT_CONNECTING_SEND);
+      end;
+    SOCKET_SUBSTATE_CLIENT_CONNECTING_SENDING_SYN_ACK :
+      begin
+        if TCP_TryLoadTransmitterAndSend(Socket^, ACK_S, TXSTART) then
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_SYN_ACK' + LF);{$ENDIF}
+          TCP_Process_ClearTimers(Socket^);
+          Socket^.StateFlags.SOCKET_FLAG_CONNECTED := 1;
+          Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
+          Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+        end;
+      end 
+    else begin
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+        Socket^.iStateMachine := SOCKET_STATE_RESET;                            // We are lost and messed up
+      end;
+    end;
+end;
+
+// *****************************************************************************
+// TCP_Process_ConnectingAsServer
+//   Parmeters: Socket: Socket that is trying to connect
+//   Results:
+//   Description: Runs the SubStatemachine for a Socket that is trying to create a TCP
+//                connection as a server (we respond to the initial ACK flag)
+// *****************************************************************************
+procedure TCP_Process_ConnectingAsServer(Socket: ^TSocket);
+begin
+  case Socket^.iSubStateMachine of
+    SOCKET_SUBSTATE_EMPTY :
+      begin
+        {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text(LF+ 'TCP_Process_ConnectingAsServer' + LF);{$ENDIF}
+        Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;                      // TODO TODO
+      end
+    else begin
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+        Socket^.iStateMachine := SOCKET_STATE_RESET;                            // We are lost and messed up
+      end;
+    end;
+end;
+
+// *****************************************************************************
+// TCP_Process_TearOurselvesDown
+//   Parmeters: Socket: Socket that is trying to disconnect
+//   Results:
+//   Description: Runs the SubStatemachine for a Socket that is trying to disconnect a TCP
+//                connection as a initiator (we send the first FIN flag)
+// *****************************************************************************
+procedure TCP_Process_TearOurselvesDown(Socket: ^TSocket);
+begin
+  case Socket^.iSubStateMachine of
+    SOCKET_SUBSTATE_EMPTY :
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('TCP_Process_TearOurselvesDown' + LF);{$ENDIF}
+          TCP_Process_ClearTimersAndResendAttempts(Socket^);
+          Socket^.ResendAttempts := 1;                                          // First Try   
+        end;
+    SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_SENDING_FIN :
+        begin
+          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S, TXSTART) then
+            begin
+              {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_DISCONNECT' + LF);{$ENDIF}
+              Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN := 0;
+              Socket^.iSubStateMachine := SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_WAITING_FOR_FIN_ACK;
+            end;
+        end;
+    SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_WAITING_FOR_FIN_ACK :   // We sent a FIN so waiting for the other end to ACK the request
+          begin
+            // We have FIN'ed so we can't send anymore but we can receive until we receive a FIN
+            if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK = 1 then
+            begin
+              {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN_ACK' + LF);{$ENDIF}
+              // Update the Acknowledge field here
+              Socket^.iStateMachine := SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_WAITING_FOR_FIN;
+            end else
+              TCP_Process_TestForResend(Socket^, SOCKET_STATE_TEAR_OURSELVES_DOWN, SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_SENDING_FIN);
+          end;
+    SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_WAITING_FOR_FIN :  // The other end ACKed our FIN now wait for it to tell us it is ready to close
+          begin
+            if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN = 1 then
+            begin
+              {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN');{$ENDIF}
+              Socket^.iStateMachine := SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_SENDING_FIN_ACK;
+            end else
+            begin
+              // Continue to process Receives here until the other end is done
+            end
+          end;
+    SOCKET_SUBSTATE_TEARING_OURSELVES_DOWN_SENDING_FIN_ACK :  // The other end sent a FIN so we need to ACK it
+          begin
+            if TCP_TryLoadTransmitterAndSend(Socket^, ACK_S, TXSTART) then
+            begin
+              {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_FIN_ACK' + LF);{$ENDIF}
+              Socket^.TCPReceivedFlags := 0;
+              Socket^.Start_addr := 0;
+              Socket^.Stop_addr := 0;
+              Socket^.SequenceNumber := 0;
+              Socket^.AckReceived := 0;
+              Socket^.SequenceReceived := 0;
+              Socket^.AckNumber := 0;
+              Socket^.StateFlags.SOCKET_FLAG_CONNECTED := 0;
+              Socket^.TCPReceivedFlags := 0;
+              Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
+            end
+          end
+    else begin
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+        Socket^.iStateMachine := SOCKET_STATE_RESET;                            // We are lost and messed up
+      end;
+    end;
+end;
+
+// *****************************************************************************
+// TCP_Process_BeingTornDown
+//   Parmeters: Socket: Socket that is trying to disconnect
+//   Results:
+//   Description: Runs the SubStatemachine for a Socket that is trying to disconnect a TCP
+//                connection as a responder (we reply to the first FIN flag)
+// *****************************************************************************
+procedure TCP_Process_BeingTornDown(Socket: ^TSocket);
+begin
+  case Socket^.iSubStateMachine of
+    SOCKET_SUBSTATE_EMPTY :                                                     // The assumptions here is we have already received a FIN flag message
+        begin
+          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text(LF+ 'TCP_Process_BeingTornDown' + LF);{$ENDIF}
+          TCP_Process_ClearTimersAndResendAttempts(Socket^);
+          Socket^.ResendAttempts := 1;                                          // First Try
+          Socket^.iSubStateMachine := SOCKET_SUBSTATE_BEING_TORN_DOWN_SENDING_FIN_ACK;
+        end;
+    SOCKET_SUBSTATE_BEING_TORN_DOWN_SENDING_FIN_ACK :
+        begin
+          Socket^.Start_addr := 0;
+          Socket^.Stop_addr := 0;
+          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S + ACK_S, TXSTART) then
+          begin
+            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN := 0;
+            Socket^.iSubStateMachine := SOCKET_SUBSTATE_BEING_TORN_DOWN_WAITING_FOR_ACK
+          end;
+        end;
+    SOCKET_SUBSTATE_BEING_TORN_DOWN_WAITING_FOR_ACK :
+        begin
+          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK then
+          begin
+            Socket^.TCPReceivedFlags := 0;
+            if Socket^.StateFlags.SOCKET_FLAG_IS_SERVER then
+            begin
+              // TODO, SHOULD JUST GO BACK TO LISTENING>>>>>>>>>>>>>>>>>>>>>>>>>>
+            end else
+              Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
+            Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+          end else
+            TCP_Process_TestForResend(Socket^, SOCKET_STATE_BEING_TORN_DOWN, SOCKET_SUBSTATE_BEING_TORN_DOWN_SENDING_FIN_ACK);
+        end
+    else begin
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+        Socket^.iStateMachine := SOCKET_STATE_RESET;                            // We are lost and messed up
+      end;
+    end;
+end;
+
+// *****************************************************************************
+// TCP_Process_Connected
+//   Parmeters: Socket: Socket that is trying to disconnect
+//   Results:
+//   Description: Runs the Statemachine for a Socket that is connected and functioning
+//                properly
+// *****************************************************************************
+procedure TCP_Process_Connected(Socket: ^TSocket);
+begin
+  if Socket^.Stop_addr - Socket^.Start_addr > 0 then                    // Do we have some data to send?
+    begin
+      Socket^.ExpireTimeCount := 0;                                              // Reset Expiration time
+      if TCP_TryLoadTransmitterAndSend(Socket^, PSH_S + ACK_S, TXSTART) then
+      begin
+        // Send the data here.....
+        if not Socket^.Keep_Alive then
+        begin
+          TCP_Process_ClearTimersAndResendAttempts(Socket^);
+          Socket^.iStateMachine := SOCKET_STATE_TEAR_OURSELVES_DOWN;
+          Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+        end
+      end
+    end else
+    begin
+      if (Socket^.StateFlags.SOCKET_FLAG_FINISH = 1) or (Socket^.ExpireTimeCount > Socket^.ExpireTimeMax) then
+      begin
+        TCP_Process_ClearTimersAndResendAttempts(Socket^);
+        Socket^.iStateMachine := SOCKET_STATE_TEAR_OURSELVES_DOWN;
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+      end
+    end;
+end;
+
+// *****************************************************************************
+// TCP_Process_Resetting
+//   Parmeters: Socket: Socket that is trying to disconnect
+//   Results:
+//   Description: Runs the Statemachine for a Socket that has received a RST flag
+// *****************************************************************************
+procedure TCP_Process_Resetting(Socket: ^TSocket);
+begin
+  {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET' + LF);{$ENDIF}
+  Socket^.TCPReceivedFlags := 0;                                        // Reset any flags to start over
+  Socket^.Start_addr := 0;
+  Socket^.Stop_addr := 0;
+  if Socket^.StateFlags.SOCKET_FLAG_IS_SERVER then
+    Socket^.iStateMachine := SOCKET_STATE_CONNECT_AS_SERVER
+  else
+    Socket^.iStateMachine := SOCKET_STATE_CONNECT_AS_CLIENT;
+  Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+end;
+
+// *****************************************************************************
 // TCP_Process_Stack
 //   Parmeters:
 //   Results:
@@ -513,164 +786,40 @@ var
 begin
   Socket := @SocketManager.Socket[SocketManager.iLastProcessedSocket];
   
-  if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_RST then
-    Socket^.iStateMachine := SOCKET_STATE_RESET;
-    
-  case Socket^.iStateMachine of
-    SOCKET_STATE_DISCONNECTED :
-        begin
+  if Socket^.StateFlags.SOCKET_FLAG_ALLOCATED then
+  begin
+    // Check if the other end wants us to reset
+    if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_RST = 1 then
+    begin
+      Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_RST := 0;
+      Socket^.iStateMachine := SOCKET_STATE_RESET;
+      Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+    end;
 
-        end;
-    SOCKET_STATE_CONNECT :
-        begin   
-          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text(LF+LF+ 'SOCKET_STATE_CONNECT' + LF);{$ENDIF}
-          TCP_Process_ClearTimersAndResendAttempts(Socket^); 
-          Socket^.ResendAttempts := 1;                                          // First Try
-          Socket^.iStateMachine := SOCKET_STATE_CONNECT_SEND;
-        end;
-    SOCKET_STATE_CONNECT_SEND :
-        begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, SYN_S, TXSTART) then
-          begin
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_CONNECT_SEND' + LF);{$ENDIF}
-            TCP_Process_ClearTimers(Socket^);
-            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_SYN_ACK;
-          end;
-        end;
-    SOCKET_STATE_WAITING_FOR_SYN_ACK :
-        begin 
-          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK = 1 then                    // Client will send an ACK then a SYN flag (or both at the same time)
-          begin
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN_ACK' + LF);{$ENDIF}
-            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK := 0;                        // Clear the ACK flag
-          //  Socket^.AckReceived should be equal to Socket^.SequenceNumber + 1 here,  what to do if not??????
-            TCP_Process_ClearTimersAndResendAttempts(Socket^);
-            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_SYN;
-          end else
-            TCP_Process_TestForResend(Socket^, SOCKET_STATE_CONNECT_SEND);
-        end;
-    SOCKET_STATE_WAITING_FOR_SYN :
-        begin 
-          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN = 1 then
-          begin
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN' + LF);{$ENDIF}
-            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN := 0;
-            
-       {     if Socket^.SequenceReceived = Socket^.SequenceNumber + 1 then
-            begin
-              // The other end thinks we still have a link and won't send a SYN back
-              Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
-            end else
-            begin
-            end;   }
+    // Check if the other end is trying to tear down the connections
+    if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN = 1 then
+    begin
+      if Socket^.iStateMachine < SOCKET_STATE_TEAR_OURSELVES_DOWN then            // If we are not in the state of being torn down it much be the other end has initiated it
+      begin
+        Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN := 0;
+        Socket^.iStateMachine := SOCKET_STATE_BEING_TORN_DOWN;
+        Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
+      end
+    end;
 
-            Socket^.AckNumber := Socket^.SequenceReceived + 1;                  // Get in syn with the destination nodes sequence number then add one and reply
-            Socket^.SequenceNumber := Socket^.SequenceNumber + 1;
-            TCP_Process_ClearTimersAndResendAttempts(Socket^);
-            Socket^.iStateMachine := SOCKET_STATE_SENDING_SYN_ACK;
-          end else
-            TCP_Process_TestForResend(Socket^, SOCKET_STATE_CONNECT);
-        end;
-    SOCKET_STATE_SENDING_SYN_ACK :
-        begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, ACK_S, TXSTART) then
-          begin
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_SYN_ACK' + LF);{$ENDIF}
-            TCP_Process_ClearTimers(Socket^);
-            Socket^.StateFlags.SOCKET_FLAG_CONNECTED := 1;
-            Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
-          end;
-        end;
-    SOCKET_STATE_CONNECTED :
-        begin
-          if Socket^.Stop_addr - Socket^.Start_addr > 0 then                    // Do we have some data to send?
-          begin
-            Socket^.ExpireTimeCount := 0;                                              // Reset Expiration time
-            if TCP_TryLoadTransmitterAndSend(Socket^, PSH_S + ACK_S, TXSTART) then
-            begin
-              // Send the data here.....
-              if not Socket^.Keep_Alive then
-              begin
-                TCP_Process_ClearTimersAndResendAttempts(Socket^);
-                Socket^.iStateMachine := SOCKET_STATE_DISCONNECT;
-              end
-            end
-          end else
-          begin
-            if (Socket^.StateFlags.SOCKET_FLAG_FINISH = 1) or (Socket^.ExpireTimeCount > Socket^.ExpireTimeMax) then
-            begin
-              TCP_Process_ClearTimersAndResendAttempts(Socket^);
-              Socket^.iStateMachine := SOCKET_STATE_DISCONNECT;
-            end
-          end;
-        end;
-    SOCKET_STATE_DISCONNECT :
-        begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S, TXSTART) then
-          begin 
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_DISCONNECT' + LF);{$ENDIF}
-            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN := 0;
-            Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK := 0;
-            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN_ACK;
-          end
-        end;
-    SOCKET_STATE_WAITING_FOR_FIN_ACK :
-        begin
-          // We have FIN'ed so we can't send anymore but we can receive until we receive a FIN
-          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_ACK = 1 then
-          begin    
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN_ACK' + LF);{$ENDIF}
-            // Update the Acknowledge field here
-            Socket^.iStateMachine := SOCKET_STATE_WAITING_FOR_FIN;
-          end else
-            TCP_Process_TestForResend(Socket^, SOCKET_STATE_DISCONNECT);
-        end;
-    SOCKET_STATE_WAITING_FOR_FIN :
-        begin 
-          if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_FIN = 1 then
-          begin         
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_FIN');{$ENDIF}
-            Socket^.iStateMachine := SOCKET_STATE_SENDING_FIN_ACK;
-          end
-        end;
-    SOCKET_STATE_SENDING_FIN_ACK :
-        begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, ACK_S, TXSTART) then
-          begin
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_SENDING_FIN_ACK' + LF);{$ENDIF}
-            Socket^.TCPReceivedFlags := 0;
-            Socket^.Start_addr := 0;
-            Socket^.Stop_addr := 0;
-            Socket^.SequenceNumber := 0;
-            Socket^.AckReceived := 0;
-            Socket^.SequenceReceived := 0;
-            Socket^.AckNumber := 0;
-            Socket^.StateFlags.SOCKET_FLAG_CONNECTED := 0;
-            Socket^.TCPReceivedFlags := 0;
-            Socket^.iStateMachine := SOCKET_STATE_DISCONNECTED;
-          end
-        end;
-    SOCKET_STATE_ERROR :
-        begin
-          if TCP_TryLoadTransmitterAndSend(Socket^, FIN_S + ACK_S, TXSTART) then
-          begin
-            {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_ERROR' + LF);{$ENDIF}
-            Socket^.iStateMachine := SOCKET_STATE_RESET;
-          end;
-        end;
-    SOCKET_STATE_RESET :
-        begin 
-          {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_RESET' + LF);{$ENDIF}     
-          Socket^.TCPReceivedFlags := 0;                                        // Reset any flags to start over
-          Socket^.Start_addr := 0;
-          Socket^.Stop_addr := 0;
-          Socket^.iStateMachine := SOCKET_STATE_CONNECT;
-        end;
+    case Socket^.iStateMachine of
+      SOCKET_STATE_DISCONNECTED         : begin end;
+      SOCKET_STATE_CONNECT_AS_CLIENT    : TCP_Process_ConnectingAsClient(Socket);
+      SOCKET_STATE_CONNECT_AS_SERVER    : TCP_Process_ConnectingAsServer(Socket);
+      SOCKET_STATE_CONNECTED            : TCP_Process_Connected(Socket);
+      SOCKET_STATE_TEAR_OURSELVES_DOWN  : TCP_Process_TearOurselvesDown(Socket);
+      SOCKET_STATE_BEING_TORN_DOWN      : TCP_Process_BeingTornDown(Socket);
+      SOCKET_STATE_RESET                : TCP_Process_Resetting(Socket);
+    end;
   end;
 
-  // Loop around if necessary
-  Inc(SocketManager.iLastProcessedSocket);
-  if SocketManager.iLastProcessedSocket >= MAX_SOCKET then
+  Inc(SocketManager.iLastProcessedSocket);                                      // Next Socket please
+  if SocketManager.iLastProcessedSocket >= MAX_SOCKET then                      // Loop around the horn if necessary
     SocketManager.iLastProcessedSocket := 0;
 end;
 
