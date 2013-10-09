@@ -20,9 +20,6 @@ NMRAnetDefinesShared,
   definitions_ENC600,
   ENCJ600;
 
-
-
-  
 // User Functions
 function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte; TxMemoryAddress: Word): Boolean;
 
@@ -171,16 +168,11 @@ end;
 //   Description: Helper function for TCP_TryLoadTransmitterAndSend
 // *****************************************************************************
 procedure LoadTCPHeaderLine1(var HeaderLine: TEthernetHeaderLine; SequenceNumber: DWord);
-var
-  TempHi, TempLo: Word;
 begin
-  // Little Endian forces this
-  TempHi := Hi(SequenceNumber);
-  TempLo := Lo(SequenceNumber);
-  HeaderLine[0] := Hi(TempHi);
-  HeaderLine[1] := Lo(TempHi);
-  HeaderLine[2] := Hi(TempLo);
-  HeaderLine[3] := Lo(TempLo);
+  HeaderLine[0] := SequenceNumber shr 24;
+  HeaderLine[1] := SequenceNumber shr 16;
+  HeaderLine[2] := SequenceNumber shr 8;
+  HeaderLine[3] := SequenceNumber;
 end;
 
 // *****************************************************************************
@@ -191,16 +183,11 @@ end;
 //   Description: Helper function for TCP_TryLoadTransmitterAndSend
 // *****************************************************************************
 procedure LoadTCPHeaderLine2(var HeaderLine: TEthernetHeaderLine; AckNumber: DWord);
-var
-  TempHi, TempLo: Word;
 begin
-  // Little Endian forces this
-  TempHi := Hi(AckNumber);
-  TempLo := Lo(AckNumber);
-  HeaderLine[0] := Hi(TempHi);
-  HeaderLine[1] := Lo(TempHi);
-  HeaderLine[2] := Hi(TempLo);
-  HeaderLine[3] := Lo(TempLo);
+  HeaderLine[0] := AckNumber shr 24;
+  HeaderLine[1] := AckNumber shr 16;
+  HeaderLine[2] := AckNumber shr 8;
+  HeaderLine[3] := AckNumber;
 end;
 
 // *****************************************************************************
@@ -242,15 +229,8 @@ end;
 //   Description: Helper function for TCP_Process_Receive
 // *****************************************************************************
 function HeaderLineToDWord(var HeaderLine: TEthernetHeaderLine): DWord;
-var
-  TempHi, TempLo: Word;
 begin
-  Hi( TempHi) := HeaderLine[0];
-  Lo( TempHi) := HeaderLine[1];
-  Hi( TempLo) := HeaderLine[2];
-  Lo( TempLo) := HeaderLine[3];
-  Hi( Result) := TempHi;
-  Lo( Result) := TempLo;
+  Result := (HeaderLine[0] shl 24) or (HeaderLine[1] shl 16) or (HeaderLine[2] shl 8) or HeaderLine[3];
 end;
 
 // *****************************************************************************
@@ -306,14 +286,14 @@ begin
   
     LoadTCPHeaderLine0(Header[0], Socket.SourcePort, Socket.DestPort);
 
-    if TCP_Flags and SYN_S <> 0 then                                            // Special case
+    if TCP_Flags and SYN_S <> 0 then                                            // Special case.  THIS DIFFERENT IF WE ARE A LISTENER
     begin
-      LoadTCPHeaderLine2(Header[1], Socket.SequenceNumber);                     // Our initial Sequence Number of SYN is set or the total number of bytes we have sent to the other node of not SYN
+      LoadTCPHeaderLine1(Header[1], Socket.SequenceNumber);                     // Our initial Sequence Number of SYN is set or the total number of bytes we have sent to the other node of not SYN
       LoadTCPHeaderLine2(Header[2], 0)                                          // Ack Number = 0 by definition
     end else 
     begin
       Socket.SequenceNumber := Socket.SequenceNumber + TcpDataLength;           // Update the sequence to data sent THIS IS NOT RIGHT FOR A SLIDING WINDOW
-      LoadTCPHeaderLine2(Header[1], Socket.SequenceNumber);
+      LoadTCPHeaderLine1(Header[1], Socket.SequenceNumber);
       if TCP_Flags and ACK_S <> 0 then
         LoadTCPHeaderLine2(Header[2], Socket.AckNumber)                         // Tell the other socket how many bytes we have received from it so far
       else
@@ -338,9 +318,11 @@ begin
     Eth_PutByte(Lo(CheckSum));
    
    {$IFDEF TRACE_ETHERNET_TX}UART1_Write_Text('TCP Header: ' + LF); PrintHeader(Header, TCP_HEADER_SIZE div MAX_ETHERNET_HEADERLINE_BYTES); WordToHex(CheckSum, s1); UART1_Write_Text('TCP Checksum: 0x' + s1 + LF);{$ENDIF}
+     ByteToHex(TCP_Flags, s1);
+     UART1_Write_Text(LF + 'Transmitting with TCP Flags: ' + s1);
+     PrintSocket(Socket);
 
     Ethernet_Send(TxMemoryAddress, MessageLength + PHYSICAL_LAYER_HEADER_SIZE);          // Enable the data transmit
-    
     Result := True;
   end;
 end;
@@ -451,7 +433,14 @@ begin
         Socket := @SocketManager.Socket[iSocket];
         Socket^.TCPReceivedFlags := Socket^.TCPReceivedFlags or (Header[3][1] and $003F);  // Only support first 6 bits of flags
         Socket^.SequenceReceived := HeaderLineToDWord(Header[1]);               // The other end tells us how many bytes it has sent, statemachine will handle it.
-        Socket^.AckReceived := HeaderLineToDWord(Header[2]);                    // The other end tells us how many bytes it has received from us
+        if Socket^.TCPReceivedFlags and ACK_S <> 0 then
+          Socket^.AckReceived := HeaderLineToDWord(Header[2])                   // The other end tells us how many bytes it has received from us
+        else
+          Socket^.AckReceived := 0;
+       
+       UART1_Write_Text(LF + 'Receiving.....');
+        PrintSocket(Socket^);
+       
         // Make the decision here if we call the User TCP Handler
         // if IsUserTCPCall then
         //    Call UserTCP
@@ -566,7 +555,17 @@ begin
           begin
             {$IFDEF TRACE_SOCKET_STATE}UART1_Write_Text('SOCKET_STATE_WAITING_FOR_SYN' + LF);{$ENDIF}
             Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_SYN := 0;
+            
+       {     if Socket^.SequenceReceived = Socket^.SequenceNumber + 1 then
+            begin
+              // The other end thinks we still have a link and won't send a SYN back
+              Socket^.iStateMachine := SOCKET_STATE_CONNECTED;
+            end else
+            begin
+            end;   }
+
             Socket^.AckNumber := Socket^.SequenceReceived + 1;                  // Get in syn with the destination nodes sequence number then add one and reply
+            Socket^.SequenceNumber := Socket^.SequenceNumber + 1;
             TCP_Process_ClearTimersAndResendAttempts(Socket^);
             Socket^.iStateMachine := SOCKET_STATE_SENDING_SYN_ACK;
           end else

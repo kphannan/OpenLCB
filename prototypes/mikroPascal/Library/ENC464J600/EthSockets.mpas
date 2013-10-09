@@ -170,8 +170,12 @@ begin
   UART1_Write_Text('DestPort: ' + s1 + LF);
   LongWordToStr(Socket.SequenceNumber, s1);
   UART1_Write_Text('Seq Number: ' + s1 + LF);
+  LongWordToStr(Socket.AckReceived, s1);
+  UART1_Write_Text('Ack Received: ' + s1 + LF);
   LongWordToStr(Socket.AckNumber, s1);
   UART1_Write_Text('Ack Number: ' + s1 + LF);
+  LongWordToStr(Socket.SequenceReceived, s1);
+  UART1_Write_Text('Seq Received: ' + s1 + LF);
   WordToStr(Socket.Identification, s1);
   UART1_Write_Text('Identification: ' + s1 + LF);
   WordToStr(Socket.ExpireTimeCount, s1);

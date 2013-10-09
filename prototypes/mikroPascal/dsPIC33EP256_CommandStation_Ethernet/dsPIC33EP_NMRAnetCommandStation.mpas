@@ -350,10 +350,6 @@ var
   ipDest: TIPAddress;
   Running: Boolean;
 begin
-
-//TCP_Process_Receive(0);
-
-
   SR := SR and $FF1F; // Bug in silicon?  Clear the IPL bits (CPU Priority is lowest possible)
   ANSELA := 0;
   ANSELB := 0;
