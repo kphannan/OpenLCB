@@ -1,0 +1,13 @@
+<Wrap_Unsigned_Window>
+	<Attributes>
+		<Url>http://stackoverflow.com/questions/2061245/how-to-subtract-two-unsigned-ints-with-wrap-around-or-overflow</Url>
+		<Image></Image>
+		<File></File>
+	</Attributes>
+	<Events>
+		<OnLeftClick></OnLeftClick>
+		<OnRightClick></OnRightClick>
+		<OnDblClick></OnDblClick>
+		<OnMouseOver></OnMouseOver>
+	</Events>
+</Wrap_Unsigned_Window>

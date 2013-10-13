@@ -1,0 +1,107 @@
+[DEVICE]
+Name=P33EP256GP502
+Clock=64000000
+[MEMORY_MODEL]
+Value=-1
+[BUILD_TYPE]
+Value=0
+[ACTIVE_TAB]
+Value=dsPIC33EP_NMRAnetCommandStation.mpas
+[USE_EEPROM]
+Value=0
+[USE_HEAP]
+Value=0
+[HEAP_SIZE]
+Value=2000
+[EEPROM_DEFINITION]
+Value=
+[FILES]
+Count=24
+File0=dsPIC33EP_NMRAnetCommandStation.mpas
+File1=MCU_Setup_dsPIC33EP64GP502.mpas
+File2=NMRAnetAppCallbacks.mpas
+File3=NMRAnetAppDefines.mpas
+File4=..\Library\NMRAnet\NMRAnetBufferPools.mpas
+File5=..\Library\NMRAnet\NMRAnetDefines.mpas
+File6=..\Library\NMRAnet\NMRAnetDefinesShared.mpas
+File7=..\Library\NMRAnet\NMRAnetNode.mpas
+File8=..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File9=..\Library\NMRAnet\NMRAnetUtilities.mpas
+File10=..\Library\NMRAnetDCCSystem\NMRAnetDCC.mpas
+File11=..\Library\dsPIC33F\dsPIC33_DMA.mpas
+File12=..\Library\Math\Float16.mpas
+File13=..\Library\NMRAnetDCCSystem\NMRAnetServiceMode.mpas
+File14=..\Library\NMRAnetDCCSystem\DirectServiceMode.mpas
+File15=..\Library\NMRAnetDCCSystem\ServiceModeDefines.mpas
+File16=..\Library\NMRAnetDCCSystem\PagedServiceMode.mpas
+File17=..\Library\NMRAnetDCCSystem\RegisterServiceMode.mpas
+File18=..\Library\NMRAnetDCCSystem\CommonServiceMode.mpas
+File19=..\Library\dsPIC33F\dsPIC33_Traps.mpas
+File20=..\Library\Common\HelperFunctions.mpas
+File21=..\Library\Common\NodeIDs.mpas
+File22=..\Library\TCPBus\TCPStorage_mPascal_Lib.mpas
+File23=..\Library\Common\dspic_additional_string_library.mpas
+[BINARIES]
+Count=0
+[IMAGES]
+Count=0
+ActiveImageIndex=-1
+[OPENED_FILES]
+Count=9
+File0=dsPIC33EP_NMRAnetCommandStation.mpas
+File1=..\Library\TCPBus\TCPStorage_mPascal_Lib.mpas
+File2=MCU_Setup_dsPIC33EP64GP502.mpas
+File3=..\Library\TCPBus\TCPStorage.mpas
+File4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\examples\HTTP_Demo_24j600\HTTP_Demo_24j600.mpas
+File5=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc24j600_Defs.mpas
+File6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\Uses\__NetEthEnc28j60Private.mpas
+File7=NMRAnetAppCallbacks.mpas
+File8=..\Library\Common\dspic_additional_string_library.mpas
+[EEPROM]
+Count=0
+[ACTIVE_COMMENTS_FILES]
+Count=1
+File0=Wrap_Unsigned_Window.xml
+[OTHER_FILES]
+Count=1
+File0=Options.inc
+[SEARCH_PATH]
+Count=13
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
+Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet_mPascal_Library\
+Path3=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path5=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path6=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path7=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path8=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
+Path9=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path10=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
+Path11=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\
+Path12=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
+[HEADER_PATH]
+Count=0
+[HEADERS]
+Count=0
+[PLDS]
+Count=0
+[Useses]
+Count=11
+File0=Conversions
+File1=String
+File2=SPI
+File3=CAN
+File4=UART
+File5=Peripheral_Pin_Select
+File6=ADC
+File7=C_Stdlib
+File8=C_Type
+File9=Net_Ethernet_24j600
+File10=Net_Ethernet_24j600_Defs
+[EXPANDED NODES]
+Node1=Sources
+Node2=Active Comments Files
+Node3=Output Files
+Node4=Other Files
+Count=4

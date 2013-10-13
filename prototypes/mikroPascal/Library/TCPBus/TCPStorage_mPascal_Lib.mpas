@@ -1,4 +1,4 @@
-unit TCPStorage;
+unit TCPStorage_mPascal_Lib;
 
 // ******************************************************************************
 //
@@ -103,8 +103,9 @@ function CANStorage_HighPriorityBufferReady: Boolean;
 // Exported for the TCP Stack
 procedure DisableInt;
 procedure EnableInt;
-procedure Eth_UserTCP(var dest_ip_addr_T : TIPAddress; var source_port_T, dest_port_T, len_T : word; iSocket : Integer);
-function Eth_UserUDP(var dest_ip_addr_U : TIPAddress; var dest_port_U, source_port_U, len_U : word) : word;
+
+procedure Net_Ethernet_24j600_UserTCP(socket : ^SOCKET_24j600_Dsc);
+function Net_Ethernet_24j600_UserUDP(udpDsc : ^UDP_24j600_Dsc) : word;
 
 //procedure CANStorage_DumpSocketData(Socket: ^SOCKET_28j60_Dsc);
 
@@ -473,128 +474,108 @@ begin           (*
   *)
 end;
 
-procedure Eth_UserTCP(var dest_ip_addr_T : TIPAddress; var source_port_T, dest_port_T, PacketLen : word; iSocket : Integer);
+procedure Net_Ethernet_24j600_UserTCP(socket : ^SOCKET_24j600_Dsc);
 var
   TCP_Receive_Char: char;
-  Socket: ^TSocket;
 begin
   // Socket will be released after this call
   
   CAN_Engine.IsTransmitting := False;  // Maybe, maybe not we will see...
 
-  Socket := @SocketManager.Socket[iSocket];
-  if Socket^.StateFlags.SOCKET_FLAG_CONNECTED = 1 then
+  // Read something if we can
+  if (Socket^.DestPort = 12021) and (Socket^.dataLength > 0) then
   begin
-    {$IFDEF LOG_UART}
-    UART1_Write_Text('TCP Rx User Entered'+LF);
-    WordToStr(Socket^.dest_port_S, s1);
-    UART1_Write_Text('Dest Port: ' + s1 +LF);
-    WordToStr(Socket^.Stop_addr - Socket^.Start_addr, s1);
-    UART1_Write_Text('Data Size: ' + s1 +LF);
-    WordToStr(PacketLen, s1);
-    UART1_Write_Text('Packet Len Size: ' + s1 +LF);
-    {$ENDIF}
-    
-    // Read something if we can
-    if (Socket^.DestPort = 12021) and (PacketLen) then
+    Receive_GridConnectBufferIndex := 0;
+    while Socket^.dataLength > 0 do
     begin
-      Receive_GridConnectBufferIndex := 0;
-      while (Socket^.Stop_addr - Socket^.Start_addr > 0) do
-      begin
-        TCP_Receive_Char := Socket^.TCP_buf[Socket^.Start_addr];                // Get the next byte from the stack
-        case TCP_Receive_State of
-          TCP_STATE_SYNC_START :                                                // Find a starting ':'
+      TCP_Receive_Char := Net_Ethernet_24j600_getByte;                        // Get the next byte from the ENC
+      case TCP_Receive_State of
+        TCP_STATE_SYNC_START :                                                // Find a starting ':'
+          begin
+            if TCP_Receive_Char = ':' then
             begin
-              if TCP_Receive_Char = ':' then
+              Receive_GridConnectBufferIndex := 0;
+              Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
+              Inc(Receive_GridConnectBufferIndex);
+              TCP_Receive_State := TCP_STATE_SYNC_FIND_X
+            end
+          end;
+        TCP_STATE_SYNC_FIND_X :
+          begin
+            if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
+            begin
+              if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
               begin
-                Receive_GridConnectBufferIndex := 0;
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ':';
+                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
                 Inc(Receive_GridConnectBufferIndex);
-                TCP_Receive_State := TCP_STATE_SYNC_FIND_X
-              end
-            end;
-          TCP_STATE_SYNC_FIND_X :
-            begin
-              if TCP_Receive_Char <> ':' then   // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
-              begin
-                if (TCP_Receive_Char = 'X') or (TCP_Receive_Char = 'x') then
-                begin
-                  Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'X';
-                  Inc(Receive_GridConnectBufferIndex);
-                  TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
-                end else
-                   TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
-              end
-            end;
-          TCP_STATE_SYNC_FIND_HEADER :
-            begin
-              if IsValidHexChar(TCP_Receive_Char) then
-              begin
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
-                if Receive_GridConnectBufferIndex = 9 then
-                  TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
-                Inc(Receive_GridConnectBufferIndex);
+                TCP_Receive_State := TCP_STATE_SYNC_FIND_HEADER
               end else
-                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
-            end;
-          TCP_STATE_SYNC_FIND_N :
+                 TCP_Receive_State := TCP_STATE_SYNC_START                    // Error, start over
+            end
+          end;
+        TCP_STATE_SYNC_FIND_HEADER :
+          begin
+            if IsValidHexChar(TCP_Receive_Char) then
             begin
-              if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
-              begin
-                Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
-                Inc(Receive_GridConnectBufferIndex);
-                TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
-              end else
-                TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
-            end;
-          TCP_STATE_SYNC_FIND_DATA :
-            begin
-               if TCP_Receive_Char = ';'then
-               begin
-                 if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
-                 begin
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
-                   GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
-                   if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
-                   begin
-                     {$IFDEF LOG_GRIDCONNECT_UART}
-                     UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
-                     {$ENDIF}
-                     ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
-                   end else
-                   begin
-                     {$IFDEF LOG_GRIDCONNECT_UART}
-                     UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
-                     {$ENDIF}
-                     ReceivedOnFilter0(@RxCANBuffer);
-                   end;
-                 end;
-                 TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
-               end else
-               begin
-                 if IsValidHexChar(TCP_Receive_Char) then
-                 begin
-                   Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
-                   Inc(Receive_GridConnectBufferIndex);
-                 end else
-                   TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
-               end
+              Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+              if Receive_GridConnectBufferIndex = 9 then
+                TCP_Receive_State := TCP_STATE_SYNC_FIND_N;
+              Inc(Receive_GridConnectBufferIndex);
             end else
-              TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
-        end;
-        Inc(Socket^.Start_addr);        // Next char
-      end;
+              TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+          end;
+        TCP_STATE_SYNC_FIND_N :
+          begin
+            if (TCP_Receive_Char >= 'N') or (TCP_Receive_Char <= 'n') then
+            begin
+              Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := 'N';
+              Inc(Receive_GridConnectBufferIndex);
+              TCP_Receive_State := TCP_STATE_SYNC_FIND_DATA;
+            end else
+              TCP_Receive_State := TCP_STATE_SYNC_START                       // Error start over
+          end;
+        TCP_STATE_SYNC_FIND_DATA :
+          begin
+             if TCP_Receive_Char = ';'then
+             begin
+               if (Receive_GridConnectBufferIndex + 1) mod 2 = 0 then           // 0 index, add 1 for the actual character count
+               begin
+                 Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := ';';
+                 Receive_GridConnectBuffer[Receive_GridConnectBufferIndex + 1] := #0;
+                 GridConnectToCANBuffer(Receive_GridConnectBuffer, @RxCANBuffer);
+                 if RxCANBuffer.ID and MTI_OLCB_MSG = MTI_OLCB_MSG then
+                 begin
+                   {$IFDEF LOG_GRIDCONNECT_UART}
+                   UART_Write_Text('Olcb Rx: ' + Receive_GridConnectBuffer + LF);
+                   {$ENDIF}
+                   ReceivedOnFilter1(@RxCANBuffer)                             // SUCCESS SEND IT
+                 end else
+                 begin
+                   {$IFDEF LOG_GRIDCONNECT_UART}
+                   UART_Write_Text('CAN Rx: ' + Receive_GridConnectBuffer + LF);
+                   {$ENDIF}
+                   ReceivedOnFilter0(@RxCANBuffer);
+                 end;
+               end;
+               TCP_Receive_State := TCP_STATE_SYNC_START                      // Done
+             end else
+             begin
+               if IsValidHexChar(TCP_Receive_Char) then
+               begin
+                 Receive_GridConnectBuffer[Receive_GridConnectBufferIndex] := TCP_Receive_Char;
+                 Inc(Receive_GridConnectBufferIndex);
+               end else
+                 TCP_Receive_State := TCP_STATE_SYNC_START;                   // Error start over
+             end
+          end else
+            TCP_Receive_State := TCP_STATE_SYNC_START;                        // Invalidate State Index
+      end;  // Case
     end;
-  end else
-  begin
-    {$IFDEF LOG_UART}
-    UART1_Write_Text('TCP Rx User Entered, Socket not connected'+LF);
-    {$ENDIF}
   end;
+
 end;
 
-function Eth_UserUDP(var dest_ip_addr_U : TIPAddress; var dest_port_U, source_port_U, len_U : word) : word;
+function Net_Ethernet_24j600_UserUDP(udpDsc : ^UDP_24j600_Dsc) : word;
 begin
   UART1_Write_Text('UDP'+LF);
   result := 0;

@@ -30,6 +30,9 @@ uses
   {$IFDEF ETHERNET_BUS}
   TCPStorage,
   {$ENDIF}
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_LIB}
+  TCPStorage_mPascal_Lib,
+  {$ENDIF}
   {$IFDEF TRACTION_PROTOCOL}
   TractionProtocol,
   {$ENDIF}

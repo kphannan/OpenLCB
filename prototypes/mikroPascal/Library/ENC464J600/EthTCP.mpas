@@ -6,6 +6,10 @@ unit EthTCP;
 {.$DEFINE TRACE_ETHERNET_RX}
 {.$DEFINE TRACE_ETHERNET_SOCKET_RX}
 
+// Wrap unsigned Window
+//   http://stackoverflow.com/questions/2061245/how-to-subtract-two-unsigned-ints-with-wrap-around-or-overflow
+
+
 {$I Options.inc}
 
 uses
@@ -23,11 +27,143 @@ NMRAnetDefinesShared,
 // User Functions
 function TCP_TryLoadTransmitterAndSend(var Socket: TSocket; TCP_Flags: Byte; TxMemoryAddress: Word): Boolean;
 
+function TCP_Event_Open(var Socket: TSocket; Passive: Boolean; Timeout: Integer): Word;
+function TCP_Event_Send(var Socket: TSocket; DataAddress: ^Byte; DataLen: Word; Push, Urgent: Boolean; Timeout: Integer): Word;
+function TCP_Event_Receive(var Socket: TSocket; var Push, Urgent: Boolean): Word;
+function TCP_Event_Close(var Socket: TSocket): Word;
+procedure TCP_Event_Abort(var Socket: TSocket);
+procedure TCP_Event_Status(var Socket: TSocket);
+
 // Internally used Functions
 procedure TCP_Process_Stack;
 procedure TCP_Process_Receive(RxMemoryAddress: Word);
 
 implementation
+
+function CalculateRandomInitalSendSequence: DWord;
+begin
+  Result := $243546;
+end;
+
+function TCP_Event_Open(var Socket: TSocket; Passive: Boolean; Timeout: Integer): Word;
+begin
+  Socket.Passive := Passive;
+  case Socket.TCB.State of
+    TCP_STATE_CLOSED :
+      begin
+        TCP_InitTCB(Socket.TCB);
+        Socket.Timeouts.UserTimeout := Timeout;
+        if Passive then
+          Socket.TCB.State := TCP_STATE_LISTEN
+        else begin
+          Socket.TCB.SendSeq.ISS := CalculateRandomInitalSendSequence;          // "Random" Initial Send Sequence Number
+          Socket.TCB.SendSeq.UNA := Socket.TCB.SendSeq.ISS;                     // Get ready to test the received ACK that is comming
+          Socket.TCB.SendSeq.NXT := Socket.TCB.SendSeq.ISS + 1;
+          TCP_SocketTransmitterLoad(Socket, TCP_STATE_SYN_SENT, SYN_S);         // The main Socket Stack Process Loop will send the packet and update the state
+        end;
+        Result := TCP_E_OK;
+      end;
+    TCP_STATE_LISTEN :
+      begin
+        if not Passive then
+        begin
+          Socket.TCB.SendSeq.ISS := CalculateRandomInitalSendSequence;          // "Random" Initial Send Sequence Number
+          Socket.TCB.SendSeq.UNA := Socket.TCB.SendSeq.ISS;                     // Get ready to test the received ACK that is comming
+          Socket.TCB.SendSeq.NXT := Socket.TCB.SendSeq.ISS + 1;
+          TCP_SocketTransmitterLoad(Socket, TCP_STATE_SYN_SENT, SYN_S);
+          Result := TCP_E_OK;
+        end
+      end
+  else
+    Result := TCP_E_CONNECTION_ALREADY_EXISTS;
+  end;
+end;
+
+function TCP_Event_Send(var Socket: TSocket; DataAddress: ^Byte; DataLen: Word; Push, Urgent: Boolean; Timeout: Integer): Word;
+begin
+  Result := TCP_E_OK;
+  case Socket.TCB.State of
+    TCP_STATE_CLOSED : Result := TCP_E_CONNECTION_DOES_NOT_EXIST;
+    TCP_STATE_LISTEN : 
+      begin
+        Result := TCP_Event_Open(Socket, False, Timeout);                       // Transition into active mode since we are forcing a send
+        Memcpy(@Socket.TCB.SendSeq.DataArray, DataAddress, DataLen);
+      end;
+    TCP_STATE_SYN_SENT,
+    TCP_STATE_SYN_RECEIVED : Result := TCP_E_INSUFFICIENT_RESOURCES;
+    TCP_STATE_ESTABLISHED,
+    TCP_STATE_CLOSE_WAIT :
+        begin
+          // if Buffer full then return TCP_E_INSUFFICIENT_RESOURCES and exit
+          // Set acknowledgment (acknowledgment value = RCV.NXT).
+          // Queue up the data
+          // If Urgent then
+          //   If the urgent flag is set, then SND.UP <- SND.NXT-1 and set the
+          //   urgent pointer in the outgoing segments
+        end
+  else
+    Result := TCP_E_CONNECTION_CLOSING;
+  end;
+end;
+
+function TCP_Event_Receive(var Socket: TSocket; var Push, Urgent: Boolean): Word;
+begin
+  Result := 0;
+end;
+
+function TCP_Event_Close(var Socket: TSocket): Word;
+begin
+  Result := TCP_E_OK;
+  case Socket.TCB.State of
+    TCP_STATE_CLOSED  : Result := TCP_E_CONNECTION_DOES_NOT_EXIST;
+    TCP_STATE_LISTEN  :
+        begin
+          // Any outstanding RECEIVEs are returned with "error: closing"
+          TCP_InitTCB(Socket.TCB);
+          Socket.TCB.State := TCP_STATE_CLOSED;
+        end;
+    TCP_STATE_SYN_SENT :
+        begin
+          TCP_InitTCB(Socket.TCB);
+          // return "error: closing" responses to any queued SENDs, or RECEIVEs
+        end;
+    TCP_STATE_SYN_RECEIVED :
+        begin
+           // If no SENDs have been issued and there is no pending data to send,
+           // then form a FIN segment and send it, and enter FIN-WAIT-1 state;
+           // otherwise queue for processing after entering ESTABLISHED state.
+        end;
+    TCP_STATE_ESTABLISHED :
+        begin
+          // Queue this until all preceding SENDs have been segmentized, then
+          // form a FIN segment and send it. In any case, enter FIN-WAIT-1
+          // state.
+        end;
+    TCP_STATE_FIN_WAIT_1,
+    TCP_STATE_FIN_WAIT_2 :
+        begin
+          // Strictly speaking, this is an error and should receive a "error:
+          // connection closing" response. An "ok" response would be
+          // acceptable, too, as long as a second FIN is not emitted (the first
+          // FIN may be retransmitted though).
+        end;
+    TCP_STATE_CLOSE_WAIT :
+        begin
+          // Queue this request until all preceding SENDs have been
+          // segmentized; then send a FIN segment, enter CLOSING state.
+        end
+  else
+    Result := TCP_E_CONNECTION_CLOSING;
+  end;
+end;
+
+procedure TCP_Event_Abort(var Socket: TSocket);
+begin
+end;
+
+procedure TCP_Event_Status(var Socket: TSocket);
+begin
+end;
 
 // *****************************************************************************
 // PrintHeader
@@ -449,6 +585,7 @@ begin
   end
 end;
 
+(*
 // *****************************************************************************
 // TCP_Process_TestForResend
 //   Parmeters: Socket: Connection that is being handled in the statemachine
@@ -773,7 +910,7 @@ begin
     Socket^.iStateMachine := SOCKET_STATE_CONNECT_AS_CLIENT;
   Socket^.iSubStateMachine := SOCKET_SUBSTATE_EMPTY;
 end;
-
+       *)
 // *****************************************************************************
 // TCP_Process_Stack
 //   Parmeters:
@@ -785,10 +922,22 @@ var
   Socket: ^TSocket;
 begin
   Socket := @SocketManager.Socket[SocketManager.iLastProcessedSocket];
-  
+
   if Socket^.StateFlags.SOCKET_FLAG_ALLOCATED then
   begin
-    // Check if the other end wants us to reset
+    if Socket^.Transmitter.Loaded then
+    begin
+      if TCP_TryLoadTransmitterAndSend(Socket^, Socket^.Transmitter.TCP_Flags, TXSTART) then
+      begin
+        Socket^.Transmitter.Loaded := False;
+        Socket^.TCB.State := Socket^.Transmitter.NextTCPState;
+      end
+    end;
+  
+
+    
+    
+ (*   // Check if the other end wants us to reset
     if Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_RST = 1 then
     begin
       Socket^.TCPReceivedFlags.SOCKET_FLAG_RECEIVED_RST := 0;
@@ -815,7 +964,7 @@ begin
       SOCKET_STATE_TEAR_OURSELVES_DOWN  : TCP_Process_TearOurselvesDown(Socket);
       SOCKET_STATE_BEING_TORN_DOWN      : TCP_Process_BeingTornDown(Socket);
       SOCKET_STATE_RESET                : TCP_Process_Resetting(Socket);
-    end;
+    end;  *)
   end;
 
   Inc(SocketManager.iLastProcessedSocket);                                      // Next Socket please

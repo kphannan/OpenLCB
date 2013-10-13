@@ -73,33 +73,25 @@ File7=..\Library\ENC464J600\lib2_enc600_V3_5_b.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
-Count=0
+Count=1
+File0=Wrap_Unsigned_Window.xml
 [OTHER_FILES]
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=21
+Count=12
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
-Path3=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path6=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path7=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path8=E:\trunk\prototypes\mikroPascal\Library\Math\
-Path9=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
-Path10=E:\trunk\prototypes\mikroPascal\Library\Common\
-Path11=E:\trunk\prototypes\mikroPascal\Library\ENC464J600\
-Path12=E:\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
-Path13=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path14=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path15=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path16=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
-Path17=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
-Path18=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
-Path19=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\
-Path20=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
+Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path4=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path5=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path6=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path7=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
+Path8=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path9=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
+Path10=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\
+Path11=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -119,6 +111,7 @@ File7=C_Stdlib
 File8=C_Type
 [EXPANDED NODES]
 Node1=Sources
-Node2=Output Files
-Node3=Other Files
-Count=3
+Node2=Active Comments Files
+Node3=Output Files
+Node4=Other Files
+Count=4

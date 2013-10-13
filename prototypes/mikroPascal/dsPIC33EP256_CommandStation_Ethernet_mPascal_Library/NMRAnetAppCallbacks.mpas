@@ -1,0 +1,749 @@
+unit NMRAnetAppCallbacks;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//
+// * Description:
+//    Implements program specific callbacks for memory configuration etc.
+//
+//   AppCallbacks for the Mustangpeak Command Station
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+uses
+ // _25AAxxxx,
+  NMRAnetStateMachine,
+  NMRAnetDCC,
+  {$IFDEF CAN_BUS}
+  CANStorage,
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS}
+  TCPStorage,
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_LIB}
+  TCPStorage_mPascal_Lib,
+  {$ENDIF}
+  NMRAnetAppDefines,
+  NMRAnetDefines,
+  NMRAnetNode,
+  NMRAnetUtilities,
+  NMRAnetDCC,
+  NMRAnetServiceMode,
+  ServiceModeDefines,
+  NMRAnetDefinesShared,
+  TractionProtocol,
+  HelperFunctions;
+
+const
+  MAX_NODE_CFG_DATA  = 512;                                                     // Command Station Configuration = 2 frames of 256 bytes
+  MAX_VNODE_CFG_DATA = 1792;                                                    // Proxy Configuration = 7 frames of 256 bytes
+  
+  // Command Station EEPROM Configuration
+  EEPROM_CONFIG_OFFSET = 128;                                                   // Start of the Command Station Specific Config Data
+  EEPROM_OVERCURRENT_LEVEL     = 132;
+  EEPROM_OVERCURRENT_TIME      = 134;
+  EEPROM_AUTORESTART_TIME      = 136;
+  EEPROM_FUNCTION_OPTIONS      = 138;
+  EEPROM_CONFIG_MAX_OFFSET     = 167;                                           // Last Offset of the Command Station Config Data that is currently _implemented_.
+  // Command Station EEPROM Debug Configuration
+  EEPROM_DEBUG_CONFG_OFFSET = 256;
+  EEPROM_AUTOALLOCATE_TRAIN_NODES = 256;                                        // Allows turning off the AutoAllocation of vNodes to debug and test software
+  
+  // Proxy Node EEPROM Configuration
+  EEPROM_PROXY_ADDRESS_REL_OFFSET          = 127;                               // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_SPEEDSTEPS_REL_OFFSET       = 129;                               // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_FUNCTION_STATE_REL_OFFSET   = 130;                               // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_FUNCTION_LATCH_REL_OFFSET   = 134;                               // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_CONSIST_LIST_REL_OFFSET     = 138;                               // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_FDI_URL_REL_OFFSET          = 512;                               // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_CDI_URL_REL_OFFSET          = 1024;                              // Relative Offset with each Train Proxy EEPROM Space
+  EEPROM_PROXY_CV_REL_OFFSET               = 1536;                              // Relative Offset with each Train Proxy EEPROM Space
+
+  CONFIG_OUTPUTMODE_MAIN_TRACK    = 0;
+  CONFIG_OUTPUTMODE_SERVICE_MODE  = 1;
+  CONFIG_SERVICE_MODE_OPERATIONS_MODE  = 0;
+  CONFIG_SERVICE_MODE_AUTO_DETECT      = 1;
+  CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT = 2;
+  CONFIG_SERVICE_MODE_DIRECT_BYTE      = 3;
+  CONFIG_SERVICE_MODE_PAGED            = 4;
+  CONFIG_SERVICE_MODE_REGISTER         = 5;
+  CONFIG_RAILCOM_ENABLED               = 1;
+  CONFIG_RAILCOM_DISABLED              = 0;
+  CONFIG_REPEATING_PACKET              = 1;
+  CONFIG_NONREPEATING_PACKET           = 0;
+  CONFIG_NMRA_DCC_TRANSMITTER          = 0;
+  CONFIG_NMRA_DCC_RECEIVER             = 1;
+
+procedure NMRAnetAppCallbacks_Initialize;
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+function AppCallback_EventsIdentify: Boolean;
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+
+// Address Space Support
+// *****************************************************************************
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
+
+procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+
+procedure AppCallback_Configuration_Zeroize(Force: Boolean);
+
+procedure AppCallback_Sync_Config_Ram_with_EEPROM;
+
+// *****************************************************************************
+
+implementation
+
+procedure PrintServiceModeResults;
+begin
+  case ServiceModeInfo.ServiceModeResult of
+    SERVICE_MODE_RESULT_SHORTCIRCUIT                :  UART1_Write_Text('Short Circuit' + LF);
+    SERVICE_MODE_RESULT_INVALID_CV                  :  UART1_Write_Text('Invalid CV' + LF);
+    SERVICE_MODE_RESULT_SHORT_ACK                   :  UART1_Write_Text('Short Ack Pulse' + LF);
+    SERVICE_MODE_RESULT_NO_ACK                      :  UART1_Write_Text('No Ack Detected' + LF);
+
+    SERVICE_MODE_RESULT_RESPONSE_DIRECT_BYTE_MODE   :  UART1_Write_Text('Direct Byte' + LF);
+    SERVICE_MODE_RESULT_RESPONSE_DIRECT_BIT_MODE    :  UART1_Write_Text('Direct Bit' + LF);
+    SERVICE_MODE_RESULT_RESPONSE_PAGED_MODE         :  UART1_Write_Text('Paged' + LF);
+    SERVICE_MODE_RESULT_RESPONSE_REGISTER_MODE      :  UART1_Write_Text('Register' + LF);
+  end;
+end;
+
+// *****************************************************************************
+// Returns The Is Present Attribute about the Address Space
+//  Node:  The Node to write the Configuration Data for
+//  AddressSpace:  The Address Space to return the information about
+//
+//  Result      : True if Is Present else False
+// *****************************************************************************
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  Result := (AddressSpace <= MSI_CDI) and (AddressSpace >= MSI_FSI)
+end;
+
+// *****************************************************************************
+// Returns The Is ReadOnly Attribute about the Address Space
+//  Node:  The Node to write the Configuration Data for
+//  AddressSpace:  The Address Space to return the information about
+//
+//  Result      : True if Is ReadOnly else False
+// *****************************************************************************
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  case AddressSpace of
+    MSI_CDI,
+    MSI_ALL,
+    MSI_ACDI_MFG,
+    MSI_ACDI_USER,   // I am not supporting writing to this space, do it through the configuration addresss space
+    MSI_FDI : Result := True
+  else
+    Result := False;
+  end;
+end;
+
+//******************************************************************************
+//  Associates the offset of the EEPROM for the Configuration Data for the Node
+//******************************************************************************
+procedure AppCallback_AssignConfigurationAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  // The first node is the Physical Node so this math works, iNode = 0 is the Physical node and al vNodes > 0 for iNode
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    Node^.ConfigurationAddress := Generic32BitPointer( MAX_NODE_CFG_DATA + ((iNode - 1) * MAX_VNODE_CFG_DATA))
+  else
+    Node^.ConfigurationAddress := Generic32BitPointer( 0) ;
+end;
+
+//******************************************************************************
+//  Returns the overall size of the Configuration Data
+//******************************************************************************
+function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
+begin
+  case AddressSpace of
+    MSI_CONFIG :
+      begin
+        if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+          Result := $FFFFFFFF  // Result := MAX_VNODE_CFG_DATA        // THIS NEEDS TO BE MAX FOR CVs WITH THE HIGH BITs SET
+        else
+          Result := MAX_NODE_CFG_DATA
+      end;
+    MSI_FDI,
+    MSI_FSI :
+      begin
+        Result := $FFFFFFFF
+      end
+  else
+    Result := 0;
+  end;
+end;
+
+// *****************************************************************************
+// Writes the Configuration Memory from the App defined storage device
+//  Node:  The Node to write the Configuration Data for
+//  Force  : Reloads the configuration memory with default as delivered data
+
+// *****************************************************************************
+procedure AppCallback_Configuration_Zeroize(Force: Boolean);
+const
+  NullArray: array[0..63] of byte = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+var
+  LocalBuffer: array[0..7] of Byte;
+  i: LongInt;
+begin     {
+  if not Force then
+  begin
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+     Delay_us(10);
+    _25AAxxxx_Read(EEPROM_BANK_0, 0, 1, @LocalBuffer);
+    Force := LocalBuffer[0] = $FF;
+  end;
+  
+  if Force then
+  begin
+    for i := 0 to 2047 do
+    begin
+      while _25AAxxxx_Busy(EEPROM_BANK_0) do
+        Delay_us(10);
+     _25AAxxxx_Write(EEPROM_BANK_0, i * 64, 64, @NullArray);
+    end;
+    
+    LocalBuffer[1] := Lo(Word( 2000));     // 2A shutdown
+    LocalBuffer[0] := Hi(Word( 2000));
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_LEVEL, 2, @LocalBuffer);   // Shut Down Time
+   
+   LocalBuffer[1] := Lo(Word( 100));     // 100ms shutdown
+   LocalBuffer[0] := Hi(Word( 100));
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_OVERCURRENT_TIME, 2, @LocalBuffer);   // RailCom Time
+   
+   LocalBuffer[1] := Lo(Word( 1000));     // 1000ms autorestart
+   LocalBuffer[0] := Hi(Word( 1000));
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_AUTORESTART_TIME, 2, @LocalBuffer);   // RailCom Time
+   
+   LocalBuffer[0] := 1;   // Repeat Speed/Dir Packets
+   LocalBuffer[1] := 1;   // Repeat F0 Packets
+   LocalBuffer[2] := 1;   // Repeat F1 Packets
+   LocalBuffer[3] := 1;   // Repeat F2 Packets
+   LocalBuffer[4] := 1;   // Repeat F3 Packets
+    while _25AAxxxx_Busy(EEPROM_BANK_0) do
+      Delay_us(10);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_FUNCTION_OPTIONS, 5, @LocalBuffer);
+   _25AAxxxx_Write(EEPROM_BANK_0, EEPROM_AUTOALLOCATE_TRAIN_NODES, 1, @CommandStationRamData.EnableAutoAllocateProxy);
+  end            }
+end;
+
+// *****************************************************************************
+// Reads the EEPROM and load the data into the Shadow RAM
+//  Parameters  :
+//  Result      :
+// *****************************************************************************
+procedure AppCallback_Sync_Config_Ram_with_EEPROM;
+begin
+ { while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_CONFIG_OFFSET, EEPROM_CONFIG_MAX_OFFSET - EEPROM_CONFIG_OFFSET, PByte( @CommandStationConfigurationShadowRam));
+  CommandStationConfigurationShadowRam.OverCurrentLevel := SwapBytes(CommandStationConfigurationShadowRam.OverCurrentLevel);
+  CommandStationConfigurationShadowRam.OverCurrentTime := SwapBytes(CommandStationConfigurationShadowRam.OverCurrentTime);
+  CommandStationConfigurationShadowRam.RestartTime := SwapBytes(CommandStationConfigurationShadowRam.RestartTime);
+  // Convert the users mA limit into Bit Counts
+  OverCurrent.Limit := Word( 310.302669 * 0.520 *  Double( CommandStationConfigurationShadowRam.OverCurrentLevel) / 1000); // 310.302669 Bits/V * 0.520V/A * Amps = Bits
+  
+  // Convert the users Tigger timeout to 5ms counts
+  OverCurrent.SampleTimeStepLimitShutDown := ( Word ( (Double(CommandStationConfigurationShadowRam.OverCurrentTime)/ADC_SAMPLE_INTERRUPT_TIME) - 1));
+  if OverCurrent.SampleTimeStepLimitShutDown <= 0 then
+    OverCurrent.SampleTimeStepLimitShutDown := 1;
+    
+  OverCurrent.SampleTimeStepLimitRestart := ( Word ( (Double(CommandStationConfigurationShadowRam.RestartTime)/ADC_SAMPLE_INTERRUPT_TIME) - 1));
+  if OverCurrent.SampleTimeStepLimitRestart <= 200 then    // Minimum of 1000ms restart time limit
+    OverCurrent.SampleTimeStepLimitRestart := 200;
+    
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Read(EEPROM_BANK_0, EEPROM_DEBUG_CONFG_OFFSET, 1, @CommandStationRamData.EnableAutoAllocateProxy);  }
+end;
+
+// *****************************************************************************
+//  Allows overriding Address Space Memory Reads
+//  Parameters  :
+//  Result      :
+// *****************************************************************************
+function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+begin
+  Result := False;                                                              // do the default for the common Address Spaces
+  if ConfigMemBuffer^.AddressSpace < MSI_ACDI_USER then
+  begin
+    case ConfigMemBuffer^.AddressSpace of
+        MSI_FDI :
+          begin
+          end;
+        MSI_FSI :
+          begin
+          end;
+    end;
+    Result := True
+  end
+end;
+
+// *****************************************************************************
+//  Allows overriding Address Space Memory Writes
+//  Parameters  :
+//  Result      :
+// *****************************************************************************
+function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
+begin
+  Result := False;                                                              // do the default for the common Address Spaces
+  if ConfigMemBuffer^.AddressSpace < MSI_ACDI_USER then
+  begin
+    case ConfigMemBuffer^.AddressSpace of
+        MSI_FDI :
+          begin
+          end;
+        MSI_FSI :
+          begin
+          end;
+    end;
+    Result := True
+  end
+end;
+
+// *****************************************************************************
+// Writes the Configuration Memory from the App defined storage device
+//  Node:  The Node to write the Configuration Data for
+//  DataTarget  : A pointer memory space to read the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the EEPROM
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+var
+  SpaceCode: Word;
+  i: DWord;
+begin
+  SpaceCode := ConfigMemBuffer^.Address shr 30;
+  case SpaceCode of
+    0 : begin
+     //     while _25AAxxxx_Busy(EEPROM_BANK_0) do
+            Delay_us(10);
+     //     _25AAxxxx_Write(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
+          // Update the Command Station Ram with the new configuration data
+          if Node^.ConfigurationAddress = 0 then
+            AppCallback_Sync_Config_Ram_with_EEPROM
+        end;
+    1: begin
+         // Double Indexed CV
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Double Indexed CV Write');
+         end
+       end;
+    2: begin
+         // Single Indexed CV
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Single Indexed CV Write');
+         end
+       end;
+    3: begin
+         if ConfigMemBuffer^.DataCount = 1 then  // Only support 1 CV for now
+         begin
+           if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+           begin
+             case CommandStationConfigurationShadowRam.ProgrammingMode of
+               CONFIG_SERVICE_MODE_AUTO_DETECT        : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
+               CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT,
+               CONFIG_SERVICE_MODE_DIRECT_BYTE        : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_DIRECT_BYTE, (ConfigMemBuffer^.Address and $000007FF), ConfigMemBuffer^.DataBytes[0], 0);
+               CONFIG_SERVICE_MODE_PAGED              : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_PAGED, (ConfigMemBuffer^.Address and $000007FF), ConfigMemBuffer^.DataBytes[0], 0);
+               CONFIG_SERVICE_MODE_REGISTER           : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_WRITE, SERVICE_MODE_TYPE_REGISTER, (ConfigMemBuffer^.Address and $000007FF), ConfigMemBuffer^.DataBytes[0], 0);
+             end;
+             ConfigMemBuffer^.State := ConfigMemBuffer^.State or CBS_PROCESSING;  // AppCallback_Configuration_CheckForComplete called until this is cleared
+           end else
+           begin
+             // CS is in Main Line Output Mode
+             if CommandStationConfigurationShadowRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             begin
+               // Load DCC Queue
+             end else
+             begin
+               // Trying to use Service Mode while CS is in Main Line Mode = Error
+               ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+               ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_INVALID_PROGRAMMING_METHOD);
+             end
+           end;
+           ByteToStr((ConfigMemBuffer^.Address and $000007FF), s1);
+           UART_Write_Text('Single Indexed CV Write: CV' + s1 + LF);
+          // PrintServiceModeResults;
+         end else
+         begin
+           // Trying to access more than 1 CV at a time = Error for now
+         end
+       end;
+  end; // case
+end;
+
+// *****************************************************************************
+// Reads the Configuration Memory from the App defined storage device
+//  Node:  The Node to read the Configuration Data for
+//  DataTarget  : A pointer memory space to write the Configuration Data to, this could be a Datagram, CAN Bytes, etc.  The Length defines how much to write
+//  StartAddress: Offset from 0x00 in the Configuration Memory to start from
+//  MaxCount    : Maximum number of Bytes to move into the DataTarget
+//
+//  Result      : Number of Bytes actually moved in to the DataTarget
+// *****************************************************************************
+procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+var
+  SpaceCode: Word;
+  i: Integer;
+begin
+  SpaceCode := ConfigMemBuffer^.Address shr 30;
+  case SpaceCode of
+    0 : begin
+         // Not a CV access, normal Config Memory call
+    //      while _25AAxxxx_Busy(EEPROM_BANK_0) do
+            Delay_us(10);
+    //      _25AAxxxx_Read(EEPROM_BANK_0, Node^.ConfigurationAddress + ConfigMemBuffer^.Address, ConfigMemBuffer^.DataCount, @ConfigMemBuffer^.DataBytes[ConfigMemBuffer^.DataOffset]);
+        end;
+    1: begin
+         // Double Indexed CV
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Double Indexed CV Read');
+         end else
+         begin
+         end
+       end;
+    2: begin
+         // Single Indexed CV
+         if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+         begin
+           UART_Write_Text('Single Indexed CV Read');
+         end else
+         begin
+         end
+       end;
+    3: begin
+         // Basic CV
+         if ConfigMemBuffer^.DataCount = 1 then  // Only support 1 CV for now
+         begin
+           if CommandStationConfigurationShadowRam.OutputMode = CONFIG_OUTPUTMODE_SERVICE_MODE then
+           begin
+             case CommandStationConfigurationShadowRam.ProgrammingMode of
+               CONFIG_SERVICE_MODE_AUTO_DETECT        : begin ServiceModeInfo.ServiceModeResult := SERVICE_MODE_RESULT_NO_ACK; ServiceModeInfo.iStateMachine := STATE_SERVICEMODE_RESULTS_READY end;
+               CONFIG_SERVICE_MODE_DIRECT_BYTE_BY_BIT : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BIT, (ConfigMemBuffer^.Address and $000007FF), $FF, 0);
+               CONFIG_SERVICE_MODE_DIRECT_BYTE        : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_DIRECT_BYTE, (ConfigMemBuffer^.Address and $000007FF), $FF, 0);
+               CONFIG_SERVICE_MODE_PAGED              : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_PAGED, (ConfigMemBuffer^.Address and $000007FF), $FF, 0);
+               CONFIG_SERVICE_MODE_REGISTER           : ServiceMode_EngageServiceMode(@Programming, True, SERVICEMODE_READ, SERVICE_MODE_TYPE_REGISTER, (ConfigMemBuffer^.Address and $000007FF), $FF, 0);
+             end;
+             ConfigMemBuffer^.State := ConfigMemBuffer^.State or CBS_PROCESSING;  // AppCallback_Configuration_CheckForComplete called until this is cleared
+           end else
+           begin
+             // CS is in Main Line Output Mode
+             if CommandStationConfigurationShadowRam.ProgrammingMode = CONFIG_SERVICE_MODE_OPERATIONS_MODE then
+             begin
+               // Load DCC Queue
+             end else
+             begin  
+               // Trying to use Service Mode while CS is in Main Line Mode = Error
+               ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+               ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_INVALID_PROGRAMMING_METHOD);
+             end
+           end;
+           ByteToStr((ConfigMemBuffer^.Address and $000007FF), s1);
+           UART_Write_Text('Single Indexed CV Read: CV' + s1 + LF);
+      //     PrintServiceModeResults;
+         end else
+         begin
+           // Trying to access more than 1 CV at a time = Error for now
+         end
+       end;
+  end; // case
+end;
+
+//******************************************************************************
+//
+//******************************************************************************
+procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+begin
+  case ConfigMemBuffer^.AddressSpace of
+    MSI_CONFIG :
+        begin
+          if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) and (ConfigMemBuffer^.Address shr 30 <> 0) then
+            ConfigMemBuffer^.AckReply := DATAGRAM_OK_ACK_REPLY_PENDING or $05
+        end;
+  end
+end;
+
+//******************************************************************************
+//
+//******************************************************************************  
+procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+begin
+  case ConfigMemBuffer^.AddressSpace of
+    MSI_CONFIG :
+        begin
+          if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+          begin
+            if ConfigMemBuffer^.Address shr 30 <> 0 then
+            begin
+              if ServiceMode_ResultsReady then
+              begin
+                ServiceMode_Quit;
+                if ServiceModeInfo.ServiceModeResult and SERVICE_MODE_RESULT_ERROR_CODE_SET = SERVICE_MODE_RESULT_ERROR_CODE_SET then
+                begin
+                  ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+                  case ServiceModeInfo.ServiceModeResult of
+                      SERVICE_MODE_RESULT_NO_ACK       : ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_ERROR_LOCO_NOT_FOUND);
+                      SERVICE_MODE_RESULT_SHORTCIRCUIT : ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_ERROR_SHORT_CIRCUIT);
+                      SERVICE_MODE_RESULT_INVALID_CV   : ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_ERROR_INVALID_CV);
+                      SERVICE_MODE_RESULT_SHORT_ACK    : ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_ERROR_SHORT_ACK);
+                  end
+                end else
+                begin
+                  // Service Mode Succeeded
+                  ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_OK[0] shl 8) or CONFIG_MEM_RESULT_OK[1];
+                  ConfigMemBuffer^.DataBytes[0] := ServiceModeInfo.Value;
+                end;
+                ConfigMemBuffer^.State := ConfigMemBuffer^.State and not CBS_PROCESSING;
+                PrintServiceModeResults;
+              end
+            end
+          end;
+        end;
+  end
+end;
+
+//******************************************************************************
+//  Associates the Address of the RAM for Volatile Node Data
+//******************************************************************************
+procedure AppCallback_AssignRAMAddress(Node: PNMRANetNode; iNode: Word);
+begin
+  Node^.RAMAddress := Generic32BitPointer( @TrainProxyRamData[iNode])
+end;
+
+//******************************************************************************
+//  Initialize the VolatileData structure
+//******************************************************************************
+procedure NMRAnetAppCallbacks_Initialize;
+begin
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure AppCallback_NodeAllocate(Node: PNMRAnetNode);
+var
+  ProxyData: PTrainProxyRamData;
+begin
+  ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
+  ProxyData^.State := 0;
+  ProxyData^.Address := 0;
+  ProxyData^.Speed := 0;
+  ProxyData^.Functions := 0;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure SetProxyNodeDccAddressFlags(Node: PNMRAnetNode; Event: PEventID);
+var
+  TestForSetFlag: Boolean;
+  ProxyData: PTrainProxyRamData;
+  Address: Word;
+begin
+  TestForSetFlag := True;
+  if Event <> nil then
+    TestForSetFlag := (Event^[0] = $06) and (Event^[1] = $01);
+
+  if TestForSetFlag then
+  begin
+    ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
+    if ProxyData^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+    begin
+      Address := (Event^[4] shl 8) or Event^[5];
+      if ProxyData^.Address = Address then
+        Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined or MSG_SEND_DCC_ADDRESS_ALLOCATED;
+    end
+  end
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+procedure SetProxyNodeProducerFlags(Node: PNMRAnetNode; EventIndex: Integer);
+begin
+  // This uses the fact that there are hard coded well known Event ID offsets in the Event Arrays
+  case EventIndex of
+    EVENT_TRAIN_INDEX           : NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
+    EVENT_TRAIN_DCC_IDLE_INDEX  : begin
+                                    if NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID)
+                                    else
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID);
+                                  end;
+    EVENT_TRAIN_DCC_INUSE_INDEX : begin
+                                    if NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node)^.State and PS_DCC_ADDRESS_ALLOCATED = PS_DCC_ADDRESS_ALLOCATED then
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_VALID)
+                                    else
+                                      NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_INVALID);
+                                  end
+  else
+    NMRAnetNode_SetProducerEventFlag(Node, EventIndex, EVENT_STATE_UNKOWN);
+  end
+end;
+
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_ProducerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+var
+  i, VNodeEventIndex, NodeEventIndex: Integer;
+  VNodeEventSupported, NodeEventSupported: Boolean;
+begin
+  Result := True;                                                               // We handle the message
+  VNodeEventIndex := -1;
+  NodeEventIndex := -1;
+  VNodeEventSupported := NMRAnetUtilities_SupportsVNodeEventAsProducer(Event, VNodeEventIndex);
+  NodeEventSupported := NMRAnetUtilities_SupportsEventAsProducer(Event, NodeEventIndex);
+  for i := 0 to Nodes.AllocatedCount - 1 do
+  begin
+    if NMRAnetNode_TestStateFlag(Nodes.AllocatedList[i], NS_VIRTUAL) then
+    begin
+      if VNodeEventSupported then
+        SetProxyNodeProducerFlags(Nodes.AllocatedList[i], VNodeEventIndex);
+      SetProxyNodeDccAddressFlags(Nodes.AllocatedList[i], Event);
+    end else
+    begin
+      if NodeEventSupported then
+        NMRAnetNode_SetProducerEventFlag(Nodes.AllocatedList[0], NodeEventIndex, EVENT_STATE_UNKOWN);
+    end
+  end;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_ConsumerIdentify(Node: PNMRAnetNode; Event: PEventID): Boolean;
+begin
+  Result := False;                                                              // Do the default
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_EventsIdentify: Boolean;
+var
+  j, ProducerIndex: Integer;
+  Node: PNMRAnetNode;
+begin
+  Result := True;                                                               // We handled it
+  for j := 0 to Nodes.AllocatedCount - 1 do
+  begin
+    Node := Nodes.AllocatedList[j];
+    if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+    begin
+      NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);              // Consumers are eaay.
+      for ProducerIndex := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do      // Producers take some work
+      begin
+        SetProxyNodeProducerFlags(Node, ProducerIndex);
+        SetProxyNodeDccAddressFlags(Node, nil);
+      end
+    end else
+    begin
+      NMRAnetNode_SetProducerEventFlags(Node, EVENT_STATE_UNKOWN);
+      NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);
+    end
+  end;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_EventsIdentifyByDest(Node: PNMRAnetNode): Boolean;
+var
+  ProducerIndex: Integer;
+begin
+  Result := True;                                                               // We handled it
+  NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);                  // Consumers are eaay.
+
+  if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) then
+  begin
+    for ProducerIndex := 0 to MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do        // Producers take some work
+      SetProxyNodeProducerFlags(Node, ProducerIndex);
+    SetProxyNodeDccAddressFlags(Node, nil);
+  end else
+  begin
+    NMRAnetNode_SetProducerEventFlags(Node, EVENT_STATE_UNKOWN);
+    NMRAnetNode_SetConsumerEventFlags(Node, EVENT_STATE_UNKOWN);
+  end;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_StateMachine(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+begin
+  Result := False;
+end;
+
+// *****************************************************************************
+//
+// *****************************************************************************
+function AppCallback_UserMessageFlags(Node: PNMRAnetNode; CANBuffer: PCANBuffer; DataBytesPtr: PCAN_DataBytes): Boolean;
+var
+  ProxyData: PTrainProxyRamData;
+begin
+  // We are in a CAN Lock block already
+  Result := False;
+  ProxyData := NMRAnetTractionProtocol_ExtractTrainProxyRamData(Node);
+
+  // Handle the oddball DCC Address Event that can come and go
+  if Node^.MsgFlagsUserDefined and MSG_SEND_DCC_ADDRESS_ALLOCATED = MSG_SEND_DCC_ADDRESS_ALLOCATED then
+  begin
+    if NMRABusTxBufferAvailable then
+    begin
+      DataBytesPtr^[0] := $06;
+      DataBytesPtr^[1] := $01;
+      DataBytesPtr^[2] := $00;
+      DataBytesPtr^[3] := $00;
+      DataBytesPtr^[4] := (ProxyData^.Address shr 8) and $00FF;
+      DataBytesPtr^[5] := ProxyData^.Address and $00FF;
+      DataBytesPtr^[6] := $00;
+      DataBytesPtr^[7] := $01;
+      TransmitNMRABusLayerMsg(Node, CANBUffer, MTI_PRODUCER_IDENTIFIED_SET, 0, 8, DataBytesPtr, False, $00);
+      Node^.MsgFlagsUserDefined := Node^.MsgFlagsUserDefined and not MSG_SEND_DCC_ADDRESS_ALLOCATED;
+      Result := True;
+    end
+  end;
+end;
+
+end.

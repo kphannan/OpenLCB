@@ -1,0 +1,577 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="http://openlcb.org/trunk/prototypes/xml/xslt/cdi.xsl"?>
+<cdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/specs/schema/cdi.xsd">
+  <identification>
+    <manufacturer>Mustangpeak</manufacturer>
+    <model>CS100</model>
+    <hardwareVersion>1.0</hardwareVersion>
+    <softwareVersion>0.2</softwareVersion>
+    <map>
+      <relation>
+        <property>Description</property>
+        <value>Mustangpeak Command Station Node</value>
+      </relation>
+      <relation>
+        <property>Status</property>
+        <value>Prototype</value>
+      </relation>
+    </map>
+  </identification>
+  <acdi fixed="1" var="1" />
+  <segment origin="0" space="253">
+    <name>Options</name>
+    <description>Configuration options for the LCBricks Command Station</description>
+    <group offset="1">
+      <name>User Data</name>
+      <description>Add your own unique node info here</description>
+      <string size="63">
+        <name>User Name</name>
+      </string>
+      <string size="64">
+        <name>User Description</name>
+      </string>
+    </group>
+    <group>
+      <name>Command Station Options</name>
+      <description>Configuration options</description>
+      <int size="1">
+        <name>Output Mode</name>
+        <description>Select if this Command Station is a Main Line Node or a Programming Track Node</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>Command Station drives a Main Line</value>
+          </relation>
+          <relation>
+            <property>1</property>
+            <value>Command Station drives a Programming Track</value>
+          </relation>
+        </map>
+      </int>
+      <int size="1">
+        <name>Programming Mode</name>
+        <description>Selects the Programming Mode the Command Station will use to write CV's to the decoder</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>Operation Mode (to a Main Line)</value>
+          </relation>
+          <relation>
+            <property>1</property>
+            <value>Auto Detect Service Mode</value>
+          </relation>
+          <relation>
+            <property>2</property>
+            <value>Direct Bit Mode</value>
+          </relation>
+          <relation>
+            <property>3</property>
+            <value>Direct Byte Mode</value>
+          </relation>
+          <relation>
+            <property>4</property>
+            <value>Paged Mode</value>
+          </relation>
+          <relation>
+            <property>5</property>
+            <value>Register Mode</value>
+          </relation>
+        </map>
+      </int>
+      <int size="1">
+        <name>DCC Bus Mode</name>
+        <description>Select if this Command Station is the driver or receiver of the DCC bus signal (Damage may occur if more than one Command Station is selected to be a driver on the DCC bus)</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>Command Station is a DCC Bus Receiver</value>
+          </relation>
+          <relation>
+            <property>1</property>
+            <value>Command Station is a DCC Bus Transmitter</value>
+          </relation>
+        </map>
+      </int>
+      <int size="1">
+        <name>RailCom Cutout</name>
+        <description>Enable/Disable the RailCom Cutout in the DCC Output</description>
+        <map>
+          <relation>
+            <property>0</property>
+            <value>RailCom Cutout Disabled</value>
+          </relation>
+          <relation>
+            <property>1</property>
+            <value>RailCom Cutout Enabled</value>
+          </relation>
+        </map>
+      </int>
+      <int size="2">
+        <name>Overcurrent Trip Level</name>
+        <description>Level of current to trip over current protection shutdown (milliAmps)</description>
+        <min>0</min>
+        <max>5000</max>
+      </int>
+      <int size="2">
+        <name>Overcurrent Shutdown Time (milliSeconds)</name>
+        <description>Time between first detected overcurrent and shutdown of the Command Station</description>
+        <min>0</min>
+        <max>1000</max>
+      </int>
+      <int size="2">
+        <name>AutoRestart Time (milliSeconds)</name>
+        <description>Time between an overcurrent detection and an attempt to renable the Command Station</description>
+        <min>1000</min>
+        <max>30000</max>
+      </int>
+      <group>
+        <name>State Repeat Setup</name>
+        <description>When there is no new information send current state packets to account for dirty track, etc</description>
+        <int size="1">
+          <name>Repeat Speed/Dir packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Speed/Dir Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Speed/Dir Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 0 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 0 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 0 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 1 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 1 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 1 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 2 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 2 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 2 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 3 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 3 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 3 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 4 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 4 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 4 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 5 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 5 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 5 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 6 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 6 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 6 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 7 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 7 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 7 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 8 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 8 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 8 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 9 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 9 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 9 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 10 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 10 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 10 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 11 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 11 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 11 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 12 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 12 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 12 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 13 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 13 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 13 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 14 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 14 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 14 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 15 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 15 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 15 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 16 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 16 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 16 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 17 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 17 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 17 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 18 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 18 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 18 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 19 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 19 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 19 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 20 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 20 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 20 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 21 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 21 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 21 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 22 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 22 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 22 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 23 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 23 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 23 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 24 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 24 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 24 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 25 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 25 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 25 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 26 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 26 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 26 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 27 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 27 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 27 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+        <int size="1">
+          <name>Repeat Function 28 packets when idle</name>
+          <map>
+            <relation>
+              <property>0</property>
+              <value>Function 28 Packets not repeated</value>
+            </relation>
+            <relation>
+              <property>1</property>
+              <value>Function 28 Packets repeated</value>
+            </relation>
+          </map>
+        </int>
+      </group>
+    </group>
+  </segment>
+  <segment origin="256" space="253">
+    <name>Debug</name>
+    <description>Debug options for developers, normal users should not change these options</description>
+    <int size="1">
+      <name>Auto allocate virtual train nodes</name>
+      <description>Allows manual allocation of Train vNode for stressing throttles with lack of resources</description>
+      <map>
+        <relation>
+          <property>0</property>
+          <value>Auto-allocate Virtual Nodes</value>
+        </relation>
+        <relation>
+          <property>1</property>
+          <value>Manually Allocate Nodes ("a" on the UART)</value>
+        </relation>
+      </map>
+    </int>
+  </segment>
+  <segment origin="0" space="252">
+    <group>
+      <name>Manufacturer Information</name>
+      <description>Manufacturer-provided fixed node description</description>
+      <int size="1">
+        <name>Version</name>
+      </int>
+      <string size="12">
+        <name>Manufacturer Name</name>
+      </string>
+      <string size="6">
+        <name>Manufacturer Info</name>
+      </string>
+      <string size="4">
+        <name>Hardware Version</name>
+      </string>
+      <string size="4">
+        <name>Software Version</name>
+      </string>
+    </group>
+  </segment>
+  <segment origin="0" space="251">
+    <group offset="0">
+      <name>User Data</name>
+      <description>Add your own unique node info here</description>
+      <int size="1">
+        <name>Version</name>
+      </int>
+      <string size="63">
+        <name>User Name</name>
+      </string>
+      <string size="64">
+        <name>User Description</name>
+      </string>
+    </group>
+  </segment>
+</cdi>
