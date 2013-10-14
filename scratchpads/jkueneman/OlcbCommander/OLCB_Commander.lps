@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="50">
+    <Units Count="49">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -23,8 +23,8 @@
         <UnitName Value="form_main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1771"/>
-        <CursorPos X="20" Y="1784"/>
+        <TopLine Value="1845"/>
+        <CursorPos X="10" Y="1870"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -251,8 +251,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="308"/>
-        <CursorPos X="36" Y="323"/>
+        <TopLine Value="267"/>
+        <CursorPos X="31" Y="323"/>
         <UsageCount Value="206"/>
         <Loaded Value="True"/>
       </Unit21>
@@ -262,7 +262,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="6"/>
-        <UsageCount Value="155"/>
+        <UsageCount Value="153"/>
       </Unit22>
       <Unit23>
         <Filename Value="..\Library\olcb_structure_helpers.pas"/>
@@ -270,7 +270,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="6"/>
-        <UsageCount Value="161"/>
+        <UsageCount Value="159"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\Library\snii.pas"/>
@@ -278,7 +278,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="50" Y="8"/>
-        <UsageCount Value="149"/>
+        <UsageCount Value="147"/>
       </Unit24>
       <Unit25>
         <Filename Value="..\Library\olcb_mem_protocol.pas"/>
@@ -286,7 +286,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="6" Y="1"/>
-        <UsageCount Value="150"/>
+        <UsageCount Value="148"/>
       </Unit25>
       <Unit26>
         <Filename Value="..\Library\statemachine_engine.pas"/>
@@ -294,7 +294,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="113"/>
         <CursorPos X="55" Y="115"/>
-        <UsageCount Value="150"/>
+        <UsageCount Value="148"/>
       </Unit26>
       <Unit27>
         <Filename Value="form_effects_editor.pas"/>
@@ -305,7 +305,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="95" Y="38"/>
-        <UsageCount Value="433"/>
+        <UsageCount Value="431"/>
       </Unit27>
       <Unit28>
         <Filename Value="..\Components\synapse40\source\lib\blcksock.pas"/>
@@ -313,15 +313,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="3114"/>
         <CursorPos X="17" Y="3189"/>
-        <UsageCount Value="39"/>
+        <UsageCount Value="37"/>
       </Unit28>
       <Unit29>
         <Filename Value="..\Library\olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1147"/>
-        <CursorPos X="35" Y="1150"/>
+        <TopLine Value="1041"/>
+        <CursorPos X="78" Y="1056"/>
         <UsageCount Value="163"/>
         <Loaded Value="True"/>
       </Unit29>
@@ -331,7 +331,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="61"/>
         <CursorPos X="62" Y="215"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="12"/>
       </Unit30>
       <Unit31>
         <Filename Value="..\NodeExplorer\olcb_utilities.pas"/>
@@ -339,146 +339,138 @@
         <WindowIndex Value="0"/>
         <TopLine Value="96"/>
         <CursorPos X="59" Y="115"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="12"/>
       </Unit31>
       <Unit32>
         <Filename Value="C:\lazarus\lcl\interfaces\win32\win32callback.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1085"/>
         <CursorPos X="1" Y="1099"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="10"/>
       </Unit32>
       <Unit33>
-        <Filename Value="C:\lazarus\lcl\widgetset\wslclclasses.pp"/>
-        <UnitName Value="WSLCLClasses"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="532"/>
-        <CursorPos X="1" Y="552"/>
-        <UsageCount Value="1"/>
-      </Unit33>
-      <Unit34>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\classes\classesh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="846"/>
         <CursorPos X="14" Y="860"/>
-        <UsageCount Value="10"/>
-      </Unit34>
-      <Unit35>
+        <UsageCount Value="8"/>
+      </Unit33>
+      <Unit34>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\classes\streams.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="195"/>
         <CursorPos X="7" Y="195"/>
-        <UsageCount Value="10"/>
-      </Unit35>
-      <Unit36>
+        <UsageCount Value="8"/>
+      </Unit34>
+      <Unit35>
         <Filename Value="..\Components\synapse40\source\lib\pingsend.pas"/>
         <UnitName Value="pingsend"/>
         <WindowIndex Value="0"/>
         <TopLine Value="228"/>
         <CursorPos X="48" Y="213"/>
-        <UsageCount Value="3"/>
-      </Unit36>
-      <Unit37>
+        <UsageCount Value="1"/>
+      </Unit35>
+      <Unit36>
         <Filename Value="..\Components\synapse40\source\lib\ssfpc.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="98"/>
         <CursorPos X="3" Y="112"/>
-        <UsageCount Value="12"/>
-      </Unit37>
-      <Unit38>
+        <UsageCount Value="10"/>
+      </Unit36>
+      <Unit37>
         <Filename Value="E:\usr\local\share\fpcsrc\rtl\inc\socketsh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="159"/>
         <CursorPos X="11" Y="174"/>
-        <UsageCount Value="10"/>
-      </Unit38>
-      <Unit39>
+        <UsageCount Value="8"/>
+      </Unit37>
+      <Unit38>
         <Filename Value="E:\Developer\lazarus\rtl\beos\unixsock.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2"/>
         <CursorPos X="11" Y="26"/>
-        <UsageCount Value="10"/>
-      </Unit39>
-      <Unit40>
+        <UsageCount Value="8"/>
+      </Unit38>
+      <Unit39>
         <Filename Value="E:\Developer\lazarus\rtl\inc\stdsock.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="25"/>
         <CursorPos X="13" Y="40"/>
-        <UsageCount Value="10"/>
-      </Unit40>
-      <Unit41>
+        <UsageCount Value="8"/>
+      </Unit39>
+      <Unit40>
         <Filename Value="E:\Developer\lazarus\rtl\inc\socketsh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="149"/>
         <CursorPos X="11" Y="164"/>
-        <UsageCount Value="10"/>
-      </Unit41>
-      <Unit42>
+        <UsageCount Value="8"/>
+      </Unit40>
+      <Unit41>
         <Filename Value="E:\Developer\lazarus\rtl\win\sockets.pp"/>
         <UnitName Value="Sockets"/>
         <WindowIndex Value="0"/>
         <TopLine Value="33"/>
         <CursorPos X="17" Y="48"/>
-        <UsageCount Value="10"/>
-      </Unit42>
-      <Unit43>
+        <UsageCount Value="8"/>
+      </Unit41>
+      <Unit42>
         <Filename Value="E:\usr\local\share\fpcsrc\rtl\objpas\strutils.pp"/>
         <UnitName Value="strutils"/>
         <WindowIndex Value="0"/>
         <TopLine Value="148"/>
         <CursorPos X="23" Y="165"/>
-        <UsageCount Value="10"/>
-      </Unit43>
-      <Unit44>
+        <UsageCount Value="8"/>
+      </Unit42>
+      <Unit43>
         <Filename Value="E:\usr\local\share\fpcsrc\rtl\objpas\sysutils\sysstrh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="229"/>
         <CursorPos X="3" Y="244"/>
-        <UsageCount Value="10"/>
-      </Unit44>
-      <Unit45>
+        <UsageCount Value="8"/>
+      </Unit43>
+      <Unit44>
         <Filename Value="..\Components\synapse40\source\lib\sswin32.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="516"/>
         <CursorPos X="7" Y="531"/>
-        <UsageCount Value="11"/>
-      </Unit45>
-      <Unit46>
+        <UsageCount Value="9"/>
+      </Unit44>
+      <Unit45>
         <Filename Value="..\Components\synapse40\source\demo\sftp\SimpleSFTP.pas"/>
         <UnitName Value="SimpleSFTP"/>
         <WindowIndex Value="0"/>
         <TopLine Value="564"/>
         <CursorPos X="66" Y="581"/>
-        <UsageCount Value="11"/>
-      </Unit46>
-      <Unit47>
+        <UsageCount Value="9"/>
+      </Unit45>
+      <Unit46>
         <Filename Value="E:\usr\local\share\fpcsrc\rtl\inc\stdsock.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="26"/>
         <CursorPos X="23" Y="41"/>
-        <UsageCount Value="10"/>
-      </Unit47>
-      <Unit48>
+        <UsageCount Value="8"/>
+      </Unit46>
+      <Unit47>
         <Filename Value="..\Components\synapse40\source\demo\echo\ConverterBackup\blcksock.pas"/>
         <UnitName Value="blcksock"/>
         <WindowIndex Value="0"/>
         <TopLine Value="3126"/>
         <CursorPos X="6" Y="3133"/>
-        <UsageCount Value="10"/>
-      </Unit48>
-      <Unit49>
+        <UsageCount Value="8"/>
+      </Unit47>
+      <Unit48>
         <Filename Value="..\Components\synapse40\source\demo\echo\ConverterBackup\synsock.pas"/>
         <UnitName Value="synsock"/>
         <WindowIndex Value="0"/>
         <TopLine Value="47"/>
         <CursorPos X="9" Y="62"/>
-        <UsageCount Value="10"/>
-      </Unit49>
+        <UsageCount Value="8"/>
+      </Unit48>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="13" HistoryIndex="12">
+    <JumpHistory Count="21" HistoryIndex="20">
       <Position1>
         <Filename Value="..\Library\ethernet_hub.pas"/>
         <Caret Line="310" Column="26" TopLine="304"/>
@@ -531,6 +523,38 @@
         <Filename Value="..\Library\ethernet_hub.pas"/>
         <Caret Line="313" Column="37" TopLine="308"/>
       </Position13>
+      <Position14>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="6" Column="157" TopLine="1"/>
+      </Position14>
+      <Position15>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="460" Column="16" TopLine="436"/>
+      </Position15>
+      <Position16>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="514" Column="14" TopLine="490"/>
+      </Position16>
+      <Position17>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1775" Column="4" TopLine="1752"/>
+      </Position17>
+      <Position18>
+        <Filename Value="form_main.pas"/>
+        <Caret Line="1776" Column="16" TopLine="1752"/>
+      </Position18>
+      <Position19>
+        <Filename Value="..\Library\ethernet_hub.pas"/>
+        <Caret Line="323" Column="42" TopLine="296"/>
+      </Position19>
+      <Position20>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <Caret Line="92" Column="15" TopLine="79"/>
+      </Position20>
+      <Position21>
+        <Filename Value="..\Library\ethernet_hub.pas"/>
+        <Caret Line="323" Column="31" TopLine="309"/>
+      </Position21>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

@@ -1772,8 +1772,8 @@ end;
 
 procedure TFormOLCB_Commander.SyncErrorEthernetMessage(MessageStr: String);
 begin
-  UpdateUI;
-  ShowMessage(MessageStr);
+ // UpdateUI;
+ // ShowMessage(MessageStr);
 end;
 
 procedure TFormOLCB_Commander.SyncReceiveEthernetMessage(MessageStr: String);
@@ -2106,4 +2106,4 @@ end;
 
 
 end.
-
+
