@@ -67,9 +67,6 @@ uses
 const
   MAX_CONNECT_TRY_COUNT = 1;
   
-  TARGET_IP = '192.168.0.127';
-  TARGET_PORT = 12021;
-
 var
   // EEPROM SPI PINS
 //  CS_Bank_0                         : sbit at LATB6_bit;
@@ -104,11 +101,22 @@ var
   TrapFlagPin                       : sbit at LATB3_bit;                  // OVERLOADING THE NMRA DCC TRANSMITTER CURRENT SENSE
   
   // Ethernet SPI Interface
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
   Net_Ethernet_24j600_CS: sbit at LATB6_bit;  // for writing to output pin always use latch
   Net_Ethernet_24j600_CS_Direction : sbit at TRISB6_bit;
+ {$ENDIF}
+ {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+  Net_Ethernet_28j60_CS: sbit at LATB6_bit;  // for writing to output pin always use latch
+  Net_Ethernet_28j60_RST: sbit at LATB0_bit;  // for writing to output pin always use latch
+  Net_Ethernet_28j60_CS_Direction : sbit at TRISB6_bit;
+  Net_Ethernet_28j60_RST_Direction : sbit at TRISB0_bit;
+ {$ENDIF}
+    
+
 
   LastSocketState: Integer;
   EthernetStackTicker: Byte;
+  MyPort: Word;
   
 // *****************************************************************************
 //  INTERRUPTS
@@ -225,14 +233,19 @@ begin
   ServiceMode_100ms_TimeTick
 end;
 
-procedure INTERRUPT_1ms_Ethernet_Stack_Timer(); iv IVT_ADDR_T3INTERRUPT; ics ICS_AUTO;
+procedure INTERRUPT_1s_Ethernet_Stack_Timer(); iv IVT_ADDR_T3INTERRUPT; ics ICS_AUTO;
 begin
   // Ticks every 500ms
   T3IF_bit := 0;
   // Need to update every 1s
   if EthernetStackTicker = 1 then
   begin
+    {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
     Net_Ethernet_24j600_userTimerSec := Net_Ethernet_24j600_userTimerSec;
+    {$ENDIF}
+    {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+    Net_Ethernet_28j60_userTimerSec := Net_Ethernet_28j60_userTimerSec;
+    {$ENDIF}
     EthernetStackTicker := 0
   end else
     Inc(EthernetStackTicker);
@@ -358,8 +371,13 @@ var
   ProxyData: PTrainProxyRamData;
   Running: Boolean;
   Delay: Word;
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
   OlcbSocket: ^SOCKET_24j600_Dsc;
-  i: Integer;
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+  OlcbSocket: ^SOCKET_28j60_Dsc;
+  {$ENDIF}
+  i, j: Integer;
   TargetIP: array[4] of byte;
   RuntimeIP,
   RuntimeGatewayIP,
@@ -375,6 +393,8 @@ begin
   
   Running := False;
   Delay := 0;
+  OlcbSocket := nil;
+  MyPort := 12021;
   
   EthernetStackTicker := 0;
                                                // Output
@@ -415,16 +435,30 @@ begin
   
 
   delay_ms(1000);
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
   case Net_Ethernet_24j600_initDHCP(5) of
-    0 : UART1_Write_Text('network parameters were obtained successfully.' + LF);
-    1 : UART1_Write_Text('network parameters were not obtained.' + LF);
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+  case Net_Ethernet_28j60_initDHCP(5) of
+  {$ENDIF}
+    1 : UART1_Write_Text('network parameters were obtained successfully.' + LF);
+    0 : UART1_Write_Text('network parameters were not obtained.' + LF);
   end;
   delay_ms(1000);
   
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
   memcpy(@RuntimeIP, Net_Ethernet_24j600_getIpAddress(), 4);
   memcpy(@RuntimeGatewayIP, Net_Ethernet_24j600_getGwIpAddress(), 4);
   memcpy(@RuntimeDnsIP, Net_Ethernet_24j600_getDnsIpAddress(), 4);
   memcpy(@RuntimeIPMask, Net_Ethernet_24j600_getIpMask(), 4);
+  {$ENDIF}
+  
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+  memcpy(@RuntimeIP, Net_Ethernet_28j60_getIpAddress(), 4);
+  memcpy(@RuntimeGatewayIP, Net_Ethernet_28j60_getGwIpAddress(), 4);
+  memcpy(@RuntimeDnsIP, Net_Ethernet_28j60_getDnsIpAddress(), 4);
+  memcpy(@RuntimeIPMask, Net_Ethernet_28j60_getIpMask(), 4);
+  {$ENDIF}
   
   UART1_Write_Text('DHCP Results' + LF);
   Ip2Str(RuntimeIP, s1);
@@ -460,26 +494,49 @@ begin
       if ActiveNode <> PNMRAnetNode( nil) then
         NMRAnetStateMachine_Process(ActiveNode);
 
-      if CANStorage_HighPriorityBufferReady then
+      if OlcbSocket^.State = 3 then
       begin
-        Do_Storage_Send;       // Send it NOW
-      end else
-      begin
+        if CANStorage_HighPriorityBufferReady then
+        begin
+          {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
+          Net_Ethernet_24j600_startSendTCP(OlcbSocket)                          // Send it NOW
+          {$ENDIF}
+          {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+          Net_Ethernet_28j60_startSendTCP(OlcbSocket)                          // Send it NOW
+          {$ENDIF}
+        end else
         if (Delay = 20) or CAN_Engine.TransmitImmediately then
         begin
           if CANStorage_LowPriorityBufferReady then
-            Do_Storage_Send;
+          begin
+         {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
+          Net_Ethernet_24j600_startSendTCP(OlcbSocket)                          // Send it NOW
+          {$ENDIF}
+          {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+          Net_Ethernet_28j60_startSendTCP(OlcbSocket)                          // Send it NOW
+          {$ENDIF}
+          end;
           Delay := 0;
-        end;
+        end
       end;
       Inc(Delay);
     end;
     
+   {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
     if (Net_Ethernet_24j600_doDHCPLeaseTime() <> 0) then
       Net_Ethernet_24j600_renewDHCP(5);
+    {$ENDIF}
+    {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+    if (Net_Ethernet_28j60_doDHCPLeaseTime() <> 0) then
+      Net_Ethernet_28j60_renewDHCP(5);
+    {$ENDIF}
 
-    
+    {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
     case Net_Ethernet_24j600_doPacket of
+    {$ENDIF}
+    {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+    case Net_Ethernet_28j60_doPacket of
+    {$ENDIF}
    //   0 : UART1_Write_Text('upon successful packet processing (zero packets received or received packet processed successfully)' +LF);
       1 : UART1_Write_Text('upon reception error or receive buffer corruption. ENC24J600 controller needs to be restarted.' +LF);
       2 : UART1_Write_Text('received packet was not sent to us (not our IP, nor IP broadcast address).' +LF);
@@ -494,16 +551,50 @@ begin
       case Cmd[0] of
         'u', 'U' :
           begin
-            case Net_Ethernet_24j600_disconnectTCP(OlcbSocket) of
+            {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
+            case Net_Ethernet_24j600_disconnectTCP(OlcbSocket) of  
+            {$ENDIF}
+            {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+            case Net_Ethernet_28j60_disconnectTCP(OlcbSocket) of
+            {$ENDIF}
               0 : UART1_Write_Text('successful FYN transmit' +LF);
               1 : UART1_Write_Text('no successful FYN transmit' +LF);
             end;
+
             Running := False;
+            Inc(MyPort);
+            OlcbSocket := nil;
           end;
         's', 'S' :
           begin 
-            Str2IP(TARGET_IP, TargetIP);
-            case Net_Ethernet_24j600_connectTCP(@TargetIP, TARGET_PORT, 21022, @OlcbSocket) of
+            i := 1;
+            j := 0;
+            while Cmd[i] <> #0 do
+            begin
+              if IsNumeric( Cmd[i]) then
+              begin
+                s1[j] := Cmd[i];
+                Inc(j);
+              end;
+              Inc(i);
+            end;
+            s1[j] := #0;
+            
+            if strlen(s1) > 0 then
+              TargetPort := StrToWord(s1)
+            else
+              WordToStr(TargetPort, s1);
+            
+            Str2IP(OLCB_TARGET_IP, TargetIP);
+            Inc(MyPort);
+            
+            UART1_Write_Text('Connecting to ' + OLCB_TARGET_IP + ':' + s1 +LF);
+            {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
+            case Net_Ethernet_24j600_connectTCP(@TargetIP, TargetPort, MyPort, @OlcbSocket) of
+            {$ENDIF}
+            {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+            case Net_Ethernet_28j60_connectTCP(@TargetIP, TargetPort, MyPort, @OlcbSocket) of
+            {$ENDIF}
                0 :  UART1_Write_Text('no successful transmit SYN segment' +LF);
                1 :  begin
                       UART1_Write_Text('successful transmit SYN segment' +LF);
@@ -556,6 +647,13 @@ begin
           begin
             DumpEEProm(False);     // Print in Hex
           end;
+        '8' : 
+          begin
+             if OlcbSocket <> nil then
+                CANStorage_DumpSocketData(OlcbSocket)
+             else
+               UART1_Write_Text('OlcbSocket not assigned');
+           end;
         '9' :
           begin
             ByteToStr(CommandStationConfigurationShadowRam.OutputMode, s1);

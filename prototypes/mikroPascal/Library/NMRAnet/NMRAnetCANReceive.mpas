@@ -61,7 +61,7 @@ type
   procedure ReceivedOnFilter5(Buffer: PCANBuffer);
   procedure ReceivedOnFilter6(Buffer: PCANBuffer);
   
-  procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString);
+  function CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString): Integer;
   procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer);
 
   {$IFDEF CAN_BUS}
@@ -114,10 +114,10 @@ begin
   NMRAnetLayerReceiveHook := HookFunc
 end;
 
-procedure CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString);
+function CANBufferToGridConnect(Buffer: PCANBuffer; var GridConnectBuffer: TGridConnectString): Integer;
 var
   ConvertString: string[8];
-  i, GridConnectBufferOffset: Integer;
+  i: Integer;
 begin
   GridConnectBuffer[0] := ':';
   GridConnectBuffer[1] := 'X';
@@ -132,24 +132,21 @@ begin
   GridConnectBuffer[7] := ConvertString[5];
   GridConnectBuffer[8] := ConvertString[6];
   GridConnectBuffer[9] := ConvertString[7];
-  GridConnectBuffer[10] := 'N';
+  GridConnectBuffer[10] := 'N';                         
+  Result := 11;
   if Buffer^.DataCount > 0 then
   begin
-    GridConnectBufferOffset := 11;
     for i := 0 to Buffer^.DataCount - 1 do
     begin
       WordToHex(Buffer^.DataBytes[i], ConvertString);
-      GridConnectBuffer[GridConnectBufferOffset]     := ConvertString[2];
-      GridConnectBuffer[GridConnectBufferOffset + 1] := ConvertString[3];
-      GridConnectBufferOffset := GridConnectBufferOffset + 2;
+      GridConnectBuffer[Result]     := ConvertString[2];
+      GridConnectBuffer[Result + 1] := ConvertString[3];
+      Result := Result + 2;
     end;
-    GridConnectBuffer[GridConnectBufferOffset] := ';';
-    GridConnectBuffer[GridConnectBufferOffset+1] := #0;
-  end else
-  begin
-    GridConnectBuffer[11] := ';';
-    GridConnectBuffer[12] := #0;
   end;
+  GridConnectBuffer[Result] := ';';
+  Inc(Result);
+  GridConnectBuffer[Result] := #0;
 end;
 
 procedure GridConnectToCANBuffer(var GridConnectBuffer: TGridConnectString; Buffer: PCANBuffer);

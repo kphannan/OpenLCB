@@ -72,11 +72,17 @@ begin
   SPI1CON := SPI1CON and $FFE0;  // Clear the prescaler bits
   SPI1CON := SPI1CON or $0003 or $0018;  // Setup for 5 Mhz (with the CAN plug in boards)     $10=5Mhz, $14=6.67Mhz, $18 = 10Mhz
   SPIEN_bit := 1;    // Enable the SPI
-  
+ 
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_24J600}
   Net_Ethernet_24j600_stackInitTCP();
   Net_Ethernet_24j600_Init(@myMacAddr, @myIpAddr, Net_Ethernet_24j600_AUTO_NEGOTIATION and Net_Ethernet_24j600_ETHERNET_DEFAULT_MAC and Net_Ethernet_24j600_FULLDUPLEX and Net_Ethernet_24j600_SPD100); // init ethernet board
   Net_Ethernet_24j600_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);
-
+  {$ENDIF}
+  {$IFDEF ETHERNET_BUS_MICROPASCAL_28J60}
+  Net_Ethernet_28j60_stackInitTCP();
+  Net_Ethernet_28j60_Init(@myMacAddr, @myIpAddr, Net_Ethernet_28j60_FULLDUPLEX); // init ethernet board
+  Net_Ethernet_28j60_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);
+  {$ENDIF}
 end;
 
 procedure MCU_Setup_Initialize;

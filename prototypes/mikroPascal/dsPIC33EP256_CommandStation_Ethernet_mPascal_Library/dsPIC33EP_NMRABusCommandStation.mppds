@@ -47,16 +47,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=8
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
 File1=..\Library\TCPBus\TCPStorage_mPascal_Lib.mpas
-File2=MCU_Setup_dsPIC33EP64GP502.mpas
-File3=..\Library\TCPBus\TCPStorage.mpas
-File4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\examples\HTTP_Demo_24j600\HTTP_Demo_24j600.mpas
-File5=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc24j600_Defs.mpas
-File6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\Uses\__NetEthEnc28j60Private.mpas
-File7=NMRAnetAppCallbacks.mpas
-File8=..\Library\Common\dspic_additional_string_library.mpas
+File2=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc24j600_Defs.mpas
+File3=NMRAnetAppCallbacks.mpas
+File4=..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File5=MCU_Setup_dsPIC33EP64GP502.mpas
+File6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc28j60_Defs.mpas
+File7=..\Library\TCPBus\TCPStorage.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -66,20 +65,17 @@ File0=Wrap_Unsigned_Window.xml
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=13
+Count=10
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet_mPascal_Library\
-Path3=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path5=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path6=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path7=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path8=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
-Path9=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
-Path10=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
-Path11=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\
-Path12=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\ENC464J600\Hardware\
+Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet_mPascal_Library\
+Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path4=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path6=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path7=E:\trunk\prototypes\mikroPascal\Library\Math\
+Path8=E:\trunk\prototypes\mikroPascal\Library\Common\
+Path9=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -97,8 +93,8 @@ File5=Peripheral_Pin_Select
 File6=ADC
 File7=C_Stdlib
 File8=C_Type
-File9=Net_Ethernet_24j600
-File10=Net_Ethernet_24j600_Defs
+File9=Net_Ethernet_24j600_Defs
+File10=Net_Ethernet_24j600
 [EXPANDED NODES]
 Node1=Sources
 Node2=Active Comments Files
