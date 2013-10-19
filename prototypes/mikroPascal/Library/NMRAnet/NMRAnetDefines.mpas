@@ -54,6 +54,16 @@ const
 
 const
   CAN_DATA_LEN = 8;
+  MAX_STREAM_TYPE_CONTENT = 8;
+  
+  // These are the Byte Offsets so we can update easily as they evolove
+  // Destination Alias = 0, 1
+  STREAM_OFFSET_BUFFER_SIZE_3 = 2;
+  STREAM_OFFSET_BUFFER_SIZE_2 = 3;
+  STREAM_OFFSET_BUFFER_SIZE_1 = 4;
+  STREAM_OFFSET_BUFFER_SIZE_0 = 5;
+  STREAM_OFFSET_SRC_SID       = 6;
+  STREAM_OFFSET_DEST_SID      = 7;
 
 type
   TCAN_DataBytes = array[CAN_DATA_LEN] of Byte;
@@ -89,17 +99,73 @@ type
   end;
   PDataBuffer = ^TDataBuffer;
   
+  //*****************************************************************************
+// Stream Buffer
+//*****************************************************************************
+type
+  TStream = array[0..MAX_STREAM_LEN-1] of Byte;
+  PStream = ^TStream;
+  
+  TStreamErrorCode = array[0..1] of Byte;
+  PStreamErrorCode = ^TStreamErrorCode;
+
+  TStreamError = record
+    SubType: TStreamErrorCode;
+    Count: Byte;                                                                // Number of Bytes to move into the Stream Databyte (MTI + SubType if needed)
+  end;
+  PStreamError = ^TStreamError;
+
+  TStreamContentType = array[MAX_STREAM_TYPE_CONTENT] of Byte;
+
+  TStreamContent = record
+    TypeIncluded: Boolean;                                                      // True if the stream contained defined content and the rest of this record will be filled in when the stream is returned
+    ContentType: TStreamContentType;                                            // Filled out with the Content Type marker if Type is Included in the stream
+  end;
+
+  TStreamBuffer = record                                                        // Overlays TBaseBuffer..........
+    State: Byte;                                                                // State of Buffer, see CBS_xxx flags
+    Alias: Word;                                                                // Alias associated with the buffer (Destination or Source depending on if the buffer is a Rx or Tx buffer)
+    Next: ^TStreamBuffer;                                                       // Pointer to the next Message Buffer
+    mCode: Byte;                                                                // Buffer Message Code for what the message is
+    StateMachine: Byte;                                                         // Local StateMachine Index for use
+    Tag: TBufferTag;                                                            // Stream Only: TBD
+    TotalTransferCount: DWord;                                                  // Total number of bytes to send or receive
+    iByteCount: DWord;                                                          // The number of bytes recevied as they come in, or the number of bytes to transmit
+    NegotiatedTransferSize: DWord;                                              //
+    DataBytes: TStream;                                                         // The 1024 bytes sent in the stream
+    ErrorCode: TStreamError;                                                    // Tracks any errors that occur through the MTI/Error Codes send as the first few bytes in the stream
+    Content: TStreamContent;                                                    // If the stream has well defined content then this will be filled out
+    LocalStreamID,                                                              // Unique ID defined by the Local Node that identifies the Stream Conversation
+    RemoteStreamID: Byte;                                                       // Unique ID defined by the Remote Node that identifies the Stream Conversation
+    iWatchdog: Word;                                                            // Increments every 1ms or so to allow detecting a stream that was abandon and never sent the End message or during transmit the Target Node never responds
+    iRetransmit: Byte;                                                          // Number of times the Stream was attempted to transmit use to test before not trying any more
+  end;
+  PStreamBuffer = ^TStreamBuffer;
+
+  
 // *****************************************************************************
 // Configuration Memory Buffer to hold data while configuration memory is 
 // being accessed
-// *****************************************************************************
+// ****************************************************************************
+
+type
+  TConfigMemErrorCode = array[0..1] of Byte;
+  PConfigMemErrorCode = ^TConfigMemErrorCode;
+  
 const
   CBA_WRITE             = $01;                                                  // ConfigmemBufferAction is a Write;
   CBA_WRITE_UNDER_MASK  = $02;                                                  // ConfigmemBufferAction is a Write under Mask;
   CBA_READ              = $03;                                                  // ConfigmemBufferAction is a Read;
+  CBA_READ_STREAM       = $04;
+  CBA_WRITE_STREAM      = $05;
 
   MAX_CONFIG_MEM_DATA          = 64;
   MAX_CONFIG_MEM_ERROR_STR_LEN = 60;
+
+  CONFIG_MEM_RESULT_OK                               : TConfigMemErrorCode = ($00, $00);
+  CONFIG_MEM_RESULT_TERMINATE                        : TConfigMemErrorCode = ($10, $00);
+  CONFIG_MEM_RESULT_REJECTED_STREAM_PERMANENT_ERROR  : TConfigMemErrorCode = ($10, $10);  // $10xx high bytes says don't try again
+  CONFIG_MEM_RESULT_REJECTED_STREAM_BUFFER_FULL      : TConfigMemErrorCode = ($20, $00);  // $20xx high byte says to try again
 
 type
   TConfigMemData = array[0..MAX_CONFIG_MEM_DATA-1] of Byte;
@@ -114,11 +180,12 @@ type
     Action: Byte;                                                               // See CBA_xxx flags, One or more of the flags
     AddressSpace: Byte;                                                         // Address Space to access
     Address: DWord;                                                             // Configuration Memory Address into the Address Space
-    DataCount: Byte;                                                            // Number of Bytes
-    DataBytes: TConfigMemData;                                                  // Databytes for the ConfigMem access
+    DataCount: Integer;                                                         // Number of Bytes (only for non-Stream access)
+    DataBytes: TConfigMemData;                                                  // Databytes for the ConfigMem access (only for non Stream access)
     DataOffset: Byte;                                                           // Allows Offsets to reads/writes in to the DataBytes array
-    AckReply: Byte;                                                             // Reply to send back to the requesting node, allows telling the node the reply is pending and an estimated time
-    ErrorCode: Word;                                                            // Error Code to reply to the requestor with
+    Stream: ^TStreamBuffer;                                                     // Holds the Stream if this is a stream request
+    AckFlags: Byte;                                                             // Reply Flags to send back to the requesting node, allows telling the node the reply is pending and an estimated time
+    ErrorCode: TConfigMemErrorCode;                                             // Error Code to reply to the requestor with
     ErrorString: PConfigMemDataErrorStr;                                        // Error Code String (2 byte for target Alias, 2 bytes for error code)
   end;
   PConfigMemBuffer = ^TConfigMemBuffer;
@@ -130,8 +197,6 @@ type
 type
   TDatagramErrorCode = array[0..1] of Byte;
   PDatagramErrorCode = ^TDatagramErrorCode;
-  TConfigMemErrorCode = array[0..1] of Byte;
-  PConfigMemErrorCode = ^TConfigMemErrorCode;
 
 const
   DATAGRAM_RESULT_OKAY                                    : TDatagramErrorCode = ($00, $00);
@@ -179,7 +244,9 @@ const
   DATAGRAM_WATCHDOG_MAX = 30;                                                   // 100ms counts before the buffer (base/datagram) is declared abandon, spec is must be greater than 3 seconds
   DATAGRAM_MAX_RETRY_COUNT = 3;                                                 // Number of try a datagram will try to be resent
 
-
+  STREAM_WATCHDOG_MAX = 30;
+  STREAM_MAX_RETRY_COUNT = 3;
+  
   // The first byte in a datagram is a command byte that allows datagrams to be "tagged" as special through these codes
   // The first byte is always reserved for this special purpose
   DATAGRAM_TYPE_MEMORY_CONFIGURATION        = $20;                              // Memory Configuration Protocol
@@ -190,12 +257,6 @@ const
   DATAGRAM_TYPE_TWO_BYTE_CMD_MASK           = $E0;                              // Next two bytes are command bytes and not data
   DATAGRAM_TYPE_SIX_BYTE_CMD_MASK           = $F0;                              // Next six bytes are command bytes and not data
   
-  
-  CONFIG_MEM_RESULT_OK                      : TConfigMemErrorCode = ($00, $00);
-  CONFIG_MEM_RESULT_TERMINATE               : TConfigMemErrorCode = ($10, $00);
-  
-  CONFIG_MEM_RESULT_REJECTED_NO_RESEND_MASK                 = $1000;
-  CONFIG_MEM_RESULT_REJECTED_RESEND_MASK                    = $2000;
 
 type
   TDatagram = array[0..MAX_DATAGRAM_LEN-1] of Byte;
@@ -274,7 +335,11 @@ const
   MTI_FRAME_TYPE_DATAGRAM_FRAME_START   = $0B000000;
   MTI_FRAME_TYPE_DATAGRAM_FRAME         = $0C000000;
   MTI_FRAME_TYPE_DATAGRAM_FRAME_END     = $0D000000;
+  MTI_FRAME_TYPE_STREAM_INIT_REQUEST    = $09CC8000;
+  MTI_FRAME_TYPE_STREAM_INIT_REPLY      = $09868000;
   MTI_FRAME_TYPE_STREAM_SEND            = $0F000000;
+  MTI_FRAME_TYPE_STREAM_PROCEED         = $09888000;
+  MTI_FRAME_TYPE_STREAM_COMPLETE        = $098A8000;
 
   MTI_ADDRESSED_MASK                 = $00008000;
   MTI_SIMPLE_PROTOCOL_MASK           = $00010000;
@@ -403,10 +468,11 @@ type
     EventsConsumedFlags: array[0..MAX_EVENTS_CONSUMED_BIT_BYTES-1] of Byte;     // Events Produced that need to be broadcast, each event occupies 2 bits (unknown, valid, invalid)
     PCER_Flags: array[0..MAX_PCER_BIT_BYTES-1] of Byte;                         // If bit is set then the index of the bit maps to the Produced Event and it requires a PCER sent for that event
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
-    BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of Messages Replies to service
+    BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of dataless Messages Replies to service
     DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service
     ConfigMemBuffers: PConfigMemBuffer;                                         // Head of a possible linked list of Configuration Memory Accesses to service
-    DataBuffers: PDataBuffer;                                                   // Head of a possible linked list of Message Replies that need the CAN Bytes to service
+    DataBuffers: PDataBuffer;                                                   // Head of a possible linked list of Message Replies that need sent Data Bytes to be serviced
+    StreamBuffers: PStreamBuffer;                                               // Head of a possible linked list of Streams to service
     ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory, user assigned in the NMRAnetAppCallbacks file
     ParentAlias,                                                                // Definition depends on what kind of node.  If a Throttle then Parent should never be set, If a Train then the will be the Owner Throttle
     ChildAlias,                                                                 // Definition depends on what kind of node.  If a Throttle then Child should the Train it is controlling, if a Train then should not be set
@@ -436,15 +502,30 @@ type
   
 const
   MCP_COMMAND_MASK                    = $C0;                                    // Upper 2 bits are the command type
+  
+  // Upper 2 bits 0 = Write Command
   MCP_COMMAND_WRITE                   = $00;                                    // MemoryConfigurationProtocol - Write Memory Mask
+  MCP_COMMAND_WRITE_STREAM            = $20;                                    // MemoryConfigurationProtocol - Write Memory Mask with Streams
   MCP_COMMAND_WRITE_UNDER_MASK        = $08;                                    // MemoryConfigurationProtocol - Write Memory under mask Mask
+  MCP_COMMAND_WRITE_REPLY_OK          = $10;
+  MCP_COMMAND_WRITE_REPLY_FAIL        = $18;
+  
+  // Upper 2 bits 1 = Read Command
   MCP_COMMAND_READ                    = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
+  MCP_COMMAND_READ_STREAM             = $60;                                    // MemoryConfigurationProtocol - Read Memory with Streams
+  MCP_COMMAND_READ_REPLY_OK           = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
+  MCP_COMMAND_READ_REPLY_FAIL         = $58;
+  MCP_COMMAND_READ_SREAM_REPLY        = $30;
+  
+  // Upper 2 bits 2 = Operation Command
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
-  MCP_READ_DATAGRAM_REPLY_OK          = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
-  MCP_READ_DATAGRAM_REPLY_FAIL        = $58;
-  MCP_WRITE_DATAGRAM_REPLY_OK         = $10;
-  MCP_WRITE_DATAGRAM_REPLY_FAIL       = $18;
-  MCP_READ_STREAM_REPLY               = $30;
+
+  // Bit 0..2 are to define address space
+  MCP_COMMAND_REPLY_FAIL              = 3;                                      // Bit 3 set mean the result is a failed result if it is a Command Reply
+  MCP_COMMAND_WRITE_UNDER_MASK_BIT    = 3;                                      // Bit 3 set means write under mask for an in coming command
+  MCP_REPLY_COMMAND_BIT               = 4;                                      // Bit 4 set means it is a reply to a Command
+  MCP_STREAM_COMMAND_BIT              = 5;                                      // Bit 5 set means it is a Stream Command
+  // Bit 6..7 define the Command
 
   MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
   MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask
@@ -471,10 +552,22 @@ const
   STATE_DATAGRAM_MEM_CONFIG_SEND_RESUSED_DATAGRAM = $01;
   STATE_DATAGRAM_MEM_CONFIG_WAITFOR_REPLY         = $02;
 
-  STATE_MEM_CONFIG_READWRITE_START           = $00;
-  STATE_MEM_CONFIG_READWRITE_READ            = $01;
-  STATE_MEM_CONFIG_READWRITE_WRITE           = $02;
-  STATE_MEM_CONFIG_READWRITE_WAIT            = $03;
+  STATE_MEM_CONFIG_READWRITE_START                      = $00;
+  STATE_MEM_CONFIG_READWRITE_READ                       = $01;
+  STATE_MEM_CONFIG_READWRITE_WRITE                      = $02;
+  STATE_MEM_CONFIG_READWRITE_WAIT_UNTIL_DONE_PROCESSING = $03;
+  STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_WAIT          = $04;
+  STATE_MEM_CONFIG_READWRITE_STREAM_READ                = $05;
+  STATE_MEM_CONFIG_READWRITE_STREAM_WRITE               = $06;
+  STATE_MEM_CONFIG_READWRITE_WRITE_UNDER_MASK           = $07;
+  STATE_MEM_CONFIG_RELEASE                              = $10;
+  
+  STATE_STREAM_IDLE                            = $00;
+  STATE_STREAM_INITIATE_REQUEST                = $01;
+  STATE_STREAM_INITIATE_REPLY                  = $02;
+  STATE_STREAM_SEND                            = $03;
+  STATE_STREAM_PROCEED                         = $04;
+  STATE_STREAM_COMPLETE                        = $05;
   
 var
   MaxTime_StateMachine: Word;

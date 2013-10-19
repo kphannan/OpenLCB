@@ -48,6 +48,13 @@ type
     Count: Byte;                                                                // Number of Buffers currently used
   end;
   
+  TStreamBufferPool = record
+    Pool: array[0..MAX_STREAM_BUFFER_POOL-1] of TStreamBuffer;                  // Pool Array
+    MaxCount: Byte;                                                             // Max Count of Pool Buffers used
+    Count: Byte;                                                                // Number of Buffers currently used
+    NextLocalStreamID: Byte;                                                    // Next number to use for a local steam ID (SID), automatically hanlded if you use NMRAnetBufferPools_GetNextStreamID or NMRAnetBufferPools_InitializeStreamBuffer
+  end;
+  
   TConfigMemBufferPool = record
     Pool: array[0..MAX_CONFIG_MEM_BUFFER_POOL-1] of TConfigMemBuffer;           // Pool Array
     MaxCount: Byte;                                                             // Max Count of Pool Buffers used
@@ -57,6 +64,7 @@ type
 procedure NMRAnetBufferPools_Initialize;
 procedure NMRAnetBufferPools_InitializeBaseBuffer(Buffer: PBaseBuffer);
 procedure NMRAnetBufferPools_InitializeDatagramBuffer(Buffer: PDatagramBuffer);
+procedure NMRAnetBufferPools_InitializeStreamBuffer(Buffer: PStreamBuffer; AllocateStreamID: Boolean);
 procedure NMRAnetBufferPools_InitializeConfigMemBuffer(Buffer: PConfigMemBuffer);
 procedure NMRAnetBufferPools_InitializeDataBuffer(Buffer: PDataBuffer);
 
@@ -65,6 +73,10 @@ procedure NMRAnetBufferPools_ReleaseBaseBuffer(Buffer: PBaseBuffer);
 
 function NMRAnetBufferPools_AllocateDatagramBuffer(var Buffer: PDatagramBuffer; ForTransmit: Boolean): Boolean;
 procedure NMRAnetBufferPools_ReleaseDatagramBuffer(Buffer: PDatagramBuffer);
+
+function NMRAnetBufferPools_AllocateStreamBuffer(var Buffer: PStreamBuffer; ForTransmit: Boolean): Boolean;
+procedure NMRAnetBufferPools_ReleaseStreamBuffer(Buffer: PStreamBuffer);
+function NMRAnetBufferPools_GetNextStreamID: Byte;
 
 function NMRAnetBufferPools_AllocateConfigMemBuffer(var Buffer: PConfigMemBuffer): Boolean;
 procedure NMRAnetBufferPools_ReleaseConfigMemBuffer(Buffer: PConfigMemBuffer);
@@ -81,6 +93,7 @@ procedure NMRAnetBufferPools_Print;
 var
   BaseBufferPool: TBaseBufferPool;
   DatagramPool: TDatagramBufferPool;
+  StreamPool: TStreamBufferPool;
   ConfigMemPool: TConfigMemBufferPool;
   DataPool: TDataBufferPool;
 
@@ -130,6 +143,15 @@ begin
     begin
       if DatagramPool.Pool[i].iWatchdog < DATAGRAM_WATCHDOG_MAX then
         Inc(DatagramPool.Pool[i].iWatchdog);
+    end;
+  end;
+  
+  for i := 0 to StreamPool.Count - 1 do
+  begin
+    if StreamPool.Pool[i].State and CBS_ALLOCATED = CBS_ALLOCATED then
+    begin
+      if StreamPool.Pool[i].iWatchdog < STREAM_WATCHDOG_MAX then
+        Inc(StreamPool.Pool[i].iWatchdog);
     end;
   end;
 end;
@@ -187,6 +209,48 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure NMRAnetBufferPools_InitializeStreamBuffer;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetBufferPools_InitializeStreamBuffer(Buffer: PStreamBuffer; AllocateStreamID: Boolean);
+var
+  j: Integer;
+begin
+  if Buffer <> nil then
+  begin
+    Buffer^.State := 0;
+    Buffer^.Alias := 0;
+    Buffer^.Next := 0;
+    Buffer^.mCode := 0;
+    Buffer^.StateMachine := 0;
+    Buffer^.Tag := 0;
+    Buffer^.ErrorCode.Count := 1;                                               // Assume only the MTI
+    Buffer^.ErrorCode.SubType[0] := 0;
+    Buffer^.ErrorCode.SubType[1] := 0;
+    Buffer^.TotalTransferCount := 0;
+    Buffer^.iByteCount := 0;
+    Buffer^.NegotiatedTransferSize := 0;
+    for j := 0 to MAX_STREAM_LEN-1 do                                           // Is this really needed?   Will be slow if buffer is big
+      Buffer^.DataBytes[j] := 0;
+    if AllocateStreamID then
+      Buffer^.LocalStreamID := NMRAnetBufferPools_GetNextStreamID
+    else
+      Buffer^.LocalStreamID := 0;                                               // Unique ID defined by the Local Node that identifies the Stream Conversation
+    Buffer^.Content.TypeIncluded := False;                                      // True if the stream contained defined content and the rest of this record will be filled in when the stream is returned
+    for j := 0 to MAX_STREAM_TYPE_CONTENT - 1 do
+      Buffer^.Content.ContentType[j] := 0;
+    Buffer^.RemoteStreamID := 0;
+    Buffer^.iWatchdog := 0;
+    Buffer^.iRetransmit := 0;
+  end;
+end;
+
+// *****************************************************************************
 //  procedure NMRAnetBufferPools_InitializeConfigMemBuffer;
 //
 //  Parameters:
@@ -208,10 +272,11 @@ begin
   Buffer^.Address := 0;
   Buffer^.DataCount := 0;
   Buffer^.DataOffset := 0;
+  Buffer^.Stream := nil;
   for i := 0 to MAX_CONFIG_MEM_DATA - 1 do
     Buffer^.DataBytes[i] := 0;
-  Buffer^.AckReply := DATAGRAM_OK_ACK_REPLY_PENDING; // The Write call is no longer blocked until the write is complete so tell the caller to wait until we tell you the write is complete
-  Buffer^.ErrorCode := 0;
+  Buffer^.AckFlags := DATAGRAM_OK_ACK_REPLY_PENDING; // The Write call is no longer blocked until the write is complete so tell the caller to wait until we tell you the write is complete
+  Buffer^.ErrorCode := CONFIG_MEM_RESULT_OK;
   Buffer^.ErrorString := '';
 end;
 
@@ -262,6 +327,11 @@ begin
     NMRAnetBufferPools_InitializeDataBuffer(@DataPool.Pool[i]);
   DataPool.Count := 0;
   DataPool.MaxCount := 0;
+  
+  for i := 0 to MAX_STREAM_BUFFER_POOL - 1 do
+    NMRAnetBufferPools_InitializeStreamBuffer(@StreamPool.Pool[i], False);
+  StreamPool.Count := 0;
+  StreamPool.MaxCount := 0;
 end;
 
 // *****************************************************************************
@@ -369,6 +439,76 @@ begin
     Dec(DatagramPool.Count);
   end;
 end;
+
+// *****************************************************************************
+//  procedure NMRAnetBufferPools_AllocateStreamBuffer;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetBufferPools_AllocateStreamBuffer(var Buffer: PStreamBuffer; ForTransmit: Boolean): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to MAX_STREAM_BUFFER_POOL - 1 do
+  begin
+    if StreamPool.Pool[i].State = 0 then
+    begin
+      Buffer := @StreamPool.Pool[i];
+      {$IFDEF TRACK_BUFFER_ALLOCATIONS}UART1_Write_Text('Stream_Alloc: '); WordToHex(Buffer, s1); UART1_Write_Text('$'+s1+LF);{$ENDIF}
+      NMRAnetBufferPools_InitializeStreamBuffer(Buffer, True);
+      Buffer^.State := CBS_ALLOCATED;
+      if ForTransmit then
+        Buffer^.State := Buffer^.State or CBS_OUTGOING;
+      Inc(StreamPool.Count);
+      if StreamPool.Count >= StreamPool.MaxCount then
+        StreamPool.MaxCount := StreamPool.Count;
+      {$IFDEF TRACK_BUFFER_MAX_COUNT}UART1_Write_Text('Stream MaxCount: '); ByteToStr(StreamPool.MaxCount, s1); UART1_Write_Text(s1+LF); {$ENDIF}
+      Result := True;
+      Break
+    end
+  end;
+  {$IFDEF TRACK_BUFFER_OVERFLOWS}if not Result then begin UART1_Write_Text('StreamAllocateFail: ' + LF); {NMRAnetBufferPools_Print;} end{$ENDIF}
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetBufferPools_ReleaseStreamBuffer;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure NMRAnetBufferPools_ReleaseStreamBuffer(Buffer: PStreamBuffer);
+begin
+  if Buffer <> nil then
+  begin
+    {$IFDEF TRACK_BUFFER_ALLOCATIONS}UART1_Write_Text('Stream_Free: '); WordToHex(Buffer, s1); UART1_Write_Text('$'+s1+LF);{$ENDIF}
+    Buffer^.State := 0;
+    Dec(StreamPool.Count);
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetBufferPools_GetNextStreamID;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetBufferPools_GetNextStreamID: Byte;
+begin
+  Result := StreamPool.NextLocalStreamID;
+  Inc(StreamPool.NextLocalStreamID);
+end;
+
 
 // *****************************************************************************
 //  procedure NMRAnetBufferPools_AllocateConfigMemBuffer;

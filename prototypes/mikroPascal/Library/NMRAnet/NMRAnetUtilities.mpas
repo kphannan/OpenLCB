@@ -3,7 +3,7 @@ unit NMRAnetUtilities;
 //
 // * Copyright:
 //     (c) Mustangpeak Software 2012.
-//
+//                                                                                                                                            3
 //     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
 //     this file except in compliance with the License. You may obtain a copy of the
 //     License at http://www.gnu.org/licenses/gpl.html
@@ -76,6 +76,10 @@ procedure NMRAnetUtilities_DatagramBufferLink(Node: PNMRAnetNode; Buffer: PDatag
 procedure NMRAnetUtilities_DatagramBufferUnLink(Node: PNMRAnetNode; Buffer: PDatagramBuffer);
 function NMRAnetUtilities_NextDatagramBuffer(Node: PNMRAnetNode): PDatagramBuffer;
 
+procedure NMRAnetUtilities_StreamBufferLink(Node: PNMRAnetNode; Buffer: PStreamBuffer);
+procedure NMRAnetUtilities_StreamBufferUnLink(Node: PNMRAnetNode; Buffer: PStreamBuffer);
+function NMRAnetUtilities_NextStreamBuffer(Node: PNMRAnetNode): PStreamBuffer;
+
 procedure NMRAnetUtilities_ConfigMemBufferLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
 procedure NMRAnetUtilities_ConfigMemBufferUnLink(Node: PNMRAnetNode; Buffer: PConfigMemBuffer);
 function NMRAnetUtilities_NextConfigMemBuffer(Node: PNMRAnetNode): PConfigMemBuffer;
@@ -88,6 +92,11 @@ function NMRAnetUtilities_FindInProcessDatagram(Node: PNMRAnetNode; var Buffer: 
 function NMRAnetUtilities_FindCompletedDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
 function NMRAnetUtilities_FindOutgoingDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; ProcessingOnly: Boolean): Boolean;
 function NMRAnetUtilities_FindInDatagramByState(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; AState: Byte; AnyBit: Boolean): Boolean;
+
+function NMRAnetUtilities_FindInProcessStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer): Boolean;
+function NMRAnetUtilities_FindCompletedStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer): Boolean;
+function NMRAnetUtilities_FindOutgoingStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; ProcessingOnly: Boolean): Boolean;
+function NMRAnetUtilities_FindInStreamByState(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer; AState: Byte; AnyBit: Boolean): Boolean;
 
 implementation
 
@@ -863,6 +872,84 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure NMRAnetUtilities_StreamBufferLink
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetUtilities_StreamBufferLink(Node: PNMRAnetNode; Buffer: PStreamBuffer);
+var
+  Temp: PStreamBuffer;
+begin
+  if Node^.StreamBuffers = nil then
+    Node^.StreamBuffers := Buffer
+  else begin                                  // Tack it to the end of the chain
+    Temp := Node^.StreamBuffers;
+    while Temp^.Next <> nil do
+      Temp := Temp^.Next;
+    Temp^.Next := Buffer
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_StreamBufferUnLink
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure NMRAnetUtilities_StreamBufferUnLink(Node: PNMRAnetNode; Buffer: PStreamBuffer);
+var
+  Temp, Parent: PStreamBuffer;
+begin
+  if Buffer <> nil then
+  begin
+    if Node^.StreamBuffers <> nil then
+    begin
+      if Node^.StreamBuffers = Buffer then           // Root Buffer match case is easy
+        Node^.StreamBuffers := Node^.StreamBuffers^.Next
+      else begin
+        Parent := Node^.StreamBuffers;                // Already know it is not the root buffer so setup for the first level down
+        Temp := Node^.StreamBuffers^.Next;
+        while (Temp <> nil) and (Temp <> Buffer) do
+        begin
+          Parent := Temp;
+          Temp := Temp^.Next
+        end;
+        if Temp <> nil then
+          Parent^.Next := Temp^.Next
+      end
+    end;
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_NextStreamBuffer
+//     Parameters:
+//     Returns:     The next completed StreamBuffer connected to the passed node
+//
+//     Description:
+//
+// ***************************************************************************
+function NMRAnetUtilities_NextStreamBuffer(Node: PNMRAnetNode): PStreamBuffer;
+begin
+  Result := Node^.StreamBuffers;
+  if Result <> nil then
+  begin
+    while Result^.State and CBS_TRANSFER_COMPLETE = 0 do    // Use only Complete Transfers
+    begin
+      Result := Result^.Next;
+      if Result = nil then
+        Break
+    end
+  end
+end;
+
+
+// *****************************************************************************
 //  procedure NMRAnetUtilities_ConfigMemBufferLink
 //     Parameters:
 //     Returns:
@@ -1092,5 +1179,112 @@ begin
     Temp := Temp^.Next
   end;
 end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_FindInStreamByState
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_FindInStreamByState(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer; AState: Byte; AnyBit: Boolean): Boolean;
+var
+  Temp: PStreamBuffer;
+begin
+  Result := False;
+  Temp := Node^.StreamBuffers;
+  while Temp <> nil do
+  begin
+  //  if Temp^.Alias = Alias then
+    begin
+      if AnyBit then
+      begin
+        if Temp^.State and AState <> 0 then                                     // Test if any bit is set
+        begin
+          if ((Temp^.LocalStreamID = LocalSID) or (LocalSID < 0)) then
+            if ((Temp^.RemoteStreamID = RemoteSID) or (RemoteSID < 0)) then
+            begin
+              Buffer := Temp;
+              Result := True;
+              Break
+            end
+        end;
+      end else
+      begin
+        if Temp^.State and AState = AState then                                 // Test for and exact match for the State bits
+        begin
+          if ((Temp^.LocalStreamID = LocalSID) or (LocalSID < 0)) then
+            if ((Temp^.RemoteStreamID = RemoteSID) or (RemoteSID < 0)) then
+            begin
+              Buffer := Temp;
+              Result := True;
+              Break
+            end
+        end;
+      end
+    end;
+    Temp := Temp^.Next
+  end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_FindInProcessStream
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_FindInProcessStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer): Boolean;
+begin
+  Result := NMRAnetUtilities_FindInStreamByState(Node, Buffer, LocalSID, RemoteSID, CBS_PROCESSING, False);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_FindCompletedStream
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_FindCompletedStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer): Boolean;
+begin
+  Result := NMRAnetUtilities_FindInStreamByState(Node, Buffer, -1, -1, CBS_TRANSFER_COMPLETE, False);
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_FindOutgoingStream;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+function NMRAnetUtilities_FindOutgoingStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; ProcessingOnly: Boolean): Boolean;
+var
+  Temp: PStreamBuffer;
+  AState: Byte;
+begin
+  Result := False;
+  AState := CBS_OUTGOING;
+  if ProcessingOnly then
+    AState := AState or CBS_PROCESSING;
+
+  Temp := Node^.StreamBuffers;
+  while Temp <> nil do
+  begin
+    if Temp^.State and AState = AState then
+    begin
+      Buffer := Temp;
+      Result := True;
+      Break
+    end;
+    Temp := Temp^.Next
+  end;
+end;
+
 
 end.

@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=dsPIC33EP_NMRAnetCommandStation.mpas
+Value=..\Library\NMRAnet\NMRAnetStateMachine.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -49,13 +49,13 @@ ActiveImageIndex=-1
 [OPENED_FILES]
 Count=8
 File0=dsPIC33EP_NMRAnetCommandStation.mpas
-File1=..\Library\TCPBus\TCPStorage_mPascal_Lib.mpas
-File2=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc24j600_Defs.mpas
-File3=NMRAnetAppCallbacks.mpas
-File4=..\Library\NMRAnet\NMRAnetCANReceive.mpas
-File5=MCU_Setup_dsPIC33EP64GP502.mpas
-File6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\__Lib_NetEthEnc28j60_Defs.mpas
-File7=..\Library\TCPBus\TCPStorage.mpas
+File1=..\Library\NMRAnet\NMRAnetCANReceive.mpas
+File2=..\Library\TCPBus\TCPStorage.mpas
+File3=..\Library\NMRAnet\NMRAnetStateMachine.mpas
+File4=..\Library\NMRAnet\NMRAnetDefines.mpas
+File5=..\Library\NMRAnet\NMRAnetBufferPools.mpas
+File6=..\Library\NMRAnet\NMRAnetUtilities.mpas
+File7=NMRAnetAppCallbacks.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -65,17 +65,24 @@ File0=Wrap_Unsigned_Window.xml
 Count=1
 File0=Options.inc
 [SEARCH_PATH]
-Count=10
+Count=17
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet_mPascal_Library\
-Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path4=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
-Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
-Path6=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
-Path7=E:\trunk\prototypes\mikroPascal\Library\Math\
-Path8=E:\trunk\prototypes\mikroPascal\Library\Common\
-Path9=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path2=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet_mPascal_Library\
+Path3=E:\trunk\prototypes\mikroPascal\dsPIC33EP256_CommandStation_Ethernet_mPascal_Library\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path5=E:\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path6=E:\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path7=E:\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path8=E:\trunk\prototypes\mikroPascal\Library\Math\
+Path9=E:\trunk\prototypes\mikroPascal\Library\Common\
+Path10=E:\trunk\prototypes\mikroPascal\Library\TCPBus\
+Path11=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnet\
+Path12=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\NMRAnetDCCSystem\
+Path13=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\dsPIC33F\
+Path14=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Math\
+Path15=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\Common\
+Path16=\\VBOXSVR\OpenLCB\trunk\prototypes\mikroPascal\Library\TCPBus\
 [HEADER_PATH]
 Count=0
 [HEADERS]

@@ -87,7 +87,7 @@ uses
   procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);  external;
   function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean; external;
   function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean; external;
-  procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
+  procedure AppCallback_ConfigMemReadWriteAckFlags(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
   procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer); external;
 
 // Forward declarations
@@ -294,6 +294,70 @@ begin
       TransmitNMRABusLayerMsg(Node, CANBuffer, MTI, Datagram^.Alias, i, @DataBytes, True, $00);
       {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('TransmitNMRABusLayerMsg = Transmitted'+LF);{$ENDIF}
     end;
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendStreamInitiate
+//     Parameters:
+//     Returns:
+//
+//     Description:  Returns True when the Datagram is COMPLETLY sent
+//                   Expects the iDataCount, DataBytes, Alias (destination) to be valid and Tag to be
+//                   initaialized to 0
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendStreamInitiate(Node: PNMRAnetNode; CANBuffer: PCANBuffer; Stream: PStreamBuffer): Boolean;
+var
+  DataBytes: TCAN_DataBytes;
+  MTI: DWord;
+  DestAliasFlagMask: Byte;
+begin
+  Result := False;
+  DestAliasFlagMask := 0;
+  if NMRABusTxBufferAvailable then
+  begin
+    if Stream^.NegotiatedTransferSize > MAX_STREAM_LEN then
+      Stream^.NegotiatedTransferSize := MAX_STREAM_LEN;
+    DataBytes[0] := Stream^.NegotiatedTransferSize shr 24;
+    DataBytes[1] := Stream^.NegotiatedTransferSize shr 16;
+    DataBytes[2] := Stream^.NegotiatedTransferSize shr 8;
+    DataBytes[3] := Stream^.NegotiatedTransferSize shr 0;
+    DataBytes[4] := Stream^.LocalStreamID;
+    if Stream^.Content.TypeIncluded then
+      DestAliasFlagMask := DestAliasFlagMask or $10;
+    TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_FRAME_TYPE_STREAM_INIT_REQUEST, Stream^.Alias, 5, @DataBytes, False, DestAliasFlagMask);
+    Result := True
+  end
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetStateMachine_TrySendStreamInitiateReply
+//     Parameters:
+//     Returns:
+//
+//     Description:  Returns True when the Datagram is COMPLETLY sent
+//                   Expects the iDataCount, DataBytes, Alias (destination) to be valid and Tag to be
+//                   initaialized to 0
+//
+// *****************************************************************************
+function NMRAnetStateMachine_TrySendStreamInitiateReply(Node: PNMRAnetNode; CANBuffer: PCANBuffer; Stream: PStreamBuffer): Boolean;
+var
+  DataBytes: TCAN_DataBytes;
+  MTI: DWord;
+begin
+  Result := False;
+  if NMRABusTxBufferAvailable then
+  begin
+    if Stream^.NegotiatedTransferSize > MAX_STREAM_LEN then
+      Stream^.NegotiatedTransferSize := MAX_STREAM_LEN;
+    DataBytes[0] := Stream^.NegotiatedTransferSize shr 24;
+    DataBytes[1] := Stream^.NegotiatedTransferSize shr 16;
+    DataBytes[2] := Stream^.NegotiatedTransferSize shr 8;
+    DataBytes[3] := Stream^.NegotiatedTransferSize shr 0;
+    DataBytes[4] := Stream^.LocalStreamID;
+    TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_FRAME_TYPE_STREAM_INIT_REPLY, Stream^.Alias, 5, @DataBytes, False, $00);
+    Result := True
   end
 end;
 
@@ -535,12 +599,13 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
 //     Description:
 //
 // *****************************************************************************
-procedure DecodeConfigMemReadWriteHeader(Node: PNMRAnetNode; DatagramBuffer: PDatagramBuffer; ConfigMemBuffer: PConfigMemBuffer);
+function DecodeConfigMemReadWriteHeader(Node: PNMRAnetNode; DatagramBuffer: PDatagramBuffer; ConfigMemBuffer: PConfigMemBuffer): Boolean;
 var
   DataOffset: Byte;
   i: Integer;
   MaxSpaceSize: DWord;
 begin
+  Result := True;
   // Set the Alias of the requesting node
   ConfigMemBuffer^.Alias := DatagramBuffer^.Alias;
 
@@ -557,27 +622,46 @@ begin
        end;
   end;
   
-  // Decode the Address
   ConfigMemBuffer^.Address := DWord( DatagramBuffer^.DataBytes[2] shl 24) or DWord( DatagramBuffer^.DataBytes[3] shl 16) or DWord( DatagramBuffer^.DataBytes[4] shl 8) or DWord( DatagramBuffer^.DataBytes[5]);
-
-  // Decode what the Config Memory access Action is
-  if DatagramBuffer^.DataBytes[1] and MCP_COMMAND_MASK = MCP_COMMAND_READ then
-    ConfigMemBuffer^.Action := CBA_READ
-  else begin
-    if DatagramBuffer^.DataBytes[1] and MCP_COMMAND_WRITE_UNDER_MASK = MCP_COMMAND_WRITE_UNDER_MASK then
-      ConfigMemBuffer^.Action := CBA_WRITE_UNDER_MASK
-    else
-      ConfigMemBuffer^.Action := CBA_WRITE
+  
+  case DatagramBuffer^.DataBytes[1] and MCP_COMMAND_MASK of
+     MCP_COMMAND_READ :
+         begin  
+           ConfigMemBuffer^.Action := CBA_READ;
+           ConfigMemBuffer^.DataCount := DatagramBuffer^.DataBytes[DataOffset] and $7F; // If it is a read then the value is passed by the caller; Must ignore the uppder bit per the spec; the DataBytes are already zeroed when the ConfigMemBuffer was allocated
+         end;
+     MCP_COMMAND_WRITE :
+         begin     
+            ConfigMemBuffer^.Action := CBA_WRITE;
+            ConfigMemBuffer^.DataCount := DatagramBuffer^.iByteCount - DataOffset;      // If it is a write then copy the Data over to the ConfigMemBuffer
+            for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+              ConfigMemBuffer^.DataBytes[i] := DatagramBuffer^.DataBytes[i + DataOffset];
+         end;
+     MCP_COMMAND_READ_STREAM :
+         begin
+           ConfigMemBuffer^.Action := CBA_READ_STREAM;
+           if NMRAnetBufferPools_AllocateStreamBuffer(ConfigMemBuffer^.Stream, True) then
+           begin
+             NMRAnetUtilities_StreamBufferLink(Node, ConfigMemBuffer^.Stream);  // Link to the Node so the Stream StateMachine will run
+             ConfigMemBuffer^.Stream^.TotalTransferCount := DWord((DatagramBuffer^.DataBytes[DataOffset] shl 24)) or DWord((DatagramBuffer^.DataBytes[DataOffset+1] shl 16)) or DWord((DatagramBuffer^.DataBytes[DataOffset+2] shl 8)) or DWord(DatagramBuffer^.DataBytes[DataOffset+3]);
+             ConfigMemBuffer^.Stream^.LocalStreamID := DatagramBuffer^.DataBytes[DataOffset+4]; // Requester sent us a SID to use so it can reconize it
+           end else
+             Result := False
+         end;
+     MCP_COMMAND_WRITE_STREAM :
+         begin
+           if NMRAnetBufferPools_AllocateStreamBuffer(ConfigMemBuffer^.Stream, False) then
+           begin
+             ConfigMemBuffer^.Stream^.TotalTransferCount := DWord((DatagramBuffer^.DataBytes[DataOffset] shl 24)) or DWord((DatagramBuffer^.DataBytes[DataOffset+1] shl 16)) or DWord((DatagramBuffer^.DataBytes[DataOffset+2] shl 8)) or DWord(DatagramBuffer^.DataBytes[DataOffset+3]);
+             ConfigMemBuffer^.Stream^.LocalStreamID := DatagramBuffer^.DataBytes[DataOffset+4]; // Requester sent us a SID to use so it can reconize it
+           end else
+             Result := False
+         end;
+     MCP_COMMAND_WRITE_UNDER_MASK :
+         begin   
+           ConfigMemBuffer^.Action := CBA_WRITE_UNDER_MASK
+         end;
   end;
-
-  // Decode the size of the Read or Write
-  if ConfigMemBuffer^.Action = CBA_READ then
-    ConfigMemBuffer^.DataCount := DatagramBuffer^.DataBytes[DataOffset] and $7F // If it is a read then the value is passed by the caller; Must ignore the uppder bit per the spec; the DataBytes are already zeroed when the ConfigMemBuffer was allocated
-  else begin
-    ConfigMemBuffer^.DataCount := DatagramBuffer^.iByteCount - DataOffset;      // If it is a write then copy the Data over to the ConfigMemBuffer
-    for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-      ConfigMemBuffer^.DataBytes[i] := DatagramBuffer^.DataBytes[i + DataOffset]
-   end;
 
    // Test the size against the size of the Address Space and adjust to the Max size if necessary
    MaxSpaceSize := MaxAddressByAddressSpace(Node, ConfigMemBuffer^.AddressSpace);
@@ -615,17 +699,17 @@ begin
     end;
   end;
   
-  DatagramBuffer^.DataBytes[2] := (DWord(ConfigMemBuffer^.Address) shr 24) and $000000FF;
-  DatagramBuffer^.DataBytes[3] := (DWord(ConfigMemBuffer^.Address) shr 16) and $000000FF;
-  DatagramBuffer^.DataBytes[4] := (DWord(ConfigMemBuffer^.Address) shr 8) and $000000FF;
-  DatagramBuffer^.DataBytes[5] := DWord(ConfigMemBuffer^.Address) and $000000FF;
+  DatagramBuffer^.DataBytes[2] := (DWord(ConfigMemBuffer^.Address) shr 24);
+  DatagramBuffer^.DataBytes[3] := (DWord(ConfigMemBuffer^.Address) shr 16);
+  DatagramBuffer^.DataBytes[4] := (DWord(ConfigMemBuffer^.Address) shr 8);
+  DatagramBuffer^.DataBytes[5] := DWord(ConfigMemBuffer^.Address);
   
 
-  if ConfigMemBuffer^.ErrorCode > 0 then
+  if ConfigMemBuffer^.ErrorCode[0] > 0 then
   begin
     // Error found need to report it
-    DatagramBuffer^.DataBytes[DataOffset] := Hi( ConfigMemBuffer^.ErrorCode);
-    DatagramBuffer^.DataBytes[DataOffset+1] := Lo( ConfigMemBuffer^.ErrorCode);
+    DatagramBuffer^.DataBytes[DataOffset] := ConfigMemBuffer^.ErrorCode[0];
+    DatagramBuffer^.DataBytes[DataOffset+1] := ConfigMemBuffer^.ErrorCode[1];
     DatagramBuffer^.iByteCount := DataOffset + 2;
 
     if ConfigMemBuffer^.ErrorString^[0] <> #0 then
@@ -649,28 +733,37 @@ begin
       end;
     end
   end;
-      
-  if ConfigMemBuffer^.Action = CBA_READ then
-  begin
-    if ConfigMemBuffer^.ErrorCode > 0 then
-      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_READ_DATAGRAM_REPLY_FAIL
-    else begin
-      // No Error all is good
-      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_READ_DATAGRAM_REPLY_OK;
-      for i := 0 to ConfigMemBuffer^.DataCount - 1 do
-        DatagramBuffer^.DataBytes[i+DataOffset] := ConfigMemBuffer^.DataBytes[i];
-      DatagramBuffer^.iByteCount := ConfigMemBuffer^.DataCount + DataOffset;
-    end;
-  end else
-  begin
-    if ConfigMemBuffer^.ErrorCode > 0 then
-      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_WRITE_DATAGRAM_REPLY_FAIL
-    else begin
-      DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_WRITE_DATAGRAM_REPLY_OK;
-      DatagramBuffer^.iByteCount := DataOffset;
-    end
+  
+  case ConfigMemBuffer^.Action of
+      CBA_READ,
+      CBA_READ_STREAM :
+          begin
+            if ConfigMemBuffer^.ErrorCode[0] > 0 then
+              DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_COMMAND_READ_REPLY_FAIL
+            else begin
+              DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_COMMAND_READ_REPLY_OK;
+              if ConfigMemBuffer^.Action = CBA_READ then                        // Stream information is filled in to its buffer
+              begin
+                for i := 0 to ConfigMemBuffer^.DataCount - 1 do
+                  DatagramBuffer^.DataBytes[i+DataOffset] := ConfigMemBuffer^.DataBytes[i];
+                DatagramBuffer^.iByteCount := ConfigMemBuffer^.DataCount + DataOffset;
+              end
+            end;
+          end;
+      CBA_WRITE,
+      CBA_WRITE_STREAM :
+          begin
+            if ConfigMemBuffer^.ErrorCode[0] > 0 then
+              DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_COMMAND_WRITE_REPLY_FAIL
+            else begin
+              DatagramBuffer^.DataBytes[1] := DatagramBuffer^.DataBytes[1] or MCP_COMMAND_WRITE_REPLY_OK;
+              if ConfigMemBuffer^.Action = CBA_READ then                        // Stream information is filled in to its buffer
+              begin
+                DatagramBuffer^.iByteCount := DataOffset;
+              end
+            end
+          end;
   end;
-    
   DatagramBuffer^.Alias := ConfigMemBuffer^.Alias;
 end;
 
@@ -698,11 +791,14 @@ var
   i, j, EventIndex: Integer;
   BaseBuffer: PBaseBuffer;
   DatagramBuffer: PDatagramBuffer;
+  StreamBuffer: PStreamBuffer;
   ConfigMemBuffer: PConfigMemBuffer;
+  LocalConfigMemBuffer: TConfigMemBuffer;
   DataBuffer: PDataBuffer;
   State: Byte;
   MemorySpaceAddress, MemorySpaceMaxAddress: DWord;
   ByteArray: PByteArray;
+  FailDatagram: Boolean;
 begin
   // The first thing to check is for duplicate Node ID's or Aliases and handle
   // them first and exclusively
@@ -907,7 +1003,6 @@ begin
       end;
     end;
 
-    DataBuffer := nil;
     DataBuffer := NMRAnetUtilities_NextDataBuffer(Node);
     if DataBuffer <> nil then
     begin
@@ -1009,10 +1104,15 @@ begin
       case ConfigMemBuffer^.StateMachine of
         STATE_MEM_CONFIG_READWRITE_START :
           begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_START'+LF); {$ENDIF}
-            if ConfigMemBuffer^.Action = CBA_READ then
-              ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_READ
+            case ConfigMemBuffer^.Action of 
+                CBA_READ             : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_READ;
+                CBA_WRITE            : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WRITE;
+                CBA_WRITE_UNDER_MASK : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WRITE_UNDER_MASK;                                                  // ConfigmemBufferAction is a Write under Mask;
+                CBA_READ_STREAM,
+                CBA_WRITE_STREAM     : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_WAIT
             else
-              ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WRITE
+              ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_RELEASE;
+            end;
           end;
         STATE_MEM_CONFIG_READWRITE_READ :
           begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_READ'+LF); {$ENDIF}
@@ -1081,7 +1181,7 @@ begin
                                 end;
               end;
             end;
-            ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT
+            ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT_UNTIL_DONE_PROCESSING
           end;
         STATE_MEM_CONFIG_READWRITE_WRITE :
           begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_WRITE'+LF); {$ENDIF}
@@ -1092,25 +1192,62 @@ begin
                 MSI_ACDI_USER : UART1_Write_Text('Unimplemented Configuration Mem write'+LF);
               end;
             end;
-            ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT
+            ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WAIT_UNTIL_DONE_PROCESSING
           end;
-        STATE_MEM_CONFIG_READWRITE_WAIT :
+        STATE_MEM_CONFIG_READWRITE_WAIT_UNTIL_DONE_PROCESSING :
           begin {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_MEM_CONFIG_READWRITE_WAIT'+LF); {$ENDIF}
-            AppCallback_Configuration_CheckForComplete(Node, ConfigMemBuffer);       // Let the app flag the configuration action complete
+            AppCallback_Configuration_CheckForComplete(Node, ConfigMemBuffer);       // Let the app flag the configuration action complete (Clear the CBS_PROCESSING flag if conplete)
             if ConfigMemBuffer^.State and CBS_PROCESSING <> CBS_PROCESSING then
             begin
               DatagramBuffer := nil;
               if NMRAnetBufferPools_AllocateDatagramBuffer(DatagramBuffer, True) then
               begin
-                DatagramBuffer^.State := DatagramBuffer^.State or CBS_PROCESSING;       // Start the Transfer Immediately
+                DatagramBuffer^.State := DatagramBuffer^.State or CBS_PROCESSING;       // Start the Transfer Immediately in the main message loop
                 NMRAnetUtilities_DatagramBufferLink(Node, DatagramBuffer);
                 EncodeConfigMemReadWriteHeader(Node, DatagramBuffer, ConfigMemBuffer);  // Copy the data back into a Datagram and let the node send it when it can
-                NMRAnetUtilities_ConfigMemBufferUnLink(Node, ConfigMemBuffer);
-                NMRAnetBufferPools_ReleaseConfigMemBuffer(ConfigMemBuffer);
+                ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_RELEASE;
                 // This is updated within the CAN Interrupt by detecting if the target received the datagram correctly or not
                // and handling a resend.  Once done the datagram is released and unlinked from the node and no other action is need in the statemachine
               end
             end
+          end;
+        STATE_MEM_CONFIG_READWRITE_WRITE_UNDER_MASK :
+          begin
+            ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_RELEASE;
+          end;
+        STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_WAIT :
+          begin
+            if NMRAnetBufferPools_AllocateDatagramBuffer(DatagramBuffer, True) then   // Create a new datagram to send the Read Reply before opening the Read Stream
+            begin
+            
+              // TODO:   Do I wait for a sucessful ACK to the datagram?????
+              //         If so HOW do I do that?  There is nothing connecting these two objects....
+              
+              NMRAnetUtilities_DatagramBufferLink(Node, DatagramBuffer);
+              EncodeConfigMemReadWriteHeader(Node, DatagramBuffer, ConfigMemBuffer);               // Copy the data back into a Datagram and let the node send it when it can
+              DatagramBuffer^.State := DatagramBuffer^.State or CBS_PROCESSING;                    // Start the Transfer Immediately
+              ConfigMemBuffer^.Stream^.State := ConfigMemBuffer^.Stream^.State or CBS_PROCESSING;  // Start the streaming statemachine
+              if ConfigMemBuffer^.Action = CBA_READ_STREAM then
+                ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_STREAM_READ
+              else
+                ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_STREAM_WRITE
+            end
+          end;
+        STATE_MEM_CONFIG_READWRITE_STREAM_READ :
+          begin
+            // Setup the Stream to read and then wait for its statemachine to complete
+            if ConfigMemBuffer^.Stream^.StateMachine = STATE_STREAM_COMPLETE then
+              ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_RELEASE;
+          end;
+        STATE_MEM_CONFIG_READWRITE_STREAM_WRITE :
+          begin
+          end;
+        STATE_MEM_CONFIG_RELEASE :
+          begin
+            NMRAnetUtilities_ConfigMemBufferUnLink(Node, ConfigMemBuffer);
+            NMRAnetUtilities_StreamBufferUnLink(Node, ConfigMemBuffer^.Stream); // Ok to send a nil to this function
+            NMRAnetBufferPools_ReleaseStreamBuffer(ConfigMemBuffer^.Stream);
+            NMRAnetBufferPools_ReleaseConfigMemBuffer(ConfigMemBuffer);
           end;
       end
     end;
@@ -1136,28 +1273,48 @@ begin
         BMC_DATAGRAM_MEMORY_CONFIG :
             begin
               case DatagramBuffer^.StateMachine of
-                STATE_DATAGRAM_MEM_CONFIG_SEND_REPLY :               // CAN Receive does not handle the Ack to the Config Mem request, it is done here for better control
+                STATE_DATAGRAM_MEM_CONFIG_SEND_REPLY :                          // CAN Receive does not handle the Ack to the Config Mem request, it is done here for better control
                     begin  {$IFDEF TRACE_MEM_CONFIG_STATEMACHINE}  UART1_Write_Text('STATE_DATAGRAM_MEM_CONFIG_SEND_REPLY'+LF); {$ENDIF}
-                       if NMRABusTxBufferAvailable then     // When a Datagram is received the ACK is not sent at that time.  It is packed up in a DatagramBuffer and
-                       begin                                // passed to the main statemachine, here.  It is this sub-statemachines job to send the correct ACK
+                       if NMRABusTxBufferAvailable then                         // When a Datagram is received the ACK is not sent at that time.  It is packed up in a DatagramBuffer and
+                       begin                                                    // passed to the main statemachine, here.  It is this sub-statemachines job to send the correct ACK
                          case DatagramBuffer^.DataBytes[1] and MCP_COMMAND_MASK of
                            MCP_COMMAND_READ,
-                           MCP_COMMAND_WRITE :
+                           MCP_COMMAND_READ_STREAM,
+                           MCP_COMMAND_WRITE,
+                           MCP_COMMAND_WRITE_STREAM :                           // Convert in to a ConfigMemBuffer and add it to the list to process
                                begin
-                                 if NMRAnetBufferPools_AllocateConfigMemBuffer(ConfigMemBuffer) then
+                                 FailDatagram := False;
+                                 if Node^.ConfigMemBuffers <> nil then          // Only allow 1 Read/Write access at a time for each node
                                  begin
-                                   NMRAnetUtilities_ConfigMemBufferLink(Node, ConfigMemBuffer);
-                                   DecodeConfigMemReadWriteHeader(Node, DatagramBuffer, ConfigMemBuffer);
-                                   AppCallback_ConfigMemReadWriteAckReply(Node, ConfigMemBuffer);         // How to handle the ACK is up to the app
-                                   if ConfigMemBuffer^.AckReply <> 0 then
+                                   if NMRAnetBufferPools_AllocateConfigMemBuffer(ConfigMemBuffer) then   // Get a Config Mem Buffer, this locks up new Config Reads and Writes
                                    begin
-                                     DataBytes[0] := ConfigMemBuffer^.AckReply;
-                                     TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 1, @DataBytes, False, $00);
+                                     if DecodeConfigMemReadWriteHeader(Node, DatagramBuffer, ConfigMemBuffer) then // Decode the Datagram into the ConfigMemBuffer Fields, unless something goes wrong
+                                     begin
+                                       NMRAnetUtilities_ConfigMemBufferLink(Node, ConfigMemBuffer);           // Link it to the node so the statemachines will run
+                                       AppCallback_ConfigMemReadWriteAckFlags(Node, ConfigMemBuffer);         // How to handle the ACK is up to the app
+                                       if ConfigMemBuffer^.AckFlags <> 0 then                                 // Note this ACk reply is not a failure, it is the new byte that can be returned
+                                       begin
+                                         DataBytes[0] := ConfigMemBuffer^.AckFlags;
+                                         TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 1, @DataBytes, False, $00);
+                                       end else
+                                         TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False, $00);
+                                     end else
+                                       FailDatagram := True;
                                    end else
-                                     TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_OK_REPLY, DatagramBuffer^.Alias, 0, @DataBytes, False, $00);
-                                   NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);       // Copied the info to the ConfigMemBuffer, release the Datagram for now
-                                   NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);          // This is the end of this statemachine, it is continued in the Config Mem Statemachine
+                                     FailDatagram := True;
+                                 end else
+                                   FailDatagram := True;
+                                 
+                                 if FailDatagram then
+                                 begin
+                                   DataBytes[0] := DATAGRAM_RESULT_REJECTED_BUFFER_FULL[0];
+                                   DataBytes[1] := DATAGRAM_RESULT_REJECTED_BUFFER_FULL[1];
+                                   TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_REJECTED_REPLY, DatagramBuffer^.Alias, 2, @DataBytes, False, $00);
                                  end;
+                                 
+                                 // Unlink regardless of what we do
+                                 NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);       // Copied the info to the ConfigMemBuffer, release the Datagram for now
+                                 NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);          // This is the end of this statemachine, it is continued in the Config Mem Statemachine
                                end;
                            MCP_OPERATION :
                                begin
@@ -1287,6 +1444,21 @@ begin
          end;
       end;
     end;
+    
+    // See if there is a Stream Buffer to service
+    StreamBuffer := NMRAnetUtilities_NextStreamBuffer(Node);                // Grab the next completed Stream to work on
+    if StreamBuffer <> nil then
+    begin
+      {$IFDEF TRACE_BUFFER_ADDRESSES}
+      UART1_Write_Text('StreamBuffer Statemachine :');
+      WordToHex(StreamBuffer, s1);
+      UART1_Write_Text('$'+s1+LF);
+      {$ENDIF}
+      
+      NMRAnetUtilities_StreamBufferUnLink(Node, StreamBuffer);                  // Unknown Command just throw it away
+      NMRAnetBufferPools_ReleaseStreamBuffer(StreamBuffer);
+    end;
+  
   end;
 end;
 
@@ -1304,6 +1476,7 @@ end;
 procedure ProcessOutgoingMessages(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
   DatagramBuffer: PDatagramBuffer;
+  StreamBuffer: PStreamBuffer;
 begin
   // Look for outgoing Datagrams
   DatagramBuffer := nil;
@@ -1316,7 +1489,35 @@ begin
       DatagramBuffer^.iWatchdog := 0;  // Reset watchdog, now that it is complete it can timout waiting for the ACK/NAK
       DatagramBuffer^.State := (DatagramBuffer^.State and not CBS_PROCESSING) or CBS_TRANSFER_COMPLETE;    // Flag as complete (this is also flagged as outgoing) so the Statemachine can wait for a response from the target
     end;
-  end
+  end;
+  
+  StreamBuffer := nil;
+  if NMRAnetUtilities_FindOutgoingStream(Node, StreamBuffer, True) then         // Find a Stream that is allocated and waiting to send a message out
+  begin
+    case StreamBuffer^.StateMachine of
+      STATE_STREAM_INITIATE_REQUEST :                                           // We want to send, this expects the StreamBuffer to be setup
+          begin
+            if NMRAnetStateMachine_TrySendStreamInitiate(Node, CANBuffer, StreamBuffer) then
+            begin
+              StreamBuffer^.iWatchdog := 0;
+              StreamBuffer^.State := StreamBuffer^.State and not CBS_OUTGOING; // When the Reply is received it will jump to Send, since we removed OutGoing
+              StreamBuffer^.StateMachine := STATE_STREAM_IDLE;                  // Wait for the Initate Reply
+            end;
+          end;
+      STATE_STREAM_INITIATE_REPLY :                                             // Remote node as asked to send us data
+          begin
+            if NMRAnetStateMachine_TrySendStreamInitiateReply(Node, CANBuffer, StreamBuffer) then
+            begin
+              StreamBuffer^.iWatchdog := 0;
+              StreamBuffer^.State := StreamBuffer^.State and not CBS_OUTGOING;
+              StreamBuffer^.StateMachine := STATE_STREAM_IDLE;                  // Wait for it to send the data to us
+            end;
+          end;
+      STATE_STREAM_SEND :                                                       // Send what we need to send
+          begin
+          end;
+    end;
+  end;
 end;
 
 // *****************************************************************************
@@ -1386,6 +1587,7 @@ const
   CBS_OUTGOING_COMPLETE = CBS_TRANSFER_COMPLETE or CBS_OUTGOING;
 var
   DatagramBuffer: PDatagramBuffer;
+  StreamBuffer: PStreamBuffer;
 begin
   DatagramBuffer := Node^.DatagramBuffers;
   while DatagramBuffer <> nil do
@@ -1401,6 +1603,22 @@ begin
       end;
     end;
     DatagramBuffer := DatagramBuffer^.Next
+  end;
+  
+  StreamBuffer := Node^.StreamBuffers;
+  while StreamBuffer <> nil do
+  begin
+    if (StreamBuffer^.State and CBS_OUTGOING_COMPLETE = CBS_OUTGOING_COMPLETE) or                   // The target of the outgoing may never send us a response so bail out
+       ((StreamBuffer^.State and CBS_OUTGOING = 0) and (StreamBuffer^.State and CBS_PROCESSING = CBS_PROCESSING)) // An incoming only times out during the reception, once complete it waits until we can use it
+    then begin
+      if StreamBuffer^.iWatchdog >= STREAM_WATCHDOG_MAX then
+      begin
+        UART_Write_Text('Abandon Stream'+LF);
+        NMRAnetUtilities_StreamBufferUnLink(Node, StreamBuffer);
+        NMRAnetBufferPools_ReleaseStreamBuffer(StreamBuffer);
+      end;
+    end;
+    StreamBuffer := StreamBuffer^.Next
   end;
 end;
 
@@ -1454,7 +1672,6 @@ begin
         if CANBusBufferAvailable then
         begin
           LockCANInterrupt;
-          TransmitCANLayerMsg(Node, @CANBuffer, VariableField);
           Node^.iStateMachine := STATE_NMRABUS_NEXT_CDI;
           UnLockCANInterrupt
         end

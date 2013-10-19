@@ -44,7 +44,8 @@ const
   MAX_DATAGRAM_BUFFER_POOL         = 10;                                        // Number of Datagram Buffers to allocate for Messages
   MAX_CONFIG_MEM_BUFFER_POOL       = 2;                                         // Number of Configuration Memory Access buffers to allocate
   MAX_DATA_BUFFER_POOL             = 10;                                        // Number of Data Buffers to allocate for Messages that need to transfer the 8 CAN bytes
-
+  MAX_STREAM_BUFFER_POOL           = 2;                                         // Number of Stream Buffers to allocate for Messages
+  MAX_STREAM_LEN                   = 1024;                                      // How many Bytes in the Stream
 // **************************************************************************************************************************************************************
 // Memory Configuration Protocol Supported Options
 // **************************************************************************************************************************************************************

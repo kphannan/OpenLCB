@@ -107,7 +107,7 @@ procedure AppCallback_Configuration_Read(Node: PNMRAnetNode; ConfigMemBuffer: PC
 procedure AppCallback_Configuration_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 function AppCallback_AddressSpace_Read(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
 function AppCallback_AddressSpace_Write(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer): Boolean;
-procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_ConfigMemReadWriteAckFlags(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 procedure AppCallback_Configuration_CheckForComplete(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 
 procedure AppCallback_Configuration_Zeroize(Force: Boolean);
@@ -395,7 +395,7 @@ begin
              end else
              begin
                // Trying to use Service Mode while CS is in Main Line Mode = Error
-               ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+               ConfigMemBuffer^.ErrorCode := CONFIG_MEM_RESULT_TERMINATE;
                ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_INVALID_PROGRAMMING_METHOD);
              end
            end;
@@ -473,7 +473,7 @@ begin
              end else
              begin  
                // Trying to use Service Mode while CS is in Main Line Mode = Error
-               ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+               ConfigMemBuffer^.ErrorCode := CONFIG_MEM_RESULT_TERMINATE;
                ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_INVALID_PROGRAMMING_METHOD);
              end
            end;
@@ -491,13 +491,13 @@ end;
 //******************************************************************************
 //
 //******************************************************************************
-procedure AppCallback_ConfigMemReadWriteAckReply(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
+procedure AppCallback_ConfigMemReadWriteAckFlags(Node: PNMRAnetNode; ConfigMemBuffer: PConfigMemBuffer);
 begin
   case ConfigMemBuffer^.AddressSpace of
     MSI_CONFIG :
         begin
           if NMRAnetNode_TestStateFlag(Node, NS_VIRTUAL) and (ConfigMemBuffer^.Address shr 30 <> 0) then
-            ConfigMemBuffer^.AckReply := DATAGRAM_OK_ACK_REPLY_PENDING or $05
+            ConfigMemBuffer^.AckFlags := DATAGRAM_OK_ACK_REPLY_PENDING or $05;  // Reply is coming within about 2^5 seconds
         end;
   end
 end;
@@ -519,7 +519,7 @@ begin
                 ServiceMode_Quit;
                 if ServiceModeInfo.ServiceModeResult and SERVICE_MODE_RESULT_ERROR_CODE_SET = SERVICE_MODE_RESULT_ERROR_CODE_SET then
                 begin
-                  ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_TERMINATE[0] shl 8) or CONFIG_MEM_RESULT_TERMINATE[1];
+                  ConfigMemBuffer^.ErrorCode := CONFIG_MEM_RESULT_TERMINATE;
                   case ServiceModeInfo.ServiceModeResult of
                       SERVICE_MODE_RESULT_NO_ACK       : ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_ERROR_LOCO_NOT_FOUND);
                       SERVICE_MODE_RESULT_SHORTCIRCUIT : ConfigMemBuffer^.ErrorString := PConfigMemDataErrorStr( @STR_ERROR_SHORT_CIRCUIT);
@@ -529,7 +529,7 @@ begin
                 end else
                 begin
                   // Service Mode Succeeded
-                  ConfigMemBuffer^.ErrorCode := (CONFIG_MEM_RESULT_OK[0] shl 8) or CONFIG_MEM_RESULT_OK[1];
+                  ConfigMemBuffer^.ErrorCode := CONFIG_MEM_RESULT_OK;
                   ConfigMemBuffer^.DataBytes[0] := ServiceModeInfo.Value;
                 end;
                 ConfigMemBuffer^.State := ConfigMemBuffer^.State and not CBS_PROCESSING;
