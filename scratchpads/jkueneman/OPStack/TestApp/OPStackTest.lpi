@@ -1,0 +1,155 @@
+<?xml version="1.0"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
+      <Title Value="OPStackTest"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+    </General>
+    <i18n>
+      <EnableI18N LFM="False"/>
+    </i18n>
+    <VersionInfo>
+      <StringTable ProductVersion=""/>
+    </VersionInfo>
+    <BuildModes Count="1">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IncludeFileFilter Value="*.(pas|pp|inc|lfm|lpr|lrs|lpi|lpk|sh|xml)"/>
+      <ExcludeFileFilter Value="*.(bak|ppu|o|so);*~;backup"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="1">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+    </RequiredPackages>
+    <Units Count="10">
+      <Unit0>
+        <Filename Value="OPStackTest.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="OPStackTest"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="unitmain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitMain"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\NMRAnet\opstackcore.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\NMRAnet\nmranetdefines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="nmranetdefines"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\NMRAnet\opstackdefines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackdefines"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\NMRAnet\opstacknode.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstacknode"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\AppLayerTemplates\template_node.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_node"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\AppLayerTemplates\template_vnode.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_vnode"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\HardwareLayerImplementations\hardware_template.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="hardware_template"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\NMRAnet\nmranetutilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="nmranetutilities"/>
+      </Unit9>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="CompiledBinaries\$(TargetOS)\$(TargetCPU)\OPStackTest"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir);..\AppLayerTemplates"/>
+      <OtherUnitFiles Value="..\NMRAnet;..\AppLayerTemplates;..\HardwareLayerImplementations;..\..\Components\synapse40\source\lib"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Conditionals Value="if TargetOS = 'darwin' then
+begin
+  CustomOptions += '-k-macosx_version_min -k10.4';
+  CustomOptions += '-XR/Developer/SDKs/MacOSX10.4u.sdk/';
+  CustomOptions += ' -dUseCThreads';
+end;
+if TargetOS = 'linux' then
+  CustomOptions += ' -dUseCThreads';"/>
+    <CodeGeneration>
+      <TargetCPU Value="i386"/>
+      <TargetOS Value="darwin"/>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <GenerateDebugInfo Value="False"/>
+        <UseValgrind Value="True"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerMessages>
+        <UseMsgFile Value="True"/>
+      </CompilerMessages>
+      <CustomOptions Value="if TargetOS = 'darwin' then begin
+  UsageCustomOptions += ' -k-macosx_version_min -k10.5';
+ // UsageCustomOptions += ' -XR/Developer/SDKs/MacOSX10.5.sdk/';
+end;"/>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

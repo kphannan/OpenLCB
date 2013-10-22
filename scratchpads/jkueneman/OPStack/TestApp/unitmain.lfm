@@ -1,0 +1,76 @@
+object Form1: TForm1
+  Left = 717
+  Height = 375
+  Top = 399
+  Width = 552
+  Caption = 'Form1'
+  ClientHeight = 375
+  ClientWidth = 552
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnShow = FormShow
+  LCLVersion = '1.0.8.0'
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 15
+    Top = 360
+    Width = 552
+    Panels = <    
+      item
+        Text = 'Idle Counts:'
+        Width = 120
+      end    
+      item
+        Text = 'Allocated Nodes:'
+        Width = 120
+      end>
+    SimplePanel = False
+  end
+  object ButtonAllocateNode: TButton
+    Left = 232
+    Height = 22
+    Top = 46
+    Width = 272
+    Caption = 'Allocate Virtual Node'
+    OnClick = ButtonAllocateNodeClick
+    TabOrder = 1
+  end
+  object ButtonDeallocateNode: TButton
+    Left = 232
+    Height = 22
+    Top = 80
+    Width = 272
+    Caption = 'Mark for Virtual Node for Deallocation'
+    OnClick = ButtonDeallocateNodeClick
+    TabOrder = 2
+  end
+  object MemoReceive: TMemo
+    Left = 0
+    Height = 240
+    Top = 120
+    Width = 552
+    Align = alBottom
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    TabOrder = 3
+  end
+  object Button1: TButton
+    Left = 16
+    Height = 22
+    Top = 8
+    Width = 216
+    Caption = 'Send Verify Nodes Global'
+    OnClick = Button1Click
+    TabOrder = 4
+  end
+  object ApplicationProperties1: TApplicationProperties
+    OnIdle = ApplicationProperties1Idle
+    left = 80
+    top = 40
+  end
+  object TimerCore: TTimer
+    Interval = 100
+    OnTimer = TimerCoreTimer
+    left = 56
+    top = 112
+  end
+end
