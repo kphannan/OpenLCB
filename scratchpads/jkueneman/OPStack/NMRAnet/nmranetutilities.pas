@@ -5,16 +5,14 @@ interface
 {$I Options.inc}
 
 uses
-  opstackdefines;
-
-
+  opstackdefines,
+  opstackbuffers;
 
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
 procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var Data: TCANData);
 procedure NMRAnetUtilities_LoadBaseMessageBuffer(Message: PMessage; MessageType: Byte; MTI: DWord; Next: PMessage; var SourceNodeID: TNodeID; var DestNodeID: TNodeID);
-procedure NMRAnetUtilities_FillDataArray(DataArray: PArrayData; Value, ArraySize, Count: Byte);
 
 implementation
 
@@ -99,7 +97,7 @@ begin
   case MessageType of
     MT_BASIC          :
         begin
-          NMRAnetUtilities_FillDataArray(@PNMRAnetBasicMessage( Message)^.CANData, 0, MAX_CAN_BYTES, 0);
+
           Exit;
         end;
     MT_PROTCOLSUPPORT :
@@ -118,22 +116,21 @@ begin
         end;
     MT_REMOTEBUTTON   :
         begin
-          NMRAnetUtilities_FillDataArray(@PNMRAnetRemoteButtonMessage( Message)^.CANData, 0, MAX_CAN_BYTES, 0);
           Exit;
         end;
     MT_SNIP           :
         begin
-          NMRAnetUtilities_FillDataArray(@PNMRAnetSNIPMessage( Message)^.SNIPData, 0, MAX_SNIP_BYTES, 0);
+
           Exit;
         end;
     MT_DATATGRAM      :
         begin
-          NMRAnetUtilities_FillDataArray(@PNMRAnetDatagramMessage( Message)^.DatagramData, 0, MAX_DATAGRAM_BYTES, 0);
+
           Exit;
         end;
     MT_STREAM         :
         begin
-          NMRAnetUtilities_FillDataArray(@PNMRAnetStreamMessage( Message)^.StreamData, 0, MAX_STREAM_BYTES, 0);
+
           Exit;
         end;
     MT_CAN            :
@@ -143,14 +140,6 @@ begin
   end;
 end;
 
-procedure NMRAnetUtilities_FillDataArray(DataArray: PArrayData; Value, ArraySize, Count: Byte);
-var
-  i: Integer;
-begin
-  for i := 0 to ArraySize - 1 do
-    DataArray^.AnArray[i] := Value;
-  DataArray^.Count := Count;
-end;
 
 
 end.

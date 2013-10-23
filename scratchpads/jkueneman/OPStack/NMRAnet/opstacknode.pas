@@ -488,11 +488,11 @@ var
 begin
   if OPStackNode_TestState(Node, NS_VIRTUAL) then
   begin
-    for i := 0 to MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
+    for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
       OPStackNode_SetEventFlag(Events, i, State);
   end else
   begin
-    for i := 0 to MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
+    for i := 0 to USER_MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
       OPStackNode_SetEventFlag(Events, i, State);
   end
 end;

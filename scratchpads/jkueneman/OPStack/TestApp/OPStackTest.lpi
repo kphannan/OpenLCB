@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="10">
+    <Units Count="12">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -89,6 +89,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="nmranetutilities"/>
       </Unit9>
+      <Unit10>
+        <Filename Value="..\NMRAnet\opstackbuffers.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackbuffers"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\AppLayerTemplates\template_buffers.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_buffers"/>
+      </Unit11>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -119,7 +129,6 @@ if TargetOS = 'linux' then
     </CodeGeneration>
     <Linking>
       <Debugging>
-        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
       </Debugging>
       <Options>

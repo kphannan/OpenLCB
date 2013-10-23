@@ -12,6 +12,7 @@ uses
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
+  opstackbuffers,
   opstacknode;
 
 

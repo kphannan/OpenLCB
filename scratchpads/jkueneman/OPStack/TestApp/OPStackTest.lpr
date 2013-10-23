@@ -8,7 +8,8 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, unitMain, OPStackCore, nmranetdefines, opstackdefines, opstacknode,
-  template_node, template_vnode, hardware_template, nmranetutilities;
+  template_node, template_vnode, hardware_template, nmranetutilities, 
+opstackbuffers, template_buffers;
 
 {$R *.res}
 

@@ -8,8 +8,12 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils, blcksock, synsock,
   {$ENDIF}
+  opstackbuffers,
   opstackdefines;
 
+// *****************************************************************************
+//  Lazarus Specific from here down
+// *****************************************************************************
 {$IFDEF FPC}
 type
   TOpStackTestCallbackMethod = procedure(ReceivedStr: ansistring) of object;
@@ -76,6 +80,9 @@ type
     property Event: PRTLEvent read FEvent write FEvent;
   end;
 {$ENDIF}
+// *****************************************************************************
+//  Lazarus Specific from here up
+// *****************************************************************************
 
 
 procedure Hardware_Initialize;
@@ -176,6 +183,10 @@ begin
   Result := True
 end;
 
+
+// *****************************************************************************
+//  Lazarus Specific from here down
+// *****************************************************************************
 
 {$IFDEF FPC}
 { TOPStackTestConnectionOutput }
@@ -282,17 +293,14 @@ begin
     while not Terminated do
     begin
       Socket.ResetLastError;
-      if Socket.CanRead(-1) then
+      if Socket.LastError = 0 then
       begin
-        if Socket.LastError = 0 then
+        ReceiveStr := Socket.RecvPacket(-1);
+        if Socket.LastError <> WSAETIMEDOUT then
         begin
-          ReceiveStr := Socket.RecvString(1);
-          if Socket.LastError <> WSAETIMEDOUT then
-          begin
-            if (Socket.LastError = 0) and (ReceiveStr <> '') then
-              if Assigned(Callback) then
-                Synchronize(@Synchronizer);
-          end
+          if (Socket.LastError = 0) and (ReceiveStr <> '') then
+            if Assigned(Callback) then
+              Synchronize(@Synchronizer);
         end
       end
     end;

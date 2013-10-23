@@ -4,6 +4,9 @@ unit opstackdefines;
 
 interface
 
+uses
+  template_buffers;
+
 const
   MAX_BUS_LOGIN_TIMEOUT = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
 
@@ -31,30 +34,19 @@ const
   MAX_CAN_BYTES = 8;
   MAX_SNIP_BYTES = 64;
   MAX_DATAGRAM_BYTES = 64;
-  MAX_STREAM_BYTES = 1024;
 
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
   TCANDataArray = array[0..MAX_CAN_BYTES-1] of Byte;
-  TSNIPDataArray = array[0..MAX_SNIP_BYTES-1] of Byte;
+  PCANDataArray = ^TCANDataArray;
   TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES-1] of Byte;
-  TStreamDataArray = array[0..MAX_STREAM_BYTES-1] of Byte;
-  TArray = array[0..0] of Byte;
-
-  TArrayData = record
-    Count: Word;
-    AnArray: TArray;
-  end;
-  PArrayData = ^TArrayData;
+  PDatagramDataArray = ^TDatagramDataArray;
+  TStreamDataArray = array[0..USER_MAX_STREAM_BYTES-1] of Byte;
+  PStreamDataArray = ^TStreamDataArray;
 
   TCANData = record
     Count: Word;
     Bytes: TCANDataArray;
-  end;
-
-  TSNIPData = record
-    Count: Word;
-    Bytes: TSNIPDataArray;
   end;
 
   TDatagramData = record
@@ -103,103 +95,6 @@ const
 type
   PMessage = ^Byte;
 
-type
-  TBaseMessage = record                                                         // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID: TNodeID;                                                      // NodeID if the MTI carries it
-    DestNodeID: TNodeID;
-  end;
-  PBaseMessage = ^TBaseMessage;
-
-  // These messages types are the interface between the Physical Layer and the OPStack Library
-  TNMRAnetCANLayerMessage = record                                              // Only called if the interface is CAN
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID: TNodeID;                                                      // NodeID if the MTI carries it
-    DestNodeID: TNodeID;                                                        // Not needed but allows common code for initializing and loading buffers
-  end;
-  PNMRAnetCANLayerMessage = ^TNMRAnetCANLayerMessage;
-
-  TNMRAnetBasicMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    CANData: TCANData;
-  end;
-  PNMRAnetBasicMessage = ^TNMRAnetBasicMessage;
-
-  TNMRAnetProtocolSupportMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    Protocols: DWord;
-  end;
-  PNMRAnetProtocolSupportMessage = ^TNMRAnetProtocolSupportMessage;
-
-  TNMRAnetEventMessage = record
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    EventID: TEventID;
-  end;
-  PNMRAnetEventMessage = ^TNMRAnetEventMessage;
-
-  TNMRAnetTractionMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    CANData: TCANData;
-  end;
-  PNMRAnetTractionMessage = ^TNMRAnetTractionMessage;
-
-  TNMRAnetRemoteButtonMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    CANData: TCANData;
-  end;
-  PNMRAnetRemoteButtonMessage = ^TNMRAnetRemoteButtonMessage;
-
-  TNMRAnetSNIPMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    SNIPData: TSNIPData;
-  end;
-  PNMRAnetSNIPMessage = ^TNMRAnetSNIPMessage;
-
-  TNMRAnetDatagramMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    DatagramData: TDatagramData;
-  end;
-  PNMRAnetDatagramMessage = ^TNMRAnetDatagramMessage;
-
-  TNMRAnetStreamMessage = record
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Next: PMessage;
-    MTI: DWord;
-    SourceNodeID,
-    DestNodeID: TNodeID;
-    StreamData: TStreamData;
-  end;
-  PNMRAnetStreamMessage = ^TNMRAnetStreamMessage;
 
 implementation
 
