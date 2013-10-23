@@ -1,8 +1,11 @@
 unit opstackbuffers;
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
 
 uses
+  opstacktypes,
   opstackdefines,
   template_buffers;
 
@@ -13,7 +16,7 @@ type
     Dest: TNodeInfo;
     Next: PMessage;
     MTI: DWord;
-    Data: PByte;
+    DataBytes: PByte;
     DataLen: Word;
     MessageSpecificInfo: PMessage;
   end;
@@ -28,7 +31,7 @@ function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage; MTI: DWor
 function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 
 
-procedure OPStack_LoadBaseMessageBuffer(Message: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
+procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
 
 implementation
 
@@ -205,7 +208,7 @@ begin
     if AllocateCANArray(DataArrayPtr) then
     begin
       OPStack_LoadBaseMessageBuffer(AMessage, MT_SIMPLE, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-      AMessage^.Data := PByte( DataArrayPtr);
+      AMessage^.DataBytes := PByte( DataArrayPtr);
       Result := True
     end;
   end;
@@ -226,19 +229,18 @@ begin
 end;
 
 
-procedure OPStack_LoadBaseMessageBuffer(Message: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
+procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
 begin
-  Message^.MessageType := MessageType;
-  Message^.MTI := MTI;
-  Message^.Next := Next;
-  Message^.Dest.AliasID := DestAlias;
-  Message^.Dest.ID := DestNodeID;
-  Message^.Source.AliasID := SourceNodeAlias;
-  Message^.Source.ID := SourceNodeID;
-  Message^.MessageSpecificInfo := nil;
-  Message^.DataLen := 0;
-  Message^.Data := nil;
+  AMessage^.MessageType := MessageType;
+  AMessage^.MTI := MTI;
+  AMessage^.Next := Next;
+  AMessage^.Dest.AliasID := DestAlias;
+  AMessage^.Dest.ID := DestNodeID;
+  AMessage^.Source.AliasID := SourceNodeAlias;
+  AMessage^.Source.ID := SourceNodeID;
+  AMessage^.MessageSpecificInfo := nil;
+  AMessage^.DataLen := 0;
+  AMessage^.DataBytes := nil;
 end;
 
 end.
-

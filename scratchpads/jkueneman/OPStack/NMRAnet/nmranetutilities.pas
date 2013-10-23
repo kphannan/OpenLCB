@@ -1,10 +1,13 @@
 unit nmranetutilities;
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
 
 {$I Options.inc}
 
 uses
+  opstacktypes,
   opstackdefines,
   opstackbuffers;
 
@@ -12,7 +15,7 @@ uses
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; Data: PByte);
+procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; DataPtr: PByte);
 
 
 implementation
@@ -77,22 +80,21 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; Data: PByte);
+procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; DataPtr: PByte);
 begin
-  Data^ := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
-  Inc(Data);
-  Data^ := NodeID[1] shr 8;
-  Inc(Data);
-  Data^ := NodeID[1];
-  Inc(Data);
-  Data^ := NodeID[0] shr 16;
-  Inc(Data);
-  Data^ := NodeID[0] shr 8;
-  Inc(Data);
-  Data^ := NodeID[0];
+  DataPtr^ := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
+  Inc(DataPtr);
+  DataPtr^ := NodeID[1] shr 8;
+  Inc(DataPtr);
+  DataPtr^ := NodeID[1];
+  Inc(DataPtr);
+  DataPtr^ := NodeID[0] shr 16;
+  Inc(DataPtr);
+  DataPtr^ := NodeID[0] shr 8;
+  Inc(DataPtr);
+  DataPtr^ := NodeID[0];
 end;
 
 
 
 end.
-

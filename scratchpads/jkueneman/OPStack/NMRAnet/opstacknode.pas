@@ -1,16 +1,17 @@
 unit opstacknode;
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
 
 {$I Options.inc}
 
 uses
-  {$IFDEF FPC}
+  {$IFDEF HARDWARE_TEMPLATE}
+  hardware_template,
   template_node,
   template_vnode,
   {$ENDIF}
-
-  {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
   nmranetutilities,
@@ -602,4 +603,3 @@ end;
 
 
 end.
-

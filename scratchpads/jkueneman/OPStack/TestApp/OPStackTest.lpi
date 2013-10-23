@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="12">
+    <Units Count="13">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -99,6 +99,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_buffers"/>
       </Unit11>
+      <Unit12>
+        <Filename Value="..\NMRAnet\opstacktypes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstacktypes"/>
+      </Unit12>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

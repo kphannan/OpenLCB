@@ -1,6 +1,8 @@
 unit hardware_template;
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
 
 {$I Options.inc}
 
@@ -91,11 +93,11 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
-procedure OutgoingMessage(Message: PSimpleMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure OutgoingMessage(AMessage: PSimpleMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 function IsOutgoingBufferAvailable: Boolean;
 
 // Callback to push received messages into the OPStack
-procedure IncomingMessageCallback(Message: PSimpleMessage); external;
+procedure IncomingMessageCallback(AMessage: PSimpleMessage); external;
 
 implementation
 
@@ -136,9 +138,9 @@ begin
   end;
 end;
 
-procedure OutgoingMessage(Message: PSimpleMessage);
+procedure OutgoingMessage(AMessage: PSimpleMessage);
 begin
-  case Message^.MessageType of
+  case AMessage^.MessageType of
     MT_SIMPLE :
         begin
 
@@ -409,4 +411,3 @@ end;
 
 
 end.
-

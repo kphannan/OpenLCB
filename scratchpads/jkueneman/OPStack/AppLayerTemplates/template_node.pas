@@ -4,12 +4,15 @@ unit template_node;
 // features of OPStack including number of Nodes implemented by the library,
 // Hardcoded Events for physical node, etc
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
 
 {$I Options.inc}
 
-type
-  TEventID = array[0..7] of Byte;                            // Is the 48 Bit node ID + 16 Bits of unique Event ID = 64 Bits
+uses
+  opstacktypes;
+
 
 // Enter the number of nodes this build will emulate, must be at least 1, if more than
 // one then SUPPORT_VIRTUAL_NODES must be enabled in the Options.inc file
@@ -76,4 +79,3 @@ const
 implementation
 
 end.
-

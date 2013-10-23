@@ -1,9 +1,8 @@
 unit nmranetdefines;
 
+{$IFDEF FPC}
 interface
-
-uses
-  Classes, SysUtils;
+{$ENDIF}
 
 const
   MTI_OLCB_MSG                          = $08000000;                            //
@@ -86,4 +85,3 @@ const
 implementation
 
 end.
-

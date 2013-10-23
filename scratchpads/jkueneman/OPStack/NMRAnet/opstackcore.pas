@@ -1,6 +1,8 @@
 unit opstackcore;
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
 
 {$I Options.inc}
 
@@ -13,6 +15,7 @@ uses
   nmranetdefines,
   opstackdefines,
   opstackbuffers,
+  opstacktypes,
   opstacknode;
 
 
@@ -22,7 +25,7 @@ procedure OPStackCore_Process;                                                  
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 
 // Callback from the Hardware when a message is received
-procedure IncomingMessageCallback(Message: PSimpleMessage);
+procedure IncomingMessageCallback(AMessage: PSimpleMessage);
 
 
 implementation
@@ -199,7 +202,7 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStack_AllocateCANMessage(SimpleMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, SimpleMessage^.Data);
+              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, SimpleMessage^.DataBytes);
               SimpleMessage^.DataLen := 6;
               OutgoingMessage(SimpleMessage);
               OPStackNode_SetState(Node, NS_INITIALIZED);
@@ -257,7 +260,7 @@ begin
           if OPStack_AllocateCANMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
             SimpleMessage^.DataLen := 8;
-            PEventID( SimpleMessage^.Data)^ := EVENT_DUPLICATE_ID_DETECTED;
+            PEventID( SimpleMessage^.DataBytes)^ := EVENT_DUPLICATE_ID_DETECTED;
             Node^.iStateMachine := STATE_NODE_OFFLINE;
           end
       end;
@@ -266,7 +269,7 @@ begin
         // Done until reboot
       end
   else
-     Node^.iStateMachine := STATE_NODE_INHIBITED                                // We are confused, start over
+     Node^.iStateMachine := STATE_NODE_INHIBITED;                                // We are confused, start over
   end;
 end;
 
@@ -288,9 +291,9 @@ begin
 
 end;
 
-procedure IncomingMessageCallback(Message: PSimpleMessage);
+procedure IncomingMessageCallback(AMessage: PSimpleMessage);
 begin
-  case Message^.MessageType of
+  case AMessage^.MessageType of
       MT_SIMPLE :
           begin
 
@@ -349,4 +352,3 @@ begin
 end;
 
 end.
-

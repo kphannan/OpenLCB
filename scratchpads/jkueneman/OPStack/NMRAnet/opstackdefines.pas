@@ -1,15 +1,20 @@
 unit opstackdefines;
 
+
+
+{$IFDEF FPC}
+interface
+{$ENDIF}
+
 {$I Options.inc}
 
-interface
 
 uses
-  {$IFDEF FPC}
+  {$IFDEF HARDWARE_TEMPLATE}
   template_node,
   template_vnode,
   {$ENDIF}
-
+  opstacktypes,
   template_buffers;
 
 const
@@ -19,7 +24,7 @@ const
 const
   STATE_NODE_START                       = 0;
   STATE_NODE_GENERATE_NODE_ALIAS         = 1;
-  STATE_RANDOM_NUMBER_GENERATOR             = 2;
+  STATE_RANDOM_NUMBER_GENERATOR          = 2;
   STATE_NODE_TRANSMIT_CID                = 3;
   STATE_NODE_NEXT_CDI                    = 4;
   STATE_NODE_WAITSTATE                   = 5;
@@ -68,10 +73,6 @@ type
 // Events
 const
   NULL_NODE_ID: TNodeID = (0, 0);
-
-type
-  TEventID = array[0..7] of Byte;                            // Is the 48 Bit node ID + 16 Bits of unique Event ID = 64 Bits
-  PEventID = ^TEventID;
 
 const
   NULL_EVENT_ID : TEventID = (0, 0, 0, 0, 0, 0, 0, 0);
@@ -176,4 +177,3 @@ type
 implementation
 
 end.
-

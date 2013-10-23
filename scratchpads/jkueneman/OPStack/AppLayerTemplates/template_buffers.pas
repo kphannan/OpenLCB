@@ -3,7 +3,11 @@ unit template_buffers;
 // This file contains application layer variabile the user can change to customize
 // features of OPStack including buffer memory management, etc.
 
+{$IFDEF FPC}
 interface
+{$ENDIF}
+
+{$I Options.inc}
 
 // Enter the number of buffers to allocate for CAN data, Datagrams, and Streams.  These
 // buffers are created in RAM so the more you creat the less free RAM you will have
@@ -26,4 +30,3 @@ const
 implementation
 
 end.
-

@@ -4,12 +4,16 @@ unit template_vnode;
 // features of OPStack including number of Nodes implemented by the library,
 // Hardcoded Events for physical node, etc
 
+
+
+{$IFDEF FPC}
+interface
+{$ENDIF}
+
 {$I Options.inc}
 
-interface
-
-type
-  TEventID = array[0..7] of Byte;                            // Is the 48 Bit node ID + 16 Bits of unique Event ID = 64 Bits
+uses
+  opstacktypes;
 
 // Set the number of Events that are Consumed by this Node
 {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
@@ -49,4 +53,3 @@ const
 implementation
 
 end.
-
