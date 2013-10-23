@@ -8,8 +8,8 @@ interface
 
 {$I Options.inc}
 
-uses
-  opstackdefines;
+type
+  TEventID = array[0..7] of Byte;                            // Is the 48 Bit node ID + 16 Bits of unique Event ID = 64 Bits
 
 // Enter the number of nodes this build will emulate, must be at least 1, if more than
 // one then SUPPORT_VIRTUAL_NODES must be enabled in the Options.inc file

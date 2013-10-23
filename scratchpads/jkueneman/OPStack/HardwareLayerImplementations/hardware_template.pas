@@ -91,11 +91,11 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
-procedure OutgoingMessage(Message: PMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure OutgoingMessage(Message: PSimpleMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 function IsOutgoingBufferAvailable: Boolean;
 
 // Callback to push received messages into the OPStack
-procedure IncomingMessageCallback(Message: PMessage); external;
+procedure IncomingMessageCallback(Message: PSimpleMessage); external;
 
 implementation
 
@@ -136,10 +136,10 @@ begin
   end;
 end;
 
-procedure OutgoingMessage(Message: PMessage);
+procedure OutgoingMessage(Message: PSimpleMessage);
 begin
-  case PBaseMessage( Message)^.MessageType of
-    MT_BASIC :
+  case Message^.MessageType of
+    MT_SIMPLE :
         begin
 
         end;

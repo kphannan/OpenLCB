@@ -22,7 +22,7 @@ procedure OPStackCore_Process;                                                  
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 
 // Callback from the Hardware when a message is received
-procedure IncomingMessageCallback(Message: PMessage);
+procedure IncomingMessageCallback(Message: PSimpleMessage);
 
 
 implementation
@@ -36,6 +36,7 @@ implementation
 procedure OPStackCore_Initialize;
 begin
   OPStackNode_Initialize;
+  OPStack_Initialize;
   OPStackNode_Allocate;                                                         // Allocate the hardware Node
 end;
 
@@ -45,10 +46,11 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure ProcessMarkedForDeleteNodes(Node: PNMRAnetNode; var CANMessage: TNMRAnetCANLayerMessage);
+procedure ProcessMarkedForDeleteNodes(Node: PNMRAnetNode);
 var
   DoDeallocate: Boolean;
   i, j: Integer;
+  SimpleMessage: PSimpleMessage;
 begin
   if OPStackNode_TestState(Node, NS_RELEASING) then
   begin
@@ -61,11 +63,11 @@ begin
              if not OPStackNode_IsAnyPCER_Set(Node) then
                if Node^.Flags = 0 then
                  if Node^.MsgFlagsUserDefined = 0 then
-                 begin
-                   NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_AMR, nil, Node^.Info.ID, NULL_NODE_ID); // Tell the network we are leaving
-                   OutgoingMessage(@CANMessage);
-                   DoDeallocate := True;
-                 end
+                   if OPStack_AllocateCANMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                   begin
+                     OutgoingMessage(SimpleMessage); // Tell the network we are leaving
+                     DoDeallocate := True;
+                   end;
 
       end else
         DoDeallocate := True;                                                   // If it is not in the Permitted state then we are not allowed to send a AMR so just free it
@@ -102,9 +104,8 @@ end;
 // *****************************************************************************
 procedure NodeRunStateMachine(Node: PNMRAnetNode);
 var
-  CANMessage: TNMRAnetCANLayerMessage;
-  BasicMessage: TNMRAnetBasicMessage;
-  EventMessage: TNMRAnetEventMessage;
+  SimpleMessage: PSimpleMessage;
+  MTI: DWord;
 begin
   case Node^.iStateMachine of
     STATE_NODE_START :
@@ -114,13 +115,13 @@ begin
       end;
     STATE_NODE_GENERATE_NODE_ALIAS :
       begin
-        Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Info.Seed, False);
+        Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Login.Seed, False);
         Node^.Login.iCID := 0;
         Node^.iStateMachine := STATE_NODE_TRANSMIT_CID;
       end;
     STATE_RANDOM_NUMBER_GENERATOR :
       begin
-        NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(Node^.Info.Seed);
+        NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(Node^.Login.Seed);
         Node^.iStateMachine := STATE_NODE_GENERATE_NODE_ALIAS;
       end;
     STATE_NODE_TRANSMIT_CID :
@@ -128,13 +129,16 @@ begin
         if IsOutgoingBufferAvailable then
         begin
           case Node^.Login.iCID of
-            0 : NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_CID0 or DWord((Node^.Info.ID[1] shr 12) and $00000FFF), nil, Node^.Info.ID, NULL_NODE_ID);
-            1 : NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_CID1 or DWord(Node^.Info.ID[1] and $00000FFF), nil, Node^.Info.ID, NULL_NODE_ID);
-            2 : NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_CID2 or DWord((Node^.Info.ID[0] shr 12) and $00000FFF), nil, Node^.Info.ID, NULL_NODE_ID);
-            3 : NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, DWord(Node^.Info.ID[0] and $00000FFF), nil, Node^.Info.ID, NULL_NODE_ID);
+            0 : MTI := MTI_CID0 or DWord((Node^.Info.ID[1] shr 12) and $00000FFF);
+            1 : MTI := MTI_CID1 or DWord( Node^.Info.ID[1] and $00000FFF);
+            2 : MTI := MTI_CID2 or DWord((Node^.Info.ID[0] shr 12) and $00000FFF);
+            3 : MTI := MTI_CID3 or DWord( Node^.Info.ID[0] and $00000FFF);
           end;
-          OutgoingMessage(@CANMessage);
-          Node^.iStateMachine := STATE_NODE_NEXT_CDI;
+          if OPStack_AllocateMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          begin
+            OutgoingMessage(SimpleMessage);
+            Node^.iStateMachine := STATE_NODE_NEXT_CDI;
+          end
         end;
       end;
     STATE_NODE_NEXT_CDI :
@@ -162,11 +166,11 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-          begin
-            NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_RID, nil, Node^.Info.ID, NULL_NODE_ID);
-            OutgoingMessage(@CANMessage);
-            Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
-          end;
+            if OPStack_AllocateMessage(SimpleMessage, MTI_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              OutgoingMessage(SimpleMessage);
+              Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
+            end
         end
       end;
     STATE_NODE_SEND_LOGIN_AMD :
@@ -177,12 +181,12 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-          begin
-            NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_AMD, nil, Node^.Info.ID, NULL_NODE_ID);
-            OutgoingMessage(@CANMessage);
-            OPStackNode_SetState(Node, NS_PERMITTED);
-            Node^.iStateMachine := STATE_NODE_INITIALIZED;
-           end
+            if OPStack_AllocateMessage(SimpleMessage, MTI_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              OutgoingMessage(SimpleMessage);
+              OPStackNode_SetState(Node, NS_PERMITTED);
+              Node^.iStateMachine := STATE_NODE_INITIALIZED;
+            end
         end
       end;
     STATE_NODE_INITIALIZED :
@@ -193,31 +197,33 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-          begin
-            NMRAnetUtilities_LoadBaseMessageBuffer(@BasicMessage, MT_BASIC, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.ID, NULL_NODE_ID);
-            NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, BasicMessage.CANData);
-            BasicMessage.CANData.Count := 6;
-            OutgoingMessage(@BasicMessage);
-            OPStackNode_SetState(Node, NS_INITIALIZED);
-            Node^.iStateMachine := STATE_NODE_LOGIN_IDENTIFY_EVENTS;
-          end
+            if OPStack_AllocateCANMessage(SimpleMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, SimpleMessage^.Data);
+              SimpleMessage^.DataLen := 6;
+              OutgoingMessage(SimpleMessage);
+              OPStackNode_SetState(Node, NS_INITIALIZED);
+              Node^.iStateMachine := STATE_NODE_LOGIN_IDENTIFY_EVENTS;
+            end
         end
       end;
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
-        NMRAnetUtilities_LoadBaseMessageBuffer(@EventMessage, MT_EVENT, MTI_EVENTS_IDENTIFY, nil, NULL_NODE_ID, NULL_NODE_ID);  // Fake Source Node
-        Hardware_DisableInterrupts;                                             // don' get stomped on by and incoming message within an interrupt
-        IncomingMessageCallback(@EventMessage);
-        Hardware_EnableInterrupts;
-        Node^.iStateMachine := STATE_NODE_PERMITTED;
+        if OPStack_AllocateMessage(SimpleMessage, MTI_EVENTS_IDENTIFY, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+        begin
+          Hardware_DisableInterrupts;                                             // don' get stomped on by and incoming message within an interrupt
+          IncomingMessageCallback(SimpleMessage);
+          Hardware_EnableInterrupts;
+          Node^.iStateMachine := STATE_NODE_PERMITTED;
+        end
       end;
     STATE_NODE_PERMITTED :
       begin
         Hardware_DisableInterrupts;
     //    ProcessNode(Node, @CANBuffer);                                        // Handle auto Actions to CAN/NMRAnet messages coming in
     //    ProcessOutgoingMessages(Node, @CANBuffer);                            // Handle outgoing messages like Datagrams
-        ProcessMarkedForDeleteNodes(Node, CANMessage);                          // Handle vNodes marked to be deleted
+        ProcessMarkedForDeleteNodes(Node);                          // Handle vNodes marked to be deleted
     //    ProcessAbandonBuffers(Node);                                          // Handle (free) buffers (datagrams mainly) that appear to be abandon in midstream
         Hardware_EnableInterrupts
       end;
@@ -225,37 +231,35 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-        begin
-          NMRAnetUtilities_LoadBaseMessageBuffer(@CANMessage, MT_CAN, MTI_AMR, nil, Node^.Info.ID, NULL_NODE_ID);
-          OutgoingMessage(@CANMessage);
-          OPStackNode_ClearState(Node, NS_PERMITTED);
-          OPStackNode_ClearFlags(Node);
-   //       ReleaseBuffers(Node);
-          Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
-        end
+          if OPStack_AllocateMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          begin
+            OutgoingMessage(SimpleMessage);
+            OPStackNode_ClearState(Node, NS_PERMITTED);
+            OPStackNode_ClearFlags(Node);
+            Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
+          end
       end;
     STATE_NODE_DUPLICATE_FULL_ID :
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-        begin
-          NMRAnetUtilities_LoadBaseMessageBuffer(@BasicMessage, MT_CAN, MTI_AMR, nil, Node^.Info.ID, NULL_NODE_ID);
-          OutgoingMessage(@CANMessage);
-          OPStackNode_ClearState(Node, NS_PERMITTED);
-          OPStackNode_ClearFlags(Node);
-           //       ReleaseBuffers(Node);
-          Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
-        end;
+          if OPStack_AllocateMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          begin
+            OutgoingMessage(SimpleMessage);
+            OPStackNode_ClearState(Node, NS_PERMITTED);
+            OPStackNode_ClearFlags(Node);
+            Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
+          end
       end;
     STATE_NODE_TAKE_OFFLINE :
       begin
         if IsOutgoingBufferAvailable then
-        begin
-          EventMessage.SourceNodeID := Node^.Info.ID;
-          EventMessage.DestNodeID := NULL_NODE_ID;
-          EventMessage.EventID := EVENT_DUPLICATE_ID_DETECTED;
-          Node^.iStateMachine := STATE_NODE_OFFLINE;
-        end
+          if OPStack_AllocateCANMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          begin
+            SimpleMessage^.DataLen := 8;
+            PEventID( SimpleMessage^.Data)^ := EVENT_DUPLICATE_ID_DETECTED;
+            Node^.iStateMachine := STATE_NODE_OFFLINE;
+          end
       end;
     STATE_NODE_OFFLINE :
       begin
@@ -284,10 +288,10 @@ begin
 
 end;
 
-procedure IncomingMessageCallback(Message: PMessage);
+procedure IncomingMessageCallback(Message: PSimpleMessage);
 begin
-  case PBaseMessage( Message)^.MessageType of
-      MT_BASIC :
+  case Message^.MessageType of
+      MT_SIMPLE :
           begin
 
           end;

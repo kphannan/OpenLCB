@@ -17,6 +17,11 @@ const
 const
   USER_MAX_STREAM_BYTES = 1024;
 
+// Enter the size of the buffer to hold Messages, this should be at LEAST equal to the number
+// of Nodes, 2x is recommended
+const
+  USER_MAX_SIMPLE_MESSAGE_BUFFERS = 20;
+
 
 implementation
 

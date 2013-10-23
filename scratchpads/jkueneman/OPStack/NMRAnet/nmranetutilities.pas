@@ -8,11 +8,12 @@ uses
   opstackdefines,
   opstackbuffers;
 
+
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var Data: TCANData);
-procedure NMRAnetUtilities_LoadBaseMessageBuffer(Message: PMessage; MessageType: Byte; MTI: DWord; Next: PMessage; var SourceNodeID: TNodeID; var DestNodeID: TNodeID);
+procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; Data: PByte);
+
 
 implementation
 
@@ -76,68 +77,19 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var Data: TCANData);
+procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; Data: PByte);
 begin
-  Data.Count := 6;
-  Data.Bytes[0] := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
-  Data.Bytes[1] := NodeID[1] shr 8;
-  Data.Bytes[2] := NodeID[1];
-  Data.Bytes[3] := NodeID[0] shr 16;
-  Data.Bytes[4] := NodeID[0] shr 8;
-  Data.Bytes[5] := NodeID[0];
-end;
-
-procedure NMRAnetUtilities_LoadBaseMessageBuffer(Message: PMessage; MessageType: Byte; MTI: DWord; Next: PMessage; var SourceNodeID: TNodeID; var DestNodeID: TNodeID);
-begin
-  PBaseMessage( Message)^.MessageType := MessageType;
-  PBaseMessage( Message)^.MTI := MTI;
-  PBaseMessage( Message)^.Next := Next;
-  PBaseMessage( Message)^.SourceNodeID := SourceNodeID;
-  PBaseMessage( Message)^.DestNodeID := DestNodeID;
-  case MessageType of
-    MT_BASIC          :
-        begin
-
-          Exit;
-        end;
-    MT_PROTCOLSUPPORT :
-        begin
-          PNMRAnetProtocolSupportMessage( Message)^.Protocols := 0;
-          Exit;
-        end;
-    MT_EVENT          :
-        begin
-          PNMRAnetEventMessage( Message)^.EventID := NULL_EVENT_ID;
-          Exit;
-        end;
-    MT_TRACTION       :
-        begin
-          Exit
-        end;
-    MT_REMOTEBUTTON   :
-        begin
-          Exit;
-        end;
-    MT_SNIP           :
-        begin
-
-          Exit;
-        end;
-    MT_DATATGRAM      :
-        begin
-
-          Exit;
-        end;
-    MT_STREAM         :
-        begin
-
-          Exit;
-        end;
-    MT_CAN            :
-        begin
-
-        end;
-  end;
+  Data^ := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
+  Inc(Data);
+  Data^ := NodeID[1] shr 8;
+  Inc(Data);
+  Data^ := NodeID[1];
+  Inc(Data);
+  Data^ := NodeID[0] shr 16;
+  Inc(Data);
+  Data^ := NodeID[0] shr 8;
+  Inc(Data);
+  Data^ := NodeID[0];
 end;
 
 
