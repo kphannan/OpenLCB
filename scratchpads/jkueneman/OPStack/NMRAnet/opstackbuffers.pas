@@ -9,6 +9,44 @@ uses
   opstackdefines,
   template_buffers;
 
+const
+  ABS_ALLOCATED = $01;                                                          // Array Buffer State Flag = Allocated Buffer
+
+type
+  TBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
+    DataArray: TDataArray;
+  end;
+  PBUffer = ^TBuffer;
+
+  TCANBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
+    DataArray: TCANDataArray;
+  end;
+  PCANBUffer = ^TCANBuffer;
+
+  TDatagramBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataArray: TDatagramDataArray;
+  end;
+  PDatagramBuffer = ^TDatagramBuffer;
+
+  TStreamBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataArray: TStreamDataArray;
+  end;
+  PStreamBuffer = ^TStreamBuffer;
+
 type
   TSimpleMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
     MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
@@ -16,9 +54,7 @@ type
     Dest: TNodeInfo;
     Next: PMessage;
     MTI: DWord;
-    DataBytes: PByte;
-    DataLen: Word;
-    MessageSpecificInfo: PMessage;
+    Buffer: PBuffer;
   end;
   PSimpleMessage = ^TSimpleMessage;
 
@@ -35,22 +71,24 @@ procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: B
 
 implementation
 
-
 type
-  TCANArrayPool = record
-    Pool: array[0..USER_MAX_CAN_ARRAY_BUFFERS-1] of TCANDataArray;
+  TCANBufferPool = record
+    Pool: array[0..USER_MAX_CAN_ARRAY_BUFFERS-1] of TCANBuffer;
     Count: Word;
   end;
+  PCANBufferPool = ^TCANBufferPool;
 
-  TDatagramArrayPool = record
-    Pool: array[0..USER_MAX_DATAGRAM_ARRAY_BUFFERS-1] of TDatagramDataArray;
+  TDatagramBufferPool = record
+    Pool: array[0..USER_MAX_DATAGRAM_ARRAY_BUFFERS-1] of TDatagramBuffer;
     Count: Word;
   end;
+  PDatagramBufferPool = ^TDatagramBufferPool;
 
-  TStreamArrayPool = record
-    Pool: array[0..USER_MAX_STREAM_ARRAY_BUFFERS-1] of TStreamDataArray;
+  TStreamBufferPool = record
+    Pool: array[0..USER_MAX_STREAM_ARRAY_BUFFERS-1] of TStreamBuffer;
     Count: Word;
   end;
+  PStreamBufferPool = ^TStreamBufferPool;
 
   TSimpleMessagePool = record
     Pool: array[0..USER_MAX_SIMPLE_MESSAGE_BUFFERS-1] of TSimpleMessage;
@@ -58,49 +96,64 @@ type
   end;
 
 var
-  CANArrayPool: TCANArrayPool;
-  DatagramArrayPool: TDatagramArrayPool;
-  StreamArrayPool: TStreamArrayPool;
+  CANBufferPool: TCANBufferPool;
+  DatagramBufferPool: TDatagramBufferPool;
+  StreamBufferPool: TStreamBufferPool;
   SimpleMessagePool: TSimpleMessagePool;
 
 procedure OPStack_Initialize;
 var
   i, j: Integer;
 begin
-  for j := 0 to USER_MAX_CAN_ARRAY_BUFFERS  do                                  // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_CAN_ARRAY_BUFFERS-1  do
+  begin
+    CANBufferPool.Pool[j].State := 0;
+    CANBufferPool.Pool[j].iStateMachine := 0;
+    CANBufferPool.Pool[j].DataBufferSize := 0;
     for i := 0 to MAX_CAN_BYTES - 1 do
-       CANArrayPool.Pool[j][i] := 0;
-  CANArrayPool.Count := 0;
+      CANBufferPool.Pool[j].DataArray[i] := 0;
+  end;
+  CANBufferPool.Count := 0;
 
-  for j := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS  do                             // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS-1  do
+  begin
+    DatagramBufferPool.Pool[j].State := 0;
+    DatagramBufferPool.Pool[j].iStateMachine := 0;
+    DatagramBufferPool.Pool[j].DataBufferSize := 0;
     for i := 0 to MAX_DATAGRAM_BYTES - 1 do
-       DatagramArrayPool.Pool[j][i] := 0;
-  DatagramArrayPool.Count := 0;
+      DatagramBufferPool.Pool[j].DataArray[i] := 0;
+  end;
+  DatagramBufferPool.Count := 0;
 
-  for j := 0 to USER_MAX_STREAM_ARRAY_BUFFERS  do                               // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_STREAM_ARRAY_BUFFERS-1  do
+  begin
+    StreamBufferPool.Pool[j].State := 0;
+    StreamBufferPool.Pool[j].iStateMachine := 0;
+    StreamBufferPool.Pool[j].DataBufferSize := 0;
     for i := 0 to USER_MAX_STREAM_BYTES - 1 do
-       StreamArrayPool.Pool[j][i] := 0;
-  StreamArrayPool.Count := 0;
+      StreamBufferPool.Pool[j].DataArray[i] := 0;
+  end;
+  StreamBufferPool.Count := 0;
 
   for j := 0 to USER_MAX_SIMPLE_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
     OPStack_LoadBaseMessageBuffer(@SimpleMessagePool.Pool[j], MT_UNALLOCATED, 0, nil, 0, NULL_NODE_ID, 0, NULL_NODE_ID);
   SimpleMessagePool.Count := 0;
 end;
 
-function AllocateCANArray(AnArray: PCANDataArray): Boolean;
+function AllocateCANBuffer(Buffer: PCANBuffer): Boolean;
 var
   i: Integer;
 begin
   Result := False;
-  if CANArrayPool.Count < USER_MAX_CAN_ARRAY_BUFFERS then
+  if CANBufferPool.Count < USER_MAX_CAN_ARRAY_BUFFERS then
   begin
     for i := 0 to USER_MAX_CAN_ARRAY_BUFFERS - 1 do
     begin
-      if CANArrayPool.Pool[i][MAX_CAN_BYTES] and $80 = 0 then
+      if CANBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
       begin
-        AnArray := @CANArrayPool.Pool[i];
-        CANArrayPool.Pool[i][MAX_CAN_BYTES] := CANArrayPool.Pool[i][MAX_CAN_BYTES] or $80;
-        Inc(CANArrayPool.Count);
+        Buffer := @CANBufferPool.Pool[i];
+        CANBufferPool.Pool[i].State := CANBufferPool.Pool[i].State or ABS_ALLOCATED;
+        Inc(CANBufferPool.Count);
         Result := True;
         Exit;
       end;
@@ -108,20 +161,20 @@ begin
   end;
 end;
 
-function AllocateDatagramArray(AnArray: PDatagramDataArray): Boolean;
+function AllocateDatagramBuffer(Buffer: PDatagramBuffer): Boolean;
 var
   i: Integer;
 begin
   Result := False;
-  if DatagramArrayPool.Count < USER_MAX_DATAGRAM_ARRAY_BUFFERS then
+  if DatagramBufferPool.Count < USER_MAX_DATAGRAM_ARRAY_BUFFERS then
   begin
     for i := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS - 1 do
     begin
-      if DatagramArrayPool.Pool[i][MAX_DATAGRAM_BYTES] and $80 = 0 then
+      if DatagramBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
       begin
-        AnArray := @DatagramArrayPool.Pool[i];
-        DatagramArrayPool.Pool[i][MAX_DATAGRAM_BYTES] := DatagramArrayPool.Pool[i][MAX_DATAGRAM_BYTES] or $80;
-        Inc(DatagramArrayPool.Count);
+        Buffer := @DatagramBufferPool.Pool[i];
+        DatagramBufferPool.Pool[i].State := DatagramBufferPool.Pool[i].State or ABS_ALLOCATED;
+        Inc(DatagramBufferPool.Count);
         Result := True;
         Exit;
       end;
@@ -129,20 +182,20 @@ begin
   end;
 end;
 
-function AllocateSteamArray(AnArray: PStreamDataArray): Boolean;
+function AllocateSteamBuffer(Buffer: PStreamBuffer): Boolean;
 var
   i: Integer;
 begin
   Result := False;
-  if StreamArrayPool.Count < USER_MAX_STREAM_ARRAY_BUFFERS then
+  if StreamBufferPool.Count < USER_MAX_STREAM_ARRAY_BUFFERS then
   begin
     for i := 0 to USER_MAX_STREAM_ARRAY_BUFFERS - 1 do
     begin
-      if StreamArrayPool.Pool[i][USER_MAX_STREAM_BYTES] and $80 = 0 then
+      if StreamBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
       begin
-        AnArray := @StreamArrayPool.Pool[i];
-        StreamArrayPool.Pool[i][USER_MAX_STREAM_BYTES] := StreamArrayPool.Pool[i][USER_MAX_STREAM_BYTES] or $80;
-        Inc(StreamArrayPool.Count);
+        Buffer := @StreamBufferPool.Pool[i];
+        StreamBufferPool.Pool[i].State := StreamBufferPool.Pool[i].State or ABS_ALLOCATED;
+        Inc(StreamBufferPool.Count);
         Result := True;
         Exit;
       end;
@@ -150,22 +203,22 @@ begin
   end;
 end;
 
-procedure DeAllocateCANArray(DataArray: PCANDataArray);
+procedure DeAllocateCANBuffer(Buffer: PCANBuffer);
 begin
-  DataArray^[MAX_CAN_BYTES] := DataArray^[MAX_CAN_BYTES] and $7F;
-  Dec(CANArrayPool.Count);
+  Buffer^.State := Buffer^.State and not ABS_ALLOCATED;
+  Dec(CANBufferPool.Count);
 end;
 
-procedure DeAllocateDatagramArray(DataArray: PDatagramDataArray);
+procedure DeAllocateDatagramBuffer(Buffer: PDatagramBuffer);
 begin
-  DataArray^[MAX_DATAGRAM_BYTES] := DataArray^[MAX_DATAGRAM_BYTES] and $7F;
-  Dec(DatagramArrayPool.Count);
+  Buffer^.State := Buffer^.State and not ABS_ALLOCATED;
+  Dec(DatagramBufferPool.Count);
 end;
 
-procedure DeAllocateSteamArray(DataArray: PStreamDataArray);
+procedure DeAllocateSteamBuffer(Buffer: PStreamBuffer);
 begin
-  DataArray^[USER_MAX_STREAM_BYTES] := DataArray^[USER_MAX_STREAM_BYTES] and $7F;
-  Dec(StreamArrayPool.Count);
+  Buffer^.State := Buffer^.State and not ABS_ALLOCATED;
+  Dec(StreamBufferPool.Count);
 end;
 
 function NextFreeSimpleMessage(var SimpleMessage: PSimpleMessage): Boolean;
@@ -200,15 +253,15 @@ function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord;
   Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
-  DataArrayPtr: PCANDataArray;
+  CANBuffer: PCANBuffer;
 begin
   Result := False;
-  if  NextFreeSimpleMessage(AMessage) then
+  if NextFreeSimpleMessage(AMessage) then
   begin
-    if AllocateCANArray(DataArrayPtr) then
+    if AllocateCANBuffer(CANBuffer) then
     begin
       OPStack_LoadBaseMessageBuffer(AMessage, MT_SIMPLE, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-      AMessage^.DataBytes := PByte( DataArrayPtr);
+      AMessage^.Buffer := PBuffer( CANBuffer);
       Result := True
     end;
   end;
@@ -238,9 +291,7 @@ begin
   AMessage^.Dest.ID := DestNodeID;
   AMessage^.Source.AliasID := SourceNodeAlias;
   AMessage^.Source.ID := SourceNodeID;
-  AMessage^.MessageSpecificInfo := nil;
-  AMessage^.DataLen := 0;
-  AMessage^.DataBytes := nil;
+  AMessage^.Buffer := nil;
 end;
 
 end.

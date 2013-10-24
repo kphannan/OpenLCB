@@ -48,12 +48,10 @@ const
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
 
-  TCANDataArray = array[0..MAX_CAN_BYTES] of Byte;                              // The last byte flags the state of the buffer
-  PCANDataArray = ^TCANDataArray;
-  TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES] of Byte;                    // The last byte flags the state of the buffer
-  PDatagramDataArray = ^TDatagramDataArray;
-  TStreamDataArray = array[0..USER_MAX_STREAM_BYTES] of Byte;                   // The last byte flags the state of the buffer
-  PStreamDataArray = ^TStreamDataArray;
+  TDataArray = array[0..0] of Byte;
+  TCANDataArray = array[0..MAX_CAN_BYTES-1] of Byte;
+  TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES-1] of Byte;
+  TStreamDataArray = array[0..USER_MAX_STREAM_BYTES-1] of Byte;
 
   TCANData = record
     Count: Word;

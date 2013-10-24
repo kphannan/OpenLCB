@@ -202,8 +202,8 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStack_AllocateCANMessage(SimpleMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, SimpleMessage^.DataBytes);
-              SimpleMessage^.DataLen := 6;
+              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, @SimpleMessage^.Buffer^.DataArray);
+              SimpleMessage^.Buffer^.DataBufferSize := 6;
               OutgoingMessage(SimpleMessage);
               OPStackNode_SetState(Node, NS_INITIALIZED);
               Node^.iStateMachine := STATE_NODE_LOGIN_IDENTIFY_EVENTS;
@@ -259,8 +259,8 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStack_AllocateCANMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
-            SimpleMessage^.DataLen := 8;
-            PEventID( SimpleMessage^.DataBytes)^ := EVENT_DUPLICATE_ID_DETECTED;
+            SimpleMessage^.Buffer^.DataBufferSize := 8;
+            PEventID( @SimpleMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
             Node^.iStateMachine := STATE_NODE_OFFLINE;
           end
       end;
