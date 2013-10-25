@@ -85,6 +85,7 @@ begin
   OlcbThread.FreeOnTerminate := True;
   Listener := TOPStackTestListener.Create(False);
   Listener.FreeOnTerminate := True;
+  ListenerThread := Listener;
   FHalfConnected := False;
   FConnected := False;
 end;

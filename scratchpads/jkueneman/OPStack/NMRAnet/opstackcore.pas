@@ -336,6 +336,7 @@ procedure OPStackCore_Process;
 var
   Node: PNMRAnetnode;
 begin
+
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
     Node := OPStackNode_NextNode;

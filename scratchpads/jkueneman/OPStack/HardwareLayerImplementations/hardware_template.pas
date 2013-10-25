@@ -8,8 +8,9 @@ interface
 
 uses
   {$IFDEF FPC}
-  Classes, SysUtils, blcksock, synsock,
+  Classes, SysUtils, blcksock, synsock, Forms, Dialogs,
   {$ENDIF}
+  gridconnect,
   opstackbuffers,
   opstackdefines;
 
@@ -91,6 +92,9 @@ type
     property Event: PRTLEvent read FEvent write FEvent;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
   end;
+
+var
+  ListenerThread: TOPStackTestListener;
 {$ENDIF}
 // *****************************************************************************
 //  Lazarus Specific from here up
@@ -149,15 +153,21 @@ begin
 end;
 
 procedure OutgoingMessage(AMessage: PSimpleMessage);
+var
+  GridConnectBuffer: TGridConnectString;
+  StringList: TStringList;
 begin
-  case AMessage^.MessageType of
-    MT_SIMPLE :
+  case AMessage^.MessageType and $7F of
+    MT_SIMPLE,
+    MT_CAN:
         begin
-
-        end;
-    MT_CAN :
-        begin
-
+          MessageToGridConnect(AMessage, GridConnectBuffer);
+          {$IFDEF FPC}
+          ShowMessage(GridConnectBuffer);
+          StringList := TStringList.Create;
+          StringList.Add(GridConnectBuffer);
+          ListenerThread.Send(StringList);
+          {$ENDIF}
         end;
     MT_DATAGRAM :
         begin

@@ -94,8 +94,8 @@ const
   MT_UNALLOCATED     = 0;
   MT_SIMPLE          = 1;                                                       // Message Type Identifiers
   MT_CAN             = 2;
-  MT_DATAGRAM        = 3;
-  MT_STREAM          = 4;
+  MT_DATAGRAM        = 4;
+  MT_STREAM          = 8;
   MT_ALLOCATED       = $80;
 
 type
