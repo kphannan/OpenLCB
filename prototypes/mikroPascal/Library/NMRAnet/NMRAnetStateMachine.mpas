@@ -41,7 +41,6 @@ uses
   NMRAnetDefinesShared,
   NMRAnetUtilities,
   NMRAnetCANReceive,
-
   NMRAnetNode,
   NMRAnetBufferPools;
 
@@ -359,33 +358,6 @@ begin
     TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_FRAME_TYPE_STREAM_INIT_REPLY, Stream^.Alias, 5, @DataBytes, False, $00);
     Result := True
   end
-end;
-
-// *****************************************************************************
-//  procedure ReleaseBuffers
-//     Parameters:
-//     Returns:
-//
-//     Description:  Expects CAN Disabled
-//
-// *****************************************************************************
-procedure ReleaseBuffers(Node: PNMRAnetNode);
-var
-  BaseTemp: PBaseBuffer;
-  DatagramTemp: PDatagramBuffer;
-begin
-  while Node^.BaseBuffers <> nil do
-  begin
-    BaseTemp := Node^.BaseBuffers;
-    NMRAnetUtilities_BaseBufferUnLink(Node, BaseTemp);
-    NMRAnetBufferPools_ReleaseBaseBuffer(BaseTemp);
-  end;
-  while Node^.DatagramBuffers <> nil do
-  begin
-    DatagramTemp := Node^.DatagramBuffers;
-    NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramTemp);
-    NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramTemp);
-  end;
 end;
 
 // *****************************************************************************
@@ -1109,7 +1081,7 @@ begin
                 CBA_WRITE            : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WRITE;
                 CBA_WRITE_UNDER_MASK : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_WRITE_UNDER_MASK;                                                  // ConfigmemBufferAction is a Write under Mask;
                 CBA_READ_STREAM,
-                CBA_WRITE_STREAM     : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_WAIT
+                CBA_WRITE_STREAM     : ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_SETUP
             else
               ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_RELEASE;
             end;
@@ -1215,17 +1187,13 @@ begin
           begin
             ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_RELEASE;
           end;
-        STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_WAIT :
+        STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_SETUP :
           begin
             if NMRAnetBufferPools_AllocateDatagramBuffer(DatagramBuffer, True) then   // Create a new datagram to send the Read Reply before opening the Read Stream
             begin
-            
-              // TODO:   Do I wait for a sucessful ACK to the datagram?????
-              //         If so HOW do I do that?  There is nothing connecting these two objects....
-              
               NMRAnetUtilities_DatagramBufferLink(Node, DatagramBuffer);
               EncodeConfigMemReadWriteHeader(Node, DatagramBuffer, ConfigMemBuffer);               // Copy the data back into a Datagram and let the node send it when it can
-              DatagramBuffer^.State := DatagramBuffer^.State or CBS_PROCESSING;                    // Start the Transfer Immediately
+              DatagramBuffer^.State := DatagramBuffer^.State or CBS_PROCESSING;                    // Start the Transfer of the Read/Write Reply Immediately
               ConfigMemBuffer^.Stream^.State := ConfigMemBuffer^.Stream^.State or CBS_PROCESSING;  // Start the streaming statemachine
               if ConfigMemBuffer^.Action = CBA_READ_STREAM then
                 ConfigMemBuffer^.StateMachine := STATE_MEM_CONFIG_READWRITE_STREAM_READ
@@ -1312,7 +1280,7 @@ begin
                                    TransmitNMRABusLayerMsg(Node, CANBuffer, MTI_DATAGRAM_REJECTED_REPLY, DatagramBuffer^.Alias, 2, @DataBytes, False, $00);
                                  end;
                                  
-                                 // Unlink regardless of what we do
+                                 // Unlink regardless of what we do as we either have failed it or moved over to a ConfigMemBuffer
                                  NMRAnetUtilities_DatagramBufferUnLink(Node, DatagramBuffer);       // Copied the info to the ConfigMemBuffer, release the Datagram for now
                                  NMRAnetBufferPools_ReleaseDatagramBuffer(DatagramBuffer);          // This is the end of this statemachine, it is continued in the Config Mem Statemachine
                                end;
@@ -1464,7 +1432,8 @@ end;
 
 
 // *****************************************************************************
-//  procedure ProcessOutgoingMessages
+//  procedure ProcessOutgoingDatagrams
+
 //     Parameters:
 //     Returns:
 //
@@ -1473,26 +1442,41 @@ end;
 //                  Expects CAN to be disabled
 //
 // *****************************************************************************
-procedure ProcessOutgoingMessages(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+procedure ProcessOutgoingDatagrams(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
   DatagramBuffer: PDatagramBuffer;
-  StreamBuffer: PStreamBuffer;
 begin
   // Look for outgoing Datagrams
   DatagramBuffer := nil;
-  if NMRAnetUtilities_FindOutgoingDatagram(Node, DatagramBuffer, True) then
+  if NMRAnetUtilities_FindOutgoingDatagramInNode(Node, DatagramBuffer, True) then
   begin
     {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetUtilities_FindOutgoingDatagram = Found'+LF);{$ENDIF}
     if NMRAnetStateMachine_TrySendDatagram(Node, CANBuffer, DatagramBuffer) then
     begin
-      {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetStateMachine_TrySendDatagram = Sent'+LF);{$ENDIF}   
+      {$IFDEF TRACE_DATAGRAM_SEND}UART1_Write_Text('NMRAnetStateMachine_TrySendDatagram = Sent'+LF);{$ENDIF}
       DatagramBuffer^.iWatchdog := 0;  // Reset watchdog, now that it is complete it can timout waiting for the ACK/NAK
       DatagramBuffer^.State := (DatagramBuffer^.State and not CBS_PROCESSING) or CBS_TRANSFER_COMPLETE;    // Flag as complete (this is also flagged as outgoing) so the Statemachine can wait for a response from the target
     end;
   end;
-  
+end;
+
+// *****************************************************************************
+//  procedure ProcessOutgoingStreams
+
+//     Parameters:
+//     Returns:
+//
+//     Description: If outgoing messages need to be queued up then this function
+//                  ensures all needed messages are sent;
+//                  Expects CAN to be disabled
+//
+// *****************************************************************************
+procedure ProcessOutgoingStreams(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
+var
+  StreamBuffer: PStreamBuffer;
+begin
   StreamBuffer := nil;
-  if NMRAnetUtilities_FindOutgoingStream(Node, StreamBuffer, True) then         // Find a Stream that is allocated and waiting to send a message out
+  if NMRAnetUtilities_FindOutgoingStreamInNode(Node, StreamBuffer, True) then         // Find a Stream that is allocated and waiting to send a message out
   begin
     case StreamBuffer^.StateMachine of
       STATE_STREAM_INITIATE_REQUEST :                                           // We want to send, this expects the StreamBuffer to be setup
@@ -1500,9 +1484,13 @@ begin
             if NMRAnetStateMachine_TrySendStreamInitiate(Node, CANBuffer, StreamBuffer) then
             begin
               StreamBuffer^.iWatchdog := 0;
-              StreamBuffer^.State := StreamBuffer^.State and not CBS_OUTGOING; // When the Reply is received it will jump to Send, since we removed OutGoing
+              StreamBuffer^.State := StreamBuffer^.State and not CBS_OUTGOING;  // When the Reply is received it will jump to Send, since we removed OutGoing
               StreamBuffer^.StateMachine := STATE_STREAM_IDLE;                  // Wait for the Initate Reply
             end;
+          end;
+      STATE_STREAM_INITIATE_REQEUST_WAIT_FOR_REPLY :
+          begin
+          
           end;
       STATE_STREAM_INITIATE_REPLY :                                             // Remote node as asked to send us data
           begin
@@ -1521,12 +1509,10 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure ProcessOutgoingNode
+//  procedure ProcessMarkedForDeleteNodes
 //     Parameters:
 //     Returns:
-//
 //     Description:
-//                  DO NOT LET AN INTERRUPT OCCUR IN THE MIDDLE OF THIS
 // *****************************************************************************
 procedure ProcessMarkedForDeleteNodes(Node: PNMRAnetNode; CANBuffer: PCANBuffer);
 var
@@ -1582,6 +1568,14 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure ProcessAbandonBuffers
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
 procedure ProcessAbandonBuffers(Node: PNMRAnetNode);
 const
   CBS_OUTGOING_COMPLETE = CBS_TRANSFER_COMPLETE or CBS_OUTGOING;
@@ -1774,7 +1768,8 @@ begin
       begin  //    {$IFDEF TRACE_NODE_STATEMACHINE} UART1_Write_Text('STATE_NMRABUS_PERMITTED'+LF); {$ENDIF}
         LockCANInterrupt;
         ProcessNode(Node, @CANBuffer);                                          // Handle auto Actions to CAN/NMRAnet messages coming in
-        ProcessOutgoingMessages(Node, @CANBuffer);                              // Handle outgoing messages like Datagrams
+        ProcessOutgoingDatagrams(Node, @CANBuffer);                              // Handle outgoing Datagrams
+        ProcessOutgoingStreams(Node, @CANBuffer);                               // Handle outgoing Streams
         ProcessMarkedForDeleteNodes(Node, @CANBuffer);                          // Handle vNodes marked to be deleted
         {$IFNDEF DISABLE_DATAGRAM_ABANDON_TIMEOUT}
         ProcessAbandonBuffers(Node);                                            // Handle (free) buffers (datagrams mainly) that appear to be abandon in midstream
@@ -1790,7 +1785,7 @@ begin
         begin
           LockCANInterrupt;
           TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
-          ReleaseBuffers(Node);
+          NMRAnetUtilities_ReleaseAllBuffers(Node);
           NMRAnetNode_ClearStateFlag(Node, NS_PERMITTED);
           NMRAnetNode_ClearMsgFlags(Node);
           Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
@@ -1806,7 +1801,7 @@ begin
         begin
           LockCANInterrupt;
           TransmitCANLayerMsg(Node, @CANBuffer, MTI_AMR);
-          ReleaseBuffers(Node);
+          NMRAnetUtilities_ReleaseAllBuffers(Node);
           NMRAnetNode_ClearStateFlag(Node, NS_PERMITTED);
           NMRAnetNode_ClearMsgFlags(Node);
           Node^.iStateMachine := STATE_NMRABUS_TAKE_OFFLINE ;

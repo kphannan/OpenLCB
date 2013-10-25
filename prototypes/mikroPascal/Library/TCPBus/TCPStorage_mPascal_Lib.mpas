@@ -354,7 +354,7 @@ end;
 
 procedure StartCANHighPriorityMessageEngine;
 begin 
-  // Not used with Ethernet
+  CAN_Engine.TransmitImmediately := True;     // Move it to the Ethernet buffer NOW
 end;
 
 

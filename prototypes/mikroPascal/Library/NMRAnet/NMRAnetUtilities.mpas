@@ -31,6 +31,7 @@ uses
   TCPStorage_mPascal_Lib,
   {$ENDIF}
   NMRAnetDefines,
+  NMRAnetBufferPools,
   NMRAnetAppDefines;
   
 procedure NMRAnetUtilities_LoadFrameCANBufferDataWith48BitNodeID(NodeBuffer: PNMRAnetNode; CANBuffer: PCANBuffer);
@@ -88,15 +89,17 @@ procedure NMRAnetUtilities_DataBufferLink(Node: PNMRAnetNode; Buffer: PDataBuffe
 procedure NMRAnetUtilities_DataBufferUnLink(Node: PNMRAnetNode; Buffer: PDataBuffer);
 function NMRAnetUtilities_NextDataBuffer(Node: PNMRAnetNode): PDataBuffer;
 
-function NMRAnetUtilities_FindInProcessDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
-function NMRAnetUtilities_FindCompletedDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
-function NMRAnetUtilities_FindOutgoingDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; ProcessingOnly: Boolean): Boolean;
-function NMRAnetUtilities_FindInDatagramByState(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; AState: Byte; AnyBit: Boolean): Boolean;
+procedure NMRAnetUtilities_ReleaseAllBuffers(Node: PNMRAnetNode);
 
-function NMRAnetUtilities_FindInProcessStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer): Boolean;
-function NMRAnetUtilities_FindCompletedStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer): Boolean;
-function NMRAnetUtilities_FindOutgoingStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; ProcessingOnly: Boolean): Boolean;
-function NMRAnetUtilities_FindInStreamByState(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer; AState: Byte; AnyBit: Boolean): Boolean;
+function NMRAnetUtilities_FindInProcessDatagramInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
+function NMRAnetUtilities_FindCompletedDatagramInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
+function NMRAnetUtilities_FindOutgoingDatagramInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; ProcessingOnly: Boolean): Boolean;
+function NMRAnetUtilities_FindInDatagramByStateInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; AState: Byte; AnyBit: Boolean): Boolean;
+
+function NMRAnetUtilities_FindInProcessStreamInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer): Boolean;
+function NMRAnetUtilities_FindCompletedStreamInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer): Boolean;
+function NMRAnetUtilities_FindOutgoingStreamInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer; ProcessingOnly: Boolean): Boolean;
+function NMRAnetUtilities_FindInStreamByStateInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer; AState: Byte; AnyBit: Boolean): Boolean;
 
 implementation
 
@@ -1080,16 +1083,53 @@ begin
   Result := Node^.DataBuffers
 end;
 
-
 // *****************************************************************************
-//  procedure NMRAnetUtilities_FindInDatagramByState
+//  procedure NMRAnetUtilities_ReleaseAllBuffers
 //     Parameters:
 //     Returns:
 //
 //     Description:
 //
 // *****************************************************************************
-function NMRAnetUtilities_FindInDatagramByState(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; AState: Byte; AnyBit: Boolean): Boolean;
+procedure NMRAnetUtilities_ReleaseAllBuffers(Node: PNMRAnetNode);
+begin
+  while Node^.BaseBuffers <> nil do
+  begin
+    NMRAnetUtilities_BaseBufferUnLink(Node, Node^.BaseBuffers);
+    NMRAnetBufferPools_ReleaseBaseBuffer(Node^.BaseBuffers);
+  end;
+  while Node^.DataBuffers <> nil do
+  begin
+    NMRAnetUtilities_DataBufferUnLink(Node, Node^.DataBuffers);
+    NMRAnetBufferPools_ReleaseDataBuffer(Node^.DataBuffers);
+  end;
+  while Node^.ConfigMemBuffers <> nil do
+  begin
+    NMRAnetUtilities_ConfigMemBufferUnLink(Node, Node^.ConfigMemBuffers);
+    NMRAnetBufferPools_ReleaseConfigMemBuffer(Node^.ConfigMemBuffers);
+  end;
+  while Node^.StreamBuffers <> nil do
+  begin
+    NMRAnetUtilities_StreamBufferUnLink(Node, Node^.StreamBuffers);
+    NMRAnetBufferPools_ReleaseStreamBuffer(Node^.StreamBuffers);
+  end;
+  while Node^.DatagramBuffers <> nil do
+  begin
+    NMRAnetUtilities_DatagramBufferUnLink(Node, Node^.DatagramBuffers);
+    NMRAnetBufferPools_ReleaseDatagramBuffer(Node^.DatagramBuffers);
+  end;
+end;
+
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_FindInDatagramByStateInNode
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_FindInDatagramByStateInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; AState: Byte; AnyBit: Boolean): Boolean;
 var
   Temp: PDatagramBuffer;
 begin
@@ -1123,16 +1163,16 @@ end;
 
 
 // *****************************************************************************
-//  procedure NMRAnetUtilities_FindInProcessDatagram
+//  procedure NMRAnetUtilities_FindInProcessDatagramInNode
 //     Parameters:
 //     Returns:
 //
 //     Description:
 //
 // *****************************************************************************
-function NMRAnetUtilities_FindInProcessDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
+function NMRAnetUtilities_FindInProcessDatagramInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
 begin
-  Result := NMRAnetUtilities_FindInDatagramByState(Node, Buffer, CBS_PROCESSING, False);
+  Result := NMRAnetUtilities_FindInDatagramByStateInNode(Node, Buffer, CBS_PROCESSING, False);
 end;
 
 // *****************************************************************************
@@ -1143,9 +1183,9 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function NMRAnetUtilities_FindCompletedDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
+function NMRAnetUtilities_FindCompletedDatagramInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer): Boolean;
 begin
-  Result := NMRAnetUtilities_FindInDatagramByState(Node, Buffer, CBS_TRANSFER_COMPLETE, False);
+  Result := NMRAnetUtilities_FindInDatagramByStateInNode(Node, Buffer, CBS_TRANSFER_COMPLETE, False);
 end;
 
 // *****************************************************************************
@@ -1157,7 +1197,7 @@ end;
 //
 //  Description:
 // *****************************************************************************
-function NMRAnetUtilities_FindOutgoingDatagram(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; ProcessingOnly: Boolean): Boolean;
+function NMRAnetUtilities_FindOutgoingDatagramInNode(Node: PNMRAnetNode; var Buffer: PDatagramBuffer; ProcessingOnly: Boolean): Boolean;
 var
   Temp: PDatagramBuffer;
   AState: Byte;
@@ -1188,7 +1228,7 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function NMRAnetUtilities_FindInStreamByState(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer; AState: Byte; AnyBit: Boolean): Boolean;
+function NMRAnetUtilities_FindInStreamByStateInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer; AState: Byte; AnyBit: Boolean): Boolean;
 var
   Temp: PStreamBuffer;
 begin
@@ -1229,16 +1269,16 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NMRAnetUtilities_FindInProcessStream
+//  procedure NMRAnetUtilities_FindInProcessStreamInNode
 //     Parameters:
 //     Returns:
 //
 //     Description:
 //
 // *****************************************************************************
-function NMRAnetUtilities_FindInProcessStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer): Boolean;
+function NMRAnetUtilities_FindInProcessStreamInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer; LocalSID, RemoteSID: Integer): Boolean;
 begin
-  Result := NMRAnetUtilities_FindInStreamByState(Node, Buffer, LocalSID, RemoteSID, CBS_PROCESSING, False);
+  Result := NMRAnetUtilities_FindInStreamByStateInNode(Node, Buffer, LocalSID, RemoteSID, CBS_PROCESSING, False);
 end;
 
 // *****************************************************************************
@@ -1249,9 +1289,9 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function NMRAnetUtilities_FindCompletedStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer): Boolean;
+function NMRAnetUtilities_FindCompletedStreamInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer): Boolean;
 begin
-  Result := NMRAnetUtilities_FindInStreamByState(Node, Buffer, -1, -1, CBS_TRANSFER_COMPLETE, False);
+  Result := NMRAnetUtilities_FindInStreamByStateInNode(Node, Buffer, -1, -1, CBS_TRANSFER_COMPLETE, False);
 end;
 
 // *****************************************************************************
@@ -1263,7 +1303,7 @@ end;
 //
 //  Description:
 // *****************************************************************************
-function NMRAnetUtilities_FindOutgoingStream(Node: PNMRAnetNode; var Buffer: PStreamBuffer; ProcessingOnly: Boolean): Boolean;
+function NMRAnetUtilities_FindOutgoingStreamInNode(Node: PNMRAnetNode; var Buffer: PStreamBuffer; ProcessingOnly: Boolean): Boolean;
 var
   Temp: PStreamBuffer;
   AState: Byte;

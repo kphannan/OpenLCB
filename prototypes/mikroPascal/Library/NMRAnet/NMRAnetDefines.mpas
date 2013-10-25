@@ -38,7 +38,8 @@ const
   CBS_PROCESSING                           = $02;                               // CommonBufferState is Processing (what that means depends on the Buffer type, implys that the buffer is not ready for the main loop to use yet)
   CBS_OUTGOING                             = $04;                               // CommonBufferState is an outgoing Buffer (Transmitting to the CAN Bus)
   CBS_TRANSFER_COMPLETE                    = $08;                               // Multi Frame Message transfer is complete
-
+  CBS_INHIBIT_AUTORELEASE                  = $10;                               // Typcially buffers are released when when the library sees fit.  This allows that logic to be bypassed (So far only implemented on Datagrams)
+  
   // These must be in Priority Order for transmit, higher = higher priority
   BMC_PROTOCOL_SUPPORT_QUERY               = $01;                               // [IN] Buffer Message Code is a Protocol Support Query    [BaseBuffer]
   BMC_PRODUCER_IDENTIFY                    = $02;                               // [IN] Buffer Message Code is Producer Identify           [DataBuffer]
@@ -55,15 +56,6 @@ const
 const
   CAN_DATA_LEN = 8;
   MAX_STREAM_TYPE_CONTENT = 8;
-  
-  // These are the Byte Offsets so we can update easily as they evolove
-  // Destination Alias = 0, 1
-  STREAM_OFFSET_BUFFER_SIZE_3 = 2;
-  STREAM_OFFSET_BUFFER_SIZE_2 = 3;
-  STREAM_OFFSET_BUFFER_SIZE_1 = 4;
-  STREAM_OFFSET_BUFFER_SIZE_0 = 5;
-  STREAM_OFFSET_SRC_SID       = 6;
-  STREAM_OFFSET_DEST_SID      = 7;
 
 type
   TCAN_DataBytes = array[CAN_DATA_LEN] of Byte;
@@ -102,18 +94,27 @@ type
   //*****************************************************************************
 // Stream Buffer
 //*****************************************************************************
+const
+  SF_CONTENT_INCLUDED = 0;                                                      // Bit 0 of InitiateFlags; Stream includes content in the first 8 bytes
+  SF_REJECTED         = 1;                                                      // Bit 1 of InitiateFlags; The stream request was rejected, out of order or should not happen
+  SF_PERMANENT_ERROR  = 6;                                                      // Bit 6 of InitiateFlags; The error is permanent, don't try again
+  SF_ACCEPT           = 7;                                                      // Bit 7 of InitiateFlags; The stream request was accepted
+  
+  // Global Reject flags
+  SAF_REJECT_INFO_LOGGED = 0;  // If the request was rejected the info was logged
+  // Bits 1..4 Reserved
+  
+  // Permanent specific Reject flags
+  SAF_REJECT_PERMANENT_INVALID_STREAM = 5;
+  SAF_REJECT_PERMANENT_SOURCE_NOT_PERMITTED = 6;
+  SAF_REJECT_PERMANENT_STREAMS_NOT_ACCEPTED = 7;
+  
+  // Temporary specific Reject flags
+  // None to date
+
 type
   TStream = array[0..MAX_STREAM_LEN-1] of Byte;
   PStream = ^TStream;
-  
-  TStreamErrorCode = array[0..1] of Byte;
-  PStreamErrorCode = ^TStreamErrorCode;
-
-  TStreamError = record
-    SubType: TStreamErrorCode;
-    Count: Byte;                                                                // Number of Bytes to move into the Stream Databyte (MTI + SubType if needed)
-  end;
-  PStreamError = ^TStreamError;
 
   TStreamContentType = array[MAX_STREAM_TYPE_CONTENT] of Byte;
 
@@ -131,9 +132,10 @@ type
     Tag: TBufferTag;                                                            // Stream Only: TBD
     TotalTransferCount: DWord;                                                  // Total number of bytes to send or receive
     iByteCount: DWord;                                                          // The number of bytes recevied as they come in, or the number of bytes to transmit
-    NegotiatedTransferSize: DWord;                                              //
+    NegotiatedTransferSize: Word;                                               //
     DataBytes: TStream;                                                         // The 1024 bytes sent in the stream
-    ErrorCode: TStreamError;                                                    // Tracks any errors that occur through the MTI/Error Codes send as the first few bytes in the stream
+    InitiateFlags: Byte;                                                        // See Stream Flags (SF_xxx) for bit values
+    InitiateAdditionalFlags: Byte;                                              // Stream Additional Flags (SAF_xxx) for bit values
     Content: TStreamContent;                                                    // If the stream has well defined content then this will be filled out
     LocalStreamID,                                                              // Unique ID defined by the Local Node that identifies the Stream Conversation
     RemoteStreamID: Byte;                                                       // Unique ID defined by the Remote Node that identifies the Stream Conversation
@@ -556,7 +558,7 @@ const
   STATE_MEM_CONFIG_READWRITE_READ                       = $01;
   STATE_MEM_CONFIG_READWRITE_WRITE                      = $02;
   STATE_MEM_CONFIG_READWRITE_WAIT_UNTIL_DONE_PROCESSING = $03;
-  STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_WAIT          = $04;
+  STATE_MEM_CONFIG_READWRITE_STREAM_REPLY_SETUP         = $04;
   STATE_MEM_CONFIG_READWRITE_STREAM_READ                = $05;
   STATE_MEM_CONFIG_READWRITE_STREAM_WRITE               = $06;
   STATE_MEM_CONFIG_READWRITE_WRITE_UNDER_MASK           = $07;
@@ -564,10 +566,11 @@ const
   
   STATE_STREAM_IDLE                            = $00;
   STATE_STREAM_INITIATE_REQUEST                = $01;
-  STATE_STREAM_INITIATE_REPLY                  = $02;
-  STATE_STREAM_SEND                            = $03;
-  STATE_STREAM_PROCEED                         = $04;
-  STATE_STREAM_COMPLETE                        = $05;
+  STATE_STREAM_INITIATE_REQEUST_WAIT_FOR_REPLY = $02;
+  STATE_STREAM_INITIATE_REPLY                  = $03;
+  STATE_STREAM_SEND                            = $04;
+  STATE_STREAM_PROCEED                         = $05;
+  STATE_STREAM_COMPLETE                        = $06;
   
 var
   MaxTime_StateMachine: Word;
