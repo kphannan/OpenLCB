@@ -15,7 +15,7 @@ uses
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; DataPtr: PByte);
+procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TCANDataArray);
 
 
 implementation
@@ -80,19 +80,14 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; DataPtr: PByte);
+procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TCANDataArray);
 begin
-  DataPtr^ := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
-  Inc(DataPtr);
-  DataPtr^ := NodeID[1] shr 8;
-  Inc(DataPtr);
-  DataPtr^ := NodeID[1];
-  Inc(DataPtr);
-  DataPtr^ := NodeID[0] shr 16;
-  Inc(DataPtr);
-  DataPtr^ := NodeID[0] shr 8;
-  Inc(DataPtr);
-  DataPtr^ := NodeID[0];
+  DataArray[0] := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
+  DataArray[1] := NodeID[1] shr 8;
+  DataArray[2] := NodeID[1];
+  DataArray[3] := NodeID[0] shr 16;
+  DataArray[4] := NodeID[0] shr 8;
+  DataArray[5] := NodeID[0];
 end;
 
 

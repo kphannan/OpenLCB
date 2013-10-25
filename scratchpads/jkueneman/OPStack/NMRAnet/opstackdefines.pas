@@ -50,8 +50,11 @@ type
 
   TDataArray = array[0..0] of Byte;
   TCANDataArray = array[0..MAX_CAN_BYTES-1] of Byte;
+  PCANDataArray = ^TCANDataArray;
   TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES-1] of Byte;
+  PDatagramDataArray = ^TDatagramDataArray;
   TStreamDataArray = array[0..USER_MAX_STREAM_BYTES-1] of Byte;
+  PStreamDataArray = ^TStreamDataArray;
 
   TCANData = record
     Count: Word;
@@ -90,14 +93,9 @@ const
 const
   MT_UNALLOCATED     = 0;
   MT_SIMPLE          = 1;                                                       // Message Type Identifiers
-  MT_PROTCOLSUPPORT  = 2;
-  MT_EVENT           = 3;
-  MT_TRACTION        = 4;
-  MT_REMOTEBUTTON    = 5;
-  MT_SNIP            = 6;
-  MT_DATATGRAM       = 7;
-  MT_STREAM          = 8;
-  MT_CAN             = 10;
+  MT_CAN             = 2;
+  MT_DATAGRAM        = 3;
+  MT_STREAM          = 4;
   MT_ALLOCATED       = $80;
 
 type

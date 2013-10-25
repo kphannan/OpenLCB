@@ -27,8 +27,21 @@ procedure OPStackCore_Timer;                                                    
 // Callback from the Hardware when a message is received
 procedure IncomingMessageCallback(AMessage: PSimpleMessage);
 
+var
+  OPStack: TOPStack;
 
 implementation
+
+// *****************************************************************************
+//  procedure OPStack_Initialize
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+procedure OPStack_Initialize;
+begin
+  OPStack.State := 0;                                                           // User must set OPS_Running to enable Library
+end;
 
 // *****************************************************************************
 //  procedure OPStackCore_Initialize
@@ -202,7 +215,7 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStack_AllocateCANMessage(SimpleMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, @SimpleMessage^.Buffer^.DataArray);
+              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
               SimpleMessage^.Buffer^.DataBufferSize := 6;
               OutgoingMessage(SimpleMessage);
               OPStackNode_SetState(Node, NS_INITIALIZED);
@@ -298,35 +311,15 @@ begin
           begin
 
           end;
-      MT_PROTCOLSUPPORT :
+      MT_CAN :
           begin
 
           end;
-      MT_EVENT :
-          begin
-
-          end;
-      MT_TRACTION :
-          begin
-
-          end;
-      MT_REMOTEBUTTON :
-          begin
-
-          end;
-      MT_SNIP :
-          begin
-
-          end;
-      MT_DATATGRAM :
+      MT_DATAGRAM :
           begin
 
           end;
       MT_STREAM :
-          begin
-
-          end;
-      MT_CAN :
           begin
 
           end;
@@ -343,11 +336,14 @@ procedure OPStackCore_Process;
 var
   Node: PNMRAnetnode;
 begin
-  Node := OPStackNode_NextNode;
-  if Node <> nil then
+  if OPStack.State and OPS_PROCESSING <> 0 then
   begin
-    NodeRunStateMachine(Node);
+    Node := OPStackNode_NextNode;
+    if Node <> nil then
+    begin
+      NodeRunStateMachine(Node);
 
+    end;
   end;
 end;
 

@@ -17,7 +17,7 @@ object Form1: TForm1
     Width = 552
     Panels = <    
       item
-        Text = 'Idle Counts:'
+        Text = 'Not Connected'
         Width = 120
       end    
       item
@@ -27,18 +27,18 @@ object Form1: TForm1
     SimplePanel = False
   end
   object ButtonAllocateNode: TButton
-    Left = 232
+    Left = 272
     Height = 22
-    Top = 46
+    Top = 8
     Width = 272
     Caption = 'Allocate Virtual Node'
     OnClick = ButtonAllocateNodeClick
     TabOrder = 1
   end
   object ButtonDeallocateNode: TButton
-    Left = 232
+    Left = 272
     Height = 22
-    Top = 80
+    Top = 32
     Width = 272
     Caption = 'Mark for Virtual Node for Deallocation'
     OnClick = ButtonDeallocateNodeClick
@@ -46,8 +46,8 @@ object Form1: TForm1
   end
   object MemoReceive: TMemo
     Left = 0
-    Height = 240
-    Top = 120
+    Height = 176
+    Top = 184
     Width = 552
     Align = alBottom
     Anchors = [akTop, akLeft, akRight, akBottom]
@@ -62,15 +62,20 @@ object Form1: TForm1
     OnClick = Button1Click
     TabOrder = 4
   end
-  object ApplicationProperties1: TApplicationProperties
-    OnIdle = ApplicationProperties1Idle
-    left = 80
-    top = 40
+  object ButtonStartStack: TButton
+    Left = 16
+    Height = 22
+    Top = 40
+    Width = 216
+    Caption = 'Start the OPStack'
+    Enabled = False
+    OnClick = ButtonStartStackClick
+    TabOrder = 5
   end
   object TimerCore: TTimer
     Interval = 100
     OnTimer = TimerCoreTimer
-    left = 56
-    top = 112
+    left = 448
+    top = 120
   end
 end

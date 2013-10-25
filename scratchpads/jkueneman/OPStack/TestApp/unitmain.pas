@@ -12,6 +12,7 @@ uses
   {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
+  opstacktypes,
   template_node,
   opstackdefines;
 type
@@ -25,29 +26,34 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
-    ApplicationProperties1: TApplicationProperties;
     Button1: TButton;
+    ButtonStartStack: TButton;
     ButtonAllocateNode: TButton;
     ButtonDeallocateNode: TButton;
     MemoReceive: TMemo;
     StatusBar: TStatusBar;
     TimerCore: TTimer;
-    procedure ApplicationProperties1Idle(Sender: TObject; var Done: Boolean);
     procedure Button1Click(Sender: TObject);
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
+    procedure ButtonStartStackClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure TimerCoreTimer(Sender: TObject);
   private
+    FHalfConnected: Boolean;
+  private
+    FConnected: Boolean;
     FListener: TOPStackTestListener;
     FOlcbThread: TOlcbThread;
-    { private declarations }
+    property HalfConnected: Boolean read FHalfConnected write FHalfConnected;
   public
     { public declarations }
     procedure ListenerCallback(ReceiveStr: ansistring);
+    procedure ConnectedCallback(EthernetThreadType: TEthernetThreadType);
     procedure UpdateUI;
+    property Connected: Boolean read FConnected;
     property OlcbThread: TOlcbThread read FOlcbThread write FOlcbThread;
     property Listener: TOPStackTestListener read FListener write FListener;
   end;
@@ -59,9 +65,6 @@ var
 implementation
 
 {$R *.lfm}
-
-var
-  IdleCount: DWord;
 
 { TOlcbThread }
 
@@ -77,17 +80,19 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  IdleCount := 0;
   OPStackCore_Initialize;
   OlcbThread := TOlcbThread.Create(False);
   OlcbThread.FreeOnTerminate := True;
   Listener := TOPStackTestListener.Create(False);
   Listener.FreeOnTerminate := True;
+  FHalfConnected := False;
+  FConnected := False;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
   Listener.Callback := @ListenerCallback;
+  Listener.RunningCallback := @ConnectedCallback;
   UpdateUI;
 end;
 
@@ -103,17 +108,27 @@ begin
   MemoReceive.Lines.EndUpdate;
 end;
 
+procedure TForm1.ConnectedCallback(EthernetThreadType: TEthernetThreadType);
+begin
+  if HalfConnected then
+  begin
+    FConnected := True;
+    UpdateUI;
+  end
+  else
+    HalfConnected := True;
+end;
+
 procedure TForm1.UpdateUI;
 begin
   ButtonAllocateNode.Enabled := NodePool.AllocatedCount < USER_MAX_NODE_COUNT;
   ButtonDeallocateNode.Enabled := NodePool.AllocatedCount > 1;
   Statusbar.Panels[1].Text := 'Allocated Nodes: ' + IntToStr(NodePool.AllocatedCount);
-end;
-
-procedure TForm1.ApplicationProperties1Idle(Sender: TObject; var Done: Boolean);
-begin
-//  Statusbar.Panels[0].Text := 'Idle Counts: ' + IntToStr(IdleCount);
-//  Inc(IdleCount);
+  if Connected then
+    Statusbar.Panels[0].Text := 'Connected'
+  else
+    Statusbar.Panels[0].Text := 'Not Connected';
+  ButtonStartStack.Enabled := Connected;
 end;
 
 procedure TForm1.Button1Click(Sender: TObject);
@@ -135,6 +150,11 @@ procedure TForm1.ButtonDeallocateNodeClick(Sender: TObject);
 begin
   OPStackNode_MarkForRelease(OPStackNode_FindLastVirtualNode);
   UpdateUI;
+end;
+
+procedure TForm1.ButtonStartStackClick(Sender: TObject);
+begin
+  OPStack.State := OPStack.State or OPS_PROCESSING;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
