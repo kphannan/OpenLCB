@@ -163,7 +163,7 @@ begin
         begin
           MessageToGridConnect(AMessage, GridConnectBuffer);
           {$IFDEF FPC}
-          ShowMessage(GridConnectBuffer);
+      //    ShowMessage(GridConnectBuffer);
           StringList := TStringList.Create;
           StringList.Add(GridConnectBuffer);
           ListenerThread.Send(StringList);

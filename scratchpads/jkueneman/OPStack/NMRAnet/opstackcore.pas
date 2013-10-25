@@ -152,6 +152,7 @@ begin
           end;
           if OPStack_AllocateMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
+            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
           end
@@ -184,6 +185,7 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStack_AllocateMessage(SimpleMessage, MTI_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
+              OPStack_SetAsCAN_MTI(SimpleMessage);
               OutgoingMessage(SimpleMessage);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
             end
@@ -197,8 +199,11 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateMessage(SimpleMessage, MTI_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStack_AllocateCANMessage(SimpleMessage, MTI_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
+              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+              SimpleMessage^.Buffer^.DataBufferSize := 6;
+              OPStack_SetAsCAN_MTI(SimpleMessage);
               OutgoingMessage(SimpleMessage);
               OPStackNode_SetState(Node, NS_PERMITTED);
               Node^.iStateMachine := STATE_NODE_INITIALIZED;
@@ -249,6 +254,7 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStack_AllocateMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
+            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
@@ -261,6 +267,7 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStack_AllocateMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
+            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
@@ -274,6 +281,8 @@ begin
           begin
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             PEventID( @SimpleMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
+            OPStack_SetAsCAN_MTI(SimpleMessage);
+            OutgoingMessage(SimpleMessage);
             Node^.iStateMachine := STATE_NODE_OFFLINE;
           end
       end;

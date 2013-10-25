@@ -65,7 +65,8 @@ function OPStack_AllocateMessage(var AMessage: PSimpleMessage; MTI: DWord; Next:
 function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-procedure OPStack_DeAllocateMessage(var AMessage: PSimpleMessage);
+procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
+procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
 
 
 
@@ -318,7 +319,7 @@ begin
   end;
 end;
 
-procedure OPStack_DeAllocateMessage(var AMessage: PSimpleMessage);
+procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
 begin
   case (AMessage^.MessageType and $7F) of
     MT_CAN       : DeAllocateCANBuffer(PCANBuffer( AMessage^.Buffer));
@@ -328,11 +329,16 @@ begin
   AMessage^.MessageType := MT_UNALLOCATED;
 end;
 
+procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
+begin
+  AMessage^.MTI := AMessage^.MTI and not $10000000;
+end;
+
 
 procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
 begin
   AMessage^.MessageType := AMessage^.MessageType or MessageType;
-  AMessage^.MTI := MTI;
+  AMessage^.MTI := MTI or $10000000;
   AMessage^.Next := Next;
   AMessage^.Dest.AliasID := DestAlias;
   AMessage^.Dest.ID := DestNodeID;
