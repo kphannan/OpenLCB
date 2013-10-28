@@ -98,8 +98,6 @@ const
   MT_STREAM          = 8;
   MT_ALLOCATED       = $80;
 
-type
-  PMessage = ^Byte;
 
 // *****************************************************************************
 // Node
@@ -114,11 +112,11 @@ const                                                                           
   NS_RELEASING            = $10;                                                // Node is tagged to send and AMD and be removed from the bus (while this is set what happens??)
 
   // MsgFlags in order of precidence (= 0 highest precidence)
-  MF_DUPLICATE_NODE_ID        = $01;                                            // MsgFlag, a Duplicate Node ID was detected, critical fault
-  MF_DUPLICATE_ALIAS          = $02;                                            // MsgFlag, a Duplicate Alias was Detected, critical fault
-  MF_DUPLICATE_ALIAS_RID      = $04;                                            // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
-  MF_ALIAS_MAP_ENQUIRY        = $08;                                            // MsgFlag, an AMD message need to be responded to
-  MF_VERIFY_NODE_ID           = $10;                                            // MsgFlag, a Verify Node ID message needs to be responded to
+  MF_DUPLICATE_NODE_ID        = $0001;                                          // MsgFlag, a Duplicate Node ID was detected, critical fault
+  MF_DUPLICATE_ALIAS          = $0002;                                          // MsgFlag, a Duplicate Alias was Detected, critical fault
+  MF_DUPLICATE_ALIAS_RID      = $0004;                                          // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
+  MF_ALIAS_MAP_ENQUIRY        = $0008;                                          // MsgFlag, an AMD message need to be responded to
+  MF_VERIFY_NODE_ID           = $0010;                                          // MsgFlag, a Verify Node ID message needs to be responded to
 
 type
   // Each Byte contains the state of up to 4 Events, as each event can have 3 state (2 bits)
@@ -145,6 +143,62 @@ type
     PCER      : TNodePCERArray;
   end;
 
+const
+  ABS_ALLOCATED   = $01;                                                        // Array Buffer State Flag = Allocated Buffer
+  ABS_PROCESSING  = $02;                                                        // Array Buffer State Flag = The buffer is being used to transmit/receive and is not complete so don't use the data yet
+
+type
+  TBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
+    DataArray: TDataArray;
+  end;
+  PBUffer = ^TBuffer;
+
+  TCANBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
+    DataArray: TCANDataArray;
+  end;
+  PCANBUffer = ^TCANBuffer;
+
+  TDatagramBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataArray: TDatagramDataArray;
+  end;
+  PDatagramBuffer = ^TDatagramBuffer;
+
+  TStreamBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataArray: TStreamDataArray;
+  end;
+  PStreamBuffer = ^TStreamBuffer;
+
+type
+  {$IFDEF FPC}
+  PSimpleMessage = ^TSimpleMessage;
+  {$ENDIF}
+  TSimpleMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
+    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
+    Source: TNodeInfo;
+    Dest: TNodeInfo;
+    {$IFDEF FPC}
+    Next: PSimpleMessage;
+    {$ELSE}
+    Next: ^TSimpleMessage;
+    {$ENDIF}
+    MTI: DWord;
+    Buffer: PBuffer;
+  end;
+
 type
   TNMRAnetNode = record
     iIndex: Byte;                                                               // Index in the main array
@@ -152,10 +206,11 @@ type
     Events: TNodeEvents;
     Info: TNodeInfo;                                                            // Information about a Node
     Login: TNMRAnetNodeLoginInfo;                                               // Login Information
-    Flags: Byte;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
-    MsgFlagsUserDefined: Byte;                                                  // Message Flags for user apps to define AND handle in App Callbacks
+    Flags: Word;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
- //   BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of dataless Messages Replies to service
+    Messages: PSimpleMessage;                                                   // Linked List of Message to process for the node
+
+  //   BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of dataless Messages Replies to service
  //   DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service
  //   ConfigMemBuffers: PConfigMemBuffer;                                         // Head of a possible linked list of Configuration Memory Accesses to service
  //   DataBuffers: PDataBuffer;                                                   // Head of a possible linked list of Message Replies that need sent Data Bytes to be serviced

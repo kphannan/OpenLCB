@@ -9,71 +9,6 @@ uses
   opstackdefines,
   template_buffers;
 
-const
-  ABS_ALLOCATED = $01;                                                          // Array Buffer State Flag = Allocated Buffer
-
-type
-  TBuffer = record
-    State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
-    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
-    DataArray: TDataArray;
-  end;
-  PBUffer = ^TBuffer;
-
-  TCANBuffer = record
-    State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
-    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
-    DataArray: TCANDataArray;
-  end;
-  PCANBUffer = ^TCANBuffer;
-
-  TDatagramBuffer = record
-    State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
-    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
-    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
-    DataArray: TDatagramDataArray;
-  end;
-  PDatagramBuffer = ^TDatagramBuffer;
-
-  TStreamBuffer = record
-    State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
-    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
-    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
-    DataArray: TStreamDataArray;
-  end;
-  PStreamBuffer = ^TStreamBuffer;
-
-type
-  TSimpleMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
-    Source: TNodeInfo;
-    Dest: TNodeInfo;
-    Next: PMessage;
-    MTI: DWord;
-    Buffer: PBuffer;
-  end;
-  PSimpleMessage = ^TSimpleMessage;
-
-
-procedure OPStack_Initialize;
-
-function OPStack_AllocateMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
-procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
-
-
-
-procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
-
-implementation
-
 type
   TCANBufferPool = record
     Pool: array[0..USER_MAX_CAN_ARRAY_BUFFERS-1] of TCANBuffer;
@@ -98,11 +33,25 @@ type
     Count: Word;
   end;
 
+
+procedure OPStack_Initialize;
+
+function OPStack_AllocateMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
+procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
+
+procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
+
 var
   CANBufferPool: TCANBufferPool;
   DatagramBufferPool: TDatagramBufferPool;
   StreamBufferPool: TStreamBufferPool;
   SimpleMessagePool: TSimpleMessagePool;
+
+implementation
 
 procedure OPStack_Initialize;
 var
@@ -156,6 +105,8 @@ begin
       begin
         Buffer := @CANBufferPool.Pool[i];
         CANBufferPool.Pool[i].State := CANBufferPool.Pool[i].State or ABS_ALLOCATED;
+        Buffer^.DataBufferSize := 0;
+        Buffer^.iStateMachine := 0;
         Inc(CANBufferPool.Count);
         Result := True;
         Exit;
@@ -235,6 +186,7 @@ begin
     begin
       SimpleMessage := @SimpleMessagePool.Pool[i];
       SimpleMessage^.MessageType := SimpleMessage^.MessageType or MT_ALLOCATED;
+      Inc(SimpleMessagePool.Count);
       Result := True;
       Break
     end;
@@ -242,7 +194,7 @@ begin
 end;
 
 function OPStack_AllocateMessage(var AMessage: PSimpleMessage; MTI: DWord;
-  Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 begin
   Result := False;
@@ -254,7 +206,7 @@ begin
 end;
 
 function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord;
-  Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
   CANBuffer: PCANBuffer;
@@ -276,7 +228,7 @@ begin
 end;
 
 function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage;
-  MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
   DatagramBuffer: PDatagramBuffer;
@@ -298,7 +250,7 @@ begin
 end;
 
 function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage;
-  MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
   StreamBuffer: PStreamBuffer;
@@ -327,6 +279,7 @@ begin
     MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( AMessage^.Buffer));
   end;
   AMessage^.MessageType := MT_UNALLOCATED;
+  Dec(SimpleMessagePool.Count)
 end;
 
 procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
@@ -335,7 +288,7 @@ begin
 end;
 
 
-procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
+procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
 begin
   AMessage^.MessageType := AMessage^.MessageType or MessageType;
   AMessage^.MTI := MTI or $10000000;

@@ -1,11 +1,11 @@
 object Form1: TForm1
-  Left = 717
+  Left = 481
   Height = 375
   Top = 399
-  Width = 552
+  Width = 788
   Caption = 'Form1'
   ClientHeight = 375
-  ClientWidth = 552
+  ClientWidth = 788
   OnClose = FormClose
   OnCreate = FormCreate
   OnShow = FormShow
@@ -14,7 +14,7 @@ object Form1: TForm1
     Left = 0
     Height = 15
     Top = 360
-    Width = 552
+    Width = 788
     Panels = <    
       item
         Text = 'Not Connected'
@@ -22,7 +22,23 @@ object Form1: TForm1
       end    
       item
         Text = 'Allocated Nodes:'
+        Width = 130
+      end    
+      item
+        Text = 'Message Buffers:'
         Width = 120
+      end    
+      item
+        Text = 'CAN Buffers'
+        Width = 130
+      end    
+      item
+        Text = 'Datagram Buffers'
+        Width = 130
+      end    
+      item
+        Text = 'Stream Buffers'
+        Width = 130
       end>
     SimplePanel = False
   end
@@ -48,7 +64,7 @@ object Form1: TForm1
     Left = 0
     Height = 176
     Top = 184
-    Width = 552
+    Width = 788
     Align = alBottom
     Anchors = [akTop, akLeft, akRight, akBottom]
     TabOrder = 3

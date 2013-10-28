@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="14">
+    <Units Count="15">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -109,6 +109,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="gridconnect"/>
       </Unit13>
+      <Unit14>
+        <Filename Value="..\AppLayerTemplates\template_callbacks.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_callbacks"/>
+      </Unit14>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

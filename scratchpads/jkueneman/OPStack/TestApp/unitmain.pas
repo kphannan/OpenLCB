@@ -12,6 +12,7 @@ uses
   {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
+  opstackbuffers,
   opstacktypes,
   template_node,
   opstackdefines;
@@ -130,6 +131,10 @@ begin
   else
     Statusbar.Panels[0].Text := 'Not Connected';
   ButtonStartStack.Enabled := Connected;
+  Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(SimpleMessagePool.Count);
+  Statusbar.Panels[3].Text := 'CAN Buffers: ' + IntToStr(CANBufferPool.Count);
+  Statusbar.Panels[4].Text := 'Datagram Buffers: ' + IntToStr(DatagramBufferPool.Count);
+  Statusbar.Panels[5].Text := 'Steam Buffers: ' + IntToStr(StreamBufferPool.Count);
 end;
 
 procedure TForm1.Button1Click(Sender: TObject);
@@ -139,6 +144,7 @@ begin
   StringList := TStringList.Create;
   StringList.Add(':X19490F37N;');
   Listener.Send(StringList);
+  UpdateUI
 end;
 
 procedure TForm1.ButtonAllocateNodeClick(Sender: TObject);

@@ -62,6 +62,10 @@ procedure OPStackNode_ClearPCER_Flags(Node: PNMRAnetNode);
 function OPStackNode_NextPCER_Flag(Node: PNMRAnetNode): Integer;
 function OPStackNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
 
+procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+function OPStackNode_MessageBuffer(Node: PNMRAnetNode): PSimpleMessage;
+
 var
   NodePool: TNodePool;
 
@@ -598,8 +602,82 @@ begin
       Break;
     end
   end
-
 end;
 
+// *****************************************************************************
+//  procedure OPStackNode_MessageLink;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+var
+  Temp: PSimpleMessage;
+begin
+  if Node^.Messages = nil then
+    Node^.Messages := AMessage
+  else begin                                  // Tack it to the end of the chain
+    Temp := Node^.Messages;
+    while Temp^.Next <> nil do
+      Temp := Temp^.Next;
+    Temp^.Next := AMessage
+  end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_MessageUnLink;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+var
+  Temp, Parent: PSimpleMessage;
+begin
+  if Node^.Messages <> nil then
+  begin
+    if Node^.Messages = AMessage then           // Root Buffer match case is easy
+      Node^.Messages := Node^.Messages^.Next
+    else begin
+      Parent := Node^.Messages;                // Already know it is not the root buffer so setup for the first level down
+      Temp := Node^.Messages^.Next;
+      while (Temp <> nil) and (Temp <> AMessage) do
+      begin
+        Parent := Temp;
+        Temp := Temp^.Next
+      end;
+      if Temp <> nil then
+        Parent^.Next := Temp^.Next
+    end
+  end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_MessageBuffer;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_MessageBuffer(Node: PNMRAnetNode): PSimpleMessage;
+var
+  Done: Boolean;
+begin
+  Result := Node^.Messages;
+  if Result <> nil then
+  begin
+    Done := False;
+    while not Done and (Result <> nil) do
+    begin
+      if Result^.Buffer <> nil then                                             // Has a buffer so we need to make sure the buffer is not processing
+      begin
+        if Result^.Buffer^.State and ABS_PROCESSING <> 0 then
+          Result := Result^.Next                                               // Processing, try the next one
+        else
+          Done := True;                                                         // Not processing so use it
+      end else
+        Done := True;                                                           // Is as simple message no testing necessary
+    end
+  end
+end;
 
 end.
