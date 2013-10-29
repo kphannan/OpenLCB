@@ -126,6 +126,7 @@ var
 procedure Hardware_Initialize;
 begin
   Hardware.InterruptDisableCount := 0;
+  GridConnect_Initialize;                                                       // This is here because it only is needed if we are using a GridConnect interface
 end;
 
 procedure Hardware_DisableInterrupts;
@@ -163,7 +164,6 @@ begin
         begin
           MessageToGridConnect(AMessage, GridConnectBuffer);
           {$IFDEF FPC}
-      //    ShowMessage(GridConnectBuffer);
           StringList := TStringList.Create;
           StringList.Add(GridConnectBuffer);
           ListenerThread.Send(StringList);
@@ -321,7 +321,19 @@ begin
 end;
 
 procedure TOPStackTestConnectionInput.Synchronizer;
+var
+  GridConnectPtr: PGridConnectString;
+  i: Integer;
 begin
+  for i := 1 to Length(ReceiveStr) do
+  begin
+    GridConnectPtr := GridConnectDecodeMachine(ReceiveStr[i]);
+    if GridConnectPtr <> nil then
+    begin
+
+    end
+  end;
+
   if Assigned(Callback) then
     Callback(ReceiveStr)
 end;

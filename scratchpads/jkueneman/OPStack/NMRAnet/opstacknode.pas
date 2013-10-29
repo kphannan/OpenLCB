@@ -636,10 +636,10 @@ var
 begin
   if Node^.Messages <> nil then
   begin
-    if Node^.Messages = AMessage then           // Root Buffer match case is easy
+    if Node^.Messages = AMessage then                                           // Root Buffer match case is easy
       Node^.Messages := Node^.Messages^.Next
     else begin
-      Parent := Node^.Messages;                // Already know it is not the root buffer so setup for the first level down
+      Parent := Node^.Messages;                                                 // Already know it is not the root buffer so setup for the first level down
       Temp := Node^.Messages^.Next;
       while (Temp <> nil) and (Temp <> AMessage) do
       begin
@@ -671,7 +671,7 @@ begin
       if Result^.Buffer <> nil then                                             // Has a buffer so we need to make sure the buffer is not processing
       begin
         if Result^.Buffer^.State and ABS_PROCESSING <> 0 then
-          Result := Result^.Next                                               // Processing, try the next one
+          Result := Result^.Next                                                // Processing, try the next one
         else
           Done := True;                                                         // Not processing so use it
       end else
