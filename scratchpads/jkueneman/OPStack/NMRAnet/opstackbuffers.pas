@@ -5,6 +5,9 @@ interface
 {$ENDIF}
 
 uses
+  {$IFDEF FPC}
+  Classes, SysUtils,
+  {$ENDIF}
   opstacktypes,
   opstackdefines,
   template_buffers;

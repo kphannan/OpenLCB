@@ -26,7 +26,7 @@ procedure OPStackCore_Process;                                                  
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 
 // Callback from the Hardware when a message is received
-procedure IncomingMessageCallback(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+procedure IncomingMessageCallback(AMessage: PSimpleMessage);
 
 var
   OPStack: TOPStack;
@@ -497,7 +497,7 @@ begin
         if OPStack_AllocateMessage(SimpleMessage, MTI_EVENTS_IDENTIFY, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
         begin
           Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
-          IncomingMessageCallback(Node, SimpleMessage);
+          IncomingMessageCallback(SimpleMessage);
           Hardware_EnableInterrupts;
           Node^.iStateMachine := STATE_NODE_PERMITTED;
         end
@@ -589,7 +589,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure IncomingMessageCallback(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+procedure IncomingMessageCallback(AMessage: PSimpleMessage);
 begin
   case AMessage^.MessageType of
       MT_SIMPLE :
@@ -609,6 +609,7 @@ begin
 
           end;
     end;
+  OPStack_DeAllocateMessage(AMessage);
 end;
 
 // *****************************************************************************

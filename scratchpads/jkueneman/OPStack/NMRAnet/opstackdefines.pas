@@ -99,6 +99,20 @@ const
   MT_ALLOCATED       = $80;
 
 
+const
+  // :X19170640N0501010107015555;#0  Example.....
+  // ^         ^                ^
+  // 0         10               27
+  MAX_GRID_CONNECT_LEN = 28;
+  GRID_CONNECT_HEADER_OFFSET_HI = 2;
+  GRID_CONNECT_HEADER_OFFSET_LO = 4;
+  GRID_CONNECT_DATA_OFFSET = 11;
+
+type
+  TGridConnectString = array[0..MAX_GRID_CONNECT_LEN-1] of char;
+  PGridConnectString = ^TGridConnectString;
+
+
 // *****************************************************************************
 // Node
 // *****************************************************************************

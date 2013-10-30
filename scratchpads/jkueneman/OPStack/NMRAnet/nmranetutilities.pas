@@ -91,6 +91,12 @@ begin
   DataArray[5] := NodeID[0];
 end;
 
+// *****************************************************************************
+//  procedure NMRAnetUtilities_LoadCANDataWithEventID
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
 procedure NMRAnetUtilities_LoadCANDataWithEventID(var EventID: TEventID; var DataArray: TCANDataArray);
 begin
   DataArray[0] := EventID[0];

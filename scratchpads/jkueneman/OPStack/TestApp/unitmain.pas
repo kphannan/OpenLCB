@@ -107,6 +107,8 @@ procedure TForm1.ListenerCallback(ReceiveStr: ansistring);
 begin
   MemoReceive.Lines.BeginUpdate;
   MemoReceive.Text := MemoReceive.Text + ReceiveStr;
+  MemoReceive.SelStart := Length(MemoReceive.Text) - 1;
+  MemoReceive.SelLength := 1;
   MemoReceive.Lines.EndUpdate;
 end;
 

@@ -110,10 +110,17 @@ procedure Hardware_EnableInterrupts;
 procedure OutgoingMessage(AMessage: PSimpleMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 function IsOutgoingBufferAvailable: Boolean;
 
+{$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure IncomingMessageCallback(AMessage: PSimpleMessage); external;
+{$ENDIF}
 
 implementation
+
+{$IFDEF FPC}
+uses
+  opstackcore;
+{$ENDIF}
 
 type
   THardware = record
@@ -323,6 +330,7 @@ end;
 procedure TOPStackTestConnectionInput.Synchronizer;
 var
   GridConnectPtr: PGridConnectString;
+  Str: string;
   i: Integer;
 begin
   for i := 1 to Length(ReceiveStr) do
@@ -330,12 +338,13 @@ begin
     GridConnectPtr := GridConnectDecodeMachine(ReceiveStr[i]);
     if GridConnectPtr <> nil then
     begin
-
+      IncomingMessageCallback(GridConnectToMessageBuffer(GridConnectPtr));
+      Str := GridConnectPtr^;
+      SetLength(Str, strlen(GridConnectPtr^));
+      if Assigned(Callback) then
+        Callback('Received: '+Str+LF)
     end
   end;
-
-  if Assigned(Callback) then
-    Callback(ReceiveStr)
 end;
 
 procedure TOPStackTestConnectionInput.RunningSynchronizer;
