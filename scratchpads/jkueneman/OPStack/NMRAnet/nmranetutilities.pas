@@ -17,6 +17,7 @@ function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
 procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TCANDataArray);
 procedure NMRAnetUtilities_LoadCANDataWithEventID(var EventID: TEventID; var DataArray: TCANDataArray);
+procedure NMRAnetUtilities_CANDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
 
 
 implementation
@@ -107,6 +108,22 @@ begin
   DataArray[5] := EventID[5];
   DataArray[6] := EventID[6];
   DataArray[7] := EventID[7];
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_CANBufferBytesToNodeID
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+procedure NMRAnetUtilities_CANDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
+begin
+  NodeID[1] := DataArray^[iStartByte+2];
+  NodeID[1] := NodeID[1] or DataArray^[iStartByte+1] shl 8;
+  NodeID[1] := NodeID[1] or DataArray^[iStartByte] shl 16;
+  NodeID[0] := DataArray^[iStartByte+5];
+  NodeID[0] := NodeID[0] or DataArray^[iStartByte+4] shl 8;
+  NodeID[0] := NodeID[0] or DataArray^[iStartByte+3] shl 16;
 end;
 
 end.

@@ -304,15 +304,14 @@ begin
   {$ELSE}
   MTI := HexToLongWord(ConvertStr);
   {$ENDIF}
-  if MTI and MTI_ADDRESSED_MASK <> 0 then
-    SourceAlias := MTI and MASK_SOURCE_ALIAS;
 
+  SourceAlias := MTI and MASK_SOURCE_ALIAS;
   if GridConnectStr^[GRID_CONNECT_DATA_OFFSET] <> ';' then
   begin
     if OPStack_AllocateCANMessage(Result, MTI, nil, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID) then
     begin
-      Result^.Buffer^.DataBufferSize := 0;
       Result^.MTI := MTI and MTI_MASK;
+      Result^.Buffer^.DataBufferSize := 0;
       i := 0;
       while GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i] <> ';' do
       begin
@@ -327,9 +326,19 @@ begin
         Inc(Result^.Buffer^.DataBufferSize);
         i := i + 2;
       end;
+
+      if MTI and MTI_ADDRESSED_MASK <> 0 then
+      begin
+        if MTI and MTI_FRAME_TYPE_GENERAL = MTI_FRAME_TYPE_GENERAL then
+          Result^.Dest.AliasID := ((Result^.Buffer^.DataArray[0] shl 8) and $0F) or (Result^.Buffer^.DataArray[1])
+        else
+          Result^.Dest.AliasID := (MTI and $00FFF000) shr 24;
+      end
     end
   end else
+  begin
     OPStack_AllocateMessage(Result, MTI, nil, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID);
+  end
 end;
 
 // *****************************************************************************

@@ -19,6 +19,10 @@ uses
 
 {$I NodeID.inc}
 
+const
+  FIND_BY_SOURCE = 0;
+  FIND_BY_DEST = 1;
+
 type
   TNodePool = record
     Pool: array[0..USER_MAX_NODE_COUNT-1] of TNMRAnetNode;                      // Node [0] is ALWAYS the physical node
@@ -65,6 +69,8 @@ function OPStackNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
 procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
 procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
 function OPStackNode_MessageBuffer(Node: PNMRAnetNode): PSimpleMessage;
+
+function OPStackNode_Find(AMessage: PSimpleMessage; FindBy: Byte): PNMRAnetNode;
 
 var
   NodePool: TNodePool;
@@ -678,6 +684,53 @@ begin
         Done := True;                                                           // Is as simple message no testing necessary
     end
   end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_Find;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_Find(AMessage: PSimpleMessage; FindBy: Byte): PNMRAnetNode;
+var
+  i: Integer;
+  NodeID: TNodeID;
+  AliasID: Word;
+begin
+  Result := nil;
+  if FIndBy = FIND_BY_SOURCE then
+  begin
+    AliasID := AMessage^.Source.AliasID;
+    NodeID := AMessage^.Source.ID;
+  end else
+  begin
+    AliasID := AMessage^.Dest.AliasID;
+    NodeID := AMessage^.Dest.ID;
+  end;
+
+  if AliasID <> 0 then
+  begin
+    for i := 0 to NodePool.AllocatedCount - 1 do
+    begin
+      if NodePool.AllocatedList[i]^.Info.AliasID = AliasID then
+      begin
+        Result := NodePool.AllocatedList[i];
+        Exit
+      end;
+    end;
+  end else
+  begin
+    for i := 0 to NodePool.AllocatedCount - 1 do
+    begin
+      if NodePool.AllocatedList[i]^.Info.ID[0] = NodeID[0] then
+        if NodePool.AllocatedList[i]^.Info.ID[1] = NodeID[1] then
+        begin
+           Result := NodePool.AllocatedList[i];
+          Exit
+        end;
+    end;
+  end;
 end;
 
 end.

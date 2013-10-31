@@ -49,6 +49,7 @@ type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
 
   TDataArray = array[0..0] of Byte;
+  PDataArray = ^TDataArray;
   TCANDataArray = array[0..MAX_CAN_BYTES-1] of Byte;
   PCANDataArray = ^TCANDataArray;
   TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES-1] of Byte;

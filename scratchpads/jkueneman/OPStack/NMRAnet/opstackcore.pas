@@ -176,7 +176,7 @@ begin
          if OPStack_AllocateCANMessage(SimpleMessage, MTI_VERIFIED_NODE_ID_NUMBER, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
          begin
            NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
-           Node^.Flags := Node^.Flags and not MF_ALIAS_MAP_ENQUIRY;             // Clear the Flag
+           Node^.Flags := Node^.Flags and not MF_VERIFY_NODE_ID;                // Clear the Flag
            SimpleMessage^.Buffer^.DataBufferSize := 6;
            OutgoingMessage(SimpleMessage);
            Result := True;
@@ -494,12 +494,12 @@ begin
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
-        if OPStack_AllocateMessage(SimpleMessage, MTI_EVENTS_IDENTIFY, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+        if OPStack_AllocateMessage(SimpleMessage, MTI_EVENTS_IDENTIFY, nil, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
         begin
+          Node^.iStateMachine := STATE_NODE_PERMITTED;
           Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
           IncomingMessageCallback(SimpleMessage);
           Hardware_EnableInterrupts;
-          Node^.iStateMachine := STATE_NODE_PERMITTED;
         end
       end;
     STATE_NODE_PERMITTED :
@@ -590,26 +590,87 @@ end;
 //     Description:
 // *****************************************************************************
 procedure IncomingMessageCallback(AMessage: PSimpleMessage);
+var
+  Node: PNMRAnetNode;
+  ID: DWord;
+  ReleaseMessage: Boolean;
 begin
-  case AMessage^.MessageType of
-      MT_SIMPLE :
-          begin
+  ReleaseMessage := True;
+  // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
+  Node := OPStackNode_Find(AMessage, FIND_BY_SOURCE);
+  if Node <> nil then
+  begin
+    ID := AMessage^.MTI and MTI_CID_MASK;
+    if (ID = MTI_CID0) or (ID = MTI_CID1) or (ID = MTI_CID2) or (ID = MTI_CID3) then
+      OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS_RID)                         // A "good" duplicate Alias
+    else
+      OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS);                             // Bad
+    Exit;
+  end else
+  begin
+    ID := AMessage^.MTI and MTI_MASK;
+    case (AMessage^.MessageType) and $7F of
+        MT_SIMPLE :
+            begin
+              case ID of
+                MTI_AME  :   // Alias Map Enquiry.....
+                    begin
+                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);
+                      if Node <> nil then
+                        OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+                      Exit
+                    end;
+                MTI_VERIFY_NODE_ID_NUMBER   :
+                    begin
+                      OPStackNode_SetFlags(MF_VERIFY_NODE_ID);                  // THIS IS NOT CLEAR IN THE SPEC
+                      Exit
+                    end;
+              end
+            end;
+        MT_CAN :
+            begin
+              case ID of
+                MTI_AME :
+                    begin                                                 // Alias Map Enquiry.....
+                      NMRAnetUtilities_CANDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
+                      if Node <> nil then
+                      begin
+                        if OPStackNode_TestState(Node, NS_PERMITTED) then   // Only reply if node is in Permitted state
+                          OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+                      end;
+                      Exit;
+                    end;
+                MTI_AMD :
+                    begin                                                        // Another node has sent an Alias Map Definition....
+                      NMRAnetUtilities_CANDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
+                      if Node <> nil then
+                        OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);          // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
+                      Exit;
+                    end;
+                MTI_VERIFY_NODE_ID_NUMBER   :
+                    begin
+                      NMRAnetUtilities_CANDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
+                      if Node <> nil then
+                        OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);
+                      Exit;
+                    end;
+              end;
+            end;
+        MT_DATAGRAM :
+            begin
 
-          end;
-      MT_CAN :
-          begin
+            end;
+        MT_STREAM :
+            begin
 
-          end;
-      MT_DATAGRAM :
-          begin
-
-          end;
-      MT_STREAM :
-          begin
-
-          end;
-    end;
-  OPStack_DeAllocateMessage(AMessage);
+            end
+      end;
+  end;
+  if ReleaseMessage then
+    OPStack_DeAllocateMessage(AMessage); ;
 end;
 
 // *****************************************************************************
