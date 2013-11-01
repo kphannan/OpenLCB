@@ -11,6 +11,7 @@ uses
   Classes, SysUtils, blcksock, synsock, Forms, Dialogs,
   {$ENDIF}
   gridconnect,
+  nmranetdefines,
   opstackbuffers,
   opstackdefines;
 
@@ -162,17 +163,42 @@ end;
 
 procedure OutgoingMessage(AMessage: PSimpleMessage);
 var
-  GridConnectBuffer: TGridConnectString;
+  GridConnectStr: TGridConnectString;
+  GridConnectBuffer: TGridConnectBuffer;
   StringList: TStringList;
+  i: Integer;
 begin
-  case AMessage^.MessageType and $7F of
-    MT_SIMPLE,
-    MT_CAN:
+  case AMessage^.MessageType and MESSAGE_TYPE_MASK of
+    MT_SIMPLE:
         begin
-          MessageToGridConnect(AMessage, GridConnectBuffer);
+          GridConnectBuffer.PayloadCount := 0;
+          if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+          begin
+            GridConnectBuffer.Payload[0] := Hi( AMessage^.Dest.AliasID);
+            GridConnectBuffer.Payload[1] := Lo( AMessage^.Dest.AliasID);
+            GridConnectBuffer.PayloadCount := 2;
+          end;
+          for i := 0 to AMessage^.Buffer^.DataBufferSize - 1 do
+          begin
+            GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := AMessage^.Buffer^.DataArray[i];
+            Inc(GridConnectBuffer.PayloadCount);
+          end;
+          if AMessage^.MessageType and MT_CAN_TYPE = 0 then
+            GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000
+          else begin
+            case AMessage^.MTI of
+              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF);
+              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF);
+              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shr 12) and $00000FFF);
+              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00000FFF);
+            else
+              GridConnectBuffer.MTI := (AMessage^.MTI shl 12);
+            end;
+          end;
+          GridConnectBufferToGridConnect(GridConnectBuffer, GridConnectStr);
           {$IFDEF FPC}
           StringList := TStringList.Create;
-          StringList.Add(GridConnectBuffer);
+          StringList.Add(GridConnectStr);
           ListenerThread.Send(StringList);
           {$ENDIF}
         end;
@@ -330,6 +356,8 @@ end;
 procedure TOPStackTestConnectionInput.Synchronizer;
 var
   GridConnectPtr: PGridConnectString;
+  GridConnectBuffer: TGridConnectBuffer;
+  SimpleMessage: TSimpleMessage;
   Str: string;
   i: Integer;
 begin
@@ -338,9 +366,21 @@ begin
     GridConnectPtr := GridConnectDecodeMachine(ReceiveStr[i]);
     if GridConnectPtr <> nil then
     begin
-      IncomingMessageCallback(GridConnectToMessageBuffer(GridConnectPtr));
-      Str := GridConnectPtr^;
+      GridConnectToGridConnectBuffer(GridConnectPtr, GridConnectBuffer);
+      SimpleMessage.MTI := GridConnectBuffer.MTI shr 24;
+      SimpleMessage.Source.AliasID := GridConnectBuffer.MTI and $00000FFF;
+      SimpleMessage.Source.ID := NULL_NODE_ID;
+      if SimpleMessage.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+        SimpleMessage.Dest.AliasID := (GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]
+      else
+        SimpleMessage.Dest.AliasID := 0;
+      SimpleMessage.Dest.ID := NULL_NODE_ID;
+      SimpleMessage.MessageType := MT_SIMPLE and MT_ALLOCATED;
+      SimpleMessage.Next := nil;
+      SimpleMessage.Buffer := @GridConnectBuffer.Payload;
+      IncomingMessageCallback(@SimpleMessage);
       SetLength(Str, strlen(GridConnectPtr^));
+      Str := GridConnectPtr^;
       if Assigned(Callback) then
         Callback('Received: '+Str+LF)
     end

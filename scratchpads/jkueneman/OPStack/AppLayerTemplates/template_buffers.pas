@@ -12,7 +12,7 @@ interface
 // Enter the number of buffers to allocate for CAN data, Datagrams, and Streams.  These
 // buffers are created in RAM so the more you creat the less free RAM you will have
 const
-  USER_MAX_CAN_ARRAY_BUFFERS = 10;
+  USER_MAX_SIMPLE_ARRAY_BUFFERS = 10;
   USER_MAX_DATAGRAM_ARRAY_BUFFERS = 4;
   USER_MAX_STREAM_ARRAY_BUFFERS = 2;
 

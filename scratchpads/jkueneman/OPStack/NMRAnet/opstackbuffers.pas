@@ -12,12 +12,15 @@ uses
   opstackdefines,
   template_buffers;
 
+const
+  MESSAGE_TYPE_MASK = $3F;
+
 type
-  TCANBufferPool = record
-    Pool: array[0..USER_MAX_CAN_ARRAY_BUFFERS-1] of TCANBuffer;
+  TSimpleBufferPool = record
+    Pool: array[0..USER_MAX_SIMPLE_ARRAY_BUFFERS-1] of TSimpleBuffer;
     Count: Word;
   end;
-  PCANBufferPool = ^TCANBufferPool;
+  PSimpleBufferPool = ^TSimpleBufferPool;
 
   TDatagramBufferPool = record
     Pool: array[0..USER_MAX_DATAGRAM_ARRAY_BUFFERS-1] of TDatagramBuffer;
@@ -39,17 +42,16 @@ type
 
 procedure OPStack_Initialize;
 
-function OPStack_AllocateMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllocateSimpleMessage(var AMessage: PSimpleMessage; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllocateSimpleCANMessage(var AMessage: PSimpleMessage; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
-procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
 
-procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
+procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
 
 var
-  CANBufferPool: TCANBufferPool;
+  SimpleBufferPool: TSimpleBufferPool;
   DatagramBufferPool: TDatagramBufferPool;
   StreamBufferPool: TStreamBufferPool;
   SimpleMessagePool: TSimpleMessagePool;
@@ -60,15 +62,15 @@ procedure OPStack_Initialize;
 var
   i, j: Integer;
 begin
-  for j := 0 to USER_MAX_CAN_ARRAY_BUFFERS-1  do
+  for j := 0 to USER_MAX_SIMPLE_ARRAY_BUFFERS-1  do
   begin
-    CANBufferPool.Pool[j].State := 0;
-    CANBufferPool.Pool[j].iStateMachine := 0;
-    CANBufferPool.Pool[j].DataBufferSize := 0;
-    for i := 0 to MAX_CAN_BYTES - 1 do
-      CANBufferPool.Pool[j].DataArray[i] := 0;
+    SimpleBufferPool.Pool[j].State := 0;
+    SimpleBufferPool.Pool[j].iStateMachine := 0;
+    SimpleBufferPool.Pool[j].DataBufferSize := 0;
+    for i := 0 to MAX_SIMPLE_BYTES - 1 do
+      SimpleBufferPool.Pool[j].DataArray[i] := 0;
   end;
-  CANBufferPool.Count := 0;
+  SimpleBufferPool.Count := 0;
 
   for j := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS-1  do
   begin
@@ -95,22 +97,22 @@ begin
   SimpleMessagePool.Count := 0;
 end;
 
-function AllocateCANBuffer(var Buffer: PCANBuffer): Boolean;
+function AllocateSimpleBuffer(var Buffer: PSimpleBuffer): Boolean;
 var
   i: Integer;
 begin
   Result := False;
-  if CANBufferPool.Count < USER_MAX_CAN_ARRAY_BUFFERS then
+  if SimpleBufferPool.Count < USER_MAX_SIMPLE_ARRAY_BUFFERS then
   begin
-    for i := 0 to USER_MAX_CAN_ARRAY_BUFFERS - 1 do
+    for i := 0 to USER_MAX_SIMPLE_ARRAY_BUFFERS - 1 do
     begin
-      if CANBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
+      if SimpleBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
       begin
-        Buffer := @CANBufferPool.Pool[i];
-        CANBufferPool.Pool[i].State := CANBufferPool.Pool[i].State or ABS_ALLOCATED;
+        Buffer := @SimpleBufferPool.Pool[i];
+        SimpleBufferPool.Pool[i].State := SimpleBufferPool.Pool[i].State or ABS_ALLOCATED;
         Buffer^.DataBufferSize := 0;
         Buffer^.iStateMachine := 0;
-        Inc(CANBufferPool.Count);
+        Inc(SimpleBufferPool.Count);
         Result := True;
         Exit;
       end;
@@ -160,10 +162,10 @@ begin
   end;
 end;
 
-procedure DeAllocateCANBuffer(Buffer: PCANBuffer);
+procedure DeAllocateSimpleBuffer(Buffer: PSimpleBuffer);
 begin
   Buffer^.State := Buffer^.State and not ABS_ALLOCATED;
-  Dec(CANBufferPool.Count);
+  Dec(SimpleBufferPool.Count);
 end;
 
 procedure DeAllocateDatagramBuffer(Buffer: PDatagramBuffer);
@@ -196,31 +198,19 @@ begin
   end;
 end;
 
-function OPStack_AllocateMessage(var AMessage: PSimpleMessage; MTI: DWord;
-  Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
-  DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-begin
-  Result := False;
-  if  NextFreeSimpleMessage(AMessage) then
-  begin
-    OPStack_LoadBaseMessageBuffer(AMessage, MT_SIMPLE, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-    Result := True
-  end;
-end;
-
-function OPStack_AllocateCANMessage(var AMessage: PSimpleMessage; MTI: DWord;
+function OPStack_AllocateSimpleMessage(var AMessage: PSimpleMessage; MTI: Word;
   Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
-  CANBuffer: PCANBuffer;
+  SimpleBuffer: PSimpleBuffer;
 begin
   Result := False;
   if NextFreeSimpleMessage(AMessage) then
   begin
-    if AllocateCANBuffer(CANBuffer) then
+    if AllocateSimpleBuffer(SimpleBuffer) then
     begin
-      OPStack_LoadBaseMessageBuffer(AMessage, MT_CAN, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-      AMessage^.Buffer := PBuffer( CANBuffer);
+      OPStack_LoadBaseMessageBuffer(AMessage, MT_SIMPLE, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
+      AMessage^.Buffer := PBuffer( SimpleBuffer);
       Result := True
     end else
     begin
@@ -230,8 +220,17 @@ begin
   end;
 end;
 
+function OPStack_AllocateSimpleCANMessage(var AMessage: PSimpleMessage;
+  MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+begin
+  Result := OPStack_AllocateSimpleMessage(AMessage, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
+  if Result then
+    AMessage^.MessageType := AMessage^.MessageType or MT_CAN_TYPE;
+end;
+
 function OPStack_AllocateDatagramMessage(var AMessage: PSimpleMessage;
-  MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
   DatagramBuffer: PDatagramBuffer;
@@ -253,7 +252,7 @@ begin
 end;
 
 function OPStack_AllcoateStreamMessage(var AMessage: PSimpleMessage;
-  MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
+  MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID;
   DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
   StreamBuffer: PStreamBuffer;
@@ -276,8 +275,8 @@ end;
 
 procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
 begin
-  case (AMessage^.MessageType and $7F) of
-    MT_CAN       : DeAllocateCANBuffer(PCANBuffer( AMessage^.Buffer));
+  case (AMessage^.MessageType and MESSAGE_TYPE_MASK) of
+    MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
     MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( AMessage^.Buffer));
     MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( AMessage^.Buffer));
   end;
@@ -285,16 +284,10 @@ begin
   Dec(SimpleMessagePool.Count)
 end;
 
-procedure OPStack_SetAsCAN_MTI(AMessage: PSimpleMessage);
-begin
-  AMessage^.MTI := AMessage^.MTI and not $10000000;
-end;
-
-
-procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: DWord; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
+procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
 begin
   AMessage^.MessageType := AMessage^.MessageType or MessageType;
-  AMessage^.MTI := MTI or $10000000;
+  AMessage^.MTI := MTI;
   AMessage^.Next := Next;
   AMessage^.Dest.AliasID := DestAlias;
   AMessage^.Dest.ID := DestNodeID;

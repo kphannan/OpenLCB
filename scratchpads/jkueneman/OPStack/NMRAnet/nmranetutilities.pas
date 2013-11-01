@@ -15,9 +15,9 @@ uses
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TCANDataArray);
-procedure NMRAnetUtilities_LoadCANDataWithEventID(var EventID: TEventID; var DataArray: TCANDataArray);
-procedure NMRAnetUtilities_CANDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
+procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
+procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
 
 
 implementation
@@ -77,12 +77,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID
+//  procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID
 //     Parameters:
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadCANDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TCANDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
 begin
   DataArray[0] := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
   DataArray[1] := NodeID[1] shr 8;
@@ -93,12 +93,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NMRAnetUtilities_LoadCANDataWithEventID
+//  procedure NMRAnetUtilities_LoadSimpleDataWithEventID
 //     Parameters:
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadCANDataWithEventID(var EventID: TEventID; var DataArray: TCANDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
 begin
   DataArray[0] := EventID[0];
   DataArray[1] := EventID[1];
@@ -111,12 +111,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NMRAnetUtilities_CANBufferBytesToNodeID
+//  procedure NMRAnetUtilities_SimpleBufferBytesToNodeID
 //     Parameters:
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_CANDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
+procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
 begin
   NodeID[1] := DataArray^[iStartByte+2];
   NodeID[1] := NodeID[1] or DataArray^[iStartByte+1] shl 8;

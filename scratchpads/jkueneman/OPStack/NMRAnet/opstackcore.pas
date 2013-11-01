@@ -80,10 +80,9 @@ begin
            if not OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
              if not OPStackNode_IsAnyPCER_Set(Node) then
                if Node^.Flags = 0 then
-                 if OPStack_AllocateCANMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                 if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
                  begin
-                   OPStack_SetAsCAN_MTI(SimpleMessage);
-                   NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+                   NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
                    SimpleMessage^.Buffer^.DataBufferSize := 6;
                    OutgoingMessage(SimpleMessage); // Tell the network we are leaving
                    DoDeallocate := True;
@@ -150,32 +149,30 @@ begin
          end else
          if Node^.Flags and MF_DUPLICATE_ALIAS_RID <> 0 then                    // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
          begin
-           if OPStack_AllocateMessage(SimpleMessage, MTI_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+           if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
            begin
              Node^.Flags := Node^.Flags and not MF_DUPLICATE_ALIAS_RID;         // Clear the Flag
-             OPStack_SetAsCAN_MTI(SimpleMessage);
              OutgoingMessage(SimpleMessage);
              Result := True;
            end
          end
        end else
-       if Node^.Flags and MF_ALIAS_MAP_ENQUIRY <> 0 then                        // MsgFlag, an AMD message needs to be responded to
+       if Node^.Flags and MF_ALIAS_MAP_ENQUIRY <> 0 then                        // MsgFlag, an AME message needs to be responded to with an AMD
        begin
-         if OPStack_AllocateCANMessage(SimpleMessage, MTI_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+         if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
          begin
-           NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+           NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
            Node^.Flags := Node^.Flags and not MF_ALIAS_MAP_ENQUIRY;             // Clear the Flag
            SimpleMessage^.Buffer^.DataBufferSize := 6;
-           OPStack_SetAsCAN_MTI(SimpleMessage);
            OutgoingMessage(SimpleMessage);
            Result := True;
          end
        end else
        if Node^.Flags and MF_VERIFY_NODE_ID <> 0 then                           // MsgFlag, a Verify Node ID message needs to be responded to
        begin
-         if OPStack_AllocateCANMessage(SimpleMessage, MTI_VERIFIED_NODE_ID_NUMBER, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+         if OPStack_AllocateSimpleMessage(SimpleMessage, MTI_VERIFIED_NODE_ID_NUMBER, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
          begin
-           NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+           NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
            Node^.Flags := Node^.Flags and not MF_VERIFY_NODE_ID;                // Clear the Flag
            SimpleMessage^.Buffer^.DataBufferSize := 6;
            OutgoingMessage(SimpleMessage);
@@ -195,7 +192,7 @@ function NodeRunEventFlagsReply(Node: PNMRAnetNode): Boolean;
 var
   EventIndex: Integer;
   State: Byte;
-  MTI: DWord;
+  MTI: Word;
   SimpleMessage: PSimpleMessage;
   DynamicEvent: TEventID;
 begin
@@ -220,18 +217,18 @@ begin
         begin
           if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
             if AppCallback_DynamicVNodeConsumedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
-              if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadCANDataWithEventID(DynamicEvent, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
                 SimpleMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(SimpleMessage);
                 Result := True;
               end
         end else
         begin
-          if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadCANDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex], PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(SimpleMessage);
             Result := True;
@@ -244,18 +241,18 @@ begin
         begin
           if EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
             if AppCallback_DynamicConsumedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
-              if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadCANDataWithEventID(DynamicEvent, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
                 SimpleMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(SimpleMessage);
                 Result := True;
               end
         end else
         begin
-          if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadCANDataWithEventID(USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(SimpleMessage);
             Result := True;
@@ -282,18 +279,18 @@ begin
         begin
           if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
             if AppCallback_DynamicVNodeProducedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
-              if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadCANDataWithEventID(DynamicEvent, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
                 SimpleMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(SimpleMessage);
                 Result := True;
               end
         end else
         begin
-          if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadCANDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(SimpleMessage);
             Result := True;
@@ -306,18 +303,18 @@ begin
         begin
           if EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
             if AppCallback_DynamicProducedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
-              if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadCANDataWithEventID(DynamicEvent, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^) ;
+                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^) ;
                 SimpleMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(SimpleMessage);
                 Result := True;
               end
         end else
         begin
-          if OPStack_AllocateCANMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadCANDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(SimpleMessage);
             Result := True;
@@ -346,14 +343,14 @@ begin
     if EventIndex > -1 then
     begin
       SimpleMessage := nil;
-      if OPStack_AllocateCANMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+      if OPStack_AllocateSimpleMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
         if Node^.State and NS_VIRTUAL <> 0 then
-          NMRAnetUtilities_LoadCANDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^)
+          NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^)
         else
         {$ENDIF}
-          NMRAnetUtilities_LoadCANDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+          NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
         SimpleMessage^.Buffer^.DataBufferSize := 8;
         OutgoingMessage(SimpleMessage);
         Result := True;
@@ -383,7 +380,7 @@ end;
 procedure NodeRunStateMachine(Node: PNMRAnetNode);
 var
   SimpleMessage: PSimpleMessage;
-  MTI: DWord;
+  CAN_MTI: DWord;
 begin
   SimpleMessage := nil;
   case Node^.iStateMachine of
@@ -408,14 +405,13 @@ begin
         if IsOutgoingBufferAvailable then
         begin
           case Node^.Login.iCID of
-            0 : MTI := MTI_CID0 or DWord((Node^.Info.ID[1] shr 12) and $00000FFF);
-            1 : MTI := MTI_CID1 or DWord( Node^.Info.ID[1] and $00000FFF);
-            2 : MTI := MTI_CID2 or DWord((Node^.Info.ID[0] shr 12) and $00000FFF);
-            3 : MTI := MTI_CID3 or DWord( Node^.Info.ID[0] and $00000FFF);
+            0 : CAN_MTI := MTI_CAN_CID0;
+            1 : CAN_MTI := MTI_CAN_CID1;
+            2 : CAN_MTI := MTI_CAN_CID2;
+            3 : CAN_MTI := MTI_CAN_CID3;
           end;
-          if OPStack_AllocateMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStack_AllocateSimpleCANMessage(SimpleMessage, CAN_MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
           end
@@ -446,9 +442,8 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateMessage(SimpleMessage, MTI_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              OPStack_SetAsCAN_MTI(SimpleMessage);
               OutgoingMessage(SimpleMessage);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
             end
@@ -462,11 +457,10 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateCANMessage(SimpleMessage, MTI_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
               SimpleMessage^.Buffer^.DataBufferSize := 6;
-              OPStack_SetAsCAN_MTI(SimpleMessage);
               OutgoingMessage(SimpleMessage);
               OPStackNode_SetState(Node, NS_PERMITTED);
               Node^.iStateMachine := STATE_NODE_INITIALIZED;
@@ -481,9 +475,9 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateCANMessage(SimpleMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStack_AllocateSimpleMessage(SimpleMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadCANDataWith48BitNodeID(Node^.Info.ID, PCANDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
               SimpleMessage^.Buffer^.DataBufferSize := 6;
               OutgoingMessage(SimpleMessage);
               OPStackNode_SetState(Node, NS_INITIALIZED);
@@ -494,7 +488,7 @@ begin
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
-        if OPStack_AllocateMessage(SimpleMessage, MTI_EVENTS_IDENTIFY, nil, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
+        if OPStack_AllocateSimpleMessage(SimpleMessage, MTI_EVENTS_IDENTIFY, nil, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
         begin
           Node^.iStateMachine := STATE_NODE_PERMITTED;
           Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
@@ -522,9 +516,8 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStack_AllocateMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
-            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
@@ -535,9 +528,8 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStack_AllocateMessage(SimpleMessage, MTI_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStack_AllocateSimpleCANMessage(SimpleMessage, MTI_CAN_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
-            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
@@ -547,11 +539,10 @@ begin
     STATE_NODE_TAKE_OFFLINE :
       begin
         if IsOutgoingBufferAvailable then
-          if OPStack_AllocateCANMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStack_AllocateSimpleMessage(SimpleMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             PEventID( @SimpleMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
-            OPStack_SetAsCAN_MTI(SimpleMessage);
             OutgoingMessage(SimpleMessage);
             Node^.iStateMachine := STATE_NODE_OFFLINE;
           end
@@ -600,50 +591,38 @@ begin
   Node := OPStackNode_Find(AMessage, FIND_BY_SOURCE);
   if Node <> nil then
   begin
-    ID := AMessage^.MTI and MTI_CID_MASK;
-    if (ID = MTI_CID0) or (ID = MTI_CID1) or (ID = MTI_CID2) or (ID = MTI_CID3) then
+    ID := AMessage^.MTI and MTI_CAN_CID_MASK;
+    if (ID = MTI_CAN_CID0) or (ID = MTI_CAN_CID1) or (ID = MTI_CAN_CID2) or (ID = MTI_CAN_CID3) then
       OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS_RID)                         // A "good" duplicate Alias
     else
       OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS);                             // Bad
     Exit;
   end else
   begin
+    // Should double check, if addressed, the message is for us
     ID := AMessage^.MTI and MTI_MASK;
     case (AMessage^.MessageType) and $7F of
         MT_SIMPLE :
             begin
               case ID of
-                MTI_AME  :   // Alias Map Enquiry.....
-                    begin
-                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);
-                      if Node <> nil then
-                        OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
-                      Exit
-                    end;
-                MTI_VERIFY_NODE_ID_NUMBER   :
-                    begin
-                      OPStackNode_SetFlags(MF_VERIFY_NODE_ID);                  // THIS IS NOT CLEAR IN THE SPEC
-                      Exit
-                    end;
-              end
-            end;
-        MT_CAN :
-            begin
-              case ID of
-                MTI_AME :
+                MTI_CAN_AME :
                     begin                                                 // Alias Map Enquiry.....
-                      NMRAnetUtilities_CANDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
-                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
-                      if Node <> nil then
-                      begin
-                        if OPStackNode_TestState(Node, NS_PERMITTED) then   // Only reply if node is in Permitted state
-                          OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+                      if AMessage^.Buffer^.DataBufferSize = 0 then
+                        OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
+                      else begin;
+                        NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                        Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
+                        if Node <> nil then
+                        begin
+                          if OPStackNode_TestState(Node, NS_PERMITTED) then   // Only reply if node is in Permitted state
+                            OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+                        end;
                       end;
                       Exit;
                     end;
-                MTI_AMD :
+                MTI_CAN_AMD :
                     begin                                                        // Another node has sent an Alias Map Definition....
-                      NMRAnetUtilities_CANDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                      NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
                       Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
                       if Node <> nil then
                         OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);          // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
@@ -651,10 +630,14 @@ begin
                     end;
                 MTI_VERIFY_NODE_ID_NUMBER   :
                     begin
-                      NMRAnetUtilities_CANDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
-                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
-                      if Node <> nil then
-                        OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);
+                      if AMessage^.Buffer^.DataBufferSize = 0 then
+                        OPStackNode_SetFlags(MF_VERIFY_NODE_ID)                  // THIS IS NOT CLEAR IN THE SPEC
+                      else begin
+                        NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                        Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
+                        if Node <> nil then
+                          OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);
+                      end;
                       Exit;
                     end;
               end;

@@ -41,7 +41,7 @@ const
 
 // Nodes
 const
-  MAX_CAN_BYTES = 8;
+  MAX_SIMPLE_BYTES = 8;
   MAX_SNIP_BYTES = 64;
   MAX_DATAGRAM_BYTES = 64;
 
@@ -50,16 +50,16 @@ type
 
   TDataArray = array[0..0] of Byte;
   PDataArray = ^TDataArray;
-  TCANDataArray = array[0..MAX_CAN_BYTES-1] of Byte;
-  PCANDataArray = ^TCANDataArray;
+  TSimpleDataArray = array[0..MAX_SIMPLE_BYTES-1] of Byte;
+  PSimpleDataArray = ^TSimpleDataArray;
   TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES-1] of Byte;
   PDatagramDataArray = ^TDatagramDataArray;
   TStreamDataArray = array[0..USER_MAX_STREAM_BYTES-1] of Byte;
   PStreamDataArray = ^TStreamDataArray;
 
-  TCANData = record
+  TSimpleData = record
     Count: Word;
-    Bytes: TCANDataArray;
+    Bytes: TSimpleDataArray;
   end;
 
   TDatagramData = record
@@ -92,11 +92,11 @@ const
 // Message types
 
 const
-  MT_UNALLOCATED     = 0;
-  MT_SIMPLE          = 1;                                                       // Message Type Identifiers
-  MT_CAN             = 2;
-  MT_DATAGRAM        = 4;
-  MT_STREAM          = 8;
+  MT_UNALLOCATED     = $00;
+  MT_SIMPLE          = $01;                                                       // Message Type Identifiers
+  MT_DATAGRAM        = $02;
+  MT_STREAM          = $04;
+  MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
   MT_ALLOCATED       = $80;
 
 
@@ -171,13 +171,13 @@ type
   end;
   PBUffer = ^TBuffer;
 
-  TCANBuffer = record
+  TSimpleBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
     iStateMachine: Byte;                                                        // Local Statemachine
     DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
-    DataArray: TCANDataArray;
+    DataArray: TSimpleDataArray;
   end;
-  PCANBUffer = ^TCANBuffer;
+  PSimpleBUffer = ^TSimpleBuffer;
 
   TDatagramBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
@@ -210,7 +210,7 @@ type
     {$ELSE}
     Next: ^TSimpleMessage;
     {$ENDIF}
-    MTI: DWord;
+    MTI: Word;
     Buffer: PBuffer;
   end;
 

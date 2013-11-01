@@ -12,13 +12,18 @@ uses
   opstackdefines,
   opstackbuffers;
 
+type
+  TGridConnectBuffer = record
+    MTI: DWord;
+    Payload: array[0..7] of byte;
+    PayloadCount: Byte;
+  end;
+
 procedure GridConnect_Initialize;
 
-function MessageToGridConnect(Message: PSimpleMessage; var GridConnectBuffer: TGridConnectString): Integer;
-procedure GridConnectToMessage(var GridConnectBuffer: TGridConnectString; Message: PSimpleMessage);
 function GridConnectDecodeMachine(NextChar: Char): PGridConnectString;
-function GridConnectToMessageBuffer(GridConnectStr: PGridConnectString): PSimpleMessage;
-function MessageBufferToGridConnect(SimpleMessage: PSimpleMessage; var GridConnectStr: TGridConnectString): Integer;
+procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
+function GridConnectBufferToGridConnect(GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
 
 
 implementation
@@ -59,143 +64,6 @@ begin
   GridConnectReceiveState := 0;
 end;
 
-// *****************************************************************************
-//  procedure MessageToGridConnect
-//     Parameters: Message to convert to a GridConnect String
-//                 GridConnectBuffer: array of characters that receives the GridConnect string
-//     Returns:     The number of bytes in the GridConnect string
-//     Description: Converts a message into a Grid
-// *****************************************************************************
-function MessageToGridConnect(Message: PSimpleMessage; var GridConnectBuffer: TGridConnectString): Integer;
-var
-  ConvertString: array[0..7] of char;
-  i: Integer;
-begin
-  {$IFDEF FPC}
-    i := 1;
-    GridConnectBuffer[0] := ':';
-    GridConnectBuffer[1] := 'X';
-    ConvertString := IntToHex(Message^.MTI, 8);
-    GridConnectBuffer[2] := ConvertString[0];
-    GridConnectBuffer[3] := ConvertString[1];
-    GridConnectBuffer[4] := ConvertString[2];
-    GridConnectBuffer[5] := ConvertString[3];
-    GridConnectBuffer[6] := ConvertString[4];
-    GridConnectBuffer[7] := ConvertString[5];
-    GridConnectBuffer[8] := ConvertString[6];
-    GridConnectBuffer[9] := ConvertString[7];
-    GridConnectBuffer[10] := 'N';
-    Result := 11;
-    if Message^.Buffer <> nil then
-    begin
-      if Message^.Buffer^.DataBufferSize > 0 then
-      begin
-        for i := 0 to Message^.Buffer^.DataBufferSize - 1 do
-        begin
-          ConvertString := IntToHex(Message^.Buffer^.DataArray[i], 4);
-          GridConnectBuffer[Result]     := ConvertString[2];
-          GridConnectBuffer[Result + 1] := ConvertString[3];
-          Result := Result + 2;
-        end;
-      end;
-    end;
-    GridConnectBuffer[Result] := ';';
-    Inc(Result);
-    GridConnectBuffer[Result] := #0;
-  {$ELSE}
-    GridConnectBuffer[0] := ':';
-    GridConnectBuffer[1] := 'X';
-    LongWordToHex(Message^.MTI, ConvertString);
-    GridConnectBuffer[2] := ConvertString[0];
-    GridConnectBuffer[3] := ConvertString[1];
-    GridConnectBuffer[4] := ConvertString[2];
-    GridConnectBuffer[5] := ConvertString[3];
-    GridConnectBuffer[6] := ConvertString[4];
-    GridConnectBuffer[7] := ConvertString[5];
-    GridConnectBuffer[8] := ConvertString[6];
-    GridConnectBuffer[9] := ConvertString[7];
-    GridConnectBuffer[10] := 'N';
-    Result := 11;
-    if Message^.Buffer <> nil then
-    begin
-      if Message^.Buffer^.DataBufferSize > 0 then
-      begin
-        for i := 0 to Message^.Buffer^.DataBufferSize - 1 do
-        begin
-          WordToHex(Message^.Buffer^.DataArray[i], ConvertString);
-          GridConnectBuffer[Result]     := ConvertString[2];
-          GridConnectBuffer[Result + 1] := ConvertString[3];
-          Result := Result + 2;
-        end;
-      end;
-    end;
-    GridConnectBuffer[Result] := ';';
-    Inc(Result);
-    GridConnectBuffer[Result] := #0;
-
-  {$ENDIF}
-end;
-
-// *****************************************************************************
-//  procedure GridConnectToMessage
-//     Parameters: Message that contains the information in the GridConnect String
-//                 GridConnectBuffer: array of characters to convert to a Message
-//     Returns:
-//     Description: Converts a GridConnect string to a Message
-// *****************************************************************************
-procedure GridConnectToMessage(var GridConnectBuffer: TGridConnectString; Message: PSimpleMessage);
-const
-  MT_CAN_TRANSPORT = MT_SIMPLE or MT_CAN;
-var
-  ConvertString: string[8];
-  i: Integer;
-begin
-  {$IFDEF FPC}
-  if Message^.MessageType and MT_CAN_TRANSPORT <> 0 then
-  begin
-    Message^.Buffer^.DataBufferSize := 0;
-    for i := 0 to 7 do
-      ConvertString[i] := GridConnectBuffer[GRID_CONNECT_HEADER_OFFSET_HI + i];
-    ConvertString[8] := #0;
-    Message^.MTI := StrToInt('0x'+ConvertString);
-    if GridConnectBuffer[GRID_CONNECT_DATA_OFFSET] <> ';' then
-    begin
-      i := 0;
-      while GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i] <> ';' do
-      begin
-        ConvertString[0] := GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i];
-        ConvertString[1] := GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i + 1];
-        ConvertString[2] := #0;
-        Message^.Buffer^.DataArray[Message^.Buffer^.DataBufferSize] := StrToInt('0x'+ConvertString);
-        Inc(Message^.Buffer^.DataBufferSize);
-        i := i + 2;
-      end;
-    end;
-  end;
- {$ELSE}
-  if Message^.MessageType and MT_CAN_TRANSPORT <> 0 then
-  begin
-    Message^.Buffer^.DataBufferSize := 0;
-    for i := 0 to 7 do
-      ConvertString[i] := GridConnectBuffer[GRID_CONNECT_HEADER_OFFSET_HI + i];
-    ConvertString[8] := #0;
-    Message^.MTI := StrToInt('0x'+ConvertString);
-    if GridConnectBuffer[GRID_CONNECT_DATA_OFFSET] <> ';' then
-    begin
-      i := 0;
-      while GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i] <> ';' do
-      begin
-        ConvertString[0] := GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i];
-        ConvertString[1] := GridConnectBuffer[GRID_CONNECT_DATA_OFFSET + i + 1];
-        ConvertString[2] := #0;
-        Message^.Buffer^.DataBytes[Message^.Buffer^.DataBufferSize] := HexToWord(ConvertString);
-        Inc(Message^.Buffer^.DataBufferSize);
-        i := i + 2;
-      end;
-    end;
-  end;
- {$ENDIF}
-end;
 
 // *****************************************************************************
 //  procedure GridConnectToMessage
@@ -287,57 +155,37 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-function GridConnectToMessageBuffer(GridConnectStr: PGridConnectString): PSimpleMessage;
+procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
 var
   ConvertStr: array[0..8] of char;
   i: Integer;
-  MTI: DWord;
-  SourceAlias, DestAlias: Word;
 begin
-  Result := nil;
   // First convert part of the message to see what we have
   for i := 0 to 7 do
     ConvertStr[i] := GridConnectStr^[GRID_CONNECT_HEADER_OFFSET_HI+i];
   ConvertStr[8] := #0;
   {$IFDEF FPC}
-  MTI := StrToInt('0x'+ConvertStr);
+  GridConnectBuffer.MTI := StrToInt('0x'+ConvertStr);
   {$ELSE}
-  MTI := HexToLongWord(ConvertStr);
+  GridConnectBuffer.MTI := HexToLongWord(ConvertStr);
   {$ENDIF}
-
-  SourceAlias := MTI and MASK_SOURCE_ALIAS;
+  GridConnectBuffer.PayloadCount := 0;
   if GridConnectStr^[GRID_CONNECT_DATA_OFFSET] <> ';' then
   begin
-    if OPStack_AllocateCANMessage(Result, MTI, nil, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID) then
+    i := 0;
+    while GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i] <> ';' do
     begin
-      Result^.MTI := MTI and MTI_MASK;
-      Result^.Buffer^.DataBufferSize := 0;
-      i := 0;
-      while GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i] <> ';' do
-      begin
-        ConvertStr[0] := GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i];
-        ConvertStr[1] := GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i + 1];
-        ConvertStr[2] := #0;
-        {$IFDEF FPC}
-        Result^.Buffer^.DataArray[Result^.Buffer^.DataBufferSize] := StrToInt('0x'+ConvertStr);
-        {$ELSE}
-        Result^.Buffer^.DataArray[Result^.Buffer^.DataBufferSize] := HexToWord(ConvertStr);
-        {$ENDIF}
-        Inc(Result^.Buffer^.DataBufferSize);
-        i := i + 2;
-      end;
-
-      if MTI and MTI_ADDRESSED_MASK <> 0 then
-      begin
-        if MTI and MTI_FRAME_TYPE_GENERAL = MTI_FRAME_TYPE_GENERAL then
-          Result^.Dest.AliasID := ((Result^.Buffer^.DataArray[0] shl 8) and $0F) or (Result^.Buffer^.DataArray[1])
-        else
-          Result^.Dest.AliasID := (MTI and $00FFF000) shr 24;
-      end
-    end
-  end else
-  begin
-    OPStack_AllocateMessage(Result, MTI, nil, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID);
+      ConvertStr[0] := GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i];
+      ConvertStr[1] := GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i + 1];
+      ConvertStr[2] := #0;
+      {$IFDEF FPC}
+      GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := StrToInt('0x'+ConvertStr);
+      {$ELSE}
+      GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := HexToWord(ConvertStr);
+      {$ENDIF}
+      Inc(GridConnectBuffer.PayloadCount);
+      i := i + 2;
+    end;
   end
 end;
 
@@ -347,7 +195,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-function MessageBufferToGridConnect(SimpleMessage: PSimpleMessage; var GridConnectStr: TGridConnectString): Integer;
+function GridConnectBufferToGridConnect(GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
 var
   ConvertString: array[0..8] of char;
   i: Integer;
@@ -355,9 +203,9 @@ begin
   GridConnectStr[0] := ':';
   GridConnectStr[1] := 'X';
   {$IFDEF FPC}
-  ConvertString := IntToHex(SimpleMessage^.MTI, 8);
+  ConvertString := IntToHex(GridConnectBuffer.MTI, 8);
   {$ELSE}
-  LongWordToHex(Buffer^.ID, ConvertString);
+  LongWordToHex(GridConnectBuffer, ConvertString);
   {$ENDIF}
   GridConnectStr[2] := ConvertString[0];
   GridConnectStr[3] := ConvertString[1];
@@ -369,18 +217,18 @@ begin
   GridConnectStr[9] := ConvertString[7];
   GridConnectStr[10] := 'N';
   Result := 11;
-  if SimpleMessage^.Buffer <> nil then
-    if SimpleMessage^.Buffer^.DataBufferSize > 0 then
+
+    if GridConnectBuffer.PayloadCount > 0 then
     begin
-      for i := 0 to SimpleMessage^.Buffer^.DataBufferSize - 1 do
+      for i := 0 to GridConnectBuffer.PayloadCount - 1 do
       begin
         {$IFDEF FPC}
-        ConvertString := IntToHex(SimpleMessage^.Buffer^.DataArray[i], 2);
+        ConvertString := IntToHex(GridConnectBuffer.Payload[i], 2);
         {$ELSE}
-        WordToHex(SimpleMessage^.Buffer^.DataArray[i], ConvertString);
+        WordToHex(GridConnectBuffer.Payload[i], ConvertString);
         {$ENDIF}
-        GridConnectStr[Result]     := ConvertString[2];
-        GridConnectStr[Result + 1] := ConvertString[3];
+        GridConnectStr[Result]     := ConvertString[0];
+        GridConnectStr[Result + 1] := ConvertString[1];
         Result := Result + 2;
       end;
     end;
