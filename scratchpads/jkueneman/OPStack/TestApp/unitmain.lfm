@@ -1,10 +1,10 @@
 object Form1: TForm1
   Left = 481
-  Height = 375
+  Height = 368
   Top = 399
   Width = 788
   Caption = 'Form1'
-  ClientHeight = 375
+  ClientHeight = 368
   ClientWidth = 788
   OnClose = FormClose
   OnCreate = FormCreate
@@ -13,7 +13,7 @@ object Form1: TForm1
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
-    Top = 360
+    Top = 353
     Width = 788
     Panels = <    
       item
@@ -43,7 +43,7 @@ object Form1: TForm1
     SimplePanel = False
   end
   object ButtonAllocateNode: TButton
-    Left = 272
+    Left = 240
     Height = 22
     Top = 8
     Width = 272
@@ -52,7 +52,7 @@ object Form1: TForm1
     TabOrder = 1
   end
   object ButtonDeallocateNode: TButton
-    Left = 272
+    Left = 240
     Height = 22
     Top = 32
     Width = 272
@@ -62,8 +62,8 @@ object Form1: TForm1
   end
   object MemoReceive: TMemo
     Left = 0
-    Height = 176
-    Top = 184
+    Height = 289
+    Top = 64
     Width = 788
     Align = alBottom
     Anchors = [akTop, akLeft, akRight, akBottom]
@@ -82,12 +82,22 @@ object Form1: TForm1
   object ButtonStartStack: TButton
     Left = 16
     Height = 22
-    Top = 40
+    Top = 32
     Width = 216
     Caption = 'Start the OPStack'
     Enabled = False
     OnClick = ButtonStartStackClick
     TabOrder = 5
+  end
+  object CheckBoxAutoConnect: TCheckBox
+    Left = 528
+    Height = 18
+    Top = 32
+    Width = 165
+    Caption = 'Auto-Start On Connect'
+    Checked = True
+    State = cbChecked
+    TabOrder = 6
   end
   object TimerCore: TTimer
     Interval = 100

@@ -11,6 +11,7 @@ interface
 {$I Options.inc}
 
 uses
+  nmranetdefines,
   opstacktypes;
 
 
@@ -92,6 +93,19 @@ const
       ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
     );
   {$ENDIF}
+
+
+const
+  PIV_SUPPORTED_PROTOCOL_COUNT = 7;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
+  PIV_SUPPORTED_PROTOCOLS: array[0..PIV_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (     // Look at the PIV_xxxx constants for more Protocols
+    ($80, $00, $00, $00, $00, $00),                                             // Protocol
+    ($40, $00, $00, $00, $00, $00),                                             // Datagram Protocol
+    ($04, $00, $00, $00, $00, $00),                                             // Producer Consumer Protocol
+    ($10, $00, $00, $00, $00, $00),                                             // Memory Configruation Protocol
+    ($00, $08, $00, $00, $00, $00),                                             // CDI Protocol
+    ($00, $10, $00, $00, $00, $00),                                             // SNIP Protocol
+    ($00, $40, $00, $00, $00, $00)                                              // ACDI Protocol
+    );
 
 implementation
 

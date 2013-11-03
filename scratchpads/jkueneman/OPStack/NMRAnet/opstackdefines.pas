@@ -87,13 +87,14 @@ const
   EVENT_STATE_CLEAR                 = $00;
   EVENT_STATE_VALID                 = $01;
   EVENT_STATE_INVALID               = $02;
-  EVENT_STATE_UNKOWN                = $03;
+  EVENT_STATE_UNKNOWN               = $03;
 
 // Message types
 
 const
+  MT_MASK            = $3F;                                                     // Strips off the CAN and Allocated flags
   MT_UNALLOCATED     = $00;
-  MT_SIMPLE          = $01;                                                       // Message Type Identifiers
+  MT_SIMPLE          = $01;                                                     // Message Type Identifiers
   MT_DATAGRAM        = $02;
   MT_STREAM          = $04;
   MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
@@ -102,9 +103,9 @@ const
 
 const
   // :X19170640N0501010107015555;#0  Example.....
-  // ^         ^                ^
-  // 0         10               27
-  MAX_GRID_CONNECT_LEN = 28;
+  // ^         ^                  ^
+  // 0         10                28
+  MAX_GRID_CONNECT_LEN = 29;
   GRID_CONNECT_HEADER_OFFSET_HI = 2;
   GRID_CONNECT_HEADER_OFFSET_LO = 4;
   GRID_CONNECT_DATA_OFFSET = 11;
@@ -205,6 +206,7 @@ type
     MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
     Source: TNodeInfo;
     Dest: TNodeInfo;
+    DestFlags: Byte;                                                            // The upper 4 bits sent in the Destination (when used for the message)
     {$IFDEF FPC}
     Next: PSimpleMessage;
     {$ELSE}

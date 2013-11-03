@@ -23,7 +23,7 @@ procedure GridConnect_Initialize;
 
 function GridConnectDecodeMachine(NextChar: Char): PGridConnectString;
 procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
-function GridConnectBufferToGridConnect(GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
+function GridConnectBufferToGridConnect(var GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
 
 
 implementation
@@ -195,7 +195,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-function GridConnectBufferToGridConnect(GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
+function GridConnectBufferToGridConnect(var GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
 var
   ConvertString: array[0..8] of char;
   i: Integer;

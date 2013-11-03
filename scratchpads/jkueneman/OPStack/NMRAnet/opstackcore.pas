@@ -58,6 +58,126 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure SupportsVNodeEventAsConsumer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function SupportsVNodeEventAsConsumer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+begin
+  Result := False;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED) do
+  begin
+    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex], DataBytes) then
+    begin
+      Result := True;
+      Exit
+    end;
+    Inc(EventIndex)
+  end;
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) do
+  begin
+    Inc(EventIndex);
+  end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  procedure SupportsVNodeEventAsProducer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function SupportsVNodeEventAsProducer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+begin
+  Result := False;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED) do
+  begin
+    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], DataBytes) then
+    begin
+      Result := True;
+      Exit
+    end;
+    Inc(EventIndex)
+  end;
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED) do
+  begin
+    Inc(EventIndex);
+  end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  procedure SupportsEventAsConsumer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function SupportsEventAsConsumer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+begin
+  Result := False;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED) do
+  begin
+    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], DataBytes) then
+    begin
+      Result := True;
+      Exit
+    end;
+    Inc(EventIndex)
+  end;
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) do
+  begin
+    Inc(EventIndex);
+  end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
+//  procedure SupportsEventAsProducer
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function SupportsEventAsProducer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+begin
+  Result := False;
+  {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED) do
+  begin
+    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], DataBytes) then
+    begin
+      Result := True;
+      Exit
+    end;
+    Inc(EventIndex)
+  end;
+  EventIndex := 0;
+  while (EventIndex < USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED) do
+  begin
+    Inc(EventIndex);
+  end
+  {$ENDIF}
+end;
+
+// *****************************************************************************
 //  procedure ProcessMarkedForDeleteNodes
 //     Parameters:
 //     Returns:
@@ -205,7 +325,7 @@ begin
     begin
       SimpleMessage := nil;
       case State of
-        EVENT_STATE_UNKOWN  : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
+        EVENT_STATE_UNKNOWN : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
         EVENT_STATE_VALID   : MTI := MTI_CONSUMER_IDENTIFIED_SET;
         EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR
       end;
@@ -267,7 +387,7 @@ begin
     if EventIndex > -1 then
     begin
       case State of
-        EVENT_STATE_UNKOWN  : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
+        EVENT_STATE_UNKNOWN : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
         EVENT_STATE_VALID   : MTI := MTI_PRODUCER_IDENTIFIED_SET;
         EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR
       end;
@@ -366,8 +486,41 @@ end;
 //     Description: Picks up Buffers pending in the node and tries to send the reply
 // *****************************************************************************
 function NodeRunMessageBufferReply(Node: PNMRAnetNode): Boolean;
+var
+  AMessage: PSimpleMessage;
+  i, j: Integer;
 begin
-  Result := False
+  Result := False;
+  AMessage := OPStackNode_MessageBuffer(Node);
+  if AMessage <> nil then
+  begin
+    case AMessage^.MTI of
+      MTI_PROTOCOL_SUPPORT_REPLY :
+          begin
+            if IsOutgoingBufferAvailable then
+            begin
+              {$IFDEF SUPPORT_VIRTUAL_NODES}
+              if OPStackNode_TestState(Node, NS_VIRTUAL) then
+              begin
+                for i := 0 to LEN_PIV_PROTOCOL-1 do
+                  for j := 0 to PIV_VNODE_SUPPORTED_PROTOCOL_COUNT - 1 do
+                    AMessage^.Buffer^.DataArray[i] := AMessage^.Buffer^.DataArray[i] or PIV_VNODE_SUPPORTED_PROTOCOLS[j][i];
+                AMessage^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
+              end else
+              {$ENDIF}
+              begin
+                for i := 0 to LEN_PIV_PROTOCOL-1 do
+                  for j := 0 to PIV_SUPPORTED_PROTOCOL_COUNT - 1 do
+                    AMessage^.Buffer^.DataArray[i] := AMessage^.Buffer^.DataArray[i] or PIV_SUPPORTED_PROTOCOLS[j][i];
+                AMessage^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
+              end;
+              OPStackNode_MessageUnLink(Node, AMessage);
+              OutgoingMessage(AMessage);
+              Result := True;
+            end;
+          end;
+    end;
+  end;
 end;
 
 
@@ -493,6 +646,7 @@ begin
           Node^.iStateMachine := STATE_NODE_PERMITTED;
           Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
           IncomingMessageCallback(SimpleMessage);
+          OPStack_DeAllocateMessage(SimpleMessage);
           Hardware_EnableInterrupts;
         end
       end;
@@ -583,63 +737,165 @@ end;
 procedure IncomingMessageCallback(AMessage: PSimpleMessage);
 var
   Node: PNMRAnetNode;
-  ID: DWord;
-  ReleaseMessage: Boolean;
+  VNodeEventSupported, NodeEventSupported: Boolean;
+  VNodeEventIndex, NodeEventIndex, i: Integer;
+  NewMessage: PSimpleMessage;
+  BufferAllocFailed: Boolean;
 begin
-  ReleaseMessage := True;
+  BufferAllocFailed := False;
   // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
   Node := OPStackNode_Find(AMessage, FIND_BY_SOURCE);
   if Node <> nil then
   begin
-    ID := AMessage^.MTI and MTI_CAN_CID_MASK;
-    if (ID = MTI_CAN_CID0) or (ID = MTI_CAN_CID1) or (ID = MTI_CAN_CID2) or (ID = MTI_CAN_CID3) then
+    if (AMessage^.MTI = MTI_CAN_CID0) or (AMessage^.MTI = MTI_CAN_CID1) or (AMessage^.MTI = MTI_CAN_CID2) or (AMessage^.MTI = MTI_CAN_CID3) then
       OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS_RID)                         // A "good" duplicate Alias
     else
       OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS);                             // Bad
     Exit;
   end else
   begin
-    // Should double check, if addressed, the message is for us
-    ID := AMessage^.MTI and MTI_MASK;
-    case (AMessage^.MessageType) and $7F of
+    case (AMessage^.MessageType) and MT_MASK of
         MT_SIMPLE :
             begin
-              case ID of
-                MTI_CAN_AME :
-                    begin                                                 // Alias Map Enquiry.....
-                      if AMessage^.Buffer^.DataBufferSize = 0 then
-                        OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
-                      else begin;
+              if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+              begin
+                Node := OPStackNode_Find(AMessage, FIND_BY_DEST);
+                if Node <> nil then
+                begin
+                  case AMessage^.MTI of
+                    MTI_VERIFY_NODE_ID_NUMBER_DEST  :
+                        begin
+                          OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID)          // All messages addressed to node get replies even if the payload is wrong!
+                        end;
+                    MTI_EVENTS_IDENTIFY_DEST          :
+                        begin
+                          OPStackNode_SetEventFlags(Node, Node^.Events.Produced, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventFlags(Node, Node^.Events.Consumed, EVENT_STATE_UNKNOWN);
+                        end;
+                    MTI_PROTOCOL_SUPPORT_INQUIRY      :
+                        begin
+                          // BITS ARE NEGATIVE LOGIC
+                          // Since we don't implement extended protocols yet just reply when we see the start bit set (active 0)
+                          if AMessage^.DestFlags and PIP_EXTENSION_START_BIT_MASK = 0 then
+                          begin
+                            if OPStack_AllocateSimpleMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, nil, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
+                            begin
+                              OPStackNode_MessageLink(Node, NewMessage);
+                            end else
+                              BufferAllocFailed := True
+                          end
+                        end;
+                    MTI_OPTIONAL_INTERACTION_REJECTED :
+                        begin
+                        end;
+                  end
+                end
+              end else
+              begin
+                case AMessage^.MTI of
+                  MTI_CAN_AME :
+                      begin                                                 // Alias Map Enquiry.....
+                        if AMessage^.Buffer^.DataBufferSize = 0 then
+                          OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
+                        else begin;
+                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                          Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
+                          if Node <> nil then
+                          begin
+                            if OPStackNode_TestState(Node, NS_PERMITTED) then   // Only reply if node is in Permitted state
+                              OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+                          end;
+                        end;
+                        Exit;
+                      end;
+                  MTI_CAN_AMD :
+                      begin                                                        // Another node has sent an Alias Map Definition....
                         NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
                         Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
                         if Node <> nil then
-                        begin
-                          if OPStackNode_TestState(Node, NS_PERMITTED) then   // Only reply if node is in Permitted state
-                            OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
+                          OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);          // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
+                        Exit;
+                      end;
+                  MTI_VERIFY_NODE_ID_NUMBER   :
+                      begin
+                        if AMessage^.Buffer^.DataBufferSize = 0 then
+                          OPStackNode_SetFlags(MF_VERIFY_NODE_ID)                  // THIS IS NOT CLEAR IN THE SPEC
+                        else begin
+                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                          Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
+                          if Node <> nil then
+                            OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);
                         end;
+                        Exit;
                       end;
-                      Exit;
-                    end;
-                MTI_CAN_AMD :
-                    begin                                                        // Another node has sent an Alias Map Definition....
-                      NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
-                      Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
-                      if Node <> nil then
-                        OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);          // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
-                      Exit;
-                    end;
-                MTI_VERIFY_NODE_ID_NUMBER   :
-                    begin
-                      if AMessage^.Buffer^.DataBufferSize = 0 then
-                        OPStackNode_SetFlags(MF_VERIFY_NODE_ID)                  // THIS IS NOT CLEAR IN THE SPEC
-                      else begin
-                        NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
-                        Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
-                        if Node <> nil then
-                          OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);
+                  MTI_CONSUMER_IDENTIFY       :
+                      begin
+                        VNodeEventIndex := -1;
+                        NodeEventIndex := -1;
+                        VNodeEventSupported := SupportsVNodeEventAsConsumer(@AMessage^.Buffer^.DataArray, VNodeEventIndex);
+                        NodeEventSupported := SupportsEventAsConsumer(@AMessage^.Buffer^.DataArray, NodeEventIndex);
+                        for i := 0 to NodePool.AllocatedCount - 1 do
+                        begin
+                          Node := NodePool.AllocatedList[i];
+                          if OPStackNode_TestState(Node, NS_VIRTUAL) then
+                          begin
+                            if VNodeEventSupported then
+                              OPStackNode_SetEventFlag(Node^.Events.Consumed, VNodeEventIndex, EVENT_STATE_UNKNOWN);
+                          end else
+                          begin
+                            if NodeEventSupported then
+                              OPStackNode_SetEventFlag(Node^.Events.Consumed, NodeEventIndex, EVENT_STATE_UNKNOWN);
+                          end
+                        end;
+                        Exit;
                       end;
-                      Exit;
-                    end;
+                  MTI_CONSUMER_IDENTIFY_RANGE :
+                      begin
+                        // TODO
+                        Exit;
+                      end;
+                  MTI_PRODUCER_IDENDIFY       :
+                      begin
+                        VNodeEventIndex := -1;
+                        NodeEventIndex := -1;
+                        VNodeEventSupported := SupportsVNodeEventAsProducer(@AMessage^.Buffer^.DataArray, VNodeEventIndex);
+                        NodeEventSupported := SupportsEventAsProducer(@AMessage^.Buffer^.DataArray, NodeEventIndex);
+                        for i := 0 to NodePool.AllocatedCount - 1 do
+                        begin
+                          Node := NodePool.AllocatedList[i];
+                          if OPStackNode_TestState(Node, NS_VIRTUAL) then
+                          begin
+                            if VNodeEventSupported then
+                              OPStackNode_SetEventFlag(Node^.Events.Produced, VNodeEventIndex, EVENT_STATE_UNKNOWN);
+                          end else
+                          begin
+                            if NodeEventSupported then
+                              OPStackNode_SetEventFlag(Node^.Events.Produced, NodeEventIndex, EVENT_STATE_UNKNOWN);
+                          end
+                        end;
+                        Exit;
+                      end;
+                  MTI_PRODUCER_IDENTIFY_RANGE :
+                      begin
+                        // TODO
+                        Exit;
+                      end;
+                  MTI_EVENT_LEARN             :
+                      begin
+                        Exit;
+                      end;
+                  MTI_EVENTS_IDENTIFY         :
+                      begin
+                        for i := 0 to NodePool.AllocatedCount - 1 do
+                        begin
+                          Node := NodePool.AllocatedList[i];
+                          OPStackNode_SetEventFlags(Node, Node^.Events.Produced, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventFlags(Node, Node^.Events.Consumed, EVENT_STATE_UNKNOWN);
+                        end;
+                        Exit;
+                      end;
+
+                end;
               end;
             end;
         MT_DATAGRAM :
@@ -652,8 +908,6 @@ begin
             end
       end;
   end;
-  if ReleaseMessage then
-    OPStack_DeAllocateMessage(AMessage); ;
 end;
 
 // *****************************************************************************

@@ -97,9 +97,9 @@ type
 var
   ListenerThread: TOPStackTestListener;
 {$ENDIF}
-// *****************************************************************************
+// ***************************************************************************************************************************************************************************************************************************************
 //  Lazarus Specific from here up
-// *****************************************************************************
+// ***************************************************************************************************************************************************************************************************************************************
 
 
 procedure Hardware_Initialize;
@@ -137,22 +137,34 @@ begin
   GridConnect_Initialize;                                                       // This is here because it only is needed if we are using a GridConnect interface
 end;
 
+// *****************************************************************************
+//  procedure Hardware_DisableInterrupts
+//    Parameters:
+//    Result:
+//    Description:   called when lists or similar are being maniuplated that
+//                   could be in an interterminate state if an interrupt driven
+//                   system is called in the middle of the manipulation. Use this
+//                   function to disable asyncronous access to library variable
+//                   during this call
+// *****************************************************************************
 procedure Hardware_DisableInterrupts;
 begin
-  // called when lists or similar are being maniuplated that could be in an interterminate state if an interrupt
-  // driven system is called in the middle of the manipulation.
-  // Use this function to disable asyncronous access to library variable during this call
-
   // Disable Any interrupts here
   Inc(Hardware.InterruptDisableCount);
 end;
 
+// *****************************************************************************
+//  procedure Hardware_EnableInterrupts
+//    Parameters:
+//    Result:
+//    Description:   called when lists or similar are being maniuplated that
+//                   could be in an interterminate state if an interrupt driven
+//                   system is called in the middle of the manipulation. Use this
+//                   function to re enable asyncronous access to library variable
+//                   during this call
+// *****************************************************************************
 procedure Hardware_EnableInterrupts;
 begin
-  // called when lists or similar are being maniuplated that could be in an interterminate state if an interrupt
-  // driven system is called in the middle of the manipulation.
-  // Use this function to enable asyncronous access to library variable during this call
-
   Dec(Hardware.InterruptDisableCount);
   if Hardware.InterruptDisableCount <= 0 then
   begin
@@ -161,6 +173,14 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure OutgoingMessage
+//    Parameters:
+//    Result:
+//    Description:   called to send a message on the physical layer, must call
+//                   IsOutgoingBufferAvailable before to ensure a buffer is
+//                   available to use
+// *****************************************************************************
 procedure OutgoingMessage(AMessage: PSimpleMessage);
 var
   GridConnectStr: TGridConnectString;
@@ -168,7 +188,7 @@ var
   StringList: TStringList;
   i: Integer;
 begin
-  case AMessage^.MessageType and MESSAGE_TYPE_MASK of
+  case AMessage^.MessageType and MT_MASK of
     MT_SIMPLE:
         begin
           GridConnectBuffer.PayloadCount := 0;
@@ -187,12 +207,12 @@ begin
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000
           else begin
             case AMessage^.MTI of
-              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF);
-              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF);
-              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shr 12) and $00000FFF);
-              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00000FFF);
+              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF) or $10000000;
+              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF) or $10000000;
+              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shr 12) and $00000FFF) or $10000000;
+              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00000FFF) or $10000000;
             else
-              GridConnectBuffer.MTI := (AMessage^.MTI shl 12);
+              GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $10000000;
             end;
           end;
           GridConnectBufferToGridConnect(GridConnectBuffer, GridConnectStr);
@@ -219,10 +239,62 @@ begin
   Result := True
 end;
 
+// *****************************************************************************
+//  procedure GridConnectStrToIncomingMessageCallback
+//    Parameters:
+//    Result:
+//    Description:   called to setup a received message in GridConnect format into
+//                   a format the OPStack can use.  NOTE: The buffer that is sent to
+//                   IncomingMessageCallback is NOT from the allocated buffer Pool
+//                   and will be gone when this function returns.  You MUST copy
+//                   the contents of it if needed
+// *****************************************************************************
+procedure GridConnectStrToIncomingMessageCallback(GridConnectStr: PGridConnectString);
+var
+  GridConnectBuffer: TGridConnectBuffer;
+  SimpleMessage: TSimpleMessage;
+  Buffer: TSimpleBuffer;
+  i: Integer;
+begin
+  GridConnectToGridConnectBuffer(GridConnectStr, GridConnectBuffer);
+  SimpleMessage.MTI := GridConnectBuffer.MTI shr 12;
+  if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_GENERAL <= MTI_FRAME_TYPE_CAN_GENERAL then
+  begin
+    // These are the only messages that map to a full MTI
+    SimpleMessage.MTI := SimpleMessage.MTI and not MTI_FRAME_TYPE_CAN_GENERAL;
+    SimpleMessage.Source.AliasID := GridConnectBuffer.MTI and $00000FFF;
+    SimpleMessage.Source.ID := NULL_NODE_ID;
+    if SimpleMessage.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+    begin
+      SimpleMessage.Dest.AliasID := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
+      SimpleMessage.DestFlags := GridConnectBuffer.Payload[0] and $F0;
+    end else
+      SimpleMessage.Dest.AliasID := 0;
+    SimpleMessage.Dest.ID := NULL_NODE_ID;
+    SimpleMessage.MessageType := MT_SIMPLE or MT_ALLOCATED;
+    SimpleMessage.Next := nil;
+    Buffer.DataBufferSize := GridConnectBuffer.PayloadCount;
+    for i := 0 to Buffer.DataBufferSize - 1 do
+      Buffer.DataArray[i] := GridConnectBuffer.Payload[i];
+    Buffer.iStateMachine := 0;
+    Buffer.State := 0;
+    SimpleMessage.Buffer := @Buffer;
+    IncomingMessageCallback(@SimpleMessage);
+  end else
+  if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_STREAM_SEND = MTI_FRAME_TYPE_CAN_STREAM_SEND then
+  begin
+    // It is a CAN Stream Frame, need to collect them all then call into the library with a Stream full MTI
+  end else
+  if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME >= MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME then
+  begin
+    // It is a CAN Datagram Frame, need to collect them all then call into the library with a Datagram full MTI
+  end
+end;
 
-// *****************************************************************************
+
+// ***************************************************************************************************************************************************************************************************************************************
 //  Lazarus Specific from here down
-// *****************************************************************************
+// ***************************************************************************************************************************************************************************************************************************************
 
 {$IFDEF FPC}
 { TOPStackTestConnectionOutput }
@@ -355,34 +427,21 @@ end;
 
 procedure TOPStackTestConnectionInput.Synchronizer;
 var
-  GridConnectPtr: PGridConnectString;
-  GridConnectBuffer: TGridConnectBuffer;
-  SimpleMessage: TSimpleMessage;
+  GridConnectStr: PGridConnectString;
   Str: string;
-  i: Integer;
+  i, StringLen: Integer;
 begin
   for i := 1 to Length(ReceiveStr) do
   begin
-    GridConnectPtr := GridConnectDecodeMachine(ReceiveStr[i]);
-    if GridConnectPtr <> nil then
+    GridConnectStr := GridConnectDecodeMachine(ReceiveStr[i]);
+    if GridConnectStr <> nil then
     begin
-      GridConnectToGridConnectBuffer(GridConnectPtr, GridConnectBuffer);
-      SimpleMessage.MTI := GridConnectBuffer.MTI shr 24;
-      SimpleMessage.Source.AliasID := GridConnectBuffer.MTI and $00000FFF;
-      SimpleMessage.Source.ID := NULL_NODE_ID;
-      if SimpleMessage.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
-        SimpleMessage.Dest.AliasID := (GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]
-      else
-        SimpleMessage.Dest.AliasID := 0;
-      SimpleMessage.Dest.ID := NULL_NODE_ID;
-      SimpleMessage.MessageType := MT_SIMPLE and MT_ALLOCATED;
-      SimpleMessage.Next := nil;
-      SimpleMessage.Buffer := @GridConnectBuffer.Payload;
-      IncomingMessageCallback(@SimpleMessage);
-      SetLength(Str, strlen(GridConnectPtr^));
-      Str := GridConnectPtr^;
+      GridConnectStrToIncomingMessageCallback(GridConnectStr);
+      StringLen := strlen(GridConnectStr^);
+      SetLength(Str, StringLen);
+      Str := GridConnectStr^;
       if Assigned(Callback) then
-        Callback('Received: '+Str+LF)
+        Callback('Received: '+GridConnectStr^+LF)
     end
   end;
 end;
@@ -411,18 +470,18 @@ var
 begin
   try
     for i := 0 to ConnectionOutputList.Count - 1 do
-      TOPStackTestConnectionInput(ConnectionOutputList[i]).Terminate;
+      TOPStackTestConnectionOutput(ConnectionOutputList[i]).Terminate;
   finally
     ConnectionOutputList.Clear
   end;
-  FreeAndNil(FConnectionInputList);
+  FreeAndNil(FConnectionOutputList);
   try
     for i := 0 to ConnectionInputList.Count - 1 do
       TOPStackTestConnectionInput(ConnectionInputList[i]).Terminate;
   finally
     ConnectionInputList.Clear
   end;
-  FreeAndNil(FConnectionOutputList);
+  FreeAndNil(FConnectionInputList);
   inherited Destroy;
 end;
 

@@ -31,6 +31,8 @@ type
     ButtonStartStack: TButton;
     ButtonAllocateNode: TButton;
     ButtonDeallocateNode: TButton;
+    CheckBoxLogMessages: TCheckBox;
+    CheckBoxAutoConnect: TCheckBox;
     MemoReceive: TMemo;
     StatusBar: TStatusBar;
     TimerCore: TTimer;
@@ -38,6 +40,7 @@ type
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
     procedure ButtonStartStackClick(Sender: TObject);
+    procedure CheckBoxLogMessagesChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -83,6 +86,7 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
   OPStackCore_Initialize;
   OlcbThread := TOlcbThread.Create(False);
+  OlcbThread.Priority := tpHigher;
   OlcbThread.FreeOnTerminate := True;
   Listener := TOPStackTestListener.Create(False);
   Listener.FreeOnTerminate := True;
@@ -117,6 +121,8 @@ begin
   if HalfConnected then
   begin
     FConnected := True;
+    if CheckBoxAutoConnect.Checked then
+      ButtonStartStack.Click;
     UpdateUI;
   end
   else
@@ -164,6 +170,25 @@ end;
 procedure TForm1.ButtonStartStackClick(Sender: TObject);
 begin
   OPStack.State := OPStack.State or OPS_PROCESSING;
+end;
+
+procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);
+var
+  i: Integer;
+begin
+  if CheckBoxLogMessages.Checked then
+  begin
+    for i := 0 to Listener.ConnectionOutputList.Count - 1 do
+      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).RunningCallback := Listener.RunningCallback;
+    for i := 0 to Listener.ConnectionInputList.Count - 1 do
+      TOPStackTestConnectionInput(Listener.ConnectionInputList[i]).Callback := Listener.Callback;
+  end else
+  begin
+    for i := 0 to Listener.ConnectionOutputList.Count - 1 do
+      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).RunningCallback := nil;
+    for i := 0 to Listener.ConnectionInputList.Count - 1 do
+      TOPStackTestConnectionInput(Listener.ConnectionInputList[i]).Callback := nil;
+  end;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);

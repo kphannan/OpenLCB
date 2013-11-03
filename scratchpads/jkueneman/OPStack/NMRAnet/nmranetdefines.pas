@@ -5,8 +5,8 @@ interface
 {$ENDIF}
 
 const
-//  MTI_OLCB_MSG                          = $08000;                            //
-//  MTI_CAN                               = $00000;                            // Frame Type CAN Control Message
+//  MTI_OLCB_MSG                          = $08000;                             //
+//  MTI_CAN                               = $00000;                             // Frame Type CAN Control Message
   MTI_CAN_CID0                              = $7000;                            // First 12 Bits of 48 bit Node ID
   MTI_CAN_CID1                              = $6000;                            // 2rd 12 Bits of 48 bit Node ID
   MTI_CAN_CID2                              = $5000;                            // 3nd 12 Bits of 48 bit Node ID
@@ -23,8 +23,8 @@ const
 
   MTI_MASK                              = $FFFF;
   MTI_FRAME_TYPE_MASK                   = $F000;
-  MTI_FRAME_TYPE_GENERAL                = $9000;
-  MASK_SOURCE_ALIAS                  = $00000FFF;                                // Masks out just the Source Alias Address
+  MTI_FRAME_TYPE_CAN_GENERAL            = $9000;
+  MASK_SOURCE_ALIAS                     = $00000FFF;                            // Masks out just the Source Alias Address
 
 
   MTI_ADDRESSED_MASK                 = $0008;
@@ -63,15 +63,15 @@ const
   MTI_SIMPLE_NODE_INFO_REQUEST       = $0DE8;                                // Databytes = Destination Alias
   MTI_SIMPLE_NODE_INFO_REPLY         = $0A08;                                // Databytes = Destination Alias, ACDI Data
   MTI_DATAGRAM                       = $1C48;
-  MTI_FRAME_TYPE_DATAGRAM_ONLY_FRAME = $A000;
-  MTI_FRAME_TYPE_DATAGRAM_FRAME_START= $B000;
-  MTI_FRAME_TYPE_DATAGRAM_FRAME      = $C000;
-  MTI_FRAME_TYPE_DATAGRAM_FRAME_END  = $D000;
+  MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME = $A000;
+  MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_START= $B000;
+  MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME      = $C000;
+  MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END  = $D000;
   MTI_DATAGRAM_OK_REPLY              = $0A28;                                // Databytes = Destination Alias
   MTI_DATAGRAM_REJECTED_REPLY        = $0A48;
   MTI_FRAME_TYPE_STREAM_INIT_REQUEST = $0CC8;
   MTI_FRAME_TYPE_STREAM_INIT_REPLY   = $0868;
-  MTI_FRAME_TYPE_STREAM_SEND         = $F000;
+  MTI_FRAME_TYPE_CAN_STREAM_SEND     = $F000;
   MTI_FRAME_TYPE_STREAM_PROCEED      = $0888;
   MTI_FRAME_TYPE_STREAM_COMPLETE     = $08A8;
 
@@ -81,6 +81,25 @@ const
   PIP_EXTENSION_START_BIT_MASK       = $2000;                                    // Confusing for sure....
   PIP_EXTENSION_END_BIT_MASK         = $1000;                                    // Confusing for sure....
   PIP_EXTENSION_START_END_BIT        = $0000;                                    // Both Start and End are "set" (active zero)
+
+const
+  LEN_PIV_PROTOCOL = 6;                                                         // 6 Bytes long
+
+type
+  TPIVProtocolValueArray = array[0..LEN_PIV_PROTOCOL-1] of Byte;
+
+const
+  PIV_PROTOCOL_ID_PROTOCOL: TPIVProtocolValueArray           = ($80, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_DATAGRAM: TPIVProtocolValueArray           = ($40, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_STREAM: TPIVProtocolValueArray             = ($20, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_CONFIGURATION: TPIVProtocolValueArray      = ($10, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_RESERVATION: TPIVProtocolValueArray        = ($08, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_PRODUCER_CONSUMER: TPIVProtocolValueArray  = ($04, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_IDENTIFICATION: TPIVProtocolValueArray     = ($02, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_TEACH_LEARN: TPIVProtocolValueArray        = ($01, $00, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_REMOTE_BUTTON: TPIVProtocolValueArray      = ($00, $80, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_CDI: TPIVProtocolValueArray                = ($00, $40, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_DISPLAY: TPIVProtocolValueArray            = ($00, $20, $00, $00, $00, $00);
 
 implementation
 

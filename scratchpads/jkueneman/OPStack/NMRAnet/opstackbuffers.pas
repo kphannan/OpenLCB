@@ -12,9 +12,6 @@ uses
   opstackdefines,
   template_buffers;
 
-const
-  MESSAGE_TYPE_MASK = $3F;
-
 type
   TSimpleBufferPool = record
     Pool: array[0..USER_MAX_SIMPLE_ARRAY_BUFFERS-1] of TSimpleBuffer;
@@ -275,13 +272,16 @@ end;
 
 procedure OPStack_DeAllocateMessage(AMessage: PSimpleMessage);
 begin
-  case (AMessage^.MessageType and MESSAGE_TYPE_MASK) of
+  case (AMessage^.MessageType and MT_MASK) of
     MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
     MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( AMessage^.Buffer));
     MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( AMessage^.Buffer));
   end;
   AMessage^.MessageType := MT_UNALLOCATED;
-  Dec(SimpleMessagePool.Count)
+  Dec(SimpleMessagePool.Count);
+
+  if SimpleMessagePool.Count > 10 then
+    beep;
 end;
 
 procedure OPStack_LoadBaseMessageBuffer(AMessage: PSimpleMessage; MessageType: Byte; MTI: Word; Next: PSimpleMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID);
@@ -294,6 +294,7 @@ begin
   AMessage^.Source.AliasID := SourceNodeAlias;
   AMessage^.Source.ID := SourceNodeID;
   AMessage^.Buffer := nil;
+  AMessage^.DestFlags := 0;
 end;
 
 end.

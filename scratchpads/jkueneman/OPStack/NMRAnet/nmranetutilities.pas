@@ -7,6 +7,7 @@ interface
 {$I Options.inc}
 
 uses
+  nmranetdefines,
   opstacktypes,
   opstackdefines,
   opstackbuffers;
@@ -18,6 +19,7 @@ procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
 procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
 procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
 procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
+function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
 
 
 implementation
@@ -124,6 +126,31 @@ begin
   NodeID[0] := DataArray^[iStartByte+5];
   NodeID[0] := NodeID[0] or DataArray^[iStartByte+4] shl 8;
   NodeID[0] := NodeID[0] or DataArray^[iStartByte+3] shl 16;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_EqualEventID
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
+var
+  i: Integer;
+begin
+  Result := True;
+  i := 0;
+  while (i < 8) and Result do
+  begin
+    if Event1^[i] <> Event2^[i] then
+    begin
+      Result := False;
+      Break
+    end;
+    Inc(i);
+  end;
 end;
 
 end.
