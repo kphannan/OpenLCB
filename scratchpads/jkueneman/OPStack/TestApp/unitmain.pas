@@ -86,7 +86,11 @@ procedure TForm1.FormCreate(Sender: TObject);
 begin
   OPStackCore_Initialize;
   OlcbThread := TOlcbThread.Create(False);
+  {$IFDEF DARWIN}
   OlcbThread.Priority := tpHigher;
+  {$ELSE}
+  OlcbThread.Priority := tpLower;
+  {$ENDIF}
   OlcbThread.FreeOnTerminate := True;
   Listener := TOPStackTestListener.Create(False);
   Listener.FreeOnTerminate := True;

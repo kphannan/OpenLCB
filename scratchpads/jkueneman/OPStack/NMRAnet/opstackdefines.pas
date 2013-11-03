@@ -48,8 +48,8 @@ const
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
 
-  TDataArray = array[0..0] of Byte;
-  PDataArray = ^TDataArray;
+  // = array[0..0] of Byte;
+ // PDataArray = ^TDataArray;
   TSimpleDataArray = array[0..MAX_SIMPLE_BYTES-1] of Byte;
   PSimpleDataArray = ^TSimpleDataArray;
   TDatagramDataArray = array[0..MAX_DATAGRAM_BYTES-1] of Byte;
@@ -164,13 +164,13 @@ const
   ABS_PROCESSING  = $02;                                                        // Array Buffer State Flag = The buffer is being used to transmit/receive and is not complete so don't use the data yet
 
 type
-  TBuffer = record
-    State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
-    DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
-    DataArray: TDataArray;
-  end;
-  PBUffer = ^TBuffer;
+//  TBuffer = record
+ //   State: Byte;                                                                // See ABS_xxxx flags
+//    iStateMachine: Byte;                                                        // Local Statemachine
+  //  DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
+//    DataArray: TDataArray;
+//  end;
+//  PBUffer = ^TBuffer;
 
   TSimpleBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
@@ -213,7 +213,7 @@ type
     Next: ^TSimpleMessage;
     {$ENDIF}
     MTI: Word;
-    Buffer: PBuffer;
+    Buffer: PSimpleBUffer;
   end;
 
 type

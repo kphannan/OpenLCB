@@ -207,7 +207,7 @@ begin
     if AllocateSimpleBuffer(SimpleBuffer) then
     begin
       OPStack_LoadBaseMessageBuffer(AMessage, MT_SIMPLE, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-      AMessage^.Buffer := PBuffer( SimpleBuffer);
+      AMessage^.Buffer := PSimpleBuffer( SimpleBuffer);
       Result := True
     end else
     begin
@@ -238,7 +238,7 @@ begin
     if AllocateDatagramBuffer(DatagramBuffer) then
     begin
       OPStack_LoadBaseMessageBuffer(AMessage, MT_DATAGRAM, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-      AMessage^.Buffer := PBuffer( DatagramBuffer);
+      AMessage^.Buffer := PSimpleBuffer( DatagramBuffer);
       Result := True
     end else
     begin
@@ -260,7 +260,7 @@ begin
     if AllocateStreamBuffer(StreamBuffer) then
     begin
       OPStack_LoadBaseMessageBuffer(AMessage, MT_STREAM, MTI, Next, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-      AMessage^.Buffer := PBuffer( StreamBuffer);
+      AMessage^.Buffer := PSimpleBuffer( StreamBuffer);
       Result := True
     end else
     begin

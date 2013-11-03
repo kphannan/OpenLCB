@@ -15,7 +15,7 @@ uses
 type
   TGridConnectBuffer = record
     MTI: DWord;
-    Payload: array[0..7] of byte;
+    Payload: array[0..8] of byte;
     PayloadCount: Byte;
   end;
 

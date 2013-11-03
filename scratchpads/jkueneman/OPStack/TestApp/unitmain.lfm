@@ -12,8 +12,8 @@ object Form1: TForm1
   LCLVersion = '1.0.8.0'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 353
+    Height = 23
+    Top = 345
     Width = 788
     Panels = <    
       item
@@ -62,7 +62,7 @@ object Form1: TForm1
   end
   object MemoReceive: TMemo
     Left = 0
-    Height = 289
+    Height = 281
     Top = 64
     Width = 788
     Align = alBottom
@@ -91,9 +91,9 @@ object Form1: TForm1
   end
   object CheckBoxAutoConnect: TCheckBox
     Left = 528
-    Height = 18
+    Height = 17
     Top = 32
-    Width = 165
+    Width = 129
     Caption = 'Auto-Start On Connect'
     Checked = True
     State = cbChecked

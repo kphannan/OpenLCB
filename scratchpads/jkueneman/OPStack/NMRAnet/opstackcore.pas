@@ -798,7 +798,7 @@ begin
                         if AMessage^.Buffer^.DataBufferSize = 0 then
                           OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
                         else begin;
-                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
                           Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
                           if Node <> nil then
                           begin
@@ -810,7 +810,7 @@ begin
                       end;
                   MTI_CAN_AMD :
                       begin                                                        // Another node has sent an Alias Map Definition....
-                        NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                        NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
                         Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
                         if Node <> nil then
                           OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);          // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
@@ -819,9 +819,9 @@ begin
                   MTI_VERIFY_NODE_ID_NUMBER   :
                       begin
                         if AMessage^.Buffer^.DataBufferSize = 0 then
-                          OPStackNode_SetFlags(MF_VERIFY_NODE_ID)                  // THIS IS NOT CLEAR IN THE SPEC
+                          OPStackNode_SetFlags(MF_VERIFY_NODE_ID)
                         else begin
-                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID, 0);
+                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
                           Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
                           if Node <> nil then
                             OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);

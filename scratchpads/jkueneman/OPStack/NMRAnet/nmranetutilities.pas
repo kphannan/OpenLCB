@@ -18,7 +18,7 @@ function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
 procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
 procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
-procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
+procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PSimpleDataArray; var NodeID: TNodeID);
 function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
 
 
@@ -118,14 +118,14 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PDataArray; var NodeID: TNodeID; iStartByte: Byte);
+procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PSimpleDataArray; var NodeID: TNodeID);
 begin
-  NodeID[1] := DataArray^[iStartByte+2];
-  NodeID[1] := NodeID[1] or DataArray^[iStartByte+1] shl 8;
-  NodeID[1] := NodeID[1] or DataArray^[iStartByte] shl 16;
-  NodeID[0] := DataArray^[iStartByte+5];
-  NodeID[0] := NodeID[0] or DataArray^[iStartByte+4] shl 8;
-  NodeID[0] := NodeID[0] or DataArray^[iStartByte+3] shl 16;
+  NodeID[1] := DataArray^[2];
+  NodeID[1] := NodeID[1] or DataArray^[1] shl 8;
+  NodeID[1] := NodeID[1] or DataArray^[0] shl 16;
+  NodeID[0] := DataArray^[5];
+  NodeID[0] := NodeID[0] or DataArray^[4] shl 8;
+  NodeID[0] := NodeID[0] or DataArray^[3] shl 16;
 end;
 
 // *****************************************************************************

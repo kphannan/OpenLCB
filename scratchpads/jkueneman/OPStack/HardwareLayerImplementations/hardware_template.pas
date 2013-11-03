@@ -31,8 +31,6 @@ type
     FCallback: TOpStackTestCallbackMethod;
     FConnectionInputList: TList;
     FConnectionOutputList: TList;
-    FListenStrings: TStringList;
-    FReceiveStr: ansistring;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
@@ -40,15 +38,11 @@ type
     procedure Execute; override;
     procedure Send(StringList: TStringList);
 
-    property ReceiveStr: ansistring read FReceiveStr write FReceiveStr;
-    property ListenStrings: TStringList read FListenStrings write FListenStrings;
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property ConnectionInputList: TList read FConnectionInputList write FConnectionInputList;
     property ConnectionOutputList: TList read FConnectionOutputList write FConnectionOutputList;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
   end;
-
-  { TOPStackTestConnection }
 
   { TOPStackTestConnectionInput }
 
@@ -56,8 +50,7 @@ type
   private
     FCallback: TOpStackTestCallbackMethod;
     FhSocket: TSocket;
-    FListenStrings: TStringList;
-    FReceiveStr: ansistring;
+    FReceiveStr: string;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
@@ -67,8 +60,7 @@ type
     procedure RunningSynchronizer;
   public
     property hSocket: TSocket read FhSocket write FhSocket;
-    property ReceiveStr: ansistring read FReceiveStr write FReceiveStr;
-    property ListenStrings: TStringList read FListenStrings write FListenStrings;
+    property ReceiveStr: string read FReceiveStr write FReceiveStr;
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
   end;
@@ -77,6 +69,7 @@ type
 
   TOPStackTestConnectionOutput = class(TThread)
   private
+    FCallback: TOpStackTestCallbackMethod;
     FEvent: PRTLEvent;
     FhSocket: TSocket;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
@@ -91,6 +84,7 @@ type
     property hSocket: TSocket read FhSocket write FhSocket;
     property SendList: TThreadList read FSendList write FSendList;
     property Event: PRTLEvent read FEvent write FEvent;
+    property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
   end;
 
@@ -304,6 +298,8 @@ constructor TOPStackTestConnectionOutput.Create(CreateSuspended: Boolean;
 begin
   inherited Create(CreateSuspended, StackSize);
   SendList := TThreadList.Create;
+  Callback := nil;
+  RunningCallback := nil;
 end;
 
 destructor TOPStackTestConnectionOutput.Destroy;
@@ -346,12 +342,15 @@ begin
         SendString := '';
         for i := 0 to List.Count - 1 do
           SendString := SendString + TStringList( List[i]).Text;
+        TStringList( List[i]).Free;
       finally
         List.Clear;
         SendList.UnlockList;
       end;
       Socket.ResetLastError;
       Socket.SendString(SendString);
+      if Assigned(Callback) then
+        Callback('Sent: '+SendString)
     end;
   finally
     Socket.CloseSocket;
@@ -385,6 +384,8 @@ constructor TOPStackTestConnectionInput.Create(CreateSuspended: Boolean; const S
 begin
   inherited Create(CreateSuspended, StackSize);
   Callback := nil;
+  RunningCallback := nil;
+  ReceiveStr := '';
 end;
 
 destructor TOPStackTestConnectionInput.Destroy;
@@ -515,6 +516,7 @@ begin
           NewConnectionOutput := TOPStackTestConnectionOutput.Create(True);
           NewConnectionOutput.hSocket := NewConnectionInput.hSocket;
           NewConnectionOutput.RunningCallback := RunningCallback;
+          NewConnectionOutput.Callback := Callback;
           NewConnectionOutput.Start;
           ConnectionOutputList.Add(NewConnectionOutput);
         end
