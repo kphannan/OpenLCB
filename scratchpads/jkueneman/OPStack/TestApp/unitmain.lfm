@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 481
+  Left = 435
   Height = 368
-  Top = 399
+  Top = 324
   Width = 788
   Caption = 'Form1'
   ClientHeight = 368
@@ -12,8 +12,8 @@ object Form1: TForm1
   LCLVersion = '1.0.8.0'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 345
+    Height = 15
+    Top = 353
     Width = 788
     Panels = <    
       item
@@ -63,20 +63,18 @@ object Form1: TForm1
   object MemoReceive: TMemo
     Left = 0
     Height = 281
-    Top = 64
+    Top = 72
     Width = 788
-    Align = alBottom
-    Anchors = [akTop, akLeft, akRight, akBottom]
     ScrollBars = ssVertical
     TabOrder = 3
   end
-  object Button1: TButton
+  object ButtonSendGlobalNotify: TButton
     Left = 16
     Height = 22
     Top = 8
     Width = 216
     Caption = 'Send Verify Nodes Global'
-    OnClick = Button1Click
+    OnClick = ButtonSendGlobalNotifyClick
     TabOrder = 4
   end
   object ButtonStartStack: TButton
@@ -91,9 +89,9 @@ object Form1: TForm1
   end
   object CheckBoxAutoConnect: TCheckBox
     Left = 528
-    Height = 17
+    Height = 18
     Top = 32
-    Width = 129
+    Width = 165
     Caption = 'Auto-Start On Connect'
     Checked = True
     State = cbChecked
@@ -102,7 +100,13 @@ object Form1: TForm1
   object TimerCore: TTimer
     Interval = 100
     OnTimer = TimerCoreTimer
-    left = 448
-    top = 120
+    left = 64
+    top = 80
+  end
+  object TimerStatemachine: TTimer
+    Interval = 1
+    OnTimer = TimerStatemachineTimer
+    left = 152
+    top = 80
   end
 end

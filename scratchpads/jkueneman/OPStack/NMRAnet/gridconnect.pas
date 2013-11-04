@@ -21,7 +21,7 @@ type
 
 procedure GridConnect_Initialize;
 
-function GridConnectDecodeMachine(NextChar: Char): PGridConnectString;
+function GridConnectDecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
 procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
 function GridConnectBufferToGridConnect(var GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
 
@@ -75,9 +75,9 @@ end;
 //     Description: Takes a single character at a time and tries to create a
 //                  GridConnect string from it in a statemachine
 // *****************************************************************************
-function GridConnectDecodeMachine(NextChar: Char): PGridConnectString;
+function GridConnectDecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
 begin
- Result := nil;
+ Result := False;
  case GridConnectReceiveState of
       GRIDCONNECT_STATE_SYNC_START :                                            // Find a starting ':'
         begin
@@ -131,7 +131,8 @@ begin
              begin
                ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := ';';
                ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex + 1] := #0;
-               Result := @ReceiveGridConnectBuffer;
+               GridConnectStrPtr := @ReceiveGridConnectBuffer;
+               Result := True;
              end;
              GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START            // Done
            end else
@@ -158,6 +159,9 @@ end;
 procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
 var
   ConvertStr: array[0..8] of char;
+  {$IFDEF FPC}
+  ConvertPasStr: ansistring;
+  {$ENDIF}
   i: Integer;
 begin
   // First convert part of the message to see what we have
@@ -165,7 +169,8 @@ begin
     ConvertStr[i] := GridConnectStr^[GRID_CONNECT_HEADER_OFFSET_HI+i];
   ConvertStr[8] := #0;
   {$IFDEF FPC}
-  GridConnectBuffer.MTI := StrToInt('0x'+ConvertStr);
+  ConvertPasStr := ConvertStr;
+  GridConnectBuffer.MTI := StrToInt('0x' + ConvertPasStr);
   {$ELSE}
   GridConnectBuffer.MTI := HexToLongWord(ConvertStr);
   {$ENDIF}
@@ -179,7 +184,8 @@ begin
       ConvertStr[1] := GridConnectStr^[GRID_CONNECT_DATA_OFFSET + i + 1];
       ConvertStr[2] := #0;
       {$IFDEF FPC}
-      GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := StrToInt('0x'+ConvertStr);
+      ConvertPasStr := ConvertStr;
+      GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := StrToInt('0x' + ConvertPasStr);
       {$ELSE}
       GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := HexToWord(ConvertStr);
       {$ENDIF}

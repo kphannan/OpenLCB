@@ -18,16 +18,10 @@ uses
   opstackdefines;
 type
 
-  { TOlcbThread }
-
-  TOlcbThread = class(TThread)
-    procedure Execute; override;
-  end;
-
   { TForm1 }
 
   TForm1 = class(TForm)
-    Button1: TButton;
+    ButtonSendGlobalNotify: TButton;
     ButtonStartStack: TButton;
     ButtonAllocateNode: TButton;
     ButtonDeallocateNode: TButton;
@@ -35,8 +29,9 @@ type
     CheckBoxAutoConnect: TCheckBox;
     MemoReceive: TMemo;
     StatusBar: TStatusBar;
+    TimerStatemachine: TTimer;
     TimerCore: TTimer;
-    procedure Button1Click(Sender: TObject);
+    procedure ButtonSendGlobalNotifyClick(Sender: TObject);
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
     procedure ButtonStartStackClick(Sender: TObject);
@@ -45,12 +40,12 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure TimerCoreTimer(Sender: TObject);
+    procedure TimerStatemachineTimer(Sender: TObject);
   private
     FHalfConnected: Boolean;
   private
     FConnected: Boolean;
     FListener: TOPStackTestListener;
-    FOlcbThread: TOlcbThread;
     property HalfConnected: Boolean read FHalfConnected write FHalfConnected;
   public
     { public declarations }
@@ -58,7 +53,6 @@ type
     procedure ConnectedCallback(EthernetThreadType: TEthernetThreadType);
     procedure UpdateUI;
     property Connected: Boolean read FConnected;
-    property OlcbThread: TOlcbThread read FOlcbThread write FOlcbThread;
     property Listener: TOPStackTestListener read FListener write FListener;
   end;
 
@@ -70,37 +64,21 @@ implementation
 
 {$R *.lfm}
 
-{ TOlcbThread }
-
-procedure TOlcbThread.Execute;
-begin
-  while not Terminated do
-  begin
-    OPStackCore_Process;
-  end;
-end;
 
 { TForm1 }
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  OPStackCore_Initialize;
-  OlcbThread := TOlcbThread.Create(False);
-  {$IFDEF DARWIN}
-  OlcbThread.Priority := tpHigher;
-  {$ELSE}
-  OlcbThread.Priority := tpLower;
-  {$ENDIF}
-  OlcbThread.FreeOnTerminate := True;
-  Listener := TOPStackTestListener.Create(False);
-  Listener.FreeOnTerminate := True;
-  ListenerThread := Listener;
   FHalfConnected := False;
   FConnected := False;
+  OPStackCore_Initialize;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
+  Listener := TOPStackTestListener.Create(False);
+  Listener.FreeOnTerminate := True;
+  ListenerThread := Listener;
   Listener.Callback := @ListenerCallback;
   Listener.RunningCallback := @ConnectedCallback;
   UpdateUI;
@@ -111,12 +89,18 @@ begin
   OPStackCore_Timer;
 end;
 
+procedure TForm1.TimerStatemachineTimer(Sender: TObject);
+begin
+  OPStackCore_Process;
+end;
+
 procedure TForm1.ListenerCallback(ReceiveStr: ansistring);
 begin
   MemoReceive.Lines.BeginUpdate;
   MemoReceive.Text := MemoReceive.Text + ReceiveStr;
-  MemoReceive.SelStart := Length(MemoReceive.Text) - 1;
-  MemoReceive.SelLength := 1;
+  MemoReceive.SelStart := MemoReceive.GetTextLen;
+  MemoReceive.SelLength := 0;
+  MemoReceive.ScrollBy(0, MemoReceive.Lines.Count);
   MemoReceive.Lines.EndUpdate;
 end;
 
@@ -149,13 +133,9 @@ begin
   Statusbar.Panels[5].Text := 'Steam Buffers: ' + IntToStr(StreamBufferPool.Count);
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
-var
-  StringList: TStringList;
+procedure TForm1.ButtonSendGlobalNotifyClick(Sender: TObject);
 begin
-  StringList := TStringList.Create;
-  StringList.Add(':X19490F37N;');
-  Listener.Send(StringList);
+  Listener.Send(':X19490F37N;');
   UpdateUI
 end;
 
@@ -180,16 +160,16 @@ procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);
 var
   i: Integer;
 begin
-  if CheckBoxLogMessages.Checked then
+  if CheckBoxLogMessages.Checked and Assigned(FListener) then
   begin
     for i := 0 to Listener.ConnectionOutputList.Count - 1 do
-      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).RunningCallback := Listener.RunningCallback;
+      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).Callback := Listener.Callback;
     for i := 0 to Listener.ConnectionInputList.Count - 1 do
       TOPStackTestConnectionInput(Listener.ConnectionInputList[i]).Callback := Listener.Callback;
   end else
   begin
     for i := 0 to Listener.ConnectionOutputList.Count - 1 do
-      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).RunningCallback := nil;
+      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).Callback := nil;
     for i := 0 to Listener.ConnectionInputList.Count - 1 do
       TOPStackTestConnectionInput(Listener.ConnectionInputList[i]).Callback := nil;
   end;
@@ -197,9 +177,13 @@ end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  OlcbThread.Terminate;
-  Listener.Callback := nil;
-  Listener.Terminate;
+  if Assigned(FListener) then
+  begin
+    Listener.Callback := nil;
+    Listener.RunningCallback := nil;
+    Listener.Terminate;
+  //  Listener.WaitFor;
+  end;
 end;
 
 end.

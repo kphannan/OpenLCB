@@ -36,7 +36,7 @@ type
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure Execute; override;
-    procedure Send(StringList: TStringList);
+    procedure Send(MessageStr: ansistring);
 
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property ConnectionInputList: TList read FConnectionInputList write FConnectionInputList;
@@ -65,6 +65,27 @@ type
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
   end;
 
+  { TOPStackTestConnectionInputSlave }
+ {
+  TOPStackTestConnectionInputSlave = class(TThread)
+  private
+    FCallback: TOpStackTestCallbackMethod;
+    FReceivedStr: ansistring;
+    FRunningCallback: TOpStackTestRunningCallbackMethod;
+    FSocket: TTCPBlockSocket;
+  protected
+    property Socket: TTCPBlockSocket read FSocket write FSocket;
+    property ReceivedStr: ansistring read FReceivedStr write FReceivedStr;
+  public
+    constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
+    destructor Destroy; override;
+    procedure Execute; override;
+    procedure Synchronizer;
+    procedure RunningSynchronizer;
+    property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
+    property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
+  end;        }
+
   { TOPStackTestConnectionOutput }
 
   TOPStackTestConnectionOutput = class(TThread)
@@ -74,19 +95,27 @@ type
     FhSocket: TSocket;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
     FSendList: TThreadList;
+    FSendString: ansistring;
+    FSocket: TTCPBlockSocket;
+ //   FInputSlave: TOPStackTestConnectionInputSlave;
+  protected
+    property Socket: TTCPBlockSocket read FSocket write FSocket;
+    property SendString: ansistring read FSendString write FSendString;
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
     procedure Execute; override;
     procedure RunningSynchronizer;
-  public
+    procedure Synchronizer;
     procedure Send(StringList: TStringList);
     property hSocket: TSocket read FhSocket write FhSocket;
     property SendList: TThreadList read FSendList write FSendList;
     property Event: PRTLEvent read FEvent write FEvent;
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
+  //  property InputSlave: TOPStackTestConnectionInputSlave read FInputSlave write FInputSlave;
   end;
+
 
 var
   ListenerThread: TOPStackTestListener;
@@ -179,7 +208,6 @@ procedure OutgoingMessage(AMessage: PSimpleMessage);
 var
   GridConnectStr: TGridConnectString;
   GridConnectBuffer: TGridConnectBuffer;
-  StringList: TStringList;
   i: Integer;
 begin
   case AMessage^.MessageType and MT_MASK of
@@ -211,9 +239,7 @@ begin
           end;
           GridConnectBufferToGridConnect(GridConnectBuffer, GridConnectStr);
           {$IFDEF FPC}
-          StringList := TStringList.Create;
-          StringList.Add(GridConnectStr);
-          ListenerThread.Send(StringList);
+          ListenerThread.Send(GridConnectStr);
           {$ENDIF}
         end;
     MT_DATAGRAM :
@@ -243,14 +269,14 @@ end;
 //                   and will be gone when this function returns.  You MUST copy
 //                   the contents of it if needed
 // *****************************************************************************
-procedure GridConnectStrToIncomingMessageCallback(GridConnectStr: PGridConnectString);
+procedure GridConnectStrToIncomingMessageCallback(GridConnectStrPtr: PGridConnectString);
 var
   GridConnectBuffer: TGridConnectBuffer;
   SimpleMessage: TSimpleMessage;
   Buffer: TSimpleBuffer;
   i: Integer;
 begin
-  GridConnectToGridConnectBuffer(GridConnectStr, GridConnectBuffer);
+  GridConnectToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);
   SimpleMessage.MTI := GridConnectBuffer.MTI shr 12;
   if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_GENERAL <= MTI_FRAME_TYPE_CAN_GENERAL then
   begin
@@ -291,10 +317,43 @@ end;
 // ***************************************************************************************************************************************************************************************************************************************
 
 {$IFDEF FPC}
+
+{ TOPStackTestConnectionInputSlave }
+   {
+constructor TOPStackTestConnectionInputSlave.Create(CreateSuspended: Boolean; const StackSize: SizeUInt);
+begin
+  inherited Create(CreateSuspended, StackSize);
+  ReceivedStr := '';
+  RunningCallback := nil;
+  Callback := nil;
+  Socket := nil;
+end;
+
+destructor TOPStackTestConnectionInputSlave.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TOPStackTestConnectionInputSlave.Execute;
+begin
+
+end;
+
+procedure TOPStackTestConnectionInputSlave.Synchronizer;
+begin
+  if Assigned(Callback) then
+    Callback(ReceivedStr)
+end;
+
+procedure TOPStackTestConnectionInputSlave.RunningSynchronizer;
+begin
+  if Assigned(RunningCallback) then
+    RunningCallback(ETT_Reader)
+end;    }
+
 { TOPStackTestConnectionOutput }
 
-constructor TOPStackTestConnectionOutput.Create(CreateSuspended: Boolean;
-  const StackSize: SizeUInt);
+constructor TOPStackTestConnectionOutput.Create(CreateSuspended: Boolean; const StackSize: SizeUInt);
 begin
   inherited Create(CreateSuspended, StackSize);
   SendList := TThreadList.Create;
@@ -320,9 +379,7 @@ end;
 
 procedure TOPStackTestConnectionOutput.Execute;
 var
-  Socket: TTCPBlockSocket;
   List: TList;
-  SendString: ansistring;
   i: Integer;
 begin
   Event := RTLEventCreate;
@@ -333,6 +390,11 @@ begin
     Socket.ConvertLineEnd := True;      // Use #10, #13, or both to be a "string"
     Socket.GetSins;                     // Back load the IP's / Ports information from the handle
     Synchronize(@RunningSynchronizer);
+  //  InputSlave := TOPStackTestConnectionInputSlave.Create(True);
+  //  InputSlave.Socket := Socket;
+  //  InputSlave.Callback := Callback;
+  //  InputSlave.RunningCallback := RunningCallback;
+  //  InputSlave.Start;
     while not Terminated do
     begin
       RTLEventWaitFor(Event);
@@ -350,8 +412,11 @@ begin
       Socket.ResetLastError;
       Socket.SendString(SendString);
       if Assigned(Callback) then
-        Callback('Sent: '+SendString)
-    end;
+      begin
+        SendString := 'Sent: ' + SendString;
+        Synchronize(@Synchronizer);
+      end;
+    end
   finally
     Socket.CloseSocket;
     Socket.Free;
@@ -363,6 +428,12 @@ procedure TOPStackTestConnectionOutput.RunningSynchronizer;
 begin
   if Assigned(RunningCallback) then
     RunningCallback(ETT_Writer)
+end;
+
+procedure TOPStackTestConnectionOutput.Synchronizer;
+begin
+  if Assigned(Callback) then
+    Callback(SendString)
 end;
 
 procedure TOPStackTestConnectionOutput.Send(StringList: TStringList);
@@ -391,6 +462,7 @@ end;
 destructor TOPStackTestConnectionInput.Destroy;
 begin
   Callback := nil;
+  RunningCallback := nil;
   inherited Destroy;
 end;
 
@@ -428,21 +500,20 @@ end;
 
 procedure TOPStackTestConnectionInput.Synchronizer;
 var
-  GridConnectStr: PGridConnectString;
-  Str: string;
+  GridConnectStrPtr: PGridConnectString;
+  Str: ansistring;
   i, StringLen: Integer;
 begin
   for i := 1 to Length(ReceiveStr) do
   begin
-    GridConnectStr := GridConnectDecodeMachine(ReceiveStr[i]);
-    if GridConnectStr <> nil then
+    if GridConnectDecodeMachine(ReceiveStr[i], GridConnectStrPtr) then
     begin
-      GridConnectStrToIncomingMessageCallback(GridConnectStr);
-      StringLen := strlen(GridConnectStr^);
+      GridConnectStrToIncomingMessageCallback(GridConnectStrPtr);
+      StringLen := strlen(GridConnectStrPtr^);
       SetLength(Str, StringLen);
-      Str := GridConnectStr^;
+      Str := GridConnectStrPtr^;
       if Assigned(Callback) then
-        Callback('Received: '+GridConnectStr^+LF)
+        Callback('Received: ' + GridConnectStrPtr^ + LF)
     end
   end;
 end;
@@ -452,6 +523,7 @@ begin
   if Assigned(RunningCallback) then
     RunningCallback(ETT_Reader);
 end;
+
 
 { TOPStackTestListener }
 
@@ -473,16 +545,18 @@ begin
     for i := 0 to ConnectionOutputList.Count - 1 do
       TOPStackTestConnectionOutput(ConnectionOutputList[i]).Terminate;
   finally
-    ConnectionOutputList.Clear
+    ConnectionOutputList.Clear;
+    FreeAndNil(FConnectionOutputList);
   end;
-  FreeAndNil(FConnectionOutputList);
+
   try
     for i := 0 to ConnectionInputList.Count - 1 do
       TOPStackTestConnectionInput(ConnectionInputList[i]).Terminate;
   finally
-    ConnectionInputList.Clear
+    ConnectionInputList.Clear;
+    FreeAndNil(FConnectionInputList);
   end;
-  FreeAndNil(FConnectionInputList);
+
   inherited Destroy;
 end;
 
@@ -528,22 +602,20 @@ begin
   end;
 end;
 
-procedure TOPStackTestListener.Send(StringList: TStringList);
+procedure TOPStackTestListener.Send(MessageStr: ansistring);
 var
   NewStringList: TStringList;
   i: Integer;
 begin
-  if ConnectionOutputList.Count > 1 then
+  if (MessageStr <> '') and not Terminated then
   begin
-    for i := 1 to ConnectionOutputList.Count - 1 do
+    for i := 0 to ConnectionOutputList.Count - 1 do
     begin
       NewStringList := TStringList.Create;
-      NewStringList.Assign( StringList);
+      NewStringList.Add( MessageStr);
       TOPStackTestConnectionOutput( ConnectionOutputList[i]).Send(NewStringList);
     end;
   end;
-  if ConnectionOutputList.Count > 0 then
-    TOPStackTestConnectionOutput( ConnectionOutputList[0]).Send( StringList);
 end;
 
 {$ENDIF}
