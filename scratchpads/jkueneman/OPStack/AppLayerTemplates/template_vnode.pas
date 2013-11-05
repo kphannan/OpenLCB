@@ -18,7 +18,7 @@ uses
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
 const
-  USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 1;
+  USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 2;
 {$ELSE}
 const
   USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 0;
@@ -34,8 +34,9 @@ const
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
 const
-  USER_SUPPORTED_VNODE_EVENTS_CONSUMED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
-    ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
+  USER_VNODE_SUPPORTED_EVENTS_CONSUMED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
+    ($01, $01, $00, $00, $00, $00, $FF, $FF),                                    // EVENT_EMERGENCY_STOP
+    ($05, $02, $01, $02, $02, $00, $00, $00)                                    // TEST
   );
 {$ENDIF}
 
@@ -44,23 +45,24 @@ const
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
 const
-  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 1;
+  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 2;
 {$ELSE}
 const
-  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 1;
+  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 0;
 {$ENDIF}
 
 // Dynamic events are events whos IDs are not known at compile time. When enabled
 // the library will callback on the AppCallback_DynamicEvent_Produced with and index from
 // 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1.
 const
-  USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED = 1;
+  USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED = 0;
 
 // Define the UIDs of Events that are Produced by this Node
   {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
   const
-    USER_SUPPORTED_VNODE_EVENTS_PRODUCED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
-      ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
+    USER_VNODE_SUPPORTED_EVENTS_PRODUCED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
+      ($01, $01, $00, $00, $00, $00, $FF, $FF),                                    // EVENT_EMERGENCY_STOP
+      ($05, $02, $01, $02, $02, $00, $00, $00)                                    // TEST
     );
   {$ENDIF}
 

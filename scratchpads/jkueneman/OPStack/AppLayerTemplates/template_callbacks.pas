@@ -28,7 +28,7 @@ implementation
 // *****************************************************************************
 function AppCallback_DynamicConsumedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 begin
-  Result := False
+  Result := False;
 end;
 
 // *****************************************************************************
@@ -41,7 +41,7 @@ end;
 // *****************************************************************************
 function AppCallback_DynamicProducedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 begin
-  Result := False
+  Result := False;
 end;
 
 // *****************************************************************************

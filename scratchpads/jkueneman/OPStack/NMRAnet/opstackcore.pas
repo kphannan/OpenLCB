@@ -65,14 +65,16 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function SupportsVNodeEventAsConsumer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+function SupportsVNodeEventAsConsumer(Node: PNMRAnetNode; DataBytes: PEventID; var EventIndex: Integer): Boolean;
+var
+  Event: TEventID;
 begin
   Result := False;
   {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
   EventIndex := 0;
   while (EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED) do
   begin
-    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex], DataBytes) then
+    if NMRAnetUtilities_EqualEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], DataBytes) then
     begin
       Result := True;
       Exit
@@ -82,6 +84,13 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) do
   begin
+    if AppCallback_DynamicVNodeConsumedEvent(Node, EventIndex, Event) then
+      if NMRAnetUtilities_EqualEventID(@Event, DataBytes) then
+      begin
+        EventIndex := USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + EventIndex;
+        Result := True;
+        Exit;
+      end;
     Inc(EventIndex);
   end
   {$ENDIF}
@@ -95,14 +104,16 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function SupportsVNodeEventAsProducer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+function SupportsVNodeEventAsProducer(Node: PNMRAnetNode; DataBytes: PEventID; var EventIndex: Integer): Boolean;
+var
+  Event: TEventID;
 begin
   Result := False;
   {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
   EventIndex := 0;
   while (EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED) do
   begin
-    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], DataBytes) then
+    if NMRAnetUtilities_EqualEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], DataBytes) then
     begin
       Result := True;
       Exit
@@ -112,6 +123,13 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED) do
   begin
+    if AppCallback_DynamicVNodeProducedEvent(Node, EventIndex, Event) then
+      if NMRAnetUtilities_EqualEventID(@Event, DataBytes) then
+      begin
+        EventIndex := USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + EventIndex;
+        Result := True;
+        Exit;
+      end;
     Inc(EventIndex);
   end
   {$ENDIF}
@@ -125,7 +143,9 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function SupportsEventAsConsumer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+function SupportsEventAsConsumer(Node: PNMRAnetNode; DataBytes: PEventID; var EventIndex: Integer): Boolean;
+var
+  Event: TEventID;
 begin
   Result := False;
   {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
@@ -142,6 +162,13 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) do
   begin
+    if AppCallback_DynamicConsumedEvent(Node, EventIndex, Event) then
+      if NMRAnetUtilities_EqualEventID(@Event, DataBytes) then
+      begin
+        EventIndex := USER_MAX_SUPPORTED_EVENTS_CONSUMED + EventIndex;
+        Result := True;
+        Exit;
+      end;
     Inc(EventIndex);
   end
   {$ENDIF}
@@ -155,7 +182,9 @@ end;
 //     Description:
 //
 // *****************************************************************************
-function SupportsEventAsProducer(DataBytes: PEventID; var EventIndex: Integer): Boolean;
+function SupportsEventAsProducer(Node: PNMRAnetNode; DataBytes: PEventID; var EventIndex: Integer): Boolean;
+var
+  Event: TEventID;
 begin
   Result := False;
   {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
@@ -172,6 +201,13 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED) do
   begin
+    if AppCallback_DynamicProducedEvent(Node, EventIndex, Event) then
+      if NMRAnetUtilities_EqualEventID(@Event, DataBytes) then
+      begin
+        EventIndex := USER_MAX_SUPPORTED_EVENTS_PRODUCED + EventIndex;
+        Result := True;
+        Exit;
+      end;
     Inc(EventIndex);
   end
   {$ENDIF}
@@ -348,7 +384,7 @@ begin
         begin
           if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(SimpleMessage);
             Result := True;
@@ -410,7 +446,7 @@ begin
         begin
           if OPStack_AllocateSimpleMessage(SimpleMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
             SimpleMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(SimpleMessage);
             Result := True;
@@ -467,7 +503,7 @@ begin
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
         if Node^.State and NS_VIRTUAL <> 0 then
-          NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_VNODE_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^)
+          NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^)
         else
         {$ENDIF}
           NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@SimpleMessage^.Buffer^.DataArray)^);
@@ -769,8 +805,8 @@ begin
                         end;
                     MTI_EVENTS_IDENTIFY_DEST          :
                         begin
-                          OPStackNode_SetEventFlags(Node, Node^.Events.Produced, EVENT_STATE_UNKNOWN);
-                          OPStackNode_SetEventFlags(Node, Node^.Events.Consumed, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventConsumedFlags(Node, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventProducedFlags(Node, EVENT_STATE_UNKNOWN);
                         end;
                     MTI_PROTOCOL_SUPPORT_INQUIRY      :
                         begin
@@ -832,8 +868,8 @@ begin
                       begin
                         VNodeEventIndex := -1;
                         NodeEventIndex := -1;
-                        VNodeEventSupported := SupportsVNodeEventAsConsumer(@AMessage^.Buffer^.DataArray, VNodeEventIndex);
-                        NodeEventSupported := SupportsEventAsConsumer(@AMessage^.Buffer^.DataArray, NodeEventIndex);
+                        VNodeEventSupported := SupportsVNodeEventAsConsumer(Node, @AMessage^.Buffer^.DataArray, VNodeEventIndex);
+                        NodeEventSupported := SupportsEventAsConsumer(Node, @AMessage^.Buffer^.DataArray, NodeEventIndex);
                         for i := 0 to NodePool.AllocatedCount - 1 do
                         begin
                           Node := NodePool.AllocatedList[i];
@@ -858,8 +894,8 @@ begin
                       begin
                         VNodeEventIndex := -1;
                         NodeEventIndex := -1;
-                        VNodeEventSupported := SupportsVNodeEventAsProducer(@AMessage^.Buffer^.DataArray, VNodeEventIndex);
-                        NodeEventSupported := SupportsEventAsProducer(@AMessage^.Buffer^.DataArray, NodeEventIndex);
+                        VNodeEventSupported := SupportsVNodeEventAsProducer(Node, @AMessage^.Buffer^.DataArray, VNodeEventIndex);
+                        NodeEventSupported := SupportsEventAsProducer(Node, @AMessage^.Buffer^.DataArray, NodeEventIndex);
                         for i := 0 to NodePool.AllocatedCount - 1 do
                         begin
                           Node := NodePool.AllocatedList[i];
@@ -889,8 +925,8 @@ begin
                         for i := 0 to NodePool.AllocatedCount - 1 do
                         begin
                           Node := NodePool.AllocatedList[i];
-                          OPStackNode_SetEventFlags(Node, Node^.Events.Produced, EVENT_STATE_UNKNOWN);
-                          OPStackNode_SetEventFlags(Node, Node^.Events.Consumed, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventProducedFlags(Node, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventConsumedFlags(Node, EVENT_STATE_UNKNOWN);
                         end;
                         Exit;
                       end;

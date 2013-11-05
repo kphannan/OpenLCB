@@ -157,21 +157,15 @@ begin
 end;
 
 procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);
-var
-  i: Integer;
 begin
   if CheckBoxLogMessages.Checked and Assigned(FListener) then
   begin
-    for i := 0 to Listener.ConnectionOutputList.Count - 1 do
-      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).Callback := Listener.Callback;
-    for i := 0 to Listener.ConnectionInputList.Count - 1 do
-      TOPStackTestConnectionInput(Listener.ConnectionInputList[i]).Callback := Listener.Callback;
+    Listener.ConnectionOutput.Callback := Listener.Callback;
+    Listener.ConnectionInput.Callback := Listener.Callback;
   end else
   begin
-    for i := 0 to Listener.ConnectionOutputList.Count - 1 do
-      TOPStackTestConnectionOutput(Listener.ConnectionOutputList[i]).Callback := nil;
-    for i := 0 to Listener.ConnectionInputList.Count - 1 do
-      TOPStackTestConnectionInput(Listener.ConnectionInputList[i]).Callback := nil;
+    Listener.ConnectionOutput.Callback := nil;
+    Listener.ConnectionInput.Callback := nil;
   end;
 end;
 

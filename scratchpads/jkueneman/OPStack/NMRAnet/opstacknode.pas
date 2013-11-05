@@ -54,7 +54,8 @@ procedure OPStackNode_SetState(Node: PNMRAnetNode; State: Byte);
 procedure OPStackNode_ClearState(Node: PNMRAnetNode; State: Byte);
 function OPStackNode_TestState(Node: PNMRAnetNode; State: Byte): Boolean;
 
-procedure OPStackNode_SetEventFlags(Node: PNMRAnetNode; var Events: TNodeEventArray; State: Byte);
+procedure OPStackNode_SetEventConsumedFlags(Node: PNMRAnetNode; State: Byte);
+procedure OPStackNode_SetEventProducedFlags(Node: PNMRAnetNode; State: Byte);
 procedure OPStackNode_SetEventFlag(var Events: TNodeEventArray; EventIndex: Integer; State: Byte);
 procedure OPStackNode_ClearEventFlags(var Events: TNodeEventArray);
 function OPStackNode_NextEventFlag(var Events: TNodeEventArray; var State: Byte): Integer;
@@ -398,24 +399,46 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_SetEventFlags;
+//  procedure OPStackNode_SetEventConsumedFlags;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_SetEventFlags(Node: PNMRAnetNode; var Events: TNodeEventArray; State: Byte);
+procedure OPStackNode_SetEventConsumedFlags(Node: PNMRAnetNode; State: Byte);
 var
   i: Integer;
 begin
   if OPStackNode_TestState(Node, NS_VIRTUAL) then
   begin
-    for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
-      OPStackNode_SetEventFlag(Events, i, State);
+    for i := 0 to (USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
+      OPStackNode_SetEventFlag(Node^.Events.Consumed, i, State);
   end else
   begin
-    for i := 0 to USER_MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
-      OPStackNode_SetEventFlag(Events, i, State);
+    for i := 0 to (USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
+      OPStackNode_SetEventFlag(Node^.Events.Consumed, i, State);
   end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_SetEventProducedFlags;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_SetEventProducedFlags(Node: PNMRAnetNode; State: Byte);
+var
+  i: Integer;
+begin
+  if OPStackNode_TestState(Node, NS_VIRTUAL) then
+  begin
+    for i := 0 to (USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
+      OPStackNode_SetEventFlag(Node^.Events.Produced, i, State);
+  end else
+  begin
+    for i := 0 to (USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
+      OPStackNode_SetEventFlag(Node^.Events.Produced, i, State);
+  end
+
 end;
 
 // *****************************************************************************

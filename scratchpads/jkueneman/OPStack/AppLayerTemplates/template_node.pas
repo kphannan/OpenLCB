@@ -46,7 +46,7 @@ const
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
 const
-  USER_MAX_SUPPORTED_EVENTS_CONSUMED = 1;
+  USER_MAX_SUPPORTED_EVENTS_CONSUMED = 2;
 {$ELSE}
 const
   USER_MAX_SUPPORTED_EVENTS_CONSUMED = 0;
@@ -64,7 +64,8 @@ const
 {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
 const
   USER_SUPPORTED_EVENTS_CONSUMED: array[0..USER_MAX_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
-    ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
+    ($01, $01, $00, $00, $00, $00, $FF, $FF),                                    // EVENT_EMERGENCY_STOP
+    ($05, $02, $01, $02, $02, $00, $00, $00)                                    // TEST
   );
 {$ENDIF}
 
@@ -73,7 +74,7 @@ const
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
 const
-  USER_MAX_SUPPORTED_EVENTS_PRODUCED = 1;
+  USER_MAX_SUPPORTED_EVENTS_PRODUCED = 2;
 {$ELSE}
 const
   USER_MAX_SUPPORTED_EVENTS_PRODUCED = 0;
@@ -90,7 +91,8 @@ const
   {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
   const
     USER_SUPPORTED_EVENTS_PRODUCED: array[0..USER_MAX_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
-      ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
+      ($01, $01, $00, $00, $00, $00, $FF, $FF),                                    // EVENT_EMERGENCY_STOP
+      ($05, $02, $01, $02, $02, $00, $00, $00)                                    // TEST
     );
   {$ENDIF}
 
