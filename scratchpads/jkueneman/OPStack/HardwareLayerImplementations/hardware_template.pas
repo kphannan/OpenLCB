@@ -45,27 +45,6 @@ type
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
   end;
 
-  { TOPStackTestConnectionInputSlave }
- {
-  TOPStackTestConnectionInputSlave = class(TThread)
-  private
-    FCallback: TOpStackTestCallbackMethod;
-    FReceivedStr: ansistring;
-    FRunningCallback: TOpStackTestRunningCallbackMethod;
-    FSocket: TTCPBlockSocket;
-  protected
-    property Socket: TTCPBlockSocket read FSocket write FSocket;
-    property ReceivedStr: ansistring read FReceivedStr write FReceivedStr;
-  public
-    constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
-    destructor Destroy; override;
-    procedure Execute; override;
-    procedure Synchronizer;
-    procedure RunningSynchronizer;
-    property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
-    property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
-  end;        }
-
   { TOPStackTestConnectionOutput }
 
   TOPStackTestConnectionOutput = class(TThread)
@@ -77,7 +56,6 @@ type
     FSendList: TThreadList;
     FSendString: ansistring;
     FSocket: TTCPBlockSocket;
- //   FInputSlave: TOPStackTestConnectionInputSlave;
   protected
     property Socket: TTCPBlockSocket read FSocket write FSocket;
     property SendString: ansistring read FSendString write FSendString;
@@ -93,7 +71,6 @@ type
     property Event: PRTLEvent read FEvent write FEvent;
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
-  //  property InputSlave: TOPStackTestConnectionInputSlave read FInputSlave write FInputSlave;
   end;
 
   { TOPStackTestListener }
@@ -131,18 +108,20 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
-procedure OutgoingMessage(AMessage: PSimpleMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure OutgoingMessage(AMessage: POPStackMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 function IsOutgoingBufferAvailable: Boolean;
 
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
-procedure IncomingMessageCallback(AMessage: PSimpleMessage); external;
+procedure IncomingMessageCallback(AMessage: POPStackMessage); external;
+function OPStackCANStatemachine_ProcessIncomingDatagramMessage(OPStackMessage: POPStackMessage): POPStackMessage; external;
 {$ENDIF}
 
 implementation
 
 {$IFDEF FPC}
 uses
+  opstackcanstatemachines,
   opstackcore;
 {$ENDIF}
 
@@ -204,7 +183,7 @@ end;
 //                   IsOutgoingBufferAvailable before to ensure a buffer is
 //                   available to use
 // *****************************************************************************
-procedure OutgoingMessage(AMessage: PSimpleMessage);
+procedure OutgoingMessage(AMessage: POPStackMessage);
 var
   GridConnectStr: TGridConnectString;
   GridConnectBuffer: TGridConnectBuffer;
@@ -272,42 +251,50 @@ end;
 procedure GridConnectStrToIncomingMessageCallback(GridConnectStrPtr: PGridConnectString);
 var
   GridConnectBuffer: TGridConnectBuffer;
-  SimpleMessage: TSimpleMessage;
+  OPStackMessage: TOPStackMessage;
+  OPStackMessagePtr: POPStackMessage;
   Buffer: TSimpleBuffer;
   i: Integer;
 begin
   GridConnectToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);
-  SimpleMessage.MTI := GridConnectBuffer.MTI shr 12;
-  if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_GENERAL <= MTI_FRAME_TYPE_CAN_GENERAL then
+  OPStackMessage.Buffer := @Buffer;
+  OPStackMessage.Source.ID := NULL_NODE_ID;
+  OPStackMessage.Dest.ID := NULL_NODE_ID;
+  OPStackMessage.Source.AliasID := GridConnectBuffer.MTI and $00000FFF;
+  OPStackMessage.MessageType := MT_SIMPLE or MT_ALLOCATED;
+  OPStackMessage.Next := nil;
+  Buffer.iStateMachine := 0;
+  Buffer.State := ABS_ALLOCATED;
+  Buffer.DataBufferSize := GridConnectBuffer.PayloadCount;
+  OPStackMessage.MTI := GridConnectBuffer.MTI shr 12;
+  if OPStackMessage.MTI and $F000 <= MTI_FRAME_TYPE_CAN_GENERAL then
   begin
     // These are the only messages that map to a full MTI
-    SimpleMessage.MTI := SimpleMessage.MTI and not MTI_FRAME_TYPE_CAN_GENERAL;
-    SimpleMessage.Source.AliasID := GridConnectBuffer.MTI and $00000FFF;
-    SimpleMessage.Source.ID := NULL_NODE_ID;
-    if SimpleMessage.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+    OPStackMessage.MTI := OPStackMessage.MTI and not MTI_FRAME_TYPE_CAN_GENERAL;
+    if OPStackMessage.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
     begin
-      SimpleMessage.Dest.AliasID := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
-      SimpleMessage.DestFlags := GridConnectBuffer.Payload[0] and $F0;
+      OPStackMessage.Dest.AliasID := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
+      OPStackMessage.DestFlags := GridConnectBuffer.Payload[0] and $F0;
     end else
-      SimpleMessage.Dest.AliasID := 0;
-    SimpleMessage.Dest.ID := NULL_NODE_ID;
-    SimpleMessage.MessageType := MT_SIMPLE or MT_ALLOCATED;
-    SimpleMessage.Next := nil;
-    Buffer.DataBufferSize := GridConnectBuffer.PayloadCount;
+      OPStackMessage.Dest.AliasID := 0;
+    for i := 0 to Buffer.DataBufferSize - 1 do
+      Buffer.DataArray[i] := GridConnectBuffer.Payload[i];                      // DO I SHIFT OVER THE BYTES TO REMOVE THE DESTINATION ADDRESS AND MAKE ALL DATA START AT 0 IN THE LIBRARY???
+    IncomingMessageCallback(@OPStackMessage);
+  end else
+  if OPStackMessage.MTI and $F000 <= MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END then
+  begin
+    OPStackMessage.Dest.AliasID := OPStackMessage.MTI and $0FFF;
+    OPStackMessage.DestFlags := 0;
+    OPStackMessage.MTI := OPStackMessage.MTI and $F000;
     for i := 0 to Buffer.DataBufferSize - 1 do
       Buffer.DataArray[i] := GridConnectBuffer.Payload[i];
-    Buffer.iStateMachine := 0;
-    Buffer.State := 0;
-    SimpleMessage.Buffer := @Buffer;
-    IncomingMessageCallback(@SimpleMessage);
+    OPStackMessagePtr := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage);
+    if OPStackMessagePtr <> nil then
+      IncomingMessageCallback(OPStackMessagePtr);                                 // We have a complete Datagram MTI message, set it on
   end else
-  if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_STREAM_SEND = MTI_FRAME_TYPE_CAN_STREAM_SEND then
+  if OPStackMessage.MTI and $F000 = MTI_FRAME_TYPE_CAN_STREAM_SEND then
   begin
     // It is a CAN Stream Frame, need to collect them all then call into the library with a Stream full MTI
-  end else
-  if SimpleMessage.MTI and MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME >= MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME then
-  begin
-    // It is a CAN Datagram Frame, need to collect them all then call into the library with a Datagram full MTI
   end
 end;
 
@@ -317,39 +304,6 @@ end;
 // ***************************************************************************************************************************************************************************************************************************************
 
 {$IFDEF FPC}
-
-{ TOPStackTestConnectionInputSlave }
-   {
-constructor TOPStackTestConnectionInputSlave.Create(CreateSuspended: Boolean; const StackSize: SizeUInt);
-begin
-  inherited Create(CreateSuspended, StackSize);
-  ReceivedStr := '';
-  RunningCallback := nil;
-  Callback := nil;
-  Socket := nil;
-end;
-
-destructor TOPStackTestConnectionInputSlave.Destroy;
-begin
-  inherited Destroy;
-end;
-
-procedure TOPStackTestConnectionInputSlave.Execute;
-begin
-
-end;
-
-procedure TOPStackTestConnectionInputSlave.Synchronizer;
-begin
-  if Assigned(Callback) then
-    Callback(ReceivedStr)
-end;
-
-procedure TOPStackTestConnectionInputSlave.RunningSynchronizer;
-begin
-  if Assigned(RunningCallback) then
-    RunningCallback(ETT_Reader)
-end;    }
 
 { TOPStackTestConnectionOutput }
 
@@ -390,11 +344,6 @@ begin
     Socket.ConvertLineEnd := True;      // Use #10, #13, or both to be a "string"
     Socket.GetSins;                     // Back load the IP's / Ports information from the handle
     Synchronize(@RunningSynchronizer);
-  //  InputSlave := TOPStackTestConnectionInputSlave.Create(True);
-  //  InputSlave.Socket := Socket;
-  //  InputSlave.Callback := Callback;
-  //  InputSlave.RunningCallback := RunningCallback;
-  //  InputSlave.Start;
     while not Terminated do
     begin
       RTLEventWaitFor(Event);

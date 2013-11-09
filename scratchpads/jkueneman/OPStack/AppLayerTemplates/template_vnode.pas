@@ -66,9 +66,10 @@ const
     );
   {$ENDIF}
 
+// Set Protocols that the node(s) will support and return in the Protocol Identification Protcol
 const
-  PIV_VNODE_SUPPORTED_PROTOCOL_COUNT = 8;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
-  PIV_VNODE_SUPPORTED_PROTOCOLS: array[0..PIV_VNODE_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (     // Look at the PIV_xxxx constants for more Protocols
+  USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT = 8;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
+  USER_PIV_VNODE_SUPPORTED_PROTOCOLS: array[0..USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (     // Look at the PIV_xxxx constants for more Protocols
     ($80, $00, $00, $00, $00, $00),                                             // Protocol
     ($40, $00, $00, $00, $00, $00),                                             // Datagram Protocol
     ($04, $00, $00, $00, $00, $00),                                             // Producer Consumer Protocol
@@ -78,6 +79,21 @@ const
     ($00, $40, $00, $00, $00, $00),                                             // ACDI Protocol
     ($00, $04, $00, $00, $00, $00)                                              // Traction Protocol
     );
+
+
+  // Set options and configurations of the Configuration Memory Protocol.  Most depend on the
+  //   capabilities of the device/EEPROM/Flash being used and what the application wants to support
+const
+  USER_VNODE_CONFIGMEM_OPTIONS = MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES or MCO_UNALIGNED_WRITES;  // The commands that are avialable to the system, see the MCO_xxx constants
+  USER_VNODE_CONFIGMEM_WRITE_LENGTH = MCWL_ONE_BYTE or MCWL_TWO_BYTE or MCWL_FOUR_BYTE or MCWL_64_BYTE or MCWL_ARBITRARY_BYTE;                      // The length of writes supported by the EEPROM, see the MCWL_xxx constants
+  USER_VNODE_CONFIGMEM_HIGHEST_SPACE = MSI_CDI;                                                                                                     // Highest space, see MSI_xxx constants
+  USER_VNODE_CONFIGMEM_LOWEST_SPACE = MSI_FDI;                                                                                                      // Lowest space, see MSI_xxx constants
+
+
+const
+  USER_MAX_VNODE_CDI_ARRAY = 0;
+  USER_MAX_VNODE_ACDI_MFG_ARRAY = 0;
+  USER_MAX_VNODE_USER_CONFIG_DATA = 0;
 
 implementation
 

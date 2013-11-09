@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="15">
+    <Units Count="17">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -114,6 +114,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_callbacks"/>
       </Unit14>
+      <Unit15>
+        <Filename Value="..\NMRAnet\opstackcanstatemachines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcanstatemachines"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="..\AppLayerTemplates\template_configmem.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_configmem"/>
+      </Unit16>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

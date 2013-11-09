@@ -67,11 +67,13 @@ procedure OPStackNode_ClearPCER_Flags(Node: PNMRAnetNode);
 function OPStackNode_NextPCER_Flag(Node: PNMRAnetNode): Integer;
 function OPStackNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
 
-procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
-procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
-function OPStackNode_MessageBuffer(Node: PNMRAnetNode): PSimpleMessage;
+procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+function OPStackNode_MessageBuffer(Node: PNMRAnetNode): POPStackMessage;
 
-function OPStackNode_Find(AMessage: PSimpleMessage; FindBy: Byte): PNMRAnetNode;
+function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;
+
+function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 
 var
   NodePool: TNodePool;
@@ -639,9 +641,9 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
-  Temp: PSimpleMessage;
+  Temp: POPStackMessage;
 begin
   if Node^.Messages = nil then
     Node^.Messages := AMessage
@@ -659,9 +661,9 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: PSimpleMessage);
+procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
-  Temp, Parent: PSimpleMessage;
+  Temp, Parent: POPStackMessage;
 begin
   if Node^.Messages <> nil then
   begin
@@ -687,26 +689,9 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_MessageBuffer(Node: PNMRAnetNode): PSimpleMessage;
-var
-  Done: Boolean;
+function OPStackNode_MessageBuffer(Node: PNMRAnetNode): POPStackMessage;
 begin
   Result := Node^.Messages;
-  if Result <> nil then
-  begin
-    Done := False;
-    while not Done and (Result <> nil) do
-    begin
-      if Result^.Buffer <> nil then                                             // Has a buffer so we need to make sure the buffer is not processing
-      begin
-        if Result^.Buffer^.State and ABS_PROCESSING <> 0 then
-          Result := Result^.Next                                                // Processing, try the next one
-        else
-          Done := True;                                                         // Not processing so use it
-      end else
-        Done := True;                                                           // Is as simple message no testing necessary
-    end
-  end
 end;
 
 // *****************************************************************************
@@ -715,7 +700,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_Find(AMessage: PSimpleMessage; FindBy: Byte): PNMRAnetNode;
+function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;
 var
   i: Integer;
   NodeID: TNodeID;
@@ -754,6 +739,20 @@ begin
         end;
     end;
   end;
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_Equal;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
+begin
+  Result := False;
+  if NMRAnetUtilities_EqualNodeIDInfo(Message1^.Dest, Message2^.Dest) then
+    if NMRAnetUtilities_EqualNodeIDInfo(Message1^.Source, Message2^.Source) then
+      Result := True
 end;
 
 end.

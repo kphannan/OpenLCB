@@ -127,7 +127,7 @@ begin
   else
     Statusbar.Panels[0].Text := 'Not Connected';
   ButtonStartStack.Enabled := Connected;
-  Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(SimpleMessagePool.Count);
+  Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(OPStackMessagePool.Count);
   Statusbar.Panels[3].Text := 'CAN Buffers: ' + IntToStr(SimpleBufferPool.Count);
   Statusbar.Panels[4].Text := 'Datagram Buffers: ' + IntToStr(DatagramBufferPool.Count);
   Statusbar.Panels[5].Text := 'Steam Buffers: ' + IntToStr(StreamBufferPool.Count);

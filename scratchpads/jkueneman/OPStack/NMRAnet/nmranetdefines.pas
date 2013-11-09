@@ -101,6 +101,86 @@ const
   PIV_PROTOCOL_ID_CDI: TPIVProtocolValueArray                = ($00, $40, $00, $00, $00, $00);
   PIV_PROTOCOL_ID_DISPLAY: TPIVProtocolValueArray            = ($00, $20, $00, $00, $00, $00);
 
+const
+  DATAGRAM_TYPE_MEMORY_CONFIGURATION        = $20;                              // Memory Configuration Protocol
+  DATAGRAM_TYPE_TRAIN_CONTROL               = $30;                              // Train Control Protocol
+  DATAGRAM_TYPE_BOOTLOADER                  = $40;                              // MAKING A GUESS ON A NUMBER>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  DATAGRAM_TYPE_TWO_BYTE_CMD_MASK           = $E0;                              // Next two bytes are command bytes and not data
+  DATAGRAM_TYPE_SIX_BYTE_CMD_MASK           = $F0;                              // Next six bytes are command bytes and not data
+
+
+type
+  TDatagramErrorCode = array[0..1] of Byte;
+  PDatagramErrorCode = ^TDatagramErrorCode;
+
+const
+  DATAGRAM_RESULT_OKAY                                    : TDatagramErrorCode = ($00, $00);
+  // Errors that will cause sender to not retry
+  DATAGRAM_RESULT_REJECTED_PERMANENT_ERROR                : TDatagramErrorCode = ($10, $00);
+  DATAGRAM_RESULT_REJECTED_INFORMATION_LOGGED             : TDatagramErrorCode = ($10, $10);
+  DATAGRAM_RESULT_REJECTED_SOURCE_NOT_PERMITTED           : TDatagramErrorCode = ($10, $20);
+  DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED  : TDatagramErrorCode = ($10, $40);
+  // Error that should cause sender to retry
+  DATAGRAM_RESULT_REJECTED_BUFFER_FULL                    : TDatagramErrorCode = ($20, $00);
+  // Error that was a transport problem
+  DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER                   : TDatagramErrorCode = ($60, $00);
+
+  DATAGRAM_RESULT_REJECTED_NO_RESEND_MASK                 = $1000;
+  DATAGRAM_RESULT_REJECTED_RESEND_MASK                    = $2000;
+  DATAGRAM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
+
+  DATAGRAM_OK_ACK_REPLY_PENDING                           = $80;
+
+const
+  MCP_COMMAND_MASK                    = $C0;                                    // Upper 2 bits are the command type
+
+  // Upper 2 bits 0 = Write Command
+  MCP_COMMAND_WRITE                   = $00;                                    // MemoryConfigurationProtocol - Write Memory Mask
+  MCP_COMMAND_WRITE_STREAM            = $20;                                    // MemoryConfigurationProtocol - Write Memory Mask with Streams
+  MCP_COMMAND_WRITE_UNDER_MASK        = $08;                                    // MemoryConfigurationProtocol - Write Memory under mask Mask
+  MCP_COMMAND_WRITE_REPLY_OK          = $10;
+  MCP_COMMAND_WRITE_REPLY_FAIL        = $18;
+
+  // Upper 2 bits 1 = Read Command
+  MCP_COMMAND_READ                    = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
+  MCP_COMMAND_READ_STREAM             = $60;                                    // MemoryConfigurationProtocol - Read Memory with Streams
+  MCP_COMMAND_READ_REPLY_OK           = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
+  MCP_COMMAND_READ_REPLY_FAIL         = $58;
+  MCP_COMMAND_READ_SREAM_REPLY        = $30;
+
+  // Upper 2 bits 2 = Operation Command
+  MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
+
+  // Bit 0..2 are to define address space
+  MCP_COMMAND_REPLY_FAIL              = 3;                                      // Bit 3 set mean the result is a failed result if it is a Command Reply
+  MCP_COMMAND_WRITE_UNDER_MASK_BIT    = 3;                                      // Bit 3 set means write under mask for an in coming command
+  MCP_REPLY_COMMAND_BIT               = 4;                                      // Bit 4 set means it is a reply to a Command
+  MCP_STREAM_COMMAND_BIT              = 5;                                      // Bit 5 set means it is a Stream Command
+  // Bit 6..7 define the Command
+
+  MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
+  MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask
+  MCP_CONFIGURATION                   = $01;                                    // Address space = Basic Configuration ($FD) access Mask
+  MCP_NONE                            = $00;                                    // Use the optional {Space} byte in the datagram to defin the address space
+
+  MCP_OP_GET_CONFIG                  = $80;                                     // MemoryConfigurationProtocol Operation - Get Configuration
+  MCP_OP_GET_CONFIG_REPLY            = $82;                                     // MemoryConfigurationProtocol Operation - Get Configuration Reply
+  MCP_OP_GET_ADD_SPACE_INFO          = $84;                                     // MemoryConfigurationProtocol Operation - Get Add Space Info
+  MCP_OP_GET_ADD_SPACE_INFO_REPLY    = $86;                                     // MemoryConfigurationProtocol Operation - Get Add Space Info Reply
+  MCP_OP_LOCK                        = $88;                                     // MemoryConfigurationProtocol Operation - Lock Node
+  MCP_OP_LOCK_REPLY                  = $8A;                                     // MemoryConfigurationProtocol Operation - Lock Node Reply
+  MCP_OP_GET_UNIQUEID                = $8C;                                     // MemoryConfiguratio                    nProtocol Operation - Get Unique ID Key
+  MCP_OP_GET_UNIQUEID_REPLY          = $8E;                                     // MemoryConfigurationProtocol Operation - Get Unique ID Key Reply
+
+  MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT = $01;
+
+  MCP_OP_FREEZE                      = $A0;                                     // MemoryConfigurationProtocol Operation - Freeze Node
+  MCP_OP_INDICATE                    = $A4;                                     // MemoryConfigurationProtocol Operation - Indicate
+  MCP_OP_UPDATE_COMPLETE             = $A8;                                     // MemoryConfigurationProtocol Operation - Update Complete
+  MCP_OP_RESETS                      = $A9;                                     // MemoryConfigurationProtocol Operation - Resets
+
+
+
 implementation
 
 end.

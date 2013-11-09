@@ -20,6 +20,7 @@ procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; va
 procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
 procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PSimpleDataArray; var NodeID: TNodeID);
 function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
+function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNodeInfo): Boolean;
 
 
 implementation
@@ -151,6 +152,23 @@ begin
     end;
     Inc(i);
   end;
+end;
+
+// *****************************************************************************
+//  procedure NMRAnetUtilities_EqualNodeIDInfo
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNodeInfo): Boolean;
+begin
+  Result := False;
+  if Info1.AliasID = Info2.AliasID then
+    if Info1.ID[0] = Info2.ID[0] then
+      if Info1.ID[1] = Info2.ID[1] then
+        Result := True;
 end;
 
 end.

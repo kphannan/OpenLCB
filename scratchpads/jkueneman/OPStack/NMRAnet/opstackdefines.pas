@@ -92,11 +92,12 @@ const
 // Message types
 
 const
-  MT_MASK            = $3F;                                                     // Strips off the CAN and Allocated flags
+  MT_MASK            = $0F;                                                     // Strips off the CAN and Allocated flags
   MT_UNALLOCATED     = $00;
   MT_SIMPLE          = $01;                                                     // Message Type Identifiers
   MT_DATAGRAM        = $02;
   MT_STREAM          = $04;
+
   MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
   MT_ALLOCATED       = $80;
 
@@ -160,8 +161,8 @@ type
   end;
 
 const
-  ABS_ALLOCATED   = $01;                                                        // Array Buffer State Flag = Allocated Buffer
-  ABS_PROCESSING  = $02;                                                        // Array Buffer State Flag = The buffer is being used to transmit/receive and is not complete so don't use the data yet
+  ABS_ALLOCATED     = $01;                                                      // Array Buffer State Flag = Allocated Buffer
+  ABS_HASBEENACKED  = $02;                                                      // Array Buffer State Flag = The received Datagram buffer has be ACK'ed
 
 type
 //  TBuffer = record
@@ -178,7 +179,7 @@ type
     DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
     DataArray: TSimpleDataArray;
   end;
-  PSimpleBUffer = ^TSimpleBuffer;
+  PSimpleBuffer = ^TSimpleBuffer;
 
   TDatagramBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
@@ -200,20 +201,20 @@ type
 
 type
   {$IFDEF FPC}
-  PSimpleMessage = ^TSimpleMessage;
+  POPStackMessage = ^TOPStackMessage;
   {$ENDIF}
-  TSimpleMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message
+  TOPStackMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
+    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message, bottom 4 bits are the type of message u
     Source: TNodeInfo;
     Dest: TNodeInfo;
     DestFlags: Byte;                                                            // The upper 4 bits sent in the Destination (when used for the message)
     {$IFDEF FPC}
-    Next: PSimpleMessage;
+    Next: POPStackMessage;
     {$ELSE}
-    Next: ^TSimpleMessage;
+    Next: ^TOPStackMessage;
     {$ENDIF}
     MTI: Word;
-    Buffer: PSimpleBUffer;
+    Buffer: PSimpleBuffer;                                                      // This can be nil, CANBuffer, Datagram Buffer, or StreamBuffer based on the lower 4 bits of MessageType
   end;
 
 type
@@ -225,7 +226,7 @@ type
     Login: TNMRAnetNodeLoginInfo;                                               // Login Information
     Flags: Word;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
-    Messages: PSimpleMessage;                                                   // Linked List of Message to process for the node
+    Messages: POPStackMessage;                                                   // Linked List of Message to process for the node
 
   //   BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of dataless Messages Replies to service
  //   DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service
