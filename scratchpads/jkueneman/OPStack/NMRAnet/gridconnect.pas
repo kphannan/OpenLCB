@@ -8,6 +8,7 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils,
   {$ENDIF}
+  HelperFunctions,
   nmranetdefines,
   opstackdefines,
   opstackbuffers;
@@ -41,17 +42,6 @@ var
   ReceiveGridConnectBufferIndex: Integer;
   GridConnectReceiveState: Word;
 
-
-// *****************************************************************************
-//  procedure IsValidHexChar
-//     Parameters: AChar: Charater to test
-//     Returns:     True if the character is used in a Hex number
-//     Description:
-// *****************************************************************************
-function IsValidHexChar(AChar: Char): Boolean;
-begin
-  Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
-end;
 
 // *****************************************************************************
 //  procedure GridConnect_Initialize
@@ -212,7 +202,7 @@ begin
   {$IFDEF FPC}
   ConvertString := IntToHex(GridConnectBuffer.MTI, 8);
   {$ELSE}
-  LongWordToHex(GridConnectBuffer, ConvertString);
+  LongWordToHex(GridConnectBuffer.MTI, ConvertString);
   {$ENDIF}
   GridConnectStr[2] := ConvertString[0];
   GridConnectStr[3] := ConvertString[1];
@@ -245,4 +235,3 @@ begin
 end;
 
 end.
-

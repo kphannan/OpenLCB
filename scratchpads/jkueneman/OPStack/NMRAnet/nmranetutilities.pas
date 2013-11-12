@@ -17,7 +17,7 @@ function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean):
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
 procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
-procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWithEventID(EventID: PEventID; DataArray: PSimpleDataArray);
 procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PSimpleDataArray; var NodeID: TNodeID);
 function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
 function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNodeInfo): Boolean;
@@ -101,16 +101,16 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadSimpleDataWithEventID(var EventID: TEventID; var DataArray: TSimpleDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWithEventID(EventID: PEventID; DataArray: PSimpleDataArray);
 begin
-  DataArray[0] := EventID[0];
-  DataArray[1] := EventID[1];
-  DataArray[2] := EventID[2];
-  DataArray[3] := EventID[3];
-  DataArray[4] := EventID[4];
-  DataArray[5] := EventID[5];
-  DataArray[6] := EventID[6];
-  DataArray[7] := EventID[7];
+  DataArray^[0] := EventID^[0];
+  DataArray^[1] := EventID^[1];
+  DataArray^[2] := EventID^[2];
+  DataArray^[3] := EventID^[3];
+  DataArray^[4] := EventID^[4];
+  DataArray^[5] := EventID^[5];
+  DataArray^[6] := EventID^[6];
+  DataArray^[7] := EventID^[7];
 end;
 
 // *****************************************************************************

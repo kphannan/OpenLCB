@@ -210,6 +210,9 @@ type
     MTI: Word;
     Buffer: PSimpleBuffer;                                                      // This can be nil, CANBuffer, Datagram Buffer, or StreamBuffer based on the lower 4 bits of MessageType
   end;
+  {$IFNDEF FPC}
+  POPStackMessage = ^TOPStackMessage;
+  {$ENDIF}
 
 type
   TNMRAnetNode = record

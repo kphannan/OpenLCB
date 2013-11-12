@@ -246,7 +246,7 @@ begin
               begin                                                             // Alias Map Enquiry.....
                 if AMessage^.Buffer^.DataBufferSize = 0 then
                   OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
-                else begin;
+                else begin
                   NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
                   DestNode := OPStackNode_Find(AMessage, FIND_BY_DEST);
                   if DestNode <> nil then       // The full Source ID was filled above so it will be use to search
@@ -399,7 +399,7 @@ begin
                               OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
                             end;
                             Exit;
-                          end
+                          end;
                   // Handling unknown MTI for all nodes (virtual and physical) is difficult and not sure it is needed
                   end; {case}
                 end; {not an addressed message}
@@ -441,7 +441,7 @@ begin
                   if AMessage^.MessageType and MT_ALLOCATED <> 0 then
                     OPStackBuffers_DeAllocateMessage(AMessage);
                 end
-              end
+              end;
         end
       end;
   end;
@@ -654,7 +654,7 @@ begin
       case State of
         EVENT_STATE_UNKNOWN : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
         EVENT_STATE_VALID   : MTI := MTI_CONSUMER_IDENTIFIED_SET;
-        EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR
+        EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR;
       end;
 
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
@@ -666,7 +666,7 @@ begin
             if AppCallback_DynamicVNodeConsumedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+                NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(OPStackMessage);
                 Result := True;
@@ -675,7 +675,7 @@ begin
         begin
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(OPStackMessage);
             Result := True;
@@ -690,7 +690,7 @@ begin
             if AppCallback_DynamicConsumedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+                NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(OPStackMessage);
                 Result := True;
@@ -699,7 +699,7 @@ begin
         begin
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(OPStackMessage);
             Result := True;
@@ -716,7 +716,7 @@ begin
       case State of
         EVENT_STATE_UNKNOWN : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
         EVENT_STATE_VALID   : MTI := MTI_PRODUCER_IDENTIFIED_SET;
-        EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR
+        EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR;
       end;
 
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
@@ -728,7 +728,7 @@ begin
             if AppCallback_DynamicVNodeProducedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+                NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(OPStackMessage);
                 Result := True;
@@ -737,7 +737,7 @@ begin
         begin
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(OPStackMessage);
             Result := True;
@@ -752,7 +752,7 @@ begin
             if AppCallback_DynamicProducedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
-                NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^) ;
+                NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)) ;
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 OutgoingMessage(OPStackMessage);
                 Result := True;
@@ -761,7 +761,7 @@ begin
         begin
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             OutgoingMessage(OPStackMessage);
             Result := True;
@@ -794,10 +794,10 @@ begin
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
         if Node^.State and NS_VIRTUAL <> 0 then
-          NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^)
+          NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray))
         else
         {$ENDIF}
-          NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+          NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
         OPStackMessage^.Buffer^.DataBufferSize := 8;
         OutgoingMessage(OPStackMessage);
         Result := True;
@@ -853,7 +853,7 @@ begin
           end;
       MTI_DATAGRAM :
           begin
-            DatagramBufferPtr := PDatagramBuffer( NextMessage^.Buffer);
+            DatagramBufferPtr := PDatagramBuffer( PByte( NextMessage^.Buffer));
             AckFlags := $00;                                                    // Default
             case DatagramBufferPtr^.DataArray[0] of
               DATAGRAM_TYPE_BOOTLOADER :
@@ -1000,7 +1000,7 @@ begin
                                    Exit;                                                     // Don't call Datagram OK again!
                                  end;
                                end {case Operation}
-                             end {MPC_OPERATION}
+                             end; {MPC_OPERATION}
                       end
                     end;
                   end;

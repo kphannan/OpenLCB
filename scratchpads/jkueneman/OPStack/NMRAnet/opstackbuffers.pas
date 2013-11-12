@@ -260,7 +260,7 @@ begin
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, DestFlags);
       AMessage^.MessageType := MT_DATAGRAM or MT_ALLOCATED;
-      AMessage^.Buffer := PSimpleBuffer( DatagramBuffer);
+      AMessage^.Buffer := PSimpleBuffer( PByte( DatagramBuffer));
       Result := True
     end else
     begin
@@ -281,7 +281,7 @@ begin
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
       AMessage^.MessageType := MT_STREAM or MT_ALLOCATED;
-      AMessage^.Buffer := PSimpleBuffer( StreamBuffer);
+      AMessage^.Buffer := PSimpleBuffer( PByte( StreamBuffer));
       Result := True
     end else
     begin
@@ -297,8 +297,8 @@ begin
   begin
     case (AMessage^.MessageType and MT_MASK) of
       MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
-      MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( AMessage^.Buffer));
-      MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( AMessage^.Buffer));
+      MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( PByte(AMessage^.Buffer)));
+      MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
     end;
     AMessage^.MessageType := MT_UNALLOCATED;
     Dec(OPStackMessagePool.Count);
@@ -353,12 +353,12 @@ end;
 
 procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 begin
-  LoadBuffer(PSimpleBuffer( ABuffer), iStateMachine, DataBufferSize, DataArray, MAX_DATAGRAM_BYTES, ArrayOffset);
+  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), iStateMachine, DataBufferSize, DataArray, MAX_DATAGRAM_BYTES, ArrayOffset);
 end;
 
 procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 begin
-  LoadBuffer(PSimpleBuffer( ABuffer), iStateMachine, DataBufferSize, DataArray, USER_MAX_STREAM_BYTES, ArrayOffset);
+  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), iStateMachine, DataBufferSize, DataArray, USER_MAX_STREAM_BYTES, ArrayOffset);
 end;
 
 procedure ZeroBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word);
@@ -383,17 +383,17 @@ end;
 procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray: Boolean);
 begin
   if ZeroArray then
-    ZeroBuffer(PSimpleBuffer( ABuffer), MAX_DATAGRAM_BYTES)
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), MAX_DATAGRAM_BYTES)
   else
-    ZeroBuffer(PSimpleBuffer( ABuffer), 0)
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0)
 end;
 
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
 begin
   if ZeroArray then
-    ZeroBuffer(PSimpleBuffer( ABuffer), USER_MAX_STREAM_BYTES)
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_STREAM_BYTES)
   else
-    ZeroBuffer(PSimpleBuffer( ABuffer), 0)
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0)
 end;
 
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);

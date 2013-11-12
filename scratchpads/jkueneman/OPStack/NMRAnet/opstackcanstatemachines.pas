@@ -149,7 +149,7 @@ begin
                     begin
                       InprocessDatagram^.Buffer^.DataBufferSize := OPStackMessage^.Buffer^.DataBufferSize;
                       OPStackBuffers_CopyData(InprocessDatagram^.Buffer, OPStackMessage^.Buffer);
-                      PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount := 0;
+                      PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount := 0;
                       Result := InprocessDatagram;
                       Exit;
                     end else                                                    // No Buffer available, try again
@@ -172,7 +172,7 @@ begin
             begin
               InprocessDatagram^.Buffer^.DataBufferSize := OPStackMessage^.Buffer^.DataBufferSize;
               OPStackBuffers_CopyData(InprocessDatagram^.Buffer, OPStackMessage^.Buffer);
-              PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount := OPStackMessage^.Buffer^.DataBufferSize;
+              PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount := OPStackMessage^.Buffer^.DataBufferSize;
               AddInprocessMessage(InprocessDatagram, DatagramInProcessStack);
               Exit
             end else                                                            // No Buffer available, try again
@@ -186,8 +186,8 @@ begin
         begin
           if InprocessDatagram <> nil then
           begin
-            OPStackBuffers_CopyDataArrayWithDestOffset(InprocessDatagram^.Buffer, @OPStackMessage^.Buffer^.DataArray, PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount, OPStackMessage^.Buffer^.DataBufferSize);
-            PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount := PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount + OPStackMessage^.Buffer^.DataBufferSize;
+            OPStackBuffers_CopyDataArrayWithDestOffset(InprocessDatagram^.Buffer, @OPStackMessage^.Buffer^.DataArray, PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount, OPStackMessage^.Buffer^.DataBufferSize);
+            PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount := PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount + OPStackMessage^.Buffer^.DataBufferSize;
           end else
           begin                                                                 // Problem out of order
             OPStackBuffers_LoadDatagramRejectedBuffer(OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, @DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER)
@@ -197,8 +197,8 @@ begin
         begin
           if InprocessDatagram <> nil then
           begin
-            OPStackBuffers_CopyDataArrayWithDestOffset(InprocessDatagram^.Buffer, @OPStackMessage^.Buffer^.DataArray, PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount, OPStackMessage^.Buffer^.DataBufferSize);
-            PDatagramBuffer( InprocessDatagram^.Buffer)^.CurrentCount := 0;      // Wooh Hoo, we are done
+            OPStackBuffers_CopyDataArrayWithDestOffset(InprocessDatagram^.Buffer, @OPStackMessage^.Buffer^.DataArray, PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount, OPStackMessage^.Buffer^.DataBufferSize);
+            PDatagramBuffer( PByte( InprocessDatagram^.Buffer))^.CurrentCount := 0;      // Wooh Hoo, we are done
             case InprocessDatagram^.Buffer^.DataArray[0] of
               DATAGRAM_TYPE_BOOTLOADER,
               DATAGRAM_TYPE_MEMORY_CONFIGURATION,
@@ -260,7 +260,7 @@ begin
   if IsOutgoingBufferAvailable then
     if LocalOutgoingMessage <> nil then                                 // We just work this stack from the top down, for now
     begin
-      DatagramBuffer := PDatagramBuffer( LocalOutgoingMessage^.Buffer);
+      DatagramBuffer := PDatagramBuffer( PByte( LocalOutgoingMessage^.Buffer));
       OPStackBuffers_ZeroMessage(@AMessage);
       OPStackBuffers_ZeroSimpleBuffer(@ABuffer, False);
       if LocalOutgoingMessage^.Buffer^.DataBufferSize <= 8 then
@@ -275,10 +275,10 @@ begin
         OutgoingMessage(@AMessage);
         Exit;
       end else
-      if PDatagramBuffer( LocalOutgoingMessage^.Buffer)^.CurrentCount = 0 then
+      if PDatagramBuffer( PByte( LocalOutgoingMessage^.Buffer))^.CurrentCount = 0 then
         MTI := MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_START
       else
-      if LocalOutgoingMessage^.Buffer^.DataBufferSize - PDatagramBuffer( LocalOutgoingMessage^.Buffer)^.CurrentCount > 8 then
+      if LocalOutgoingMessage^.Buffer^.DataBufferSize - PDatagramBuffer( PByte( LocalOutgoingMessage^.Buffer))^.CurrentCount > 8 then
         MTI := MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME
       else begin
         MTI := MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END;
@@ -346,7 +346,7 @@ end;
 
 }
 
-{
+(*
    ConfigMemBuffer := nil;
   if NMRABusTxBufferAvailable then
       if NMRAnetBufferPools_AllocateConfigMemBuffer(ConfigMemBuffer) then
@@ -457,7 +457,7 @@ end;
       end;
 
       NMRAnetBufferPools_ReleaseConfigMemBuffer(ConfigMemBuffer);
-    end   }
+    end   *)
 
 { STREAM }
 {
@@ -538,4 +538,3 @@ end;
           end;
       }
 end.
-

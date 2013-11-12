@@ -13,14 +13,13 @@ uses
   opstackdefines;
 
 
-function AppCallback_AddressSpacePresent(Node: TNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpacePresent(var Node: TNMRAnetNode; AddressSpace: Byte): Boolean;
 
 implementation
 
-function AppCallback_AddressSpacePresent(Node: TNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpacePresent(var Node: TNMRAnetNode; AddressSpace: Byte): Boolean;
 begin
   Result := True
 end;
 
 end.
-
