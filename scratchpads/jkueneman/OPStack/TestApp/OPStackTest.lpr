@@ -10,7 +10,8 @@ uses
   Forms, unitMain, OPStackCore, nmranetdefines, opstackdefines, opstacknode,
   template_node, template_vnode, hardware_template, nmranetutilities,
   opstackbuffers, template_buffers, opstacktypes, gridconnect,
-  template_callbacks, opstackcanstatemachines, template_configmem;
+  template_event_callbacks, opstackcanstatemachines, template_configmem, 
+unitbuffertrace;
 
 {$R *.res}
 
@@ -18,6 +19,7 @@ begin
   RequireDerivedFormResource := True;
   Application.Initialize;
   Application.CreateForm(TForm1, Form1);
+  Application.CreateForm(TForm2, Form2);
   Application.Run;
 end.
 

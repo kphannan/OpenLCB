@@ -1,4 +1,4 @@
-unit template_callbacks;
+unit template_event_callbacks;
 
 
 {$IFDEF FPC}

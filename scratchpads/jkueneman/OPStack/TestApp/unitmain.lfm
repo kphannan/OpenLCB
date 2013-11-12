@@ -1,11 +1,12 @@
 object Form1: TForm1
   Left = 435
-  Height = 368
+  Height = 369
   Top = 324
-  Width = 788
+  Width = 791
   Caption = 'Form1'
-  ClientHeight = 368
-  ClientWidth = 788
+  ClientHeight = 369
+  ClientWidth = 791
+  Menu = MainMenu1
   OnClose = FormClose
   OnCreate = FormCreate
   OnShow = FormShow
@@ -13,8 +14,8 @@ object Form1: TForm1
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
-    Top = 353
-    Width = 788
+    Top = 354
+    Width = 791
     Panels = <    
       item
         Text = 'Not Connected'
@@ -62,9 +63,10 @@ object Form1: TForm1
   end
   object MemoReceive: TMemo
     Left = 0
-    Height = 281
-    Top = 72
-    Width = 788
+    Height = 258
+    Top = 96
+    Width = 791
+    Align = alBottom
     ScrollBars = ssVertical
     TabOrder = 3
   end
@@ -88,14 +90,32 @@ object Form1: TForm1
     TabOrder = 5
   end
   object CheckBoxAutoConnect: TCheckBox
-    Left = 528
+    Left = 16
     Height = 18
-    Top = 32
+    Top = 64
     Width = 165
     Caption = 'Auto-Start On Connect'
     Checked = True
     State = cbChecked
     TabOrder = 6
+  end
+  object ButtonClear: TButton
+    Left = 536
+    Height = 22
+    Top = 8
+    Width = 224
+    Caption = 'Clear'
+    OnClick = ButtonClearClick
+    TabOrder = 7
+  end
+  object ButtonRefreshBufferTracking: TButton
+    Left = 536
+    Height = 22
+    Top = 36
+    Width = 224
+    Caption = 'Refresh Buffer Tracking'
+    OnClick = ButtonRefreshBufferTrackingClick
+    TabOrder = 8
   end
   object TimerCore: TTimer
     Interval = 100
@@ -108,5 +128,12 @@ object Form1: TForm1
     OnTimer = TimerStatemachineTimer
     left = 152
     top = 80
+  end
+  object MainMenu1: TMainMenu
+    left = 728
+    top = 16
+    object MenuItemTrackBuffer: TMenuItem
+      Caption = 'Track Buffers'
+    end
   end
 end

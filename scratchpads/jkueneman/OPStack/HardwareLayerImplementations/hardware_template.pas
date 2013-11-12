@@ -108,19 +108,25 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
-procedure OutgoingMessage(AMessage: POPStackMessage);                                   // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure ProcessOutgoingDatagrams;
+procedure ProcessOutgoingStreams;
+function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
+procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
 function IsOutgoingBufferAvailable: Boolean;
 
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
-procedure IncomingMessageCallback(AMessage: POPStackMessage); external;
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode); external;
 function OPStackCANStatemachine_ProcessIncomingDatagramMessage(OPStackMessage: POPStackMessage): POPStackMessage; external;
+function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 {$ENDIF}
 
 implementation
 
 {$IFDEF FPC}
 uses
+  opstacknode,
   opstackcanstatemachines,
   opstackcore;
 {$ENDIF}
@@ -193,20 +199,9 @@ begin
     MT_SIMPLE:
         begin
           GridConnectBuffer.PayloadCount := 0;
-          if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+
+          if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
           begin
-            GridConnectBuffer.Payload[0] := Hi( AMessage^.Dest.AliasID);
-            GridConnectBuffer.Payload[1] := Lo( AMessage^.Dest.AliasID);
-            GridConnectBuffer.PayloadCount := 2;
-          end;
-          for i := 0 to AMessage^.Buffer^.DataBufferSize - 1 do
-          begin
-            GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := AMessage^.Buffer^.DataArray[i];
-            Inc(GridConnectBuffer.PayloadCount);
-          end;
-          if AMessage^.MessageType and MT_CAN_TYPE = 0 then
-            GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000
-          else begin
             case AMessage^.MTI of
               MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF) or $10000000;
               MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF) or $10000000;
@@ -215,22 +210,66 @@ begin
             else
               GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $10000000;
             end;
+          end else
+          if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_GENERAL then
+          begin
+            GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000;
+            if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+            begin
+              GridConnectBuffer.Payload[0] := Hi( AMessage^.Dest.AliasID);
+              GridConnectBuffer.Payload[1] := Lo( AMessage^.Dest.AliasID);
+              GridConnectBuffer.PayloadCount := 2;
+            end;
+          end else
+          if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_STREAM_SEND then
+          begin
+            GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or (AMessage^.Dest.AliasID shl 12) or AMessage^.Source.AliasID or $10000000;
           end;
+
+          for i := 0 to AMessage^.Buffer^.DataBufferSize - 1 do
+          begin
+            GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := AMessage^.Buffer^.DataArray[i];
+            Inc(GridConnectBuffer.PayloadCount);
+          end;
+
           GridConnectBufferToGridConnect(GridConnectBuffer, GridConnectStr);
+          OPStackBuffers_DeAllocateMessage(AMessage);
+
           {$IFDEF FPC}
           ListenerThread.Send(GridConnectStr);
           {$ENDIF}
         end;
     MT_DATAGRAM :
         begin
-
+          OPStackCANStatemachine_AddOutgoingDatagramMessage(AMessage)           // CAN can't handle a full Datagram Message so we need to parse it up into 8 byte frames
         end;
     MT_STREAM :
         begin
-
-        end;
+          OPStackBuffers_DeAllocateMessage(AMessage);
+        end
+  else
+     OPStackBuffers_DeAllocateMessage(AMessage);
   end;
-  OPStack_DeAllocateMessage(AMessage);
+end;
+
+procedure ProcessOutgoingDatagrams;
+begin
+  OPStackCANStatemachine_ProcessOutgoingDatagramMessage;
+end;
+
+procedure ProcessOutgoingStreams;
+begin
+
+end;
+
+function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
+begin
+  Result := OPStackCANStatemachine_FindDatagramWaitingforACKStack(SourceNodeID, DestNodeID)
+end;
+
+procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
+begin
+  OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage)
 end;
 
 function IsOutgoingBufferAvailable: Boolean;
@@ -238,8 +277,73 @@ begin
   Result := True
 end;
 
+procedure GridConnectBufferToOPStackBufferAndDispatch(var GridConnectBuffer: TGridConnectBuffer; var OPStackMessage: TOPStackMessage);
+var
+  RawMTI, SourceAlias: Word;
+  CanMessageType, DestAlias: Word;
+  DatagramMessage: POPStackMessage;
+  DestinationNode: PNMRAnetNode;
+begin
+  CanMessageType := (GridConnectBuffer.MTI shr 12) and $F000;                   // always true regardless
+  SourceAlias := GridConnectBuffer.MTI and $00000FFF;                           // always true regardless
+  if GridConnectBuffer.MTI and $01000000 = 0 then                               // Is it a CAN message?
+  begin
+    OPStackMessage.MessageType := MT_SIMPLE or MT_CAN_TYPE;                     // Created on the heap not the pool
+    RawMTI := (GridConnectBuffer.MTI shr 12) and $0FFF;
+    OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);
+    OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
+    IncomingMessageDispatch(@OPStackMessage, DestinationNode);
+  end else
+  begin
+    OPStackMessage.MessageType := MT_SIMPLE;
+    case CanMessageType of
+      MTI_FRAME_TYPE_CAN_GENERAL :
+          begin
+            RawMTI := (GridConnectBuffer.MTI shr 12) and $0FFF;
+            if RawMTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+            begin                                                                 // It is an addressed message
+              DestAlias := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
+              DestinationNode := OPStackNode_FindByAlias(DestAlias);
+              if DestinationNode <> nil then
+              begin
+                OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, GridConnectBuffer.Payload[0] and $F0);
+                OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount-2, @GridConnectBuffer.Payload, 2);
+                IncomingMessageDispatch(@OPStackMessage, DestinationNode);
+              end else
+                Exit;                                                             // It was an addressed message but not for any of our nodes
+            end else
+            begin                                                                 // It was not an addressed message
+              OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);
+              OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
+              IncomingMessageDispatch(@OPStackMessage, DestinationNode);
+            end;
+          end;
+      MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME,
+      MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_START,
+      MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME,
+      MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END :
+          begin
+            DestAlias := (GridConnectBuffer.MTI shr 12) and $0FFF;
+            DestinationNode := OPStackNode_FindByAlias(DestAlias);
+            if DestinationNode <> nil then
+            begin
+              OPStackBuffers_LoadMessage(@OPStackMessage, CanMessageType, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, 0);   // These messages do not have real "MTIs", they are based on the identifier
+              OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
+              DatagramMessage := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage);
+              if DatagramMessage <> nil then
+                IncomingMessageDispatch(DatagramMessage, DestinationNode);
+            end;
+          end;
+      MTI_FRAME_TYPE_CAN_STREAM_SEND :
+          begin
+
+          end;
+    end;
+  end;
+end;
+
 // *****************************************************************************
-//  procedure GridConnectStrToIncomingMessageCallback
+//  procedure GridConnectStrToIncomingMessageDispatch
 //    Parameters:
 //    Result:
 //    Description:   called to setup a received message in GridConnect format into
@@ -248,54 +352,15 @@ end;
 //                   and will be gone when this function returns.  You MUST copy
 //                   the contents of it if needed
 // *****************************************************************************
-procedure GridConnectStrToIncomingMessageCallback(GridConnectStrPtr: PGridConnectString);
+procedure GridConnectStrToIncomingMessageDispatch(GridConnectStrPtr: PGridConnectString);
 var
   GridConnectBuffer: TGridConnectBuffer;
   OPStackMessage: TOPStackMessage;
-  OPStackMessagePtr: POPStackMessage;
   Buffer: TSimpleBuffer;
-  i: Integer;
 begin
-  GridConnectToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);
   OPStackMessage.Buffer := @Buffer;
-  OPStackMessage.Source.ID := NULL_NODE_ID;
-  OPStackMessage.Dest.ID := NULL_NODE_ID;
-  OPStackMessage.Source.AliasID := GridConnectBuffer.MTI and $00000FFF;
-  OPStackMessage.MessageType := MT_SIMPLE or MT_ALLOCATED;
-  OPStackMessage.Next := nil;
-  Buffer.iStateMachine := 0;
-  Buffer.State := ABS_ALLOCATED;
-  Buffer.DataBufferSize := GridConnectBuffer.PayloadCount;
-  OPStackMessage.MTI := GridConnectBuffer.MTI shr 12;
-  if OPStackMessage.MTI and $F000 <= MTI_FRAME_TYPE_CAN_GENERAL then
-  begin
-    // These are the only messages that map to a full MTI
-    OPStackMessage.MTI := OPStackMessage.MTI and not MTI_FRAME_TYPE_CAN_GENERAL;
-    if OPStackMessage.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
-    begin
-      OPStackMessage.Dest.AliasID := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
-      OPStackMessage.DestFlags := GridConnectBuffer.Payload[0] and $F0;
-    end else
-      OPStackMessage.Dest.AliasID := 0;
-    for i := 0 to Buffer.DataBufferSize - 1 do
-      Buffer.DataArray[i] := GridConnectBuffer.Payload[i];                      // DO I SHIFT OVER THE BYTES TO REMOVE THE DESTINATION ADDRESS AND MAKE ALL DATA START AT 0 IN THE LIBRARY???
-    IncomingMessageCallback(@OPStackMessage);
-  end else
-  if OPStackMessage.MTI and $F000 <= MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END then
-  begin
-    OPStackMessage.Dest.AliasID := OPStackMessage.MTI and $0FFF;
-    OPStackMessage.DestFlags := 0;
-    OPStackMessage.MTI := OPStackMessage.MTI and $F000;
-    for i := 0 to Buffer.DataBufferSize - 1 do
-      Buffer.DataArray[i] := GridConnectBuffer.Payload[i];
-    OPStackMessagePtr := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage);
-    if OPStackMessagePtr <> nil then
-      IncomingMessageCallback(OPStackMessagePtr);                                 // We have a complete Datagram MTI message, set it on
-  end else
-  if OPStackMessage.MTI and $F000 = MTI_FRAME_TYPE_CAN_STREAM_SEND then
-  begin
-    // It is a CAN Stream Frame, need to collect them all then call into the library with a Stream full MTI
-  end
+  GridConnectToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);           // Parse the string into a Grid Connect Data structure
+  GridConnectBufferToOPStackBufferAndDispatch(GridConnectBuffer, OPStackMessage); // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
 end;
 
 
@@ -457,7 +522,7 @@ begin
   begin
     if GridConnectDecodeMachine(ReceiveStr[i], GridConnectStrPtr) then
     begin
-      GridConnectStrToIncomingMessageCallback(GridConnectStrPtr);
+      GridConnectStrToIncomingMessageDispatch(GridConnectStrPtr);
       StringLen := strlen(GridConnectStrPtr^);
       SetLength(Str, StringLen);
       Str := GridConnectStrPtr^;
@@ -542,7 +607,6 @@ end;
 procedure TOPStackTestListener.Send(MessageStr: ansistring);
 var
   NewStringList: TStringList;
-  i: Integer;
 begin
   if (MessageStr <> '') and not Terminated then
   begin

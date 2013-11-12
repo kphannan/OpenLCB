@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls, ExtCtrls, opstackcore, opstacknode,
+  ComCtrls, ExtCtrls, Menus, opstackcore, opstacknode,
   {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
@@ -21,16 +21,22 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    ButtonClear: TButton;
+    ButtonRefreshBufferTracking: TButton;
     ButtonSendGlobalNotify: TButton;
     ButtonStartStack: TButton;
     ButtonAllocateNode: TButton;
     ButtonDeallocateNode: TButton;
     CheckBoxLogMessages: TCheckBox;
     CheckBoxAutoConnect: TCheckBox;
+    MainMenu1: TMainMenu;
     MemoReceive: TMemo;
+    MenuItemTrackBuffer: TMenuItem;
     StatusBar: TStatusBar;
     TimerStatemachine: TTimer;
     TimerCore: TTimer;
+    procedure ButtonClearClick(Sender: TObject);
+    procedure ButtonRefreshBufferTrackingClick(Sender: TObject);
     procedure ButtonSendGlobalNotifyClick(Sender: TObject);
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
@@ -136,6 +142,18 @@ end;
 procedure TForm1.ButtonSendGlobalNotifyClick(Sender: TObject);
 begin
   Listener.Send(':X19490F37N;');
+  UpdateUI
+end;
+
+procedure TForm1.ButtonClearClick(Sender: TObject);
+begin
+  MemoReceive.Lines.BeginUpdate;
+  MemoReceive.Lines.Clear;
+  MemoReceive.Lines.EndUpdate;
+end;
+
+procedure TForm1.ButtonRefreshBufferTrackingClick(Sender: TObject);
+begin
   UpdateUI
 end;
 

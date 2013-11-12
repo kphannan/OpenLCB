@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="17">
+    <Units Count="18">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -124,6 +124,13 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_configmem"/>
       </Unit16>
+      <Unit17>
+        <Filename Value="unitbuffertrace.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form2"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitbuffertrace"/>
+      </Unit17>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

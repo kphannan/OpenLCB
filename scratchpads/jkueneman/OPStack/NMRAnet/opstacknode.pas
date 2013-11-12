@@ -36,8 +36,8 @@ type
 procedure OPStackNode_Initialize;
 function OPStackNode_Allocate: PNMRAnetNode;
 procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
+function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;    // See FIND_BY_xxxx constants
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode;
-function OPStackNode_FindByNodeID(var NodeID: TNodeID): PNMRAnetNode;
 function OPStackNode_FindFirstVirtualNode: PNMRAnetNode;
 function OPStackNode_FindLastVirtualNode: PNMRAnetNode;
 
@@ -69,9 +69,9 @@ function OPStackNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
 
 procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-function OPStackNode_MessageBuffer(Node: PNMRAnetNode): POPStackMessage;
+function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
 
-function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;
+
 
 function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 
@@ -120,6 +120,8 @@ begin
     Node := @NodePool.Pool[i];
     Node^.iIndex := i;
     OPStackNode_ZeroizeNode(Node);
+    Node^.IncomingMessages := nil;
+    Node^.OutgoingMessages := nil;
     Node^.Info.ID[0] := NodeID_LO + i;         // Picked up from the NodeID.inc file
     Node^.Info.ID[1] := NodeID_HI;
     Node^.Login.Seed := Node^.Info.ID;
@@ -177,36 +179,15 @@ function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode;
 var
   i: Integer;
 begin
-  Result := PNMRAnetNode( nil);
-  for i := 0 to NodePool.AllocatedCount- 1 do
-  begin
-    if NodePool.AllocatedList[i]^.Info.AliasID = AliasID then
-    begin
-      Result := NodePool.AllocatedList[i];
-      Exit;
-    end;
-  end
-end;
-
-// *****************************************************************************
-//  procedure OPStackNode_FindByNodeID;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-function OPStackNode_FindByNodeID(var NodeID: TNodeID): PNMRAnetNode;
-var
-  i: Integer;
-begin
-  Result := PNMRAnetNode( nil);
+  Result := nil;
   for i := 0 to NodePool.AllocatedCount - 1 do
   begin
-    if NodePool.AllocatedList[i]^.Info.ID[0] = NodeID[0] then
-      if NodePool.AllocatedList[i]^.Info.ID[1] = NodeID[1] then
+    if NodePool.AllocatedList[i]^.Info.AliasID = AliasID then
+      if NodePool.AllocatedList[i]^.State and NS_RELEASING = 0 then
       begin
         Result := NodePool.AllocatedList[i];
-        Exit;
-      end;
+        Exit
+      end
   end
 end;
 
@@ -288,6 +269,7 @@ procedure OPStackNode_ZeroizeNode(Node: PNMRAnetNode);
 var
   j: Integer;
 begin
+
   Node^.Login.iCID := 0;
   Node^.Login.TimeCounter := 0;
   Node^.Info.AliasID := 0;
@@ -326,7 +308,8 @@ begin
   begin
     Node := NodePool.AllocatedList[i];
     if Node^.State and NS_PERMITTED = NS_PERMITTED then
-      Node^.Flags := Node^.Flags or Flags
+      if Node^.State and NS_RELEASING = 0 then
+        Node^.Flags := Node^.Flags or Flags
     else
       Node^.Flags := 0;
   end;
@@ -645,10 +628,10 @@ procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage)
 var
   Temp: POPStackMessage;
 begin
-  if Node^.Messages = nil then
-    Node^.Messages := AMessage
+  if Node^.IncomingMessages = nil then
+    Node^.IncomingMessages := AMessage
   else begin                                  // Tack it to the end of the chain
-    Temp := Node^.Messages;
+    Temp := Node^.IncomingMessages;
     while Temp^.Next <> nil do
       Temp := Temp^.Next;
     Temp^.Next := AMessage
@@ -665,13 +648,13 @@ procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessag
 var
   Temp, Parent: POPStackMessage;
 begin
-  if Node^.Messages <> nil then
+  if Node^.IncomingMessages <> nil then
   begin
-    if Node^.Messages = AMessage then                                           // Root Buffer match case is easy
-      Node^.Messages := Node^.Messages^.Next
+    if Node^.IncomingMessages = AMessage then                                           // Root Buffer match case is easy
+      Node^.IncomingMessages := Node^.IncomingMessages^.Next
     else begin
-      Parent := Node^.Messages;                                                 // Already know it is not the root buffer so setup for the first level down
-      Temp := Node^.Messages^.Next;
+      Parent := Node^.IncomingMessages;                                                 // Already know it is not the root buffer so setup for the first level down
+      Temp := Node^.IncomingMessages^.Next;
       while (Temp <> nil) and (Temp <> AMessage) do
       begin
         Parent := Temp;
@@ -684,14 +667,14 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_MessageBuffer;
+//  procedure OPStackNode_NextMessage;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_MessageBuffer(Node: PNMRAnetNode): POPStackMessage;
+function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
 begin
-  Result := Node^.Messages;
+  Result := Node^.IncomingMessages;
 end;
 
 // *****************************************************************************
@@ -722,10 +705,11 @@ begin
     for i := 0 to NodePool.AllocatedCount - 1 do
     begin
       if NodePool.AllocatedList[i]^.Info.AliasID = AliasID then
-      begin
-        Result := NodePool.AllocatedList[i];
-        Exit
-      end;
+        if NodePool.AllocatedList[i]^.State and NS_RELEASING = 0 then
+        begin
+          Result := NodePool.AllocatedList[i];
+          Exit
+        end;
     end;
   end else
   begin
@@ -733,10 +717,11 @@ begin
     begin
       if NodePool.AllocatedList[i]^.Info.ID[0] = NodeID[0] then
         if NodePool.AllocatedList[i]^.Info.ID[1] = NodeID[1] then
-        begin
-           Result := NodePool.AllocatedList[i];
-          Exit
-        end;
+          if NodePool.AllocatedList[i]^.State and NS_RELEASING = 0 then
+          begin
+            Result := NodePool.AllocatedList[i];
+            Exit
+          end;
     end;
   end;
 end;

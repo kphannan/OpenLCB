@@ -11,8 +11,7 @@ uses
   {$IFDEF HARDWARE_TEMPLATE}hardware_template, template_node, template_vnode, template_configmem,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
-  opstackcanstatemachines,
-  template_callbacks,
+  template_event_callbacks,
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
@@ -27,23 +26,12 @@ procedure OPStackCore_Process;                                                  
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 
 // Callback from the Hardware when a message is received
-procedure IncomingMessageCallback(AMessage: POPStackMessage);
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 
 var
   OPStack: TOPStack;
 
 implementation
-
-// *****************************************************************************
-//  procedure OPStack_Initialize
-//     Parameters:
-//     Returns:
-//     Description:
-// *****************************************************************************
-procedure OPStack_Initialize;
-begin
-  OPStack.State := 0;                                                           // User must set OPS_Running to enable Library
-end;
 
 // *****************************************************************************
 //  procedure OPStackCore_Initialize
@@ -53,52 +41,11 @@ end;
 // *****************************************************************************
 procedure OPStackCore_Initialize;
 begin
+  OPStack.State := 0;
   OPStackNode_Initialize;
-  OPStack_Initialize;
+  OPStackBuffers_Initialize;
   OPStackNode_Allocate;                                                         // Allocate the hardware Node
 end;
-
-// *****************************************************************************
-//  procedure MaxAddressByAddressSpace
-//     Parameters:
-//     Returns:
-//
-//     Description:
-//
-// *****************************************************************************
-function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
- begin
-   case AddressSpace of
-      MSI_CDI       : begin
-                        {$IFDEF SUPPORT_VIRTUAL_NODES}
-                        if Node^.State and NS_VIRTUAL <> 0 then
-                          Result := USER_MAX_VNODE_CDI_ARRAY
-                        else {$ENDIF}
-                          Result := USER_MAX_CDI_ARRAY;
-                      end;
-      MSI_ALL       : Result := $FFFFFFFF;
-      MSI_ACDI_MFG  : begin
-                        {$IFDEF SUPPORT_VIRTUAL_NODES}
-                        if Node^.State and NS_VIRTUAL <> 0 then
-                          Result := USER_MAX_VNODE_ACDI_MFG_ARRAY + 1           // for the Version ID Byte
-                        else {$ENDIF}
-                          Result := USER_MAX_ACDI_MFG_ARRAY + 1                 // for the Version ID Byte
-                      end;
-      MSI_ACDI_USER : begin
-                        {$IFDEF SUPPORT_VIRTUAL_NODES}
-                        if Node^.State and NS_VIRTUAL <> 0 then
-                          Result := USER_MAX_VNODE_USER_CONFIG_DATA + 1         // for the Version ID Byte
-                        else {$ENDIF}
-                          Result := USER_MAX_USER_CONFIG_DATA + 1               // for the Version ID Byte
-                      end;
-      MSI_CONFIG,
-      MSI_FDI       : begin
-                   //     Result := AppCallback_AddressSpaceSize(Node, AddressSpace);
-                      end
-    else
-      Result := 0;
-    end;
- end;
 
 // *****************************************************************************
 //  procedure SupportsVNodeEventAsConsumer
@@ -257,6 +204,292 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure IncomingMessageDispatch
+//     Parameters:  AMessage: Pointer to a OPStackMessage object, may not be allocated
+//                            from the pool and may be gone after the function returns
+//                            Look at the AMessage^.MessageType for MT_ALLOCATED, if it
+//                            exists then then message was allocated from the pool and
+//                            can be used as such
+//                  DestNode: Pointer to a NMRAnet Node if the message contained a
+//                            destination ID (Alias or NodeID). If message is unaddressed
+//                            contains nil
+//     Returns:
+//     Description:
+// *****************************************************************************
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+var
+  VNodeEventIndex, NodeEventIndex, i: Integer;
+  NewMessage: POPStackMessage;
+  BufferAllocFailed: Boolean;
+  SourceNode: PNMRAnetNode;
+begin
+  BufferAllocFailed := False;
+  // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
+  SourceNode := OPStackNode_Find(AMessage, FIND_BY_SOURCE);
+  if SourceNode <> nil then
+  begin
+    if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
+    begin
+      if (AMessage^.MTI = MTI_CAN_CID0) or (AMessage^.MTI = MTI_CAN_CID1) or (AMessage^.MTI = MTI_CAN_CID2) or (AMessage^.MTI = MTI_CAN_CID3) then
+        OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS_RID)                 // Another node is trying to register our Alias, tell the NO!
+      else
+        OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS);                    // Another node is using our Alias, we have to disconnect from the network
+    end else
+      OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS);                      // Another node is using our Alias, we have to disconnect from the network
+    Exit;
+  end else
+  begin
+    if AMessage^.MessageType and MT_CAN_TYPE <> 0 then                          // Is it a CAN message?
+    begin
+      case AMessage^.MTI of
+          MTI_CAN_AME :
+              begin                                                             // Alias Map Enquiry.....
+                if AMessage^.Buffer^.DataBufferSize = 0 then
+                  OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
+                else begin;
+                  NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
+                  DestNode := OPStackNode_Find(AMessage, FIND_BY_DEST);
+                  if DestNode <> nil then       // The full Source ID was filled above so it will be use to search
+                  begin
+                    if OPStackNode_TestState(DestNode, NS_PERMITTED) then       // Only reply if node is in Permitted state
+                      OPStackNode_SetFlag(DestNode, MF_ALIAS_MAP_ENQUIRY);
+                  end;
+                end;
+                Exit;
+              end;
+          MTI_CAN_AMD :
+              begin                                                             // Another node has sent an Alias Map Definition....
+                NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
+                DestNode := OPStackNode_Find(AMessage, FIND_BY_DEST);
+                if DestNode <> nil then         // The full Source ID was filled above so it will be use to search
+                  OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);                   // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
+                Exit;
+              end;
+        end {case}
+    end else
+    begin
+      case (AMessage^.MessageType) and MT_MASK of
+          MT_SIMPLE :
+              begin
+                if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
+                begin
+                  case AMessage^.MTI of
+                    MTI_VERIFY_NODE_ID_NUMBER_DEST  :
+                        begin
+                          OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID)      // All messages addressed to node get replies even if the payload is wrong!
+                        end;
+                    MTI_EVENTS_IDENTIFY_DEST          :
+                        begin
+                          OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
+                          OPStackNode_SetEventProducedFlags(DestNode, EVENT_STATE_UNKNOWN);
+                        end;
+                    MTI_PROTOCOL_SUPPORT_INQUIRY      :
+                        begin
+                          // BITS ARE NEGATIVE LOGIC
+                          // Since we don't implement extended protocols yet just reply when we see the start bit set (active 0)
+                          if AMessage^.DestFlags and PIP_EXTENSION_START_BIT_MASK = 0 then
+                          begin
+                            NewMessage := nil;
+                            if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
+                            begin
+                              OPStackNode_MessageLink(DestNode, NewMessage);
+                            end else
+                              BufferAllocFailed := True
+                          end
+                        end;
+                    MTI_OPTIONAL_INTERACTION_REJECTED :
+                        begin
+                        end;
+                    MTI_DATAGRAM_OK_REPLY :
+                        begin
+                          NewMessage := FindDatagramWaitingForAck(AMessage^.Dest, AMessage^.Source);
+                          if NewMessage <> nil then
+                          begin
+                            RemoveDatagramWaitingForAck(NewMessage);
+                            OPStackBuffers_DeAllocateMessage(NewMessage);
+                          end
+                        end;
+                    MTI_DATAGRAM_REJECTED_REPLY :
+                        begin
+                          NewMessage := FindDatagramWaitingForAck(AMessage^.Dest, AMessage^.Source);
+                          if NewMessage <> nil then
+                          begin
+                            // Need to send it again and again until we give up
+
+                            RemoveDatagramWaitingForAck(NewMessage);
+                            OPStackBuffers_DeAllocateMessage(NewMessage);
+                          end
+                        end
+                  else
+                    OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionRejected, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
+                  end {case}
+                end else  {addressed message}
+                begin
+                  case AMessage^.MTI of
+                      MTI_VERIFY_NODE_ID_NUMBER   :
+                          begin
+                            if AMessage^.Buffer^.DataBufferSize = 0 then
+                              OPStackNode_SetFlags(MF_VERIFY_NODE_ID)
+                            else begin
+                              NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
+                              DestNode := OPStackNode_Find(AMessage, FIND_BY_DEST);
+                              if DestNode <> nil then  // The full Source ID was filled above so it will be use to search
+                                OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID);
+                            end;
+                            Exit;
+                          end;
+                      MTI_CONSUMER_IDENTIFY       :
+                          begin
+                            VNodeEventIndex := -1;
+                            NodeEventIndex := -1;
+                            for i := 0 to NodePool.AllocatedCount - 1 do
+                            begin
+                              DestNode := NodePool.AllocatedList[i];
+                              if OPStackNode_TestState(DestNode, NS_VIRTUAL) then
+                              begin
+                                if SupportsVNodeEventAsConsumer(DestNode, @AMessage^.Buffer^.DataArray, VNodeEventIndex) then
+                                  OPStackNode_SetEventFlag(DestNode^.Events.Consumed, VNodeEventIndex, EVENT_STATE_UNKNOWN);
+                              end else
+                              begin
+                                if SupportsEventAsConsumer(DestNode, @AMessage^.Buffer^.DataArray, NodeEventIndex) then
+                                  OPStackNode_SetEventFlag(DestNode^.Events.Consumed, NodeEventIndex, EVENT_STATE_UNKNOWN);
+                              end
+                            end;
+                            Exit;
+                          end;
+                      MTI_CONSUMER_IDENTIFY_RANGE :
+                          begin
+                            // TODO
+                            Exit;
+                          end;
+                      MTI_PRODUCER_IDENDIFY       :
+                          begin
+                            VNodeEventIndex := -1;
+                            NodeEventIndex := -1;
+                            for i := 0 to NodePool.AllocatedCount - 1 do
+                            begin
+                              DestNode := NodePool.AllocatedList[i];
+                              if OPStackNode_TestState(DestNode, NS_VIRTUAL) then
+                              begin
+                                if SupportsVNodeEventAsProducer(DestNode, @AMessage^.Buffer^.DataArray, VNodeEventIndex) then
+                                  OPStackNode_SetEventFlag(DestNode^.Events.Produced, VNodeEventIndex, EVENT_STATE_UNKNOWN);
+                              end else
+                              begin
+                                if SupportsEventAsProducer(DestNode, @AMessage^.Buffer^.DataArray, NodeEventIndex) then
+                                  OPStackNode_SetEventFlag(DestNode^.Events.Produced, NodeEventIndex, EVENT_STATE_UNKNOWN);
+                              end
+                            end;
+                            Exit;
+                          end;
+                      MTI_PRODUCER_IDENTIFY_RANGE :
+                          begin
+                            // TODO
+                            Exit;
+                          end;
+                      MTI_EVENT_LEARN             :
+                          begin
+                            Exit;
+                          end;
+                      MTI_EVENTS_IDENTIFY         :
+                          begin
+                            for i := 0 to NodePool.AllocatedCount - 1 do
+                            begin
+                              DestNode := NodePool.AllocatedList[i];
+                              OPStackNode_SetEventProducedFlags(DestNode, EVENT_STATE_UNKNOWN);
+                              OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
+                            end;
+                            Exit;
+                          end
+                  // Handling unknown MTI for all nodes (virtual and physical) is difficult and not sure it is needed
+                  end; {case}
+                end; {not an addressed message}
+              end;
+          MT_DATAGRAM :
+              begin
+                if DestNode^.State and NS_RELEASING = 0 then                      // if Releasing don't add more messages
+                begin
+                  if AMessage^.MessageType and MT_ALLOCATED <> 0 then
+                    OPStackNode_MessageLink(DestNode, AMessage)                   // A Datagram Message was allocated, Attach it to the node to be processed in the main loop
+                  else begin                                                      // If the Message is not from the Pools then allocate one and copy the contents
+                    if OPStackBuffers_AllocateDatagramMessage(NewMessage, AMessage^.MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.DestFlags) then
+                    begin
+                      OPStackBuffers_CopyDataArray(NewMessage^.Buffer, @AMessage^.Buffer^.DataArray, AMessage^.Buffer^.DataBufferSize);
+                      OPStackNode_MessageLink(DestNode, NewMessage)
+                    end
+                  end
+                end else
+                begin
+                  if AMessage^.MessageType and MT_ALLOCATED <> 0 then
+                    OPStackBuffers_DeAllocateMessage(AMessage);
+                end
+              end;
+          MT_STREAM :
+              begin
+                if DestNode^.State and NS_RELEASING = 0 then                      // if Releasing don't add more messages
+                begin
+                  if AMessage^.MessageType and MT_ALLOCATED <> 0 then
+                    OPStackNode_MessageLink(DestNode, AMessage)                   // A Datagram Message and buffer was allocated Attach it to the node to be processed in the main loop
+                  else begin                                                      // If the Message is not from the Pools then allocate one and copy the contents
+                    if OPStackBuffers_AllcoateStreamMessage(NewMessage, AMessage^.MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+                    begin
+                      OPStackBuffers_CopyDataArray(NewMessage^.Buffer, @AMessage^.Buffer^.DataArray, AMessage^.Buffer^.DataBufferSize);
+                      OPStackNode_MessageLink(DestNode, NewMessage)
+                    end
+                  end
+                end else
+                begin
+                  if AMessage^.MessageType and MT_ALLOCATED <> 0 then
+                    OPStackBuffers_DeAllocateMessage(AMessage);
+                end
+              end
+        end
+      end;
+  end;
+end;
+
+// *****************************************************************************
+//  procedure MaxAddressByAddressSpace
+//     Parameters:
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
+ begin
+   case AddressSpace of
+      MSI_CDI       : begin
+                        {$IFDEF SUPPORT_VIRTUAL_NODES}
+                        if Node^.State and NS_VIRTUAL <> 0 then
+                          Result := USER_MAX_VNODE_CDI_ARRAY
+                        else {$ENDIF}
+                          Result := USER_MAX_CDI_ARRAY;
+                      end;
+      MSI_ALL       : Result := $FFFFFFFF;
+      MSI_ACDI_MFG  : begin
+                        {$IFDEF SUPPORT_VIRTUAL_NODES}
+                        if Node^.State and NS_VIRTUAL <> 0 then
+                          Result := USER_MAX_VNODE_ACDI_MFG_ARRAY + 1           // for the Version ID Byte
+                        else {$ENDIF}
+                          Result := USER_MAX_ACDI_MFG_ARRAY + 1                 // for the Version ID Byte
+                      end;
+      MSI_ACDI_USER : begin
+                        {$IFDEF SUPPORT_VIRTUAL_NODES}
+                        if Node^.State and NS_VIRTUAL <> 0 then
+                          Result := USER_MAX_VNODE_USER_CONFIG_DATA + 1         // for the Version ID Byte
+                        else {$ENDIF}
+                          Result := USER_MAX_USER_CONFIG_DATA + 1               // for the Version ID Byte
+                      end;
+      MSI_CONFIG,
+      MSI_FDI       : begin
+     // TODO              //     Result := AppCallback_AddressSpaceSize(Node, AddressSpace);
+                      end
+    else
+      Result := 0;
+    end;
+ end;
+
+// *****************************************************************************
 //  procedure ProcessAbandonMessages
 //     Parameters:
 //     Returns:
@@ -264,7 +497,7 @@ end;
 // *****************************************************************************
 procedure ProcessAbandonMessages(Node: PNMRAnetNode);
 begin
-  if Node^.Messages <> nil then
+  if Node^.IncomingMessages <> nil then
   begin
 
   end;
@@ -293,14 +526,15 @@ begin
            if not OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
              if not OPStackNode_IsAnyPCER_Set(Node) then
                if Node^.Flags = 0 then
-                 if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
-                 begin
-                   NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
-                   OPStackMessage^.Buffer^.DataBufferSize := 6;
-                   OutgoingMessage(OPStackMessage); // Tell the network we are leaving
-                   DoDeallocate := True;
-                 end;
-
+                 if Node^.IncomingMessages = nil then
+                   if Node^.OutgoingMessages = nil then
+                     if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                     begin
+                       NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+                       OPStackMessage^.Buffer^.DataBufferSize := 6;
+                       OutgoingMessage(OPStackMessage); // Tell the network we are leaving
+                       DoDeallocate := True;
+                     end;
       end else
         DoDeallocate := True;                                                   // If it is not in the Permitted state then we are not allowed to send a AMR so just free it
 
@@ -362,7 +596,7 @@ begin
          end else
          if Node^.Flags and MF_DUPLICATE_ALIAS_RID <> 0 then                    // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
          begin
-           if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+           if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
            begin
              Node^.Flags := Node^.Flags and not MF_DUPLICATE_ALIAS_RID;         // Clear the Flag
              OutgoingMessage(OPStackMessage);
@@ -372,7 +606,7 @@ begin
        end else
        if Node^.Flags and MF_ALIAS_MAP_ENQUIRY <> 0 then                        // MsgFlag, an AME message needs to be responded to with an AMD
        begin
-         if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+         if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
          begin
            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
            Node^.Flags := Node^.Flags and not MF_ALIAS_MAP_ENQUIRY;             // Clear the Flag
@@ -383,7 +617,7 @@ begin
        end else
        if Node^.Flags and MF_VERIFY_NODE_ID <> 0 then                           // MsgFlag, a Verify Node ID message needs to be responded to
        begin
-         if OPStack_AllocateOPStackMessage(OPStackMessage, MTI_VERIFIED_NODE_ID_NUMBER, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+         if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_VERIFIED_NODE_ID_NUMBER, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
          begin
            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
            Node^.Flags := Node^.Flags and not MF_VERIFY_NODE_ID;                // Clear the Flag
@@ -430,7 +664,7 @@ begin
         begin
           if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
             if AppCallback_DynamicVNodeConsumedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
-              if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -439,7 +673,7 @@ begin
               end
         end else
         begin
-          if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
             NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
             OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -454,7 +688,7 @@ begin
         begin
           if EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
             if AppCallback_DynamicConsumedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
-              if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -463,7 +697,7 @@ begin
               end
         end else
         begin
-          if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
             NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
             OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -492,7 +726,7 @@ begin
         begin
           if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
             if AppCallback_DynamicVNodeProducedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
-              if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -501,7 +735,7 @@ begin
               end
         end else
         begin
-          if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
             NMRAnetUtilities_LoadSimpleDataWithEventID(USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
             OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -516,7 +750,7 @@ begin
         begin
           if EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
             if AppCallback_DynamicProducedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
-              if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^) ;
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -525,7 +759,7 @@ begin
               end
         end else
         begin
-          if OPStack_AllocateOPStackMessage(OPStackMessage, MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
             NMRAnetUtilities_LoadSimpleDataWithEventID(USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
             OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -556,7 +790,7 @@ begin
     if EventIndex > -1 then
     begin
       OPStackMessage := nil;
-      if OPStack_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+      if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
         if Node^.State and NS_VIRTUAL <> 0 then
@@ -580,18 +814,19 @@ end;
 // *****************************************************************************
 function NodeRunMessageBufferReply(Node: PNMRAnetNode): Boolean;
 var
-  AMessagePtr: POPStackMessage;
-  AMessage: TOPStackMessage;
+  NextMessage: POPStackMessage;
+  LocalMessage: TOPStackMessage;
+  LocalBuffer: TSimpleBuffer;
   DatagramBufferPtr: PDatagramBuffer;
   i, j: Integer;
   AckFlags: Byte;
   MemorySpaceMaxAddress: DWord;
 begin
   Result := False;
-  AMessagePtr := OPStackNode_MessageBuffer(Node);
-  if AMessagePtr <> nil then
+  NextMessage := OPStackNode_NextMessage(Node);
+  if NextMessage <> nil then
   begin
-    case AMessagePtr^.MTI of
+    case NextMessage^.MTI of
       MTI_PROTOCOL_SUPPORT_REPLY :
           begin
             if IsOutgoingBufferAvailable then
@@ -601,68 +836,73 @@ begin
               begin
                 for i := 0 to LEN_PIV_PROTOCOL-1 do
                   for j := 0 to USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT - 1 do
-                    AMessagePtr^.Buffer^.DataArray[i] := AMessagePtr^.Buffer^.DataArray[i] or USER_PIV_VNODE_SUPPORTED_PROTOCOLS[j][i];
-                AMessagePtr^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
+                    NextMessage^.Buffer^.DataArray[i] := NextMessage^.Buffer^.DataArray[i] or USER_PIV_VNODE_SUPPORTED_PROTOCOLS[j][i];
+                NextMessage^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
               end else
               {$ENDIF}
               begin
                 for i := 0 to LEN_PIV_PROTOCOL-1 do
                   for j := 0 to USER_PIV_SUPPORTED_PROTOCOL_COUNT - 1 do
-                    AMessagePtr^.Buffer^.DataArray[i] := AMessagePtr^.Buffer^.DataArray[i] or USER_PIV_SUPPORTED_PROTOCOLS[j][i];
-                AMessagePtr^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
+                    NextMessage^.Buffer^.DataArray[i] := NextMessage^.Buffer^.DataArray[i] or USER_PIV_SUPPORTED_PROTOCOLS[j][i];
+                NextMessage^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
               end;
-              OPStackNode_MessageUnLink(Node, AMessagePtr);
-              OutgoingMessage(AMessagePtr);
+              OPStackNode_MessageUnLink(Node, NextMessage);
+              OutgoingMessage(NextMessage);
               Result := True;
             end;
           end;
       MTI_DATAGRAM :
           begin
-            DatagramBufferPtr := PDatagramBuffer( AMessagePtr^.Buffer);
+            DatagramBufferPtr := PDatagramBuffer( NextMessage^.Buffer);
             AckFlags := $00;                                                    // Default
             case DatagramBufferPtr^.DataArray[0] of
               DATAGRAM_TYPE_BOOTLOADER :
                   begin
-                    if DatagramBufferPtr^.State and ABS_HASBEENACKED = 1 then   // After ACKed we can work the reply
+                    if DatagramBufferPtr^.State and ABS_HASBEENACKED <> 0 then   // After ACKed we can work the reply
                     begin
-                      OPStackNode_MessageUnLink(Node, AMessagePtr);
-                      OPStack_DeAllocateMessage(AMessagePtr);
+                      OPStackNode_MessageUnLink(Node, NextMessage);
+                      OPStackBuffers_DeAllocateMessage(NextMessage);
+                      Exit;                                                     // Don't call Datagram OK again!
                     end;
                   end;
               DATAGRAM_TYPE_MEMORY_CONFIGURATION :
                   begin
                     AckFlags := $00;                                            // May want to change this for slow configuration reads/writes
-                    if DatagramBufferPtr^.State and ABS_HASBEENACKED = 1 then   // After ACKed we can work the reply
+                    if DatagramBufferPtr^.State and ABS_HASBEENACKED <> 0 then   // After ACKed we can work the reply
                     begin
                       case DatagramBufferPtr^.DataArray[1] and $F8 of           // Strip off bottom 3 bits
                          MCP_COMMAND_READ :
                              begin
-                               OPStackNode_MessageUnLink(Node, AMessagePtr);
-                               OPStack_DeAllocateMessage(AMessagePtr);
+                               OPStackNode_MessageUnLink(Node, NextMessage);
+                               OPStackBuffers_DeAllocateMessage(NextMessage);
+                               Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_COMMAND_READ_STREAM :
                              begin
-                               OPStackNode_MessageUnLink(Node, AMessagePtr);
-                               OPStack_DeAllocateMessage(AMessagePtr);
+                               OPStackNode_MessageUnLink(Node, NextMessage);
+                               OPStackBuffers_DeAllocateMessage(NextMessage);
+                               Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_COMMAND_WRITE :
                              begin
-                               OPStackNode_MessageUnLink(Node, AMessagePtr);
-                               OPStack_DeAllocateMessage(AMessagePtr);
+                               OPStackNode_MessageUnLink(Node, NextMessage);
+                               OPStackBuffers_DeAllocateMessage(NextMessage);
+                               Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_COMMAND_WRITE_STREAM :
                              begin
-                               OPStackNode_MessageUnLink(Node, AMessagePtr);
-                               OPStack_DeAllocateMessage(AMessagePtr);
+                               OPStackNode_MessageUnLink(Node, NextMessage);
+                               OPStackBuffers_DeAllocateMessage(NextMessage);
+                               Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_OPERATION :
-                             begin
-                               // We will reuse the Datagram Buffer for this one
-                               case DatagramBufferPtr^.DataArray[1] of      // Mask off the upper 2 bits
+                             begin                                              // We will reuse the Datagram Buffer for this one
+                               case DatagramBufferPtr^.DataArray[1] of          // Mask off the upper 2 bits
                                  MCP_OP_GET_CONFIG :
                                      begin
-                                       OPstack_SwapDestAndSourceIDs(AMessagePtr^);      // Reuse the Datagram Buffer
-                                       AMessagePtr^.DestFlags := $00;
+                                       OPstackBuffers_SwapDestAndSourceIDs(NextMessage^);      // Reuse the Datagram Buffer
+                                       NextMessage^.MTI := MTI_DATAGRAM;
+                                       NextMessage^.DestFlags := $00;
                                        DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
                                        DatagramBufferPtr^.DataArray[1] := MCP_OP_GET_CONFIG_REPLY;
                                        {$IFDEF SUPPORT_VIRTUAL_NODES}
@@ -684,13 +924,16 @@ begin
                                        end;
                                        DatagramBufferPtr^.DataBufferSize := 7;
                                        DatagramBufferPtr^.iStateMachine := 0;
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStackNode_MessageLink(Node, AMessagePtr);
+                                       DatagramBufferPtr^.CurrentCount := 0;
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OutgoingMessage(NextMessage);
+                                       Exit;                                    // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_GET_ADD_SPACE_INFO :
                                      begin
-                                       OPstack_SwapDestAndSourceIDs(AMessagePtr^);      // Reuse the Datagram Buffer
-                                       AMessagePtr^.DestFlags := $00;
+                                       OPstackBuffers_SwapDestAndSourceIDs(NextMessage^);      // Reuse the Datagram Buffer
+                                       NextMessage^.MTI := MTI_DATAGRAM;
+                                       NextMessage^.DestFlags := $00;
                                        DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
                                        DatagramBufferPtr^.DataArray[1] := MCP_OP_GET_ADD_SPACE_INFO_REPLY;
                                        if AppCallback_AddressSpacePresent(Node^, DatagramBufferPtr^.DataArray[2]) then
@@ -702,40 +945,46 @@ begin
                                        DatagramBufferPtr^.DataArray[4] := (DWord(MemorySpaceMaxAddress) shr 16) and $000000FF;
                                        DatagramBufferPtr^.DataArray[5] := (DWord(MemorySpaceMaxAddress) shr 8) and $000000FF;
                                        DatagramBufferPtr^.DataArray[6] := DWord(MemorySpaceMaxAddress) and $000000FF;
-                                       if AppCallback_AddressSpaceReadOnly(Node, DatagramBuffer^.DataArray[2]) then
-                                        DatagramBufferPtr^.DataArray[7] := $01
-                                       else
+          // TODO                             if AppCallback_AddressSpaceReadOnly(Node, DatagramBuffer^.DataArray[2]) then
+          //                              DatagramBufferPtr^.DataArray[7] := $01
+          //                             else
                                          DatagramBufferPtr^.DataArray[7] := $00;
                                        DatagramBufferPtr^.DataBufferSize := 8;
                                        DatagramBufferPtr^.CurrentCount := 0;
-                                       DatagramBufferPtr^.Statemachine := 0;
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStackNode_MessageLink(Node, AMessagePtr);
+                                       DatagramBufferPtr^.iStateMachine := 0;
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OutgoingMessage(NextMessage);
+                                       Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_LOCK :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStack_DeAllocateMessage(AMessagePtr);
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OPStackBuffers_DeAllocateMessage(NextMessage);
+                                       Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_GET_UNIQUEID :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStack_DeAllocateMessage(AMessagePtr);
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OPStackBuffers_DeAllocateMessage(NextMessage);
+                                       Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_FREEZE :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStack_DeAllocateMessage(AMessagePtr);
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OPStackBuffers_DeAllocateMessage(NextMessage);
+                                       Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_INDICATE :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStack_DeAllocateMessage(AMessagePtr);
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OPStackBuffers_DeAllocateMessage(NextMessage);
+                                       Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_UPDATE_COMPLETE :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                       OPStack_DeAllocateMessage(AMessagePtr);
+                                       OPStackNode_MessageUnLink(Node, NextMessage);
+                                       OPStackBuffers_DeAllocateMessage(NextMessage);
+                                       Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_RESETS :
                                       begin
@@ -746,9 +995,9 @@ begin
                                         {$ENDIF}
                                      end
                                  else begin
-                                   // Don't know what that was but we got it, throw it away
-                                   OPStackNode_MessageUnLink(Node, AMessagePtr);
-                                   OPStack_DeAllocateMessage(AMessagePtr);
+                                   OPStackNode_MessageUnLink(Node, NextMessage);  // Don't know what that was but we got it, throw it away
+                                   OPStackBuffers_DeAllocateMessage(NextMessage);
+                                   Exit;                                                     // Don't call Datagram OK again!
                                  end;
                                end {case Operation}
                              end {MPC_OPERATION}
@@ -757,20 +1006,23 @@ begin
                   end;
               DATAGRAM_TYPE_TRAIN_CONTROL :
                   begin
-                    if DatagramBufferPtr^.State and ABS_HASBEENACKED = 1 then   // After ACKed we can work the reply
+                    if DatagramBufferPtr^.State and ABS_HASBEENACKED <> 0 then   // After ACKed we can work the reply
                     begin
-                      OPStackNode_MessageUnLink(Node, AMessagePtr);
-                      OPStack_DeAllocateMessage(AMessagePtr);
+                      OPStackNode_MessageUnLink(Node, NextMessage);
+                      OPStackBuffers_DeAllocateMessage(NextMessage);
                     end;
                   end;
             end;
+
             if DatagramBufferPtr^.State and ABS_HASBEENACKED = 0 then
             begin
               if IsOutgoingBufferAvailable then
               begin
-                OPStack_LoadDatagramOkBuffer(AMessage, AMessagePtr^.Dest.AliasID, AMessagePtr^.Dest.ID, AMessagePtr^.Source.AliasID, AMessagePtr^.Source.ID, AckFlags);
-                OutgoingMessage(@AMessage);
-                DatagramBufferPtr^.State := DatagramBufferPtr^.State and not ABS_HASBEENACKED;
+                LocalMessage.Buffer := @LocalBuffer;
+                LocalMessage.MessageType := MT_SIMPLE;
+                OPStackBuffers_LoadDatagramOkMessage(@LocalMessage, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, AckFlags);
+                OutgoingMessage(@LocalMessage);
+                DatagramBufferPtr^.State := DatagramBufferPtr^.State or ABS_HASBEENACKED;
               end
             end
 
@@ -794,201 +1046,6 @@ begin
  // NMRAnetBufferPools_100ms_TimeTick;
  // ServiceMode_100ms_TimeTick
 
-end;
-
-// *****************************************************************************
-//  procedure IncomingMessageCallback
-//     Parameters:
-//     Returns:
-//     Description:
-// *****************************************************************************
-procedure IncomingMessageCallback(AMessage: POPStackMessage);
-var
-  Node: PNMRAnetNode;
-  VNodeEventSupported, NodeEventSupported: Boolean;
-  VNodeEventIndex, NodeEventIndex, i: Integer;
-  NewMessage: POPStackMessage;
-  BufferAllocFailed: Boolean;
-begin
-  BufferAllocFailed := False;
-  // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
-  Node := OPStackNode_Find(AMessage, FIND_BY_SOURCE);
-  if Node <> nil then
-  begin
-    if (AMessage^.MTI = MTI_CAN_CID0) or (AMessage^.MTI = MTI_CAN_CID1) or (AMessage^.MTI = MTI_CAN_CID2) or (AMessage^.MTI = MTI_CAN_CID3) then
-      OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS_RID)                         // A "good" duplicate Alias
-    else
-      OPStackNode_SetFlag(Node, MF_DUPLICATE_ALIAS);                             // Bad
-    Exit;
-  end else
-  begin
-    case (AMessage^.MessageType) and MT_MASK of
-        MT_SIMPLE :
-            begin
-              if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
-              begin
-                Node := OPStackNode_Find(AMessage, FIND_BY_DEST);
-                if Node <> nil then
-                begin
-                  case AMessage^.MTI of
-                    MTI_VERIFY_NODE_ID_NUMBER_DEST  :
-                        begin
-                          OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID)          // All messages addressed to node get replies even if the payload is wrong!
-                        end;
-                    MTI_EVENTS_IDENTIFY_DEST          :
-                        begin
-                          OPStackNode_SetEventConsumedFlags(Node, EVENT_STATE_UNKNOWN);
-                          OPStackNode_SetEventProducedFlags(Node, EVENT_STATE_UNKNOWN);
-                        end;
-                    MTI_PROTOCOL_SUPPORT_INQUIRY      :
-                        begin
-                          // BITS ARE NEGATIVE LOGIC
-                          // Since we don't implement extended protocols yet just reply when we see the start bit set (active 0)
-                          if AMessage^.DestFlags and PIP_EXTENSION_START_BIT_MASK = 0 then
-                          begin
-                            if OPStack_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, nil, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
-                            begin
-                              OPStackNode_MessageLink(Node, NewMessage);
-                            end else
-                              BufferAllocFailed := True
-                          end
-                        end;
-                    MTI_OPTIONAL_INTERACTION_REJECTED :
-                        begin
-                        end;
-                    MTI_DATAGRAM_OK_REPLY :
-                        begin
-                          NewMessage := OPStackCANStatemachine_FindDatagramWaitingforACKStack(AMessage^.Source, AMessage^.Dest);
-                          if NewMessage <> nil then
-                            OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(NewMessage);
-                        end;
-                    MTI_DATAGRAM_REJECTED_REPLY :
-                        begin
-                          NewMessage := OPStackCANStatemachine_FindDatagramWaitingforACKStack(AMessage^.Source, AMessage^.Dest);
-                          if NewMessage <> nil then
-                          begin
-                            // Need to send it again and again until we give up
-                          end;
-                        end;
-                  end
-                end
-              end else
-              begin
-                case AMessage^.MTI of
-                  MTI_CAN_AME :
-                      begin                                                 // Alias Map Enquiry.....
-                        if AMessage^.Buffer^.DataBufferSize = 0 then
-                          OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
-                        else begin;
-                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
-                          Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
-                          if Node <> nil then
-                          begin
-                            if OPStackNode_TestState(Node, NS_PERMITTED) then   // Only reply if node is in Permitted state
-                              OPStackNode_SetFlag(Node, MF_ALIAS_MAP_ENQUIRY);
-                          end;
-                        end;
-                        Exit;
-                      end;
-                  MTI_CAN_AMD :
-                      begin                                                        // Another node has sent an Alias Map Definition....
-                        NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
-                        Node := OPStackNode_Find(AMessage, FIND_BY_DEST);  // The full Source ID was filled above so it will be use to search
-                        if Node <> nil then
-                          OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);          // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
-                        Exit;
-                      end;
-                  MTI_VERIFY_NODE_ID_NUMBER   :
-                      begin
-                        if AMessage^.Buffer^.DataBufferSize = 0 then
-                          OPStackNode_SetFlags(MF_VERIFY_NODE_ID)
-                        else begin
-                          NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
-                          Node := OPStackNode_Find(AMessage, FIND_BY_DEST);       // The full Source ID was filled above so it will be use to search
-                          if Node <> nil then
-                            OPStackNode_SetFlag(Node, MF_VERIFY_NODE_ID);
-                        end;
-                        Exit;
-                      end;
-                  MTI_CONSUMER_IDENTIFY       :
-                      begin
-                        VNodeEventIndex := -1;
-                        NodeEventIndex := -1;
-                        VNodeEventSupported := SupportsVNodeEventAsConsumer(Node, @AMessage^.Buffer^.DataArray, VNodeEventIndex);
-                        NodeEventSupported := SupportsEventAsConsumer(Node, @AMessage^.Buffer^.DataArray, NodeEventIndex);
-                        for i := 0 to NodePool.AllocatedCount - 1 do
-                        begin
-                          Node := NodePool.AllocatedList[i];
-                          if OPStackNode_TestState(Node, NS_VIRTUAL) then
-                          begin
-                            if VNodeEventSupported then
-                              OPStackNode_SetEventFlag(Node^.Events.Consumed, VNodeEventIndex, EVENT_STATE_UNKNOWN);
-                          end else
-                          begin
-                            if NodeEventSupported then
-                              OPStackNode_SetEventFlag(Node^.Events.Consumed, NodeEventIndex, EVENT_STATE_UNKNOWN);
-                          end
-                        end;
-                        Exit;
-                      end;
-                  MTI_CONSUMER_IDENTIFY_RANGE :
-                      begin
-                        // TODO
-                        Exit;
-                      end;
-                  MTI_PRODUCER_IDENDIFY       :
-                      begin
-                        VNodeEventIndex := -1;
-                        NodeEventIndex := -1;
-                        VNodeEventSupported := SupportsVNodeEventAsProducer(Node, @AMessage^.Buffer^.DataArray, VNodeEventIndex);
-                        NodeEventSupported := SupportsEventAsProducer(Node, @AMessage^.Buffer^.DataArray, NodeEventIndex);
-                        for i := 0 to NodePool.AllocatedCount - 1 do
-                        begin
-                          Node := NodePool.AllocatedList[i];
-                          if OPStackNode_TestState(Node, NS_VIRTUAL) then
-                          begin
-                            if VNodeEventSupported then
-                              OPStackNode_SetEventFlag(Node^.Events.Produced, VNodeEventIndex, EVENT_STATE_UNKNOWN);
-                          end else
-                          begin
-                            if NodeEventSupported then
-                              OPStackNode_SetEventFlag(Node^.Events.Produced, NodeEventIndex, EVENT_STATE_UNKNOWN);
-                          end
-                        end;
-                        Exit;
-                      end;
-                  MTI_PRODUCER_IDENTIFY_RANGE :
-                      begin
-                        // TODO
-                        Exit;
-                      end;
-                  MTI_EVENT_LEARN             :
-                      begin
-                        Exit;
-                      end;
-                  MTI_EVENTS_IDENTIFY         :
-                      begin
-                        for i := 0 to NodePool.AllocatedCount - 1 do
-                        begin
-                          Node := NodePool.AllocatedList[i];
-                          OPStackNode_SetEventProducedFlags(Node, EVENT_STATE_UNKNOWN);
-                          OPStackNode_SetEventConsumedFlags(Node, EVENT_STATE_UNKNOWN);
-                        end;
-                        Exit;
-                      end;
-
-                end;
-              end;
-            end;
-        MT_DATAGRAM,
-        MT_STREAM :
-            begin
-              Node := OPStackNode_Find(AMessage, FIND_BY_DEST);
-              if Node <> nil then
-                OPStackNode_MessageLink(Node, AMessage);                          // Attach it to the node to be processed in the main loop
-            end;
-      end;
-  end;
 end;
 
 // *****************************************************************************
@@ -1030,7 +1087,7 @@ begin
             2 : CAN_MTI := MTI_CAN_CID2;
             3 : CAN_MTI := MTI_CAN_CID3;
           end;
-          if OPStack_AllocateSimpleCANMessage(OPStackMessage, CAN_MTI, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, CAN_MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
           begin
             OutgoingMessage(OPStackMessage);
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
@@ -1062,7 +1119,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_RID, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
               OutgoingMessage(OPStackMessage);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
@@ -1077,7 +1134,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
               OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -1095,7 +1152,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStack_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
               OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -1108,12 +1165,12 @@ begin
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
-        if OPStack_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY, nil, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
+        if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
         begin
           Node^.iStateMachine := STATE_NODE_PERMITTED;
           Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
-          IncomingMessageCallback(OPStackMessage);
-          OPStack_DeAllocateMessage(OPStackMessage);
+          IncomingMessageDispatch(OPStackMessage, Node);
+          OPStackBuffers_DeAllocateMessage(OPStackMessage);
           Hardware_EnableInterrupts;
         end
       end;
@@ -1133,7 +1190,7 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
             OutgoingMessage(OPStackMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
@@ -1145,7 +1202,7 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStack_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
             OutgoingMessage(OPStackMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
@@ -1156,7 +1213,7 @@ begin
     STATE_NODE_TAKE_OFFLINE :
       begin
         if IsOutgoingBufferAvailable then
-          if OPStack_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, nil, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             PEventID( @OPStackMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
@@ -1187,11 +1244,9 @@ begin
   begin
     Node := OPStackNode_NextNode;
     if Node <> nil then
-    begin
       NodeRunStateMachine(Node);
-      OPStackCANStatemachine_ProcessOutgoingDatagramMessage;
-      OPStackCANStatemachine_ProcessOutgoingStreamMessage;
-    end;
+    ProcessOutgoingDatagrams;
+    ProcessOutgoingStreams;
   end;
 end;
 

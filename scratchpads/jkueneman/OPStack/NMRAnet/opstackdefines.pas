@@ -99,7 +99,7 @@ const
   MT_STREAM          = $04;
 
   MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
-  MT_ALLOCATED       = $80;
+  MT_ALLOCATED       = $80;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
 
 
 const
@@ -165,14 +165,6 @@ const
   ABS_HASBEENACKED  = $02;                                                      // Array Buffer State Flag = The received Datagram buffer has be ACK'ed
 
 type
-//  TBuffer = record
- //   State: Byte;                                                                // See ABS_xxxx flags
-//    iStateMachine: Byte;                                                        // Local Statemachine
-  //  DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
-//    DataArray: TDataArray;
-//  end;
-//  PBUffer = ^TBuffer;
-
   TSimpleBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
     iStateMachine: Byte;                                                        // Local Statemachine
@@ -184,18 +176,20 @@ type
   TDatagramBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
     iStateMachine: Byte;                                                        // Local Statemachine
-    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray
     DataArray: TDatagramDataArray;
+    // *******
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
   end;
   PDatagramBuffer = ^TDatagramBuffer;
 
   TStreamBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
     iStateMachine: Byte;                                                        // Local Statemachine
-    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray
     DataArray: TStreamDataArray;
+    // *******
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
   end;
   PStreamBuffer = ^TStreamBuffer;
 
@@ -226,19 +220,8 @@ type
     Login: TNMRAnetNodeLoginInfo;                                               // Login Information
     Flags: Word;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
-    Messages: POPStackMessage;                                                   // Linked List of Message to process for the node
-
-  //   BaseBuffers: PBaseBuffer;                                                   // Head of a possible linked list of dataless Messages Replies to service
- //   DatagramBuffers: PDatagramBuffer;                                           // Head of a possible linked list of Datagrams to service
- //   ConfigMemBuffers: PConfigMemBuffer;                                         // Head of a possible linked list of Configuration Memory Accesses to service
- //   DataBuffers: PDataBuffer;                                                   // Head of a possible linked list of Message Replies that need sent Data Bytes to be serviced
- //   StreamBuffers: PStreamBuffer;                                               // Head of a possible linked list of Streams to service
- //   ConfigurationAddress: Generic32BitPointer;                                  // Pointer into the EEProm Memory, user assigned in the NMRAnetAppCallbacks file
- //   ParentAlias,                                                                // Definition depends on what kind of node.  If a Throttle then Parent should never be set, If a Train then the will be the Owner Throttle
- //   ChildAlias,                                                                 // Definition depends on what kind of node.  If a Throttle then Child should the Train it is controlling, if a Train then should not be set
- //   LeftSibling,                                                                // Definition depends on what kind of node.  If Train then may be the next in a Consist Chain
- //   RightSibling: ^TNMRAnetNode;                                                // Definition depends on what kind of node.  If Train then may be the previous in a Consist Chain
- //   RAMAddress: Generic32BitPointer;                                            // Pointer to a DataStructure that is in Volatile RAM defined in the user defined NMRAnetAppCallbacks file, user assigned in the NMRAnetAppCallbacks file
+    IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
+    OutgoingMessages: POPStackMessage;                                          // Linked List of Messages on their way out on the wire
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 
