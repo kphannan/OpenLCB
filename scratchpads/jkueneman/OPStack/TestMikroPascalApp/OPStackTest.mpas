@@ -1,0 +1,26 @@
+program OPStackTest;
+
+{ Declarations section }
+
+procedure Timer1_100ms(); iv IVT_ADDR_T1INTERRUPT; ics ICS_AUTO;
+begin
+  OPStackCore_Timer;
+end;
+
+
+var
+  GridConnectBuffer: TGridConnectBuffer; 
+  OPStackMessage: TOPStackMessage;
+
+begin
+  { Main program }
+  
+  // Just to get it compiled in for now:
+  GridConnectBufferToOPStackBufferAndDispatch(GridConnectBuffer, OPStackMessage);
+  
+  OPStackCore_Initialize;
+  while True do
+  begin
+    OPStackCore_Process
+  end;
+end.
