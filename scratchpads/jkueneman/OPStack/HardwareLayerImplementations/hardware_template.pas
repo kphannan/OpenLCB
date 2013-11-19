@@ -12,6 +12,7 @@ uses
   {$ENDIF}
   gridconnect,
   nmranetdefines,
+  nmranetutilities,
   opstackbuffers,
   opstackdefines;
 
@@ -108,10 +109,12 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
 procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 procedure ProcessOutgoingDatagrams;
 procedure ProcessOutgoingStreams;
 function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
+procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
 procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
 function IsOutgoingBufferAvailable: Boolean;
 
@@ -186,6 +189,11 @@ begin
   end;
 end;
 
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage);
+begin
+  OutgoingMessage(AMessage)  // For Ethernet this is no different than a nomral Message
+end;
+
 // *****************************************************************************
 //  procedure OutgoingMessage
 //    Parameters:
@@ -207,6 +215,7 @@ begin
 
           if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
           begin
+            // This is a special case CAN message
             case AMessage^.MTI of
               MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF) or $10000000;
               MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF) or $10000000;
@@ -218,6 +227,7 @@ begin
           end else
           if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_GENERAL then
           begin
+            // This is a general case MTI ($9xxx)
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000;
             if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin
@@ -228,6 +238,7 @@ begin
           end else
           if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_STREAM_SEND then
           begin
+            // This is a datagram MTI ($Axxx...$Dxxxx) or stream MTI ($Fxxx)
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or (AMessage^.Dest.AliasID shl 12) or AMessage^.Source.AliasID or $10000000;
           end;
 
@@ -272,6 +283,11 @@ begin
   Result := OPStackCANStatemachine_FindDatagramWaitingforACKStack(SourceNodeID, DestNodeID)
 end;
 
+procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
+begin
+  OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage);
+end;
+
 procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
 begin
   OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage)
@@ -288,15 +304,49 @@ var
   CanMessageType, DestAlias: Word;
   DatagramMessage: POPStackMessage;
   DestinationNode: PNMRAnetNode;
+  DatagramError: PSimpleDataArray;
+  DatagramRejectedMessage: TOPStackMessage;
+  DatagramRejectedBuffer: TDatagramBuffer;
+  DatagramProcessErrorCode: Byte;
 begin
   CanMessageType := (GridConnectBuffer.MTI shr 12) and $F000;                   // always true regardless
   SourceAlias := GridConnectBuffer.MTI and $00000FFF;                           // always true regardless
-  if GridConnectBuffer.MTI and $01000000 = 0 then                               // Is it a CAN message?
+  if GridConnectBuffer.MTI and MTI_OLCB_MSG = 0 then                            // Is it a CAN message?
   begin
+    DestinationNode := nil;
     OPStackMessage.MessageType := MT_SIMPLE or MT_CAN_TYPE;                     // Created on the heap not the pool
     RawMTI := (GridConnectBuffer.MTI shr 12) and $0FFF;
     OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);
     OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
+    case RawMTI of
+        MTI_CAN_AMD,
+        MTI_CAN_AMR :
+            begin
+              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(OPStackMessage.Source.AliasID);
+              while DatagramMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveOutgoingDatagramMessage(DatagramMessage);
+                OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(OPStackMessage.Source.AliasID);
+              end;
+
+              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(OPStackMessage.Source.AliasID);
+              while DatagramMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveIncomingDatagramMessage(DatagramMessage);
+                OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(OPStackMessage.Source.AliasID);
+              end;
+
+              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(OPStackMessage.Source.AliasID);
+              while DatagramMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage);
+                OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(OPStackMessage.Source.AliasID);
+              end;
+            end;
+    end;
     IncomingMessageDispatch(@OPStackMessage, DestinationNode);
   end else
   begin
@@ -334,10 +384,29 @@ begin
             begin
               OPStackBuffers_LoadMessage(@OPStackMessage, CanMessageType, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, 0);   // These messages do not have real "MTIs", they are based on the identifier
               OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
-              DatagramMessage := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage);
-              if DatagramMessage <> nil then
-                IncomingMessageDispatch(DatagramMessage, DestinationNode);
-            end;
+              DatagramProcessErrorCode := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage, DatagramMessage);
+              case DatagramProcessErrorCode of
+                DATAGRAM_PROCESS_ERROR_OK                  :
+                    begin
+                      if DatagramMessage <> nil then
+                        IncomingMessageDispatch(DatagramMessage, DestinationNode);
+                      Exit;
+                    end
+              else begin
+                  if DatagramMessage <> nil then
+                    OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                  case DatagramProcessErrorCode of
+                    DATAGRAM_PROCESS_ERROR_BUFFER_FULL         : DatagramError := @DATAGRAM_RESULT_REJECTED_BUFFER_FULL;
+                    DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := @DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER;
+                    DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := @DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED;
+                  end;
+                  DatagramRejectedMessage.Buffer := @DatagramRejectedBuffer;
+                  OPStackBuffers_LoadDatagramRejectedBuffer(@DatagramRejectedMessage, OPStackMessage.Dest.AliasID, OPStackMessage.Dest.ID, OPStackMessage.Source.AliasID, OPStackMessage.Source.ID, DatagramError);
+                  OutgoingCriticalMessage(@DatagramRejectedMessage);
+                  Exit;
+                end;
+              end;
+            end
           end;
       MTI_FRAME_TYPE_CAN_STREAM_SEND :
           begin

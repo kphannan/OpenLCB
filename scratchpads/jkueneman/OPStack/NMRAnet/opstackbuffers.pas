@@ -49,7 +49,7 @@ procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
-procedure OPStackBuffers_LoadDatagramRejectedBuffer(SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
+procedure OPStackBuffers_LoadDatagramRejectedBuffer(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; RejectedMTI: Word);
 
@@ -66,22 +66,17 @@ procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boo
 
 // Copy buffer helpers
 procedure OPStackBuffers_CopyData(DestData, SourceData: PSimpleBuffer);
-procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word);
-procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; DestOffset, Count: Word);
+procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
+procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
 
 // Message Node ID helpers
-procedure OPStackBuffers_SwapDestAndSourceIDs(var AMessage: TOPStackMessage);
+procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
 
 var
   SimpleBufferPool: TSimpleBufferPool;
   DatagramBufferPool: TDatagramBufferPool;
   StreamBufferPool: TStreamBufferPool;
   OPStackMessagePool: TOPStackMessagePool;
-
-  DatagramRejected: TOPStackMessage;
-  DatagramRejectedBuffer: TSimpleBuffer;
-  OptionalInteractionRejected: TOPStackMessage;
-  OptionalInteractionRejectedBuffer: TSimpleBuffer;
 
 implementation
 
@@ -90,9 +85,6 @@ procedure OPStackBuffers_Initialize;
 var
   i, j: Integer;
 begin
-  DatagramRejected.Buffer := @DatagramRejectedBuffer;
-  OptionalInteractionRejected.Buffer := @OptionalInteractionRejectedBuffer;
-
   for j := 0 to USER_MAX_SIMPLE_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroSimpleBuffer(@SimpleBufferPool.Pool[j], True);
   SimpleBufferPool.Count := 0;
@@ -305,11 +297,11 @@ begin
   end;
 end;
 
-procedure OPStackBuffers_LoadDatagramRejectedBuffer(SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
+procedure OPStackBuffers_LoadDatagramRejectedBuffer(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
 begin
-  OPStackBuffers_LoadMessage(@DatagramRejected, MTI_DATAGRAM_REJECTED_REPLY, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
-  DatagramRejected.MessageType := MT_SIMPLE;                                    // This is not Allocated because the DatagramRejected Message is a local copy
-  OPStackBuffers_CopyDataArray(DatagramRejected.Buffer, ErrorCode, 2)
+  OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM_REJECTED_REPLY, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+  AMessage^.MessageType := MT_SIMPLE;                                           // This is not Allocated because the DatagramRejected Message is a local copy
+  OPStackBuffers_CopyDataArray(AMessage^.Buffer, ErrorCode, 2, True)
 end;
 
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
@@ -326,6 +318,7 @@ end;
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; RejectedMTI: Word);
 begin
   OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, SourceNodeAlias, SourceNodeID, 0, NULL_NODE_ID, 0);
+  AMessage^.MessageType := MT_SIMPLE;
   AMessage^.Buffer^.DataBufferSize := 4;
   AMessage^.Buffer^.DataArray[0] := $20;
   AMessage^.Buffer^.DataArray[1] := $00;
@@ -431,31 +424,36 @@ begin
   end
 end;
 
-procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word);
+procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
 begin
-  OPStackBuffers_CopyDataArrayWithDestOffset(DestData, SourceDataArray, 0, Count);
+  OPStackBuffers_CopyDataArrayWithDestOffset(DestData, SourceDataArray, Count, ClearDestSize);
 end;
 
-procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; DestOffset, Count: Word);
+procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
+var
+  i: Integer;
 begin
-  DestData^.DataBufferSize := 0;
-  while DestData^.DataBufferSize < Count do
+  if ClearDestSize then
+    DestData^.DataBufferSize := 0;
+  i := 0;
+  while i < Count do
   begin
-    DestData^.DataArray[DestData^.DataBufferSize+DestOffset] := SourceDataArray^[DestData^.DataBufferSize];
-    Inc(DestData^.DataBufferSize)
+    DestData^.DataArray[DestData^.DataBufferSize] := SourceDataArray^[i];
+    Inc(DestData^.DataBufferSize);
+    Inc(i)
   end
 end;
 
-procedure OPStackBuffers_SwapDestAndSourceIDs(var AMessage: TOPStackMessage);
+procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
 var
   Temp: TNodeInfo;
 begin
-  Temp.AliasID := AMessage.Dest.AliasID;
-  Temp.ID := AMessage.Dest.ID;
-  AMessage.Dest.AliasID := AMessage.Source.AliasID;
-  AMessage.Dest.ID := AMessage.Source.ID;
-  AMessage.Source.AliasID := Temp.AliasID;
-  AMessage.Source.ID := Temp.ID;
+  Temp.AliasID := AMessage^.Dest.AliasID;
+  Temp.ID := AMessage^.Dest.ID;
+  AMessage^.Dest.AliasID := AMessage^.Source.AliasID;
+  AMessage^.Dest.ID := AMessage^.Source.ID;
+  AMessage^.Source.AliasID := Temp.AliasID;
+  AMessage^.Source.ID := Temp.ID;
 end;
 
 end.

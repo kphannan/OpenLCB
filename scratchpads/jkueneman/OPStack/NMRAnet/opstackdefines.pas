@@ -228,6 +228,12 @@ type
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 
+const
+  DATAGRAM_PROCESS_ERROR_OK                  = $00;
+  DATAGRAM_PROCESS_ERROR_BUFFER_FULL         = $02;
+  DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        = $03;
+  DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED = $04;
+
 
 implementation
 

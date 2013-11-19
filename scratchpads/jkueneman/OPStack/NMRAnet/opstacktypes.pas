@@ -35,6 +35,7 @@ const
   MCWL_STREAM_WRITE_SUPPORTED        = $01;                                     // MemoryConfigurationWriteLength - Stream Write Supported
 
 
+
 const
   OPS_PROCESSING     = $01;                                                     // Start and stops the main StateMachine for running. Default is Off on startup Allows holding off OLCB processing until the node is read (Ethernet link is up, etc)
 

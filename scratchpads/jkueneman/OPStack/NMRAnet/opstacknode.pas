@@ -38,6 +38,7 @@ function OPStackNode_Allocate: PNMRAnetNode;
 procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
 function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;    // See FIND_BY_xxxx constants
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode;
+function OPStackNode_FindByID(ID: TNodeID): PNMRAnetNode;
 function OPStackNode_FindFirstVirtualNode: PNMRAnetNode;
 function OPStackNode_FindLastVirtualNode: PNMRAnetNode;
 
@@ -189,6 +190,30 @@ begin
         Exit
       end
   end
+end;
+
+
+// *****************************************************************************
+//  procedure OPStackNode_FindByID;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_FindByID(ID: TNodeID): PNMRAnetNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to NodePool.AllocatedCount - 1 do
+  begin
+    if NodePool.AllocatedList[i]^.Info.ID[0] = ID[0] then
+      if NodePool.AllocatedList[i]^.Info.ID[1] = ID[1] then
+          if NodePool.AllocatedList[i]^.State and NS_RELEASING = 0 then
+          begin
+            Result := NodePool.AllocatedList[i];
+            Exit
+          end;
+  end;
 end;
 
 // *****************************************************************************

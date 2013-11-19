@@ -222,6 +222,7 @@ var
   NewMessage: POPStackMessage;
   BufferAllocFailed: Boolean;
   SourceNode: PNMRAnetNode;
+  OptionalInteractionMessage: TOPStackMessage;
 begin
   BufferAllocFailed := False;
   // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
@@ -248,7 +249,7 @@ begin
                   OPStackNode_SetFlags(MF_ALIAS_MAP_ENQUIRY)
                 else begin
                   NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
-                  DestNode := OPStackNode_Find(AMessage, FIND_BY_DEST);
+                  DestNode := OPStackNode_FindByID(AMessage^.Dest.ID);
                   if DestNode <> nil then       // The full Source ID was filled above so it will be use to search
                   begin
                     if OPStackNode_TestState(DestNode, NS_PERMITTED) then       // Only reply if node is in Permitted state
@@ -260,9 +261,12 @@ begin
           MTI_CAN_AMD :
               begin                                                             // Another node has sent an Alias Map Definition....
                 NMRAnetUtilities_SimpleDataToNodeID(@AMessage^.Buffer^.DataArray, AMessage^.Dest.ID);
-                DestNode := OPStackNode_Find(AMessage, FIND_BY_DEST);
-                if DestNode <> nil then         // The full Source ID was filled above so it will be use to search
-                  OPStackNode_SetFlags(MF_DUPLICATE_NODE_ID);                   // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
+                DestNode := OPStackNode_FindByID(AMessage^.Dest.ID);
+                if DestNode <> nil then                                        // The full Source ID was filled above so it will be use to search
+                begin
+                  if OPStackNode_TestState(DestNode, NS_PERMITTED) then         // Only reply if node is in Permitted state
+                    OPStackNode_SetFlag(DestNode, MF_DUPLICATE_NODE_ID);      // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
+                end;
                 Exit;
               end;
         end {case}
@@ -315,13 +319,14 @@ begin
                           if NewMessage <> nil then
                           begin
                             // Need to send it again and again until we give up
-
                             RemoveDatagramWaitingForAck(NewMessage);
-                            OPStackBuffers_DeAllocateMessage(NewMessage);
+                            AddOutgoingDatagramMessage(NewMessage);
                           end
                         end
-                  else
-                    OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionRejected, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
+                  else begin
+                      OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
+                      OutgoingCriticalMessage(@OptionalInteractionMessage);
+                    end
                   end {case}
                 end else  {addressed message}
                 begin
@@ -413,7 +418,7 @@ begin
                   else begin                                                      // If the Message is not from the Pools then allocate one and copy the contents
                     if OPStackBuffers_AllocateDatagramMessage(NewMessage, AMessage^.MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.DestFlags) then
                     begin
-                      OPStackBuffers_CopyDataArray(NewMessage^.Buffer, @AMessage^.Buffer^.DataArray, AMessage^.Buffer^.DataBufferSize);
+                      OPStackBuffers_CopyDataArray(NewMessage^.Buffer, @AMessage^.Buffer^.DataArray, AMessage^.Buffer^.DataBufferSize, True);
                       OPStackNode_MessageLink(DestNode, NewMessage)
                     end
                   end
@@ -432,7 +437,7 @@ begin
                   else begin                                                      // If the Message is not from the Pools then allocate one and copy the contents
                     if OPStackBuffers_AllcoateStreamMessage(NewMessage, AMessage^.MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
                     begin
-                      OPStackBuffers_CopyDataArray(NewMessage^.Buffer, @AMessage^.Buffer^.DataArray, AMessage^.Buffer^.DataBufferSize);
+                      OPStackBuffers_CopyDataArray(NewMessage^.Buffer, @AMessage^.Buffer^.DataArray, AMessage^.Buffer^.DataBufferSize, True);
                       OPStackNode_MessageLink(DestNode, NewMessage)
                     end
                   end
@@ -482,7 +487,7 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
                       end;
       MSI_CONFIG,
       MSI_FDI       : begin
-     // TODO              //     Result := AppCallback_AddressSpaceSize(Node, AddressSpace);
+                        Result := AppCallback_AddressSpaceSize(Node, AddressSpace);
                       end
     else
       Result := 0;
@@ -773,6 +778,123 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure DecodeConfigMemReadWriteHeader
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+procedure DecodeConfigMemReadWriteHeader(Node: PNMRAnetNode; Buffer: PDatagramDataArray; var AddressSpace: Byte; var ConfigAddress: DWord; var ReadCount: DWord; var DataOffset: Byte);
+var
+  MaxSpaceSize: DWord;
+begin
+  // Decode the Memory Space and where the Data starts
+  DataOffset := 6;
+  case Buffer^[1] and $03 of      // Strip off bottom two bits
+    MCP_CDI            : AddressSpace := MSI_CDI;
+    MCP_ALL            : AddressSpace := MSI_ALL;
+    MCP_CONFIGURATION  : AddressSpace := MSI_CONFIG;
+    MCP_NONE           :
+      begin
+        Inc(DataOffset);
+        AddressSpace := Buffer^[6]
+       end;
+  end;
+  ConfigAddress := DWord( Buffer^[2] shl 24) or DWord( Buffer^[3] shl 16) or DWord( Buffer^[4] shl 8) or DWord( Buffer^[5]);
+
+  case Buffer^[1] and $F0 of
+    MCP_COMMAND_READ_STREAM  : ReadCount := DWord( Buffer^[DataOffset] shl 24) or DWord( Buffer^[DataOffset+1] shl 16) or DWord( Buffer^[DataOffset+2] shl 8) or DWord( Buffer^[DataOffset+3]);
+    MCP_COMMAND_READ         : ReadCount := Buffer^[DataOffset]
+  else
+     ReadCount := 0;
+  end;
+
+     // Test the size against the size of the Address Space and adjust to the Max size if necessary
+   MaxSpaceSize := MaxAddressByAddressSpace(Node, AddressSpace);
+   if ConfigAddress >= MaxSpaceSize then                               // If the caller overruns the address we are done
+     ReadCount := 0
+   else begin
+     if ConfigAddress + ReadCount > MaxSpaceSize then
+       ReadCount := MaxSpaceSize - ConfigAddress;
+   end
+end;
+
+// *****************************************************************************
+//  procedure EncodeConfigMemReadWriteHeader
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+procedure EncodeConfigMemReadWriteHeader(Buffer: PDatagramDataArray; IsRead: Boolean; IsStream: Boolean; AddressSpace: Byte; ConfigAddress: DWord; ReadCount: DWord; UseAddressSpaceByte: Boolean; var DataOffset: Byte);
+begin
+  Buffer^[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+
+  // Setup the Command
+  if IsRead then
+  begin
+    if IsStream then
+      Buffer^[1] := MCP_COMMAND_READ_STREAM
+    else
+      Buffer^[1] := MCP_COMMAND_READ;
+  end else
+  begin
+    if IsStream then
+      Buffer^[1] := MCP_COMMAND_WRITE_STREAM
+    else
+      Buffer^[1] := MCP_COMMAND_WRITE;
+  end;
+
+  DataOffset := 6;
+  if UseAddressSpaceByte then
+  begin
+  end else
+  begin
+    case AddressSpace of
+      MSI_CDI            : Buffer^[1] := Buffer^[1] or MCP_CDI;
+      MSI_ALL            : Buffer^[1] := Buffer^[1] or MCP_ALL;
+      MSI_CONFIG         : Buffer^[1] := Buffer^[1] or MCP_CONFIGURATION
+    else begin
+        Inc(DataOffset);
+        Buffer^[6] := AddressSpace
+      end
+    end
+  end;
+
+  Buffer^[2] := ConfigAddress shr 24;
+  Buffer^[3] := ConfigAddress shr 16;
+  Buffer^[4] := ConfigAddress shr 8;
+  Buffer^[5] := ConfigAddress;
+
+  if IsRead then
+  begin
+    if IsStream then
+    begin
+      Buffer^[DataOffset] := ReadCount shr 24;
+      Buffer^[DataOffset+1] := ReadCount shr 16;
+      Buffer^[DataOffset+2] := ReadCount shr 8;
+      Buffer^[DataOffset+3] := ReadCount;
+    end else
+      Buffer^[DataOffset] := ReadCount;
+  end;
+end;
+
+procedure EncodeConfigMemReadWriteHeaderReply(Buffer: PDatagramDataArray; IsReplyOK, IsRead: Boolean);
+begin
+  if IsRead then
+  begin
+    if IsReplyOK then
+      Buffer^[1] := Buffer^[1] or MCP_COMMAND_READ_REPLY_OK
+    else
+      Buffer^[1] := Buffer^[1] or MCP_COMMAND_READ_REPLY_FAIL;
+  end else
+  begin
+    if IsReplyOK then
+      Buffer^[1] := Buffer^[1] or MCP_COMMAND_WRITE_REPLY_OK
+    else
+      Buffer^[1] := Buffer^[1] or MCP_COMMAND_WRITE_REPLY_FAIL;
+  end;
+end;
+
+// *****************************************************************************
 //  procedure NodeRunPCERFlagsReply
 //     Parameters:
 //     Returns:     True if a message was loaded
@@ -814,13 +936,15 @@ end;
 // *****************************************************************************
 function NodeRunMessageBufferReply(Node: PNMRAnetNode): Boolean;
 var
-  NextMessage: POPStackMessage;
+  NextMessage, NewMessage: POPStackMessage;
   LocalMessage: TOPStackMessage;
   LocalBuffer: TSimpleBuffer;
   DatagramBufferPtr: PDatagramBuffer;
   i, j: Integer;
   AckFlags: Byte;
   MemorySpaceMaxAddress: DWord;
+  AddressSpace, DataOffset: Byte;
+  ConfigAddress, ReadCount: DWord;
 begin
   Result := False;
   NextMessage := OPStackNode_NextMessage(Node);
@@ -870,11 +994,70 @@ begin
                     AckFlags := $00;                                            // May want to change this for slow configuration reads/writes
                     if DatagramBufferPtr^.State and ABS_HASBEENACKED <> 0 then   // After ACKed we can work the reply
                     begin
-                      case DatagramBufferPtr^.DataArray[1] and $F8 of           // Strip off bottom 3 bits
+                      DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, ReadCount, DataOffset);
+                      case DatagramBufferPtr^.DataArray[1] and $F0 of
                          MCP_COMMAND_READ :
                              begin
                                OPStackNode_MessageUnLink(Node, NextMessage);
-                               OPStackBuffers_DeAllocateMessage(NextMessage);
+                               OPStackBuffers_SwapDestAndSourceIDs(NextMessage);
+                               if AddressSpace <= MSI_CONFIG then
+                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, False, DataOffset)
+                               else
+                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset);
+                               EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, True);
+
+                               DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
+                               DatagramBufferPtr^.CurrentCount := 0;
+                               DatagramBufferPtr^.iStateMachine := 0;
+                               case AddressSpace of
+                                   MSI_CDI :
+                                       begin
+                                         {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                         if Node^.State and NS_VIRTUAL <> 0 then
+                                         begin
+                                           for i := 0 to ReadCount - 1 do
+                                             DatagramBufferPtr^.DataArray[DataOffset+i] := USER_CDI_VNODE_ARRAY[i+ConfigAddress]
+                                         end else {$ENDIF}
+                                         begin
+                                           for i := 0 to ReadCount - 1 do
+                                              DatagramBufferPtr^.DataArray[DataOffset+i] := USER_CDI_ARRAY[i+ConfigAddress];
+                                         end;
+                                       end;
+                                   MSI_ALL :
+                                       begin
+                                         for i := 0 to ReadCount - 1 do
+                                           DatagramBufferPtr^.DataArray[DataOffset+i] := PByte(i)^
+                                       end;
+                                   MSI_CONFIG :
+                                       begin
+                                         for i := 0 to ReadCount - 1 do
+                                           DatagramBufferPtr^.DataArray[DataOffset+i] := $33;      // TEMPORARY
+                                       end;
+                                   MSI_ACDI_MFG :
+                                       begin
+                                         {$IFDEF SUPPORT_VIRTUAL_NODES}
+                                         if Node^.State and NS_VIRTUAL <> 0 then
+                                         begin
+                                           for i := 0 to ReadCount - 1 do
+                                             DatagramBufferPtr^.DataArray[DataOffset+i] := USER_VNODE_ACDI_MFG_STRINGS[ConfigAddress + i];
+                                         end else {$ENDIF}
+                                         begin
+                                           for i := 0 to ReadCount - 1 do
+                                             DatagramBufferPtr^.DataArray[DataOffset+i] := USER_ACDI_MFG_STRINGS[ConfigAddress + i];
+                                         end;
+                                       end;
+                                   MSI_ACDI_USER :
+                                       begin
+                                         for i := 0 to ReadCount - 1 do
+                                           DatagramBufferPtr^.DataArray[DataOffset+i] := $AA;      // TEMPORARY
+                                       end;
+                                   MSI_FDI :
+                                       begin
+                                         for i := 0 to ReadCount - 1 do
+                                           DatagramBufferPtr^.DataArray[DataOffset+i] := $FF;      // TEMPORARY
+                                       end;
+                               end;
+                               OutgoingMessage(NextMessage);
                                Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_COMMAND_READ_STREAM :
@@ -885,6 +1068,7 @@ begin
                              end;
                          MCP_COMMAND_WRITE :
                              begin
+
                                OPStackNode_MessageUnLink(Node, NextMessage);
                                OPStackBuffers_DeAllocateMessage(NextMessage);
                                Exit;                                            // Don't call Datagram OK again!
@@ -900,7 +1084,7 @@ begin
                                case DatagramBufferPtr^.DataArray[1] of          // Mask off the upper 2 bits
                                  MCP_OP_GET_CONFIG :
                                      begin
-                                       OPstackBuffers_SwapDestAndSourceIDs(NextMessage^);      // Reuse the Datagram Buffer
+                                       OPstackBuffers_SwapDestAndSourceIDs(NextMessage);      // Reuse the Datagram Buffer
                                        NextMessage^.MTI := MTI_DATAGRAM;
                                        NextMessage^.DestFlags := $00;
                                        DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
@@ -931,12 +1115,12 @@ begin
                                      end;
                                  MCP_OP_GET_ADD_SPACE_INFO :
                                      begin
-                                       OPstackBuffers_SwapDestAndSourceIDs(NextMessage^);      // Reuse the Datagram Buffer
+                                       OPstackBuffers_SwapDestAndSourceIDs(NextMessage);      // Reuse the Datagram Buffer
                                        NextMessage^.MTI := MTI_DATAGRAM;
                                        NextMessage^.DestFlags := $00;
                                        DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
                                        DatagramBufferPtr^.DataArray[1] := MCP_OP_GET_ADD_SPACE_INFO_REPLY;
-                                       if AppCallback_AddressSpacePresent(Node^, DatagramBufferPtr^.DataArray[2]) then
+                                       if AppCallback_AddressSpacePresent(Node, DatagramBufferPtr^.DataArray[2]) then
                                          DatagramBufferPtr^.DataArray[1] := DatagramBufferPtr^.DataArray[1] or MCP_OP_GET_ADD_SPACE_INFO_REPLY_PRESENT;
                                        DatagramBufferPtr^.DataArray[2] := DatagramBufferPtr^.DataArray[2];
                                          // I am not supporting the ability to return anything but a $0 for the lower address so we only deal with offsets from zero in these calls
@@ -945,9 +1129,9 @@ begin
                                        DatagramBufferPtr^.DataArray[4] := (DWord(MemorySpaceMaxAddress) shr 16) and $000000FF;
                                        DatagramBufferPtr^.DataArray[5] := (DWord(MemorySpaceMaxAddress) shr 8) and $000000FF;
                                        DatagramBufferPtr^.DataArray[6] := DWord(MemorySpaceMaxAddress) and $000000FF;
-          // TODO                             if AppCallback_AddressSpaceReadOnly(Node, DatagramBuffer^.DataArray[2]) then
-          //                              DatagramBufferPtr^.DataArray[7] := $01
-          //                             else
+                                       if AppCallback_AddressSpaceReadOnly(Node, DatagramBufferPtr^.DataArray[2]) then
+                                         DatagramBufferPtr^.DataArray[7] := $01
+                                       else
                                          DatagramBufferPtr^.DataArray[7] := $00;
                                        DatagramBufferPtr^.DataBufferSize := 8;
                                        DatagramBufferPtr^.CurrentCount := 0;

@@ -5,8 +5,8 @@ interface
 {$ENDIF}
 
 const
-//  MTI_OLCB_MSG                          = $08000;                             //
-//  MTI_CAN                               = $00000;                             // Frame Type CAN Control Message
+  MTI_OLCB_MSG                              = $08000000;                        //
+
   MTI_CAN_CID0                              = $7000;                            // First 12 Bits of 48 bit Node ID
   MTI_CAN_CID1                              = $6000;                            // 2rd 12 Bits of 48 bit Node ID
   MTI_CAN_CID2                              = $5000;                            // 3nd 12 Bits of 48 bit Node ID
@@ -132,6 +132,18 @@ const
   DATAGRAM_OK_ACK_REPLY_PENDING                           = $80;
 
 const
+  MSI_CDI                            = $FF;                                     // MemorySpaceIdentifier - Access the Configuration Definition Infomation (CDI)
+  MSI_ALL                            = $FE;                                     // MemorySpaceIdentifier - Access All memory (define all in the application)
+  MSI_CONFIG                         = $FD;                                     // MemorySpaceIdentifier - Access basic configuration memory that feeds into the CDI
+  MSI_ACDI_MFG                       = $FC;                                     // MemorySpaceIdentifier - Access the ACDI Manfacturers Info
+  MSI_ACDI_USER                      = $FB;                                     // MemorySpaceIdentifier - Access the ACDI User definable Info
+  MSI_FDI                            = $FA;                                     // MemorySpaceIdentifier - Access the Function Definition Information (FDI)
+
+  MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
+  MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask
+  MCP_CONFIGURATION                   = $01;                                    // Address space = Basic Configuration ($FD) access Mask
+  MCP_NONE                            = $00;                                    // Use the optional {Space} byte in the datagram to defin the address space
+
   MCP_COMMAND_MASK                    = $C0;                                    // Upper 2 bits are the command type
 
   // Upper 2 bits 0 = Write Command
@@ -157,11 +169,6 @@ const
   MCP_REPLY_COMMAND_BIT               = 4;                                      // Bit 4 set means it is a reply to a Command
   MCP_STREAM_COMMAND_BIT              = 5;                                      // Bit 5 set means it is a Stream Command
   // Bit 6..7 define the Command
-
-  MCP_CDI                             = $03;                                    // Address space = CDI ($FF) access Mask
-  MCP_ALL                             = $02;                                    // Address space = All ($FE) access Mask
-  MCP_CONFIGURATION                   = $01;                                    // Address space = Basic Configuration ($FD) access Mask
-  MCP_NONE                            = $00;                                    // Use the optional {Space} byte in the datagram to defin the address space
 
   MCP_OP_GET_CONFIG                  = $80;                                     // MemoryConfigurationProtocol Operation - Get Configuration
   MCP_OP_GET_CONFIG_REPLY            = $82;                                     // MemoryConfigurationProtocol Operation - Get Configuration Reply

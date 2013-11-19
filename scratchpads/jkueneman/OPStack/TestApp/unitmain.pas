@@ -14,8 +14,7 @@ uses
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
   opstackbuffers,
   opstacktypes,
-  template_node,
-  opstackdefines;
+  template_node;
 type
 
   { TForm1 }
