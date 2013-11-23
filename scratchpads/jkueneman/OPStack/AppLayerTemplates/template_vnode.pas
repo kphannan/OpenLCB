@@ -97,8 +97,8 @@ const
  // ACDI Manufacturer Memory ($FC) Space Implementation
  // **************************************************************************************************************************************************************
 const
-  USER_MAX_VNODE_ACDI_MFG_ARRAY = 26;
-  USER_VNODE_ACDI_MFG_STRINGS: array[0..USER_MAX_VNODE_ACDI_MFG_ARRAY - 1] of byte = (
+  USER_VNODE_MAX_ACDI_MFG_ARRAY = 26;
+  USER_VNODE_ACDI_MFG_STRINGS: array[0..USER_VNODE_MAX_ACDI_MFG_ARRAY - 1] of byte = (
       $4D,$75,$73,$74,$61,$6E,$67,$70,$65,$61,$6B,$00,  // Mustangpeak
       $56,$4E,$31,$30,$30,$00,  // VN100
       $30,$2E,$31,$00,  // 0.1

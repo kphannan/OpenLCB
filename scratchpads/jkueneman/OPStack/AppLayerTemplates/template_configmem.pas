@@ -31,7 +31,7 @@ end;
 
 function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
 begin
-  Result := 4;
+  Result := 44;
 end;
 
 end.

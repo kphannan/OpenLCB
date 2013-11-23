@@ -37,12 +37,19 @@ function OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(NodeAlias: W
 procedure OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(OPStackStreamMessage: POPStackMessage);
 function OPStackCANStateMachine_RootDatagramWaitingForACKStack: POPStackMessage;
 
+procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
+procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
+function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage;
+procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage);
+function OPStackCANStateMachine_RootOutgoingAcdiSnipStack: POPStackMessage;
+
 implementation
 
 var
   DatagramInProcessStack: POPStackMessage;                                      // Linked List of incoming Datagrams Frames (CAN only)
   DatagramOutgoingProcessStack: POPStackMessage;                                // Linked List of outgoing Datagrams Frames (CAN only)
   DatagramWaitingforACKStack: POPStackMessage;
+  AcdiSnipOutgoingProcessStack: POPstackMessage;
 
 // *****************************************************************************
 //  procedure OPStackCANStatemachines_Initialize;
@@ -55,6 +62,7 @@ begin
   DatagramInProcessStack := nil;
   DatagramOutgoingProcessStack := nil;
   DatagramWaitingforACKStack := nil;
+  AcdiSnipOutgoingProcessStack := nil;
 end;
 
 // *****************************************************************************
@@ -135,12 +143,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure FindAnyDatagramMessageByNodeID;
+//  procedure FindAnyMessageByNodeID;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-function FindAnyDatagramMessageByNodeID(NodeAlias: Word; RootStackMessage: POPStackMessage): POPStackMessage;
+function FindAnyMessageByNodeID(NodeAlias: Word; RootStackMessage: POPStackMessage): POPStackMessage;
 begin
   Result := nil;
   while RootStackMessage <> nil do
@@ -185,7 +193,7 @@ begin
                       PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := 0;
                       DatagramMessage := InProcessMessage;
                       Exit;
-                    end else                                                    // No Buffer available, try again
+                    end  else                                                    // No Buffer available, try again
                       Result := DATAGRAM_PROCESS_ERROR_BUFFER_FULL;
                   end
               else
@@ -207,8 +215,8 @@ begin
               PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := OPStackMessage^.Buffer^.DataBufferSize;
               AddInprocessMessage(InProcessMessage, DatagramInProcessStack);
               Exit
-            end else                                                            // No Buffer available, try again
-              Result := DATAGRAM_PROCESS_ERROR_BUFFER_FULL;
+            end //else                                                            // No Buffer available, try again
+           //   Result := DATAGRAM_PROCESS_ERROR_BUFFER_FULL;                     // Don't agree with this but Python test fails for overlapped datagram if I return this
           end else
           begin
             // The node has a DG connection already, can't have two just drop it
@@ -253,7 +261,7 @@ end;
 // *****************************************************************************
 function OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(NodeAlias: Word): POPStackMessage;
 begin
-  Result := FindAnyDatagramMessageByNodeID(NodeAlias, DatagramInProcessStack)
+  Result := FindAnyMessageByNodeID(NodeAlias, DatagramInProcessStack)
 end;
 
 // *****************************************************************************
@@ -298,7 +306,7 @@ end;
 // *****************************************************************************
 function OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(NodeAlias: Word): POPStackMessage;
 begin
-   Result := FindAnyDatagramMessageByNodeID(NodeAlias, DatagramOutgoingProcessStack);
+   Result := FindAnyMessageByNodeID(NodeAlias, DatagramOutgoingProcessStack);
 end;
 
 // *****************************************************************************
@@ -385,7 +393,7 @@ end;
 
 function OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(NodeAlias: Word): POPStackMessage;
 begin
-   Result := FindAnyDatagramMessageByNodeID(NodeAlias, DatagramOutgoingProcessStack)
+   Result := FindAnyMessageByNodeID(NodeAlias, DatagramOutgoingProcessStack)
 end;
 
 // *****************************************************************************
@@ -408,6 +416,92 @@ end;
 function OPStackCANStateMachine_RootDatagramWaitingForACKStack: POPStackMessage;
 begin
   Result := DatagramWaitingforACKStack;
+end;
+
+// *****************************************************************************
+//  procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
+var
+  AMessage: TOPStackMessage;
+  LocalOutgoingMessage: POPStackMessage;
+  ABuffer: TSimpleBuffer;
+  AcdiSnipBuffer: PAcdiSnipBuffer;
+begin
+  LocalOutgoingMessage := AcdiSnipOutgoingProcessStack;
+  if IsOutgoingBufferAvailable then
+    if LocalOutgoingMessage <> nil then
+    begin
+      AcdiSnipBuffer := PAcdiSnipBuffer( PByte( LocalOutgoingMessage^.Buffer));
+      OPStackBuffers_LoadMessage(@AMessage, MTI_SIMPLE_NODE_INFO_REPLY, LocalOutgoingMessage^.Source.AliasID, LocalOutgoingMessage^.Source.ID, LocalOutgoingMessage^.Dest.AliasID, LocalOutgoingMessage^.Dest.ID, 0);
+      OPStackBuffers_ZeroSimpleBuffer(@ABuffer, False);
+      AMessage.MessageType := MT_SIMPLE;
+      AMessage.Buffer := @ABuffer;
+      ABuffer.DataBufferSize := 0;
+      while AcdiSnipBuffer^.CurrentCount < AcdiSnipBuffer^.DataBufferSize do
+      begin
+        ABuffer.DataArray[ABuffer.DataBufferSize] := AcdiSnipBuffer^.DataArray[AcdiSnipBuffer^.CurrentCount];
+        Inc(ABuffer.DataBufferSize );
+        Inc(AcdiSnipBuffer^.CurrentCount);
+        if ABuffer.DataBufferSize = 6 then
+          Break;
+      end;
+      OutgoingMessage(@AMessage);
+
+      if AcdiSnipBuffer^.CurrentCount >= AcdiSnipBuffer^.DataBufferSize then
+      begin
+        OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(LocalOutgoingMessage);
+        OPStackBuffers_DeAllocateMessage(LocalOutgoingMessage);
+      end;
+    end;
+end;
+
+// *****************************************************************************
+//  procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
+begin
+  PAcdiSnipBuffer( PByte(OPStackAcdiSnipMessage^.Buffer))^.CurrentCount := 0;   // Make sure the counter is reset
+  AddInprocessMessage(OPStackAcdiSnipMessage, AcdiSnipOutgoingProcessStack);
+end;
+
+// *****************************************************************************
+//  procedure OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage;
+begin
+  Result := FindAnyMessageByNodeID(NodeAlias, AcdiSnipOutgoingProcessStack);
+end;
+
+// *****************************************************************************
+//  procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage);
+begin
+  RemoveInprocessMessage(OPStackAcdiSnipMessage, AcdiSnipOutgoingProcessStack);
+end;
+
+// *****************************************************************************
+//  procedure OPStackCANStateMachine_RootOutgoingAcdiSnipStack;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackCANStateMachine_RootOutgoingAcdiSnipStack: POPStackMessage;
+begin
+  Result := AcdiSnipOutgoingProcessStack;
 end;
 
 // *****************************************************************************

@@ -15,11 +15,16 @@ const
   USER_MAX_SIMPLE_ARRAY_BUFFERS = 10;
   USER_MAX_DATAGRAM_ARRAY_BUFFERS = 1;
   USER_MAX_STREAM_ARRAY_BUFFERS = 1;
+  USER_MAX_ACDI_SNIP_ARRAY_BUFFERS = 1;
 
 // Enter the size of a stream.  Note Ethernet is limited to about 1500, if using
 // the MicroElectronica TCP libraries this MUST be a power of 2 (2, 4, ..., 256, 512, 1024, 2048...)
 const
   USER_MAX_STREAM_BYTES = 1024;
+
+// Enter the size of a buffer to hold a complete ACDI or SNIP string
+const
+  USER_MAX_ACDI_SNIP_BYTES = 128;
 
 // Enter the size of the buffer to hold Messages, this should be at LEAST equal to the number
 // of Nodes, 2x is recommended

@@ -56,6 +56,8 @@ type
   PDatagramDataArray = ^TDatagramDataArray;
   TStreamDataArray = array[0..USER_MAX_STREAM_BYTES-1] of Byte;
   PStreamDataArray = ^TStreamDataArray;
+  TAcdiSnipDataArray = array[0..USER_MAX_ACDI_SNIP_BYTES] of Byte;
+  PAcdiSnipDataArray = ^TAcdiSnipDataArray;
 
   TSimpleData = record
     Count: Word;
@@ -97,6 +99,7 @@ const
   MT_SIMPLE          = $01;                                                     // Message Type Identifiers
   MT_DATAGRAM        = $02;
   MT_STREAM          = $04;
+  MT_ACDISNIP        = $08;
 
   MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
   MT_ALLOCATED       = $80;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
@@ -192,6 +195,16 @@ type
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
   end;
   PStreamBuffer = ^TStreamBuffer;
+
+  TAcdiSnipBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    iStateMachine: Byte;                                                        // Local Statemachine
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataArray: TAcdiSnipDataArray;
+    // *******
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+  end;
+  PAcdiSnipBuffer = ^TAcdiSnipBuffer;
 
 type
   {$IFDEF FPC}

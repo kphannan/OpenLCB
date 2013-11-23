@@ -278,6 +278,14 @@ begin
                 if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
                 begin
                   case AMessage^.MTI of
+                    MTI_SIMPLE_NODE_INFO_REQUEST :
+                        begin
+                          NewMessage := nil;
+                          if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
+                            OPStackNode_MessageLink(DestNode, NewMessage)
+                          else
+                            BufferAllocFailed := True
+                        end;
                     MTI_VERIFY_NODE_ID_NUMBER_DEST  :
                         begin
                           OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID)      // All messages addressed to node get replies even if the payload is wrong!
@@ -295,9 +303,8 @@ begin
                           begin
                             NewMessage := nil;
                             if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
-                            begin
-                              OPStackNode_MessageLink(DestNode, NewMessage);
-                            end else
+                              OPStackNode_MessageLink(DestNode, NewMessage)
+                            else
                               BufferAllocFailed := True
                           end
                         end;
@@ -474,7 +481,7 @@ function MaxAddressByAddressSpace(Node: PNMRAnetNode; AddressSpace: Byte): DWord
       MSI_ACDI_MFG  : begin
                         {$IFDEF SUPPORT_VIRTUAL_NODES}
                         if Node^.State and NS_VIRTUAL <> 0 then
-                          Result := USER_MAX_VNODE_ACDI_MFG_ARRAY + 1           // for the Version ID Byte
+                          Result := USER_VNODE_MAX_ACDI_MFG_ARRAY + 1           // for the Version ID Byte
                         else {$ENDIF}
                           Result := USER_MAX_ACDI_MFG_ARRAY + 1                 // for the Version ID Byte
                       end;
@@ -803,7 +810,7 @@ begin
 
   case Buffer^[1] and $F0 of
     MCP_COMMAND_READ_STREAM  : ReadCount := DWord( Buffer^[DataOffset] shl 24) or DWord( Buffer^[DataOffset+1] shl 16) or DWord( Buffer^[DataOffset+2] shl 8) or DWord( Buffer^[DataOffset+3]);
-    MCP_COMMAND_READ         : ReadCount := Buffer^[DataOffset]
+    MCP_COMMAND_READ         : ReadCount := Buffer^[DataOffset] and $7F         // Ignore the upper bit per the spec
   else
      ReadCount := 0;
   end;
@@ -844,18 +851,16 @@ begin
   end;
 
   DataOffset := 6;
-  if UseAddressSpaceByte then
+  if UseAddressSpaceByte or (AddressSpace < MSI_CONFIG) then
   begin
+    Inc(DataOffset);
+    Buffer^[6] := AddressSpace
   end else
   begin
     case AddressSpace of
       MSI_CDI            : Buffer^[1] := Buffer^[1] or MCP_CDI;
       MSI_ALL            : Buffer^[1] := Buffer^[1] or MCP_ALL;
       MSI_CONFIG         : Buffer^[1] := Buffer^[1] or MCP_CONFIGURATION
-    else begin
-        Inc(DataOffset);
-        Buffer^[6] := AddressSpace
-      end
     end
   end;
 
@@ -940,6 +945,7 @@ var
   LocalMessage: TOPStackMessage;
   LocalBuffer: TSimpleBuffer;
   DatagramBufferPtr: PDatagramBuffer;
+  AcdiSnipBufferPtr: PAcdiSnipBuffer;
   i, j: Integer;
   AckFlags: Byte;
   MemorySpaceMaxAddress: DWord;
@@ -951,6 +957,51 @@ begin
   if NextMessage <> nil then
   begin
     case NextMessage^.MTI of
+      MTI_SIMPLE_NODE_INFO_REPLY :
+          begin
+            if IsOutgoingBufferAvailable then
+            begin
+              if OPStackBuffers_Allcoate_ACDI_SNIP_Message(NewMessage, NextMessage^.MTI, NextMessage^.Source.AliasID, NextMessage^.Source.ID, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID) then
+              begin
+                AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( NewMessage^.Buffer));
+                AcdiSnipBufferPtr^.DataBufferSize := 0;
+                AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := ACDI_MFG_VERSION;
+                Inc(AcdiSnipBufferPtr^.DataBufferSize);
+                j := 0;
+                if OPStackNode_TestState(Node, NS_VIRTUAL) then
+                begin
+                  while j < USER_VNODE_MAX_ACDI_MFG_ARRAY do
+                  begin
+                    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_VNODE_ACDI_MFG_STRINGS[j];
+                    Inc(AcdiSnipBufferPtr^.DataBufferSize);
+                    Inc(j)
+                  end;
+                end else
+                begin
+                  while j < USER_MAX_ACDI_MFG_ARRAY do
+                  begin
+                    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_ACDI_MFG_STRINGS[j];
+                    Inc(AcdiSnipBufferPtr^.DataBufferSize);
+                    Inc(j)
+                  end;
+                end;
+                AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := ACDI_USER_VERSION;
+                Inc(AcdiSnipBufferPtr^.DataBufferSize);
+
+                // Need to read configuration memory here in a callback
+                j := 0;
+                while j < 2 do
+                begin
+                  AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 0;
+                  Inc(AcdiSnipBufferPtr^.DataBufferSize);
+                  Inc(j)
+                end;
+                OutgoingMessage(NewMessage);
+                OPStackNode_MessageUnLink(Node, NextMessage);
+              end;
+            end;
+            Exit;
+          end;
       MTI_PROTOCOL_SUPPORT_REPLY :
           begin
             if IsOutgoingBufferAvailable then
@@ -1000,10 +1051,10 @@ begin
                              begin
                                OPStackNode_MessageUnLink(Node, NextMessage);
                                OPStackBuffers_SwapDestAndSourceIDs(NextMessage);
-                               if AddressSpace <= MSI_CONFIG then
-                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, False, DataOffset)
+                               if AddressSpace < MSI_CONFIG then
+                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
                                else
-                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset);
+                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
                                EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, True);
 
                                DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
@@ -1429,6 +1480,7 @@ begin
     Node := OPStackNode_NextNode;
     if Node <> nil then
       NodeRunStateMachine(Node);
+    ProcessOutgoingAcdiSnips;
     ProcessOutgoingDatagrams;
     ProcessOutgoingStreams;
   end;

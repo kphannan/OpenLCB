@@ -26,6 +26,7 @@ type
     ButtonStartStack: TButton;
     ButtonAllocateNode: TButton;
     ButtonDeallocateNode: TButton;
+    CheckBoxDisableLogging: TCheckBox;
     CheckBoxLogMessages: TCheckBox;
     CheckBoxAutoConnect: TCheckBox;
     MainMenu1: TMainMenu;
@@ -40,6 +41,8 @@ type
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
     procedure ButtonStartStackClick(Sender: TObject);
+    procedure CheckBoxDisableLoggingChange(Sender: TObject);
+    procedure CheckBoxDisableTrackingChange(Sender: TObject);
     procedure CheckBoxLogMessagesChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
@@ -50,6 +53,7 @@ type
     FHalfConnected: Boolean;
   private
     FConnected: Boolean;
+    FDisableLogging: Boolean;
     FListener: TOPStackTestListener;
     property HalfConnected: Boolean read FHalfConnected write FHalfConnected;
   public
@@ -59,6 +63,7 @@ type
     procedure UpdateUI;
     property Connected: Boolean read FConnected;
     property Listener: TOPStackTestListener read FListener write FListener;
+    property DisableLogging: Boolean read FDisableLogging write FDisableLogging;
   end;
 
 
@@ -86,6 +91,7 @@ begin
   ListenerThread := Listener;
   Listener.Callback := @ListenerCallback;
   Listener.RunningCallback := @ConnectedCallback;
+  DisableLogging := False;
   UpdateUI;
 end;
 
@@ -101,12 +107,15 @@ end;
 
 procedure TForm1.ListenerCallback(ReceiveStr: ansistring);
 begin
-  MemoReceive.Lines.BeginUpdate;
-  MemoReceive.Text := MemoReceive.Text + ReceiveStr;
-  MemoReceive.SelStart := MemoReceive.GetTextLen;
-  MemoReceive.SelLength := 0;
-  MemoReceive.ScrollBy(0, MemoReceive.Lines.Count);
-  MemoReceive.Lines.EndUpdate;
+  if not DisableLogging then
+  begin
+    MemoReceive.Lines.BeginUpdate;
+    MemoReceive.Text := MemoReceive.Text + ReceiveStr;
+    MemoReceive.SelStart := MemoReceive.GetTextLen;
+    MemoReceive.SelLength := 0;
+    MemoReceive.ScrollBy(0, MemoReceive.Lines.Count);
+    MemoReceive.Lines.EndUpdate;
+  end;
 end;
 
 procedure TForm1.ConnectedCallback(EthernetThreadType: TEthernetThreadType);
@@ -171,6 +180,16 @@ end;
 procedure TForm1.ButtonStartStackClick(Sender: TObject);
 begin
   OPStack.State := OPStack.State or OPS_PROCESSING;
+end;
+
+procedure TForm1.CheckBoxDisableLoggingChange(Sender: TObject);
+begin
+  DisableLogging := CheckBoxDisableLogging.Checked;
+end;
+
+procedure TForm1.CheckBoxDisableTrackingChange(Sender: TObject);
+begin
+
 end;
 
 procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);

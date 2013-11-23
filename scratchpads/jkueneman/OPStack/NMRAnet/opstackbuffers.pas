@@ -32,6 +32,12 @@ type
   end;
   PStreamBufferPool = ^TStreamBufferPool;
 
+  TAcdiSnipBufferPool = record
+    Pool: array[0..USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1] of TAcdiSnipBuffer;
+    Count: Word;
+  end;
+  PAcdiSnipBufferPool = ^TAcdiSnipBufferPool;
+
   TOPStackMessagePool = record
     Pool: array[0..USER_MAX_SIMPLE_MESSAGE_BUFFERS-1] of TOPStackMessage;
     Count: Word;
@@ -45,6 +51,7 @@ function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MT
 function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
 function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
@@ -63,6 +70,7 @@ procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
 procedure OPStackBuffers_ZeroSimpleBuffer(ABuffer: PSimpleBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
+procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
 
 // Copy buffer helpers
 procedure OPStackBuffers_CopyData(DestData, SourceData: PSimpleBuffer);
@@ -76,6 +84,7 @@ var
   SimpleBufferPool: TSimpleBufferPool;
   DatagramBufferPool: TDatagramBufferPool;
   StreamBufferPool: TStreamBufferPool;
+  AcdiSnipBufferPool: TAcdiSnipBufferPool;
   OPStackMessagePool: TOPStackMessagePool;
 
 implementation
@@ -168,6 +177,28 @@ begin
   end;
 end;
 
+function AllocateAcdiSnipBuffer(var Buffer: PAcdiSnipBuffer): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  if AcdiSnipBufferPool.Count < USER_MAX_ACDI_SNIP_ARRAY_BUFFERS then
+  begin
+    for i := 0 to USER_MAX_ACDI_SNIP_ARRAY_BUFFERS - 1 do
+    begin
+      if AcdiSnipBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
+      begin
+        Buffer := @AcdiSnipBufferPool.Pool[i];
+        OPStackBuffers_ZeroAcdiSnipBuffer(Buffer, False);
+        AcdiSnipBufferPool.Pool[i].State := ABS_ALLOCATED;
+        Inc(AcdiSnipBufferPool.Count);
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
 procedure DeAllocateSimpleBuffer(Buffer: PSimpleBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED  <> 0 then                                 // Only effect the pool if the buffer was allocated from the pool
@@ -191,6 +222,15 @@ begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
   begin
     Dec(StreamBufferPool.Count);
+    Buffer^.State := 0
+  end
+end;
+
+procedure DeAllocateAcdiSnipBuffer(Buffer: PAcdiSnipBuffer);
+begin
+  if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
+  begin
+    Dec(AcdiSnipBufferPool.Count);
     Buffer^.State := 0
   end
 end;
@@ -283,6 +323,28 @@ begin
   end;
 end;
 
+function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+var
+  AcdiSnipBuffer: PAcdiSnipBuffer;
+begin
+  Result := False;
+  if NextFreeOPStackMessage(AMessage) then
+  begin
+    if AllocateAcdiSnipBuffer(AcdiSnipBuffer) then
+    begin
+      OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+      AMessage^.MessageType := MT_ACDISNIP or MT_ALLOCATED;
+      AMessage^.Buffer := PSimpleBuffer( PByte( AcdiSnipBuffer));
+      Result := True
+    end else
+    begin
+      OPStackBuffers_DeAllocateMessage(AMessage);
+      AMessage := nil;
+    end;
+  end;
+
+end;
+
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 begin
   if AMessage^.MessageType and MT_ALLOCATED <> 0 then                           // Only deallocate if we allocated it
@@ -291,6 +353,7 @@ begin
       MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
       MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( PByte(AMessage^.Buffer)));
       MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
+      MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PAcdiSnipBuffer( PByte( AMessage^.Buffer)));
     end;
     AMessage^.MessageType := MT_UNALLOCATED;
     Dec(OPStackMessagePool.Count);
@@ -378,7 +441,8 @@ begin
   if ZeroArray then
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), MAX_DATAGRAM_BYTES)
   else
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0)
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  ABuffer^.CurrentCount := 0;
 end;
 
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
@@ -386,7 +450,17 @@ begin
   if ZeroArray then
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_STREAM_BYTES)
   else
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0)
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  ABuffer^.CurrentCount := 0;
+end;
+
+procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
+begin
+  if ZeroArray then
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_ACDI_SNIP_BYTES)
+  else
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  ABuffer^.CurrentCount := 0;
 end;
 
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
