@@ -361,11 +361,13 @@ begin
                             for i := 0 to NodePool.AllocatedCount - 1 do
                             begin
                               DestNode := NodePool.AllocatedList[i];
-                              if OPStackNode_TestState(DestNode, NS_VIRTUAL) then
+                              {$IFDEF SUPPORT_VIRTUAL_NODES}
+                              if DestNode^.State and NS_VIRTUAL <> 0 then
                               begin
                                 if SupportsVNodeEventAsConsumer(DestNode, @AMessage^.Buffer^.DataArray, VNodeEventIndex) then
                                   OPStackNode_SetEventFlag(DestNode^.Events.Consumed, VNodeEventIndex, EVENT_STATE_UNKNOWN);
                               end else
+                              {$ENDIF}
                               begin
                                 if SupportsEventAsConsumer(DestNode, @AMessage^.Buffer^.DataArray, NodeEventIndex) then
                                   OPStackNode_SetEventFlag(DestNode^.Events.Consumed, NodeEventIndex, EVENT_STATE_UNKNOWN);
@@ -385,11 +387,13 @@ begin
                             for i := 0 to NodePool.AllocatedCount - 1 do
                             begin
                               DestNode := NodePool.AllocatedList[i];
-                              if OPStackNode_TestState(DestNode, NS_VIRTUAL) then
+                              {$IFDEF SUPPORT_VIRTUAL_NODES}
+                              if DestNode^.State and NS_VIRTUAL <> 0 then
                               begin
                                 if SupportsVNodeEventAsProducer(DestNode, @AMessage^.Buffer^.DataArray, VNodeEventIndex) then
                                   OPStackNode_SetEventFlag(DestNode^.Events.Produced, VNodeEventIndex, EVENT_STATE_UNKNOWN);
                               end else
+                              {$ENDIF}
                               begin
                                 if SupportsEventAsProducer(DestNode, @AMessage^.Buffer^.DataArray, NodeEventIndex) then
                                   OPStackNode_SetEventFlag(DestNode^.Events.Produced, NodeEventIndex, EVENT_STATE_UNKNOWN);
@@ -978,7 +982,7 @@ begin
                 AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := ACDI_MFG_VERSION;
                 Inc(AcdiSnipBufferPtr^.DataBufferSize);
                 j := 0;
-                if OPStackNode_TestState(Node, NS_VIRTUAL) then
+                if Node^.State and NS_VIRTUAL <> 0 then
                 begin
                   while j < USER_VNODE_MAX_ACDI_MFG_ARRAY do
                   begin
@@ -1018,7 +1022,7 @@ begin
             if IsOutgoingBufferAvailable then
             begin
               {$IFDEF SUPPORT_VIRTUAL_NODES}
-              if OPStackNode_TestState(Node, NS_VIRTUAL) then
+              if Node^.State and NS_VIRTUAL <> 0 then
               begin
                 for i := 0 to LEN_PIV_PROTOCOL-1 do
                   for j := 0 to USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT - 1 do
@@ -1130,7 +1134,6 @@ begin
                              end;
                          MCP_COMMAND_WRITE :
                              begin
-
                                OPStackNode_MessageUnLink(Node, NextMessage);
                                OPStackBuffers_DeAllocateMessage(NextMessage);
                                Exit;                                            // Don't call Datagram OK again!
@@ -1152,7 +1155,7 @@ begin
                                        DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
                                        DatagramBufferPtr^.DataArray[1] := MCP_OP_GET_CONFIG_REPLY;
                                        {$IFDEF SUPPORT_VIRTUAL_NODES}
-                                       if OPStackNode_TestState(Node, NS_VIRTUAL) then
+                                       if Node^.State and NS_VIRTUAL <> 0 then
                                        begin
                                          DatagramBufferPtr^.DataArray[2] := Hi( USER_VNODE_CONFIGMEM_OPTIONS);
                                          DatagramBufferPtr^.DataArray[3] := Lo( USER_VNODE_CONFIGMEM_OPTIONS);

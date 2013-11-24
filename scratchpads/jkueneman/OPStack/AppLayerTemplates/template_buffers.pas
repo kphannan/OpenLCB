@@ -19,8 +19,8 @@ const
 
 // Enter the size of a stream.  Note Ethernet is limited to about 1500, if using
 // the MicroElectronica TCP libraries this MUST be a power of 2 (2, 4, ..., 256, 512, 1024, 2048...)
-const
-  USER_MAX_STREAM_BYTES = 1024;
+//const
+  USER_MAX_STREAM_BYTES = 1032;                  // 1024 Databytes + 2 TNode ID structures (2*4) = 1032
 
 // Enter the size of a buffer to hold a complete ACDI or SNIP string
 const

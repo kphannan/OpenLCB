@@ -29,6 +29,7 @@ const
   STATE_NODE_NEXT_CDI                    = 4;
   STATE_NODE_WAITSTATE                   = 5;
   STATE_NODE_SEND_LOGIN_RID              = 6;
+
   STATE_NODE_SEND_LOGIN_AMD              = 8;
   STATE_NODE_INITIALIZED                 = 9;
   STATE_NODE_LOGIN_IDENTIFY_EVENTS       = 10;
@@ -43,7 +44,7 @@ const
 const
   MAX_SIMPLE_BYTES = 8;
   MAX_SNIP_BYTES = 64;
-  MAX_DATAGRAM_BYTES = 64;
+  MAX_DATAGRAM_BYTES = 72;             // 64 Data bytes + 8 Bytes for DG Header
 
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
