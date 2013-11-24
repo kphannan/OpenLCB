@@ -1,0 +1,8 @@
+object Form1: TForm1
+  Left = 414
+  Height = 517
+  Top = 176
+  Width = 795
+  Caption = 'Open Pascal Stack Application Builder 1.0'
+  LCLVersion = '1.2.0.1'
+end

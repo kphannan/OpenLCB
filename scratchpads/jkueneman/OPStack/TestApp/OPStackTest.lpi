@@ -137,7 +137,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="CompiledBinaries\$(TargetOS)\$(TargetCPU)\OPStackTest"/>
+      <Filename Value="CompiledBinaries\$(TargetOS)\$(TargetCPU)\OPStackTest.app\Contents\MacOS\OpStackTest"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\AppLayerTemplates"/>
