@@ -218,10 +218,10 @@ begin
           begin
             // This is a special case CAN message
             case AMessage^.MTI of
-              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF) or $10000000;
-              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF) or $10000000;
-              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shr 12) and $00000FFF) or $10000000;
-              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00000FFF) or $10000000
+              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00FFF000) or AMEssage^.Source.AliasID or $10000000;
+              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shl 12) and $00FFF000) or AMEssage^.Source.AliasID or  $10000000;
+              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00FFF000) or AMEssage^.Source.AliasID or $10000000;
+              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shl 12) and $00FFF000) or AMEssage^.Source.AliasID or  $10000000
             else
               GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $10000000;
             end;
@@ -325,7 +325,9 @@ begin
   begin
     DestinationNode := nil;
     OPStackMessage.MessageType := MT_SIMPLE or MT_CAN_TYPE;                     // Created on the heap not the pool
-    RawMTI := (GridConnectBuffer.MTI shr 12) and $0FFF;
+    RawMTI := (GridConnectBuffer.MTI shr 12);
+    if RawMTI and $F000 > 0 then
+      RawMTI := RawMTI and $F000;
     OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);
     OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
     case RawMTI of
@@ -376,14 +378,10 @@ begin
             if RawMTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin                                                                 // It is an addressed message
               DestAlias := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
-              DestinationNode := OPStackNode_FindByAlias(DestAlias);
-              if DestinationNode <> nil then
-              begin
-                OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, GridConnectBuffer.Payload[0] and $F0);
-                OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount-2, @GridConnectBuffer.Payload, 2);
-                IncomingMessageDispatch(@OPStackMessage, DestinationNode);
-              end else
-                Exit;                                                             // It was an addressed message but not for any of our nodes
+              DestinationNode := OPStackNode_FindByAlias(DestAlias);            // Note here that DestinationNode may be nil but we still need to check for someone using our Alias, etc.
+              OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, GridConnectBuffer.Payload[0] and $F0);
+              OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount-2, @GridConnectBuffer.Payload, 2);
+              IncomingMessageDispatch(@OPStackMessage, DestinationNode);
             end else
             begin                                                                 // It was not an addressed message
               OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);

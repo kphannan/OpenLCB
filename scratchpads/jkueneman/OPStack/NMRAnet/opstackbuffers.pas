@@ -58,7 +58,7 @@ procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
 procedure OPStackBuffers_LoadDatagramRejectedBuffer(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
-procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; RejectedMTI: Word);
+procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word);
 
 // Load Buffer helpers
 procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
@@ -246,6 +246,7 @@ begin
     begin
       OPStackMessage := @OPStackMessagePool.Pool[i];
       OPStackMessage^.MessageType := MT_ALLOCATED;
+      OPStackBuffers_ZeroMessage(OPStackMessage);
       Inc(OPStackMessagePool.Count);
       Result := True;
       Break
@@ -260,10 +261,10 @@ begin
   Result := False;
   if NextFreeOPStackMessage(AMessage) then
   begin
+    AMessage^.MessageType := MT_SIMPLE or MT_ALLOCATED;
     if AllocateSimpleBuffer(SimpleBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
-      AMessage^.MessageType := MT_SIMPLE or MT_ALLOCATED;
       AMessage^.Buffer := PSimpleBuffer( SimpleBuffer);
       Result := True
     end else
@@ -288,10 +289,10 @@ begin
   Result := False;
   if NextFreeOPStackMessage(AMessage) then
   begin
+    AMessage^.MessageType := MT_DATAGRAM or MT_ALLOCATED;
     if AllocateDatagramBuffer(DatagramBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, DestFlags);
-      AMessage^.MessageType := MT_DATAGRAM or MT_ALLOCATED;
       AMessage^.Buffer := PSimpleBuffer( PByte( DatagramBuffer));
       Result := True
     end else
@@ -309,10 +310,10 @@ begin
   Result := False;
   if NextFreeOPStackMessage(AMessage) then
   begin
+    AMessage^.MessageType := MT_STREAM or MT_ALLOCATED;
     if AllocateStreamBuffer(StreamBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
-      AMessage^.MessageType := MT_STREAM or MT_ALLOCATED;
       AMessage^.Buffer := PSimpleBuffer( PByte( StreamBuffer));
       Result := True
     end else
@@ -330,10 +331,10 @@ begin
   Result := False;
   if NextFreeOPStackMessage(AMessage) then
   begin
+    AMessage^.MessageType := MT_ACDISNIP or MT_ALLOCATED;
     if AllocateAcdiSnipBuffer(AcdiSnipBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
-      AMessage^.MessageType := MT_ACDISNIP or MT_ALLOCATED;
       AMessage^.Buffer := PSimpleBuffer( PByte( AcdiSnipBuffer));
       Result := True
     end else
@@ -349,11 +350,14 @@ procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 begin
   if AMessage^.MessageType and MT_ALLOCATED <> 0 then                           // Only deallocate if we allocated it
   begin
-    case (AMessage^.MessageType and MT_MASK) of
-      MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
-      MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( PByte(AMessage^.Buffer)));
-      MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
-      MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PAcdiSnipBuffer( PByte( AMessage^.Buffer)));
+    if AMessage^.Buffer <> nil then
+    begin
+      case (AMessage^.MessageType and MT_MASK) of
+        MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
+        MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( PByte(AMessage^.Buffer)));
+        MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
+        MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PAcdiSnipBuffer( PByte( AMessage^.Buffer)));
+      end;
     end;
     AMessage^.MessageType := MT_UNALLOCATED;
     Dec(OPStackMessagePool.Count);
@@ -378,9 +382,9 @@ begin
    AMessage^.Buffer^.DataBufferSize := 0;
 end;
 
-procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; RejectedMTI: Word);
+procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word);
 begin
-  OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, SourceNodeAlias, SourceNodeID, 0, NULL_NODE_ID, 0);
+  OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
   AMessage^.MessageType := MT_SIMPLE;
   AMessage^.Buffer^.DataBufferSize := 4;
   AMessage^.Buffer^.DataArray[0] := $20;

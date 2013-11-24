@@ -108,7 +108,7 @@ const
 const
   DATAGRAM_TYPE_MEMORY_CONFIGURATION        = $20;                              // Memory Configuration Protocol
   DATAGRAM_TYPE_TRAIN_CONTROL               = $30;                              // Train Control Protocol
-  DATAGRAM_TYPE_BOOTLOADER                  = $40;                              // MAKING A GUESS ON A NUMBER>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//  DATAGRAM_TYPE_BOOTLOADER                  = $40;                              // MAKING A GUESS ON A NUMBER>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   DATAGRAM_TYPE_TWO_BYTE_CMD_MASK           = $E0;                              // Next two bytes are command bytes and not data
   DATAGRAM_TYPE_SIX_BYTE_CMD_MASK           = $F0;                              // Next six bytes are command bytes and not data
 

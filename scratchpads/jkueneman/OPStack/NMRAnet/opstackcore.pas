@@ -277,64 +277,68 @@ begin
               begin
                 if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
                 begin
-                  case AMessage^.MTI of
-                    MTI_SIMPLE_NODE_INFO_REQUEST :
-                        begin
-                          NewMessage := nil;
-                          if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
-                            OPStackNode_MessageLink(DestNode, NewMessage)
-                          else
-                            BufferAllocFailed := True
-                        end;
-                    MTI_VERIFY_NODE_ID_NUMBER_DEST  :
-                        begin
-                          OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID)      // All messages addressed to node get replies even if the payload is wrong!
-                        end;
-                    MTI_EVENTS_IDENTIFY_DEST          :
-                        begin
-                          OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
-                          OPStackNode_SetEventProducedFlags(DestNode, EVENT_STATE_UNKNOWN);
-                        end;
-                    MTI_PROTOCOL_SUPPORT_INQUIRY      :
-                        begin
-                          // BITS ARE NEGATIVE LOGIC
-                          // Since we don't implement extended protocols yet just reply when we see the start bit set (active 0)
-                          if AMessage^.DestFlags and PIP_EXTENSION_START_BIT_MASK = 0 then
+                  if DestNode <> nil then                                           // Destination messages come through so we can check for duplicate Aliases, if it is nil then done
+                  begin
+                    case AMessage^.MTI of
+                      MTI_SIMPLE_NODE_INFO_REQUEST :
                           begin
                             NewMessage := nil;
-                            if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
+                            if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
                               OPStackNode_MessageLink(DestNode, NewMessage)
                             else
                               BufferAllocFailed := True
-                          end
-                        end;
-                    MTI_OPTIONAL_INTERACTION_REJECTED :
-                        begin
-                        end;
-                    MTI_DATAGRAM_OK_REPLY :
-                        begin
-                          NewMessage := FindDatagramWaitingForAck(AMessage^.Dest, AMessage^.Source);
-                          if NewMessage <> nil then
+                          end;
+                      MTI_VERIFY_NODE_ID_NUMBER_DEST  :
                           begin
-                            RemoveDatagramWaitingForAck(NewMessage);
-                            OPStackBuffers_DeAllocateMessage(NewMessage);
-                          end
-                        end;
-                    MTI_DATAGRAM_REJECTED_REPLY :
-                        begin
-                          NewMessage := FindDatagramWaitingForAck(AMessage^.Dest, AMessage^.Source);
-                          if NewMessage <> nil then
+                            OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID)      // All messages addressed to node get replies even if the payload is wrong!
+                          end;
+                      MTI_EVENTS_IDENTIFY_DEST          :
                           begin
-                            // Need to send it again and again until we give up
-                            RemoveDatagramWaitingForAck(NewMessage);
-                            AddOutgoingDatagramMessage(NewMessage);
+                            OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
+                            OPStackNode_SetEventProducedFlags(DestNode, EVENT_STATE_UNKNOWN);
+                          end;
+                      MTI_PROTOCOL_SUPPORT_INQUIRY      :
+                          begin
+                            // BITS ARE NEGATIVE LOGIC
+                            // Since we don't implement extended protocols yet just reply when we see the start bit set (active 0)
+                            if AMessage^.DestFlags and PIP_EXTENSION_START_BIT_MASK = 0 then
+                            begin
+                              NewMessage := nil;
+                              if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
+                                OPStackNode_MessageLink(DestNode, NewMessage)
+                              else
+                                BufferAllocFailed := True
+                            end
+                          end;
+                      MTI_OPTIONAL_INTERACTION_REJECTED :
+                          begin
+                          end;
+                      MTI_DATAGRAM_OK_REPLY :
+                          begin
+                            NewMessage := FindDatagramWaitingForAck(AMessage^.Dest, AMessage^.Source);
+                            if NewMessage <> nil then
+                            begin
+                              RemoveDatagramWaitingForAck(NewMessage);
+                              OPStackBuffers_DeAllocateMessage(NewMessage);
+                            end
+                          end;
+                      MTI_DATAGRAM_REJECTED_REPLY :
+                          begin
+                            NewMessage := FindDatagramWaitingForAck(AMessage^.Dest, AMessage^.Source);
+                            if NewMessage <> nil then
+                            begin
+                              // Need to send it again and again until we give up
+                              RemoveDatagramWaitingForAck(NewMessage);
+                              AddOutgoingDatagramMessage(NewMessage);
+                            end
                           end
-                        end
-                  else begin
-                      OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
-                      OutgoingCriticalMessage(@OptionalInteractionMessage);
-                    end
-                  end {case}
+                    else begin
+                        OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
+                        OutgoingCriticalMessage(@OptionalInteractionMessage);
+                      end
+                    end {case}
+                  end else {Node <> nil}
+                    Exit;
                 end else  {addressed message}
                 begin
                   case AMessage^.MTI of
@@ -696,6 +700,7 @@ begin
       end else
       {$ENDIF}
       begin
+        {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
         if EventIndex >= USER_MAX_SUPPORTED_EVENTS_CONSUMED then
         begin
           if EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
@@ -716,8 +721,8 @@ begin
             OutgoingMessage(OPStackMessage);
             Result := True;
           end
-        end
-      end
+        end  {$ENDIF}
+      end;
     end
   end else
   if OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
@@ -758,6 +763,7 @@ begin
       end else
       {$ENDIF}
       begin
+        {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
         if EventIndex >= USER_MAX_SUPPORTED_EVENTS_PRODUCED then
         begin
           if EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
@@ -778,7 +784,7 @@ begin
             OutgoingMessage(OPStackMessage);
             Result := True;
           end
-        end
+        end   {$ENDIF}
       end
     end
   end
@@ -924,7 +930,11 @@ begin
           NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray))
         else
         {$ENDIF}
+        begin
+          {$IFDEF SUPPORT_AT_LEAST_ONE_NODE_PRODUCED_EVENT}
           NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+          {$ENDIF}
+        end;
         OPStackMessage^.Buffer^.DataBufferSize := 8;
         OutgoingMessage(OPStackMessage);
         Result := True;
@@ -998,6 +1008,7 @@ begin
                 end;
                 OutgoingMessage(NewMessage);
                 OPStackNode_MessageUnLink(Node, NextMessage);
+                OPStackBuffers_DeAllocateMessage(NextMessage);
               end;
             end;
             Exit;
@@ -1031,7 +1042,7 @@ begin
             DatagramBufferPtr := PDatagramBuffer( PByte( NextMessage^.Buffer));
             AckFlags := $00;                                                    // Default
             case DatagramBufferPtr^.DataArray[0] of
-              DATAGRAM_TYPE_BOOTLOADER :
+      {        DATAGRAM_TYPE_BOOTLOADER :
                   begin
                     if DatagramBufferPtr^.State and ABS_HASBEENACKED <> 0 then   // After ACKed we can work the reply
                     begin
@@ -1039,7 +1050,7 @@ begin
                       OPStackBuffers_DeAllocateMessage(NextMessage);
                       Exit;                                                     // Don't call Datagram OK again!
                     end;
-                  end;
+                  end;         }
               DATAGRAM_TYPE_MEMORY_CONFIGURATION :
                   begin
                     AckFlags := $00;                                            // May want to change this for slow configuration reads/writes
@@ -1427,10 +1438,12 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
+            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            OPStackMessage^.Buffer^.DataBufferSize := 6;
             OutgoingMessage(OPStackMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
-            Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
+            Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
           end
       end;
     STATE_NODE_DUPLICATE_FULL_ID :
@@ -1439,6 +1452,8 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
+            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            OPStackMessage^.Buffer^.DataBufferSize := 6;
             OutgoingMessage(OPStackMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);

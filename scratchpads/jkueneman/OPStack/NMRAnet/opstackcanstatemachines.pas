@@ -182,7 +182,7 @@ begin
           if InProcessMessage = nil then
           begin
             case OPStackMessage^.Buffer^.DataArray[0] of
-              DATAGRAM_TYPE_BOOTLOADER,
+      //        DATAGRAM_TYPE_BOOTLOADER,
               DATAGRAM_TYPE_MEMORY_CONFIGURATION,
               DATAGRAM_TYPE_TRAIN_CONTROL :
                   begin                                                         // Allocate a message for a full MTI_DATRGRAM and return the pointer to the message
@@ -241,7 +241,7 @@ begin
             RemoveInprocessMessage(InProcessMessage, DatagramInProcessStack);                 // Pull it out of the working stack
             DatagramMessage := InProcessMessage;
             case InProcessMessage^.Buffer^.DataArray[0] of
-              DATAGRAM_TYPE_BOOTLOADER,
+     //         DATAGRAM_TYPE_BOOTLOADER,
               DATAGRAM_TYPE_MEMORY_CONFIGURATION,
               DATAGRAM_TYPE_TRAIN_CONTROL :  Result := DATAGRAM_PROCESS_ERROR_OK // Send it back to be dispatched
             else
@@ -426,35 +426,35 @@ end;
 // *****************************************************************************
 procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
 var
-  AMessage: TOPStackMessage;
-  LocalOutgoingMessage: POPStackMessage;
-  ABuffer: TSimpleBuffer;
-  AcdiSnipBuffer: PAcdiSnipBuffer;
+  LocalMessage: TOPStackMessage;
+  LocalOutgoingMessagePtr: POPStackMessage;
+  LocalBuffer: TSimpleBuffer;
+  AcdiSnipBufferPtr: PAcdiSnipBuffer;
 begin
-  LocalOutgoingMessage := AcdiSnipOutgoingProcessStack;
+  LocalOutgoingMessagePtr := AcdiSnipOutgoingProcessStack;
   if IsOutgoingBufferAvailable then
-    if LocalOutgoingMessage <> nil then
+    if LocalOutgoingMessagePtr <> nil then
     begin
-      AcdiSnipBuffer := PAcdiSnipBuffer( PByte( LocalOutgoingMessage^.Buffer));
-      OPStackBuffers_LoadMessage(@AMessage, MTI_SIMPLE_NODE_INFO_REPLY, LocalOutgoingMessage^.Source.AliasID, LocalOutgoingMessage^.Source.ID, LocalOutgoingMessage^.Dest.AliasID, LocalOutgoingMessage^.Dest.ID, 0);
-      OPStackBuffers_ZeroSimpleBuffer(@ABuffer, False);
-      AMessage.MessageType := MT_SIMPLE;
-      AMessage.Buffer := @ABuffer;
-      ABuffer.DataBufferSize := 0;
-      while AcdiSnipBuffer^.CurrentCount < AcdiSnipBuffer^.DataBufferSize do
+      AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
+      OPStackBuffers_LoadMessage(@LocalMessage, MTI_SIMPLE_NODE_INFO_REPLY, LocalOutgoingMessagePtr^.Source.AliasID, LocalOutgoingMessagePtr^.Source.ID, LocalOutgoingMessagePtr^.Dest.AliasID, LocalOutgoingMessagePtr^.Dest.ID, 0);
+      OPStackBuffers_ZeroSimpleBuffer(@LocalBuffer, False);
+      LocalMessage.MessageType := MT_SIMPLE;
+      LocalMessage.Buffer := @LocalBuffer;
+      LocalBuffer.DataBufferSize := 0;
+      while AcdiSnipBufferPtr^.CurrentCount < AcdiSnipBufferPtr^.DataBufferSize do
       begin
-        ABuffer.DataArray[ABuffer.DataBufferSize] := AcdiSnipBuffer^.DataArray[AcdiSnipBuffer^.CurrentCount];
-        Inc(ABuffer.DataBufferSize );
-        Inc(AcdiSnipBuffer^.CurrentCount);
-        if ABuffer.DataBufferSize = 6 then
+        LocalBuffer.DataArray[LocalBuffer.DataBufferSize] := AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.CurrentCount];
+        Inc(LocalBuffer.DataBufferSize );
+        Inc(AcdiSnipBufferPtr^.CurrentCount);
+        if LocalBuffer.DataBufferSize = 6 then
           Break;
       end;
-      OutgoingMessage(@AMessage);
+      OutgoingMessage(@LocalMessage);
 
-      if AcdiSnipBuffer^.CurrentCount >= AcdiSnipBuffer^.DataBufferSize then
+      if AcdiSnipBufferPtr^.CurrentCount >= AcdiSnipBufferPtr^.DataBufferSize then
       begin
-        OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(LocalOutgoingMessage);
-        OPStackBuffers_DeAllocateMessage(LocalOutgoingMessage);
+        OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(LocalOutgoingMessagePtr);
+        OPStackBuffers_DeAllocateMessage(LocalOutgoingMessagePtr);
       end;
     end;
 end;
