@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=OPStack\NMRAnet\opstackcore.mpas
+Value=OPStack\NMRAnet\opstackcanstatemachines.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -40,10 +40,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=3
+Count=8
 File0=OPStackTest.mpas
 File1=OPStack\NMRAnet\opstackcore.mpas
-File2=OPStack\AppLayerTemplates\template_buffers.mpas
+File2=OPStack\Common\HelperFunctions.mpas
+File3=OPStack\HardwareLayerImplementations\hardware_template.mpas
+File4=OPStack\AppLayerTemplates\template_buffers.mpas
+File5=OPStack\NMRAnet\opstackcanstatemachines.mpas
+File6=OPStack\NMRAnet\opstacktypes.mpas
+File7=OPStack\NMRAnet\opstacknode.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

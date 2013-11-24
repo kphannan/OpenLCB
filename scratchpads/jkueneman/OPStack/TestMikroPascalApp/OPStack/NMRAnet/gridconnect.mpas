@@ -7,9 +7,8 @@ interface
 uses
   {$IFDEF FPC}
   Classes, SysUtils,
-  {$ELSE}
-  HelperFunctions,
   {$ENDIF}
+  HelperFunctions,
   nmranetdefines,
   opstackdefines,
   opstackbuffers;
@@ -35,7 +34,6 @@ const
   GRIDCONNECT_STATE_SYNC_START = 0;
   GRIDCONNECT_STATE_SYNC_FIND_X = 1;
   GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
-  GRIDCONNECT_STATE_SYNC_FIND_N = 3;
   GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
 
 var
@@ -68,6 +66,9 @@ end;
 //                  GridConnect string from it in a statemachine
 // *****************************************************************************
 function GridConnectDecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
+var
+  HeaderArray: array[0..7] of Char;
+  i, j: Integer;
 begin
  Result := False;
  case GridConnectReceiveState of
@@ -96,24 +97,42 @@ begin
         end;
       GRIDCONNECT_STATE_SYNC_FIND_HEADER :
         begin
-          if IsValidHexChar(NextChar) then
+          if ReceiveGridConnectBufferIndex < 11 then
           begin
-            ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := NextChar;
-            if ReceiveGridConnectBufferIndex = 9 then
-              GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_N;
-            Inc(ReceiveGridConnectBufferIndex);
+            if (NextChar = 'n') or (NextChar = 'N') then
+            begin
+              if ReceiveGridConnectBufferIndex = 10 then                        // Just right number of characters, all done
+              begin
+                ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := 'N';
+                Inc(ReceiveGridConnectBufferIndex);                             // Skip over the "N"
+                GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_DATA;
+              end else
+              begin
+                for i := 0 to 7 do
+                  HeaderArray[i] := '0';
+                j := 7;
+                for i := ReceiveGridConnectBufferIndex - 1 downto (11 - ReceiveGridConnectBufferIndex) do
+                begin
+                  HeaderArray[j] := ReceiveGridConnectBuffer[i];
+                  Dec(j);
+                end;
+                for i := 0 to 7 do
+                  ReceiveGridConnectBuffer[2 + i] := HeaderArray[i];
+                ReceiveGridConnectBuffer[10] := 'N';
+                ReceiveGridConnectBufferIndex := 11;                             // Skip over the "N"
+                GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_DATA;
+              end;
+            end else
+            begin
+              if IsValidHexChar(NextChar) then
+              begin
+                ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := NextChar;
+                Inc(ReceiveGridConnectBufferIndex);
+              end else
+              GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START         // Error start over
+            end
           end else
-            GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START             // Error start over
-        end;
-      GRIDCONNECT_STATE_SYNC_FIND_N :
-        begin
-          if (NextChar >= 'N') or (NextChar <= 'n') then
-          begin
-            ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := 'N';
-            Inc(ReceiveGridConnectBufferIndex);
-            GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_DATA;
-          end else
-            GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START             // Error start over
+            GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START         // Error start over
         end;
       GRIDCONNECT_STATE_SYNC_FIND_DATA :
         begin

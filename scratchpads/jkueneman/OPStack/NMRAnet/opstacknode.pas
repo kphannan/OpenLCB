@@ -38,7 +38,7 @@ function OPStackNode_Allocate: PNMRAnetNode;
 procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
 function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;    // See FIND_BY_xxxx constants
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode;
-function OPStackNode_FindByID(ID: TNodeID): PNMRAnetNode;
+function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode;
 function OPStackNode_FindFirstVirtualNode: PNMRAnetNode;
 function OPStackNode_FindLastVirtualNode: PNMRAnetNode;
 
@@ -199,7 +199,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_FindByID(ID: TNodeID): PNMRAnetNode;
+function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode;
 var
   i: Integer;
 begin

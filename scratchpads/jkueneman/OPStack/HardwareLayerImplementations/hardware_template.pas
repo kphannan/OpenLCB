@@ -14,6 +14,7 @@ uses
   nmranetdefines,
   nmranetutilities,
   opstackbuffers,
+  opstacktypes,
   opstackdefines;
 
 // *****************************************************************************
@@ -102,7 +103,6 @@ var
 //  Lazarus Specific from here up
 // ***************************************************************************************************************************************************************************************************************************************
 
-
 procedure Hardware_Initialize;
 
 // The OPStack calles these functions to control and/or send messages through the hardware layer
@@ -122,14 +122,25 @@ function IsOutgoingBufferAvailable: Boolean;
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode); external;
-function OPStackCANStatemachine_ProcessIncomingDatagramMessage(OPStackMessage: POPStackMessage): POPStackMessage; external;
+function OPStackCANStatemachine_ProcessIncomingDatagramMessage(OPStackMessage: POPStackMessage; var DatagramMessage: POPStackMessage): Byte; external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 procedure OPStackCANStatemachine_ProcessOutgoingDatagramMessage; external;
 procedure OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
 procedure OPStackCANStatemachine_RemoveOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
+function OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
 procedure OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(OPStackStreamMessage: POPStackMessage); external;
+function OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(NodeAlias: Word): POPStackMessage; external;
+function OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(NodeAlias: Word): POPStackMessage; external;
+procedure OPStackCANStatemachine_RemoveIncomingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
 function OPStackCANStatemachine_FindDatagramWaitingforACKStack(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage; external;
+procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
+function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
+procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
+procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage; external;
 {$ENDIF}
+
+// Just to get it compiled in for test DO NOT CALL THIS
+procedure GridConnectBufferToOPStackBufferAndDispatch(var GridConnectBuffer: TGridConnectBuffer; var OPStackMessage: TOPStackMessage);
 
 implementation
 
@@ -416,7 +427,7 @@ begin
                     DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := @DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER;
                     DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := @DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED;
                   end;
-                  DatagramRejectedMessage.Buffer := @DatagramRejectedBuffer;
+                  DatagramRejectedMessage.Buffer := PSimpleBuffer( PByte( @DatagramRejectedBuffer));
                   OPStackBuffers_LoadDatagramRejectedBuffer(@DatagramRejectedMessage, OPStackMessage.Dest.AliasID, OPStackMessage.Dest.ID, OPStackMessage.Source.AliasID, OPStackMessage.Source.ID, DatagramError);
                   OutgoingCriticalMessage(@DatagramRejectedMessage);
                   Exit;

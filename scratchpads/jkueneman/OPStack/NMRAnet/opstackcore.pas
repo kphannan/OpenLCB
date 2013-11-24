@@ -335,8 +335,8 @@ begin
                     else begin
                         OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
                         OutgoingCriticalMessage(@OptionalInteractionMessage);
-                      end
-                    end {case}
+                      end;
+                    end; {case}
                   end else {Node <> nil}
                     Exit;
                 end else  {addressed message}
@@ -866,7 +866,7 @@ begin
     case AddressSpace of
       MSI_CDI            : Buffer^[1] := Buffer^[1] or MCP_CDI;
       MSI_ALL            : Buffer^[1] := Buffer^[1] or MCP_ALL;
-      MSI_CONFIG         : Buffer^[1] := Buffer^[1] or MCP_CONFIGURATION
+      MSI_CONFIG         : Buffer^[1] := Buffer^[1] or MCP_CONFIGURATION;
     end
   end;
 

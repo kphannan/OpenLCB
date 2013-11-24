@@ -12,7 +12,9 @@ uses
   {$ENDIF}
   gridconnect,
   nmranetdefines,
+  nmranetutilities,
   opstackbuffers,
+  opstacktypes,
   opstackdefines;
 
 // *****************************************************************************
@@ -101,34 +103,44 @@ var
 //  Lazarus Specific from here up
 // ***************************************************************************************************************************************************************************************************************************************
 
-// Temporary, just to compile in code to see how large the footprint is in mikroPascal
-procedure GridConnectBufferToOPStackBufferAndDispatch(var GridConnectBuffer: TGridConnectBuffer; var OPStackMessage: TOPStackMessage);
-
-
 procedure Hardware_Initialize;
 
 // The OPStack calles these functions to control and/or send messages through the hardware layer
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
 procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 procedure ProcessOutgoingDatagrams;
 procedure ProcessOutgoingStreams;
+procedure ProcessOutgoingAcdiSnips;
 function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
+procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
 procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
 function IsOutgoingBufferAvailable: Boolean;
 
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode); external;
-function OPStackCANStatemachine_ProcessIncomingDatagramMessage(OPStackMessage: POPStackMessage): POPStackMessage; external;
+function OPStackCANStatemachine_ProcessIncomingDatagramMessage(OPStackMessage: POPStackMessage; var DatagramMessage: POPStackMessage): Byte; external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 procedure OPStackCANStatemachine_ProcessOutgoingDatagramMessage; external;
 procedure OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
 procedure OPStackCANStatemachine_RemoveOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
+function OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
 procedure OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(OPStackStreamMessage: POPStackMessage); external;
+function OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(NodeAlias: Word): POPStackMessage; external;
+function OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(NodeAlias: Word): POPStackMessage; external;
+procedure OPStackCANStatemachine_RemoveIncomingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
 function OPStackCANStatemachine_FindDatagramWaitingforACKStack(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage; external;
+procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
+function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
+procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
+procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage; external;
 {$ENDIF}
+
+// Just to get it compiled in for test DO NOT CALL THIS
+procedure GridConnectBufferToOPStackBufferAndDispatch(var GridConnectBuffer: TGridConnectBuffer; var OPStackMessage: TOPStackMessage);
 
 implementation
 
@@ -189,6 +201,11 @@ begin
   end;
 end;
 
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage);
+begin
+  OutgoingMessage(AMessage)  // For Ethernet this is no different than a nomral Message
+end;
+
 // *****************************************************************************
 //  procedure OutgoingMessage
 //    Parameters:
@@ -210,17 +227,19 @@ begin
 
           if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
           begin
+            // This is a special case CAN message
             case AMessage^.MTI of
-              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shr 12) and $00000FFF) or $10000000;
-              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00000FFF) or $10000000;
-              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shr 12) and $00000FFF) or $10000000;
-              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00000FFF) or $10000000
+              MTI_CAN_CID0 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[1] and $00FFF000) or AMEssage^.Source.AliasID or $10000000;
+              MTI_CAN_CID1 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[1] shl 12) and $00FFF000) or AMEssage^.Source.AliasID or  $10000000;
+              MTI_CAN_CID2 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or (AMessage^.Source.ID[0] and $00FFF000) or AMEssage^.Source.AliasID or $10000000;
+              MTI_CAN_CID3 : GridConnectBuffer.MTI := DWord(AMessage^.MTI shl 12) or ((AMessage^.Source.ID[0] shl 12) and $00FFF000) or AMEssage^.Source.AliasID or  $10000000
             else
               GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $10000000;
             end;
           end else
           if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_GENERAL then
           begin
+            // This is a general case MTI ($9xxx)
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000;
             if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin
@@ -231,6 +250,7 @@ begin
           end else
           if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_STREAM_SEND then
           begin
+            // This is a datagram MTI ($Axxx...$Dxxxx) or stream MTI ($Fxxx)
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or (AMessage^.Dest.AliasID shl 12) or AMessage^.Source.AliasID or $10000000;
           end;
 
@@ -254,6 +274,10 @@ begin
     MT_STREAM :
         begin
           OPStackBuffers_DeAllocateMessage(AMessage);
+        end;
+    MT_ACDISNIP :
+        begin
+          OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(AMessage)           // CAN can't handle a full Datagram Message so we need to parse it up into 8 byte frames
         end
   else
      OPStackBuffers_DeAllocateMessage(AMessage);
@@ -270,9 +294,19 @@ begin
 
 end;
 
+procedure ProcessOutgoingAcdiSnips;
+begin
+  OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
+end;
+
 function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
 begin
   Result := OPStackCANStatemachine_FindDatagramWaitingforACKStack(SourceNodeID, DestNodeID)
+end;
+
+procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
+begin
+  OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage);
 end;
 
 procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
@@ -289,17 +323,61 @@ procedure GridConnectBufferToOPStackBufferAndDispatch(var GridConnectBuffer: TGr
 var
   RawMTI, SourceAlias: Word;
   CanMessageType, DestAlias: Word;
-  DatagramMessage: POPStackMessage;
+  DatagramMessage, AcdiSnipMessage: POPStackMessage;
   DestinationNode: PNMRAnetNode;
+  DatagramError: PSimpleDataArray;
+  DatagramRejectedMessage: TOPStackMessage;
+  DatagramRejectedBuffer: TDatagramBuffer;
+  DatagramProcessErrorCode: Byte;
 begin
   CanMessageType := (GridConnectBuffer.MTI shr 12) and $F000;                   // always true regardless
   SourceAlias := GridConnectBuffer.MTI and $00000FFF;                           // always true regardless
-  if GridConnectBuffer.MTI and $01000000 = 0 then                               // Is it a CAN message?
+  if GridConnectBuffer.MTI and MTI_OLCB_MSG = 0 then                            // Is it a CAN message?
   begin
+    DestinationNode := nil;
     OPStackMessage.MessageType := MT_SIMPLE or MT_CAN_TYPE;                     // Created on the heap not the pool
-    RawMTI := (GridConnectBuffer.MTI shr 12) and $0FFF;
+    RawMTI := (GridConnectBuffer.MTI shr 12);
+    if RawMTI and $F000 > 0 then
+      RawMTI := RawMTI and $F000;
     OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);
     OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
+    case RawMTI of
+        MTI_CAN_AMD,       // If another node has reset then we need to clear out any inprocess states with that node
+        MTI_CAN_AMR :
+            begin
+              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(OPStackMessage.Source.AliasID);
+              while DatagramMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveOutgoingDatagramMessage(DatagramMessage);
+                OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(OPStackMessage.Source.AliasID);
+              end;
+
+              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(OPStackMessage.Source.AliasID);
+              while DatagramMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveIncomingDatagramMessage(DatagramMessage);
+                OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(OPStackMessage.Source.AliasID);
+              end;
+
+              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(OPStackMessage.Source.AliasID);
+              while DatagramMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage);
+                OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(OPStackMessage.Source.AliasID);
+              end;
+
+              AcdiSnipMessage := OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(OPStackMessage.Source.AliasID);
+              while AcdiSnipMessage <> nil do
+              begin
+                OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(AcdiSnipMessage);
+                OPStackBuffers_DeAllocateMessage(AcdiSnipMessage);
+                AcdiSnipMessage := OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(OPStackMessage.Source.AliasID);
+              end;
+            end;
+    end;
     IncomingMessageDispatch(@OPStackMessage, DestinationNode);
   end else
   begin
@@ -311,14 +389,10 @@ begin
             if RawMTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin                                                                 // It is an addressed message
               DestAlias := ((GridConnectBuffer.Payload[0] shl 8) or GridConnectBuffer.Payload[1]) and $0FFF;
-              DestinationNode := OPStackNode_FindByAlias(DestAlias);
-              if DestinationNode <> nil then
-              begin
-                OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, GridConnectBuffer.Payload[0] and $F0);
-                OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount-2, @GridConnectBuffer.Payload, 2);
-                IncomingMessageDispatch(@OPStackMessage, DestinationNode);
-              end else
-                Exit;                                                             // It was an addressed message but not for any of our nodes
+              DestinationNode := OPStackNode_FindByAlias(DestAlias);            // Note here that DestinationNode may be nil but we still need to check for someone using our Alias, etc.
+              OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, GridConnectBuffer.Payload[0] and $F0);
+              OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount-2, @GridConnectBuffer.Payload, 2);
+              IncomingMessageDispatch(@OPStackMessage, DestinationNode);
             end else
             begin                                                                 // It was not an addressed message
               OPStackBuffers_LoadMessage(@OPStackMessage, RawMTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, 0);
@@ -337,10 +411,29 @@ begin
             begin
               OPStackBuffers_LoadMessage(@OPStackMessage, CanMessageType, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, 0);   // These messages do not have real "MTIs", they are based on the identifier
               OPStackBuffers_LoadSimpleBuffer(OPStackMessage.Buffer, 0, GridConnectBuffer.PayloadCount, @GridConnectBuffer.Payload, 0);
-              DatagramMessage := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage);
-              if DatagramMessage <> nil then
-                IncomingMessageDispatch(DatagramMessage, DestinationNode);
-            end;
+              DatagramProcessErrorCode := OPStackCANStatemachine_ProcessIncomingDatagramMessage(@OPStackMessage, DatagramMessage);
+              case DatagramProcessErrorCode of
+                DATAGRAM_PROCESS_ERROR_OK                  :
+                    begin
+                      if DatagramMessage <> nil then
+                        IncomingMessageDispatch(DatagramMessage, DestinationNode);
+                      Exit;
+                    end
+              else begin
+                  if DatagramMessage <> nil then
+                    OPStackBuffers_DeAllocateMessage(DatagramMessage);
+                  case DatagramProcessErrorCode of
+                    DATAGRAM_PROCESS_ERROR_BUFFER_FULL         : DatagramError := @DATAGRAM_RESULT_REJECTED_BUFFER_FULL;
+                    DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := @DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER;
+                    DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := @DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED;
+                  end;
+                  DatagramRejectedMessage.Buffer := PSimpleBuffer( PByte( @DatagramRejectedBuffer));
+                  OPStackBuffers_LoadDatagramRejectedBuffer(@DatagramRejectedMessage, OPStackMessage.Dest.AliasID, OPStackMessage.Dest.ID, OPStackMessage.Source.AliasID, OPStackMessage.Source.ID, DatagramError);
+                  OutgoingCriticalMessage(@DatagramRejectedMessage);
+                  Exit;
+                end;
+              end;
+            end
           end;
       MTI_FRAME_TYPE_CAN_STREAM_SEND :
           begin

@@ -13,13 +13,25 @@ uses
   opstackdefines;
 
 
-function AppCallback_AddressSpacePresent(var Node: TNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
 
 implementation
 
-function AppCallback_AddressSpacePresent(var Node: TNMRAnetNode; AddressSpace: Byte): Boolean;
+function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 begin
   Result := True
+end;
+
+function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
+begin
+  Result := False
+end;
+
+function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
+begin
+  Result := 44;
 end;
 
 end.
