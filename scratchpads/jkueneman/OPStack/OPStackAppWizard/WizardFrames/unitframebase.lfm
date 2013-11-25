@@ -1,0 +1,9 @@
+object FrameBase: TFrameBase
+  Left = 0
+  Height = 300
+  Top = 0
+  Width = 600
+  TabOrder = 0
+  DesignLeft = 512
+  DesignTop = 261
+end

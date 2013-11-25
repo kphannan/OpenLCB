@@ -1,0 +1,159 @@
+inherited FrameVirtualNodes: TFrameVirtualNodes
+  DesignLeft = 393
+  DesignTop = 247
+  object GroupBoxVirtualNodes: TGroupBox[0]
+    Left = 8
+    Height = 280
+    Top = 8
+    Width = 200
+    Anchors = [akTop, akLeft, akBottom]
+    Caption = 'Virtual Node Information'
+    ClientHeight = 258
+    ClientWidth = 192
+    TabOrder = 0
+    object SpinEditVirtualNodes: TSpinEdit
+      Left = 83
+      Height = 16
+      Top = 38
+      Width = 101
+      MaxValue = 256
+      TabOrder = 0
+    end
+    object LabelNumberVirtualNodes: TLabel
+      Left = 28
+      Height = 16
+      Top = 38
+      Width = 38
+      Caption = 'Count'
+      ParentColor = False
+    end
+    object CheckBoxVirtualNodes: TCheckBox
+      Left = 12
+      Height = 18
+      Top = 6
+      Width = 166
+      Caption = 'Supports Virtual Nodes'
+      OnChange = CheckBoxVirtualNodesChange
+      TabOrder = 1
+    end
+    object SpinEditNodeDyamicConsumers: TSpinEdit
+      Left = 54
+      Height = 16
+      Top = 230
+      Width = 131
+      MaxValue = 256
+      TabOrder = 2
+    end
+    object CheckBoxNodeDynamicConsumers: TCheckBox
+      Left = 28
+      Height = 18
+      Top = 206
+      Width = 150
+      Caption = 'Dynamic Consumers'
+      OnChange = CheckBoxNodeDynamicConsumersChange
+      TabOrder = 3
+    end
+    object CheckBoxNodeDynamicProducer: TCheckBox
+      Left = 28
+      Height = 18
+      Top = 158
+      Width = 142
+      Caption = 'Dynamic Producers'
+      OnChange = CheckBoxNodeDynamicProducerChange
+      TabOrder = 4
+    end
+    object SpinEditNodeDynamicProducers: TSpinEdit
+      Left = 54
+      Height = 16
+      Top = 182
+      Width = 131
+      MaxValue = 256
+      TabOrder = 5
+    end
+    object SpinEditNodeConsumers: TSpinEdit
+      Left = 54
+      Height = 16
+      Top = 134
+      Width = 131
+      MaxValue = 256
+      OnChange = SpinEditNodeConsumersChange
+      TabOrder = 6
+    end
+    object CheckBoxNodeConsumers: TCheckBox
+      Left = 28
+      Height = 18
+      Top = 110
+      Width = 92
+      Caption = 'Consumers'
+      OnChange = CheckBoxNodeConsumersChange
+      TabOrder = 7
+    end
+    object SpinEditNodeProducers: TSpinEdit
+      Left = 54
+      Height = 16
+      Top = 89
+      Width = 131
+      MaxValue = 256
+      OnChange = SpinEditNodeProducersChange
+      TabOrder = 8
+    end
+    object CheckBoxNodeProducers: TCheckBox
+      Left = 28
+      Height = 18
+      Top = 62
+      Width = 83
+      Caption = 'Producers'
+      OnChange = CheckBoxNodeProducersChange
+      TabOrder = 9
+    end
+  end
+  object PageControlEvents: TPageControl[1]
+    Left = 216
+    Height = 280
+    Top = 8
+    Width = 376
+    ActivePage = TabSheetProducerEvents
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    TabIndex = 0
+    TabOrder = 1
+    OnChange = PageControlEventsChange
+    object TabSheetProducerEvents: TTabSheet
+      Caption = 'Producer Events'
+      ClientHeight = 241
+      ClientWidth = 370
+      object ListViewProducerEvents: TListView
+        Left = 0
+        Height = 241
+        Top = 0
+        Width = 370
+        Align = alClient
+        Columns = <        
+          item
+            AutoSize = True
+            Width = 364
+          end>
+        TabOrder = 0
+        ViewStyle = vsReport
+      end
+    end
+    object TabSheetConsumerEvents: TTabSheet
+      Caption = 'Consumer Events'
+      ClientHeight = 241
+      ClientWidth = 370
+      object ListViewConsumerEvents: TListView
+        Left = 0
+        Height = 241
+        Top = 0
+        Width = 370
+        Align = alClient
+        Columns = <        
+          item
+            AutoSize = True
+            Width = 364
+          end>
+        TabOrder = 0
+        ViewStyle = vsReport
+      end
+    end
+  end
+end

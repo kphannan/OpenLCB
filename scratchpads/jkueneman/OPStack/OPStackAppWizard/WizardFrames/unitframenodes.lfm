@@ -1,0 +1,133 @@
+inherited FrameNodes: TFrameNodes
+  DesignLeft = 375
+  DesignTop = 220
+  object GroupBoxNode: TGroupBox[0]
+    Left = 8
+    Height = 280
+    Top = 8
+    Width = 200
+    Anchors = [akTop, akLeft, akBottom]
+    Caption = 'Node Information'
+    ClientHeight = 258
+    ClientWidth = 192
+    TabOrder = 0
+    object CheckBoxNodeProducers: TCheckBox
+      Left = 12
+      Height = 18
+      Top = 6
+      Width = 83
+      Caption = 'Producers'
+      OnChange = CheckBoxNodeProducersChange
+      TabOrder = 0
+    end
+    object CheckBoxNodeConsumers: TCheckBox
+      Left = 12
+      Height = 18
+      Top = 54
+      Width = 92
+      Caption = 'Consumers'
+      OnChange = CheckBoxNodeConsumersChange
+      TabOrder = 1
+    end
+    object CheckBoxNodeDynamicProducer: TCheckBox
+      Left = 12
+      Height = 18
+      Top = 102
+      Width = 142
+      Caption = 'Dynamic Producers'
+      OnChange = CheckBoxNodeDynamicProducerChange
+      TabOrder = 2
+    end
+    object CheckBoxNodeDynamicConsumers: TCheckBox
+      Left = 12
+      Height = 18
+      Top = 150
+      Width = 150
+      Caption = 'Dynamic Consumers'
+      OnChange = CheckBoxNodeDynamicConsumersChange
+      TabOrder = 3
+    end
+    object SpinEditNodeProducers: TSpinEdit
+      Left = 38
+      Height = 16
+      Top = 33
+      Width = 131
+      MaxValue = 256
+      OnChange = SpinEditNodeProducersChange
+      TabOrder = 4
+    end
+    object SpinEditNodeConsumers: TSpinEdit
+      Left = 38
+      Height = 16
+      Top = 78
+      Width = 131
+      MaxValue = 256
+      OnChange = SpinEditNodeConsumersChange
+      TabOrder = 5
+    end
+    object SpinEditNodeDynamicProducers: TSpinEdit
+      Left = 38
+      Height = 16
+      Top = 126
+      Width = 131
+      MaxValue = 256
+      TabOrder = 6
+    end
+    object SpinEditNodeDyamicConsumers: TSpinEdit
+      Left = 38
+      Height = 16
+      Top = 174
+      Width = 131
+      MaxValue = 256
+      TabOrder = 7
+    end
+  end
+  object PageControlEvents: TPageControl[1]
+    Left = 216
+    Height = 280
+    Top = 8
+    Width = 376
+    ActivePage = TabSheetProducerEvents
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    TabIndex = 0
+    TabOrder = 1
+    object TabSheetProducerEvents: TTabSheet
+      Caption = 'Producer Events'
+      ClientHeight = 241
+      ClientWidth = 370
+      object ListViewProducerEvents: TListView
+        Left = 0
+        Height = 241
+        Top = 0
+        Width = 370
+        Align = alClient
+        Columns = <        
+          item
+            AutoSize = True
+            Width = 364
+          end>
+        TabOrder = 0
+        ViewStyle = vsReport
+      end
+    end
+    object TabSheetConsumerEvents: TTabSheet
+      Caption = 'Consumer Events'
+      ClientHeight = 241
+      ClientWidth = 370
+      object ListViewConsumerEvents: TListView
+        Left = 0
+        Height = 241
+        Top = 0
+        Width = 370
+        Align = alClient
+        Columns = <        
+          item
+            AutoSize = True
+            Width = 364
+          end>
+        TabOrder = 0
+        ViewStyle = vsReport
+      end
+    end
+  end
+end
