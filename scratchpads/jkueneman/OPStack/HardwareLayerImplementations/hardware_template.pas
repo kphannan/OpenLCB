@@ -31,12 +31,17 @@ type
   TOPStackTestConnectionInput = class(TThread)
   private
     FCallback: TOpStackTestCallbackMethod;
+    FHasTemrinated: Boolean;
+    FHasTerminated: Boolean;
     FhSocket: TSocket;
     FReceiveStr: string;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
+  protected
+    Socket: TTCPBlockSocket; // Created in context of Thread
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
+    procedure Abort;
     procedure Execute; override;
     procedure Synchronizer;
     procedure RunningSynchronizer;
@@ -45,6 +50,7 @@ type
     property ReceiveStr: string read FReceiveStr write FReceiveStr;
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
+    property HasTerminated: Boolean read FHasTerminated;
   end;
 
   { TOPStackTestConnectionOutput }
@@ -53,6 +59,7 @@ type
   private
     FCallback: TOpStackTestCallbackMethod;
     FEvent: PRTLEvent;
+    FHasTerminated: Boolean;
     FhSocket: TSocket;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
     FSendList: TThreadList;
@@ -64,6 +71,7 @@ type
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
+    procedure Abort;
     procedure Execute; override;
     procedure RunningSynchronizer;
     procedure Synchronizer;
@@ -73,6 +81,7 @@ type
     property Event: PRTLEvent read FEvent write FEvent;
     property Callback: TOpStackTestCallbackMethod read FCallback write FCallback;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
+    property HasTerminated: Boolean read FHasTerminated;
   end;
 
   { TOPStackTestListener }
@@ -82,10 +91,14 @@ type
     FCallback: TOpStackTestCallbackMethod;
     FConnectionInput: TOPStackTestConnectionInput;
     FConnectionOutput: TOPStackTestConnectionOutput;
+    FHasTerminated: Boolean;
     FRunningCallback: TOpStackTestRunningCallbackMethod;
+  protected
+     Socket: TTCPBlockSocket; // Created in context of thread
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
     destructor Destroy; override;
+    procedure Abort;
     procedure Execute; override;
     procedure Send(MessageStr: ansistring);
 
@@ -93,11 +106,25 @@ type
     property ConnectionInput: TOPStackTestConnectionInput read FConnectionInput write FConnectionInput;
     property ConnectionOutput: TOPStackTestConnectionOutput read FConnectionOutput write FConnectionOutput;
     property RunningCallback: TOpStackTestRunningCallbackMethod read FRunningCallback write FRunningCallback;
+    property HasTerminated: Boolean read FHasTerminated;
+  end;
+
+  { TOPstackTestClient }
+
+  TOPstackTestClient = class(TOPStackTestListener)
+  private
+    FEvent: PRTLEvent;
+  public
+    destructor Destroy; override;
+    procedure Execute; override;
+    property Event: PRTLEvent read FEvent write FEvent;
   end;
 
 
 var
   ListenerThread: TOPStackTestListener;
+  ClientThread: TOPstackTestClient;
+
 {$ENDIF}
 // ***************************************************************************************************************************************************************************************************************************************
 //  Lazarus Specific from here up
@@ -264,7 +291,10 @@ begin
           OPStackBuffers_DeAllocateMessage(AMessage);
 
           {$IFDEF FPC}
-          ListenerThread.Send(GridConnectStr);
+          if Assigned(ListenerThread) then
+            ListenerThread.Send(GridConnectStr)
+          else if Assigned(ClientThread) then
+            ClientThread.Send(GridConnectStr);
           {$ENDIF}
         end;
     MT_DATAGRAM :
@@ -471,6 +501,67 @@ end;
 
 {$IFDEF FPC}
 
+{ TOPstackTestClient }
+
+destructor TOPstackTestClient.Destroy;
+begin
+  RTLeventdestroy(Event);
+  inherited Destroy;
+end;
+
+procedure TOPstackTestClient.Execute;
+begin
+ Event := RTLEventCreate;
+ Socket := TTCPBlockSocket.Create;
+  try
+    Socket.CreateSocket;
+    Socket.Family := SF_IP4;
+    Socket.Bind('0.0.0.0', '12022');
+    Socket.ConvertLineEnd := True;      // Use #10, #13, or both to be a "string"
+    Socket.Connect('0.0.0.0', '12021');
+
+    if Socket.LastError = 0 then
+    begin
+      ConnectionInput := TOPStackTestConnectionInput.Create(True);
+      ConnectionInput.hSocket := Socket.Socket;
+      ConnectionInput.Callback := Callback;
+      ConnectionInput.RunningCallback := RunningCallback;
+      ConnectionInput.Start;
+
+      ConnectionOutput := TOPStackTestConnectionOutput.Create(True);
+      ConnectionOutput.hSocket := Socket.Socket;
+      ConnectionOutput.RunningCallback := RunningCallback;
+      ConnectionOutput.Callback := Callback;
+      ConnectionOutput.Start;
+    end;
+
+
+  RTLEventWaitFor(Event);
+
+  finally
+    if Assigned(ConnectionInput) then
+    begin
+      ConnectionInput.Terminate;
+      ConnectionInput.Abort;
+      while not ConnectionInput.HasTerminated do
+        ThreadSwitch;
+      FreeAndNil(FConnectionInput);
+    end;
+    if Assigned(ConnectionOutput) then
+    begin
+      ConnectionOutput.Terminate;
+      RTLeventSetEvent(ConnectionOutput.Event);
+      ConnectionOutput.Abort;
+      ConnectionOutput.Terminate;
+      while not ConnectionOutput.HasTerminated do
+        ThreadSwitch;
+      FreeAndNil(FConnectionOutput);
+    end;
+    Socket.CloseSocket;
+    FHasTerminated := True;
+  end;
+end;
+
 { TOPStackTestConnectionOutput }
 
 constructor TOPStackTestConnectionOutput.Create(CreateSuspended: Boolean; const StackSize: SizeUInt);
@@ -479,6 +570,7 @@ begin
   SendList := TThreadList.Create;
   Callback := nil;
   RunningCallback := nil;
+  FHasTerminated := False;
 end;
 
 destructor TOPStackTestConnectionOutput.Destroy;
@@ -494,7 +586,15 @@ begin
     List.Clear;
     SendList.UnlockList;
   end;
+  FreeAndNil(FSocket);
+  RTLeventdestroy(Event);
   inherited Destroy;
+end;
+
+procedure TOPStackTestConnectionOutput.Abort;
+begin
+  if Assigned(Socket) then
+    Socket.AbortSocket;
 end;
 
 procedure TOPStackTestConnectionOutput.Execute;
@@ -513,29 +613,30 @@ begin
     while not Terminated do
     begin
       RTLEventWaitFor(Event);
-
-      List := SendList.LockList;
-      try
-        SendString := '';
-        for i := 0 to List.Count - 1 do
-          SendString := SendString + TStringList( List[i]).Text;
-        TStringList( List[i]).Free;
-      finally
-        List.Clear;
-        SendList.UnlockList;
-      end;
-      Socket.ResetLastError;
-      Socket.SendString(SendString);
-      if Assigned(Callback) then
+      if not Terminated then
       begin
-        SendString := 'Sent: ' + SendString;
-        Synchronize(@Synchronizer);
+        List := SendList.LockList;
+        try
+          SendString := '';
+          for i := 0 to List.Count - 1 do
+            SendString := SendString + TStringList( List[i]).Text;
+          TStringList( List[i]).Free;
+        finally
+          List.Clear;
+          SendList.UnlockList;
+        end;
+        Socket.ResetLastError;
+        Socket.SendString(SendString);
+        if Assigned(Callback) then
+        begin
+          SendString := 'Sent: ' + SendString;
+          Synchronize(@Synchronizer);
+        end;
       end;
     end
   finally
     Socket.CloseSocket;
-    Socket.Free;
-    RTLeventdestroy(Event);
+    FHasTerminated := True;
   end;
 end;
 
@@ -572,18 +673,24 @@ begin
   Callback := nil;
   RunningCallback := nil;
   ReceiveStr := '';
+  FHasTerminated := False;
 end;
 
 destructor TOPStackTestConnectionInput.Destroy;
 begin
   Callback := nil;
   RunningCallback := nil;
+  FreeAndNil(Socket);
   inherited Destroy;
 end;
 
+procedure TOPStackTestConnectionInput.Abort;
+begin
+  if Assigned(Socket) then
+    Socket.AbortSocket;
+end;
+
 procedure TOPStackTestConnectionInput.Execute;
-var
-  Socket: TTCPBlockSocket;
 begin
   Socket := TTCPBlockSocket.Create;
   try
@@ -599,17 +706,20 @@ begin
       if Socket.LastError = 0 then
       begin
         ReceiveStr := Socket.RecvPacket(-1);
-        if Socket.LastError <> WSAETIMEDOUT then
+        if not Terminated then
         begin
-          if (Socket.LastError = 0) and (ReceiveStr <> '') then
-            if Assigned(Callback) then
-              Synchronize(@Synchronizer);
+          if Socket.LastError <> WSAETIMEDOUT then
+          begin
+            if (Socket.LastError = 0) and (ReceiveStr <> '') then
+              if Assigned(Callback) then
+                Synchronize(@Synchronizer);
+          end
         end
       end
     end;
   finally
     Socket.CloseSocket;
-    Socket.Free;
+    FHasTerminated := True;
   end;
 end;
 
@@ -650,20 +760,22 @@ begin
   RunningCallback := nil;
   ConnectionOutput := nil;
   ConnectionInput := nil;
+  FHasTerminated := False;
 end;
 
 destructor TOPStackTestListener.Destroy;
 begin
-   if Assigned(ConnectionOutput) then
-     ConnectionOutput.Terminate;
-   if Assigned(ConnectionInput) then
-     ConnectionInput.Terminate;
+  FreeAndNil(Socket);
   inherited Destroy;
 end;
 
+procedure TOPStackTestListener.Abort;
+begin
+  if Assigned(Socket) then
+    Socket.AbortSocket
+end;
+
 procedure TOPStackTestListener.Execute;
-var
-  Socket: TTCPBlockSocket;
 begin
   Socket := TTCPBlockSocket.Create;
   try
@@ -681,9 +793,21 @@ begin
         if Socket.LastError = 0 then
         begin
           if Assigned(ConnectionOutput) then
+          begin
+            ConnectionOutput.Abort;
             ConnectionOutput.Terminate;
+            while not ConnectionOutput.HasTerminated do
+              ThreadSwitch;
+            FreeAndNil(FConnectionOutput);
+          end;
           if Assigned(ConnectionInput) then
+          begin
+            ConnectionInput.Abort;
             ConnectionInput.Terminate;
+            while not ConnectionInput.HasTerminated do
+              ThreadSwitch;
+            FreeAndNil(FConnectionInput);
+          end;
 
           ConnectionInput := TOPStackTestConnectionInput.Create(True);
           ConnectionInput.hSocket := Socket.Accept;
@@ -700,8 +824,26 @@ begin
       end
     end;
   finally
+    if Assigned(ConnectionInput) then
+    begin
+      ConnectionInput.Terminate;
+      ConnectionInput.Abort;
+      while not ConnectionInput.HasTerminated do
+        ThreadSwitch;
+      FreeAndNil(FConnectionInput);
+    end;
+    if Assigned(ConnectionOutput) then
+    begin
+      ConnectionOutput.Terminate;
+      RTLeventSetEvent(ConnectionOutput.Event);
+      ConnectionOutput.Abort;
+      ConnectionOutput.Terminate;
+      while not ConnectionOutput.HasTerminated do
+        ThreadSwitch;
+      FreeAndNil(FConnectionOutput);
+    end;
     Socket.CloseSocket;
-    Socket.Free;
+    FHasTerminated := True;
   end;
 end;
 

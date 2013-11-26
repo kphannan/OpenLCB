@@ -32,6 +32,7 @@ type
     MainMenu1: TMainMenu;
     MemoReceive: TMemo;
     MenuItemTrackBuffer: TMenuItem;
+    RadioGroupEthernet: TRadioGroup;
     StatusBar: TStatusBar;
     TimerStatemachine: TTimer;
     TimerCore: TTimer;
@@ -47,11 +48,13 @@ type
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure RadioGroupEthernetClick(Sender: TObject);
     procedure TimerCoreTimer(Sender: TObject);
     procedure TimerStatemachineTimer(Sender: TObject);
   private
     FHalfConnected: Boolean;
   private
+    FClient: TOPstackTestClient;
     FConnected: Boolean;
     FDisableLogging: Boolean;
     FListener: TOPStackTestListener;
@@ -61,6 +64,7 @@ type
     procedure ListenerCallback(ReceiveStr: ansistring);
     procedure ConnectedCallback(EthernetThreadType: TEthernetThreadType);
     procedure UpdateUI;
+    property Client: TOPstackTestClient read FClient write FClient;
     property Connected: Boolean read FConnected;
     property Listener: TOPStackTestListener read FListener write FListener;
     property DisableLogging: Boolean read FDisableLogging write FDisableLogging;
@@ -82,17 +86,62 @@ begin
   FHalfConnected := False;
   FConnected := False;
   OPStackCore_Initialize;
+  Client := nil;
+  Listener := nil;
+  ClientThread := nil;
+  ListenerThread := nil;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
   Listener := TOPStackTestListener.Create(False);
-  Listener.FreeOnTerminate := True;
   ListenerThread := Listener;
   Listener.Callback := @ListenerCallback;
   Listener.RunningCallback := @ConnectedCallback;
   DisableLogging := False;
   UpdateUI;
+end;
+
+procedure TForm1.RadioGroupEthernetClick(Sender: TObject);
+begin
+  case RadioGroupEthernet.ItemIndex of
+    0 : begin
+          if Assigned(FClient) then
+          begin
+            ClientThread := nil;
+            Client.Terminate;
+            RTLeventSetEvent(Client.Event);
+            while not Client.HasTerminated do
+              ThreadSwitch;
+            FreeAndNIl(FClient);
+          end;
+
+          Listener := TOPStackTestListener.Create(False);
+          ListenerThread := Listener;
+          Listener.Callback := @ListenerCallback;
+          Listener.RunningCallback := @ConnectedCallback;
+          UpdateUI;
+        end;
+    1 : begin
+          ListenerThread := nil;
+          if Assigned(Listener.ConnectionOutput) then
+            Listener.ConnectionOutput.Callback := nil;
+          if Assigned(Listener.ConnectionInput) then
+            Listener.ConnectionInput.Callback := nil;
+          Listener.Terminate;
+          Listener.Abort;
+          while not Listener.HasTerminated do;
+            ThreadSwitch;
+          FreeAndNil(FListener);
+
+          Client := TOPstackTestClient.Create(True);
+          Client.Callback := @ListenerCallback;
+          Client.RunningCallback := @ConnectedCallback;
+          Client.Start;
+          ClientThread := Client;
+          UpdateUI;
+        end;
+    end;
 end;
 
 procedure TForm1.TimerCoreTimer(Sender: TObject);
@@ -149,7 +198,8 @@ end;
 
 procedure TForm1.ButtonSendGlobalNotifyClick(Sender: TObject);
 begin
-  Listener.Send(':X19490F37N;');
+  if Assigned(Listener) then
+    Listener.Send(':X19490F37N;');
   UpdateUI
 end;
 
@@ -196,23 +246,44 @@ procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);
 begin
   if CheckBoxLogMessages.Checked and Assigned(FListener) then
   begin
-    Listener.ConnectionOutput.Callback := Listener.Callback;
-    Listener.ConnectionInput.Callback := Listener.Callback;
+    if Assigned(Listener.ConnectionOutput) then
+      Listener.ConnectionOutput.Callback := Listener.Callback;
+    if Assigned(Listener.ConnectionInput.Callback) then
+      Listener.ConnectionInput.Callback := Listener.Callback;
   end else
   begin
-    Listener.ConnectionOutput.Callback := nil;
-    Listener.ConnectionInput.Callback := nil;
+    if Assigned(Listener.ConnectionOutput) then
+      Listener.ConnectionOutput.Callback := nil;
+    if Assigned(Listener.ConnectionInput.Callback) then
+      Listener.ConnectionInput.Callback := nil;
   end;
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+var
+  i: Integer;
 begin
+  ClientThread := nil;
+  ListenerThread := nil;
+
   if Assigned(FListener) then
   begin
     Listener.Callback := nil;
     Listener.RunningCallback := nil;
     Listener.Terminate;
-  //  Listener.WaitFor;
+    Listener.Abort;
+    while not Listener.HasTerminated do;
+      ThreadSwitch;
+    FreeAndNil(FListener);
+  end;
+
+  if Assigned(FClient) then
+  begin
+    Client.Terminate;
+    RTLeventSetEvent(Client.Event);
+    while not Client.HasTerminated do
+      ThreadSwitch;
+    FreeAndNIl(FClient);
   end;
 end;
 

@@ -10,7 +10,16 @@ object Form1: TForm1
   OnClose = FormClose
   OnCreate = FormCreate
   OnShow = FormShow
-  LCLVersion = '1.0.8.0'
+  LCLVersion = '1.2.0.1'
+  object MemoReceive: TMemo
+    Left = 0
+    Height = 234
+    Top = 120
+    Width = 791
+    Align = alBottom
+    ScrollBars = ssVertical
+    TabOrder = 3
+  end
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
@@ -50,7 +59,7 @@ object Form1: TForm1
     Width = 272
     Caption = 'Allocate Virtual Node'
     OnClick = ButtonAllocateNodeClick
-    TabOrder = 1
+    TabOrder = 0
   end
   object ButtonDeallocateNode: TButton
     Left = 240
@@ -59,16 +68,7 @@ object Form1: TForm1
     Width = 272
     Caption = 'Mark for Virtual Node for Deallocation'
     OnClick = ButtonDeallocateNodeClick
-    TabOrder = 2
-  end
-  object MemoReceive: TMemo
-    Left = 0
-    Height = 258
-    Top = 96
-    Width = 791
-    Align = alBottom
-    ScrollBars = ssVertical
-    TabOrder = 3
+    TabOrder = 1
   end
   object ButtonSendGlobalNotify: TButton
     Left = 16
@@ -118,29 +118,54 @@ object Form1: TForm1
     TabOrder = 8
   end
   object CheckBoxDisableLogging: TCheckBox
-    Left = 200
+    Left = 16
     Height = 18
-    Top = 64
+    Top = 88
     Width = 122
     Caption = 'Disable Logging'
     OnChange = CheckBoxDisableLoggingChange
     TabOrder = 9
   end
+  object RadioGroupEthernet: TRadioGroup
+    Left = 240
+    Height = 44
+    Top = 64
+    Width = 273
+    AutoFill = True
+    Caption = 'Ethernet Connection'
+    ChildSizing.LeftRightSpacing = 6
+    ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+    ChildSizing.EnlargeVertical = crsHomogenousChildResize
+    ChildSizing.ShrinkHorizontal = crsScaleChilds
+    ChildSizing.ShrinkVertical = crsScaleChilds
+    ChildSizing.Layout = cclLeftToRightThenTopToBottom
+    ChildSizing.ControlsPerLine = 2
+    ClientHeight = 22
+    ClientWidth = 265
+    Columns = 2
+    ItemIndex = 0
+    Items.Strings = (
+      'Listener'
+      'Client'
+    )
+    OnClick = RadioGroupEthernetClick
+    TabOrder = 10
+  end
   object TimerCore: TTimer
     Interval = 100
     OnTimer = TimerCoreTimer
-    left = 64
-    top = 80
+    left = 104
+    top = 160
   end
   object TimerStatemachine: TTimer
     Interval = 1
     OnTimer = TimerStatemachineTimer
-    left = 152
-    top = 80
+    left = 176
+    top = 160
   end
   object MainMenu1: TMainMenu
-    left = 728
-    top = 16
+    left = 272
+    top = 120
     object MenuItemTrackBuffer: TMenuItem
       Caption = 'Track Buffers'
     end
