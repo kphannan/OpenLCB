@@ -40,7 +40,7 @@ function OPStackCANStateMachine_RootDatagramWaitingForACKStack: POPStackMessage;
 procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
 procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
 function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage;
-procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage);
+procedure OPStackCANStatemachine_RemoveAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
 function OPStackCANStateMachine_RootOutgoingAcdiSnipStack: POPStackMessage;
 
 implementation
@@ -453,7 +453,7 @@ begin
 
       if AcdiSnipBufferPtr^.CurrentCount >= AcdiSnipBufferPtr^.DataBufferSize then
       begin
-        OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(LocalOutgoingMessagePtr);
+        OPStackCANStatemachine_RemoveAcdiSnipMessage(LocalOutgoingMessagePtr);
         OPStackBuffers_DeAllocateMessage(LocalOutgoingMessagePtr);
       end;
     end;
@@ -488,7 +488,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage);
+procedure OPStackCANStatemachine_RemoveAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
 begin
   RemoveInprocessMessage(OPStackAcdiSnipMessage, AcdiSnipOutgoingProcessStack);
 end;

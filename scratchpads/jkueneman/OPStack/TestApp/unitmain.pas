@@ -94,10 +94,6 @@ end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
-  Listener := TOPStackTestListener.Create(False);
-  ListenerThread := Listener;
-  Listener.Callback := @ListenerCallback;
-  Listener.RunningCallback := @ConnectedCallback;
   DisableLogging := False;
   UpdateUI;
 end;
@@ -115,31 +111,60 @@ begin
               ThreadSwitch;
             FreeAndNIl(FClient);
           end;
+          if Assigned(FListener) then
+          begin
+            ListenerThread := nil;
+            if Assigned(Listener.ConnectionOutput) then
+              Listener.ConnectionOutput.Callback := nil;
+            if Assigned(Listener.ConnectionInput) then
+              Listener.ConnectionInput.Callback := nil;
+            Listener.Terminate;
+            Listener.Abort;
+            while not Listener.HasTerminated do;
+              ThreadSwitch;
+            FreeAndNil(FListener);
+          end;
+          FConnected := False;
+          UpdateUI
+        end;
+    1 : begin
+          if Assigned(FClient) then
+          begin
+            ClientThread := nil;
+            Client.Terminate;
+            RTLeventSetEvent(Client.Event);
+            while not Client.HasTerminated do
+              ThreadSwitch;
+            FreeAndNIl(FClient);
+          end;
 
           Listener := TOPStackTestListener.Create(False);
           ListenerThread := Listener;
           Listener.Callback := @ListenerCallback;
           Listener.RunningCallback := @ConnectedCallback;
-          UpdateUI;
+          Statusbar.Panels[0].Text := 'Listening'
         end;
-    1 : begin
-          ListenerThread := nil;
-          if Assigned(Listener.ConnectionOutput) then
-            Listener.ConnectionOutput.Callback := nil;
-          if Assigned(Listener.ConnectionInput) then
-            Listener.ConnectionInput.Callback := nil;
-          Listener.Terminate;
-          Listener.Abort;
-          while not Listener.HasTerminated do;
-            ThreadSwitch;
-          FreeAndNil(FListener);
+    2 : begin
+          if Assigned(FListener) then
+          begin
+            ListenerThread := nil;
+            if Assigned(Listener.ConnectionOutput) then
+              Listener.ConnectionOutput.Callback := nil;
+            if Assigned(Listener.ConnectionInput) then
+              Listener.ConnectionInput.Callback := nil;
+            Listener.Terminate;
+            Listener.Abort;
+            while not Listener.HasTerminated do;
+              ThreadSwitch;
+            FreeAndNil(FListener);
+          end;
 
           Client := TOPstackTestClient.Create(True);
           Client.Callback := @ListenerCallback;
           Client.RunningCallback := @ConnectedCallback;
           Client.Start;
           ClientThread := Client;
-          UpdateUI;
+          Statusbar.Panels[0].Text := 'Connecting...'
         end;
     end;
 end;

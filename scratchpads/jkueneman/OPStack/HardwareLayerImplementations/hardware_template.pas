@@ -402,7 +402,7 @@ begin
               AcdiSnipMessage := OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(OPStackMessage.Source.AliasID);
               while AcdiSnipMessage <> nil do
               begin
-                OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(AcdiSnipMessage);
+                OPStackCANStatemachine_RemoveAcdiSnipMessage(AcdiSnipMessage);
                 OPStackBuffers_DeAllocateMessage(AcdiSnipMessage);
                 AcdiSnipMessage := OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(OPStackMessage.Source.AliasID);
               end;

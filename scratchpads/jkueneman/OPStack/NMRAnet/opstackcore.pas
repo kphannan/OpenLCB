@@ -1021,6 +1021,8 @@ begin
           begin
             if IsOutgoingBufferAvailable then
             begin
+              for i := 0 to 8 - 1 do                                            // Since we are OR'ing we need to start in a known state
+                NextMessage^.Buffer^.DataArray[i] := 0;
               {$IFDEF SUPPORT_VIRTUAL_NODES}
               if Node^.State and NS_VIRTUAL <> 0 then
               begin

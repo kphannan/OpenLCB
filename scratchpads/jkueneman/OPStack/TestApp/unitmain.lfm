@@ -121,7 +121,7 @@ object Form1: TForm1
     Left = 16
     Height = 18
     Top = 88
-    Width = 122
+    Width = 121
     Caption = 'Disable Logging'
     OnChange = CheckBoxDisableLoggingChange
     TabOrder = 9
@@ -139,12 +139,13 @@ object Form1: TForm1
     ChildSizing.ShrinkHorizontal = crsScaleChilds
     ChildSizing.ShrinkVertical = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
-    ChildSizing.ControlsPerLine = 2
+    ChildSizing.ControlsPerLine = 3
     ClientHeight = 22
     ClientWidth = 265
-    Columns = 2
+    Columns = 3
     ItemIndex = 0
     Items.Strings = (
+      'Disconnected'
       'Listener'
       'Client'
     )
