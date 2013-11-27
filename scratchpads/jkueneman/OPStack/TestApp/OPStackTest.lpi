@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="18">
+    <Units Count="19">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -131,6 +131,11 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitbuffertrace"/>
       </Unit17>
+      <Unit18>
+        <Filename Value="..\AppLayerTemplates\template_configuration.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_configuration"/>
+      </Unit18>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

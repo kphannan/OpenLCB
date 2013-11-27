@@ -10,6 +10,7 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils,
   {$ENDIF}
+  nmranetdefines,
   opstackdefines;
 
 
@@ -26,12 +27,17 @@ end;
 
 function AppCallback_AddressSpaceReadOnly(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 begin
-  Result := False
+  Result := False;
+  case AddressSpace of
+    MSI_CDI,
+    MSI_ACDI_MFG,
+    MSI_ALL        : Result := True
+  end;
 end;
 
 function AppCallback_AddressSpaceSize(Node: PNMRAnetNode; AddressSpace: Byte): DWord;
 begin
-  Result := 44;
+  Result := $FFFFFFFF;
 end;
 
 end.

@@ -12,6 +12,7 @@ uses
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
   template_event_callbacks,
+  template_configuration,
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
@@ -1062,11 +1063,12 @@ begin
                     AckFlags := $00;                                            // May want to change this for slow configuration reads/writes
                     if DatagramBufferPtr^.State and ABS_HASBEENACKED <> 0 then   // After ACKed we can work the reply
                     begin
+                      OPStackNode_MessageUnLink(Node, NextMessage);             // No longer needed by the Node
                       DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, ReadCount, DataOffset);
                       case DatagramBufferPtr^.DataArray[1] and $F0 of
                          MCP_COMMAND_READ :
                              begin
-                               OPStackNode_MessageUnLink(Node, NextMessage);
+
                                OPStackBuffers_SwapDestAndSourceIDs(NextMessage);
                                if AddressSpace < MSI_CONFIG then
                                  EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
@@ -1098,8 +1100,7 @@ begin
                                        end;
                                    MSI_CONFIG :
                                        begin
-                                         for i := 0 to ReadCount - 1 do
-                                           DatagramBufferPtr^.DataArray[DataOffset+i] := $33;      // TEMPORARY
+                                         AppCallback_ReadConfiguration(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
                                        end;
                                    MSI_ACDI_MFG :
                                        begin
@@ -1116,11 +1117,14 @@ begin
                                        end;
                                    MSI_ACDI_USER :
                                        begin
+                                         // How do I know were to write this in the Configuration Memory?
+                                         // AppCallback_ReadConfiguration(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
                                          for i := 0 to ReadCount - 1 do
                                            DatagramBufferPtr^.DataArray[DataOffset+i] := $AA;      // TEMPORARY
                                        end;
                                    MSI_FDI :
                                        begin
+                                   //      AppCallback_ReadFDI(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
                                          for i := 0 to ReadCount - 1 do
                                            DatagramBufferPtr^.DataArray[DataOffset+i] := $FF;      // TEMPORARY
                                        end;
@@ -1130,19 +1134,50 @@ begin
                              end;
                          MCP_COMMAND_READ_STREAM :
                              begin
-                               OPStackNode_MessageUnLink(Node, NextMessage);
                                OPStackBuffers_DeAllocateMessage(NextMessage);
                                Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_COMMAND_WRITE :
                              begin
-                               OPStackNode_MessageUnLink(Node, NextMessage);
-                               OPStackBuffers_DeAllocateMessage(NextMessage);
+                               case AddressSpace of
+                                   MSI_CDI,
+                                   MSI_ALL,
+                                   MSI_ACDI_MFG,
+                                   MSI_FDI:
+                                       begin
+                                         OPStackNode_MessageUnLink(Node, NextMessage);
+                                         OPStackBuffers_DeAllocateMessage(NextMessage);
+                                         Exit;
+                                       end;
+                                   MSI_CONFIG :
+                                       begin
+                                         AppCallback_WriteConfiguration(ConfigAddress, DatagramBufferPtr^.DataBufferSize-DataOffset, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
+                                       end;
+                                   MSI_ACDI_USER :
+                                       begin
+                                      // How do I know were to write this in the Configuration Memory?
+                                      //   AppCallback_WriteConfiguration(ConfigAddress, DatagramBufferPtr^.DataBufferSize-DataOffset, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
+                                         for i := 0 to ReadCount - 1 do
+                                           DatagramBufferPtr^.DataArray[DataOffset+i] := $AA;      // TEMPORARY
+                                       end;
+                               end;
+
+                               OPStackBuffers_SwapDestAndSourceIDs(NextMessage);
+                               if AddressSpace < MSI_CONFIG then
+                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
+                               else
+                                 EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
+                               EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, False);
+
+                               DatagramBufferPtr^.DataBufferSize := DataOffset;
+                               DatagramBufferPtr^.CurrentCount := 0;
+                               DatagramBufferPtr^.iStateMachine := 0;
+
+                               OutgoingMessage(NextMessage);
                                Exit;                                            // Don't call Datagram OK again!
                              end;
                          MCP_COMMAND_WRITE_STREAM :
                              begin
-                               OPStackNode_MessageUnLink(Node, NextMessage);
                                OPStackBuffers_DeAllocateMessage(NextMessage);
                                Exit;                                            // Don't call Datagram OK again!
                              end;
@@ -1203,37 +1238,31 @@ begin
                                        DatagramBufferPtr^.DataBufferSize := 8;
                                        DatagramBufferPtr^.CurrentCount := 0;
                                        DatagramBufferPtr^.iStateMachine := 0;
-                                       OPStackNode_MessageUnLink(Node, NextMessage);
                                        OutgoingMessage(NextMessage);
                                        Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_LOCK :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, NextMessage);
                                        OPStackBuffers_DeAllocateMessage(NextMessage);
                                        Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_GET_UNIQUEID :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, NextMessage);
                                        OPStackBuffers_DeAllocateMessage(NextMessage);
                                        Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_FREEZE :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, NextMessage);
                                        OPStackBuffers_DeAllocateMessage(NextMessage);
                                        Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_INDICATE :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, NextMessage);
                                        OPStackBuffers_DeAllocateMessage(NextMessage);
                                        Exit;                                                     // Don't call Datagram OK again!
                                      end;
                                  MCP_OP_UPDATE_COMPLETE :
                                      begin
-                                       OPStackNode_MessageUnLink(Node, NextMessage);
                                        OPStackBuffers_DeAllocateMessage(NextMessage);
                                        Exit;                                                     // Don't call Datagram OK again!
                                      end;
@@ -1246,7 +1275,6 @@ begin
                                         {$ENDIF}
                                      end
                                  else begin
-                                   OPStackNode_MessageUnLink(Node, NextMessage);  // Don't know what that was but we got it, throw it away
                                    OPStackBuffers_DeAllocateMessage(NextMessage);
                                    Exit;                                                     // Don't call Datagram OK again!
                                  end;

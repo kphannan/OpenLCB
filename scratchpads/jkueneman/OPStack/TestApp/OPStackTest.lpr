@@ -11,7 +11,7 @@ uses
   template_node, template_vnode, hardware_template, nmranetutilities,
   opstackbuffers, template_buffers, opstacktypes, gridconnect,
   template_event_callbacks, opstackcanstatemachines, template_configmem, 
-unitbuffertrace;
+unitbuffertrace, template_Configuration;
 
 {$R *.res}
 

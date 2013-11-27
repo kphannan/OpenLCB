@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="22">
+    <Units Count="24">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -22,8 +22,8 @@
         <UnitName Value="unitMain"/>
         <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="134"/>
-        <CursorPos X="184" Y="140"/>
+        <TopLine Value="243"/>
+        <CursorPos X="5" Y="245"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -34,8 +34,8 @@
         <UnitName Value="opstackcore"/>
         <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="473"/>
-        <CursorPos X="54" Y="492"/>
+        <TopLine Value="1087"/>
+        <CursorPos X="1" Y="1103"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -45,8 +45,8 @@
         <UnitName Value="nmranetdefines"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="71"/>
-        <CursorPos X="3" Y="90"/>
+        <TopLine Value="127"/>
+        <CursorPos X="21" Y="144"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -56,8 +56,8 @@
         <UnitName Value="opstackdefines"/>
         <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="26"/>
-        <CursorPos X="69" Y="46"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="1"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -67,8 +67,8 @@
         <UnitName Value="opstacknode"/>
         <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="660"/>
-        <CursorPos X="1" Y="692"/>
+        <TopLine Value="135"/>
+        <CursorPos X="24" Y="143"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
       </Unit5>
@@ -87,11 +87,10 @@
         <Filename Value="../AppLayerTemplates/template_vnode.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_vnode"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="111"/>
-        <CursorPos X="3" Y="100"/>
+        <TopLine Value="1"/>
+        <CursorPos X="28" Y="10"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
       </Unit7>
@@ -101,8 +100,8 @@
         <UnitName Value="hardware_template"/>
         <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="114"/>
-        <CursorPos X="54" Y="405"/>
+        <TopLine Value="238"/>
+        <CursorPos X="3" Y="250"/>
         <UsageCount Value="202"/>
         <Loaded Value="True"/>
       </Unit8>
@@ -112,7 +111,7 @@
         <UnitName Value="nmranetutilities"/>
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="153"/>
+        <TopLine Value="1"/>
         <CursorPos X="28" Y="187"/>
         <UsageCount Value="201"/>
         <Loaded Value="True"/>
@@ -123,8 +122,8 @@
         <UnitName Value="opstackbuffers"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="78"/>
-        <CursorPos X="3" Y="17"/>
+        <TopLine Value="1"/>
+        <CursorPos X="62" Y="24"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit10>
@@ -132,11 +131,14 @@
         <Filename Value="../AppLayerTemplates/template_buffers.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_buffers"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="55" Y="19"/>
+        <CursorPos X="1" Y="5"/>
         <UsageCount Value="200"/>
+        <Bookmarks Count="1">
+          <Item0 X="12" Y="23" ID="0"/>
+        </Bookmarks>
         <Loaded Value="True"/>
       </Unit11>
       <Unit12>
@@ -174,12 +176,10 @@
         <Filename Value="../NMRAnet/opstackcanstatemachines.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachines"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="438"/>
-        <CursorPos X="46" Y="456"/>
+        <TopLine Value="1"/>
+        <CursorPos X="42" Y="14"/>
         <UsageCount Value="211"/>
-        <Loaded Value="True"/>
       </Unit15>
       <Unit16>
         <Filename Value="../AppLayerTemplates/template_configmem.pas"/>
@@ -187,8 +187,8 @@
         <UnitName Value="template_configmem"/>
         <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="38" Y="32"/>
+        <TopLine Value="17"/>
+        <CursorPos X="18" Y="33"/>
         <UsageCount Value="206"/>
         <Loaded Value="True"/>
       </Unit16>
@@ -225,7 +225,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="40" Y="8"/>
-        <UsageCount Value="20"/>
+        <UsageCount Value="23"/>
         <Loaded Value="True"/>
       </Unit20>
       <Unit21>
@@ -235,6 +235,25 @@
         <CursorPos X="3" Y="328"/>
         <UsageCount Value="8"/>
       </Unit21>
+      <Unit22>
+        <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/classes/lists.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_configuration"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="26"/>
+        <CursorPos X="73" Y="44"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit23>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
@@ -242,136 +261,127 @@
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="923" Column="1" TopLine="903"/>
+        <Caret Line="1148" Column="1" TopLine="1136"/>
       </Position1>
       <Position2>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="924" Column="1" TopLine="903"/>
+        <Caret Line="1149" Column="1" TopLine="1136"/>
       </Position2>
       <Position3>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="948" Column="1" TopLine="930"/>
+        <Caret Line="1150" Column="1" TopLine="1136"/>
       </Position3>
       <Position4>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="1434" Column="1" TopLine="1415"/>
+        <Caret Line="1151" Column="1" TopLine="1136"/>
       </Position4>
       <Position5>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="969" Column="1" TopLine="949"/>
+        <Caret Line="1163" Column="1" TopLine="1150"/>
       </Position5>
       <Position6>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="970" Column="1" TopLine="949"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="45" Column="1" TopLine="24"/>
       </Position6>
       <Position7>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="971" Column="1" TopLine="949"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="51" Column="1" TopLine="33"/>
       </Position7>
       <Position8>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="1283" Column="1" TopLine="1265"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="52" Column="1" TopLine="33"/>
       </Position8>
       <Position9>
-        <Filename Value="../NMRAnet/opstackbuffers.pas"/>
-        <Caret Line="84" Column="29" TopLine="59"/>
+        <Filename Value="../NMRAnet/opstackcore.pas"/>
+        <Caret Line="1151" Column="43" TopLine="1153"/>
       </Position9>
       <Position10>
-        <Filename Value="../NMRAnet/opstackcanstatemachines.pas"/>
-        <Caret Line="299" Column="1" TopLine="474"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="45" Column="1" TopLine="33"/>
       </Position10>
       <Position11>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="1065" Column="51" TopLine="1052"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="47" Column="16" TopLine="26"/>
       </Position11>
       <Position12>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="1061" Column="12" TopLine="1046"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="31" Column="1" TopLine="26"/>
       </Position12>
       <Position13>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="1065" Column="1" TopLine="1046"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="33" Column="1" TopLine="26"/>
       </Position13>
       <Position14>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="808" Column="1" TopLine="788"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="34" Column="1" TopLine="26"/>
       </Position14>
       <Position15>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="809" Column="1" TopLine="788"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="36" Column="12" TopLine="26"/>
       </Position15>
       <Position16>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="812" Column="1" TopLine="788"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="31" Column="1" TopLine="26"/>
       </Position16>
       <Position17>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="819" Column="1" TopLine="788"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="33" Column="1" TopLine="26"/>
       </Position17>
       <Position18>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="821" Column="1" TopLine="799"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="34" Column="1" TopLine="26"/>
       </Position18>
       <Position19>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="823" Column="1" TopLine="799"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="35" Column="1" TopLine="26"/>
       </Position19>
       <Position20>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="829" Column="1" TopLine="799"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="31" Column="1" TopLine="26"/>
       </Position20>
       <Position21>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="830" Column="1" TopLine="799"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="33" Column="1" TopLine="26"/>
       </Position21>
       <Position22>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="829" Column="26" TopLine="799"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="34" Column="1" TopLine="26"/>
       </Position22>
       <Position23>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="505" Column="44" TopLine="473"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="35" Column="1" TopLine="26"/>
       </Position23>
       <Position24>
-        <Filename Value="../AppLayerTemplates/template_configmem.pas"/>
-        <Caret Line="18" Column="10" TopLine="1"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="38" Column="1" TopLine="26"/>
       </Position24>
       <Position25>
-        <Filename Value="../HardwareLayerImplementations/hardware_template.pas"/>
-        <Caret Line="405" Column="51" TopLine="372"/>
+        <Filename Value="../NMRAnet/opstackcore.pas"/>
+        <Caret Line="1132" Column="1" TopLine="1087"/>
       </Position25>
       <Position26>
-        <Filename Value="../NMRAnet/opstackcanstatemachines.pas"/>
-        <Caret Line="491" Column="48" TopLine="485"/>
+        <Filename Value="../NMRAnet/opstackcore.pas"/>
+        <Caret Line="1103" Column="1" TopLine="1087"/>
       </Position26>
       <Position27>
-        <Filename Value="../NMRAnet/opstackcanstatemachines.pas"/>
-        <Caret Line="43" Column="48" TopLine="43"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="31" Column="1" TopLine="26"/>
       </Position27>
       <Position28>
-        <Filename Value="../HardwareLayerImplementations/hardware_template.pas"/>
-        <Caret Line="405" Column="51" TopLine="372"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="33" Column="1" TopLine="26"/>
       </Position28>
       <Position29>
-        <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="12" Column="136" TopLine="1"/>
+        <Filename Value="../AppLayerTemplates/template_configuration.pas"/>
+        <Caret Line="48" Column="39" TopLine="26"/>
       </Position29>
       <Position30>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
-        <Caret Line="492" Column="54" TopLine="473"/>
+        <Caret Line="1103" Column="1" TopLine="1087"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="1">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../NMRAnet/opstackcore.pas"/>
-        <Line Value="1065"/>
-      </Item1>
-    </BreakPoints>
     <Watches Count="1">
       <Item1>
         <Expression Value="DatagramBufferPool"/>
