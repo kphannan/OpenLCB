@@ -12,7 +12,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.0.8.0'
+  LCLVersion = '1.2.0.1'
   object PageControlMain: TPageControl
     Left = 0
     Height = 390
@@ -1986,11 +1986,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Caption = 'Close All'
       OnExecute = ActionConfigEditorsCloseAllExecute
     end
-    object ActionOpenLCBCommandReadFSI: TAction
-      Category = 'OpenLCBCommand'
-      Caption = 'Read FSI Memory'
-      OnExecute = ActionOpenLCBCommandReadFSIExecute
-    end
     object ActionToolsEthernetHubConnect: TAction
       Category = 'Tools'
       Caption = 'Ethernet Hub Connect'
@@ -2013,6 +2008,26 @@ object FormOLCB_Commander: TFormOLCB_Commander
       Category = 'Tools'
       Caption = 'Show LoopTime (Debug)'
       OnExecute = ActionShowLoopTimeExecute
+    end
+    object ActionOpenLCBCommandReadCDIWithStream: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read CDI Memory with Stream'
+      OnExecute = ActionOpenLCBCommandReadCDIWithStreamExecute
+    end
+    object ActionOpenLCBCommandReadAllWithStream: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read All Memory with Stream'
+      OnExecute = ActionOpenLCBCommandReadAllWithStreamExecute
+    end
+    object ActionOpenLCBCommandReadConfigurationWithStream: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read Configuration Memory with Stream'
+      OnExecute = ActionOpenLCBCommandReadConfigurationWithStreamExecute
+    end
+    object ActionOpenLCBCommandReadFDIWithStream: TAction
+      Category = 'OpenLCBCommand'
+      Caption = 'Read FDI Memory with Stream'
+      OnExecute = ActionOpenLCBCommandReadFDIWithStreamExecute
     end
   end
   object PopupMenuTreeNode: TPopupMenu
@@ -2048,8 +2063,20 @@ object FormOLCB_Commander: TFormOLCB_Commander
       object MenuItemReadFDI: TMenuItem
         Action = ActionOpenLCBCommandReadFDI
       end
-      object MenuItemReadFSI: TMenuItem
-        Action = ActionOpenLCBCommandReadFSI
+    end
+    object MenuItemConfigurationWithStreamSubMenu: TMenuItem
+      Caption = 'Configuration Memory Spaces With Stream'
+      object MenuItemReadCDIWithStream: TMenuItem
+        Action = ActionOpenLCBCommandReadCDIWithStream
+      end
+      object MenuItemReadAllMemoryWithStream: TMenuItem
+        Action = ActionOpenLCBCommandReadAllWithStream
+      end
+      object MenuItemReadConfigMemWithStream: TMenuItem
+        Action = ActionOpenLCBCommandReadConfigurationWithStream
+      end
+      object MenuItemReadFDIWithStream: TMenuItem
+        Action = ActionOpenLCBCommandReadFDIWithStream
       end
     end
     object MenuItemTVPopupSep3: TMenuItem

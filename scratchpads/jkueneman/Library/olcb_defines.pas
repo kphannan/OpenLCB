@@ -88,10 +88,26 @@ const
   MTI_TRACTION_PROTOCOL              = $095EA000;                                // Databyte = depends
   MTI_TRACTION_REPLY                 = $095E8000;                                // Databyte = depends
 
+  MTI_STREAM_INIT_REQUEST            = $0CC8;
+  MTI_STREAM_INIT_REPLY              = $0868;
+  MTI_STREAM_SEND                    = $F000;
+  MTI_STREAM_PROCEED                 = $0888;
+  MTI_STREAM_COMPLETE                = $08A8;
+
   MTI_DATAGRAM_OK_REPLY              = $09A28000;                                // Databytes = Destination Alias
   MTI_DATAGRAM_REJECTED_REPLY        = $09A48000;                                // Databytes = Destination Alias, Error Code
 
   DATAGRAM_OK_ACK_REPLY_PENDING      = $80;
+
+  STREAM_REPLY_CONTENT_TYPE                               = $01;                // LSB = 1 = first 6 bytes in data are UID of data type in stream
+  STREAM_REPLY_UNEXPECTED_ERROR                           = $02;                // Bit 2 = 1 the Stream was Rejected, Out of order, or other "should not happen" error
+  STREAM_REPLY_PERMANENT_ERROR                            = $40;                // Bit 6 = 1 = if STREAM_REPLY_ACCEPT = 1 then this is the error type where 1 = permanent
+  STREAM_REPLY_ACCEPT                                     = $80;                // MSB = 1 = Accept
+
+  STREAM_REPLY_ERROR_LOGGED                               = $01;                // Error was logged
+  STREAM_REPLY_INVALID_REQUEST                            = $20;                // if Error is permanent then these are the possible reasons
+  STREAM_REPLY_SOURCE_NOT_PERMITTED                       = $40;                // if Error is permanent then these are the possible reasons
+  STREAM_REPLY_STREAM_NOT_ACCEPTED                        = $80;                // if Error is permanent then these are the possible reasons
 
   MASK_SOURCE_ALIAS                  = $00000FFF;                                // Masks out just the Source Alias Address
 
@@ -138,7 +154,9 @@ const
 
 const
   MCP_WRITE                           = $00;                                    // MemoryConfigurationProtocol - Write Memory Mask
+  MCP_WRITE_STREAM                    = $20;
   MCP_READ                            = $40;                                    // MemoryConfigurationProtocol - Read Memory Mask
+  MCP_READ_STREAM                     = $60;
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask
   MCP_READ_DATAGRAM_REPLY             = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
   MCP_WRITE_DATAGRAM_REPLY            = $10;

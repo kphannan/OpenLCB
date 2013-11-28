@@ -1,3 +1,12 @@
+// *****************************************************************************
+//
+// This file is the template for the application to define the Virtual Nodes
+// that can be implemented above and beyond the Physical Node.  They can have
+// completely different attributes than the Physical Node but they all must share
+// the these attributes.
+//
+// *****************************************************************************
+
 unit template_vnode;
 
 // This file contains application layer variabile the user can change to customize
@@ -61,8 +70,8 @@ const
   {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
   const
     USER_VNODE_SUPPORTED_EVENTS_PRODUCED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
-      ($01, $01, $00, $00, $00, $00, $FF, $FF),                                    // EVENT_EMERGENCY_STOP
-      ($05, $02, $01, $02, $02, $00, $00, $00)                                    // TEST
+      ($01, $01, $00, $00, $00, $00, $FF, $FF),                                 // EVENT_EMERGENCY_STOP
+      ($05, $02, $01, $02, $02, $00, $00, $00)                                  // TEST
     );
   {$ENDIF}
 

@@ -4,6 +4,8 @@ unit opstackbuffers;
 interface
 {$ENDIF}
 
+{$I Options.inc}
+
 uses
   {$IFDEF FPC}
   Classes, SysUtils,
@@ -26,11 +28,13 @@ type
   end;
   PDatagramBufferPool = ^TDatagramBufferPool;
 
+  {$IFDEF SUPPORT_STREAMS}
   TStreamBufferPool = record
     Pool: array[0..USER_MAX_STREAM_ARRAY_BUFFERS-1] of TStreamBuffer;
     Count: Word;
   end;
   PStreamBufferPool = ^TStreamBufferPool;
+  {$ENDIF}
 
   TAcdiSnipBufferPool = record
     Pool: array[0..USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1] of TAcdiSnipBuffer;
@@ -50,7 +54,9 @@ procedure OPStackBuffers_Initialize;
 function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
-function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+{$IFDEF SUPPORT_STREAMS}
+function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;
+{$ENDIF}
 function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
@@ -63,19 +69,29 @@ procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessa
 // Load Buffer helpers
 procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+{$IFDEF SUPPORT_STREAMS}
 procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+{$ENDIF}
 
 // Zero buffer helpers
 procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
 procedure OPStackBuffers_ZeroSimpleBuffer(ABuffer: PSimpleBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray: Boolean);
+{$IFDEF SUPPORT_STREAMS}
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
+{$ENDIF}
 procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
+
+{$IFDEF SUPPORT_STREAMS}
+function AllocateStreamSourceID: Byte;
+function AllocateStreamDestID: Byte;
+{$ENDIF}
 
 // Copy buffer helpers
 procedure OPStackBuffers_CopyData(DestData, SourceData: PSimpleBuffer);
 procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
 procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
+procedure OPStackBuffers_CopyDataArrayWithSourceOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; SourceOffset: Word);
 
 // Message Node ID helpers
 procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
@@ -83,9 +99,14 @@ procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
 var
   SimpleBufferPool: TSimpleBufferPool;
   DatagramBufferPool: TDatagramBufferPool;
+  {$IFDEF SUPPORT_STREAMS}
   StreamBufferPool: TStreamBufferPool;
+  StreamSourceID: Byte;
+  StreamDestID: Byte;
+  {$ENDIF}
   AcdiSnipBufferPool: TAcdiSnipBufferPool;
   OPStackMessagePool: TOPStackMessagePool;
+
 
 implementation
 
@@ -102,9 +123,13 @@ begin
     OPStackBuffers_ZeroDatagramBuffer(@DatagramBufferPool.Pool[j], True);
   DatagramBufferPool.Count := 0;
 
+  {$IFDEF SUPPORT_STREAMS}
   for j := 0 to USER_MAX_STREAM_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroStreamBuffer(@StreamBufferPool.Pool[j], True);
   StreamBufferPool.Count := 0;
+  StreamSourceID := 0;
+  StreamDestID := 0;
+  {$ENDIF}
 
   for j := 0 to USER_MAX_SIMPLE_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
@@ -155,6 +180,7 @@ begin
   end;
 end;
 
+{$IFDEF SUPPORT_STREAMS}
 function AllocateStreamBuffer(var Buffer: PStreamBuffer): Boolean;
 var
   i: Integer;
@@ -176,6 +202,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 function AllocateAcdiSnipBuffer(var Buffer: PAcdiSnipBuffer): Boolean;
 var
@@ -217,6 +244,7 @@ begin
   end
 end;
 
+{$IFDEF SUPPORT_STREAMS}
 procedure DeAllocateSteamBuffer(Buffer: PStreamBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
@@ -225,6 +253,7 @@ begin
     Buffer^.State := 0
   end
 end;
+{$ENDIF}
 
 procedure DeAllocateAcdiSnipBuffer(Buffer: PAcdiSnipBuffer);
 begin
@@ -303,7 +332,8 @@ begin
   end;
 end;
 
-function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+{$IFDEF SUPPORT_STREAMS}
+function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;
 var
   StreamBuffer: PStreamBuffer;
 begin
@@ -314,6 +344,8 @@ begin
     if AllocateStreamBuffer(StreamBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+      if IsOutgoing then
+        StreamBuffer^.State := StreamBuffer^.State or ABS_STREAM_OUTGOING;
       AMessage^.Buffer := PSimpleBuffer( PByte( StreamBuffer));
       Result := True
     end else
@@ -323,6 +355,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 var
@@ -355,7 +388,9 @@ begin
       case (AMessage^.MessageType and MT_MASK) of
         MT_SIMPLE    : DeAllocateSimpleBuffer(PSimpleBuffer( AMessage^.Buffer));
         MT_DATAGRAM  : DeAllocateDatagramBuffer(PDatagramBuffer( PByte(AMessage^.Buffer)));
+        {$IFDEF SUPPORT_STREAMS}
         MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
+        {$ENDIF}
         MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PAcdiSnipBuffer( PByte( AMessage^.Buffer)));
       end;
     end;
@@ -416,10 +451,12 @@ begin
   LoadBuffer(PSimpleBuffer( PByte( ABuffer)), iStateMachine, DataBufferSize, DataArray, MAX_DATAGRAM_BYTES, ArrayOffset);
 end;
 
+{$IFDEF SUPPORT_STREAMS}
 procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 begin
   LoadBuffer(PSimpleBuffer( PByte( ABuffer)), iStateMachine, DataBufferSize, DataArray, USER_MAX_STREAM_BYTES, ArrayOffset);
 end;
+{$ENDIF}
 
 procedure ZeroBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word);
 var
@@ -449,14 +486,23 @@ begin
   ABuffer^.CurrentCount := 0;
 end;
 
+{$IFDEF SUPPORT_STREAMS}
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
+var
+  i: Integer;
 begin
   if ZeroArray then
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_STREAM_BYTES)
   else
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
   ABuffer^.CurrentCount := 0;
+  ABuffer^.SourceID := 0;
+  ABuffer^.DestID := 0;
+  for i := 0 to MAX_STREAM_TYPE_ID - 1 do
+    ABuffer^.StreamTypeID[i] := 0;
+  ABuffer^.TotalMessageSize := 0;
 end;
+{$ENDIF}
 
 procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
 begin
@@ -490,6 +536,24 @@ begin
   AMessage^.DestFlags := 0;
 end;
 
+{$IFDEF SUPPORT_STREAMS}
+function AllocateStreamSourceID: Byte;
+begin
+  if StreamSourceID = 0 then
+    Inc(StreamSourceID);
+  Result := StreamSourceID;
+  Inc(StreamSourceID);
+end;
+
+function AllocateStreamDestID: Byte;
+begin
+  if StreamDestID = 0 then
+    Inc(StreamDestID);
+  Result := StreamDestID;
+  Inc(StreamDestID);
+end;
+{$ENDIF}
+
 procedure OPStackBuffers_CopyData(DestData, SourceData: PSimpleBuffer);
 var
   i: Integer;
@@ -519,6 +583,16 @@ begin
     DestData^.DataArray[DestData^.DataBufferSize] := SourceDataArray^[i];
     Inc(DestData^.DataBufferSize);
     Inc(i)
+  end
+end;
+
+procedure OPStackBuffers_CopyDataArrayWithSourceOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; SourceOffset: Word);
+begin
+  DestData^.DataBufferSize := 0;
+  while DestData^.DataBufferSize < Count do
+  begin
+    DestData^.DataArray[DestData^.DataBufferSize] := SourceDataArray^[DestData^.DataBufferSize+SourceOffset];
+    Inc(DestData^.DataBufferSize);
   end
 end;
 

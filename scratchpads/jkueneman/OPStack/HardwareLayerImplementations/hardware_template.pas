@@ -12,7 +12,6 @@ uses
   {$ENDIF}
   gridconnect,
   nmranetdefines,
-  nmranetutilities,
   opstackbuffers,
   opstacktypes,
   opstackdefines;
@@ -31,7 +30,6 @@ type
   TOPStackTestConnectionInput = class(TThread)
   private
     FCallback: TOpStackTestCallbackMethod;
-    FHasTemrinated: Boolean;
     FHasTerminated: Boolean;
     FhSocket: TSocket;
     FReceiveStr: string;
@@ -144,6 +142,9 @@ procedure ProcessOutgoingAcdiSnips;
 function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
 procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
 procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
+{$IFDEF SUPPORT_STREAMS}
+function FindStream(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo; SourceID, DestID, iStateMachine: Byte): POPStackMessage;
+{$ENDIF}
 function IsOutgoingBufferAvailable: Boolean;
 
 {$IFNDEF FPC}
@@ -247,6 +248,7 @@ var
   GridConnectBuffer: TGridConnectBuffer;
   i: Integer;
 begin
+  GridConnectStr[0] := #0;                                                       // Quiet the compiler
   case AMessage^.MessageType and MT_MASK of
     MT_SIMPLE :
         begin
@@ -275,7 +277,7 @@ begin
               GridConnectBuffer.PayloadCount := 2;
             end;
           end else
-          if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_STREAM_SEND then
+          if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_STREAM_SEND then
           begin
             // This is a datagram MTI ($Axxx...$Dxxxx) or stream MTI ($Fxxx)
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or (AMessage^.Dest.AliasID shl 12) or AMessage^.Source.AliasID or $10000000;
@@ -301,10 +303,12 @@ begin
         begin
           OPStackCANStatemachine_AddOutgoingDatagramMessage(AMessage)           // CAN can't handle a full Datagram Message so we need to parse it up into 8 byte frames
         end;
+    {$IFDEF SUPPORT_STREAMS}
     MT_STREAM :
         begin
-          OPStackBuffers_DeAllocateMessage(AMessage);
+          OPStackCANStatemachine_AddOutgoingStreamMessage(AMessage)             // CAN can't handle a full Datagram Message so we need to parse it up into 8 byte frames
         end;
+    {$ENDIF}
     MT_ACDISNIP :
         begin
           OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(AMessage)           // CAN can't handle a full Datagram Message so we need to parse it up into 8 byte frames
@@ -343,6 +347,14 @@ procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
 begin
   OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage)
 end;
+
+{$IFDEF SUPPORT_STREAMS}
+function FindStream(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo; SourceID, DestID, iStateMachine: Byte): POPStackMessage;
+begin
+  OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeID.AliasID, SourceID, DestID, iStateMachine);
+end;
+{$ENDIF}
+
 
 function IsOutgoingBufferAvailable: Boolean;
 begin
@@ -465,7 +477,7 @@ begin
               end;
             end
           end;
-      MTI_FRAME_TYPE_CAN_STREAM_SEND :
+      MTI_STREAM_SEND :
           begin
 
           end;
@@ -489,6 +501,7 @@ var
   OPStackMessage: TOPStackMessage;
   Buffer: TSimpleBuffer;
 begin
+  GridConnectBuffer.MTI := 0;                                                   // Quite the compiler
   OPStackMessage.Buffer := @Buffer;
   GridConnectToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);           // Parse the string into a Grid Connect Data structure
   GridConnectBufferToOPStackBufferAndDispatch(GridConnectBuffer, OPStackMessage); // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
@@ -731,6 +744,7 @@ var
 begin
   for i := 1 to Length(ReceiveStr) do
   begin
+    GridConnectStrPtr := nil;
     if GridConnectDecodeMachine(ReceiveStr[i], GridConnectStrPtr) then
     begin
       GridConnectStrToIncomingMessageDispatch(GridConnectStrPtr);

@@ -121,11 +121,14 @@ type
   { TFormOLCB_Commander }
 
   TFormOLCB_Commander = class(TForm)
+    ActionOpenLCBCommandReadFDIWithStream: TAction;
+    ActionOpenLCBCommandReadConfigurationWithStream: TAction;
+    ActionOpenLCBCommandReadAllWithStream: TAction;
+    ActionOpenLCBCommandReadCDIWithStream: TAction;
     ActionShowLoopTime: TAction;
     ActionToolsEthernetHubDisconnect: TAction;
     ActionToolsEthernetHubMessageLogShow: TAction;
     ActionToolsEthernetHubConnect: TAction;
-    ActionOpenLCBCommandReadFSI: TAction;
     ActionConfigEditorsHideAll: TAction;
     ActionConfigEditorsShowAll: TAction;
     ActionConfigEditorsCloseAll: TAction;
@@ -165,12 +168,16 @@ type
     ListBoxLog: TListBox;
     MainMenu: TMainMenu;
     MainMenu1: TMainMenu;
+    MenuItemReadFDIWithStream: TMenuItem;
+    MenuItemReadCDIWithStream: TMenuItem;
+    MenuItemReadAllMemoryWithStream: TMenuItem;
+    MenuItemReadConfigMemWithStream: TMenuItem;
+    MenuItemConfigurationWithStreamSubMenu: TMenuItem;
     MenuItemHelpLoopTime: TMenuItem;
     MenuItemToolsEthernetHubConnect: TMenuItem;
     MenuItemToolsEthernetHubDisconnect: TMenuItem;
     MenuItemToolsEthernetMessageLog: TMenuItem;
     MenuItemToolsSep3: TMenuItem;
-    MenuItemReadFSI: TMenuItem;
     MenuItemConfigEditorsSep1: TMenuItem;
     MenuItemConfigEditorsShowAll: TMenuItem;
     MenuItemConfigEditorsHide: TMenuItem;
@@ -223,6 +230,11 @@ type
     procedure ActionConfigEditorsCreateExecute(Sender: TObject);
     procedure ActionConfigEditorsHideAllExecute(Sender: TObject);
     procedure ActionConfigEditorsShowAllExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandReadAllWithStreamExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandReadCDIWithStreamExecute(Sender: TObject);
+    procedure ActionOpenLCBCommandReadConfigurationWithStreamExecute(
+      Sender: TObject);
+    procedure ActionOpenLCBCommandReadFDIWithStreamExecute(Sender: TObject);
     procedure ActionShowLoopTimeExecute(Sender: TObject);
     procedure ActionToolsEthernetHubDisconnectExecute(Sender: TObject);
     procedure ActionToolsEthernetHubMessageLogShowExecute(Sender: TObject);
@@ -294,7 +306,7 @@ type
     procedure RunIdentifyEventsOnNode(Node: TOlcbTreeNode);
     procedure RunMemConfigSpacesAllInfoOnNode(Node: TOlcbTreeNode);
     procedure RunProtocolSupportOnNode(Node: TOlcbTreeNode);
-    procedure RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte);
+    procedure RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte; UseStream: Boolean);
     procedure RunSNIIOnNode(Node: TOlcbTreeNode);
     procedure RunVerifyNodeIdGlobal;
   protected
@@ -509,6 +521,59 @@ begin
   ConfigEditorList.ShowAll;
 end;
 
+procedure TFormOLCB_Commander.ActionOpenLCBCommandReadAllWithStreamExecute(Sender: TObject);
+var
+  Node: TOlcbTreeNode;
+  i: Integer;
+ begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if IsParentRootNode(Node) then
+      RunReadMemorySpaceOnNode(Node, MSI_ALL, True);
+  end;
+end;
+
+procedure TFormOLCB_Commander.ActionOpenLCBCommandReadCDIWithStreamExecute(Sender: TObject);
+var
+  Node: TOlcbTreeNode;
+  i: Integer;
+ begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if IsParentRootNode(Node) then
+      RunReadMemorySpaceOnNode(Node, MSI_CDI, True);
+  end;
+
+end;
+
+procedure TFormOLCB_Commander.ActionOpenLCBCommandReadConfigurationWithStreamExecute(Sender: TObject);
+ var
+  Node: TOlcbTreeNode;
+  i: Integer;
+ begin
+  for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+  begin
+    Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+    if IsParentRootNode(Node) then
+      RunReadMemorySpaceOnNode(Node, MSI_CONFIG, True);
+  end;
+end;
+
+procedure TFormOLCB_Commander.ActionOpenLCBCommandReadFDIWithStreamExecute(Sender: TObject);
+ var
+   Node: TOlcbTreeNode;
+   i: Integer;
+  begin
+   for i := 0 to TreeViewNetwork.SelectionCount - 1 do
+   begin
+     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
+     if IsParentRootNode(Node) then
+       RunReadMemorySpaceOnNode(Node, MSI_FDI, True);
+   end;
+end;
+
 procedure TFormOLCB_Commander.ActionShowLoopTimeExecute(Sender: TObject);
 begin
   ShowMessage('LoopTime = ' + IntToStr(LoopTime));
@@ -621,7 +686,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_ALL);
+      RunReadMemorySpaceOnNode(Node, MSI_ALL, False);
   end;
 end;
 
@@ -634,7 +699,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_CDI);
+      RunReadMemorySpaceOnNode(Node, MSI_CDI, False);
   end;
 end;
 
@@ -647,7 +712,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_CONFIG);
+      RunReadMemorySpaceOnNode(Node, MSI_CONFIG, False);
   end;
 end;
 
@@ -660,7 +725,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_FDI);
+      RunReadMemorySpaceOnNode(Node, MSI_FDI, False);
   end;
 end;
 
@@ -673,7 +738,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_FSI);
+      RunReadMemorySpaceOnNode(Node, MSI_FSI, False);
   end;
 
 end;
@@ -687,7 +752,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_ACDI_MFG);
+      RunReadMemorySpaceOnNode(Node, MSI_ACDI_MFG, False);
   end;
 end;
 
@@ -700,7 +765,7 @@ var
   begin
     Node := TreeViewNetwork.Selections[i] as TOlcbTreeNode;
     if IsParentRootNode(Node) then
-      RunReadMemorySpaceOnNode(Node, MSI_ACDI_USER);
+      RunReadMemorySpaceOnNode(Node, MSI_ACDI_USER, False)
   end;
 end;
 
@@ -1009,21 +1074,38 @@ begin
   DispatchTask(Task);
 end;
 
-procedure TFormOLCB_Commander.RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte);
+procedure TFormOLCB_Commander.RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte; UseStream: Boolean);
 var
   Task: TReadAddressSpaceMemoryTask;
+  StreamTask: TReadAddressSpaceMemoryWithStreamTask;
 begin
-  case AddressSpace of
-    MSI_CDI: begin
-               Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
-               Task.Terminator := #0;
-             end
-    else
-      Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
-  end;
-  Task.ForceOptionalSpaceByte := False;
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);
+  if UseStream then
+  begin
+    case AddressSpace of
+      MSI_CDI: begin
+                 StreamTask := TReadAddressSpaceMemoryWithStreamTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+                 StreamTask.Terminator := #0;
+               end
+      else
+        StreamTask := TReadAddressSpaceMemoryWithStreamTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+    end;
+    StreamTask.ForceOptionalSpaceByte := False;
+    StreamTask.OnBeforeDestroy := @OnBeforeDestroyTask;
+    DispatchTask(StreamTask);
+  end else
+  begin
+    case AddressSpace of
+      MSI_CDI: begin
+                 Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+                 Task.Terminator := #0;
+               end
+      else
+        Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+    end;
+    Task.ForceOptionalSpaceByte := False;
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    DispatchTask(Task);
+  end
 end;
 
 procedure TFormOLCB_Commander.RunSNIIOnNode(Node: TOlcbTreeNode);

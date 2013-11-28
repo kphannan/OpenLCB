@@ -72,6 +72,13 @@ procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage)
 procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
 
+{$IFDEF SUPPORT_STREAMS}
+procedure OPStackNode_StreamLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure OPStackNode_StreamUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+function OPStackNode_FindStream(Node: PNMRAnetNode; DestID, SourceID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
+function OPStackNode_NextStream(Node: PNMRAnetNode): POPStackMessage;
+{$ENDIF}
+
 
 
 function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
@@ -122,7 +129,9 @@ begin
     Node^.iIndex := i;
     OPStackNode_ZeroizeNode(Node);
     Node^.IncomingMessages := nil;
-    Node^.OutgoingMessages := nil;
+    {$IFDEF SUPPORT_STREAMS}
+    Node^.StreamMessages := nil;
+    {$ENDIF}
     Node^.Info.ID[0] := NodeID_LO + i;         // Picked up from the NodeID.inc file
     Node^.Info.ID[1] := NodeID_HI;
     Node^.Login.Seed := Node^.Info.ID;
@@ -701,6 +710,112 @@ function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
 begin
   Result := Node^.IncomingMessages;
 end;
+
+{$IFDEF SUPPORT_STREAMS}
+// *****************************************************************************
+//  procedure OPStackNode_StreamLink;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_StreamLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Temp: POPStackMessage;
+begin
+  if Node^.StreamMessages = nil then
+    Node^.StreamMessages := AMessage
+  else begin                                  // Tack it to the end of the chain
+    Temp := Node^.StreamMessages;
+    while Temp^.Next <> nil do
+      Temp := Temp^.Next;
+    Temp^.Next := AMessage
+  end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_StreamUnLink;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_StreamUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Temp, Parent: POPStackMessage;
+begin
+  if Node^.StreamMessages <> nil then
+  begin
+    if Node^.StreamMessages = AMessage then                                           // Root Buffer match case is easy
+      Node^.StreamMessages := Node^.StreamMessages^.Next
+    else begin
+      Parent := Node^.StreamMessages;                                                 // Already know it is not the root buffer so setup for the first level down
+      Temp := Node^.StreamMessages^.Next;
+      while (Temp <> nil) and (Temp <> AMessage) do
+      begin
+        Parent := Temp;
+        Temp := Temp^.Next
+      end;
+      if Temp <> nil then
+        Parent^.Next := Temp^.Next
+    end
+  end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_FindStream;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_FindStream(Node: PNMRAnetNode; DestID, SourceID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
+var
+  Temp: POPStackMessage;
+  StreamBuffer: PStreamBuffer;
+begin
+  Result := nil;
+  if Node^.StreamMessages <> nil then
+  begin
+    Temp := Node^.StreamMessages;
+    while Temp <> nil do
+    begin
+      StreamBuffer := PStreamBuffer( PByte( Temp^.Buffer));
+      if LinkNode.AliasID <> 0 then
+      begin
+        if (LinkNode.AliasID = Temp^.Dest.AliasID) then
+          if (StreamBuffer^.DestID = DestID) then
+            if (StreamBuffer^.SourceID = SourceID) then
+            begin
+              Result := Temp;
+              Exit;
+            end;
+       Temp := Temp^.Next;
+      end else
+      begin
+        if (LinkNode.ID[0] = Temp^.Dest.ID[0]) then
+          if (LinkNode.ID[1] = Temp^.Dest.ID[1]) then
+            if (StreamBuffer^.DestID = DestID) then
+              if (StreamBuffer^.SourceID = SourceID) then
+              begin
+                Result := Temp;
+                Exit;
+              end;
+       Temp := Temp^.Next;
+      end
+    end
+  end;
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_NextStream;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_NextStream(Node: PNMRAnetNode): POPStackMessage;
+begin
+  Result := Node^.StreamMessages;    // Basic for now
+end;
+
+{$ENDIF}
 
 // *****************************************************************************
 //  procedure OPStackNode_Find;

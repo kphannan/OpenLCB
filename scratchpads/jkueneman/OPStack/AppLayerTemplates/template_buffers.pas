@@ -1,7 +1,14 @@
+// *****************************************************************************
+//
+// This file is the template for the application to define memory management by
+// defining the number of buffers in the application.  The number of buffers will
+// vary depending on the number of possible Nodes that will be allocated at the
+// same time.
+//
+// *****************************************************************************
+
 unit template_buffers;
 
-// This file contains application layer variabile the user can change to customize
-// features of OPStack including buffer memory management, etc.
 
 {$IFDEF FPC}
 interface

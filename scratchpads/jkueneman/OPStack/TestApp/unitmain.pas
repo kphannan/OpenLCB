@@ -218,7 +218,9 @@ begin
   Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(OPStackMessagePool.Count);
   Statusbar.Panels[3].Text := 'CAN Buffers: ' + IntToStr(SimpleBufferPool.Count);
   Statusbar.Panels[4].Text := 'Datagram Buffers: ' + IntToStr(DatagramBufferPool.Count);
+  {$IFDEF SUPPORT_STREAMS}
   Statusbar.Panels[5].Text := 'Steam Buffers: ' + IntToStr(StreamBufferPool.Count);
+  {$ENDIF}
 end;
 
 procedure TForm1.ButtonSendGlobalNotifyClick(Sender: TObject);
@@ -285,8 +287,6 @@ begin
 end;
 
 procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
-var
-  i: Integer;
 begin
   ClientThread := nil;
   ListenerThread := nil;

@@ -165,8 +165,10 @@ type
   end;
 
 const
-  ABS_ALLOCATED     = $01;                                                      // Array Buffer State Flag = Allocated Buffer
-  ABS_HASBEENACKED  = $02;                                                      // Array Buffer State Flag = The received Datagram buffer has be ACK'ed
+  ABS_ALLOCATED            = $01;                                               // Array Buffer State Flag = Allocated Buffer
+  ABS_HASBEENACKED         = $02;                                               // Array Buffer State Flag = The received Datagram buffer has be ACK'ed
+  ABS_STREAM_OUTGOING      = $04;                                               // Flag the direction of the stream (if the buffer is a stream)
+  ABS_STREAM_TYPE_ID       = $08;                                               // Flag if the Stream Buffer contains a valid Stream Type ID UID
 
 type
   TSimpleBuffer = record
@@ -187,15 +189,28 @@ type
   end;
   PDatagramBuffer = ^TDatagramBuffer;
 
+  {$IFDEF SUPPORT_STREAMS}
+const
+  MAX_STREAM_TYPE_ID = 6;
+
+type
+  TStreamTypeID = array[0..MAX_STREAM_TYPE_ID-1] of Byte;
+  PStreamTypeID = ^TStreamTypeID;
+
   TStreamBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
     iStateMachine: Byte;                                                        // Local Statemachine
-    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray that are valid, for streams this is the negotiated buffer size
     DataArray: TStreamDataArray;
     // *******
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+    SourceID,
+    DestID: Byte;
+    StreamTypeID: TStreamTypeID;
+    TotalMessageSize: DWord;                                                    // The total number of bytes to send in the interaction
   end;
   PStreamBuffer = ^TStreamBuffer;
+  {$ENDIF}
 
   TAcdiSnipBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
@@ -238,7 +253,9 @@ type
     Flags: Word;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
-    OutgoingMessages: POPStackMessage;                                          // Linked List of Messages on their way out on the wire
+    {$IFDEF SUPPORT_STREAMS}
+    StreamMessages: POPStackMessage;                                            // Linked List of Stream Messages active, allocated for this node
+    {$ENDIF}
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 
@@ -247,6 +264,14 @@ const
   DATAGRAM_PROCESS_ERROR_BUFFER_FULL         = $02;
   DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        = $03;
   DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED = $04;
+
+  STATE_CONFIG_MEM_STREAM_START                    = 0;
+  STATE_CONFIG_MEM_STREAM_INIT                     = 1;
+  STATE_CONFIG_MEM_STREAM_WAIT_FOR_INIT_REPLY      = 2;
+  STATE_CONFIG_MEM_STREAM_SEND                     = 3;
+  STATE_CONFIG_MEM_STREAM_WAIT_FOR_PROCEED         = 4;
+  STATE_CONFIG_MEM_STREAM_SEND_COMPLETE            = 5;
+  STATE_CONFIG_MEM_STREAM_COMPLETE                 = 6;
 
 
 implementation

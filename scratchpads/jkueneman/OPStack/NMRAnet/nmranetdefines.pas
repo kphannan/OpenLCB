@@ -73,11 +73,11 @@ const
   MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END  = $D000;
   MTI_DATAGRAM_OK_REPLY              = $0A28;                                // Databytes = Destination Alias
   MTI_DATAGRAM_REJECTED_REPLY        = $0A48;
-  MTI_FRAME_TYPE_STREAM_INIT_REQUEST = $0CC8;
-  MTI_FRAME_TYPE_STREAM_INIT_REPLY   = $0868;
-  MTI_FRAME_TYPE_CAN_STREAM_SEND     = $F000;
-  MTI_FRAME_TYPE_STREAM_PROCEED      = $0888;
-  MTI_FRAME_TYPE_STREAM_COMPLETE     = $08A8;
+  MTI_STREAM_INIT_REQUEST            = $0CC8;
+  MTI_STREAM_INIT_REPLY              = $0868;
+  MTI_STREAM_SEND                    = $F000;
+  MTI_STREAM_PROCEED                 = $0888;
+  MTI_STREAM_COMPLETE                = $08A8;
 
   // These are Negavitve Logic so "xx01" = Start, "xx10" = End were the "0" is the bit of interest
   PIP_EXTENSION_START_BIT            = $1000;                                    // Flags in the Destination word for future extension of PIP
@@ -134,6 +134,20 @@ const
   DATAGRAM_RESULT_REJECTED_TRANSPORT_ERROR_MASK           = $4000;
 
   DATAGRAM_OK_ACK_REPLY_PENDING                           = $80;
+
+
+  STREAM_REPLY_CONTENT_TYPE                               = $01;                // LSB = 1 = first 6 bytes in data are UID of data type in stream
+  STREAM_REPLY_UNEXPECTED_ERROR                           = $02;                // Bit 2 = 1 the Stream was Rejected, Out of order, or other "should not happen" error
+  STREAM_REPLY_PERMANENT_ERROR                            = $40;                // Bit 6 = 1 = if STREAM_REPLY_ACCEPT = 1 then this is the error type where 1 = permanent
+  STREAM_REPLY_ACCEPT                                     = $80;                // MSB = 1 = Accept
+
+  STREAM_REPLY_ERROR_LOGGED                               = $01;                // Error was logged
+  STREAM_REPLY_INVALID_REQUEST                            = $20;                // if Error is permanent then these are the possible reasons
+  STREAM_REPLY_SOURCE_NOT_PERMITTED                       = $40;                // if Error is permanent then these are the possible reasons
+  STREAM_REPLY_STREAM_NOT_ACCEPTED                        = $80;                // if Error is permanent then these are the possible reasons
+
+  STREAM_REPLY_BUFFER_FULL                                = $20;                // if Error is permanent then these are the possible reasons
+  STREAM_REPLY_INTERNAL_ERROR                             = $40;                // if Error is not permanent then these are the possible reasons
 
 const
   MSI_CDI                            = $FF;                                     // MemorySpaceIdentifier - Access the Configuration Definition Infomation (CDI)
