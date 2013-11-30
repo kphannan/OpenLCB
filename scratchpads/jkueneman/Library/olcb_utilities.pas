@@ -120,6 +120,7 @@ type
   function EventIDToString(EventID: PEventID): WideString;
   function EqualEvents(Event1, Event2: PEventID): Boolean;
   function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
+  function IsStreamMTI(MTI: DWord; IncludeSetupTeardowns: Boolean): Boolean;
   function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
   function ProtocolSupportReplyToString(Mask: QWord): string;
   function AddressSpaceToString(AddressSpace: Byte): string;
@@ -435,7 +436,12 @@ begin
     MTI_DATAGRAM_REJECTED_REPLY        : Result := 'Datagram Rejected Reply';
 
     MTI_TRACTION_PROTOCOL              : Result := 'Traction Protocol';
-    MTI_TRACTION_REPLY                 : Result := 'Traction Reply'
+    MTI_TRACTION_REPLY                 : Result := 'Traction Reply';
+    MTI_STREAM_INIT_REQUEST            : Result := 'Stream Init Request';
+    MTI_STREAM_INIT_REPLY              : Result := 'Stream Init Reply';
+    MTI_STREAM_SEND                    : Result := 'Stream Send';
+    MTI_STREAM_PROCEED                 : Result := 'Stream Proceed';
+    MTI_STREAM_COMPLETE                : Result := 'Stream Complete';
    else
     Result := 'Unknown MTI';
   end;
@@ -736,6 +742,14 @@ begin
     Result := Result or (MTI = MTI_DATAGRAM_OK_REPLY) or (MTI = MTI_DATAGRAM_REJECTED_REPLY)
 end;
 
+function IsStreamMTI(MTI: DWord; IncludeSetupTeardowns: Boolean): Boolean;
+begin
+  if IncludeSetupTeardowns then
+    Result := (MTI = MTI_STREAM_SEND) or  (MTI = MTI_STREAM_COMPLETE) or  (MTI = MTI_STREAM_INIT_REPLY) or  (MTI = MTI_STREAM_INIT_REQUEST) or  (MTI = MTI_STREAM_PROCEED)
+  else
+    Result := (MTI = MTI_STREAM_SEND)
+end;
+
 function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
 var
   j, S_Len: Integer;
@@ -770,6 +784,17 @@ begin
       Result := Result + ']  MTI: ' + MTI_ToString(LocalHelper.MTI);
     end else
       Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
+
+    if IsStreamMTI( LocalHelper.MTI, True) then
+    begin
+      case LocalHelper.MTI of
+        MTI_STREAM_INIT_REQUEST            : Result := Result + ' Suggested Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID' + IntToStr(LocalHelper.Data[6]);
+        MTI_STREAM_INIT_REPLY              : Result := Result + ' Negotiated Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID' + IntToStr(LocalHelper.Data[6]) + ' Destination Stream ID' + IntToStr(LocalHelper.Data[7]);
+        MTI_STREAM_SEND                    : begin end;
+        MTI_STREAM_PROCEED                 : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
+        MTI_STREAM_COMPLETE                : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
+      end
+    end;
 
     if LocalHelper.MTI = MTI_OPTIONAL_INTERACTION_REJECTED then
     begin

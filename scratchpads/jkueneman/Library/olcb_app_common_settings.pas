@@ -37,6 +37,7 @@ const
 
   MAX_MESSAGE_WAIT_TIME_DEFAULT = 5000;    // 5 seconds
   MAX_DATAGRAM_WAIT_TIME_DEFAULT = 20000;  // 20 seconds
+  MAX_STREAM_WAIT_TIME_DEFAULT = 20000;
 
 type
   TComPortParity = (
@@ -97,6 +98,7 @@ type
     FMessageWaitTime: DWord;
     FNodeID: string;
     FSendPacketDelay: Word;
+    FStreamWaitTime: DWord;
     procedure SetAliasID(AValue: string);
   public
     constructor Create;
@@ -109,6 +111,7 @@ type
     property DatagramWaitTime: DWord read FDatagramWaitTime write FDatagramWaitTime;
     property NodeID: string read FNodeID write FNodeID;
     property SendPacketDelay: Word read FSendPacketDelay write FSendPacketDelay;
+    property StreamWaitTime: DWord read FStreamWaitTime write FStreamWaitTime;
     property MessageWaitTime: DWord read FMessageWaitTime write FMessageWaitTime;
   end;
 
@@ -219,6 +222,7 @@ begin
   FSendPacketDelay := 0;
   FMessageWaitTime := MAX_MESSAGE_WAIT_TIME_DEFAULT;
   FDatagramWaitTime := MAX_DATAGRAM_WAIT_TIME_DEFAULT;
+  FStreamWaitTime := MAX_STREAM_WAIT_TIME_DEFAULT
 end;
 
 procedure TGeneralSettings.LoadFromFile(IniFile: TIniFile);

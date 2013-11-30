@@ -232,8 +232,7 @@ type
     procedure ActionConfigEditorsShowAllExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadAllWithStreamExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadCDIWithStreamExecute(Sender: TObject);
-    procedure ActionOpenLCBCommandReadConfigurationWithStreamExecute(
-      Sender: TObject);
+    procedure ActionOpenLCBCommandReadConfigurationWithStreamExecute(Sender: TObject);
     procedure ActionOpenLCBCommandReadFDIWithStreamExecute(Sender: TObject);
     procedure ActionShowLoopTimeExecute(Sender: TObject);
     procedure ActionToolsEthernetHubDisconnectExecute(Sender: TObject);

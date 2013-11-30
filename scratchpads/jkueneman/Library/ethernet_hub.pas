@@ -302,6 +302,7 @@ begin
         SyncSendMessageList.Clear;
       end;
 
+      StreamSendManager.ProcessSend;
       DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
       OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
       if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***

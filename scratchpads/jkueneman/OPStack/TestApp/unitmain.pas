@@ -13,6 +13,7 @@ uses
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
   opstackbuffers,
+  olcb_utilities,
   opstacktypes,
   template_node;
 type
@@ -183,8 +184,11 @@ procedure TForm1.ListenerCallback(ReceiveStr: ansistring);
 begin
   if not DisableLogging then
   begin
+    ReceiveStr := Trim(ReceiveStr);
+    while (ReceiveStr[Length(ReceiveStr)] = #10) or (ReceiveStr[Length(ReceiveStr)] = #13) do
+      SetLength(ReceiveStr, Length(ReceiveStr) - 1);
     MemoReceive.Lines.BeginUpdate;
-    MemoReceive.Text := MemoReceive.Text + ReceiveStr;
+    MemoReceive.Text := MemoReceive.Text + MessageToDetailedMessage(ReceiveStr, True) + #13;
     MemoReceive.SelStart := MemoReceive.GetTextLen;
     MemoReceive.SelLength := 0;
     MemoReceive.ScrollBy(0, MemoReceive.Lines.Count);

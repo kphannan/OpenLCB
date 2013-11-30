@@ -274,6 +274,8 @@ type
   TDatagramArray = array[0..MAX_DATAGRAM_LENGTH-1] of Byte;
   PDatagramArray = ^TDatagramArray;
 
+  TStreamArray = array of Byte;
+
   TEventID = array[0..MAX_EVENT_LEN-1] of Byte;
   PEventID = ^TEventID;
 

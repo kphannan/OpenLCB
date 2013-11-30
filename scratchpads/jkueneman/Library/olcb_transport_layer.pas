@@ -38,9 +38,14 @@ type
   TDatagramSendManager    = class;
   TDatagramReceive        = class;
   TDatagramSend           = class;
+  TStreamSend             = class;
+  TStreamBase          = class;
+  TStreamSendManager      = class;
+  TStreamReceiveManager   = class;
 
   TOlcbTaskBeforeDestroy = procedure(Sender: TOlcbTaskBase) of object;
   TDispatchTaskFunc = function(Task: TOlcbTaskBase): Boolean of object;
+  TStreamData = array of byte;
 
   { TAliasTaskContainer }
 
@@ -81,6 +86,8 @@ type
     FOlcbTaskManager: TOlcbTaskEngine;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
     FRunning: Boolean;
+    FStreamReceiveManager: TStreamReceiveManager;
+    FStreamSendManager: TStreamSendManager;
     FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
     FSyncSendMessageFunc: TSyncRawMessageFunc;                                  // Function to callback through Syncronize if EnableSendMessages is true
@@ -102,6 +109,8 @@ type
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager;
     property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
+    property StreamReceiveManager: TStreamReceiveManager read FStreamReceiveManager write FStreamReceiveManager;
+    property StreamSendManager: TStreamSendManager read FStreamSendManager write FStreamSendManager;
     property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
   public
     constructor Create(CreateSuspended: Boolean); virtual;
@@ -348,12 +357,75 @@ type
   end;
 
 
-  TStreamReceive = class( TOlcbMessage)
+  { TStreamBase }
 
+  TStreamBase = class( TOlcbMessage)
+  private
+    FAdditionalFlags: Byte;
+    FCreateTime: DWord;
+    FDestinationAlias: Word;
+    FDestStreamID: Byte;
+    FEmpty: Boolean;
+    FFlags: Byte;
+    FHasUniqueStreamUID: Boolean;
+    FiStateMachine: Word;
+    FLocalHelper: TOpenLCBMessageHelper;
+    FMaxBufferSize: Word;
+    FSourceAlias: Word;
+    FSourceStreamID: Byte;
+    FStream: TMemoryStream;
+    FStreamData: TStreamData;
+    FUniqueStreamUID: DWord;
+  protected
+    property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;   // Global object to work with OLCB messages
+    property CreateTime: DWord read FCreateTime write FCreateTime;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word);
+    destructor Destroy; override;
+    function ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean; virtual; abstract;  // Processes the message/
+    function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean; virtual; abstract;
+    property Empty: Boolean read FEmpty write FEmpty;
+    property MaxBufferSize: Word read FMaxBufferSize write FMaxBufferSize;
+    property Flags: Byte read FFlags write FFlags;
+    property AdditionalFlags: Byte read FAdditionalFlags write FAdditionalFlags;
+    property HasUniqueStreamUID: Boolean read FHasUniqueStreamUID write FHasUniqueStreamUID;
+    property UniqueStreamUID: DWord read FUniqueStreamUID write FUniqueStreamUID;
+    property SourceStreamID: Byte read FSourceStreamID write FSourceStreamID;
+    property DestStreamID: Byte read FDestStreamID write FDestStreamID;
+    property StreamData: TStreamData read FStreamData write FStreamData;
+    property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
+    property SourceAlias: Word read FSourceAlias write FSourceAlias;
+    property iStateMachine: Word read FiStateMachine write FiStateMachine;
+    property Stream: TMemoryStream read FStream write FStream;
   end;
 
-  TStreamReceiveManager = class
+  { TStreamReceive }
 
+  TStreamReceive = class(TStreamBase)
+  public
+    function ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean; override;   // Processes the message/
+    function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean; override;
+  end;
+
+  { TStreamReceiveManager }
+
+  TStreamReceiveManager = class
+  private
+    FMaxCount: Integer;
+    FOwner: TTransportLayerThread;
+    FStreams: TThreadList;
+    v: TThreadList;
+  protected
+    function FindInProcessStreamAndCheckForAbandonStream(AHelper: TOpenLCBMessageHelper): TStreamBase;
+    property Streams: TThreadList read FStreams write v;
+    property Owner: TTransportLayerThread read FOwner write FOwner;
+    property MaxCount: Integer read FMaxCount write FMaxCount;
+  public
+    constructor Create(AnOwner: TTransportLayerThread);
+    destructor Destroy; override;
+    procedure Clear;
+    function ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamBase;
+    function ProcessSend(AHelper: TOpenLCBMessageHelper): TStreamBase;
   end;
 
 { TDatagramSend }
@@ -429,12 +501,38 @@ public
   procedure ProcessSend;
 end;
 
-TStreamSend = class( TOlcbMessage)
+{ TStreamSend }
 
+TStreamSend = class( TStreamBase)
+public
+  function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean; override;
+  function ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean; override;
 end;
 
-TStreamSendManager = class
+{ TStreamSendManager }
 
+TStreamSendManager = class
+private
+  FAbandonStreams: TThreadList;
+  FMaxCount: Integer;
+  FOwner: TTransportLayerThread;
+  FStreams: TThreadList;
+  FTimer: TTimer;
+protected
+protected
+  procedure TimerTick(Sender: TObject);
+  property AbandonStreams: TThreadList read FAbandonStreams write FAbandonStreams;
+  property Streams: TThreadList read FStreams write FStreams;
+  property MaxCount: Integer read FMaxCount write FMaxCount;
+  property Owner: TTransportLayerThread read FOwner write FOwner;
+  property Timer: TTimer read FTimer write FTimer;
+public
+  constructor Create(AnOwner: TTransportLayerThread);
+  destructor Destroy; override;
+  procedure Clear;
+  procedure ClearAbandon;
+  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamSend;
+  procedure ProcessSend;
 end;
 
 { TOlcbTaskBase }
@@ -469,7 +567,7 @@ end;
     function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
     function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
     function IsStreamInitializationRequest(MessageInfo: TOlcbMessage): Boolean;
-    function IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TStreamReceive): Boolean;
+    function IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TStreamBase): Boolean;
     function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
@@ -1012,23 +1110,337 @@ var
 implementation
 
 var
-  DestID, SourceID: Byte;
+  DestStreamIdPool, SourceStreamIdPool: Byte;
 
 function GenerateDestID: Byte;
 begin
-  if DestID = 0 then
-    Inc(DestID);
-  Result := DestID;
-  Inc(DestID);
+  if DestStreamIdPool = 0 then
+    Inc(DestStreamIdPool);
+  Result := DestStreamIdPool;
+  Inc(DestStreamIdPool);
 end;
 
 function GenerateSourceID: Byte;
 begin
-  if SourceID = 0 then
-    Inc(SourceID);
-  Result := SourceID;
-  Inc(SourceID);
+  if SourceStreamIdPool = 0 then
+    Inc(SourceStreamIdPool);
+  Result := SourceStreamIdPool;
+  Inc(SourceStreamIdPool);
 end;
+
+{ TStreamReceive }
+
+function TStreamReceive.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
+var
+  LocalFlags: Byte;
+  LocalAdditionalFlags: Byte;
+begin
+  Result := False;
+  case iStateMachine of
+    0: begin
+         case AHelper.MTI of
+           MTI_STREAM_INIT_REQUEST :     // Another node is initiating a stream request
+           begin
+             MaxBufferSize := (AHelper.Data[2] shl 8) or AHelper.Data[3];
+             Flags := AHelper.Data[4];
+             AdditionalFlags := AHelper.Data[5];
+             SourceStreamID := AHelper.Data[6];
+             HasUniqueStreamUID := Flags and STREAM_REPLY_CONTENT_TYPE <> 0;
+
+             if HasUniqueStreamUID then
+               LocalFlags := STREAM_REPLY_CONTENT_TYPE
+             else
+               LocalFlags := 0;
+             LocalAdditionalFlags := 0;
+             DestStreamID := GenerateDestID;
+             LocalHelper.Load(ol_OpenLCB, MTI_STREAM_INIT_REPLY, AHelper.DestinationAliasID, AHelper.SourceAliasID, 8, 0, 0, Hi( MaxBufferSize), Lo( MaxBufferSize), LocalFlags, LocalAdditionalFlags, SourceStreamID, DestStreamID);
+             TransportLayerThread.InternalAdd(LocalHelper.Encode);
+             Inc(FiStateMachine);
+           end;
+         end  // Case
+       end;
+     1: begin
+          case AHelper.MTI of
+             MTI_STREAM_SEND :
+                begin
+                  SetLength(FStreamData, MaxBufferSize + Length(FStreamData));  // We can handle anything the node can throw at us
+                end;
+             MTI_STREAM_COMPLETE :
+                begin
+                  Empty := False;
+                  iStateMachine := STATE_DONE;
+                end;
+          end;
+          // Wait for some data
+        end;
+     2: begin
+           LocalFlags := 0;
+           LocalAdditionalFlags := 0;
+           DestStreamID := GenerateDestID;
+           LocalHelper.Load(ol_OpenLCB, MTI_STREAM_PROCEED, AHelper.DestinationAliasID, AHelper.SourceAliasID, 6, 0, 0, SourceStreamID, DestStreamID, LocalFlags, LocalAdditionalFlags, 0, 0);
+           TransportLayerThread.InternalAdd(LocalHelper.Encode);
+           iStateMachine := 1;  // Get somemore data
+        end;
+
+  end;
+end;
+
+function TStreamReceive.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+begin
+  Result := False
+end;
+
+{ TStreamSend }
+
+function TStreamSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+begin
+  Result := False;
+end;
+
+function TStreamSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
+begin
+  Result := False;
+
+end;
+
+
+{ TStreamSendManager }
+
+procedure TStreamSendManager.TimerTick(Sender: TObject);
+begin
+
+end;
+
+constructor TStreamSendManager.Create(AnOwner: TTransportLayerThread);
+begin
+  inherited Create;
+  FStreams := TThreadList.Create;
+  FAbandonStreams := TThreadList.Create;
+  FOwner := AnOwner;
+  Timer := TTimer.Create(nil);
+  Timer.Interval := 500;         // Every 500m seconds
+  Timer.OnTimer := @TimerTick;
+  Timer.Enabled := True;
+  FMaxCount := 0;
+end;
+
+destructor TStreamSendManager.Destroy;
+begin
+  Clear;
+  FreeAndNil(FStreams);
+  ClearAbandon;
+  FreeAndNil(FAbandonStreams);
+  FreeAndNil(FTimer);
+  inherited Destroy;
+end;
+
+procedure TStreamSendManager.Clear;
+var
+  i: Integer;
+  List: TList;
+begin
+  List := Streams.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+  finally
+    List.Clear;
+    Streams.UnlockList;
+  end;
+end;
+
+procedure TStreamSendManager.ClearAbandon;
+var
+  i: Integer;
+  List: TList;
+begin
+  List := AbandonStreams.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+  finally
+    List.Clear;
+    AbandonStreams.UnlockList;
+  end;
+end;
+
+function TStreamSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamSend;
+var
+  Stream: TStreamSend;
+  List: TList;
+  i: Integer;
+  Done: Boolean;
+begin
+  Result := nil;
+  List := Streams.LockList;
+  try
+    i := 0;
+    Done := False;
+    while (i < List.Count) and not Done do
+    begin
+      Stream := TStreamSend( List[i]);
+      if Stream.ProcessReceive(AHelper, Owner) then
+      begin
+        Done := True;
+        if Stream.Empty then
+        begin
+          List.Remove(Stream);
+          Result := Stream;
+        end;
+      end;
+      Inc(i);
+    end;
+  finally
+    Streams.UnlockList;
+  end;
+end;
+
+procedure TStreamSendManager.ProcessSend;
+var
+  Stream: TStreamSend;
+  List: TList;
+  i: Integer;
+  Done: Boolean;
+begin
+  List := Streams.LockList;
+  try
+    i := 0;
+    Done := False;
+    while (i < List.Count) and not Done do
+    begin
+      Stream := TStreamSend( List[i]);
+      Done := Stream.ProcessSend(Owner);
+      Inc(i);
+    end;
+  finally
+    Streams.UnlockList;
+  end;
+end;
+
+{ TStreamReceiveManager }
+
+function TStreamReceiveManager.FindInProcessStreamAndCheckForAbandonStream(AHelper: TOpenLCBMessageHelper): TStreamBase;
+//
+// Searches an in process stream interaction between the nodes in the message
+//
+var
+  i: Integer;
+  List: TList;
+  Stream: TStreamBase;
+begin
+  Result := nil;
+  List := Streams.LockList;
+  try
+    for i := List.Count-1 downto 0 do    // So we can delete abandon items from the top of the list
+    begin
+      Stream := TStreamBase( List[i]);
+      if Stream.Empty and (Stream.DestinationAlias = AHelper.SourceAliasID) and (Stream.SourceAlias = AHelper.DestinationAliasID) then
+        Result := Stream;
+
+      if Stream.CreateTime + GlobalSettings.General.StreamWaitTime > GetTickCount then
+      begin
+        // Abandon Stream
+    //    Stream.Free;
+   //     List.Delete(i);
+      end;
+    end;
+  finally
+    Streams.UnlockList;
+  end;
+
+end;
+
+constructor TStreamReceiveManager.Create(AnOwner: TTransportLayerThread);
+begin
+  inherited Create;
+  FOwner := AnOwner;
+  FStreams := TThreadList.Create;
+  FMaxCount := 0;
+end;
+
+destructor TStreamReceiveManager.Destroy;
+begin
+  Clear;
+  FreeAndNil(FStreams);
+  inherited Destroy;
+end;
+
+procedure TStreamReceiveManager.Clear;
+var
+  i: Integer;
+  List: TList;
+begin
+  List := Streams.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+  finally
+    List.Clear;
+    Streams.UnlockList;
+  end;
+end;
+
+function TStreamReceiveManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamBase;
+var
+  TestStream: TStreamBase;
+  List: TList;
+begin
+  Result := nil;
+  if IsStreamMTI(AHelper.MTI, True) then
+  begin
+    TestStream := FindInProcessStreamAndCheckForAbandonStream(AHelper);
+    if not Assigned(TestStream) then
+    begin
+      TestStream := TStreamBase.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
+      Streams.Add(TestStream);
+      List := Streams.LockList;
+      if List.Count > MaxCount then
+        MaxCount := List.Count;
+      Streams.UnlockList;
+    end;
+    TestStream.ProcessReceive(AHelper, Owner);
+    if not TestStream.Empty then
+    begin
+      Streams.Remove(TestStream);
+      Result := TestStream
+    end;
+  end;
+end;
+
+function TStreamReceiveManager.ProcessSend(AHelper: TOpenLCBMessageHelper): TStreamBase;
+begin
+
+end;
+
+{ TStreamBase }
+
+constructor TStreamBase.Create(ASourceAlias, ADestinationAlias: Word);
+begin
+  inherited Create;
+  FLocalHelper := TOpenLCBMessageHelper.Create;
+  FStream := TMemoryStream.Create;
+  FAdditionalFlags := 0;
+  FCreateTime :=   GetTickCount;
+  FDestinationAlias := ADestinationAlias;
+  FDestStreamID := 0;
+  FEmpty := True;
+  FFlags := 0;
+  FHasUniqueStreamUID := False;
+  FMaxBufferSize := 0;
+  FSourceAlias := ASourceAlias;
+  FSourceStreamID := 0;
+  FStreamData := nil;
+  FUniqueStreamUID := 0;
+  FiStateMachine := 0;
+end;
+
+destructor TStreamBase.Destroy;
+begin
+  FreeAndNil(FLocalHelper);
+  FreeAndNil(FStream);
+  inherited Destroy;
+end;
+
 
 { TBaseAddressSpaceMemoryWithDatagramTask }
 
@@ -1302,7 +1714,7 @@ const
   STATE_WRITE_START = 20;
 var
   DatagramReceive: TDatagramReceive;
-  StreamReceive: TStreamReceive;
+  StreamReceive: TStreamBase;
   PIP: TOlcbProtocolIdentification;
   Space: TOlcbMemAddressSpace;
   Options: TOlcbMemOptions;
@@ -1593,6 +2005,8 @@ var
   InitializationCompleteTask: TInitializationCompleteTask;
   CompletedSendDatagram: TDatagramSend;
   BufferDatagramReceive: TDatagramReceive;
+  CompletedSendStream: TStreamSend;
+  BufferStreamReceive: TStreamBase;
 begin
   ReceiveStr := Trim(ReceiveStr);
   if Helper.Decompose(ReceiveStr) then
@@ -1623,6 +2037,23 @@ begin
         end;
       end;
     end else                                                              // *** Test for a Datagram message that came in ***
+    if IsStreamMTI(Helper.MTI, True) then
+    begin
+      CompletedSendStream := StreamSendManager.ProcessReceive(Helper);          // Sending Streams are expecting replies from their destination Nodes
+      if Assigned(CompletedSendStream) then
+      begin
+        OlcbTaskManager.ProcessReceiving(CompletedSendStream);                  // Give the Task subsystem a crack at knowning about the sent Stream
+        FreeAndNil(CompletedSendStream)
+      end else
+      begin
+        BufferStreamReceive := StreamReceiveManager.ProcessReceive(Helper);            // Stream object is created and given to the thread
+        if Assigned(BufferStreamReceive) then
+        begin
+          OlcbTaskManager.ProcessReceiving(BufferStreamReceive);                // Give the Task subsystem a crack at knowning about the received Stream
+          FreeAndNil(BufferStreamReceive)
+        end;
+      end;
+    end else
       OlcbTaskManager.ProcessReceiving(Helper);
 
     if Helper.Layer = ol_CAN then
@@ -1715,6 +2146,8 @@ begin
   FThreadListSendStrings := TThreadList.Create;
   FDatagramReceiveManager := TDatagramReceiveManager.Create(Self);
   FDatagramSendManager := TDatagramSendManager.Create(Self);
+  FStreamReceiveManager := TStreamReceiveManager.Create(Self);
+  FStreamSendManager := TStreamSendManager.Create(Self);
   FOlcbTaskManager := TOlcbTaskEngine.Create(Self);
   FAliasList := TAliasTaskContainerList.Create;
   FTerminateComplete := False;
@@ -1742,6 +2175,10 @@ begin
   FreeAndNil(FDatagramReceiveManager);
   DatagramSendManager.Clear;
   FreeAndNil(FDatagramSendManager);
+  StreamReceiveManager.Clear;
+  FreeAndNil(FStreamReceiveManager);
+  StreamSendManager.Clear;
+  FreeAndNil(FStreamSendManager);
   FreeAndNil(FAliasList);
   inherited Destroy;
 end;
@@ -2544,7 +2981,6 @@ end;
 // *****************************************************************************
 procedure TDatagramSend.Initialize(AStream: TStream; AProtocolHeader: TCANByteArray; AProtocolHeaderLen: Byte; ASourceAlias, ADestinationAlias: Word);
 begin
-  Stream.Position := 0;
   if Assigned(AStream) then
   begin
     Assert(AStream.Size > 64 - Int64( AProtocolHeaderLen), 'Stream in Datagram Send too long, 64 bytes max');
@@ -2965,7 +3401,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TStreamReceive): Boolean;
+function TOlcbTaskBase.IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TStreamBase): Boolean;
 begin
   Result := False
 end;
@@ -4887,8 +5323,8 @@ end;
 initialization
   TaskObjects := 0;
   LoopTime := 0;
-  DestID := 0;
-  SourceID := 0;
+  DestStreamIdPool := 0;
+  SourceStreamIdPool := 0;
 
 
 finalization

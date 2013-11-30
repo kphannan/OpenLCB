@@ -642,7 +642,7 @@ begin
         Socket.SendString(SendString);
         if Assigned(Callback) then
         begin
-          SendString := 'Sent: ' + SendString;
+          SendString := SendString;
           Synchronize(@Synchronizer);
         end;
       end;
@@ -752,7 +752,7 @@ begin
       SetLength(Str, StringLen);
       Str := GridConnectStrPtr^;
       if Assigned(Callback) then
-        Callback('Received: ' + GridConnectStrPtr^ + LF)
+        Callback(GridConnectStrPtr^ + LF)
     end
   end;
 end;

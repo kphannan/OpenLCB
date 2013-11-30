@@ -146,7 +146,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\AppLayerTemplates"/>
-      <OtherUnitFiles Value="..\NMRAnet;..\AppLayerTemplates;..\HardwareLayerImplementations;..\..\Components\synapse40\source\lib;..\Common"/>
+      <OtherUnitFiles Value="..\NMRAnet;..\AppLayerTemplates;..\HardwareLayerImplementations;..\..\Components\synapse40\source\lib;..\Common;..\..\Library"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then
