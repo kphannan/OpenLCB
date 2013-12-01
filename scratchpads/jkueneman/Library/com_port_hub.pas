@@ -62,7 +62,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function AddTask(NewTask: TOlcbTaskBase): Boolean;
+    function AddTask(NewTask: TTaskOlcbBase): Boolean;
     function AddComPort(BaudRate: DWord; Port: String): TComPortThread;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
     procedure RemoveComPort(ComPort: TComPortThread);
@@ -172,7 +172,7 @@ begin
   inherited Destroy
 end;
 
-function TComPortHub.AddTask(NewTask: TOlcbTaskBase): Boolean;
+function TComPortHub.AddTask(NewTask: TTaskOlcbBase): Boolean;
 var
   List: TList;
   i: Integer;
@@ -271,8 +271,8 @@ var
   List: TList;
   SendStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
-  TractionProtocolTask: TTractionProtocolTask;
-  InitializationCompleteTask: TInitializationCompleteTask;
+  TractionProtocolTask: TTaskTractionProtocol;
+  InitializationCompleteTask: TTaskInitializationComplete;
 begin
   ExecuteBegin;
   Helper := TOpenLCBMessageHelper.Create;
@@ -303,7 +303,8 @@ begin
           ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
         end;
 
-        DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
+        CANFrameParserDatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
+        CANFrameParserStreamSendManager.ProcessSend;
         OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
         if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
         begin

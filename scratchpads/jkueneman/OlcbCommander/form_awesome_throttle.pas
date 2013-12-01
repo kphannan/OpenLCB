@@ -217,7 +217,7 @@ type
     procedure HandleGeneralTimerResults;
     function IsForward: Boolean;
     function IsShortAddress: Boolean;
-    procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+    procedure OnBeforeDestroyTask(Sender: TTaskOlcbBase);
     procedure ToggleTagOnComponent(Sender: TComponent);
     procedure UpdateAddressRange;
     procedure UpdateFunctionsClearControls;
@@ -239,7 +239,7 @@ type
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
     property WaitingActions: TThrottleWaitingActions read FWaitingActions write FWaitingActions;
-    procedure EventTaskReceived(EventTask: TEventTask);
+    procedure EventTaskReceived(EventTask: TTaskOlcbBase);
     procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
     procedure UpdateUI;
   end;
@@ -638,7 +638,7 @@ procedure TFormAwesomeThrottle.RunWriteFdiFile(AliasID: Word; FileName: string);
 var
   FileStream: TFileStream;
   MemStream, BufferStream: TMemoryStream;
-  Task: TWriteAddressSpaceMemoryRawTask;
+  Task: TTaskAddressSpaceMemoryWriteRawWithDatagram;
   i, Offset: Integer;
   b: Byte;
   StartFDI: Integer;
@@ -681,7 +681,7 @@ begin
             while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
               BufferStream.WriteByte( MemStream.ReadByte);
 
-            Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, Offset, BufferStream);
+            Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_FDI, Offset, BufferStream);
             if MemStream.Position >= MemStream.Size then
             Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
             DispatchTask(Task);
@@ -700,18 +700,18 @@ end;
 
 procedure TFormAwesomeThrottle.RunProtocolSupport(AliasID: Word);
 var
-  Task: TProtocolSupportTask;
+  Task: TTaskProtocolSupport;
 begin
-  Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+  Task := TTaskProtocolSupport.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
 var
-  Task: TReadAddressSpaceMemoryTask;
+  Task: TTaskAddressSpaceMemoryReadWithDatagram;
 begin
-  Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace, False);
+  Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(GlobalSettings.General.AliasIDAsVal,AliasID, True, AddressSpace, False);
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
@@ -719,9 +719,9 @@ end;
 
 procedure TFormAwesomeThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpace: Byte; StartAddress, ByteCount: DWord);
 var
-  Task: TReadAddressSpaceMemoryRawTask;
+  Task: TTaskAddressSpaceMemoryReadRawWithDatagram;
 begin
-  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
+  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
@@ -729,7 +729,7 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
 var
-  Task: TTractionReserveAndAttachDccProxyTask;
+  Task: TTaskTractionReserveAndAttachDccProxy;
   SpeedStep: Byte;
 begin
   case RadioGroupSpeedStep.ItemIndex of
@@ -739,7 +739,7 @@ begin
   else
     SpeedStep := SPEEDSTEP_DEFAULT;
   end;
-  Task := TTractionReserveAndAttachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
+  Task := TTaskTractionReserveAndAttachDccProxy.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   if DispatchTask(Task) then
   begin
@@ -752,9 +752,9 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
 var
-  Task: TTractionReserveAndDetachDccProxyTask;
+  Task: TTaskTractionReserveAndDetachDccProxy;
 begin
-  Task := TTractionReserveAndDetachDccProxyTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
+  Task := TTaskTractionReserveAndDetachDccProxy.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   if DispatchTask(Task) then
   begin
@@ -767,9 +767,9 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionQueryDccAddress(WaitTime: Cardinal);
 var
-  Task: TTractionQueryDccAddressProxyTask;
+  Task: TTaskTractionQueryDccAddressProxy;
 begin
-  Task := TTractionQueryDccAddressProxyTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True, SpinEditAddress.Value, IsShortAddress);
+  Task := TTaskTractionQueryDccAddressProxy.Create(GlobalSettings.General.AliasIDAsVal, 0, True, SpinEditAddress.Value, IsShortAddress);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   if DispatchTask(Task) then
   begin
@@ -782,9 +782,9 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionQueryIsIdle(WaitTime: Cardinal);
 var
-  Task: TIdentifyProducerTask;
+  Task: TTaskIdentifyProducer;
 begin
-  Task := TIdentifyProducerTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
+  Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   if DispatchTask(Task) then
   begin
@@ -797,7 +797,7 @@ end;
 
 procedure TFormAwesomeThrottle.RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
 var
-  Task: TTractionSpeedTask;
+  Task: TTaskTractionSpeed;
   Speed: single;
   CalculatedSpeed: THalfFloat;
 begin
@@ -805,34 +805,34 @@ begin
   if not IsForward then
     Speed := -Speed;
   CalculatedSpeed := FloatToHalf( Speed);
-  Task := TTractionSpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, CalculatedSpeed, EmergencyStop);
+  Task := TTaskTractionSpeed.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, CalculatedSpeed, EmergencyStop);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
 var
-  Task: TTractionFunctionTask;
+  Task: TTaskTractionFunction;
 begin
-  Task := TTractionFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address, Value);
+  Task := TTaskTractionFunction.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address, Value);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionQueryFunctions(AliasID: Word; Address: DWord);
 var
-  Task: TTractionQueryFunctionTask;
+  Task: TTaskTractionQueryFunction;
 begin
-  Task := TTractionQueryFunctionTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address);
+  Task := TTaskTractionQueryFunction.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, Address);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormAwesomeThrottle.RunTractionQuerySpeed(AliasID: Word);
 var
-  Task: TTractionQuerySpeedTask;
+  Task: TTaskTractionQuerySpeed;
 begin
-  Task := TTractionQuerySpeedTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+  Task := TTaskTractionQuerySpeed.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
@@ -982,63 +982,63 @@ begin
   Result := RadioGroupShortLong.ItemIndex = 0;
 end;
 
-procedure TFormAwesomeThrottle.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+procedure TFormAwesomeThrottle.OnBeforeDestroyTask(Sender: TTaskOlcbBase);
 begin
-  if Sender is TWriteAddressSpaceMemoryRawTask then
+  if Sender is TTaskAddressSpaceMemoryWriteRawWithDatagram then
   begin
 
   end else
-  if Sender is TReadAddressSpaceMemoryRawTask then
+  if Sender is TTaskAddressSpaceMemoryReadRawWithDatagram then
   begin
 
   end else
-  if Sender is TProtocolSupportTask then
+  if Sender is TTaskProtocolSupport then
   begin
 
   end else
-  if Sender is TTractionReserveAndAttachDccProxyTask then
+  if Sender is TTaskTractionReserveAndAttachDccProxy then
   begin
     // Looking for the DCC Address Attach Result from our Allocated Alias and the correct Address, if found handle here and drop only errors to the General Timer
-    if PotentialAlias = TTractionReserveAndAttachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
+    if PotentialAlias = TTaskTractionReserveAndAttachDccProxy( Sender).MessageHelper.DestinationAliasID then
     begin
       TimerGeneralTimeout.Enabled := False;   // Done
       WaitTimeTask := gwttNone;
       AliasList.Clear;
-      if TTractionReserveAndAttachDccProxyTask( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
+      if TTaskTractionReserveAndAttachDccProxy( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
       begin
-        AliasList.Add( Pointer( TTractionReserveAndAttachDccProxyTask( Sender).MessageHelper.SourceAliasID));
+        AliasList.Add( Pointer( TTaskTractionReserveAndAttachDccProxy( Sender).MessageHelper.SourceAliasID));
         AllocatedAlias := PotentialAlias;
         Allocated := True;
         UpdateUI;
       end else
       begin
-        ShowMessage('Error Code: ' + IntToStr(TTractionReserveAndAttachDccProxyTask( Sender).ReplyCode) + ': Unable to Attach the DCC Address: ' + IntToStr(TTractionReserveAndAttachDccProxyTask( Sender).ReplyCode));
+        ShowMessage('Error Code: ' + IntToStr(TTaskTractionReserveAndAttachDccProxy( Sender).ReplyCode) + ': Unable to Attach the DCC Address: ' + IntToStr(TTaskTractionReserveAndAttachDccProxy( Sender).ReplyCode));
         AllocatedAlias := 0;
         Allocated := False;
         UpdateUI;
       end;
     end;
   end else
-  if Sender is TTractionReserveAndDetachDccProxyTask then
+  if Sender is TTaskTractionReserveAndDetachDccProxy then
   begin
     // Looking for our Allocated Alias and Events that show it is now not allocated
-    if AllocatedAlias = TTractionReserveAndDetachDccProxyTask( Sender).MessageHelper.DestinationAliasID then
+    if AllocatedAlias = TTaskTractionReserveAndDetachDccProxy( Sender).MessageHelper.DestinationAliasID then
     begin
       TimerGeneralTimeout.Enabled := False;   // Done
       WaitTimeTask := gwttNone;
       AliasList.Clear;
-      if TTractionReserveAndDetachDccProxyTask( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
+      if TTaskTractionReserveAndDetachDccProxy( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
       begin
         Allocated := False;
         AllocatedAlias := 0;
         UpdateUI;
       end else
       begin
-        ShowMessage('Error Code: ' + IntToStr(TTractionReserveAndDetachDccProxyTask( Sender).ReplyCode) + ': Unable to detach the DCC Address: ' + IntToStr(TTractionReserveAndDetachDccProxyTask( Sender).ReplyAddress));
+        ShowMessage('Error Code: ' + IntToStr(TTaskTractionReserveAndDetachDccProxy( Sender).ReplyCode) + ': Unable to detach the DCC Address: ' + IntToStr(TTaskTractionReserveAndDetachDccProxy( Sender).ReplyAddress));
       end;
     end
   end else
-  if Sender is TTractionQueryDccAddressProxyTask then
+  if Sender is TTaskTractionQueryDccAddressProxy then
   begin
 
   end;
@@ -1181,7 +1181,7 @@ begin
   end;
 end;
 
-procedure TFormAwesomeThrottle.EventTaskReceived(EventTask: TEventTask);
+procedure TFormAwesomeThrottle.EventTaskReceived(EventTask: TTaskOlcbBase);
 
     procedure ValidateDccAddressEvent(Event: TEventID; MatchAllocatedAlias: Boolean);
     var

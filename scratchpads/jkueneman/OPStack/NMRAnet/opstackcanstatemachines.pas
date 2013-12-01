@@ -35,7 +35,7 @@ function OPStackCANStateMachine_RootOutgoingDatagramStack: POPStackMessage;
 {$IFDEF SUPPORT_STREAMS}
 procedure OPStackCANStatemachine_ProcessOutgoingStreamMessage;
 procedure OPStackCANStatemachine_AddOutgoingStreamMessage(OPStackStreamMessage: POPStackMessage);
-function OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceID, DestID: Byte; iStateMachine: Byte): POPStackMessage;
+function OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte; iStateMachine: Byte): POPStackMessage;
 procedure OPStackCANStatemachine_RemoveStreamDatagramMessage(OPStackStreamMessage: POPStackMessage);
 function OPStackCANStateMachine_RootOutgoingStreamStack: POPStackMessage;
 {$ENDIF}
@@ -561,7 +561,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceID, DestID: Byte; iStateMachine: Byte): POPStackMessage;
+function OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte; iStateMachine: Byte): POPStackMessage;
 var
   LocalStack: POPStackMessage;
 begin
@@ -570,8 +570,8 @@ begin
   while LocalStack <> nil do
   begin
     if (LocalStack^.Dest.AliasID = DestNodeAlias) then
-      if (PStreamBuffer( PByte( LocalStack^.Buffer))^.DestID = DestID) then
-        if (PStreamBuffer( PByte( LocalStack^.Buffer))^.SourceID = SourceID) then
+      if (PStreamBuffer( PByte( LocalStack^.Buffer))^.DestStreamID = DestStreamID) then
+        if (PStreamBuffer( PByte( LocalStack^.Buffer))^.SourceStreamID = SourceStreamID) then
         if (PStreamBuffer( PByte( LocalStack^.Buffer))^.iStateMachine = iStateMachine) then
         begin
           Result := LocalStack;

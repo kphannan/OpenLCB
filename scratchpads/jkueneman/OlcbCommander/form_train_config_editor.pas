@@ -77,7 +77,7 @@ type
     function FindScrollBox(Page: TTabSheet): TScrollBox;
     function FindControlPageAndIndex(Control: TControl; var iPage: Word; var iControl: Word): Boolean;
     function FindControlByPageAndIndex(var Control: TControl; iPage, iControl: Word): Boolean;
-    procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+    procedure OnBeforeDestroyTask(Sender: TTaskOlcbBase);
     procedure OnSpeedButtonReadConfigClickCallback(Sender: TObject);
     procedure OnSpeedButtonWriteConfigClickCallback(Sender: TObject);
     procedure ReadConfiguration;
@@ -90,8 +90,8 @@ type
     procedure WriteConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
     procedure WriteConfigurationSpinEdit(Edit: TOlcbSpinEdit; iPage, iControl: Word);
     procedure WriteConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
-    procedure QueueConfigWriteTask(Task: TOlcbTaskBase);
-    procedure QueueConfigReadTask(Task: TOlcbTaskBase);
+    procedure QueueConfigWriteTask(Task: TTaskOlcbBase);
+    procedure QueueConfigReadTask(Task: TTaskOlcbBase);
     procedure UpdateUI;
 
     property CdiParser: TCdiParser read FCdiParser write FCdiParser;
@@ -281,11 +281,11 @@ end;
 
 procedure TFormTrainConfigEditor.FormShow(Sender: TObject);
 var
-  Task: TReadAddressSpaceMemoryTask;
+  Task: TTaskAddressSpaceMemoryReadWithDatagram;
 begin
   if Assigned(ComPortHub) and not ShownOnce then
   begin
-    Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CDI, True);
+    Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CDI, True);
     Task.RemoveKey := PtrInt( Self);
     Task.Terminator := #0;
     Task.ForceOptionalSpaceByte := False;
@@ -319,9 +319,9 @@ begin
   end;
 end;
 
-procedure TFormTrainConfigEditor.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+procedure TFormTrainConfigEditor.OnBeforeDestroyTask(Sender: TTaskOlcbBase);
 var
-  MemTask: TReadAddressSpaceMemoryTask;
+  MemTask: TTaskAddressSpaceMemoryReadWithDatagram;
   ADoc: TXMLDocument;
   iPage, iControl: Integer;
   Control: TControl;
@@ -334,10 +334,10 @@ begin
   try
     if not Sender.ForceTermination then
     begin
-      if Sender is TReadAddressSpaceMemoryTask then
+      if Sender is TTaskAddressSpaceMemoryReadWithDatagram then
       begin
         // This is the CDI read result
-        MemTask := TReadAddressSpaceMemoryTask(Sender);
+        MemTask := TTaskAddressSpaceMemoryReadWithDatagram(Sender);
         if MemTask.DataStream.Size > 1 then
         begin
           Done := False;
@@ -364,11 +364,11 @@ begin
           FreeAndNil(ADoc);
         end
       end else
-      if Sender is TReadAddressSpaceMemoryRawTask then
+      if Sender is TTaskAddressSpaceMemoryReadRawWithDatagram then
       begin
-        if TReadAddressSpaceMemoryRawTask(Sender).ErrorCode <> 0 then
+        if TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).ErrorCode <> 0 then
         begin
-          ShowMessage('Error Code: ' + IntToHex(TReadAddressSpaceMemoryRawTask(Sender).ErrorCode, 4) + #13 + #10 + TReadAddressSpaceMemoryRawTask(Sender).ErrorString);
+          ShowMessage('Error Code: ' + IntToHex(TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).ErrorCode, 4) + #13 + #10 + TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).ErrorString);
         end else
         begin
           // This is a configuration read request
@@ -388,7 +388,7 @@ begin
                   if Control = Sender.OwnerControl then
                   begin
                     // Whew, success
-                    TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                    TaskStream := TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).Stream;
                     TaskStream.Position := 0;
                     case (Control as TOlcbEdit).ConfigInfo.DataType of
                       cdt_EventID : begin
@@ -418,7 +418,7 @@ begin
                    if Control = Sender.OwnerControl then
                   begin
                     // Whew, success
-                    TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                    TaskStream := TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).Stream;
                     TaskStream.Position := 0;
                     case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
                       cdt_Int     : begin
@@ -440,7 +440,7 @@ begin
                   if Control = Sender.OwnerControl then
                   begin
                     // Whew, success
-                    TaskStream := TReadAddressSpaceMemoryRawTask(Sender).Stream;
+                    TaskStream := TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).Stream;
                     TaskStream.Position := 0;
                     case (Control as TOlcbComboBox).ConfigInfo.DataType of
                       cdt_Int,
@@ -473,14 +473,14 @@ begin
           end;
           if ConfigReadTaskQueue.Count > 0 then
           begin
-            DispatchTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
+            DispatchTask( TTaskOlcbBase( ConfigReadTaskQueue[0]));
             ConfigReadTaskQueue.Delete(0);
           end else
             ConfigReadTaskRunning := False;
           UpdateUI
         end
       end else
-      if Sender is TWriteAddressSpaceMemoryRawTask then
+      if Sender is TTaskAddressSpaceMemoryWriteRawWithDatagram then
       begin
         // This is a configuration write request
         iPage := Sender.Tag and $FFFF;
@@ -505,7 +505,7 @@ begin
         // Writes must be serialize as the micro may not keep up as some will "freeze" when they write EEPROM
         if ConfigWriteTaskQueue.Count > 0 then
         begin
-          DispatchTask( TOlcbTaskBase( ConfigReadTaskQueue[0]));
+          DispatchTask( TTaskOlcbBase( ConfigReadTaskQueue[0]));
           ConfigWriteTaskQueue.Delete(0);
         end else
           ConfigWriteTaskRunning := False;
@@ -611,9 +611,9 @@ end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
 var
-  Task: TOlcbTaskBase;
+  Task: TTaskOlcbBase;
 begin
-  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
+  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   Task.Tag := iPage or (iControl shl 16);
   Task.RemoveKey := PtrInt( Self);
@@ -623,9 +623,9 @@ end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationSpinEdit(Edit: TOlcbSpinEdit; iPage, iControl: Word);
 var
-  Task: TOlcbTaskBase;
+  Task: TTaskOlcbBase;
 begin
-  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
+  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   Task.Tag := iPage or (iControl shl 16);
   Task.RemoveKey := PtrInt( Self);
@@ -635,9 +635,9 @@ end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
 var
-  Task: TOlcbTaskBase;
+  Task: TTaskOlcbBase;
 begin
-  Task := TReadAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
+  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   Task.Tag := iPage or (iControl shl 16);
   Task.RemoveKey := PtrInt( Self);
@@ -651,7 +651,7 @@ var
   i: Integer;
   EventID: TEventID;
   HexArray: THexArray;
-  Task: TOlcbTaskBase;
+  Task: TTaskOlcbBase;
 begin
   Stream := TMemoryStream.Create;
   try
@@ -681,7 +681,7 @@ begin
       cdt_Bit     : begin
                     end;
     end;
-    Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
+    Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     Task.Tag := iPage or (iControl shl 16);
     Task.RemoveKey := PtrInt( Self);
@@ -697,7 +697,7 @@ var
   Stream: TMemoryStream;
   i: Integer;
   HexArray: THexArray;
-  Task: TOlcbTaskBase;
+  Task: TTaskOlcbBase;
 begin
   Stream := TMemoryStream.Create;
   try
@@ -713,7 +713,7 @@ begin
                        // TODO
                     end;
     end;
-    Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
+    Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
     Task.Tag := iPage or (iControl shl 16);
     Task.RemoveKey := PtrInt( Self);
@@ -731,7 +731,7 @@ var
   Relation: TMapRelation;
   EventID: TEventID;
   HexArray: THexArray;
-  Task: TOlcbTaskBase;
+  Task: TTaskOlcbBase;
 begin
   iComboBox := Edit.ItemIndex;
   if iComboBox > -1 then
@@ -776,7 +776,7 @@ begin
                         // TODO
                       end;
       end;
-      Task := TWriteAddressSpaceMemoryRawTask.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
+      Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
       Task.OnBeforeDestroy := @OnBeforeDestroyTask;
       Task.Tag := iPage or (iControl shl 16);
       Task.RemoveKey := PtrInt( Self);
@@ -823,7 +823,7 @@ begin
   end;
 end;
 
-procedure TFormTrainConfigEditor.QueueConfigWriteTask(Task: TOlcbTaskBase);
+procedure TFormTrainConfigEditor.QueueConfigWriteTask(Task: TTaskOlcbBase);
 begin
   if ConfigWriteTaskRunning then
     ConfigWriteTaskQueue.Add(Task)        // Need to allow node to finish write and send the ACK before sending next
@@ -833,7 +833,7 @@ begin
   end;
 end;
 
-procedure TFormTrainConfigEditor.QueueConfigReadTask(Task: TOlcbTaskBase);
+procedure TFormTrainConfigEditor.QueueConfigReadTask(Task: TTaskOlcbBase);
 begin
   if ConfigReadTaskRunning then
     ConfigReadTaskQueue.Add(Task)        // Need to allow node to finish read and send the ACK before sending next

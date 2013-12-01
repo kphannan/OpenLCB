@@ -496,8 +496,8 @@ begin
   else
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
   ABuffer^.CurrentCount := 0;
-  ABuffer^.SourceID := 0;
-  ABuffer^.DestID := 0;
+  ABuffer^.SourceStreamID := 0;
+  ABuffer^.DestStreamID := 0;
   for i := 0 to MAX_STREAM_TYPE_ID - 1 do
     ABuffer^.StreamTypeID[i] := 0;
   ABuffer^.TotalMessageSize := 0;

@@ -32,20 +32,20 @@ const
 
 
 type
-  TOlcbTaskBase           = class;
-  TOlcbTaskEngine         = class;
-  TDatagramReceiveManager = class;
-  TDatagramSendManager    = class;
-  TDatagramReceive        = class;
-  TDatagramSend           = class;
-  TStreamSend             = class;
-  TStreamBase          = class;
-  TStreamSendManager      = class;
-  TStreamReceiveManager   = class;
+  TTaskOlcbBase                         = class;
+  TOlcbTaskEngine                       = class;
+  TCANFrameParserDatagramReceiveManager = class;
+  TCANFrameParserDatagramSendManager    = class;
+  TCANFrameParserDatagramReceive        = class;
+  TCANFrameParserDatagramSend           = class;
+  TStreamCANFrameParserSend             = class;
+  TCANFrameParserStreamBase             = class;
+  TCANFrameParserStreamSendManager      = class;
+  TCANFrameParserStreamReceiveManager   = class;
 
-  TOlcbTaskBeforeDestroy = procedure(Sender: TOlcbTaskBase) of object;
-  TDispatchTaskFunc = function(Task: TOlcbTaskBase): Boolean of object;
-  TStreamData = array of byte;
+  TOlcbTaskBeforeDestroy = procedure(Sender: TTaskOlcbBase) of object;
+  TDispatchTaskFunc = function(Task: TTaskOlcbBase): Boolean of object;
+  TStreamDataArray = array of byte;
 
   { TAliasTaskContainer }
 
@@ -79,15 +79,15 @@ type
     FAliasList: TAliasTaskContainerList;
     FBufferRawMessage: string;                                                  // Shared data to pass string between thread and the Syncronized callbacks
     FConnected: Boolean;                                                        // True if connected to the port
-    FDatagramReceiveManager: TDatagramReceiveManager;
-    FDatagramSendManager: TDatagramSendManager;
+    FCANFrameParserDatagramReceiveManager: TCANFrameParserDatagramReceiveManager;
+    FCANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager;
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
     FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sen
     FOlcbTaskManager: TOlcbTaskEngine;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
     FRunning: Boolean;
-    FStreamReceiveManager: TStreamReceiveManager;
-    FStreamSendManager: TStreamSendManager;
+    FCANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager;
+    FCANFrameParserStreamSendManager: TCANFrameParserStreamSendManager;
     FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
     FSyncSendMessageFunc: TSyncRawMessageFunc;                                  // Function to callback through Syncronize if EnableSendMessages is true
@@ -100,22 +100,22 @@ type
     procedure ExecuteBegin;
     procedure ExecuteEnd;
     procedure InternalAdd(Msg: AnsiString);
-    procedure InternalAddDatagramToSend(Datagram: TDatagramSend);
+    procedure InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
     procedure SyncErrorMessage;
     procedure SyncReceiveMessage;
     procedure SyncSendMessage;
 
     property AliasList: TAliasTaskContainerList read FAliasList write FAliasList;                 // Tracks the Alias that have been registered with Olcb through this Transport Thread
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
-    property DatagramReceiveManager: TDatagramReceiveManager read FDatagramReceiveManager;
-    property DatagramSendManager: TDatagramSendManager read FDatagramSendManager write FDatagramSendManager;
-    property StreamReceiveManager: TStreamReceiveManager read FStreamReceiveManager write FStreamReceiveManager;
-    property StreamSendManager: TStreamSendManager read FStreamSendManager write FStreamSendManager;
+    property CANFrameParserDatagramReceiveManager: TCANFrameParserDatagramReceiveManager read FCANFrameParserDatagramReceiveManager;
+    property CANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager read FCANFrameParserDatagramSendManager write FCANFrameParserDatagramSendManager;
+    property CANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager read FCANFrameParserStreamReceiveManager write FCANFrameParserStreamReceiveManager;
+    property CANFrameParserStreamSendManager: TCANFrameParserStreamSendManager read FCANFrameParserStreamSendManager write FCANFrameParserStreamSendManager;
     property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
   public
     constructor Create(CreateSuspended: Boolean); virtual;
     destructor Destroy; override;
-    function AddTask(NewTask: TOlcbTaskBase; CopyTask: Boolean): Boolean;
+    function AddTask(NewTask: TTaskOlcbBase; CopyTask: Boolean): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
     property Connected: Boolean read FConnected write FConnected;
@@ -140,9 +140,9 @@ type
     procedure CopyTo(Target: TOlcbStructureHelperBase); virtual; abstract;
   end;
 
-  { TOlcbMemOptions }
+  { TOlcbStructureMemOptions }
 
-  TOlcbMemOptions = class(TOlcbStructureHelperBase)
+  TOlcbStructureMemOptions = class(TOlcbStructureHelperBase)
   private
     FAddressSpaceHi: Byte;
     FAddressSpaceLo: Byte;
@@ -167,7 +167,7 @@ type
   public
     constructor Create;
     procedure CopyTo(Target: TOlcbStructureHelperBase); override;
-    procedure LoadFromDatagram( Datagram: TDatagramReceive);
+    procedure LoadFromDatagram( Datagram: TCANFrameParserDatagramReceive);
     property WriteUnderMask: Boolean read GetWriteUnderMask;
     property UnAlignedReads: Boolean read GetUnAlignedReads;
     property UnalignedWrites: Boolean read GetUnAlignedWrites;
@@ -185,9 +185,9 @@ type
     property Description: string read FDescription;
   end;
 
-  { TOlcbMemAddressSpace }
+  { TOlcbStructureMemAddressSpace }
 
-  TOlcbMemAddressSpace = class(TOlcbStructureHelperBase)
+  TOlcbStructureMemAddressSpace = class(TOlcbStructureHelperBase)
   private
     FAddressHi: DWord;
     FAddressLo: DWord;
@@ -201,7 +201,7 @@ type
   public
     constructor Create;
     procedure CopyTo(Target: TOlcbStructureHelperBase); override;
-    procedure LoadByDatagram(ADatagram: TDatagramReceive);
+    procedure LoadByDatagram(ADatagram: TCANFrameParserDatagramReceive);
     property AddressLo: DWord read FAddressLo write FAddressLo;
     property AddressLoImpliedZero: Boolean read FAddressLoImpliedZero write FAddressLoImpliedZero;
     property AddressHi: DWord read FAddressHi write FAddressHi;
@@ -213,34 +213,34 @@ type
     property SpaceAsHex: string read GetSpaceAsHex;
   end;
 
-  { TOlcbMemConfig }
+  { TOlcbStructureMemConfig }
 
-  TOlcbMemConfig = class(TOlcbStructureHelperBase)
+  TOlcbStructureMemConfig = class(TOlcbStructureHelperBase)
   private
     FAddressSpaceList: TList;
-    FOptions: TOlcbMemOptions;
-    function GetAddressSpace(Index: Integer): TOlcbMemAddressSpace;
+    FOptions: TOlcbStructureMemOptions;
+    function GetAddressSpace(Index: Integer): TOlcbStructureMemAddressSpace;
     function GetAddressCount: Integer;
-    procedure SetAddressSpace(Index: Integer; AValue: TOlcbMemAddressSpace);
+    procedure SetAddressSpace(Index: Integer; AValue: TOlcbStructureMemAddressSpace);
   protected
     procedure Clear;
     property AddressSpaceList: TList read FAddressSpaceList write FAddressSpaceList;
   public
     constructor Create;
     destructor Destroy; override;
-    function AddAddressSpace: TOlcbMemAddressSpace;
-    function AddAddressSpaceByDatagram(Datagram: TDatagramReceive): TOlcbMemAddressSpace;
+    function AddAddressSpace: TOlcbStructureMemAddressSpace;
+    function AddAddressSpaceByDatagram(Datagram: TCANFrameParserDatagramReceive): TOlcbStructureMemAddressSpace;
     procedure CopyTo(Target: TOlcbStructureHelperBase); override;
-    function FindAddressSpaceBySpaceID(AnAddress: Byte): TOlcbMemAddressSpace;
+    function FindAddressSpaceBySpaceID(AnAddress: Byte): TOlcbStructureMemAddressSpace;
 
-    property AddressSpace[Index: Integer]: TOlcbMemAddressSpace read GetAddressSpace write SetAddressSpace;
+    property AddressSpace[Index: Integer]: TOlcbStructureMemAddressSpace read GetAddressSpace write SetAddressSpace;
     property AddressSpaceCount: Integer read GetAddressCount;
-    property Options: TOlcbMemOptions read FOptions;
+    property Options: TOlcbStructureMemOptions read FOptions;
   end;
 
-  { TOlcbProtocolIdentification }
+  { TOlcbStructureProtocolIdentification }
 
-  TOlcbProtocolIdentification = class(TOlcbStructureHelperBase)
+  TOlcbStructureProtocolIdentification = class(TOlcbStructureHelperBase)
   private
     FMask: QWord;
     function GetAbbreviatedCDIProtocol: Boolean;
@@ -282,9 +282,9 @@ type
     property FunctionStateInformationProtocol: Boolean read GetFunctionStateInformationProtocol;
   end;
 
-  { TOlcbSNIP }
+  { TOlcbStructureSNIP }
 
-  TOlcbSNIP = class(TOlcbStructureHelperBase)
+  TOlcbStructureSNIP = class(TOlcbStructureHelperBase)
   private
     FSniiHardwareVersion: string;
     FSniiMfgModel: string;
@@ -307,9 +307,9 @@ type
     property SniiMfgVersion: Byte read FSniiMfgVersion write FSniiMfgVersion;
   end;
 
-  { TDatagramReceive }
+  { TCANFrameParserDatagramReceive }
 
-  TDatagramReceive = class( TOlcbMessage)
+  TCANFrameParserDatagramReceive = class( TOlcbMessage)
   private
     FCreateTime: DWord;
     FDestinationAlias: Word;
@@ -337,15 +337,15 @@ type
     property SourceAlias: Word read FSourceAlias write FSourceAlias;                    // Node who is looking for Datagrams assigned to it to come in
   end;
 
-  { TDatagramReceiveManager }
+  { TCANFrameParserDatagramReceiveManager }
 
-  TDatagramReceiveManager = class
+  TCANFrameParserDatagramReceiveManager = class
   private
     FDatagrams: TThreadList;
     FMaxCount: Integer;
     FOwner: TTransportLayerThread;
   protected
-    function FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
+    function FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper: TOpenLCBMessageHelper): TCANFrameParserDatagramReceive;
     property Datagrams: TThreadList read FDatagrams write FDatagrams;
     property Owner: TTransportLayerThread read FOwner write FOwner;
     property MaxCount: Integer read FMaxCount write FMaxCount;
@@ -353,13 +353,13 @@ type
     constructor Create(AnOwner: TTransportLayerThread);
     destructor Destroy; override;
     procedure Clear;
-    function Process(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
+    function Process(AHelper: TOpenLCBMessageHelper): TCANFrameParserDatagramReceive;
   end;
 
 
-  { TStreamBase }
+  { TCANFrameParserStreamBase }
 
-  TStreamBase = class( TOlcbMessage)
+  TCANFrameParserStreamBase = class( TOlcbMessage)
   private
     FAdditionalFlags: Byte;
     FCreateTime: DWord;
@@ -374,7 +374,7 @@ type
     FSourceAlias: Word;
     FSourceStreamID: Byte;
     FStream: TMemoryStream;
-    FStreamData: TStreamData;
+    FStreamData: TStreamDataArray;
     FUniqueStreamUID: DWord;
   protected
     property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;   // Global object to work with OLCB messages
@@ -392,31 +392,31 @@ type
     property UniqueStreamUID: DWord read FUniqueStreamUID write FUniqueStreamUID;
     property SourceStreamID: Byte read FSourceStreamID write FSourceStreamID;
     property DestStreamID: Byte read FDestStreamID write FDestStreamID;
-    property StreamData: TStreamData read FStreamData write FStreamData;
+    property StreamData: TStreamDataArray read FStreamData write FStreamData;
     property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
     property SourceAlias: Word read FSourceAlias write FSourceAlias;
     property iStateMachine: Word read FiStateMachine write FiStateMachine;
     property Stream: TMemoryStream read FStream write FStream;
   end;
 
-  { TStreamReceive }
+  { TCANFrameParserStreamReceive }
 
-  TStreamReceive = class(TStreamBase)
+  TCANFrameParserStreamReceive = class(TCANFrameParserStreamBase)
   public
     function ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean; override;   // Processes the message/
     function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean; override;
   end;
 
-  { TStreamReceiveManager }
+  { TCANFrameParserStreamReceiveManager }
 
-  TStreamReceiveManager = class
+  TCANFrameParserStreamReceiveManager = class
   private
     FMaxCount: Integer;
     FOwner: TTransportLayerThread;
     FStreams: TThreadList;
     v: TThreadList;
   protected
-    function FindInProcessStreamAndCheckForAbandonStream(AHelper: TOpenLCBMessageHelper): TStreamBase;
+    function FindInProcessStreamAndCheckForAbandonStream(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamReceive;
     property Streams: TThreadList read FStreams write v;
     property Owner: TTransportLayerThread read FOwner write FOwner;
     property MaxCount: Integer read FMaxCount write FMaxCount;
@@ -424,13 +424,13 @@ type
     constructor Create(AnOwner: TTransportLayerThread);
     destructor Destroy; override;
     procedure Clear;
-    function ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamBase;
-    function ProcessSend(AHelper: TOpenLCBMessageHelper): TStreamBase;
+    function ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
+    function ProcessSend(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
   end;
 
-{ TDatagramSend }
+{ TCANFrameParserDatagramSend }
 
-TDatagramSend = class( TOlcbMessage)
+TCANFrameParserDatagramSend = class( TOlcbMessage)
 private
   FAbandonTime: Cardinal;
   FBlockStartPos: Integer;
@@ -464,7 +464,7 @@ protected
   property RetryCount: Byte read FRetryCount write FRetryCount;
   property WaitingForACK: Boolean read FWaitingForACK write FWaitingForACK;             // After a frame is sent need to wait
 public
-  constructor Create;
+  constructor Create; virtual;
   destructor Destroy; override;
   procedure Initialize(AStream: TStream; AProtocolHeader: TCANByteArray; AProtocolHeaderLen: Byte; ASourceAlias, ADestinationAlias: Word);
   function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
@@ -476,9 +476,9 @@ public
   property Stream: TMemoryStream read FStream write FStream;
 end;
 
-{ TDatagramSendManager }
+{ TCANFrameParserDatagramSendManager }
 
-TDatagramSendManager = class
+TCANFrameParserDatagramSendManager = class
 private
   FAbandonDatagrams: TThreadList;
   FDatagrams: TThreadList;
@@ -497,21 +497,21 @@ public
   destructor Destroy; override;
   procedure Clear;
   procedure ClearAbandon;
-  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TDatagramSend;
+  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserDatagramSend;
   procedure ProcessSend;
 end;
 
-{ TStreamSend }
+{ TStreamCANFrameParserSend }
 
-TStreamSend = class( TStreamBase)
+TStreamCANFrameParserSend = class( TCANFrameParserStreamBase)
 public
   function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean; override;
   function ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean; override;
 end;
 
-{ TStreamSendManager }
+{ TCANFrameParserStreamSendManager }
 
-TStreamSendManager = class
+TCANFrameParserStreamSendManager = class
 private
   FAbandonStreams: TThreadList;
   FMaxCount: Integer;
@@ -531,13 +531,13 @@ public
   destructor Destroy; override;
   procedure Clear;
   procedure ClearAbandon;
-  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamSend;
+  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamCANFrameParserSend;
   procedure ProcessSend;
 end;
 
-{ TOlcbTaskBase }
+{ TTaskOlcbBase }
 
-  TOlcbTaskBase = class
+  TTaskOlcbBase = class
   private
     FErrorCode: DWord;
     FiLogState: Integer;
@@ -560,14 +560,14 @@ end;
     FDone: Boolean;
     FiState: Integer;
     FSourceAlias: Word;
-    procedure ExtractErrorInformation(DatagramReceive: TDatagramReceive);
+    procedure ExtractErrorInformation(DatagramReceive: TCANFrameParserDatagramReceive);
     function IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
-    function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
-    function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
-    function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+    function IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TCANFrameParserDatagramReceive): Boolean;
+    function IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TCANFrameParserDatagramReceive): Boolean;
+    function IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TCANFrameParserDatagramReceive): Boolean;
     function IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
     function IsStreamInitializationRequest(MessageInfo: TOlcbMessage): Boolean;
-    function IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TStreamBase): Boolean;
+    function IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TCANFrameParserStreamBase): Boolean;
     function IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
@@ -585,10 +585,10 @@ end;
     procedure SendIdentifyEventsAddressedMessage;
     procedure SendIdentifyConsumerMessage(Event: TEventID);
     procedure SendIdentifyProducerMessage(Event: TEventID);
-    procedure SendMemoryConfigurationOptions;
-    procedure SendMemoryConfigurationSpaceInfo(Space: Byte);
-    procedure SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: DWord; ForceUseOfSpaceByte: Boolean; UseStream: Boolean);
-    procedure SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
+    procedure SendMemoryConfigurationOptionsByCANParsing;
+    procedure SendMemoryConfigurationSpaceInfoByCANParsing(Space: Byte);
+    procedure SendMemoryConfigurationReadByCANParsing(Space: Byte; StartAddress: DWord; Count: DWord; ForceUseOfSpaceByte: Boolean; UseStream: Boolean);
+    procedure SendMemoryConfigurationWriteByCANParsing(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
     procedure SendProtocolIdentificationProtocolMessage;
     procedure SendStreamInitReply(NegotiatedBuffer: Word; Flag, AdditionalFlags, SourceID, DestID: Byte);
     procedure SendSnipMessage;
@@ -615,8 +615,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); virtual;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; virtual; abstract;
-    procedure CopyTo(Target: TOlcbTaskBase); virtual;
+    function Clone: TTaskOlcbBase; virtual; abstract;
+    procedure CopyTo(Target: TTaskOlcbBase); virtual;
     property DestinationAlias: Word read FDestinationAlias;
     property ErrorCode: DWord read FErrorCode write FErrorCode;
     property ErrorString: string read FErrorString write FErrorString;
@@ -632,109 +632,109 @@ end;
     property RemoveKey: PtrInt read FRemoveKey write FRemoveKey;
   end;
 
-  { TVerifyNodeIDGlobalTask }
+  { TTaskVerifyNodeIDGlobal }
 
-  TVerifyNodeIDGlobalTask = class(TOlcbTaskBase)
+  TTaskVerifyNodeIDGlobal = class(TTaskOlcbBase)
   public
-   function Clone: TOlcbTaskBase; override;
+   function Clone: TTaskOlcbBase; override;
    procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TVerifyNodeIDTask }
+  { TTaskVerifyNodeID }
 
-  TVerifyNodeIDTask = class(TOlcbTaskBase)
+  TTaskVerifyNodeID = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TProtocolSupportTask }
+  { TTaskProtocolSupport }
 
-  TProtocolSupportTask = class(TOlcbTaskBase)
+  TTaskProtocolSupport = class(TTaskOlcbBase)
   private
     FProtocols: QWord;
   public
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property Protocols: QWord read FProtocols;
   end;
 
-  { TSimpleNodeInformationTask }
+  { TTaskSimpleNodeInformation }
 
-  TSimpleNodeInformationTask = class(TOlcbTaskBase)
+  TTaskSimpleNodeInformation = class(TTaskOlcbBase)
   private
-    FSnip: TOlcbSNIP;
+    FSnip: TOlcbStructureSNIP;
     FiSnipState: Integer;  // for inner SNIP statemachine
   protected
     property iSnipState: Integer read FiSnipState write FiSnipState;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); override;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
-    property Snip: TOlcbSNIP read FSnip;
+    property Snip: TOlcbStructureSNIP read FSnip;
   end;
 
-  { TConfigMemoryOptionsTask }
+  { TTaskConfigMemoryOptions }
 
-  TConfigMemoryOptionsTask = class(TOlcbTaskBase)
+  TTaskConfigMemoryOptions = class(TTaskOlcbBase)
   private
-    FConfigMemoryOptions: TOlcbMemOptions;
+    FConfigMemoryOptions: TOlcbStructureMemOptions;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); override;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
-    property ConfigMemoryOptions: TOlcbMemOptions read FConfigMemoryOptions write FConfigMemoryOptions;
+    property ConfigMemoryOptions: TOlcbStructureMemOptions read FConfigMemoryOptions write FConfigMemoryOptions;
   end;
 
-  { TConfigMemoryAddressSpaceInfoTask }
+  { TTaskConfigMemoryAddressSpaceInfo }
 
-  TConfigMemoryAddressSpaceInfoTask = class(TOlcbTaskBase)
+  TTaskConfigMemoryAddressSpaceInfo = class(TTaskOlcbBase)
   private
     FAddressSpace: Byte;
-    FConfigMemoryAddressSpace: TOlcbMemAddressSpace;
+    FConfigMemoryAddressSpace: TOlcbStructureMemAddressSpace;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte); reintroduce; virtual;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
-    property ConfigMemoryAddressSpace: TOlcbMemAddressSpace read FConfigMemoryAddressSpace write FConfigMemoryAddressSpace;
+    property ConfigMemoryAddressSpace: TOlcbStructureMemAddressSpace read FConfigMemoryAddressSpace write FConfigMemoryAddressSpace;
     property AddressSpace: Byte read FAddressSpace;
   end;
 
 
-  { TEnumAllConfigMemoryAddressSpaceInfoTask }
+  { TTaskConfigMemoryAddressEnumAllSpaceInfo }
 
-  TEnumAllConfigMemoryAddressSpaceInfoTask = class(TOlcbTaskBase)
+  TTaskConfigMemoryAddressEnumAllSpaceInfo = class(TTaskOlcbBase)
   private
-    FConfigMemAddressInfo: TOlcbMemConfig;
+    FConfigMemAddressInfo: TOlcbStructureMemConfig;
     FCurrentAddressSpace: Byte;
     FMaxAddressSpace: Byte;
     FMinAddressSpace: Byte;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); override;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property MinAddressSpace: Byte read FMinAddressSpace write FMinAddressSpace;
     property MaxAddressSpace: Byte read FMaxAddressSpace write FMaxAddressSpace;
     property CurrentAddressSpace: Byte read FCurrentAddressSpace write FCurrentAddressSpace;
-    property ConfigMemAddressInfo: TOlcbMemConfig read FConfigMemAddressInfo write FConfigMemAddressInfo;
+    property ConfigMemAddressInfo: TOlcbStructureMemConfig read FConfigMemAddressInfo write FConfigMemAddressInfo;
   end;
 
-  { TBaseAddressSpaceMemoryTask }
+  { TTaskAddressSpaceMemoryCommonWithDatagram }
 
-  TBaseAddressSpaceMemoryTask = class(TOlcbTaskBase)
+  TTaskAddressSpaceMemoryCommonWithDatagram = class(TTaskOlcbBase)
   private
     FAddressSpace: Byte;
     FCurrentAddress: DWord;
-    FCurrentSendSize: Byte;
+    FCurrentSendSize: DWord;
     FDataStream: TMemoryStream;
     FForceOptionalSpaceByte: Boolean;
     FLocalLoopTime: DWord;
@@ -746,7 +746,7 @@ end;
     function GetMaxPayloadSize: DWord;
   protected
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
-    property CurrentSendSize: Byte read FCurrentSendSize write FCurrentSendSize;
+    property CurrentSendSize: DWord read FCurrentSendSize write FCurrentSendSize;
     property LocalLoopTime: DWord read FLocalLoopTime write FLocalLoopTime;
     property UsingTerminator: Boolean read FUsingTerminator write FUsingTerminator;
     property MaxPayloadSize: DWord read GetMaxPayloadSize;
@@ -754,8 +754,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     property AddressSpace: Byte read FAddressSpace;
     property DataStream: TMemoryStream read FDataStream;
     property ForceOptionalSpaceByte: Boolean read FForceOptionalSpaceByte write FForceOptionalSpaceByte;
@@ -764,32 +764,32 @@ end;
     property Terminator: Char read FTerminator write FTerminator;
   end;
 
-  { TBaseAddressSpaceMemoryWithDatagramTask }
+  { TTaskAddressSpaceMemoryBaseWithDatagram }
 
-  TBaseAddressSpaceMemoryWithDatagramTask = class(TBaseAddressSpaceMemoryTask)
+  TTaskAddressSpaceMemoryBaseWithDatagram = class(TTaskAddressSpaceMemoryCommonWithDatagram)
   public
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TReadAddressSpaceMemoryTask }
+  { TTaskAddressSpaceMemoryReadWithDatagram }
 
-  TReadAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryWithDatagramTask)
+  TTaskAddressSpaceMemoryReadWithDatagram = class(TTaskAddressSpaceMemoryBaseWithDatagram)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
   end;
 
-  { TWriteAddressSpaceMemoryTask }
+  { TTaskAddressSpaceMemoryWriteWithDatagram }
 
-  TWriteAddressSpaceMemoryTask = class(TBaseAddressSpaceMemoryWithDatagramTask)
+  TTaskAddressSpaceMemoryWriteWithDatagram = class(TTaskAddressSpaceMemoryBaseWithDatagram)
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream); reintroduce;
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
   end;
 
 
-  { TBaseAddressSpaceMemoryWithStreamTask }
+  { TTaskAddressSpaceMemoryBaseWithStream }
 
-  TBaseAddressSpaceMemoryWithStreamTask = class(TBaseAddressSpaceMemoryTask)
+  TTaskAddressSpaceMemoryBaseWithStream = class(TTaskAddressSpaceMemoryCommonWithDatagram)
   private
     FDestID: Byte;
     FNegotiatedBuffer: Word;
@@ -797,25 +797,25 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
     property NegotiatedBuffer: Word read FNegotiatedBuffer write FNegotiatedBuffer;
     property SourceID: Byte read FSourceID write FSourceID;
     property DestID: Byte read FDestID write FDestID;
   end;
 
-  TReadAddressSpaceMemoryWithStreamTask = class(TBaseAddressSpaceMemoryWithStreamTask)
+  TTaskAddressSpaceMemoryReadWithStream = class(TTaskAddressSpaceMemoryBaseWithStream)
 
   end;
 
-  TWriteAddressSpaceMemoryWithStreamTask = class(TBaseAddressSpaceMemoryWithStreamTask)
+  TTaskAddressSpaceMemoryWriteWithStream = class(TTaskAddressSpaceMemoryBaseWithStream)
 
   end;
 
-  { TWriteAddressSpaceMemoryRawTask }
+  { TTaskAddressSpaceMemoryWriteRawWithDatagram }
 
-  TWriteAddressSpaceMemoryRawTask = class(TOlcbTaskBase)
+  TTaskAddressSpaceMemoryWriteRawWithDatagram = class(TTaskOlcbBase)
   private
     FAddressSpace: Byte;
     FForceOptionalSpaceByte: Boolean;
@@ -824,8 +824,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AWriteAddress: DWord; AStream: TStream); reintroduce;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property AddressSpace: Byte read FAddressSpace;
@@ -834,9 +834,9 @@ end;
     property WriteAddress: DWord read FWriteAddress write FWriteAddress;
   end;
 
-  { TReadAddressSpaceMemoryRawTask }
+  { TTaskAddressSpaceMemoryReadRawWithDatagram }
 
-  TReadAddressSpaceMemoryRawTask = class(TOlcbTaskBase)
+  TTaskAddressSpaceMemoryReadRawWithDatagram = class(TTaskOlcbBase)
   private
     FAddressSpace: Byte;
     FCurrentOffset: DWord;
@@ -855,8 +855,8 @@ end;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord; UseTerminatorChar: Boolean); reintroduce;
     destructor Destroy; override;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property AddressSpace: Byte read FAddressSpace;
@@ -868,92 +868,92 @@ end;
     property Terminator: Char read FTerminator write FTerminator;
   end;
 
-  { TIdentifyEventsTask }
+  { TTaskIdentifyEvents }
 
-  TIdentifyEventsTask = class(TOlcbTaskBase)
+  TTaskIdentifyEvents = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TIdentifyEventsAddressedTask }
+  { TTaskIdentifyEventsAddressed }
 
-  TIdentifyEventsAddressedTask = class(TOlcbTaskBase)
+  TTaskIdentifyEventsAddressed = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TIdentifyProducerTask }
+  { TTaskIdentifyProducer }
 
-  TIdentifyProducerTask = class(TOlcbTaskBase)
+  TTaskIdentifyProducer = class(TTaskOlcbBase)
   private
     FEvent: TEventID;
   protected
     property Event: TEventID read FEvent write FEvent;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnEvent: TEventID); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TIdentifyConsumerTask }
+  { TTaskIdentifyConsumer }
 
-  TIdentifyConsumerTask = class(TOlcbTaskBase)
+  TTaskIdentifyConsumer = class(TTaskOlcbBase)
   private
     FEvent: TEventID;
   protected
     property Event: TEventID read FEvent write FEvent;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnEvent: TEventID); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TCANLayerTask }
-  TCANLayerTask = class(TOlcbTaskBase)
+  { TTaskCANLayer }
+  TTaskCANLayer = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TEventTask }
+  { TTaskEvent }
 
-  TEventTask = class(TOlcbTaskBase)
+  TTaskEvent = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TVerifiedNodeIDTask }
+  { TTaskVerifiedNodeID }
 
-  TVerifiedNodeIDTask = class(TOlcbTaskBase)
+  TTaskVerifiedNodeID = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionProtocolTask }
+  { TTaskTractionProtocol }
 
-  TTractionProtocolTask = class(TOlcbTaskBase)
+  TTaskTractionProtocol = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TInitializationCompleteTask }
+  { TTaskInitializationComplete }
 
-  TInitializationCompleteTask = class(TOlcbTaskBase)
+  TTaskInitializationComplete = class(TTaskOlcbBase)
   public
-    function Clone: TOlcbTaskBase; override;
+    function Clone: TTaskOlcbBase; override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionReserveAndAttachDccProxyTask }
+  { TTaskTractionReserveAndAttachDccProxy }
 
-  TTractionReserveAndAttachDccProxyTask = class(TOlcbTaskBase)
+  TTaskTractionReserveAndAttachDccProxy = class(TTaskOlcbBase)
   private
     FAddress: Word;
     FReplyAddress: Word;
@@ -967,8 +967,8 @@ end;
     property SpeedStep: Byte read FSpeedStep write FSpeedStep;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
@@ -976,9 +976,9 @@ end;
     property ReplyAddress: Word read FReplyAddress;
   end;
 
-  { TTractionReserveAndDetachDccProxyTask }
+  { TTaskTractionReserveAndDetachDccProxy }
 
-  TTractionReserveAndDetachDccProxyTask = class(TOlcbTaskBase)
+  TTaskTractionReserveAndDetachDccProxy = class(TTaskOlcbBase)
   private
     FAddress: Word;
     FIsShort: Boolean;
@@ -990,8 +990,8 @@ end;
     property IsShort: Boolean read FIsShort write FIsShort;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
@@ -999,9 +999,9 @@ end;
     property ReplyAddress: Word read FReplyAddress;
   end;
 
-  { TTractionQueryDccAddressProxyTask }
+  { TTaskTractionQueryDccAddressProxy }
 
-  TTractionQueryDccAddressProxyTask = class(TOlcbTaskBase)
+  TTaskTractionQueryDccAddressProxy = class(TTaskOlcbBase)
   private
     FAddress: Word;
     FIsShort: Boolean;
@@ -1010,14 +1010,14 @@ end;
     property IsShort: Boolean read FIsShort write FIsShort;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionSpeedTask }
+  { TTaskTractionSpeed }
 
-  TTractionSpeedTask = class(TOlcbTaskBase)
+  TTaskTractionSpeed = class(TTaskOlcbBase)
   private
     FEStop: Boolean;
     FSpeed: THalfFloat;
@@ -1026,14 +1026,14 @@ end;
     property EStop: Boolean read FEStop write FEStop;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; ASpeed: THalfFloat; IsEStop: Boolean); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionFunctionTask }
+  { TTaskTractionFunction }
 
-  TTractionFunctionTask = class(TOlcbTaskBase)
+  TTaskTractionFunction = class(TTaskOlcbBase)
   private
     FAddress: DWord;
     FWord: Word;
@@ -1042,14 +1042,14 @@ end;
     property Value: Word read FWord write FWord;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: DWord; AValue: Word); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
-  { TTractionQueryFunctionTask }
+  { TTaskTractionQueryFunction }
 
-  TTractionQueryFunctionTask = class(TOlcbTaskBase)
+  TTaskTractionQueryFunction = class(TTaskOlcbBase)
   private
     FAddress: DWord;
     FValue: Integer;
@@ -1057,16 +1057,16 @@ end;
     property Address: DWord read FAddress write FAddress;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: DWord); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property Value: Integer read FValue write FValue;
   end;
 
-  { TTractionQuerySpeedTask }
+  { TTaskTractionQuerySpeed }
 
-  TTractionQuerySpeedTask = class(TOlcbTaskBase)
+  TTaskTractionQuerySpeed = class(TTaskOlcbBase)
   private
     FActualSpeed: Word;
     FCommandedSpeed: Word;
@@ -1074,8 +1074,8 @@ end;
     FStatus: Byte;
   public
     constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean); reintroduce;
-    function Clone: TOlcbTaskBase; override;
-    procedure CopyTo(Target: TOlcbTaskBase); override;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
 
     property SetSpeed: Word read FSetSpeed write FSetSpeed;
@@ -1128,9 +1128,9 @@ begin
   Inc(SourceStreamIdPool);
 end;
 
-{ TStreamReceive }
+{ TCANFrameParserStreamReceive }
 
-function TStreamReceive.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
+function TCANFrameParserStreamReceive.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
 var
   LocalFlags: Byte;
   LocalAdditionalFlags: Byte;
@@ -1185,33 +1185,33 @@ begin
   end;
 end;
 
-function TStreamReceive.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+function TCANFrameParserStreamReceive.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
 begin
   Result := False
 end;
 
-{ TStreamSend }
+{ TStreamCANFrameParserSend }
 
-function TStreamSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+function TStreamCANFrameParserSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
 begin
   Result := False;
 end;
 
-function TStreamSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
+function TStreamCANFrameParserSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
 begin
   Result := False;
-
+  // Is this needed?  Not sure.  In Datagram this is where we look for the ACK after it is sent.  Streams don't have ACKs
 end;
 
 
-{ TStreamSendManager }
+{ TCANFrameParserStreamSendManager }
 
-procedure TStreamSendManager.TimerTick(Sender: TObject);
+procedure TCANFrameParserStreamSendManager.TimerTick(Sender: TObject);
 begin
 
 end;
 
-constructor TStreamSendManager.Create(AnOwner: TTransportLayerThread);
+constructor TCANFrameParserStreamSendManager.Create(AnOwner: TTransportLayerThread);
 begin
   inherited Create;
   FStreams := TThreadList.Create;
@@ -1224,7 +1224,7 @@ begin
   FMaxCount := 0;
 end;
 
-destructor TStreamSendManager.Destroy;
+destructor TCANFrameParserStreamSendManager.Destroy;
 begin
   Clear;
   FreeAndNil(FStreams);
@@ -1234,7 +1234,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TStreamSendManager.Clear;
+procedure TCANFrameParserStreamSendManager.Clear;
 var
   i: Integer;
   List: TList;
@@ -1249,7 +1249,7 @@ begin
   end;
 end;
 
-procedure TStreamSendManager.ClearAbandon;
+procedure TCANFrameParserStreamSendManager.ClearAbandon;
 var
   i: Integer;
   List: TList;
@@ -1264,9 +1264,9 @@ begin
   end;
 end;
 
-function TStreamSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamSend;
+function TCANFrameParserStreamSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamCANFrameParserSend;
 var
-  Stream: TStreamSend;
+  Stream: TStreamCANFrameParserSend;
   List: TList;
   i: Integer;
   Done: Boolean;
@@ -1278,7 +1278,7 @@ begin
     Done := False;
     while (i < List.Count) and not Done do
     begin
-      Stream := TStreamSend( List[i]);
+      Stream := TStreamCANFrameParserSend( List[i]);
       if Stream.ProcessReceive(AHelper, Owner) then
       begin
         Done := True;
@@ -1295,9 +1295,9 @@ begin
   end;
 end;
 
-procedure TStreamSendManager.ProcessSend;
+procedure TCANFrameParserStreamSendManager.ProcessSend;
 var
-  Stream: TStreamSend;
+  Stream: TStreamCANFrameParserSend;
   List: TList;
   i: Integer;
   Done: Boolean;
@@ -1308,7 +1308,7 @@ begin
     Done := False;
     while (i < List.Count) and not Done do
     begin
-      Stream := TStreamSend( List[i]);
+      Stream := TStreamCANFrameParserSend( List[i]);
       Done := Stream.ProcessSend(Owner);
       Inc(i);
     end;
@@ -1317,23 +1317,23 @@ begin
   end;
 end;
 
-{ TStreamReceiveManager }
+{ TCANFrameParserStreamReceiveManager }
 
-function TStreamReceiveManager.FindInProcessStreamAndCheckForAbandonStream(AHelper: TOpenLCBMessageHelper): TStreamBase;
+function TCANFrameParserStreamReceiveManager.FindInProcessStreamAndCheckForAbandonStream(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamReceive;
 //
 // Searches an in process stream interaction between the nodes in the message
 //
 var
   i: Integer;
   List: TList;
-  Stream: TStreamBase;
+  Stream: TCANFrameParserStreamReceive;
 begin
   Result := nil;
   List := Streams.LockList;
   try
     for i := List.Count-1 downto 0 do    // So we can delete abandon items from the top of the list
     begin
-      Stream := TStreamBase( List[i]);
+      Stream := TCANFrameParserStreamReceive( List[i]);
       if Stream.Empty and (Stream.DestinationAlias = AHelper.SourceAliasID) and (Stream.SourceAlias = AHelper.DestinationAliasID) then
         Result := Stream;
 
@@ -1350,7 +1350,7 @@ begin
 
 end;
 
-constructor TStreamReceiveManager.Create(AnOwner: TTransportLayerThread);
+constructor TCANFrameParserStreamReceiveManager.Create(AnOwner: TTransportLayerThread);
 begin
   inherited Create;
   FOwner := AnOwner;
@@ -1358,14 +1358,14 @@ begin
   FMaxCount := 0;
 end;
 
-destructor TStreamReceiveManager.Destroy;
+destructor TCANFrameParserStreamReceiveManager.Destroy;
 begin
   Clear;
   FreeAndNil(FStreams);
   inherited Destroy;
 end;
 
-procedure TStreamReceiveManager.Clear;
+procedure TCANFrameParserStreamReceiveManager.Clear;
 var
   i: Integer;
   List: TList;
@@ -1380,9 +1380,9 @@ begin
   end;
 end;
 
-function TStreamReceiveManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamBase;
+function TCANFrameParserStreamReceiveManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
 var
-  TestStream: TStreamBase;
+  TestStream: TCANFrameParserStreamReceive;
   List: TList;
 begin
   Result := nil;
@@ -1391,7 +1391,7 @@ begin
     TestStream := FindInProcessStreamAndCheckForAbandonStream(AHelper);
     if not Assigned(TestStream) then
     begin
-      TestStream := TStreamBase.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
+      TestStream := TCANFrameParserStreamReceive.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
       Streams.Add(TestStream);
       List := Streams.LockList;
       if List.Count > MaxCount then
@@ -1407,14 +1407,14 @@ begin
   end;
 end;
 
-function TStreamReceiveManager.ProcessSend(AHelper: TOpenLCBMessageHelper): TStreamBase;
+function TCANFrameParserStreamReceiveManager.ProcessSend(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
 begin
 
 end;
 
-{ TStreamBase }
+{ TCANFrameParserStreamBase }
 
-constructor TStreamBase.Create(ASourceAlias, ADestinationAlias: Word);
+constructor TCANFrameParserStreamBase.Create(ASourceAlias, ADestinationAlias: Word);
 begin
   inherited Create;
   FLocalHelper := TOpenLCBMessageHelper.Create;
@@ -1434,7 +1434,7 @@ begin
   FiStateMachine := 0;
 end;
 
-destructor TStreamBase.Destroy;
+destructor TCANFrameParserStreamBase.Destroy;
 begin
   FreeAndNil(FLocalHelper);
   FreeAndNil(FStream);
@@ -1442,9 +1442,9 @@ begin
 end;
 
 
-{ TBaseAddressSpaceMemoryWithDatagramTask }
+{ TTaskAddressSpaceMemoryBaseWithDatagram }
 
-procedure TBaseAddressSpaceMemoryWithDatagramTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskAddressSpaceMemoryBaseWithDatagram.Process(MessageInfo: TOlcbMessage);
 // Outline:
 //    Read Protocols to see if the Memory Protocol is supported
 //    Read Memory Protocol Options to read the Min/Max supported Spaces to see if $FF is supported
@@ -1456,10 +1456,10 @@ const
   STATE_READ_START = 8;
   STATE_WRITE_START = 20;
 var
-  DatagramReceive: TDatagramReceive;
-  PIP: TOlcbProtocolIdentification;
-  Space: TOlcbMemAddressSpace;
-  Options: TOlcbMemOptions;
+  DatagramReceive: TCANFrameParserDatagramReceive;
+  PIP: TOlcbStructureProtocolIdentification;
+  Space: TOlcbStructureMemAddressSpace;
+  Options: TOlcbStructureMemOptions;
   DatagramResultStart: DWord;
   i: Integer;
   Terminated: Boolean;
@@ -1476,7 +1476,7 @@ begin
          // First see if the node even supports the Memory Configuration Protocol
          if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
-           PIP := TOlcbProtocolIdentification.Create;
+           PIP := TOlcbStructureProtocolIdentification.Create;
            try
              PIP.LoadByMessage( TOpenLCBMessageHelper( MessageInfo));   // Already know that MessageInfo is a TOpenLCBMessageHelper by this point
              if PIP.MemoryConfigProtocol then
@@ -1497,7 +1497,7 @@ begin
        end;
     2: begin
          // Ask for what Address Spaces the node supports
-         SendMemoryConfigurationOptions;
+         SendMemoryConfigurationOptionsByCANParsing;
          Inc(FiState);
          Sending := False;
        end;
@@ -1514,7 +1514,7 @@ begin
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
-           Options := TOlcbMemOptions.Create;
+           Options := TOlcbStructureMemOptions.Create;
            try
              Options.LoadFromDatagram(DatagramReceive);
              if (AddressSpace <= Options.AddressSpaceHi) and (AddressSpace >= Options.AddressSpaceLo) then
@@ -1534,7 +1534,7 @@ begin
        end;
     5: begin
         // Ask for details about the address space we are interested in
-         SendMemoryConfigurationSpaceInfo(AddressSpace);
+         SendMemoryConfigurationSpaceInfoByCANParsing(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
@@ -1549,7 +1549,7 @@ begin
     7: begin
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
-           Space := TOlcbMemAddressSpace.Create;
+           Space := TOlcbStructureMemAddressSpace.Create;
            try
              Space.LoadByDatagram(DatagramReceive);
              if Space.IsPresent then
@@ -1596,7 +1596,7 @@ begin
        end;
     9: begin
         // Ask for a read from the node
-         SendMemoryConfigurationRead(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte, False);
+         SendMemoryConfigurationReadByCANParsing(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte, False);
          Sending := False;
          Inc(FiState);
        end;
@@ -1657,7 +1657,7 @@ begin
           if DataStream.Size > Space.AddressHi - Space.AddressLo then
             ErrorCode := ERROR_ADDRESS_SPACE_WRITE_LARGER_THAN_SPACE
           else
-            SendMemoryConfigurationWrite(AddressSpace, CurrentAddress, Space.AddressHi - Space.AddressLo, ForceOptionalSpaceByte, DataStream);
+            SendMemoryConfigurationWriteByCANParsing(AddressSpace, CurrentAddress, Space.AddressHi - Space.AddressLo, ForceOptionalSpaceByte, DataStream);
           iState := STATE_DONE
         end;
     STATE_DONE : begin
@@ -1667,9 +1667,9 @@ begin
   end;
 end;
 
-{ TBaseAddressSpaceMemoryWithStreamTask }
+{ TTaskAddressSpaceMemoryBaseWithStream }
 
-constructor TBaseAddressSpaceMemoryWithStreamTask.Create(ASourceAlias,
+constructor TTaskAddressSpaceMemoryBaseWithStream.Create(ASourceAlias,
   ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte;
   UseTerminatorChar: Boolean);
 begin
@@ -1679,29 +1679,29 @@ begin
   FNegotiatedBuffer := 0;
 end;
 
-destructor TBaseAddressSpaceMemoryWithStreamTask.Destroy;
+destructor TTaskAddressSpaceMemoryBaseWithStream.Destroy;
 begin
   inherited Destroy;
 end;
 
-function TBaseAddressSpaceMemoryWithStreamTask.Clone: TOlcbTaskBase;
+function TTaskAddressSpaceMemoryBaseWithStream.Clone: TTaskOlcbBase;
 begin
-  Result := TBaseAddressSpaceMemoryWithStreamTask.Create(SourceAlias, DestinationAlias, True, AddressSpace, UsingTerminator);
-  (Result as TBaseAddressSpaceMemoryWithStreamTask).Terminator := Terminator;
+  Result := TTaskAddressSpaceMemoryBaseWithStream.Create(SourceAlias, DestinationAlias, True, AddressSpace, UsingTerminator);
+  (Result as TTaskAddressSpaceMemoryBaseWithStream).Terminator := Terminator;
 end;
 
-procedure TBaseAddressSpaceMemoryWithStreamTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskAddressSpaceMemoryBaseWithStream.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  if Target is TBaseAddressSpaceMemoryWithStreamTask then
+  if Target is TTaskAddressSpaceMemoryBaseWithStream then
   begin
-    TBaseAddressSpaceMemoryWithStreamTask( Target).DestID := DestID;
-    TBaseAddressSpaceMemoryWithStreamTask( Target).SourceID := SourceID;
-    TBaseAddressSpaceMemoryWithStreamTask( Target).NegotiatedBuffer := NegotiatedBuffer;
+    TTaskAddressSpaceMemoryBaseWithStream( Target).DestID := DestID;
+    TTaskAddressSpaceMemoryBaseWithStream( Target).SourceID := SourceID;
+    TTaskAddressSpaceMemoryBaseWithStream( Target).NegotiatedBuffer := NegotiatedBuffer;
   end;
 end;
 
-procedure TBaseAddressSpaceMemoryWithStreamTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskAddressSpaceMemoryBaseWithStream.Process(MessageInfo: TOlcbMessage);
 // Outline:
 //    Read Protocols to see if the Memory Protocol is supported
 //    Read Memory Protocol Options to read the Min/Max supported Spaces to see if $FF is supported
@@ -1713,11 +1713,11 @@ const
   STATE_READ_START = 8;
   STATE_WRITE_START = 20;
 var
-  DatagramReceive: TDatagramReceive;
-  StreamReceive: TStreamBase;
-  PIP: TOlcbProtocolIdentification;
-  Space: TOlcbMemAddressSpace;
-  Options: TOlcbMemOptions;
+  DatagramReceive: TCANFrameParserDatagramReceive;
+  StreamReceive: TCANFrameParserStreamBase;
+  PIP: TOlcbStructureProtocolIdentification;
+  Space: TOlcbStructureMemAddressSpace;
+  Options: TOlcbStructureMemOptions;
   DatagramResultStart: DWord;
   i: Integer;
   Terminated: Boolean;
@@ -1735,7 +1735,7 @@ begin
          // First see if the node even supports the Memory Configuration Protocol
          if IsProtocolIdentificationProcolReplyFromDestination(MessageInfo) then
          begin
-           PIP := TOlcbProtocolIdentification.Create;
+           PIP := TOlcbStructureProtocolIdentification.Create;
            try
              PIP.LoadByMessage( TOpenLCBMessageHelper( MessageInfo));   // Already know that MessageInfo is a TOpenLCBMessageHelper by this point
              if PIP.MemoryConfigProtocol then
@@ -1756,7 +1756,7 @@ begin
        end;
     2: begin
          // Ask for what Address Spaces the node supports
-         SendMemoryConfigurationOptions;
+         SendMemoryConfigurationOptionsByCANParsing;
          Inc(FiState);
          Sending := False;
        end;
@@ -1773,7 +1773,7 @@ begin
          DatagramReceive := nil;
          if IsConfigMemoryOptionsReplyFromDestination(MessageInfo, DatagramReceive) then
          begin
-           Options := TOlcbMemOptions.Create;
+           Options := TOlcbStructureMemOptions.Create;
            try
              Options.LoadFromDatagram(DatagramReceive);
              if (AddressSpace <= Options.AddressSpaceHi) and (AddressSpace >= Options.AddressSpaceLo) then
@@ -1793,7 +1793,7 @@ begin
        end;
     5: begin
         // Ask for details about the address space we are interested in
-         SendMemoryConfigurationSpaceInfo(AddressSpace);
+         SendMemoryConfigurationSpaceInfoByCANParsing(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
@@ -1809,7 +1809,7 @@ begin
          // Receive detailed information about the memory space
          if IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo, AddressSpace, DatagramReceive) then
          begin
-           Space := TOlcbMemAddressSpace.Create;
+           Space := TOlcbStructureMemAddressSpace.Create;
            try
              Space.LoadByDatagram(DatagramReceive);
              if Space.IsPresent then
@@ -1844,14 +1844,13 @@ begin
        end;
     STATE_READ_START : begin
          LocalLoopTime := GetTickCount;
-
          CurrentSendSize := MaxAddress - CurrentAddress;                        // Streams can just say "read it all"
          Sending := True;
          Inc(FiState);
        end;
     9: begin
         // Ask for a read from the node
-         SendMemoryConfigurationRead(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte, True);
+         SendMemoryConfigurationReadByCANParsing(AddressSpace, CurrentAddress, CurrentSendSize, ForceOptionalSpaceByte, True);
          Sending := False;
          Inc(FiState);
        end;
@@ -1879,6 +1878,7 @@ begin
                 DatagramResultStart := 7
               else
                 DatagramResultStart := 6;
+              Inc(FiState);
               // Not much to do here.  If no error then the node will start a Stream Initilization with us next
             end
           end
@@ -1899,6 +1899,7 @@ begin
           // Get ready for Data
           if IsStreamSendFromDestination(MessageInfo, StreamReceive) then
           begin
+            // here I create a TCANFrameParserStreamReceive and wait for the sending node to send me the data and the object to recreat it from CAN frames
           end;
         end;
     STATE_WRITE_START :
@@ -1906,7 +1907,7 @@ begin
           if DataStream.Size > Space.AddressHi - Space.AddressLo then
             ErrorCode := ERROR_ADDRESS_SPACE_WRITE_LARGER_THAN_SPACE
           else
-            SendMemoryConfigurationWrite(AddressSpace, CurrentAddress, Space.AddressHi - Space.AddressLo, ForceOptionalSpaceByte, DataStream);
+            SendMemoryConfigurationWriteByCANParsing(AddressSpace, CurrentAddress, Space.AddressHi - Space.AddressLo, ForceOptionalSpaceByte, DataStream);
           iState := STATE_DONE
         end;
     STATE_DONE : begin
@@ -1965,11 +1966,11 @@ begin
   inherited Destroy;
 end;
 
-{ TReadAddressSpaceMemoryTask }
+{ TTaskAddressSpaceMemoryReadWithDatagram }
 
-function TReadAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
+function TTaskAddressSpaceMemoryReadWithDatagram.Clone: TTaskOlcbBase;
 begin
-  Result := TReadAddressSpaceMemoryTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, UsingTerminator);
+  Result := TTaskAddressSpaceMemoryReadWithDatagram.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, UsingTerminator);
 end;
 
 { TTransportLayerThread }
@@ -1998,15 +1999,15 @@ end;
 
 procedure TTransportLayerThread.DecomposeAndDispatchGridConnectString(ReceiveStr: AnsiString; Helper: TOpenLCBMessageHelper);
 var
-  CANLayerTask: TCANLayerTask;
-  EventTask: TEventTask;
-  VerifiedNodeIDTask: TVerifiedNodeIDTask;
-  TractionProtocolTask: TTractionProtocolTask;
-  InitializationCompleteTask: TInitializationCompleteTask;
-  CompletedSendDatagram: TDatagramSend;
-  BufferDatagramReceive: TDatagramReceive;
-  CompletedSendStream: TStreamSend;
-  BufferStreamReceive: TStreamBase;
+  CANLayerTask: TTaskCANLayer;
+  EventTask: TTaskEvent;
+  VerifiedNodeIDTask: TTaskVerifiedNodeID;
+  TractionProtocolTask: TTaskTractionProtocol;
+  InitializationCompleteTask: TTaskInitializationComplete;
+  CompletedSendDatagram: TCANFrameParserDatagramSend;
+  BufferDatagramReceive: TCANFrameParserDatagramReceive;
+  CompletedSendStream: TStreamCANFrameParserSend;
+  BufferStreamReceive: TCANFrameParserStreamBase;
 begin
   ReceiveStr := Trim(ReceiveStr);
   if Helper.Decompose(ReceiveStr) then
@@ -2022,31 +2023,31 @@ begin
 
     if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
     begin
-      CompletedSendDatagram := DatagramSendManager.ProcessReceive(Helper);// Sending Datagrams are expecting replies from their destination Nodes
+      CompletedSendDatagram := CANFrameParserDatagramSendManager.ProcessReceive(Helper);  // Sending Datagrams are expecting replies from their destination Nodes
       if Assigned(CompletedSendDatagram) then
       begin
-        OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);          // Give the Task subsystem a crack at knowning about the sent datagram
+        OlcbTaskManager.ProcessReceiving(CompletedSendDatagram);                // Give the Task subsystem a crack at knowning about the sent datagram
         FreeAndNil(CompletedSendDatagram)
       end else
       begin
-        BufferDatagramReceive := DatagramReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
+        BufferDatagramReceive := CANFrameParserDatagramReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
         if Assigned(BufferDatagramReceive) then
         begin
-          OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);        // Give the Task subsystem a crack at knowning about the received datagram
+          OlcbTaskManager.ProcessReceiving(BufferDatagramReceive);              // Give the Task subsystem a crack at knowning about the received datagram
           FreeAndNil(BufferDatagramReceive)
         end;
       end;
-    end else                                                              // *** Test for a Datagram message that came in ***
-    if IsStreamMTI(Helper.MTI, True) then
+    end else                                                                    // *** Test for a Datagram message that came in ***
+    if IsStreamMTI(Helper.MTI, False) then                                      // Only send the Stream_Send message to the parser as that is all that needs parsing for Streams
     begin
-      CompletedSendStream := StreamSendManager.ProcessReceive(Helper);          // Sending Streams are expecting replies from their destination Nodes
+      CompletedSendStream := CANFrameParserStreamSendManager.ProcessReceive(Helper); // Sending Streams are expecting replies from their destination Nodes, not sure if this is needed yet.......
       if Assigned(CompletedSendStream) then
       begin
         OlcbTaskManager.ProcessReceiving(CompletedSendStream);                  // Give the Task subsystem a crack at knowning about the sent Stream
         FreeAndNil(CompletedSendStream)
       end else
       begin
-        BufferStreamReceive := StreamReceiveManager.ProcessReceive(Helper);            // Stream object is created and given to the thread
+        BufferStreamReceive := CANFrameParserStreamReceiveManager.ProcessReceive(Helper);    // Stream object is created and given to the thread
         if Assigned(BufferStreamReceive) then
         begin
           OlcbTaskManager.ProcessReceiving(BufferStreamReceive);                // Give the Task subsystem a crack at knowning about the received Stream
@@ -2064,7 +2065,7 @@ begin
             AliasList.RemoveByAlias(Helper.DestinationAliasID);
           end;
       end;
-      CANLayerTask := TCANLayerTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+      CANLayerTask := TTaskCANLayer.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
       CANLayerTask.OnBeforeDestroy := OnBeforeDestroyTask;
       Helper.CopyTo(CANLayerTask.MessageHelper);
       AddTask(CANLayerTask, False);
@@ -2073,14 +2074,14 @@ begin
     case Helper.MTI of
       MTI_INITIALIZATION_COMPLETE :
         begin
-          InitializationCompleteTask := TInitializationCompleteTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          InitializationCompleteTask := TTaskInitializationComplete.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           InitializationCompleteTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(InitializationCompleteTask.MessageHelper);
           AddTask(InitializationCompleteTask, False);
         end;
       MTI_VERIFIED_NODE_ID_NUMBER :
         begin
-          VerifiedNodeIDTask := TVerifiedNodeIDTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          VerifiedNodeIDTask := TTaskVerifiedNodeID.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           VerifiedNodeIDTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(VerifiedNodeIDTask.MessageHelper);
           AddTask(VerifiedNodeIDTask, False);
@@ -2095,14 +2096,14 @@ begin
       MTI_PRODUCER_IDENTIFIED_RESERVED,
       MTI_PC_EVENT_REPORT :
         begin
-          EventTask := TEventTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          EventTask := TTaskEvent.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           EventTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(EventTask.MessageHelper);
           AddTask(EventTask, False);
         end;
       MTI_TRACTION_PROTOCOL :
         begin
-          TractionProtocolTask := TTractionProtocolTask.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
+          TractionProtocolTask := TTaskTractionProtocol.Create(Helper.DestinationAliasID, Helper.SourceAliasID, True);
           TractionProtocolTask.OnBeforeDestroy := OnBeforeDestroyTask;
           Helper.CopyTo(TractionProtocolTask.MessageHelper);
           AddTask(TractionProtocolTask, False);
@@ -2144,10 +2145,10 @@ constructor TTransportLayerThread.Create(CreateSuspended: Boolean);
 begin
   inherited Create(CreateSuspended);
   FThreadListSendStrings := TThreadList.Create;
-  FDatagramReceiveManager := TDatagramReceiveManager.Create(Self);
-  FDatagramSendManager := TDatagramSendManager.Create(Self);
-  FStreamReceiveManager := TStreamReceiveManager.Create(Self);
-  FStreamSendManager := TStreamSendManager.Create(Self);
+  FCANFrameParserDatagramReceiveManager := TCANFrameParserDatagramReceiveManager.Create(Self);
+  FCANFrameParserDatagramSendManager := TCANFrameParserDatagramSendManager.Create(Self);
+  FCANFrameParserStreamReceiveManager := TCANFrameParserStreamReceiveManager.Create(Self);
+  FCANFrameParserStreamSendManager := TCANFrameParserStreamSendManager.Create(Self);
   FOlcbTaskManager := TOlcbTaskEngine.Create(Self);
   FAliasList := TAliasTaskContainerList.Create;
   FTerminateComplete := False;
@@ -2171,14 +2172,14 @@ begin
     ThreadListSendStrings.UnLockList;
   end;
   FreeAndNil(FThreadListSendStrings);   // Thread does not own the items so just empty the list
-  DatagramReceiveManager.Clear;
-  FreeAndNil(FDatagramReceiveManager);
-  DatagramSendManager.Clear;
-  FreeAndNil(FDatagramSendManager);
-  StreamReceiveManager.Clear;
-  FreeAndNil(FStreamReceiveManager);
-  StreamSendManager.Clear;
-  FreeAndNil(FStreamSendManager);
+  CANFrameParserDatagramReceiveManager.Clear;
+  FreeAndNil(FCANFrameParserDatagramReceiveManager);
+  CANFrameParserDatagramSendManager.Clear;
+  FreeAndNil(FCANFrameParserDatagramSendManager);
+  CANFrameParserStreamReceiveManager.Clear;
+  FreeAndNil(FCANFrameParserStreamReceiveManager);
+  CANFrameParserStreamSendManager.Clear;
+  FreeAndNil(FCANFrameParserStreamSendManager);
   FreeAndNil(FAliasList);
   inherited Destroy;
 end;
@@ -2204,28 +2205,28 @@ begin
   end;
 end;
 
-procedure TTransportLayerThread.InternalAddDatagramToSend(Datagram: TDatagramSend);
+procedure TTransportLayerThread.InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
 var
   List: TList;
 begin
   if AliasList.FindByAlias(Datagram.DestinationAlias) <> nil then
   begin
-    List := DatagramSendManager.Datagrams.LockList;
+    List := CANFrameParserDatagramSendManager.Datagrams.LockList;
     try
       List.Add(Datagram);
-      if List.Count > DatagramSendManager.MaxCount then
-        DatagramSendManager.MaxCount := List.Count;
+      if List.Count > CANFrameParserDatagramSendManager.MaxCount then
+        CANFrameParserDatagramSendManager.MaxCount := List.Count;
     finally
-      DatagramSendManager.Datagrams.UnLockList
+      CANFrameParserDatagramSendManager.Datagrams.UnLockList
     end;
   end else
     Datagram.Free
 end;
 
-function TTransportLayerThread.AddTask(NewTask: TOlcbTaskBase; CopyTask: Boolean): Boolean;
+function TTransportLayerThread.AddTask(NewTask: TTaskOlcbBase; CopyTask: Boolean): Boolean;
 var
   List: TList;
-  CloneTask: TOlcbTaskBase;
+  CloneTask: TTaskOlcbBase;
 begin
   Result := False;
   if (NewTask.DestinationAlias = 0) or (AliasList.FindByAlias(NewTask.DestinationAlias) <> nil) then
@@ -2261,10 +2262,10 @@ begin
     i := List.count;
     for i := List.Count - 1 downto 0 do
     begin
-      if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) or (TOlcbTaskBase( List[i]).RemoveKey = 0) then
+      if (TTaskOlcbBase( List[i]).RemoveKey = RemoveKey) or (TTaskOlcbBase( List[i]).RemoveKey = 0) then
       begin
-        TOlcbTaskBase( List[i]).ForceTermination := True;
-        TOlcbTaskBase( List[i]).Free;
+        TTaskOlcbBase( List[i]).ForceTermination := True;
+        TTaskOlcbBase( List[i]).Free;
         List.Delete(i);
       end;
     end;
@@ -2284,11 +2285,11 @@ begin
       Wait := False;
       for i := List.Count - 1 downto 0 do
       begin
-        if (TOlcbTaskBase( List[i]).RemoveKey = RemoveKey) then
+        if (TTaskOlcbBase( List[i]).RemoveKey = RemoveKey) then
         begin
-          if TOlcbTaskBase( List[i]).Done or not TOlcbTaskBase( List[i]).HasStarted then
+          if TTaskOlcbBase( List[i]).Done or not TTaskOlcbBase( List[i]).HasStarted then
           begin
-            TOlcbTaskBase( List[i]).Free;
+            TTaskOlcbBase( List[i]).Free;
             List.Delete(i);
           end else
             Wait := True;
@@ -2301,9 +2302,9 @@ begin
 end;
 
 
-{ TOlcbSNIP }
+{ TOlcbStructureSNIP }
 
-constructor TOlcbSNIP.Create;
+constructor TOlcbStructureSNIP.Create;
 begin
   FSniiHardwareVersion := '';
   FSniiMfgModel := '';
@@ -2315,13 +2316,13 @@ begin
   FSniiUserVersion := 0;
 end;
 
-procedure TOlcbSNIP.CopyTo(Target: TOlcbStructureHelperBase);
+procedure TOlcbStructureSNIP.CopyTo(Target: TOlcbStructureHelperBase);
 var
-  X: TOlcbSNIP;
+  X: TOlcbStructureSNIP;
 begin
-  if Target is TOlcbSNIP then
+  if Target is TOlcbStructureSNIP then
   begin
-    X := TOlcbSNIP( Target);
+    X := TOlcbStructureSNIP( Target);
     X.FSniiHardwareVersion := SniiHardwareVersion;
     X.FSniiMfgModel := SniiMfgModel;
     X.FSniiMfgName := SniiMfgName;
@@ -2333,167 +2334,167 @@ begin
   end;
 end;
 
-{ TOlcbProtocolIdentification }
+{ TOlcbStructureProtocolIdentification }
 
-function TOlcbProtocolIdentification.GetAbbreviatedCDIProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetAbbreviatedCDIProtocol: Boolean;
 begin
   Result := Mask and PIP_ABBREVIATED_CDI = PIP_ABBREVIATED_CDI;
 end;
 
-function TOlcbProtocolIdentification.GetConfigDescriptionInfoProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetConfigDescriptionInfoProtocol: Boolean;
 begin
   Result := Mask and PIP_CDI = PIP_CDI;
 end;
 
-function TOlcbProtocolIdentification.GetDatagramProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetDatagramProtocol: Boolean;
 begin
   Result := Mask and PIP_DATAGRAM = PIP_DATAGRAM;
 end;
 
-function TOlcbProtocolIdentification.GetFunctionStateInformationProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetFunctionStateInformationProtocol: Boolean;
 begin
   Result := Mask and PIP_FSI = PIP_FSI
 end;
 
-function TOlcbProtocolIdentification.GetDisplayProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetDisplayProtocol: Boolean;
 begin
   Result := Mask and PIP_DISPLAY = PIP_DISPLAY;
 end;
 
-function TOlcbProtocolIdentification.GetEventExchangeProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetEventExchangeProtocol: Boolean;
 begin
   Result := Mask and PIP_EVENT_EXCHANGE = PIP_EVENT_EXCHANGE;
 end;
 
-function TOlcbProtocolIdentification.GetFunctionDescriptionInfoProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetFunctionDescriptionInfoProtocol: Boolean;
 begin
   Result := Mask and PIP_FDI = PIP_FDI;
 end;
 
-function TOlcbProtocolIdentification.GetIdentificationProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetIdentificationProtocol: Boolean;
 begin
   Result := Mask and PIP_IDENTIFCIATION = PIP_IDENTIFCIATION;
 end;
 
-function TOlcbProtocolIdentification.GetMemoryConfigProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetMemoryConfigProtocol: Boolean;
 begin
   Result := Mask and PIP_MEMORY_CONFIG = PIP_MEMORY_CONFIG;
 end;
 
-function TOlcbProtocolIdentification.GetRemoteButtonProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetRemoteButtonProtocol: Boolean;
 begin
   Result := Mask and PIP_REMOTE_BUTTON = PIP_REMOTE_BUTTON;
 end;
 
-function TOlcbProtocolIdentification.GetReservationProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetReservationProtocol: Boolean;
 begin
   Result := Mask and PIP_RESERVATION = PIP_RESERVATION;
 end;
 
-function TOlcbProtocolIdentification.GetSimpleNodeInfoProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetSimpleNodeInfoProtocol: Boolean;
 begin
   Result := Mask and PIP_SIMPLE_NODE_ID = PIP_SIMPLE_NODE_ID;
 end;
 
-function TOlcbProtocolIdentification.GetSimpleProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetSimpleProtocol: Boolean;
 begin
   Result := Mask and PIP_PIP = PIP_PIP;
 end;
 
-function TOlcbProtocolIdentification.GetStreamProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetStreamProtocol: Boolean;
 begin
   Result := Mask and PIP_STREAM = PIP_STREAM;
 end;
 
-function TOlcbProtocolIdentification.GetTeachingLearningConfigProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetTeachingLearningConfigProtocol: Boolean;
 begin
   Result := Mask and PIP_TEACH_LEARN = PIP_TEACH_LEARN;
 end;
 
-function TOlcbProtocolIdentification.GetTractionControlProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetTractionControlProtocol: Boolean;
 begin
   Result := Mask and PIP_TRACTION = PIP_TRACTION;
 end;
 
-procedure TOlcbProtocolIdentification.CopyTo(Target: TOlcbStructureHelperBase);
+procedure TOlcbStructureProtocolIdentification.CopyTo(Target: TOlcbStructureHelperBase);
 var
-  X: TOlcbProtocolIdentification;
+  X: TOlcbStructureProtocolIdentification;
 begin
-  if Target is TOlcbProtocolIdentification then
+  if Target is TOlcbStructureProtocolIdentification then
   begin
-    X := TOlcbProtocolIdentification( Target);
+    X := TOlcbStructureProtocolIdentification( Target);
     X.Mask := Mask;
   end;
 end;
 
-procedure TOlcbProtocolIdentification.LoadByMessage(AHelper: TOpenLCBMessageHelper);
+procedure TOlcbStructureProtocolIdentification.LoadByMessage(AHelper: TOpenLCBMessageHelper);
 begin
   FMask := AHelper.ExtractDataBytesAsInt(2, 7);
 end;
 
-{ TOlcbMemOptions }
+{ TOlcbStructureMemOptions }
 
-function TOlcbMemOptions.GetReadFromMfgACDI: Boolean;
+function TOlcbStructureMemOptions.GetReadFromMfgACDI: Boolean;
 begin
   Result := OperationMask and MCO_ACDI_USER_READS = MCO_ACDI_USER_READS
 end;
 
-function TOlcbMemOptions.GetReadFromUserACDI: Boolean;
+function TOlcbStructureMemOptions.GetReadFromUserACDI: Boolean;
 begin
   Result := OperationMask and MCO_ACDI_MFG_READS = MCO_ACDI_MFG_READS
 end;
 
-function TOlcbMemOptions.GetUnAlignedReads: Boolean;
+function TOlcbStructureMemOptions.GetUnAlignedReads: Boolean;
 begin
   Result := OperationMask and MCO_UNALIGNED_READS = MCO_UNALIGNED_READS
 end;
 
-function TOlcbMemOptions.GetUnAlignedWrites: Boolean;
+function TOlcbStructureMemOptions.GetUnAlignedWrites: Boolean;
 begin
   Result := OperationMask and MCO_UNALIGNED_WRITES = MCO_UNALIGNED_WRITES
 end;
 
-function TOlcbMemOptions.GetWrite64Bytes: Boolean;
+function TOlcbStructureMemOptions.GetWrite64Bytes: Boolean;
 begin
   Result := WriteLengthMask and MCWL_64_BYTE = MCWL_64_BYTE
 end;
 
-function TOlcbMemOptions.GetWriteArbitraryBytes: Boolean;
+function TOlcbStructureMemOptions.GetWriteArbitraryBytes: Boolean;
 begin
   Result := WriteLengthMask and MCWL_ARBITRARY_BYTE = MCWL_ARBITRARY_BYTE
 end;
 
-function TOlcbMemOptions.GetWriteFourBytes: Boolean;
+function TOlcbStructureMemOptions.GetWriteFourBytes: Boolean;
 begin
   Result := WriteLengthMask and MCWL_FOUR_BYTE = MCWL_FOUR_BYTE
 end;
 
-function TOlcbMemOptions.GetWriteOneByte: Boolean;
+function TOlcbStructureMemOptions.GetWriteOneByte: Boolean;
 begin
   Result := WriteLengthMask and MCWL_ONE_BYTE = MCWL_ONE_BYTE
 end;
 
-function TOlcbMemOptions.GetWriteStreamBytes: Boolean;
+function TOlcbStructureMemOptions.GetWriteStreamBytes: Boolean;
 begin
   Result := WriteLengthMask and MCWL_STREAM_WRITE_SUPPORTED = MCWL_STREAM_WRITE_SUPPORTED;
 end;
 
-function TOlcbMemOptions.GetWriteToUserACDI: Boolean;
+function TOlcbStructureMemOptions.GetWriteToUserACDI: Boolean;
 begin
    Result := OperationMask and MCO_ACDI_USER_WRITES  = MCO_ACDI_USER_WRITES;
 end;
 
-function TOlcbMemOptions.GetWriteTwoBytes: Boolean;
+function TOlcbStructureMemOptions.GetWriteTwoBytes: Boolean;
 begin
   Result := WriteLengthMask and MCWL_TWO_BYTE = MCWL_TWO_BYTE
 end;
 
-function TOlcbMemOptions.GetWriteUnderMask: Boolean;
+function TOlcbStructureMemOptions.GetWriteUnderMask: Boolean;
 begin
   Result := OperationMask and MCO_WRITE_UNDER_MASK = MCO_WRITE_UNDER_MASK
 end;
 
-constructor TOlcbMemOptions.Create;
+constructor TOlcbStructureMemOptions.Create;
 begin
   FAddressSpaceHi := 0;
   FAddressSpaceLo := 0;
@@ -2502,13 +2503,13 @@ begin
   FWriteLengthMask := 0;
 end;
 
-procedure TOlcbMemOptions.CopyTo(Target: TOlcbStructureHelperBase);
+procedure TOlcbStructureMemOptions.CopyTo(Target: TOlcbStructureHelperBase);
 var
-  X: TOlcbMemOptions;
+  X: TOlcbStructureMemOptions;
 begin
-  if Target is TOlcbMemOptions then
+  if Target is TOlcbStructureMemOptions then
   begin
-    X := TOlcbMemOptions( Target);
+    X := TOlcbStructureMemOptions( Target);
     X.FAddressSpaceHi := AddressSpaceHi;
     X.FAddressSpaceLo := AddressSpaceLo;
     X.FDescription := Description;
@@ -2517,7 +2518,7 @@ begin
   end;
 end;
 
-procedure TOlcbMemOptions.LoadFromDatagram(Datagram: TDatagramReceive);
+procedure TOlcbStructureMemOptions.LoadFromDatagram(Datagram: TCANFrameParserDatagramReceive);
 var
   i: Integer;
 begin
@@ -2536,27 +2537,27 @@ begin
   end;
 end;
 
-{ TOlcbMemConfig }
+{ TOlcbStructureMemConfig }
 
-function TOlcbMemConfig.GetAddressSpace(Index: Integer): TOlcbMemAddressSpace;
+function TOlcbStructureMemConfig.GetAddressSpace(Index: Integer): TOlcbStructureMemAddressSpace;
 begin
   Result := nil;
   if (Index > -1) and (Index < AddressSpaceList.Count) then
-    Result := TOlcbMemAddressSpace( AddressSpaceList[Index])
+    Result := TOlcbStructureMemAddressSpace( AddressSpaceList[Index])
 end;
 
-function TOlcbMemConfig.GetAddressCount: Integer;
+function TOlcbStructureMemConfig.GetAddressCount: Integer;
 begin
   Result := AddressSpaceList.Count
 end;
 
-procedure TOlcbMemConfig.SetAddressSpace(Index: Integer; AValue: TOlcbMemAddressSpace);
+procedure TOlcbStructureMemConfig.SetAddressSpace(Index: Integer; AValue: TOlcbStructureMemAddressSpace);
 begin
   if (Index > -1) and (Index < AddressSpaceList.Count) then
     AddressSpaceList[Index] := AValue                      // We don't free it
 end;
 
-procedure TOlcbMemConfig.Clear;
+procedure TOlcbStructureMemConfig.Clear;
 var
   i: Integer;
 begin
@@ -2568,14 +2569,14 @@ begin
   end;
 end;
 
-constructor TOlcbMemConfig.Create;
+constructor TOlcbStructureMemConfig.Create;
 begin
   inherited Create;
   FAddressSpaceList := TList.Create;
-  FOptions := TOlcbMemOptions.Create;
+  FOptions := TOlcbStructureMemOptions.Create;
 end;
 
-destructor TOlcbMemConfig.Destroy;
+destructor TOlcbStructureMemConfig.Destroy;
 begin
   Clear;
   FreeAndNil(FAddressSpaceList);
@@ -2583,36 +2584,36 @@ begin
   inherited Destroy;
 end;
 
-function TOlcbMemConfig.AddAddressSpace: TOlcbMemAddressSpace;
+function TOlcbStructureMemConfig.AddAddressSpace: TOlcbStructureMemAddressSpace;
 begin
-  Result := TOlcbMemAddressSpace.Create;
+  Result := TOlcbStructureMemAddressSpace.Create;
   AddressSpaceList.Add(Result);
 end;
 
-function TOlcbMemConfig.AddAddressSpaceByDatagram(Datagram: TDatagramReceive): TOlcbMemAddressSpace;
+function TOlcbStructureMemConfig.AddAddressSpaceByDatagram(Datagram: TCANFrameParserDatagramReceive): TOlcbStructureMemAddressSpace;
 begin
   Result := FindAddressSpaceBySpaceID(Datagram.RawDatagram[2]);
   if not Assigned(Result) then
   begin
-    Result := TOlcbMemAddressSpace.Create;
+    Result := TOlcbStructureMemAddressSpace.Create;
     AddressSpaceList.Add(Result);
   end;
   Result.LoadByDatagram(Datagram);
 end;
 
-procedure TOlcbMemConfig.CopyTo(Target: TOlcbStructureHelperBase);
+procedure TOlcbStructureMemConfig.CopyTo(Target: TOlcbStructureHelperBase);
 var
-  X: TOlcbMemConfig;
+  X: TOlcbStructureMemConfig;
   i: Integer;
-  NewSpace: TOlcbMemAddressSpace;
+  NewSpace: TOlcbStructureMemAddressSpace;
 begin
-  if Target is TOlcbMemConfig then
+  if Target is TOlcbStructureMemConfig then
   begin
-    X := TOlcbMemConfig( Target);
+    X := TOlcbStructureMemConfig( Target);
     X.Clear;
     for i := 0 to AddressSpaceCount - 1 do
     begin
-      NewSpace := TOlcbMemAddressSpace.Create;
+      NewSpace := TOlcbStructureMemAddressSpace.Create;
       AddressSpace[i].CopyTo(NewSpace);
       X.AddressSpaceList.Add(NewSpace);
     end;
@@ -2620,7 +2621,7 @@ begin
   Options.CopyTo(X.Options);
 end;
 
-function TOlcbMemConfig.FindAddressSpaceBySpaceID(AnAddress: Byte): TOlcbMemAddressSpace;
+function TOlcbStructureMemConfig.FindAddressSpaceBySpaceID(AnAddress: Byte): TOlcbStructureMemAddressSpace;
 var
   i: Integer;
 begin
@@ -2635,19 +2636,19 @@ begin
 end;
 
 
-{ TOlcbMemAddressSpace }
+{ TOlcbStructureMemAddressSpace }
 
-function TOlcbMemAddressSpace.GetAddressSize: DWord;
+function TOlcbStructureMemAddressSpace.GetAddressSize: DWord;
 begin
   Result := AddressHi-AddressLo
 end;
 
-function TOlcbMemAddressSpace.GetSpaceAsHex: string;
+function TOlcbStructureMemAddressSpace.GetSpaceAsHex: string;
 begin
   Result := IntToHex(FSpace, 2);
 end;
 
-constructor TOlcbMemAddressSpace.Create;
+constructor TOlcbStructureMemAddressSpace.Create;
 begin
   FAddressHi := 0;
   FAddressLo := 0;
@@ -2658,13 +2659,13 @@ begin
   FIsPresent := False;
 end;
 
-procedure TOlcbMemAddressSpace.CopyTo(Target: TOlcbStructureHelperBase);
+procedure TOlcbStructureMemAddressSpace.CopyTo(Target: TOlcbStructureHelperBase);
 var
-  X: TOlcbMemAddressSpace;
+  X: TOlcbStructureMemAddressSpace;
 begin
-  if Target is TOlcbMemAddressSpace then
+  if Target is TOlcbStructureMemAddressSpace then
   begin
-    X := TOlcbMemAddressSpace( Target);
+    X := TOlcbStructureMemAddressSpace( Target);
     X.FAddressHi := AddressHi;
     X.FAddressLo := AddressLo;
     X.FAddressLoImpliedZero := AddressLoImpliedZero;
@@ -2675,7 +2676,7 @@ begin
   end;
 end;
 
-procedure TOlcbMemAddressSpace.LoadByDatagram(ADatagram: TDatagramReceive);
+procedure TOlcbStructureMemAddressSpace.LoadByDatagram(ADatagram: TCANFrameParserDatagramReceive);
 var
   DescriptionStart: Integer;
   Done: Boolean;
@@ -2704,11 +2705,11 @@ begin
   end;
 end;
 
-{ TDatagramSendManager }
+{ TCANFrameParserDatagramSendManager }
 
-procedure TDatagramSendManager.TimerTick(Sender: TObject);
+procedure TCANFrameParserDatagramSendManager.TimerTick(Sender: TObject);
 var
-  SendDatagram: TDatagramSend;
+  SendDatagram: TCANFrameParserDatagramSend;
   i: Integer;
   List: TList;
   AbandonList: TList;
@@ -2718,7 +2719,7 @@ begin
   try
   for i := List.Count - 1 downto 0 do     // May remove the item so need to go from the top down
   begin
-    SendDatagram := TDatagramSend( List[i]);
+    SendDatagram := TCANFrameParserDatagramSend( List[i]);
     if not SendDatagram.Empty then
     begin
       if SendDatagram.AbandonTime > 4000 then
@@ -2736,7 +2737,7 @@ begin
 end;
 
 
-constructor TDatagramSendManager.Create(AnOwner: TTransportLayerThread);
+constructor TCANFrameParserDatagramSendManager.Create(AnOwner: TTransportLayerThread);
 begin
   inherited Create;
   FDatagrams := TThreadList.Create;
@@ -2749,7 +2750,7 @@ begin
   FMaxCount := 0;
 end;
 
-destructor TDatagramSendManager.Destroy;
+destructor TCANFrameParserDatagramSendManager.Destroy;
 begin
   Clear;
   FreeAndNil(FDatagrams);
@@ -2759,7 +2760,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TDatagramSendManager.Clear;
+procedure TCANFrameParserDatagramSendManager.Clear;
 var
   i: Integer;
   List: TList;
@@ -2774,7 +2775,7 @@ begin
   end;
 end;
 
-procedure TDatagramSendManager.ClearAbandon;
+procedure TCANFrameParserDatagramSendManager.ClearAbandon;
 var
   i: Integer;
   List: TList;
@@ -2789,9 +2790,9 @@ begin
   end;
 end;
 
-function TDatagramSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TDatagramSend;
+function TCANFrameParserDatagramSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserDatagramSend;
 var
-  Datagram: TDatagramSend;
+  Datagram: TCANFrameParserDatagramSend;
   List: TList;
   i: Integer;
   Done: Boolean;
@@ -2803,7 +2804,7 @@ begin
     Done := False;
     while (i < List.Count) and not Done do
     begin
-      Datagram := TDatagramSend( List[i]);
+      Datagram := TCANFrameParserDatagramSend( List[i]);
       if Datagram.ProcessReceive(AHelper) then
       begin
         Done := True;
@@ -2820,9 +2821,9 @@ begin
   end;
 end;
 
-procedure TDatagramSendManager.ProcessSend;
+procedure TCANFrameParserDatagramSendManager.ProcessSend;
 var
-  Datagram: TDatagramSend;
+  Datagram: TCANFrameParserDatagramSend;
   List: TList;
   i: Integer;
   Done: Boolean;
@@ -2833,7 +2834,7 @@ begin
     Done := False;
     while (i < List.Count) and not Done do
     begin
-      Datagram := TDatagramSend( List[i]);
+      Datagram := TCANFrameParserDatagramSend( List[i]);
       Done := Datagram.ProcessSend(Owner);
       Inc(i);
     end;
@@ -2842,23 +2843,23 @@ begin
   end;
 end;
 
-{ TDatagramReceiveManager }
+{ TCANFrameParserDatagramReceiveManager }
 
-function TDatagramReceiveManager.FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
+function TCANFrameParserDatagramReceiveManager.FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper: TOpenLCBMessageHelper): TCANFrameParserDatagramReceive;
 //
 // Searches an in process datagram interaction between the nodes in the message
 //
 var
   i: Integer;
   List: TList;
-  Datagram: TDatagramReceive;
+  Datagram: TCANFrameParserDatagramReceive;
 begin
   Result := nil;
   List := Datagrams.LockList;
   try
     for i := List.Count-1 downto 0 do    // So we can delete abandon items from the top of the list
     begin
-      Datagram := TDatagramReceive( List[i]);
+      Datagram := TCANFrameParserDatagramReceive( List[i]);
       if not Datagram.Full and (Datagram.DestinationAlias = AHelper.SourceAliasID) and (Datagram.SourceAlias = AHelper.DestinationAliasID) then
         Result := Datagram;
 
@@ -2874,7 +2875,7 @@ begin
   end;
 end;
 
-constructor TDatagramReceiveManager.Create(AnOwner: TTransportLayerThread);
+constructor TCANFrameParserDatagramReceiveManager.Create(AnOwner: TTransportLayerThread);
 begin
   inherited Create;
   FOwner := AnOwner;
@@ -2882,14 +2883,14 @@ begin
   FMaxCount := 0;
 end;
 
-destructor TDatagramReceiveManager.Destroy;
+destructor TCANFrameParserDatagramReceiveManager.Destroy;
 begin
   Clear;
   FreeAndNil(FDatagrams);
   inherited Destroy;
 end;
 
-procedure TDatagramReceiveManager.Clear;
+procedure TCANFrameParserDatagramReceiveManager.Clear;
 var
   i: Integer;
   List: TList;
@@ -2904,9 +2905,9 @@ begin
   end;
 end;
 
-function TDatagramReceiveManager.Process(AHelper: TOpenLCBMessageHelper): TDatagramReceive;
+function TCANFrameParserDatagramReceiveManager.Process(AHelper: TOpenLCBMessageHelper): TCANFrameParserDatagramReceive;
 var
-  TestDatagram: TDatagramReceive;
+  TestDatagram: TCANFrameParserDatagramReceive;
   List: TList;
 begin
   Result := nil;
@@ -2915,7 +2916,7 @@ begin
     TestDatagram := FindInProcessDatagramAndCheckForAbandonDatagrams(AHelper);
     if not Assigned(TestDatagram) then
     begin
-      TestDatagram := TDatagramReceive.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
+      TestDatagram := TCANFrameParserDatagramReceive.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
       Datagrams.Add(TestDatagram);
       List := Datagrams.LockList;
       if List.Count > MaxCount then
@@ -2931,7 +2932,7 @@ begin
   end;
 end;
 
-{ TDatagramSend }
+{ TCANFrameParserDatagramSend }
 
 // *****************************************************************************
 // Pulls the next 1..8 byte(s) from the Stream and puts them in the CAN Array to send, it always assumes the Stream Position of were to start
@@ -2940,7 +2941,7 @@ end;
 //   ByteArray:  [out] CAN ByteArray that will be sent on the wire
 //   Count    :  [out] The number of bytes that were transfered to the Byte Array
 // *****************************************************************************
-procedure TDatagramSend.StreamBytesToByteArray(Offset: Byte; var ByteArray: TCANByteArray; var Count: Byte);
+procedure TCANFrameParserDatagramSend.StreamBytesToByteArray(Offset: Byte; var ByteArray: TCANByteArray; var Count: Byte);
 begin
   Count := 0;
   // Tests for breaking out of loop:
@@ -2959,9 +2960,27 @@ end;
 // *****************************************************************************
 // Creates the datagram object
 // *****************************************************************************
-constructor TDatagramSend.Create;
+constructor TCANFrameParserDatagramSend.Create;
+var
+  i: Integer;
 begin
-  inherited;
+  FAbandonTime := 0;
+  FBlockStartPos := 0;
+  for i := 0 to 7 do
+   FDataBytesSent[i] := 0;
+  FDataBytesSentLen := 0;
+  FDestinationAlias := 0;
+  FEmpty := True;
+  FErrorCode := 0;
+  FMTI := 0;
+  FNewStartFrame := False;
+  for i := 0 to 7 do
+   FProtocolHeader[i] := 0;
+  FProtocolHeaderLen := 0;
+  FRetryCount := 0;
+  FBlockByteCount := 0;
+  FSourceAlias := 0;
+  FWaitingForACK := False;
   FStream := TMemoryStream.Create;
   FLocalHelper := TOpenLCBMessageHelper.Create;
 end;
@@ -2969,7 +2988,7 @@ end;
 // *****************************************************************************
 // Destroys the datagram object
 // *****************************************************************************
-destructor TDatagramSend.Destroy;
+destructor TCANFrameParserDatagramSend.Destroy;
 begin
   FreeAndNil(FStream);
   FreeAndNil(FLocalHelper);
@@ -2979,8 +2998,10 @@ end;
 // *****************************************************************************
 // Loads and initalizes the object to start sending the datagram
 // *****************************************************************************
-procedure TDatagramSend.Initialize(AStream: TStream; AProtocolHeader: TCANByteArray; AProtocolHeaderLen: Byte; ASourceAlias, ADestinationAlias: Word);
+procedure TCANFrameParserDatagramSend.Initialize(AStream: TStream; AProtocolHeader: TCANByteArray; AProtocolHeaderLen: Byte; ASourceAlias, ADestinationAlias: Word);
 begin
+  Stream.Size := 0;
+  Stream.Position := 0;
   if Assigned(AStream) then
   begin
     Assert(AStream.Size > 64 - Int64( AProtocolHeaderLen), 'Stream in Datagram Send too long, 64 bytes max');
@@ -3006,7 +3027,7 @@ end;
 // Call repeatedly in the statemachine until Empty = True
 //   TransportLayerThread: Thread to send the messages to
 // *****************************************************************************
-function TDatagramSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+function TCANFrameParserDatagramSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
 var
   Count: Byte;
 begin
@@ -3048,7 +3069,7 @@ begin
   end;
 end;
 
-function TDatagramSend.ProcessReceive(AHelper: TOpenLCBMessageHelper): Boolean;
+function TCANFrameParserDatagramSend.ProcessReceive(AHelper: TOpenLCBMessageHelper): Boolean;
 //
 // It is assumed that the message is actually for this object and the object is not empty, it is not checked.........
 begin
@@ -3088,13 +3109,13 @@ begin
   end
 end;
 
-{ TDatagramReceive }
+{ TCANFrameParserDatagramReceive }
 
 
 // *****************************************************************************
 // Clears the structures and fields of the object
 // *****************************************************************************
-procedure TDatagramReceive.Clear;
+procedure TCANFrameParserDatagramReceive.Clear;
 var
   i: Integer;
 begin
@@ -3104,13 +3125,13 @@ begin
     RawDatagram[i] := 0;
 end;
 
-procedure TDatagramReceive.SendACK(TransportLayerThread: TTransportLayerThread);
+procedure TCANFrameParserDatagramReceive.SendACK(TransportLayerThread: TTransportLayerThread);
 begin
   LocalHelper.Load(ol_OpenLCB, MTI_DATAGRAM_OK_REPLY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0, 0, 0, 0, 0);
   TransportLayerThread.InternalAdd(LocalHelper.Encode);
 end;
 
-constructor TDatagramReceive.Create(ASourceAlias, ADestinationAlias: Word);
+constructor TCANFrameParserDatagramReceive.Create(ASourceAlias, ADestinationAlias: Word);
 begin
   inherited Create;
   FLocalHelper := TOpenLCBMessageHelper.Create;
@@ -3119,7 +3140,7 @@ begin
   FCreateTime := GetTickCount;
 end;
 
-destructor TDatagramReceive.Destroy;
+destructor TCANFrameParserDatagramReceive.Destroy;
 begin
   FreeAndNil(FLocalHelper);
   inherited;
@@ -3130,7 +3151,7 @@ end;
 //  StartByteIndex: The first byte to use in the result (most significant 8 bits of integer/QWord)
 //  EndByteIndex  : The last byte to use in the result (least significant 8 bits of integer/QWord)
 // *****************************************************************************
-function TDatagramReceive.ExtractDataBytesAsInt(StartByteIndex, EndByteIndex: Integer): QWord;
+function TCANFrameParserDatagramReceive.ExtractDataBytesAsInt(StartByteIndex, EndByteIndex: Integer): QWord;
 var
   i, Offset, Shift: Integer;
   ByteAsQ, ShiftedByte: QWord;
@@ -3152,7 +3173,7 @@ end;
 //  StartIndex: The index of the byte in the Datagram Array as the first character of the string
 //  Count     : The number of character in the string (bytes)
 // *****************************************************************************
-function TDatagramReceive.ExtractDataBytesAsString(StartIndex, Count: Integer): String;
+function TCANFrameParserDatagramReceive.ExtractDataBytesAsString(StartIndex, Count: Integer): String;
 var
   i, Last: Integer;
 begin
@@ -3174,7 +3195,7 @@ end;
 //   StartIndex: The index of the byte in the Datagram Array to copy into the stream
 //   Count     : The number of bytes to copy into the stream
 // *****************************************************************************
-procedure TDatagramReceive.CopyToStream(Stream: TStream; StartIndex, Count: Integer);
+procedure TCANFrameParserDatagramReceive.CopyToStream(Stream: TStream; StartIndex, Count: Integer);
 var
   i, Last: Integer;
 begin
@@ -3198,7 +3219,7 @@ end;
 //         have already been made.
 //
 // *****************************************************************************
-procedure TDatagramReceive.Process(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread);
+procedure TCANFrameParserDatagramReceive.Process(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread);
 var
   i: Integer;
 begin
@@ -3236,9 +3257,9 @@ begin
   end;
 end;
 
-{ TOlcbTaskBase }
+{ TTaskOlcbBase }
 
-function TOlcbTaskBase.SpaceToCommandByteEncoding(ASpace: Byte): Byte;
+function TTaskOlcbBase.SpaceToCommandByteEncoding(ASpace: Byte): Byte;
 begin
   case ASpace of
     MSI_CDI     : Result := MCP_CDI;
@@ -3249,7 +3270,7 @@ begin
   end;
 end;
 
-procedure TOlcbTaskBase.ExtractErrorInformation(DatagramReceive: TDatagramReceive);
+procedure TTaskOlcbBase.ExtractErrorInformation(DatagramReceive: TCANFrameParserDatagramReceive);
 var
   i, iChar: Integer;
 begin
@@ -3271,16 +3292,16 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsDatagramAckFromDestination(MessageInfo: TOlcbMessage): Boolean;
 var
-  DatagramSend: TDatagramSend;
+  DatagramSend: TCANFrameParserDatagramSend;
 begin
   Result := False;
   if Assigned(MessageInfo) then
   begin
-    if MessageInfo is TDatagramSend then                                 // Wait for the ACK from the send
+    if MessageInfo is TCANFrameParserDatagramSend then                                 // Wait for the ACK from the send
     begin
-      DatagramSend := TDatagramSend( MessageInfo);
+      DatagramSend := TCANFrameParserDatagramSend( MessageInfo);
       if DatagramSend.Empty and
          (DatagramSend.SourceAlias = SourceAlias) and
          (DatagramSend.DestinationAlias = DestinationAlias) then
@@ -3292,15 +3313,15 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TDatagramReceive): Boolean;
+function TTaskOlcbBase.IsConfigMemorySpaceInfoReplyFromDestination(MessageInfo: TOlcbMessage; AnAddress: Byte; var DatagramReceive: TCANFrameParserDatagramReceive): Boolean;
 begin
   Result := False;
   DatagramReceive := nil;
   if Assigned(MessageInfo) then
   begin
-    if MessageInfo is TDatagramReceive then
+    if MessageInfo is TCANFrameParserDatagramReceive then
     begin
-      DatagramReceive := TDatagramReceive(MessageInfo);
+      DatagramReceive := TCANFrameParserDatagramReceive(MessageInfo);
       if (DatagramReceive.RawDatagram[0] and
           DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
          (DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_ADD_SPACE_INFO_REPLY) and
@@ -3315,15 +3336,15 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+function TTaskOlcbBase.IsConfigMemoryOptionsReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TCANFrameParserDatagramReceive): Boolean;
 begin
   Result := False;
   DatagramReceive := nil;
   if Assigned(MessageInfo) then
   begin
-    if MessageInfo is TDatagramReceive then
+    if MessageInfo is TCANFrameParserDatagramReceive then
     begin
-      DatagramReceive := TDatagramReceive(MessageInfo);
+      DatagramReceive := TCANFrameParserDatagramReceive(MessageInfo);
       if  (DatagramReceive.RawDatagram[0] and
            DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
           (DatagramReceive.RawDatagram[1] and $FE = MCP_OP_GET_CONFIG_REPLY) and
@@ -3337,15 +3358,15 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TDatagramReceive): Boolean;
+function TTaskOlcbBase.IsConfigMemoryReadReplyFromDestination(MessageInfo: TOlcbMessage; var DatagramReceive: TCANFrameParserDatagramReceive): Boolean;
 begin
   Result := False;
   DatagramReceive := nil;
   if Assigned(MessageInfo) then
   begin
-    if MessageInfo is TDatagramReceive then
+    if MessageInfo is TCANFrameParserDatagramReceive then
     begin
-      DatagramReceive := TDatagramReceive(MessageInfo);
+      DatagramReceive := TCANFrameParserDatagramReceive(MessageInfo);
       if  (DatagramReceive.RawDatagram[0] and
           DATAGRAM_PROTOCOL_CONFIGURATION = DATAGRAM_PROTOCOL_CONFIGURATION) and
           (DatagramReceive.RawDatagram[1] and MCP_READ_DATAGRAM_REPLY = MCP_READ_DATAGRAM_REPLY) and
@@ -3359,7 +3380,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsProtocolIdentificationProcolReplyFromDestination(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3380,7 +3401,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsStreamInitializationRequest(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsStreamInitializationRequest(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3401,12 +3422,12 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TStreamBase): Boolean;
+function TTaskOlcbBase.IsStreamSendFromDestination(MessageInfo: TOlcbMessage; StreamReceive: TCANFrameParserStreamBase): Boolean;
 begin
   Result := False
 end;
 
-function TOlcbTaskBase.IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsSnipMessageReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3427,7 +3448,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3450,7 +3471,7 @@ begin
 
 end;
 
-function TOlcbTaskBase.IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3473,7 +3494,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3496,7 +3517,7 @@ begin
 
 end;
 
-function TOlcbTaskBase.IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3519,7 +3540,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3542,7 +3563,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3565,7 +3586,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3588,7 +3609,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3611,7 +3632,7 @@ begin
   end;
 end;
 
-function TOlcbTaskBase.IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
+function TTaskOlcbBase.IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
 var
   Helper: TOpenLCBMessageHelper;
 begin
@@ -3633,12 +3654,12 @@ begin
     end;
   end;
 end;
-procedure TOlcbTaskBase.MessageWaitTimerReset;
+procedure TTaskOlcbBase.MessageWaitTimerReset;
 begin
   MessageWaitTimeStart := GetTickCount;
 end;
 
-function TOlcbTaskBase.MessageWaitTimerCheckTimeout: Boolean;
+function TTaskOlcbBase.MessageWaitTimerCheckTimeout: Boolean;
 begin
   if HasStarted then
     Result := GetTickCount - MessageWaitTimeStart > GlobalSettings.General.MessageWaitTime
@@ -3646,7 +3667,7 @@ begin
     Result := True
 end;
 
-procedure TOlcbTaskBase.Process(MessageInfo: TOlcbMessage);
+procedure TTaskOlcbBase.Process(MessageInfo: TOlcbMessage);
 begin
   if not HasStarted then
   begin
@@ -3665,120 +3686,121 @@ begin
   end;
 end;
 
-procedure TOlcbTaskBase.SendIdentifyEventsMessage;
+procedure TTaskOlcbBase.SendIdentifyEventsMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY, SourceAlias, 0, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendIdentifyEventsAddressedMessage;
+procedure TTaskOlcbBase.SendIdentifyEventsAddressedMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_EVENTS_IDENTIFY_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendIdentifyConsumerMessage(Event: TEventID);
+procedure TTaskOlcbBase.SendIdentifyConsumerMessage(Event: TEventID);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_CONSUMER_IDENTIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendIdentifyProducerMessage(Event: TEventID);
+procedure TTaskOlcbBase.SendIdentifyProducerMessage(Event: TEventID);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, Event[0], Event[1], Event[2], Event[3], Event[4], Event[5], Event[6], Event[7]);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendMemoryConfigurationOptions;
+procedure TTaskOlcbBase.SendMemoryConfigurationOptionsByCANParsing;
 var
-  DatagramSend: TDatagramSend;
+  DatagramSend: TCANFrameParserDatagramSend;
 begin
-  DatagramSend := TDatagramSend.Create;
+  DatagramSend := TCANFrameParserDatagramSend.Create;
   DatagramSend.Initialize(nil, HEADER_MEMCONFIG_OPTIONS_REQUEST, 2, SourceAlias, DestinationAlias);
-  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSendByCANParsing(DatagramSend);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendMemoryConfigurationSpaceInfo(Space: Byte);
+procedure TTaskOlcbBase.SendMemoryConfigurationSpaceInfoByCANParsing(Space: Byte);
 var
-  DatagramSend: TDatagramSend;
+  DatagramSend: TCANFrameParserDatagramSend;
   CANByteArray: TCANByteArray;
 begin
-  DatagramSend := TDatagramSend.Create;
+  DatagramSend := TCANFrameParserDatagramSend.Create;
   CANByteArray := HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST;
   CANByteArray[2] := Space;                                     // Set the address
   DatagramSend.Initialize(nil, CANByteArray, 3, SourceAlias, DestinationAlias);
-  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSendByCANParsing(DatagramSend);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendMemoryConfigurationRead(Space: Byte; StartAddress: DWord; Count: DWord; ForceUseOfSpaceByte: Boolean; UseStream: Boolean);
+procedure TTaskOlcbBase.SendMemoryConfigurationReadByCANParsing(Space: Byte; StartAddress: DWord; Count: DWord; ForceUseOfSpaceByte: Boolean; UseStream: Boolean);
 var
-  DatagramSend: TDatagramSend;
+  DatagramSendObject: TCANFrameParserDatagramSend;
   CANByteArray: TCANByteArray;
   HeaderByteCount: Byte;
+  Stream: TMemoryStream;
 begin
-  DatagramSend := TDatagramSend.Create;
+  Stream := nil;
+  DatagramSendObject := TCANFrameParserDatagramSend.Create;
   CANByteArray[0] := DATAGRAM_PROTOCOL_CONFIGURATION;
+  if UseStream then
+    CANByteArray[1] := MCP_READ_STREAM
+  else
+    CANByteArray[1] := MCP_READ;
+  CANByteArray[2] := (StartAddress shr 24) and $000000FF;
+  CANByteArray[3] := (StartAddress shr 16) and $000000FF;
+  CANByteArray[4] := (StartAddress shr 8) and $000000FF;
+  CANByteArray[5] := StartAddress and $000000FF;
   if ForceUseOfSpaceByte or (Space < MSI_CONFIG) then
   begin
-    if UseStream then
-      CANByteArray[1] := MCP_READ
-    else
-      CANByteArray[1] := MCP_READ_STREAM;
     CANByteArray[6] := Space;
     if UseStream then
     begin
-      CANByteArray[7] := (Count shr 24) and $000000FF;
-      CANByteArray[8] := (Count shr 16) and $000000FF;
-      CANByteArray[9] := (Count shr 8) and $000000FF;
-      CANByteArray[10] := Count and $000000FF;
-      HeaderByteCount := 11;
+      Stream := TMemoryStream.Create;
+      Stream.WriteByte( Byte( (Count shr 24) and $000000FF));
+      Stream.WriteByte( Byte( (Count shr 16) and $000000FF));
+      Stream.WriteByte( Byte( (Count shr 8) and $000000FF));
+      Stream.WriteByte( Byte( Count and $000000FF));
+      HeaderByteCount := 7;
     end else
     begin
       CANByteArray[7] := Count;
-      HeaderByteCount := 8;
+      HeaderByteCount := 8
     end;
-  end else
-  begin
-    if UseStream then
-      CANByteArray[1] := MCP_READ_STREAM or SpaceToCommandByteEncoding(Space)
-    else
-      CANByteArray[1] := MCP_READ or SpaceToCommandByteEncoding(Space);
+  end
+  else begin
+    CANByteArray[1] := CANByteArray[1] or SpaceToCommandByteEncoding(Space);
     if UseStream then
     begin
-      CANByteArray[6] := (Count shr 24) and $000000FF;
-      CANByteArray[7] := (Count shr 16) and $000000FF;
-      CANByteArray[8] := (Count shr 8) and $000000FF;
-      CANByteArray[9] := Count and $000000FF;
-      HeaderByteCount := 10;
+      Stream := TMemoryStream.Create;
+      Stream.WriteByte( Byte( (Count shr 24) and $000000FF));
+      Stream.WriteByte( Byte( (Count shr 16) and $000000FF));
+      Stream.WriteByte( Byte( (Count shr 8) and $000000FF));
+      Stream.WriteByte( Byte( Count and $000000FF));
+      HeaderByteCount := 6;
     end else
     begin
       CANByteArray[6] := Count;
       HeaderByteCount := 7;
     end;
   end;
-  CANByteArray[2] := (StartAddress shr 24) and $000000FF;
-  CANByteArray[3] := (StartAddress shr 16) and $000000FF;
-  CANByteArray[4] := (StartAddress shr 8) and $000000FF;
-  CANByteArray[5] := StartAddress and $000000FF;
-
-  DatagramSend.Initialize(nil, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
-  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  DatagramSendObject.Initialize(Stream, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
+  Stream.Free;
+  TransportLayerThread.InternalAddDatagramToSendByCANParsing(DatagramSendObject);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendMemoryConfigurationWrite(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
+procedure TTaskOlcbBase.SendMemoryConfigurationWriteByCANParsing(Space: Byte; StartAddress: DWord; MaxAddressSize: DWORD; ForceUseOfSpaceByte: Boolean; AStream: TStream);
 var
-  DatagramSend: TDatagramSend;
+  DatagramSend: TCANFrameParserDatagramSend;
   CANByteArray: TCANByteArray;
   HeaderByteCount: Byte;
-begin
-  DatagramSend := TDatagramSend.Create;
+begin      //CAUTION SEE SendMemoryConfigurationRead before getting too cocky adding a "UseStreams" parameter
+  DatagramSend := TCANFrameParserDatagramSend.Create;
   CANByteArray[0] := DATAGRAM_PROTOCOL_CONFIGURATION;
   if ForceUseOfSpaceByte or (Space < MSI_CONFIG) then
   begin
@@ -3798,32 +3820,32 @@ begin
   if AStream.Size > MaxAddressSize then
     AStream.Size := MaxAddressSize;
   DatagramSend.Initialize(AStream, CANByteArray, HeaderByteCount, SourceAlias, DestinationAlias);
-  TransportLayerThread.InternalAddDatagramToSend(DatagramSend);
+  TransportLayerThread.InternalAddDatagramToSendByCANParsing(DatagramSend);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendProtocolIdentificationProtocolMessage;
+procedure TTaskOlcbBase.SendProtocolIdentificationProtocolMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_PROTOCOL_SUPPORT_INQUIRY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendStreamInitReply(NegotiatedBuffer: Word; Flag,
+procedure TTaskOlcbBase.SendStreamInitReply(NegotiatedBuffer: Word; Flag,
   AdditionalFlags, SourceID, DestID: Byte);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_STREAM_INIT_REPLY, SourceAlias, DestinationAlias, 2, 0, 0, Hi(NegotiatedBuffer), Lo(NegotiatedBuffer), Flag, AdditionalFlags, SourceID, DestID);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
 end;
 
-procedure TOlcbTaskBase.SendSnipMessage;
+procedure TTaskOlcbBase.SendSnipMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_SIMPLE_NODE_INFO_REQUEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
+procedure TTaskOlcbBase.SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
 begin
   if not Short then
     Address := Address or $C000;
@@ -3832,35 +3854,35 @@ begin
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
+procedure TTaskOlcbBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionEStopMessage;
+procedure TTaskOlcbBase.SendTractionEStopMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_E_STOP, $00, $00, $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
+procedure TTaskOlcbBase.SendTractionFunction(FunctionAddress: DWord; Value: Word);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 8, $00, $00, TRACTION_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, Hi(Value), Lo(Value));
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionQueryFunction(FunctionAddress: DWord);
+procedure TTaskOlcbBase.SendTractionQueryFunction(FunctionAddress: DWord);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_QUERY_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, 0, 0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+procedure TTaskOlcbBase.SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
 begin
   if not Short then
     Address := Address or $C000;
@@ -3869,62 +3891,62 @@ begin
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionQuerySpeeds;
+procedure TTaskOlcbBase.SendTractionQuerySpeeds;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_QUERY_SPEED, $00, $00, $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionQueryProxyMessage;
+procedure TTaskOlcbBase.SendTractionQueryProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_QUERY, $00, $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionReleaseProxyMessage;
+procedure TTaskOlcbBase.SendTractionReleaseProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RELEASE, $00, $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionReserveProxyMessage;
+procedure TTaskOlcbBase.SendTractionReserveProxyMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RESERVE, $00, $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendTractionSpeedMessage(Speed: THalfFloat);
+procedure TTaskOlcbBase.SendTractionSpeedMessage(Speed: THalfFloat);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 5, $00, $00, TRACTION_SPEED_DIR, Hi(Speed), Lo(Speed), $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendVerifyNodeIDGlobalMessage;
+procedure TTaskOlcbBase.SendVerifyNodeIDGlobalMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER_DEST, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SendVerifyNodeIDToDestinationMessage;
+procedure TTaskOlcbBase.SendVerifyNodeIDToDestinationMessage;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_VERIFY_NODE_ID_NUMBER, SourceAlias, DestinationAlias, 0, 0, 0, 0, 0 ,0 ,0 ,0 ,0);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
 
-procedure TOlcbTaskBase.SyncOnBeforeTaskDestroy;
+procedure TTaskOlcbBase.SyncOnBeforeTaskDestroy;
 begin
   if Assigned(OnBeforeDestroy) then
     OnBeforeDestroy(Self)
 end;
 
-constructor TOlcbTaskBase.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
+constructor TTaskOlcbBase.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create;
   Inc(TaskObjects);
@@ -3946,14 +3968,14 @@ begin
   FOwnerControl := nil;
 end;
 
-destructor TOlcbTaskBase.Destroy;
+destructor TTaskOlcbBase.Destroy;
 begin
   Dec(TaskObjects);
   FreeAndNil(FMessageHelper);
   inherited Destroy;
 end;
 
-procedure TOlcbTaskBase.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskOlcbBase.CopyTo(Target: TTaskOlcbBase);
 begin
   // don't copy the State Machine Index!!!
   Target.FErrorCode := FErrorCode;
@@ -3973,9 +3995,9 @@ begin
   Target.OwnerControl := FOwnerControl;
 end;
 
-{ TReadAddressSpaceMemoryRawTask }
+{ TTaskAddressSpaceMemoryReadRawWithDatagram }
 
-function TReadAddressSpaceMemoryRawTask.GetPayloadSize: Integer;
+function TTaskAddressSpaceMemoryReadRawWithDatagram.GetPayloadSize: Integer;
 begin
   if ReadByteCount - Stream.Size < MAX_CONFIG_MEM_READWRITE_SIZE then
     Result := ReadByteCount - Stream.Size
@@ -3983,7 +4005,7 @@ begin
     Result := MAX_CONFIG_MEM_READWRITE_SIZE;
 end;
 
-constructor TReadAddressSpaceMemoryRawTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord; UseTerminatorChar: Boolean);
+constructor TTaskAddressSpaceMemoryReadRawWithDatagram.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AReadAddress, AReadByteCount: DWord; UseTerminatorChar: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FStream := TMemoryStream.Create;
@@ -3997,34 +4019,34 @@ begin
   FTerminator := #0;
 end;
 
-destructor TReadAddressSpaceMemoryRawTask.Destroy;
+destructor TTaskAddressSpaceMemoryReadRawWithDatagram.Destroy;
 begin
   FreeAndNil(FStream);
   inherited Destroy;
 end;
 
-function TReadAddressSpaceMemoryRawTask.Clone: TOlcbTaskBase;
+function TTaskAddressSpaceMemoryReadRawWithDatagram.Clone: TTaskOlcbBase;
 begin
-  Result := TReadAddressSpaceMemoryRawTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, ReadAddress, ReadByteCount, UsingTerminator);
+  Result := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, ReadAddress, ReadByteCount, UsingTerminator);
 end;
 
-procedure TReadAddressSpaceMemoryRawTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskAddressSpaceMemoryReadRawWithDatagram.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TReadAddressSpaceMemoryRawTask).FAddressSpace := FAddressSpace;
-  (Target as TReadAddressSpaceMemoryRawTask).FCurrentOffset := FCurrentOffset;
-  (Target as TReadAddressSpaceMemoryRawTask).FForceOptionalSpaceByte := FForceOptionalSpaceByte;
-  (Target as TReadAddressSpaceMemoryRawTask).FIncludeTerminator := FIncludeTerminator;
-  (Target as TReadAddressSpaceMemoryRawTask).FReadByteCount := FReadByteCount;
-  (Target as TReadAddressSpaceMemoryRawTask).FStream.CopyFrom(FStream, FStream.Size);
-  (Target as TReadAddressSpaceMemoryRawTask).FReadAddress := FReadAddress;
-  (Target as TReadAddressSpaceMemoryRawTask).FTerminator := FTerminator;
-  (Target as TReadAddressSpaceMemoryRawTask).UsingTerminator := FUsingTerminator;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FAddressSpace := FAddressSpace;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FCurrentOffset := FCurrentOffset;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FIncludeTerminator := FIncludeTerminator;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FReadByteCount := FReadByteCount;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FStream.CopyFrom(FStream, FStream.Size);
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FReadAddress := FReadAddress;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).FTerminator := FTerminator;
+  (Target as TTaskAddressSpaceMemoryReadRawWithDatagram).UsingTerminator := FUsingTerminator;
 end;
 
-procedure TReadAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskAddressSpaceMemoryReadRawWithDatagram.Process(MessageInfo: TOlcbMessage);
 var
-  DatagramReceive: TDatagramReceive;
+  DatagramReceive: TCANFrameParserDatagramReceive;
   i: Integer;
   Finished: Boolean;
 begin
@@ -4032,7 +4054,7 @@ begin
   case iState of
     0: begin
         // Ask for a read from the node
-         SendMemoryConfigurationRead(AddressSpace, CurrentOffset, PayloadSize, ForceOptionalSpaceByte, False);
+         SendMemoryConfigurationReadByCANParsing(AddressSpace, CurrentOffset, PayloadSize, ForceOptionalSpaceByte, False);
          Sending := False;
          Inc(FiState);
        end;
@@ -4098,9 +4120,9 @@ begin
 
 end;
 
-{ TWriteAddressSpaceMemoryRawTask }
+{ TTaskAddressSpaceMemoryWriteRawWithDatagram }
 
-constructor TWriteAddressSpaceMemoryRawTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AWriteAddress: DWord; AStream: TStream);
+constructor TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AWriteAddress: DWord; AStream: TStream);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FStream := TMemoryStream.Create;
@@ -4115,34 +4137,34 @@ begin
   FWriteAddress := AWriteAddress;
 end;
 
-destructor TWriteAddressSpaceMemoryRawTask.Destroy;
+destructor TTaskAddressSpaceMemoryWriteRawWithDatagram.Destroy;
 begin
   FreeAndNil(FStream);
   inherited Destroy;
 end;
 
-function TWriteAddressSpaceMemoryRawTask.Clone: TOlcbTaskBase;
+function TTaskAddressSpaceMemoryWriteRawWithDatagram.Clone: TTaskOlcbBase;
 begin
-  Result := TWriteAddressSpaceMemoryRawTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, WriteAddress, Stream);
+  Result := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, WriteAddress, Stream);
 end;
 
-procedure TWriteAddressSpaceMemoryRawTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskAddressSpaceMemoryWriteRawWithDatagram.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TWriteAddressSpaceMemoryRawTask).FAddressSpace := FAddressSpace;
-  (Target as TWriteAddressSpaceMemoryRawTask).ForceOptionalSpaceByte := FForceOptionalSpaceByte;
-  (Target as TWriteAddressSpaceMemoryRawTask).FStream.Position := 0;
+  (Target as TTaskAddressSpaceMemoryWriteRawWithDatagram).FAddressSpace := FAddressSpace;
+  (Target as TTaskAddressSpaceMemoryWriteRawWithDatagram).ForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TTaskAddressSpaceMemoryWriteRawWithDatagram).FStream.Position := 0;
   FStream.Position := 0;
-  (Target as TWriteAddressSpaceMemoryRawTask).FStream.CopyFrom(FStream, FStream.Size);
-  (Target as TWriteAddressSpaceMemoryRawTask).FWriteAddress := FWriteAddress;
+  (Target as TTaskAddressSpaceMemoryWriteRawWithDatagram).FStream.CopyFrom(FStream, FStream.Size);
+  (Target as TTaskAddressSpaceMemoryWriteRawWithDatagram).FWriteAddress := FWriteAddress;
 end;
 
-procedure TWriteAddressSpaceMemoryRawTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskAddressSpaceMemoryWriteRawWithDatagram.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
     0 : begin
-          SendMemoryConfigurationWrite(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
+          SendMemoryConfigurationWriteByCANParsing(AddressSpace, WriteAddress, $FFFFFFFF, ForceOptionalSpaceByte, Stream);
           Sending := False;
           Inc(FiState);
         end;
@@ -4162,40 +4184,40 @@ begin
   end;
 end;
 
-{ TWriteAddressSpaceMemoryTask }
+{ TTaskAddressSpaceMemoryWriteWithDatagram }
 
-constructor TWriteAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream);
+constructor TTaskAddressSpaceMemoryWriteWithDatagram.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte; AStream: TStream);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending, AnAddressSpace, False);
   DataStream.CopyFrom(AStream, AStream.Size);
   FWritingToAddress := True;
 end;
 
-function TWriteAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
+function TTaskAddressSpaceMemoryWriteWithDatagram.Clone: TTaskOlcbBase;
 begin
-  Result := TWriteAddressSpaceMemoryTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, DataStream);
+  Result := TTaskAddressSpaceMemoryWriteWithDatagram.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, DataStream);
 end;
 
-{ TIdentifyConsumerTask }
+{ TTaskIdentifyConsumer }
 
-constructor TIdentifyConsumerTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnEvent: TEventID);
+constructor TTaskIdentifyConsumer.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnEvent: TEventID);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FEvent := AnEvent;
 end;
 
-function TIdentifyConsumerTask.Clone: TOlcbTaskBase;
+function TTaskIdentifyConsumer.Clone: TTaskOlcbBase;
 begin
-  Result := TIdentifyConsumerTask.Create(SourceAlias, DestinationAlias, Sending, Event);
+  Result := TTaskIdentifyConsumer.Create(SourceAlias, DestinationAlias, Sending, Event);
 end;
 
-procedure TIdentifyConsumerTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskIdentifyConsumer.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TIdentifyConsumerTask).FEvent := FEvent;
+  (Target as TTaskIdentifyConsumer).FEvent := FEvent;
 end;
 
-procedure TIdentifyConsumerTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskIdentifyConsumer.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4210,26 +4232,26 @@ begin
   end;
 end;
 
-{ TIdentifyProducerTask }
+{ TTaskIdentifyProducer }
 
-constructor TIdentifyProducerTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnEvent: TEventID);
+constructor TTaskIdentifyProducer.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnEvent: TEventID);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FEvent := AnEvent;
 end;
 
-function TIdentifyProducerTask.Clone: TOlcbTaskBase;
+function TTaskIdentifyProducer.Clone: TTaskOlcbBase;
 begin
-  Result := TIdentifyProducerTask.Create(SourceAlias, DestinationAlias, Sending, Event);
+  Result := TTaskIdentifyProducer.Create(SourceAlias, DestinationAlias, Sending, Event);
 end;
 
-procedure TIdentifyProducerTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskIdentifyProducer.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TIdentifyProducerTask).FEvent := FEvent;
+  (Target as TTaskIdentifyProducer).FEvent := FEvent;
 end;
 
-procedure TIdentifyProducerTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskIdentifyProducer.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
    case iState of
@@ -4244,9 +4266,9 @@ begin
   end;
 end;
 
-{ TTractionReserveAndAttachDccProxyTask }
+{ TTaskTractionReserveAndAttachDccProxy }
 
-constructor TTractionReserveAndAttachDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
+constructor TTaskTractionReserveAndAttachDccProxy.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FSpeedStep := ASpeedStep;
@@ -4257,23 +4279,23 @@ begin
   FReplySpeedSteps := 0;
 end;
 
-function TTractionReserveAndAttachDccProxyTask.Clone: TOlcbTaskBase;
+function TTaskTractionReserveAndAttachDccProxy.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionReserveAndAttachDccProxyTask.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort, SpeedStep);
+  Result := TTaskTractionReserveAndAttachDccProxy.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort, SpeedStep);
 end;
 
-procedure TTractionReserveAndAttachDccProxyTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionReserveAndAttachDccProxy.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionReserveAndAttachDccProxyTask).FAddress := FAddress;
-  (Target as TTractionReserveAndAttachDccProxyTask).FReplyAddress := FReplyAddress;
-  (Target as TTractionReserveAndAttachDccProxyTask).FReplyCode := FReplyCode;
-  (Target as TTractionReserveAndAttachDccProxyTask).FReplySpeedSteps := FReplySpeedSteps;
-  (Target as TTractionReserveAndAttachDccProxyTask).FIsShort := FIsShort;
-  (Target as TTractionReserveAndAttachDccProxyTask).FSpeedStep := FSpeedStep;
+  (Target as TTaskTractionReserveAndAttachDccProxy).FAddress := FAddress;
+  (Target as TTaskTractionReserveAndAttachDccProxy).FReplyAddress := FReplyAddress;
+  (Target as TTaskTractionReserveAndAttachDccProxy).FReplyCode := FReplyCode;
+  (Target as TTaskTractionReserveAndAttachDccProxy).FReplySpeedSteps := FReplySpeedSteps;
+  (Target as TTaskTractionReserveAndAttachDccProxy).FIsShort := FIsShort;
+  (Target as TTaskTractionReserveAndAttachDccProxy).FSpeedStep := FSpeedStep;
 end;
 
-procedure TTractionReserveAndAttachDccProxyTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionReserveAndAttachDccProxy.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4324,9 +4346,9 @@ begin
   end;
 end;
 
-{ TTractionReserveAndDetachDccProxyTask }
+{ TTaskTractionReserveAndDetachDccProxy }
 
-constructor TTractionReserveAndDetachDccProxyTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean);
+constructor TTaskTractionReserveAndDetachDccProxy.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FAddress := AnAddress;
@@ -4336,22 +4358,22 @@ begin
   FReplySpeedSteps := 0;
 end;
 
-function TTractionReserveAndDetachDccProxyTask.Clone: TOlcbTaskBase;
+function TTaskTractionReserveAndDetachDccProxy.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionReserveAndDetachDccProxyTask.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
+  Result := TTaskTractionReserveAndDetachDccProxy.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
 end;
 
-procedure TTractionReserveAndDetachDccProxyTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionReserveAndDetachDccProxy.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionReserveAndDetachDccProxyTask).FAddress := FAddress;
-  (Target as TTractionReserveAndDetachDccProxyTask).FIsShort := FIsShort;
-  (Target as TTractionReserveAndDetachDccProxyTask).FReplyAddress := FReplyAddress;
-  (Target as TTractionReserveAndDetachDccProxyTask).FReplyCode := FReplyCode;
-  (Target as TTractionReserveAndDetachDccProxyTask).FReplySpeedSteps := FReplySpeedSteps
+  (Target as TTaskTractionReserveAndDetachDccProxy).FAddress := FAddress;
+  (Target as TTaskTractionReserveAndDetachDccProxy).FIsShort := FIsShort;
+  (Target as TTaskTractionReserveAndDetachDccProxy).FReplyAddress := FReplyAddress;
+  (Target as TTaskTractionReserveAndDetachDccProxy).FReplyCode := FReplyCode;
+  (Target as TTaskTractionReserveAndDetachDccProxy).FReplySpeedSteps := FReplySpeedSteps
 end;
 
-procedure TTractionReserveAndDetachDccProxyTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionReserveAndDetachDccProxy.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4402,28 +4424,28 @@ begin
   end;
 end;
 
-{ TTractionQueryDccAddressProxyTask }
+{ TTaskTractionQueryDccAddressProxy }
 
-constructor TTractionQueryDccAddressProxyTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean);
+constructor TTaskTractionQueryDccAddressProxy.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FAddress := AnAddress;
   FIsShort := IsShortAddress;
 end;
 
-function TTractionQueryDccAddressProxyTask.Clone: TOlcbTaskBase;
+function TTaskTractionQueryDccAddressProxy.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionQueryDccAddressProxyTask.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
+  Result := TTaskTractionQueryDccAddressProxy.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
 end;
 
-procedure TTractionQueryDccAddressProxyTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionQueryDccAddressProxy.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionQueryDccAddressProxyTask).FAddress := FAddress;
-  (Target as TTractionQueryDccAddressProxyTask).FIsShort := FIsShort;
+  (Target as TTaskTractionQueryDccAddressProxy).FAddress := FAddress;
+  (Target as TTaskTractionQueryDccAddressProxy).FIsShort := FIsShort;
 end;
 
-procedure TTractionQueryDccAddressProxyTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionQueryDccAddressProxy.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4438,28 +4460,28 @@ begin
   end;
 end;
 
-{ TTractionFunctionTask }
+{ TTaskTractionFunction }
 
-constructor TTractionFunctionTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: DWord; AValue: Word);
+constructor TTaskTractionFunction.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: DWord; AValue: Word);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   Address := AnAddress;
   Value := AValue;
 end;
 
-function TTractionFunctionTask.Clone: TOlcbTaskBase;
+function TTaskTractionFunction.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionFunctionTask.Create(SourceAlias, DestinationAlias, Sending, Address, Value);
+  Result := TTaskTractionFunction.Create(SourceAlias, DestinationAlias, Sending, Address, Value);
 end;
 
-procedure TTractionFunctionTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionFunction.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionFunctionTask).FAddress := FAddress;
-  (Target as TTractionFunctionTask).FWord := FWord;
+  (Target as TTaskTractionFunction).FAddress := FAddress;
+  (Target as TTaskTractionFunction).FWord := FWord;
 end;
 
-procedure TTractionFunctionTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionFunction.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4474,28 +4496,28 @@ begin
   end;
 end;
 
-{ TTractionSpeedTask }
+{ TTaskTractionSpeed }
 
-constructor TTractionSpeedTask.Create(ASourceAlias, ADestinationAlias: Word;  DoesStartAsSending: Boolean; ASpeed: THalfFloat; IsEStop: Boolean);
+constructor TTaskTractionSpeed.Create(ASourceAlias, ADestinationAlias: Word;  DoesStartAsSending: Boolean; ASpeed: THalfFloat; IsEStop: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FSpeed := ASpeed;
   FEStop := IsEStop;
 end;
 
-function TTractionSpeedTask.Clone: TOlcbTaskBase;
+function TTaskTractionSpeed.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionSpeedTask.Create(SourceAlias, DestinationAlias, Sending, Speed, EStop);
+  Result := TTaskTractionSpeed.Create(SourceAlias, DestinationAlias, Sending, Speed, EStop);
 end;
 
-procedure TTractionSpeedTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionSpeed.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionSpeedTask).EStop := EStop;
-  (Target as TTractionSpeedTask).FSpeed := FSpeed;
+  (Target as TTaskTractionSpeed).EStop := EStop;
+  (Target as TTaskTractionSpeed).FSpeed := FSpeed;
 end;
 
-procedure TTractionSpeedTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionSpeed.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4513,9 +4535,9 @@ begin
   end;
 end;
 
-{ TTractionQuerySpeedTask }
+{ TTaskTractionQuerySpeed }
 
-constructor TTractionQuerySpeedTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
+constructor TTaskTractionQuerySpeed.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FActualSpeed := 0;
@@ -4524,21 +4546,21 @@ begin
   FStatus := 0;
 end;
 
-function TTractionQuerySpeedTask.Clone: TOlcbTaskBase;
+function TTaskTractionQuerySpeed.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionQuerySpeedTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskTractionQuerySpeed.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TTractionQuerySpeedTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionQuerySpeed.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionQuerySpeedTask).FActualSpeed := FActualSpeed;
-  (Target as TTractionQuerySpeedTask).FCommandedSpeed := FCommandedSpeed;
-  (Target as TTractionQuerySpeedTask).FSetSpeed := FSetSpeed;
-  (Target as TTractionQuerySpeedTask).FStatus := FStatus;
+  (Target as TTaskTractionQuerySpeed).FActualSpeed := FActualSpeed;
+  (Target as TTaskTractionQuerySpeed).FCommandedSpeed := FCommandedSpeed;
+  (Target as TTaskTractionQuerySpeed).FSetSpeed := FSetSpeed;
+  (Target as TTaskTractionQuerySpeed).FStatus := FStatus;
 end;
 
-procedure TTractionQuerySpeedTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionQuerySpeed.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4571,28 +4593,28 @@ begin
   end;
 end;
 
-{ TTractionQueryFunctionTask }
+{ TTaskTractionQueryFunction }
 
-constructor TTractionQueryFunctionTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: DWord);
+constructor TTaskTractionQueryFunction.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: DWord);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FAddress := AnAddress;
   FValue := -1;
 end;
 
-function TTractionQueryFunctionTask.Clone: TOlcbTaskBase;
+function TTaskTractionQueryFunction.Clone: TTaskOlcbBase;
 begin
-  Result := TTractionQueryFunctionTask.Create(SourceAlias, DestinationAlias, Sending, Address);
+  Result := TTaskTractionQueryFunction.Create(SourceAlias, DestinationAlias, Sending, Address);
 end;
 
-procedure TTractionQueryFunctionTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskTractionQueryFunction.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TTractionQueryFunctionTask).FAddress := FAddress;
-  (Target as TTractionQueryFunctionTask).FValue := FValue;
+  (Target as TTaskTractionQueryFunction).FAddress := FAddress;
+  (Target as TTaskTractionQueryFunction).FValue := FValue;
 end;
 
-procedure TTractionQueryFunctionTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionQueryFunction.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4617,14 +4639,14 @@ begin
 end;
 
 
-{ TIdentifyEventsAddressedTask }
+{ TTaskIdentifyEventsAddressed }
 
-function TIdentifyEventsAddressedTask.Clone: TOlcbTaskBase;
+function TTaskIdentifyEventsAddressed.Clone: TTaskOlcbBase;
 begin
-  Result := TIdentifyEventsAddressedTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskIdentifyEventsAddressed.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TIdentifyEventsAddressedTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskIdentifyEventsAddressed.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4639,14 +4661,14 @@ begin
   end;
 end;
 
-{ TIdentifyEventsTask }
+{ TTaskIdentifyEvents }
 
-function TIdentifyEventsTask.Clone: TOlcbTaskBase;
+function TTaskIdentifyEvents.Clone: TTaskOlcbBase;
 begin
-  Result := TIdentifyEventsTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskIdentifyEvents.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TIdentifyEventsTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskIdentifyEvents.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4661,99 +4683,99 @@ begin
   end;
 end;
 
-{ TVerifiedNodeIDTask }
+{ TTaskVerifiedNodeID }
 
-function TVerifiedNodeIDTask.Clone: TOlcbTaskBase;
+function TTaskVerifiedNodeID.Clone: TTaskOlcbBase;
 begin
-  Result := TVerifiedNodeIDTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskVerifiedNodeID.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TVerifiedNodeIDTask.Process(MessageInfo: TOlcbMessage);
-begin
-  inherited Process(MessageInfo);
-  FDone := True;  // Done before we start....
-end;
-
-{ TTractionProtocolTask }
-
-function TTractionProtocolTask.Clone: TOlcbTaskBase;
-begin
-  Result := TTractionProtocolTask.Create(SourceAlias, DestinationAlias, Sending);
-end;
-
-procedure TTractionProtocolTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskVerifiedNodeID.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
-{ TInitializationCompleteTask }
+{ TTaskTractionProtocol }
 
-function TInitializationCompleteTask.Clone: TOlcbTaskBase;
+function TTaskTractionProtocol.Clone: TTaskOlcbBase;
 begin
-  Result := TInitializationCompleteTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskTractionProtocol.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TInitializationCompleteTask.Process(MessageInfo: TOlcbMessage);
-begin
-  inherited Process(MessageInfo);
-  FDone := True;  // Done before we start....
-end;
-
-{ TEventTask }
-
-function TEventTask.Clone: TOlcbTaskBase;
-begin
-  Result := TEventTask.Create(SourceAlias, DestinationAlias, Sending);
-end;
-
-procedure TEventTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskTractionProtocol.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
-{ TCANLayerTask }
+{ TTaskInitializationComplete }
 
-function TCANLayerTask.Clone: TOlcbTaskBase;
+function TTaskInitializationComplete.Clone: TTaskOlcbBase;
 begin
-  Result := TCANLayerTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskInitializationComplete.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TCANLayerTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskInitializationComplete.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   FDone := True;  // Done before we start....
 end;
 
-{ TSimpleNodeInformationTask }
+{ TTaskEvent }
 
-constructor TSimpleNodeInformationTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
+function TTaskEvent.Clone: TTaskOlcbBase;
+begin
+  Result := TTaskEvent.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TTaskEvent.Process(MessageInfo: TOlcbMessage);
+begin
+  inherited Process(MessageInfo);
+  FDone := True;  // Done before we start....
+end;
+
+{ TTaskCANLayer }
+
+function TTaskCANLayer.Clone: TTaskOlcbBase;
+begin
+  Result := TTaskCANLayer.Create(SourceAlias, DestinationAlias, Sending);
+end;
+
+procedure TTaskCANLayer.Process(MessageInfo: TOlcbMessage);
+begin
+  inherited Process(MessageInfo);
+  FDone := True;  // Done before we start....
+end;
+
+{ TTaskSimpleNodeInformation }
+
+constructor TTaskSimpleNodeInformation.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
-  FSnip := TOlcbSNIP.Create;
+  FSnip := TOlcbStructureSNIP.Create;
   FiSnipState := 0;
   iSnipState := 0;
 end;
 
-destructor TSimpleNodeInformationTask.Destroy;
+destructor TTaskSimpleNodeInformation.Destroy;
 begin
   FreeAndNil(FSnip);
   inherited Destroy;
 end;
 
-function TSimpleNodeInformationTask.Clone: TOlcbTaskBase;
+function TTaskSimpleNodeInformation.Clone: TTaskOlcbBase;
 begin
-  Result := TSimpleNodeInformationTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskSimpleNodeInformation.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TSimpleNodeInformationTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskSimpleNodeInformation.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  Snip.CopyTo( (Target as TSimpleNodeInformationTask).FSnip);
+  Snip.CopyTo( (Target as TTaskSimpleNodeInformation).FSnip);
 end;
 
-procedure TSimpleNodeInformationTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskSimpleNodeInformation.Process(MessageInfo: TOlcbMessage);
 const
   STATE_SNII_MFG_VERSION  = 0;
   STATE_SNII_MFG_NAME     = 1;
@@ -4879,20 +4901,20 @@ begin
   end;
 end;
 
-{ TProtocolSupportTask }
+{ TTaskProtocolSupport }
 
-function TProtocolSupportTask.Clone: TOlcbTaskBase;
+function TTaskProtocolSupport.Clone: TTaskOlcbBase;
 begin
-  Result := TProtocolSupportTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskProtocolSupport.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TProtocolSupportTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskProtocolSupport.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TProtocolSupportTask).FProtocols := FProtocols;
+  (Target as TTaskProtocolSupport).FProtocols := FProtocols;
 end;
 
-procedure TProtocolSupportTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskProtocolSupport.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -4916,41 +4938,41 @@ begin
   end;
 end;
 
-{ TConfigMemoryAddressSpaceInfoTask }
+{ TTaskConfigMemoryAddressSpaceInfo }
 
-constructor TConfigMemoryAddressSpaceInfoTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte);
+constructor TTaskConfigMemoryAddressSpaceInfo.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FAddressSpace := AnAddressSpace;
-  ConfigMemoryAddressSpace := TOlcbMemAddressSpace.Create;
+  ConfigMemoryAddressSpace := TOlcbStructureMemAddressSpace.Create;
 end;
 
-destructor TConfigMemoryAddressSpaceInfoTask.Destroy;
+destructor TTaskConfigMemoryAddressSpaceInfo.Destroy;
 begin
   FreeAndNil(FConfigMemoryAddressSpace);
   inherited Destroy;
 end;
 
-function TConfigMemoryAddressSpaceInfoTask.Clone: TOlcbTaskBase;
+function TTaskConfigMemoryAddressSpaceInfo.Clone: TTaskOlcbBase;
 begin
-  Result := TConfigMemoryAddressSpaceInfoTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace);
+  Result := TTaskConfigMemoryAddressSpaceInfo.Create(SourceAlias, DestinationAlias, Sending, AddressSpace);
 end;
 
-procedure TConfigMemoryAddressSpaceInfoTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskConfigMemoryAddressSpaceInfo.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TConfigMemoryAddressSpaceInfoTask).FAddressSpace := AddressSpace;
-  ConfigMemoryAddressSpace.CopyTo( (Target as TConfigMemoryAddressSpaceInfoTask).ConfigMemoryAddressSpace);
+  (Target as TTaskConfigMemoryAddressSpaceInfo).FAddressSpace := AddressSpace;
+  ConfigMemoryAddressSpace.CopyTo( (Target as TTaskConfigMemoryAddressSpaceInfo).ConfigMemoryAddressSpace);
 end;
 
-procedure TConfigMemoryAddressSpaceInfoTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskConfigMemoryAddressSpaceInfo.Process(MessageInfo: TOlcbMessage);
 var
-  DatagramReceive: TDatagramReceive;
+  DatagramReceive: TCANFrameParserDatagramReceive;
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendMemoryConfigurationSpaceInfo(AddressSpace);
+         SendMemoryConfigurationSpaceInfoByCANParsing(AddressSpace);
          Sending := False;
          Inc(FiState);
        end;
@@ -4977,39 +4999,39 @@ begin
   end;
 end;
 
-{ TConfigMemoryOptionsTask }
+{ TTaskConfigMemoryOptions }
 
-constructor TConfigMemoryOptionsTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
+constructor TTaskConfigMemoryOptions.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
-  FConfigMemoryOptions := TOlcbMemOptions.Create;
+  FConfigMemoryOptions := TOlcbStructureMemOptions.Create;
 end;
 
-destructor TConfigMemoryOptionsTask.Destroy;
+destructor TTaskConfigMemoryOptions.Destroy;
 begin
   FreeAndNil(FConfigMemoryOptions);
   inherited Destroy;
 end;
 
-function TConfigMemoryOptionsTask.Clone: TOlcbTaskBase;
+function TTaskConfigMemoryOptions.Clone: TTaskOlcbBase;
 begin
-  Result := TConfigMemoryOptionsTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskConfigMemoryOptions.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TConfigMemoryOptionsTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskConfigMemoryOptions.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  ConfigMemoryOptions.CopyTo( (Target as TConfigMemoryOptionsTask).ConfigMemoryOptions);
+  ConfigMemoryOptions.CopyTo( (Target as TTaskConfigMemoryOptions).ConfigMemoryOptions);
 end;
 
-procedure TConfigMemoryOptionsTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskConfigMemoryOptions.Process(MessageInfo: TOlcbMessage);
 var
-  DatagramReceive: TDatagramReceive;
+  DatagramReceive: TCANFrameParserDatagramReceive;
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendMemoryConfigurationOptions;
+         SendMemoryConfigurationOptionsByCANParsing;
          Sending := False;
          Inc(FiState);
        end;
@@ -5036,14 +5058,14 @@ begin
   end;
 end;
 
-{ TVerifyNodeIDTask }
+{ TTaskVerifyNodeID }
 
-function TVerifyNodeIDTask.Clone: TOlcbTaskBase;
+function TTaskVerifyNodeID.Clone: TTaskOlcbBase;
 begin
-  Result := TVerifyNodeIDTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskVerifyNodeID.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TVerifyNodeIDTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskVerifyNodeID.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -5058,14 +5080,14 @@ begin
   end;
 end;
 
-{ TVerifyNodeIDGlobalTask }
+{ TTaskVerifyNodeIDGlobal }
 
-function TVerifyNodeIDGlobalTask.Clone: TOlcbTaskBase;
+function TTaskVerifyNodeIDGlobal.Clone: TTaskOlcbBase;
 begin
-  Result := TVerifyNodeIDGlobalTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskVerifyNodeIDGlobal.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TVerifyNodeIDGlobalTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskVerifyNodeIDGlobal.Process(MessageInfo: TOlcbMessage);
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -5079,14 +5101,14 @@ begin
   end;
 end;
 
-{ TBaseAddressSpaceMemoryTask }
+{ TTaskAddressSpaceMemoryCommonWithDatagram }
 
-function TBaseAddressSpaceMemoryTask.GetMaxPayloadSize: DWord;
+function TTaskAddressSpaceMemoryCommonWithDatagram.GetMaxPayloadSize: DWord;
 begin
   Result := MAX_CONFIG_MEM_READWRITE_SIZE;
 end;
 
-constructor TBaseAddressSpaceMemoryTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte;
+constructor TTaskAddressSpaceMemoryCommonWithDatagram.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddressSpace: Byte;
   UseTerminatorChar: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
@@ -5098,72 +5120,72 @@ begin
   FLocalLoopTime := 0;
 end;
 
-destructor TBaseAddressSpaceMemoryTask.Destroy;
+destructor TTaskAddressSpaceMemoryCommonWithDatagram.Destroy;
 begin
   FreeAndNil(FDataStream);
   inherited Destroy;
 end;
 
-function TBaseAddressSpaceMemoryTask.Clone: TOlcbTaskBase;
+function TTaskAddressSpaceMemoryCommonWithDatagram.Clone: TTaskOlcbBase;
 begin
-  Result := TBaseAddressSpaceMemoryTask.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, UsingTerminator);
+  Result := TTaskAddressSpaceMemoryCommonWithDatagram.Create(SourceAlias, DestinationAlias, Sending, AddressSpace, UsingTerminator);
 end;
 
-procedure TBaseAddressSpaceMemoryTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskAddressSpaceMemoryCommonWithDatagram.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  (Target as TBaseAddressSpaceMemoryTask).FAddressSpace := FAddressSpace;
-  (Target as TBaseAddressSpaceMemoryTask).FCurrentAddress := FCurrentAddress;
-  (Target as TBaseAddressSpaceMemoryTask).FCurrentSendSize := FCurrentSendSize;
-  (Target as TBaseAddressSpaceMemoryTask).FDataStream.CopyFrom(FDataStream, FDataStream.Size);
-  (Target as TBaseAddressSpaceMemoryTask).FForceOptionalSpaceByte := FForceOptionalSpaceByte;
-  (Target as TBaseAddressSpaceMemoryTask).FMaxAddress := FMaxAddress;
-  (Target as TBaseAddressSpaceMemoryTask).FMinAddress := FMinAddress;
-  (Target as TBaseAddressSpaceMemoryTask).FTerminator := FTerminator;
-  (Target as TBaseAddressSpaceMemoryTask).FUsingTerminator := FUsingTerminator;
-  (Target as TBaseAddressSpaceMemoryTask).FWritingToAddress := FWritingToAddress;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FAddressSpace := FAddressSpace;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FCurrentAddress := FCurrentAddress;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FCurrentSendSize := FCurrentSendSize;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FDataStream.CopyFrom(FDataStream, FDataStream.Size);
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FForceOptionalSpaceByte := FForceOptionalSpaceByte;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FMaxAddress := FMaxAddress;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FMinAddress := FMinAddress;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FTerminator := FTerminator;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FUsingTerminator := FUsingTerminator;
+  (Target as TTaskAddressSpaceMemoryCommonWithDatagram).FWritingToAddress := FWritingToAddress;
 end;
 
-{ TEnumAllConfigMemoryAddressSpaceInfoTask }
+{ TTaskConfigMemoryAddressEnumAllSpaceInfo }
 
-constructor TEnumAllConfigMemoryAddressSpaceInfoTask.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
+constructor TTaskConfigMemoryAddressEnumAllSpaceInfo.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean);
 begin
   inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
   FCurrentAddressSpace := 0;
   FMaxAddressSpace := 0;
   FMinAddressSpace := 0;
-  FConfigMemAddressInfo := TOlcbMemConfig.Create;
+  FConfigMemAddressInfo := TOlcbStructureMemConfig.Create;
 end;
 
-destructor TEnumAllConfigMemoryAddressSpaceInfoTask.Destroy;
+destructor TTaskConfigMemoryAddressEnumAllSpaceInfo.Destroy;
 begin
   FreeAndNil(FConfigMemAddressInfo);
   inherited Destroy;
 end;
 
-function TEnumAllConfigMemoryAddressSpaceInfoTask.Clone: TOlcbTaskBase;
+function TTaskConfigMemoryAddressEnumAllSpaceInfo.Clone: TTaskOlcbBase;
 begin
-  Result := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(SourceAlias, DestinationAlias, Sending);
+  Result := TTaskConfigMemoryAddressEnumAllSpaceInfo.Create(SourceAlias, DestinationAlias, Sending);
 end;
 
-procedure TEnumAllConfigMemoryAddressSpaceInfoTask.CopyTo(Target: TOlcbTaskBase);
+procedure TTaskConfigMemoryAddressEnumAllSpaceInfo.CopyTo(Target: TTaskOlcbBase);
 begin
   inherited CopyTo(Target);
-  ConfigMemAddressInfo.CopyTo( (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).ConfigMemAddressInfo);
-  (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).CurrentAddressSpace := CurrentAddressSpace;
-  (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).MaxAddressSpace := MaxAddressSpace;
-  (Target as TEnumAllConfigMemoryAddressSpaceInfoTask).MinAddressSpace := MinAddressSpace;
+  ConfigMemAddressInfo.CopyTo( (Target as TTaskConfigMemoryAddressEnumAllSpaceInfo).ConfigMemAddressInfo);
+  (Target as TTaskConfigMemoryAddressEnumAllSpaceInfo).CurrentAddressSpace := CurrentAddressSpace;
+  (Target as TTaskConfigMemoryAddressEnumAllSpaceInfo).MaxAddressSpace := MaxAddressSpace;
+  (Target as TTaskConfigMemoryAddressEnumAllSpaceInfo).MinAddressSpace := MinAddressSpace;
 end;
 
-procedure TEnumAllConfigMemoryAddressSpaceInfoTask.Process(MessageInfo: TOlcbMessage);
+procedure TTaskConfigMemoryAddressEnumAllSpaceInfo.Process(MessageInfo: TOlcbMessage);
 var
-  DatagramReceive: TDatagramReceive;
-  NewSpace: TOlcbMemAddressSpace;
+  DatagramReceive: TCANFrameParserDatagramReceive;
+  NewSpace: TOlcbStructureMemAddressSpace;
 begin
   inherited Process(MessageInfo);
   case iState of
     0: begin
-         SendMemoryConfigurationOptions;
+         SendMemoryConfigurationOptionsByCANParsing;
          Inc(FiState);
          Sending := False;
        end;
@@ -5186,7 +5208,7 @@ begin
          end;
        end;
     3: begin
-         SendMemoryConfigurationSpaceInfo(CurrentAddressSpace);
+         SendMemoryConfigurationSpaceInfoByCANParsing(CurrentAddressSpace);
          Sending := False;
          Inc(FiState);
        end;
@@ -5235,14 +5257,14 @@ end;
 procedure TOlcbTaskEngine.ProcessReceiving(MessageInfo: TOlcbMessage);
 var
   List: TLIst;
-  Task, CompletedTask: TOlcbTaskBase;
+  Task, CompletedTask: TTaskOlcbBase;
 begin
   CompletedTask := nil;
   List := TaskList.LockList;
   try
     if List.Count > 0 then
     begin
-      Task := TOlcbTaskBase( List[0]);
+      Task := TTaskOlcbBase( List[0]);
       if not Task.Sending then
       begin
         Task.Process(MessageInfo);
@@ -5268,14 +5290,14 @@ end;
 procedure TOlcbTaskEngine.ProcessSending;
 var
   List: TLIst;
-  Task, CompletedTask: TOlcbTaskBase;
+  Task, CompletedTask: TTaskOlcbBase;
 begin
   CompletedTask := nil;
   List := TaskList.LockList;
   try
     if List.Count > 0 then
     begin
-      Task := TOlcbTaskBase( List[0]);
+      Task := TTaskOlcbBase( List[0]);
       if Task.Sending then
       begin
         Task.Process(nil);

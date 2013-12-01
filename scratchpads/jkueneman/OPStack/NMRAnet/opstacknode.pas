@@ -75,7 +75,7 @@ function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
 {$IFDEF SUPPORT_STREAMS}
 procedure OPStackNode_StreamLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OPStackNode_StreamUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-function OPStackNode_FindStream(Node: PNMRAnetNode; DestID, SourceID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
+function OPStackNode_FindStream(Node: PNMRAnetNode; DestStreamID, SourceStreamID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
 function OPStackNode_NextStream(Node: PNMRAnetNode): POPStackMessage;
 {$ENDIF}
 
@@ -766,7 +766,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_FindStream(Node: PNMRAnetNode; DestID, SourceID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
+function OPStackNode_FindStream(Node: PNMRAnetNode; DestStreamID, SourceStreamID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
 var
   Temp: POPStackMessage;
   StreamBuffer: PStreamBuffer;
@@ -781,8 +781,8 @@ begin
       if LinkNode.AliasID <> 0 then
       begin
         if (LinkNode.AliasID = Temp^.Dest.AliasID) then
-          if (StreamBuffer^.DestID = DestID) then
-            if (StreamBuffer^.SourceID = SourceID) then
+          if (StreamBuffer^.DestStreamID = DestStreamID) then
+            if (StreamBuffer^.SourceStreamID = SourceStreamID) then
             begin
               Result := Temp;
               Exit;
@@ -792,8 +792,8 @@ begin
       begin
         if (LinkNode.ID[0] = Temp^.Dest.ID[0]) then
           if (LinkNode.ID[1] = Temp^.Dest.ID[1]) then
-            if (StreamBuffer^.DestID = DestID) then
-              if (StreamBuffer^.SourceID = SourceID) then
+            if (StreamBuffer^.DestStreamID = DestStreamID) then
+              if (StreamBuffer^.SourceStreamID = SourceStreamID) then
               begin
                 Result := Temp;
                 Exit;

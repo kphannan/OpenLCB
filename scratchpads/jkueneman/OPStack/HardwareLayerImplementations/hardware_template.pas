@@ -137,8 +137,8 @@ procedure Hardware_EnableInterrupts;
 procedure OutgoingCriticalMessage(AMessage: POPStackMessage);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
 procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 procedure ProcessOutgoingDatagrams;
-procedure ProcessOutgoingStreams;
 procedure ProcessOutgoingAcdiSnips;
+procedure ProcessOutgoingStreams;
 function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
 procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
 procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
@@ -323,14 +323,14 @@ begin
   OPStackCANStatemachine_ProcessOutgoingDatagramMessage;
 end;
 
-procedure ProcessOutgoingStreams;
-begin
-
-end;
-
 procedure ProcessOutgoingAcdiSnips;
 begin
   OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage;
+end;
+
+procedure ProcessOutgoingStreams;
+begin
+  OPStackCANStatemachine_ProcessOutgoingStreamMessage;
 end;
 
 function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;

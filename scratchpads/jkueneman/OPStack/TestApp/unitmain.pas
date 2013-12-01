@@ -7,8 +7,9 @@ interface
 {$I Options.inc}
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls, ExtCtrls, Menus, opstackcore, opstacknode,
+  Classes, SysUtils, FileUtil, SynEdit, SynMemo, Forms, Controls, Graphics,
+  Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, opstackcore, opstacknode, SynEditKeyCmds,
+  LCLType,
   {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
@@ -31,10 +32,10 @@ type
     CheckBoxLogMessages: TCheckBox;
     CheckBoxAutoConnect: TCheckBox;
     MainMenu1: TMainMenu;
-    MemoReceive: TMemo;
     MenuItemTrackBuffer: TMenuItem;
     RadioGroupEthernet: TRadioGroup;
     StatusBar: TStatusBar;
+    SynMemo: TSynMemo;
     TimerStatemachine: TTimer;
     TimerCore: TTimer;
     procedure ButtonClearClick(Sender: TObject);
@@ -44,12 +45,13 @@ type
     procedure ButtonDeallocateNodeClick(Sender: TObject);
     procedure ButtonStartStackClick(Sender: TObject);
     procedure CheckBoxDisableLoggingChange(Sender: TObject);
-    procedure CheckBoxDisableTrackingChange(Sender: TObject);
     procedure CheckBoxLogMessagesChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupEthernetClick(Sender: TObject);
+    procedure SynMemoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState
+      );
     procedure TimerCoreTimer(Sender: TObject);
     procedure TimerStatemachineTimer(Sender: TObject);
   private
@@ -170,6 +172,21 @@ begin
     end;
 end;
 
+procedure TForm1.SynMemoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  // Windows/Linux/OSX already handled by SynEdit using the Windows Shortcuts
+  {$IFDEF darwin}
+  if (Shift = [ssMeta]) then
+  begin
+    case Key of
+      VK_C: SynMemo.CommandProcessor(TSynEditorCommand(ecCopy), ' ', nil);
+      VK_V: SynMemo.CommandProcessor(TSynEditorCommand(ecPaste), ' ', nil);
+      VK_X: SynMemo.CommandProcessor(TSynEditorCommand(ecCut), ' ', nil);
+      end;
+  end;
+  {$ENDIF}
+end;
+
 procedure TForm1.TimerCoreTimer(Sender: TObject);
 begin
   OPStackCore_Timer;
@@ -187,12 +204,10 @@ begin
     ReceiveStr := Trim(ReceiveStr);
     while (ReceiveStr[Length(ReceiveStr)] = #10) or (ReceiveStr[Length(ReceiveStr)] = #13) do
       SetLength(ReceiveStr, Length(ReceiveStr) - 1);
-    MemoReceive.Lines.BeginUpdate;
-    MemoReceive.Text := MemoReceive.Text + MessageToDetailedMessage(ReceiveStr, True) + #13;
-    MemoReceive.SelStart := MemoReceive.GetTextLen;
-    MemoReceive.SelLength := 0;
-    MemoReceive.ScrollBy(0, MemoReceive.Lines.Count);
-    MemoReceive.Lines.EndUpdate;
+    SynMemo.Lines.BeginUpdate;
+    SynMemo.Text := SynMemo.Text + MessageToDetailedMessage(ReceiveStr, True) + #13;
+    SynMemo.CaretY := SynMemo.LineHeight * SynMemo.Lines.Count;
+    SynMemo.Lines.EndUpdate;
   end;
 end;
 
@@ -236,9 +251,9 @@ end;
 
 procedure TForm1.ButtonClearClick(Sender: TObject);
 begin
-  MemoReceive.Lines.BeginUpdate;
-  MemoReceive.Lines.Clear;
-  MemoReceive.Lines.EndUpdate;
+  SynMemo.Lines.BeginUpdate;
+  SynMemo.Lines.Clear;
+  SynMemo.Lines.EndUpdate;
 end;
 
 procedure TForm1.ButtonRefreshBufferTrackingClick(Sender: TObject);
@@ -266,11 +281,6 @@ end;
 procedure TForm1.CheckBoxDisableLoggingChange(Sender: TObject);
 begin
   DisableLogging := CheckBoxDisableLogging.Checked;
-end;
-
-procedure TForm1.CheckBoxDisableTrackingChange(Sender: TObject);
-begin
-
 end;
 
 procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);

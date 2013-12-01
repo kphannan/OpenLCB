@@ -49,7 +49,6 @@ const
   MTI_FRAME_TYPE_DATAGRAM_FRAME_START   = $0B000000;
   MTI_FRAME_TYPE_DATAGRAM_FRAME         = $0C000000;
   MTI_FRAME_TYPE_DATAGRAM_FRAME_END     = $0D000000;
-  MTI_FRAME_TYPE_STREAM_SEND            = $0F000000;
 
   MTI_ADDRESSED_MASK                 = $00008000;
   MTI_SIMPLE_PROTOCOL_MASK           = $00010000;
@@ -88,11 +87,11 @@ const
   MTI_TRACTION_PROTOCOL              = $095EA000;                                // Databyte = depends
   MTI_TRACTION_REPLY                 = $095E8000;                                // Databyte = depends
 
-  MTI_STREAM_INIT_REQUEST            = $0CC8;
-  MTI_STREAM_INIT_REPLY              = $0868;
-  MTI_STREAM_SEND                    = $F000;
-  MTI_STREAM_PROCEED                 = $0888;
-  MTI_STREAM_COMPLETE                = $08A8;
+  MTI_STREAM_INIT_REQUEST            = $09CC8000;
+  MTI_STREAM_INIT_REPLY              = $09868000;
+  MTI_STREAM_SEND                    = $0F000000;
+  MTI_STREAM_PROCEED                 = $09888000;
+  MTI_STREAM_COMPLETE                = $098A8000;
 
   MTI_DATAGRAM_OK_REPLY              = $09A28000;                                // Databytes = Destination Alias
   MTI_DATAGRAM_REJECTED_REPLY        = $09A48000;                                // Databytes = Destination Alias, Error Code

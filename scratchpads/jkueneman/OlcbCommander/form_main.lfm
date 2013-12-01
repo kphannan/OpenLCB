@@ -36,7 +36,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
         ClientHeight = 351
         ClientWidth = 782
         TabOrder = 0
-        OnClick = PanelNetworkClick
         object TreeViewNetwork: TTreeView
           Left = 0
           Height = 351
@@ -92,7 +91,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
             Caption = 'ToolBar1'
             ShowCaptions = True
             TabOrder = 1
-            OnClick = ToolBar1Click
             object ToolButtonLogEthernet: TToolButton
               Left = 1
               Top = 2
@@ -257,7 +255,6 @@ object FormOLCB_Commander: TFormOLCB_Commander
       end
       object MenuItemToolsSep3: TMenuItem
         Caption = '-'
-        OnClick = MenuItemToolsSep3Click
       end
       object MenuItemToolsEthernetHubConnect: TMenuItem
         Action = ActionToolsEthernetHubConnect

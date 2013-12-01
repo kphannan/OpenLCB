@@ -67,7 +67,7 @@ uses
   olcb_app_common_settings, file_utilities, form_settings, form_about, lcltype,
   types, olcb_utilities, olcb_defines, form_messagelog, olcb_node,
   form_config_mem_viewer, laz2_DOM, laz2_XMLRead,
-  laz2_XMLWrite, common_utilities, form_awesome_throttle, blcksock,
+  laz2_XMLWrite, SynMemo, common_utilities, form_awesome_throttle, blcksock,
   form_train_config_editor, ethernet_hub, form_ethernet_messagelog,
 
   {$IFDEF DEBUG_THREAD}
@@ -258,7 +258,6 @@ type
     procedure ActionThrottlesShowAllExecute(Sender: TObject);
     procedure ActionToolsComConnectExecute(Sender: TObject);
     procedure ActionToolsComDisconnectExecute(Sender: TObject);
-    procedure ActionToolsConfigureNodeExecute(Sender: TObject);
     procedure ActionToolsEthernetHubConnectExecute(Sender: TObject);
     procedure ActionToolsCOMPortMessageLogShowExecute(Sender: TObject);
     procedure ActionToolsPreferenceShowMacExecute(Sender: TObject);
@@ -271,11 +270,8 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure MenuItemToolsSep3Click(Sender: TObject);
     procedure MenuItemConfigEditorsClick(Sender: TObject);
     procedure MenuItemThrottlesClick(Sender: TObject);
-    procedure PanelNetworkClick(Sender: TObject);
-    procedure ToolBar1Click(Sender: TObject);
     procedure TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure TreeViewNetworkCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
     procedure TreeViewNetworkCustomCreateItem(Sender: TCustomTreeView; var ATreeNode: TTreenode);
@@ -321,7 +317,7 @@ type
     procedure DeleteNetworkTreeAlias(NodeAlias: Word);
     procedure DeleteConfigEditorSubMenu(ConfigEditor: TFormTrainConfigEditor);
     procedure DeleteThrottleSubMenu(Throttle: TFormAwesomeThrottle);
-    function DispatchTask(Task: TOlcbTaskBase): Boolean;
+    function DispatchTask(Task: TTaskOlcbBase): Boolean;
     procedure EthernetConnect;
     procedure EthernetDisconnect;
     function FindChildThatContainsText(ParentNode: TTreeNode; TestString: string): TTreeNode;
@@ -334,12 +330,12 @@ type
     function FindMemConfigOptionsNode(AliasNode: TTreeNode): TTreeNode;
     function FindMemConfigAddressSpaceNode(AliasNode: TTreeNode): TTreeNode;
     function IsParentRootNode(Node: TOlcbTreeNode): Boolean;
-    procedure RefreshNetworkTreeAliasConfigMemOptions(NodeAlias: Word; Options: TOlcbMemOptions);
-    procedure RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(NodeAlias: Word; AddressSpace: TOlcbMemAddressSpace);
+    procedure RefreshNetworkTreeAliasConfigMemOptions(NodeAlias: Word; Options: TOlcbStructureMemOptions);
+    procedure RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(NodeAlias: Word; AddressSpace: TOlcbStructureMemAddressSpace);
     procedure RefreshNetworkTreeAliasEvents(NodeAlias: Word; LocalHelper: TOpenLCBMessageHelper);
     procedure RefreshTrainTreeAliasEvents(NodeAlias: Word; NodeID: QWord; LocalHelper: TOpenLCBMessageHelper);
     procedure RefreshCommandStationTreeAliasEvents(NodeAlias: Word; NodeID: QWord; LocalHelper: TOpenLCBMessageHelper);
-    procedure RefreshNetworkTreeAliasSnip(NodeAlias: Word; Snip: TOlcbSNIP);
+    procedure RefreshNetworkTreeAliasSnip(NodeAlias: Word; Snip: TOlcbStructureSNIP);
     procedure RefreshNetworkTreeAliasProtocolSupport(NodeAlias: Word; Protocols: QWord);
     procedure SyncErrorCOMPortMessage(MessageStr: String);
     procedure SyncReceiveCOMPortMessage(MessageStr: String);
@@ -359,7 +355,7 @@ type
     procedure SyncThrottleClose(Throttle: TFormAwesomeThrottle);
     procedure SyncConfigEditorHide(ConfigEditor: TFormTrainConfigEditor);
     procedure SyncConfigEditorClose(ConfigEditor: TFormTrainConfigEditor);
-    procedure OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+    procedure OnBeforeDestroyTask(Sender: TTaskOlcbBase);
     procedure OnConfigEditorMenuItemClick(Sender: TObject);
     procedure OnThrottleMenuItemClick(Sender: TObject);
 
@@ -806,11 +802,6 @@ begin
   ComDisconnect;
 end;
 
-procedure TFormOLCB_Commander.ActionToolsConfigureNodeExecute(Sender: TObject);
-begin
-
-end;
-
 procedure TFormOLCB_Commander.ActionToolsEthernetHubConnectExecute(Sender: TObject);
 begin
   EthernetConnect;
@@ -933,11 +924,6 @@ begin
   {$ENDIF}
 end;
 
-procedure TFormOLCB_Commander.MenuItemToolsSep3Click(Sender: TObject);
-begin
-
-end;
-
 procedure TFormOLCB_Commander.MenuItemConfigEditorsClick(Sender: TObject);
 var
   Start, i: Integer;
@@ -966,16 +952,6 @@ begin
   end;
   for i := 0 to ThrottleList.Count - 1 do
      AddThrottleSubMenu(ThrottleList.Throttles[i]);
-end;
-
-procedure TFormOLCB_Commander.PanelNetworkClick(Sender: TObject);
-begin
-
-end;
-
-procedure TFormOLCB_Commander.ToolBar1Click(Sender: TObject);
-begin
-
 end;
 
 procedure TFormOLCB_Commander.TreeViewNetworkContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
@@ -1030,63 +1006,63 @@ end;
 
 procedure TFormOLCB_Commander.RunConfigMemoryOptionsTaskOnNode(Node: TOlcbTreeNode);
 var
-  Task: TConfigMemoryOptionsTask;
+  Task: TTaskConfigMemoryOptions;
 begin
-  Task := TConfigMemoryOptionsTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task := TTaskConfigMemoryOptions.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunIdentifyEventsGlobal;
 var
-  Task: TIdentifyEventsTask;
+  Task: TTaskIdentifyEvents;
 begin
-  Task := TIdentifyEventsTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+  Task := TTaskIdentifyEvents.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunIdentifyEventsOnNode(Node: TOlcbTreeNode);
 var
-  Task: TIdentifyEventsAddressedTask;
+  Task: TTaskIdentifyEventsAddressed;
 begin
-  Task := TIdentifyEventsAddressedTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task := TTaskIdentifyEventsAddressed.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunMemConfigSpacesAllInfoOnNode(Node: TOlcbTreeNode);
 var
-  Task: TEnumAllConfigMemoryAddressSpaceInfoTask;
+  Task: TTaskConfigMemoryAddressEnumAllSpaceInfo;
 begin
-  Task := TEnumAllConfigMemoryAddressSpaceInfoTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task := TTaskConfigMemoryAddressEnumAllSpaceInfo.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunProtocolSupportOnNode(Node: TOlcbTreeNode);
 var
-  Task: TProtocolSupportTask;
+  Task: TTaskProtocolSupport;
 begin
-  Task := TProtocolSupportTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task := TTaskProtocolSupport.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunReadMemorySpaceOnNode(Node: TOlcbTreeNode; AddressSpace: Byte; UseStream: Boolean);
 var
-  Task: TReadAddressSpaceMemoryTask;
-  StreamTask: TReadAddressSpaceMemoryWithStreamTask;
+  Task: TTaskAddressSpaceMemoryReadWithDatagram;
+  StreamTask: TTaskAddressSpaceMemoryReadWithStream;
 begin
   if UseStream then
   begin
     case AddressSpace of
       MSI_CDI: begin
-                 StreamTask := TReadAddressSpaceMemoryWithStreamTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+                 StreamTask := TTaskAddressSpaceMemoryReadWithStream.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
                  StreamTask.Terminator := #0;
                end
       else
-        StreamTask := TReadAddressSpaceMemoryWithStreamTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+        StreamTask := TTaskAddressSpaceMemoryReadWithStream.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
     end;
     StreamTask.ForceOptionalSpaceByte := False;
     StreamTask.OnBeforeDestroy := @OnBeforeDestroyTask;
@@ -1095,11 +1071,11 @@ begin
   begin
     case AddressSpace of
       MSI_CDI: begin
-                 Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
+                 Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, True);
                  Task.Terminator := #0;
                end
       else
-        Task := TReadAddressSpaceMemoryTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
+        Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True, AddressSpace, False);
     end;
     Task.ForceOptionalSpaceByte := False;
     Task.OnBeforeDestroy := @OnBeforeDestroyTask;
@@ -1109,18 +1085,18 @@ end;
 
 procedure TFormOLCB_Commander.RunSNIIOnNode(Node: TOlcbTreeNode);
 var
-  Task: TSimpleNodeInformationTask;
+  Task: TTaskSimpleNodeInformation;
 begin
-  Task := TSimpleNodeInformationTask.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
+  Task := TTaskSimpleNodeInformation.Create(GlobalSettings.General.AliasIDAsVal, Node.OlcbData.NodeIDAlias, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
 
 procedure TFormOLCB_Commander.RunVerifyNodeIdGlobal;
 var
-  Task: TVerifyNodeIDGlobalTask;
+  Task: TTaskVerifyNodeIDGlobal;
 begin
-  Task := TVerifyNodeIDGlobalTask.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
+  Task := TTaskVerifyNodeIDGlobal.Create(GlobalSettings.General.AliasIDAsVal, 0, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
@@ -1373,7 +1349,7 @@ begin
   end;
 end;
 
-function TFormOLCB_Commander.DispatchTask(Task: TOlcbTaskBase): Boolean;
+function TFormOLCB_Commander.DispatchTask(Task: TTaskOlcbBase): Boolean;
 begin
   Result := False;
   if Task.DestinationAlias = 0 then
@@ -1506,7 +1482,7 @@ begin
   Result := (Node.Parent = RootNetworkNode) or (Node.Parent = RootCommandStationNode) or (Node.Parent = RootTrainNode)
 end;
 
-procedure TFormOLCB_Commander.RefreshNetworkTreeAliasConfigMemOptions(NodeAlias: Word; Options: TOlcbMemOptions);
+procedure TFormOLCB_Commander.RefreshNetworkTreeAliasConfigMemOptions(NodeAlias: Word; Options: TOlcbStructureMemOptions);
 var
   Node: TOlcbTreeNode;
   ConfigChildRoot: TTreeNode;
@@ -1516,7 +1492,7 @@ begin
   begin
     // Update Data
     if Node.OlcbData.ConfigMem = nil then
-      Node.OlcbData.ConfigMem := TOlcbMemConfig.Create;
+      Node.OlcbData.ConfigMem := TOlcbStructureMemConfig.Create;
     Options.CopyTo(Node.OlcbData.ConfigMem.Options);
 
     // Update UI
@@ -1548,18 +1524,18 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(NodeAlias: Word; AddressSpace: TOlcbMemAddressSpace);
+procedure TFormOLCB_Commander.RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(NodeAlias: Word; AddressSpace: TOlcbStructureMemAddressSpace);
 var
   Node: TOlcbTreeNode;
   ConfigAddressSpacesChild, AddressSpaceChild: TTreeNode;
-  LocalAddressSpace: TOlcbMemAddressSpace;
+  LocalAddressSpace: TOlcbStructureMemAddressSpace;
 begin
   Node := FindTreeNodeByAlias(RootNetworkNode, NodeAlias);
   if Assigned(Node) then
   begin
     // Update the Data
     if not Assigned(Node.OlcbData.ConfigMem) then
-      Node.OlcbData.ConfigMem := TOlcbMemConfig.Create;
+      Node.OlcbData.ConfigMem := TOlcbStructureMemConfig.Create;
     LocalAddressSpace := Node.OlcbData.ConfigMem.FindAddressSpaceBySpaceID(AddressSpace.Space);
     if not Assigned(LocalAddressSpace) then
       LocalAddressSpace := Node.OlcbData.ConfigMem.AddAddressSpace;
@@ -1787,7 +1763,7 @@ begin
   end
 end;
 
-procedure TFormOLCB_Commander.RefreshNetworkTreeAliasSnip(NodeAlias: Word; Snip: TOlcbSNIP);
+procedure TFormOLCB_Commander.RefreshNetworkTreeAliasSnip(NodeAlias: Word; Snip: TOlcbStructureSNIP);
 var
   ProtocolChild: TTreeNode;
   Node: TOlcbTreeNode;
@@ -1797,7 +1773,7 @@ begin
   begin
     // Update the Data
     if not Assigned(Node.OlcbData.Snii) then
-      Node.OlcbData.Snii := TOlcbSNIP.Create;
+      Node.OlcbData.Snii := TOlcbStructureSNIP.Create;
     Snip.CopyTo(Node.OlcbData.Snii);
 
     // Update the UI
@@ -2007,11 +1983,11 @@ begin
   end
 end;
 
-procedure TFormOLCB_Commander.OnBeforeDestroyTask(Sender: TOlcbTaskBase);
+procedure TFormOLCB_Commander.OnBeforeDestroyTask(Sender: TTaskOlcbBase);
 var
-  MemTask: TReadAddressSpaceMemoryTask;
+  MemTask: TTaskAddressSpaceMemoryReadWithDatagram;
   MemConfigViewer: TFormMemConfigViewer;
-  EnumAllSpaces: TEnumAllConfigMemoryAddressSpaceInfoTask;
+  EnumAllSpaces: TTaskConfigMemoryAddressEnumAllSpaceInfo;
   ADoc: TXMLDocument;
   x: string;
   i: Integer;
@@ -2019,9 +1995,9 @@ var
 begin
   if not Sender.ForceTermination then
   begin
-    if Sender is TReadAddressSpaceMemoryTask then
+    if Sender is TTaskAddressSpaceMemoryReadWithDatagram then
     begin
-      MemTask := TReadAddressSpaceMemoryTask( Sender);
+      MemTask := TTaskAddressSpaceMemoryReadWithDatagram( Sender);
       MemConfigViewer := TFormMemConfigViewer.Create(Application);
       MemConfigViewer.Caption := MemConfigViewer.Caption + ' - Alias:  0x' + IntToHex(MemTask.DestinationAlias, 4) + '  Address Space: ' + IntToStr(MemTask.AddressSpace);
       case MemTask.AddressSpace of
@@ -2071,41 +2047,38 @@ begin
       end;
       MemConfigViewer.Show;
     end else
-    if Sender is TConfigMemoryAddressSpaceInfoTask then
-      RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TConfigMemoryAddressSpaceInfoTask( Sender).ConfigMemoryAddressSpace)
+    if Sender is TTaskConfigMemoryOptions then
+       RefreshNetworkTreeAliasConfigMemOptions(Sender.DestinationAlias, TTaskConfigMemoryOptions( Sender).ConfigMemoryOptions)
     else
-    if Sender is TConfigMemoryOptionsTask then
-       RefreshNetworkTreeAliasConfigMemOptions(Sender.DestinationAlias, TConfigMemoryOptionsTask( Sender).ConfigMemoryOptions)
+    if Sender is TTaskConfigMemoryAddressSpaceInfo then
+      RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TTaskConfigMemoryAddressSpaceInfo( Sender).ConfigMemoryAddressSpace)
     else
-    if Sender is TConfigMemoryAddressSpaceInfoTask then
-      RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, TConfigMemoryAddressSpaceInfoTask( Sender).ConfigMemoryAddressSpace)
+    if Sender is TTaskProtocolSupport then
+      RefreshNetworkTreeAliasProtocolSupport(Sender.DestinationAlias, TTaskProtocolSupport( Sender).Protocols)
     else
-    if Sender is TProtocolSupportTask then
-      RefreshNetworkTreeAliasProtocolSupport(Sender.DestinationAlias, TProtocolSupportTask( Sender).Protocols)
+    if Sender is TTaskSimpleNodeInformation then
+      RefreshNetworkTreeAliasSnip(Sender.DestinationAlias, TTaskSimpleNodeInformation( Sender).Snip)
     else
-    if Sender is TSimpleNodeInformationTask then
-      RefreshNetworkTreeAliasSnip(Sender.DestinationAlias, TSimpleNodeInformationTask( Sender).Snip)
-    else
-    if Sender is TEnumAllConfigMemoryAddressSpaceInfoTask then
+    if Sender is TTaskConfigMemoryAddressEnumAllSpaceInfo then
     begin
-      EnumAllSpaces := TEnumAllConfigMemoryAddressSpaceInfoTask( Sender);
+      EnumAllSpaces := TTaskConfigMemoryAddressEnumAllSpaceInfo( Sender);
       for i := 0 to EnumAllSpaces.ConfigMemAddressInfo.AddressSpaceCount - 1 do
         RefreshNetworkTreeAliasConfigMemAddressSpaceInfo(Sender.DestinationAlias, EnumAllSpaces.ConfigMemAddressInfo.AddressSpace[i])
     end else
-    if Sender is TEventTask then
+    if Sender is TTaskEvent then
     begin
       RefreshNetworkTreeAliasEvents(Sender.DestinationAlias, Sender.MessageHelper);
       for i := 0 to ThrottleList.Count - 1 do
-        ThrottleList.Throttles[i].EventTaskReceived(Sender as TEventTask);
+        ThrottleList.Throttles[i].EventTaskReceived(Sender as TTaskEvent);
     end else
-    if Sender is TCANLayerTask then
+    if Sender is TTaskCANLayer then
     begin
       case Sender.MessageHelper.MTI of
         MTI_AMD : AddNetworkTreeAlias(Sender.DestinationAlias, Sender.MessageHelper.ExtractDataBytesAsInt(0, 5), True);
         MTI_AMR : DeleteNetworkTreeAlias(Sender.DestinationAlias);
       end
     end else
-    if Sender is TVerifiedNodeIDTask then
+    if Sender is TTaskVerifiedNodeID then
     begin
       if Sender.MessageHelper.DataCount = 6 then
         AddNetworkTreeAlias(Sender.DestinationAlias, Sender.MessageHelper.ExtractDataBytesAsInt(0, 5), True)
@@ -2113,11 +2086,11 @@ begin
         AddNetworkTreeAlias(Sender.DestinationAlias, 0, True);
     end
    else
-    if Sender is TTractionProtocolTask then
+    if Sender is TTaskTractionProtocol then
     begin
 
     end else
-    if Sender is TInitializationCompleteTask then
+    if Sender is TTaskInitializationComplete then
     begin
 
     end;

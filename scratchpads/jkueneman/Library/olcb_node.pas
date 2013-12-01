@@ -13,25 +13,25 @@ type
   TOpenLcbNode = class
   private
     FCDI: TXMLDocument;
-    FConfigMem: TOlcbMemConfig;
+    FConfigMem: TOlcbStructureMemConfig;
     FNodeID: QWord;
     FNodeIDAlias: Word;
     FProtocolSupport: QWord;
-    FSnii: TOlcbSNIP;
+    FSnii: TOlcbStructureSNIP;
     procedure SetCDI(AValue: TXMLDocument);
     procedure SetNodeID(AValue: QWord);
     procedure SetNodeIDAlias(AValue: Word);
     procedure SetProtocolSupport(AValue: QWord);
-    procedure SetSnii(AValue: TOlcbSNIP);
+    procedure SetSnii(AValue: TOlcbStructureSNIP);
   public
     constructor Create;
     destructor Destroy; override;
     property CDI: TXMLDocument read FCDI write SetCDI;
-    property ConfigMem: TOlcbMemConfig read FConfigMem write FConfigMem;
+    property ConfigMem: TOlcbStructureMemConfig read FConfigMem write FConfigMem;
     property NodeID: QWord read FNodeID write SetNodeID;
     property NodeIDAlias: Word read FNodeIDAlias write SetNodeIDAlias;
     property ProtocolSupport: QWord read FProtocolSupport write SetProtocolSupport;
-    property Snii: TOlcbSNIP read FSnii write SetSnii;
+    property Snii: TOlcbStructureSNIP read FSnii write SetSnii;
   end;
 
 implementation
@@ -59,7 +59,7 @@ begin
   FProtocolSupport:=AValue;
 end;
 
-procedure TOpenLcbNode.SetSnii(AValue: TOlcbSNIP);
+procedure TOpenLcbNode.SetSnii(AValue: TOlcbStructureSNIP);
 begin
   FreeAndNil(FSnii);
   FSnii:=AValue;

@@ -133,7 +133,7 @@ type
     procedure SetEnableSendMessages(AValue: Boolean);
   protected
     procedure InternalAdd(Msg: AnsiString);
-    procedure InternalAddDatagramToSend(Datagram: TDatagramSend);
+    procedure InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
     procedure LocalOnHubConnect;
     procedure LocalOnHubDisconnect;
     procedure LocalOnClientConnect;
@@ -147,7 +147,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function AddTask(NewTask: TOlcbTaskBase): Boolean;
+    function AddTask(NewTask: TTaskOlcbBase): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
     property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
@@ -302,10 +302,10 @@ begin
         SyncSendMessageList.Clear;
       end;
 
-      StreamSendManager.ProcessSend;
-      DatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
-      OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
-      if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
+      CANFrameParserStreamSendManager.ProcessSend;                              // *** See if there is a stream that is being disceted and frame out on a CAN connection ***
+      CANFrameParserDatagramSendManager.ProcessSend;                            // *** See if there is a datagram that is being disceted and frame out on a CAN connection ***
+      OlcbTaskManager.ProcessSending;                                           // *** See if there is a task what will add a message to send ***
+      if SendStr <> '' then                                                     // *** Put the message on the wire and communicate back the raw message sent ***
       begin
         ConnectedSocket.ResetLastError;
         ConnectedSocket.SendString(SendStr + LF);                               // Try to send the message
@@ -611,7 +611,7 @@ begin
   end;
 end;
 
-procedure TEthernetHub.InternalAddDatagramToSend(Datagram: TDatagramSend);
+procedure TEthernetHub.InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
 var
   List: TList;
   i: Integer;
@@ -619,13 +619,13 @@ begin
   List := ClientThreadList.LockList;
   try
     for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).InternalAddDatagramToSend(Datagram);
+      TClientSocketThread( List[i]).InternalAddDatagramToSendByCANParsing(Datagram);
   finally
     ClientThreadList.UnlockList;
   end;
 end;
 
-function TEthernetHub.AddTask(NewTask: TOlcbTaskBase): Boolean;
+function TEthernetHub.AddTask(NewTask: TTaskOlcbBase): Boolean;
 var
   List: TList;
   i: Integer;

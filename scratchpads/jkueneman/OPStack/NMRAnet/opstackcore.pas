@@ -375,7 +375,7 @@ begin
                             if NewMessage <> nil then
                             begin
                               {$IFDEF SUPPORT_STREAMS}
-                              StreamMessage := OPStackNode_FindStream(DestNode, 0, 0, NewMessage^.Source);
+                              StreamMessage := OPStackNode_FindStream(DestNode, 0, 0, NewMessage^.Dest);
                               if Assigned(StreamMessage) then
                                 PStreamBuffer( PByte( StreamMessage^.Buffer))^.iStateMachine := STATE_CONFIG_MEM_STREAM_INIT;
                               {$ENDIF}
@@ -949,11 +949,18 @@ begin
     if IsStream then
     begin
       Buffer^[DataOffset] := ReadCount shr 24;
-      Buffer^[DataOffset+1] := ReadCount shr 16;
-      Buffer^[DataOffset+2] := ReadCount shr 8;
-      Buffer^[DataOffset+3] := ReadCount;
-    end else
+      Inc(DataOffset);
+      Buffer^[DataOffset] := ReadCount shr 16;
+      Inc(DataOffset);
+      Buffer^[DataOffset] := ReadCount shr 8;
+      Inc(DataOffset);
       Buffer^[DataOffset] := ReadCount;
+      Inc(DataOffset);
+    end else
+    begin
+      Buffer^[DataOffset] := ReadCount;
+      Inc(DataOffset);
+    end;
   end;
 end;
 
@@ -1051,6 +1058,7 @@ begin
                 OPStackBuffers_ZeroMessage(@LocalOutgoingMessage);
                 OPStackBuffers_ZeroSimpleBuffer(@LocalOutgoingBuffer, False);
                 OPStackBuffers_LoadMessage(@LocalOutgoingMessage, MTI_STREAM_INIT_REQUEST, NextStream^.Source.AliasID, NextStream^.Source.ID, NextStream^.Dest.AliasID, NextStream^.Dest.ID, $00);
+                LocalOutgoingMessage.MessageType := MT_SIMPLE;                  // Not a Stream MTI, just a normal 8 byte CAN message
                 LocalOutgoingBuffer.DataBufferSize := 6;
                 LocalOutgoingBuffer.DataArray[0] := Hi(USER_MAX_STREAM_BYTES);
                 LocalOutgoingBuffer.DataArray[1] := Lo(USER_MAX_STREAM_BYTES);
@@ -1059,7 +1067,7 @@ begin
                 LocalOutgoingBuffer.DataArray[4] := AllocateStreamSourceID;            // Unique ID
                 LocalOutgoingBuffer.DataArray[5] := 0;                                 // Reserved
                 StreamBuffer^.iStateMachine := STATE_CONFIG_MEM_STREAM_WAIT_FOR_INIT_REPLY;
-                StreamBuffer^.SourceID := LocalOutgoingBuffer.DataArray[4];
+                StreamBuffer^.SourceStreamID := LocalOutgoingBuffer.DataArray[4];
                 StreamBuffer^.CurrentCount := 0;                                       // Who ever kicked this off should have filled in StreamBuffer^.TotalMessageSize
                 LocalOutgoingMessage.Buffer := @LocalOutgoingBuffer;
                 OutgoingMessage(@LocalOutgoingMessage);
@@ -1091,8 +1099,8 @@ begin
                   StreamBuffer^.CurrentCount := StreamBuffer^.CurrentCount + 6;
                 end;
 
-                StreamBuffer^.DataArray[LocalCount] := StreamBuffer^.SourceID;
-                StreamBuffer^.DataArray[LocalCount+1] := StreamBuffer^.DestID;
+                StreamBuffer^.DataArray[LocalCount] := StreamBuffer^.SourceStreamID;
+                StreamBuffer^.DataArray[LocalCount+1] := StreamBuffer^.DestStreamID;
                 StreamBuffer^.CurrentCount := StreamBuffer^.CurrentCount + 2;
                 while StreamBuffer^.CurrentCount < StreamBuffer^.TotalMessageSize do
                 begin
@@ -1122,8 +1130,8 @@ begin
                 OPStackBuffers_ZeroSimpleBuffer(@LocalOutgoingBuffer, False);
                 OPStackBuffers_LoadMessage(@LocalOutgoingMessage, MTI_STREAM_COMPLETE, NextStream^.Source.AliasID, NextStream^.Source.ID, NextStream^.Dest.AliasID, NextStream^.Dest.ID, $00);
                 LocalOutgoingBuffer.DataBufferSize := 4;
-                LocalOutgoingBuffer.DataArray[0] := StreamBuffer^.SourceID;
-                LocalOutgoingBuffer.DataArray[1] := StreamBuffer^.DestID;
+                LocalOutgoingBuffer.DataArray[0] := StreamBuffer^.SourceStreamID;
+                LocalOutgoingBuffer.DataArray[1] := StreamBuffer^.DestStreamID;
                 LocalOutgoingBuffer.DataArray[2] := 0;                                 // Flags
                 LocalOutgoingBuffer.DataArray[3] := 0;                                 // Flags
                 StreamBuffer^.iStateMachine := STATE_CONFIG_MEM_STREAM_COMPLETE;
@@ -1288,7 +1296,6 @@ begin
                       case DatagramBufferPtr^.DataArray[1] and $F0 of
                          MCP_COMMAND_READ :
                              begin
-
                                OPStackBuffers_SwapDestAndSourceIDs(NextMessage);
                                if AddressSpace < MSI_CONFIG then
                                  EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
@@ -1367,18 +1374,21 @@ begin
                                else
                                  EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, True, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
 
-                               DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
+                               DatagramBufferPtr^.DataBufferSize := DataOffset;    // Just the header, no data that comes in the stream
                                DatagramBufferPtr^.CurrentCount := 0;
                                DatagramBufferPtr^.iStateMachine := 0;
 
-                               if OPStackBuffers_AllcoateStreamMessage(NewMessage, MTI_STREAM_SEND, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, True) then
+                               if OPStackBuffers_AllcoateStreamMessage(NewMessage, MTI_STREAM_SEND, NextMessage^.Source.AliasID, NextMessage^.Source.ID, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, True) then
                                begin
+                                 // Streams are handled by their StateMacheines (NodeRunOutgoingStreamStateMachine).  We link to the node and allow the state
+                                 // machine to move through the build up/sending/teardown of the stream.  The datagram ACK from the Datagram Read Reply will move this statemachine
+                                 // into its first active state.
                                  EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, True) ;
                                  OPStackNode_StreamLink(Node, NewMessage);      // No Stream ID's yet just waiting for the Stream link to be created
                                end else
                                  EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, False, True);
 
-                               OutgoingMessage(NextMessage);                    // We need to wait for the ACK on this Datagram before we initialize the stream... How??
+                               OutgoingMessage(NextMessage);                    // We need to wait for the ACK on this Datagram before we initialize the stream
                                Exit;                                            // Don't call Datagram OK again!
                                {$ELSE}
                                OPStackBuffers_DeAllocateMessage(NextMessage);
@@ -1785,7 +1795,7 @@ begin
     ProcessOutgoingAcdiSnips;
     ProcessOutgoingDatagrams;
     ProcessOutgoingStreams;
-  end;
+   end;
 end;
 
 end.

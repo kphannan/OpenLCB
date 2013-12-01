@@ -386,7 +386,6 @@ begin
                                          end;
     MTI_FRAME_TYPE_DATAGRAM_FRAME : Result := 'Datagram Frame';
     MTI_FRAME_TYPE_DATAGRAM_FRAME_END : Result := 'Datagram End Frame';
-    MTI_FRAME_TYPE_STREAM_SEND : Result := 'Stream Send Frame';
 
     MTI_INITIALIZATION_COMPLETE : Result := 'Initialization Complete';
     MTI_VERIFY_NODE_ID_NUMBER_DEST : Result := 'Verify Node ID with Destination Address';
@@ -788,8 +787,8 @@ begin
     if IsStreamMTI( LocalHelper.MTI, True) then
     begin
       case LocalHelper.MTI of
-        MTI_STREAM_INIT_REQUEST            : Result := Result + ' Suggested Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID' + IntToStr(LocalHelper.Data[6]);
-        MTI_STREAM_INIT_REPLY              : Result := Result + ' Negotiated Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID' + IntToStr(LocalHelper.Data[6]) + ' Destination Stream ID' + IntToStr(LocalHelper.Data[7]);
+        MTI_STREAM_INIT_REQUEST            : Result := Result + ' Suggested Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]);
+        MTI_STREAM_INIT_REPLY              : Result := Result + ' Negotiated Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]) + ' Destination Stream ID: ' + IntToStr(LocalHelper.Data[7]);
         MTI_STREAM_SEND                    : begin end;
         MTI_STREAM_PROCEED                 : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
         MTI_STREAM_COMPLETE                : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);

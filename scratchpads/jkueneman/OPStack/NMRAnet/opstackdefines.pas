@@ -204,8 +204,8 @@ type
     DataArray: TStreamDataArray;
     // *******
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
-    SourceID,
-    DestID: Byte;
+    SourceStreamID,
+    DestStreamID: Byte;
     StreamTypeID: TStreamTypeID;
     TotalMessageSize: DWord;                                                    // The total number of bytes to send in the interaction
   end;
