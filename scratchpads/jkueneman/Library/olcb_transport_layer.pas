@@ -38,7 +38,7 @@ type
   TCANFrameParserDatagramSendManager    = class;
   TCANFrameParserDatagramReceive        = class;
   TCANFrameParserDatagramSend           = class;
-  TStreamCANFrameParserSend             = class;
+  TCANFrameParserStreamSend             = class;
   TCANFrameParserStreamBase             = class;
   TCANFrameParserStreamSendManager      = class;
   TCANFrameParserStreamReceiveManager   = class;
@@ -368,7 +368,6 @@ type
     FEmpty: Boolean;
     FFlags: Byte;
     FHasUniqueStreamUID: Boolean;
-    FiStateMachine: Word;
     FLocalHelper: TOpenLCBMessageHelper;
     FMaxBufferSize: Word;
     FSourceAlias: Word;
@@ -395,7 +394,6 @@ type
     property StreamData: TStreamDataArray read FStreamData write FStreamData;
     property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
     property SourceAlias: Word read FSourceAlias write FSourceAlias;
-    property iStateMachine: Word read FiStateMachine write FiStateMachine;
     property Stream: TMemoryStream read FStream write FStream;
   end;
 
@@ -501,9 +499,9 @@ public
   procedure ProcessSend;
 end;
 
-{ TStreamCANFrameParserSend }
+{ TCANFrameParserStreamSend }
 
-TStreamCANFrameParserSend = class( TCANFrameParserStreamBase)
+TCANFrameParserStreamSend = class( TCANFrameParserStreamBase)
 public
   function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean; override;
   function ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean; override;
@@ -531,7 +529,7 @@ public
   destructor Destroy; override;
   procedure Clear;
   procedure ClearAbandon;
-  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamCANFrameParserSend;
+  function ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamSend;
   procedure ProcessSend;
 end;
 
@@ -1136,53 +1134,20 @@ var
   LocalAdditionalFlags: Byte;
 begin
   Result := False;
-  case iStateMachine of
-    0: begin
-         case AHelper.MTI of
-           MTI_STREAM_INIT_REQUEST :     // Another node is initiating a stream request
+  case AHelper.MTI of
+      MTI_FRAME_TYPE_CAN_STREAM_SEND :
+         begin
+           if Empty then
            begin
-             MaxBufferSize := (AHelper.Data[2] shl 8) or AHelper.Data[3];
-             Flags := AHelper.Data[4];
-             AdditionalFlags := AHelper.Data[5];
-             SourceStreamID := AHelper.Data[6];
-             HasUniqueStreamUID := Flags and STREAM_REPLY_CONTENT_TYPE <> 0;
-
-             if HasUniqueStreamUID then
-               LocalFlags := STREAM_REPLY_CONTENT_TYPE
-             else
-               LocalFlags := 0;
-             LocalAdditionalFlags := 0;
-             DestStreamID := GenerateDestID;
-             LocalHelper.Load(ol_OpenLCB, MTI_STREAM_INIT_REPLY, AHelper.DestinationAliasID, AHelper.SourceAliasID, 8, 0, 0, Hi( MaxBufferSize), Lo( MaxBufferSize), LocalFlags, LocalAdditionalFlags, SourceStreamID, DestStreamID);
-             TransportLayerThread.InternalAdd(LocalHelper.Encode);
-             Inc(FiStateMachine);
-           end;
-         end  // Case
-       end;
-     1: begin
-          case AHelper.MTI of
-             MTI_STREAM_SEND :
-                begin
-                  SetLength(FStreamData, MaxBufferSize + Length(FStreamData));  // We can handle anything the node can throw at us
-                end;
-             MTI_STREAM_COMPLETE :
-                begin
-                  Empty := False;
-                  iStateMachine := STATE_DONE;
-                end;
-          end;
-          // Wait for some data
-        end;
-     2: begin
-           LocalFlags := 0;
-           LocalAdditionalFlags := 0;
-           DestStreamID := GenerateDestID;
-           LocalHelper.Load(ol_OpenLCB, MTI_STREAM_PROCEED, AHelper.DestinationAliasID, AHelper.SourceAliasID, 6, 0, 0, SourceStreamID, DestStreamID, LocalFlags, LocalAdditionalFlags, 0, 0);
-           TransportLayerThread.InternalAdd(LocalHelper.Encode);
-           iStateMachine := 1;  // Get somemore data
-        end;
-
+  //         SetLength(FStreamData, MaxBufferSize + Length(FStreamData));  // We can handle anything the node can throw at us
+           end
+         end;
+      MTI_STREAM_COMPLETE :
+         begin
+           Empty := False;
+         end;
   end;
+  // Wait for some data
 end;
 
 function TCANFrameParserStreamReceive.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
@@ -1190,14 +1155,14 @@ begin
   Result := False
 end;
 
-{ TStreamCANFrameParserSend }
+{ TCANFrameParserStreamSend }
 
-function TStreamCANFrameParserSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+function TCANFrameParserStreamSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
 begin
   Result := False;
 end;
 
-function TStreamCANFrameParserSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
+function TCANFrameParserStreamSend.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
 begin
   Result := False;
   // Is this needed?  Not sure.  In Datagram this is where we look for the ACK after it is sent.  Streams don't have ACKs
@@ -1264,9 +1229,9 @@ begin
   end;
 end;
 
-function TCANFrameParserStreamSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TStreamCANFrameParserSend;
+function TCANFrameParserStreamSendManager.ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamSend;
 var
-  Stream: TStreamCANFrameParserSend;
+  Stream: TCANFrameParserStreamSend;
   List: TList;
   i: Integer;
   Done: Boolean;
@@ -1278,7 +1243,7 @@ begin
     Done := False;
     while (i < List.Count) and not Done do
     begin
-      Stream := TStreamCANFrameParserSend( List[i]);
+      Stream := TCANFrameParserStreamSend( List[i]);
       if Stream.ProcessReceive(AHelper, Owner) then
       begin
         Done := True;
@@ -1297,7 +1262,7 @@ end;
 
 procedure TCANFrameParserStreamSendManager.ProcessSend;
 var
-  Stream: TStreamCANFrameParserSend;
+  Stream: TCANFrameParserStreamSend;
   List: TList;
   i: Integer;
   Done: Boolean;
@@ -1308,7 +1273,7 @@ begin
     Done := False;
     while (i < List.Count) and not Done do
     begin
-      Stream := TStreamCANFrameParserSend( List[i]);
+      Stream := TCANFrameParserStreamSend( List[i]);
       Done := Stream.ProcessSend(Owner);
       Inc(i);
     end;
@@ -1431,7 +1396,6 @@ begin
   FSourceStreamID := 0;
   FStreamData := nil;
   FUniqueStreamUID := 0;
-  FiStateMachine := 0;
 end;
 
 destructor TCANFrameParserStreamBase.Destroy;
@@ -1899,9 +1863,11 @@ begin
           // Get ready for Data
           if IsStreamSendFromDestination(MessageInfo, StreamReceive) then
           begin
+
             // here I create a TCANFrameParserStreamReceive and wait for the sending node to send me the data and the object to recreat it from CAN frames
           end;
         end;
+
     STATE_WRITE_START :
         begin
           if DataStream.Size > Space.AddressHi - Space.AddressLo then
@@ -2006,7 +1972,7 @@ var
   InitializationCompleteTask: TTaskInitializationComplete;
   CompletedSendDatagram: TCANFrameParserDatagramSend;
   BufferDatagramReceive: TCANFrameParserDatagramReceive;
-  CompletedSendStream: TStreamCANFrameParserSend;
+  CompletedSendStream: TCANFrameParserStreamSend;
   BufferStreamReceive: TCANFrameParserStreamBase;
 begin
   ReceiveStr := Trim(ReceiveStr);
@@ -3834,7 +3800,7 @@ end;
 procedure TTaskOlcbBase.SendStreamInitReply(NegotiatedBuffer: Word; Flag,
   AdditionalFlags, SourceID, DestID: Byte);
 begin
-  MessageHelper.Load(ol_OpenLCB, MTI_STREAM_INIT_REPLY, SourceAlias, DestinationAlias, 2, 0, 0, Hi(NegotiatedBuffer), Lo(NegotiatedBuffer), Flag, AdditionalFlags, SourceID, DestID);
+  MessageHelper.Load(ol_OpenLCB, MTI_STREAM_INIT_REPLY, SourceAlias, DestinationAlias, 8, 0, 0, Hi(NegotiatedBuffer), Lo(NegotiatedBuffer), Flag, AdditionalFlags, SourceID, DestID);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
 end;
 

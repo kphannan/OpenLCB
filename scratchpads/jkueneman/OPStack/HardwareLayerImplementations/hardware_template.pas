@@ -277,7 +277,7 @@ begin
               GridConnectBuffer.PayloadCount := 2;
             end;
           end else
-          if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_STREAM_SEND then
+          if AMessage^.MTI and MTI_FRAME_TYPE_MASK <= MTI_FRAME_TYPE_CAN_STREAM_SEND then
           begin
             // This is a datagram MTI ($Axxx...$Dxxxx) or stream MTI ($Fxxx)
             GridConnectBuffer.MTI := (AMessage^.MTI shl 12) or (AMessage^.Dest.AliasID shl 12) or AMessage^.Source.AliasID or $10000000;
@@ -477,7 +477,7 @@ begin
               end;
             end
           end;
-      MTI_STREAM_SEND :
+      MTI_FRAME_TYPE_CAN_STREAM_SEND :
           begin
 
           end;

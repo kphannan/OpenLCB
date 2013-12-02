@@ -75,7 +75,8 @@ const
   MTI_DATAGRAM_REJECTED_REPLY        = $0A48;
   MTI_STREAM_INIT_REQUEST            = $0CC8;
   MTI_STREAM_INIT_REPLY              = $0868;
-  MTI_STREAM_SEND                    = $F000;
+  MTI_FRAME_TYPE_CAN_STREAM_SEND     = $F000;
+  MTI_STEAM_SEND                     = $1F88;
   MTI_STREAM_PROCEED                 = $0888;
   MTI_STREAM_COMPLETE                = $08A8;
 

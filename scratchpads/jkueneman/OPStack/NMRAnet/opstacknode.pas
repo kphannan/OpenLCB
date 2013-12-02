@@ -75,7 +75,7 @@ function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
 {$IFDEF SUPPORT_STREAMS}
 procedure OPStackNode_StreamLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OPStackNode_StreamUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-function OPStackNode_FindStream(Node: PNMRAnetNode; DestStreamID, SourceStreamID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
+function OPStackNode_FindStream(Node: PNMRAnetNode; SourceStreamID, DestStreamID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
 function OPStackNode_NextStream(Node: PNMRAnetNode): POPStackMessage;
 {$ENDIF}
 
@@ -766,7 +766,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_FindStream(Node: PNMRAnetNode; DestStreamID, SourceStreamID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
+function OPStackNode_FindStream(Node: PNMRAnetNode; SourceStreamID, DestStreamID: Byte; var LinkNode: TNodeInfo): POPStackMessage;
 var
   Temp: POPStackMessage;
   StreamBuffer: PStreamBuffer;

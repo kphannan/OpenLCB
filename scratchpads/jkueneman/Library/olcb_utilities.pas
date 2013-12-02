@@ -438,7 +438,7 @@ begin
     MTI_TRACTION_REPLY                 : Result := 'Traction Reply';
     MTI_STREAM_INIT_REQUEST            : Result := 'Stream Init Request';
     MTI_STREAM_INIT_REPLY              : Result := 'Stream Init Reply';
-    MTI_STREAM_SEND                    : Result := 'Stream Send';
+    MTI_FRAME_TYPE_CAN_STREAM_SEND     : Result := 'Stream Send - CAN Frame';
     MTI_STREAM_PROCEED                 : Result := 'Stream Proceed';
     MTI_STREAM_COMPLETE                : Result := 'Stream Complete';
    else
@@ -744,9 +744,9 @@ end;
 function IsStreamMTI(MTI: DWord; IncludeSetupTeardowns: Boolean): Boolean;
 begin
   if IncludeSetupTeardowns then
-    Result := (MTI = MTI_STREAM_SEND) or  (MTI = MTI_STREAM_COMPLETE) or  (MTI = MTI_STREAM_INIT_REPLY) or  (MTI = MTI_STREAM_INIT_REQUEST) or  (MTI = MTI_STREAM_PROCEED)
+    Result := (MTI = MTI_FRAME_TYPE_CAN_STREAM_SEND) or  (MTI = MTI_STREAM_COMPLETE) or  (MTI = MTI_STREAM_INIT_REPLY) or  (MTI = MTI_STREAM_INIT_REQUEST) or  (MTI = MTI_STREAM_PROCEED)
   else
-    Result := (MTI = MTI_STREAM_SEND)
+    Result := (MTI = MTI_FRAME_TYPE_CAN_STREAM_SEND)
 end;
 
 function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
@@ -789,7 +789,7 @@ begin
       case LocalHelper.MTI of
         MTI_STREAM_INIT_REQUEST            : Result := Result + ' Suggested Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]);
         MTI_STREAM_INIT_REPLY              : Result := Result + ' Negotiated Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]) + ' Destination Stream ID: ' + IntToStr(LocalHelper.Data[7]);
-        MTI_STREAM_SEND                    : begin end;
+        MTI_FRAME_TYPE_CAN_STREAM_SEND     : begin end;
         MTI_STREAM_PROCEED                 : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
         MTI_STREAM_COMPLETE                : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
       end

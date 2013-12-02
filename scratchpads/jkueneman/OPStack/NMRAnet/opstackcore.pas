@@ -1,11 +1,12 @@
 unit opstackcore;
 
 // TODOs
-//   1) Datagram Rejected: Try N times then give up
-//   2) Check for Abandon Datagrams then Free
+//   1) Datagram Rejected: Try N times then give up, re-tries forever now
+//   2) Check for Abandon Datagrams/Streams then Free
 //   3) ACDI Read and Write not implemented correctly
 //   4) FDI not implemented correctly
 //   5) Do something with MTI_STREAM_INIT_REPLY error code results
+
 
 {$IFDEF FPC}
 interface
@@ -293,23 +294,23 @@ begin
                     {$IFDEF SUPPORT_STREAMS}
                       MTI_STREAM_INIT_REPLY :                                   // We initiated the request and the other node replied
                           begin
-                            StreamMessage := FindStream(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer^.DataArray[4], AMessage^.Buffer^.DataArray[5], STATE_CONFIG_MEM_STREAM_WAIT_FOR_INIT_REPLY);
+                            StreamMessage := OPStackNode_FindStream(DestNode, AMessage^.Buffer^.DataArray[4], 0, AMessage^.Source);
                             if StreamMessage <> nil then
                             begin
                               StreamBuffer := PStreamBuffer( PByte( StreamMessage^.Buffer));
-                              StreamBuffer^.DataBufferSize := (StreamBuffer^.DataArray[0] shl 8) or StreamBuffer^.DataArray[1];
-                              if (StreamBuffer^.DataArray[2] and STREAM_REPLY_ACCEPT <> 0) and (StreamBuffer^.DataBufferSize > 0) then
+                              StreamBuffer^.TotalMessageSize := (AMessage^.Buffer^.DataArray[0] shl 8) or AMessage^.Buffer^.DataArray[1];
+                              if (AMessage^.Buffer^.DataArray[2] and STREAM_REPLY_ACCEPT <> 0) and (StreamBuffer^.DataBufferSize > 0) then
                               begin                                             // Initialization was Accepted
                                 StreamBuffer^.iStateMachine := STATE_CONFIG_MEM_STREAM_SEND;
                               end else
                               begin                                             // Initialization was Rejected
-                                if StreamBuffer^.DataArray[2] and STREAM_REPLY_UNEXPECTED_ERROR <> 0 then
+                                if AMessage^.Buffer^.DataArray[2] and STREAM_REPLY_UNEXPECTED_ERROR <> 0 then
                                 begin
                                   // Ugly error, not sure what to do
                                 end else
-                                if StreamBuffer^.DataArray[2] and STREAM_REPLY_PERMANENT_ERROR <> 0 then
+                                if AMessage^.Buffer^.DataArray[2] and STREAM_REPLY_PERMANENT_ERROR <> 0 then
                                 begin
-                                  case StreamBuffer^.DataArray[3] and $E0 of
+                                  case AMessage^.Buffer^.DataArray[3] and $E0 of
                                     STREAM_REPLY_INVALID_REQUEST       : begin end;
                                     STREAM_REPLY_SOURCE_NOT_PERMITTED  : begin end;
                                     STREAM_REPLY_STREAM_NOT_ACCEPTED   : begin end;
@@ -790,7 +791,8 @@ begin
             OutgoingMessage(OPStackMessage);
             Result := True;
           end
-        end  {$ENDIF}
+        end
+        {$ENDIF}
       end;
     end
   end else
@@ -853,7 +855,8 @@ begin
             OutgoingMessage(OPStackMessage);
             Result := True;
           end
-        end   {$ENDIF}
+        end
+        {$ENDIF}
       end
     end
   end
@@ -1378,7 +1381,7 @@ begin
                                DatagramBufferPtr^.CurrentCount := 0;
                                DatagramBufferPtr^.iStateMachine := 0;
 
-                               if OPStackBuffers_AllcoateStreamMessage(NewMessage, MTI_STREAM_SEND, NextMessage^.Source.AliasID, NextMessage^.Source.ID, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, True) then
+                               if OPStackBuffers_AllcoateStreamMessage(NewMessage, MTI_FRAME_TYPE_CAN_STREAM_SEND, NextMessage^.Source.AliasID, NextMessage^.Source.ID, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, True) then
                                begin
                                  // Streams are handled by their StateMacheines (NodeRunOutgoingStreamStateMachine).  We link to the node and allow the state
                                  // machine to move through the build up/sending/teardown of the stream.  The datagram ACK from the Datagram Read Reply will move this statemachine

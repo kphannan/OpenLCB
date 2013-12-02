@@ -89,7 +89,7 @@ const
 
   MTI_STREAM_INIT_REQUEST            = $09CC8000;
   MTI_STREAM_INIT_REPLY              = $09868000;
-  MTI_STREAM_SEND                    = $0F000000;
+  MTI_FRAME_TYPE_CAN_STREAM_SEND     = $0F000000;
   MTI_STREAM_PROCEED                 = $09888000;
   MTI_STREAM_COMPLETE                = $098A8000;
 
