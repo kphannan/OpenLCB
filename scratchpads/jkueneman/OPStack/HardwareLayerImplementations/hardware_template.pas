@@ -163,8 +163,11 @@ procedure OPStackCANStatemachine_RemoveIncomingDatagramMessage(OPStackDatagramMe
 function OPStackCANStatemachine_FindDatagramWaitingforACKStack(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage; external;
 procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
 function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
-procedure OPStackCANStatemachine_RemoveAcdiSnipDatagramMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
 procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage; external;
+procedure OPStackCANStatemachine_RemoveAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
+procedure OPStackCANStatemachine_AddOutgoingStreamMessage(OPStackDatagramMessage: POPStackMessage); external;
+procedure OPStackCANStatemachine_ProcessOutgoingStreamMessage; external;
+function OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte; iStateMachine: Byte): POPStackMessage; external;
 {$ENDIF}
 
 // Just to get it compiled in for test DO NOT CALL THIS
@@ -351,7 +354,7 @@ end;
 {$IFDEF SUPPORT_STREAMS}
 function FindStream(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo; SourceID, DestID, iStateMachine: Byte): POPStackMessage;
 begin
-  OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeID.AliasID, SourceID, DestID, iStateMachine);
+  Result := OPStackCANStatemachine_FindAnyStreamOnOutgoingStack(DestNodeID.AliasID, SourceID, DestID, iStateMachine);
 end;
 {$ENDIF}
 

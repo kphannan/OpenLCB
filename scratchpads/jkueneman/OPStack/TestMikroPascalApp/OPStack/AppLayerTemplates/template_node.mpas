@@ -1,3 +1,11 @@
+// *****************************************************************************
+//
+// This file is the template for the application to define the Node that is the
+// physical node.  It can have completely different attributes than the virtual
+// nodes.
+//
+// *****************************************************************************
+
 unit template_node;
 
 // This file contains application layer variabile the user can change to customize

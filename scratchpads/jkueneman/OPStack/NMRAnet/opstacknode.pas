@@ -14,6 +14,7 @@ uses
   {$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
+  opstacktypes,
   nmranetutilities,
   opstackdefines;
 

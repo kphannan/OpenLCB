@@ -377,7 +377,7 @@ begin
                             begin
                               {$IFDEF SUPPORT_STREAMS}
                               StreamMessage := OPStackNode_FindStream(DestNode, 0, 0, NewMessage^.Dest);
-                              if Assigned(StreamMessage) then
+                              if StreamMessage <> nil then
                                 PStreamBuffer( PByte( StreamMessage^.Buffer))^.iStateMachine := STATE_CONFIG_MEM_STREAM_INIT;
                               {$ENDIF}
                               RemoveDatagramWaitingForAck(NewMessage);
@@ -1404,7 +1404,7 @@ begin
                                    MSI_CDI,
                                    MSI_ALL,
                                    MSI_ACDI_MFG,
-                                   MSI_FDI:
+                                   MSI_FDI :
                                        begin
                                          OPStackBuffers_DeAllocateMessage(NextMessage);    // These are Read Only
                                          Exit;
@@ -1529,9 +1529,7 @@ begin
                                  MCP_OP_RESETS :
                                       begin
                                         {$IFNDEF FPC}
-                                        asm
-                                          reset;
-                                        end;
+                                          reset();
                                         {$ENDIF}
                                      end
                                  else begin
