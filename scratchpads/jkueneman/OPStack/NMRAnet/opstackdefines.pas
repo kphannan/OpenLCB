@@ -102,6 +102,8 @@ const
   MT_STREAM          = $04;
   MT_ACDISNIP        = $08;
 
+  MT_WAITING_FOR_ACK = $10;                                                     // Message is waiting for an ACK
+  MT_RESEND          = $20;                                                     // Set if the message should just be resent as is
   MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
   MT_ALLOCATED       = $80;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
 
@@ -186,6 +188,8 @@ type
     DataArray: TDatagramDataArray;
     // *******
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+    ResendCount: Byte;                                                          // Number of tries to resend the datagram if sending is rejected
+    NextWaitingForAck: PByte;                                                   // Pointer to the Next _Message_ (not Buffer) that is waiting for an Ack
   end;
   PDatagramBuffer = ^TDatagramBuffer;
 
@@ -253,9 +257,7 @@ type
     Flags: Word;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
-    {$IFDEF SUPPORT_STREAMS}
-    StreamMessages: POPStackMessage;                                            // Linked List of Stream Messages active, allocated for this node
-    {$ENDIF}
+    StateMachineMessages: POPStackMessage;                                      // Linked List of Messages that need to run statemachine to operate allocated for this node
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 
@@ -272,6 +274,11 @@ const
   STATE_CONFIG_MEM_STREAM_WAIT_FOR_PROCEED         = 4;
   STATE_CONFIG_MEM_STREAM_SEND_COMPLETE            = 5;
   STATE_CONFIG_MEM_STREAM_COMPLETE                 = 6;
+
+
+type
+  TSendMessageFunc = procedure(OutgoingMessage: POPStackMessage);
+  PSendMessageFunc = ^TSendMessageFunc;
 
 
 implementation

@@ -20,7 +20,7 @@ interface
 // buffers are created in RAM so the more you creat the less free RAM you will have
 const
   USER_MAX_SIMPLE_ARRAY_BUFFERS = 10;
-  USER_MAX_DATAGRAM_ARRAY_BUFFERS = 10;
+  USER_MAX_DATAGRAM_ARRAY_BUFFERS = 1;
   USER_MAX_STREAM_ARRAY_BUFFERS = 1;
   USER_MAX_ACDI_SNIP_ARRAY_BUFFERS = 1;
 

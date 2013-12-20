@@ -38,7 +38,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="19">
+    <Units Count="28">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -139,6 +139,51 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_configuration"/>
       </Unit18>
+      <Unit19>
+        <Filename Value="..\NMRAnet\opstackcore_can.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_can"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="..\NMRAnet\opstackcore_events.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_events"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="..\NMRAnet\opstackcore_pip.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_pip"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="..\NMRAnet\opstackcore_basic.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_basic"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="..\NMRAnet\opstackcore_stream.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_stream"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="..\NMRAnet\opstackcore_snip.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_snip"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="..\NMRAnet\opstackcore_learn.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_learn"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="..\NMRAnet\opstackcore_datagram.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_datagram"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="..\NMRAnet\opstackcore_configmem.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_configmem"/>
+      </Unit27>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
