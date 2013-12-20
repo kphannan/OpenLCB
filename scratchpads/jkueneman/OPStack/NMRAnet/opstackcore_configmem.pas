@@ -122,7 +122,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure EncodeConfigMemReadWriteHeader(Buffer: PDatagramDataArray; IsRead: Boolean; IsStream: Boolean; AddressSpace: Byte; ConfigAddress: DWord; ReadCount: DWord; UseAddressSpaceByte: Boolean; var DataOffset: Byte);
+procedure EncodeConfigMemReadWriteHeader(Buffer: PDatagramDataArray; IsRead, IsStream, IsForReply: Boolean; AddressSpace: Byte; ConfigAddress: DWord; ReadCount: DWord; UseAddressSpaceByte: Boolean; var DataOffset: Byte);
 begin
   Buffer^[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
 
@@ -160,22 +160,25 @@ begin
   Buffer^[4] := ConfigAddress shr 8;
   Buffer^[5] := ConfigAddress;
 
-  if IsRead then
+  if not IsForReply then
   begin
-    if IsStream then
+    if IsRead then
     begin
-      Buffer^[DataOffset] := ReadCount shr 24;
-      Inc(DataOffset);
-      Buffer^[DataOffset] := ReadCount shr 16;
-      Inc(DataOffset);
-      Buffer^[DataOffset] := ReadCount shr 8;
-      Inc(DataOffset);
-      Buffer^[DataOffset] := ReadCount;
-      Inc(DataOffset);
-    end else
-    begin
-      Buffer^[DataOffset] := ReadCount;
-      Inc(DataOffset);
+      if IsStream then
+      begin
+        Buffer^[DataOffset] := ReadCount shr 24;
+        Inc(DataOffset);
+        Buffer^[DataOffset] := ReadCount shr 16;
+        Inc(DataOffset);
+        Buffer^[DataOffset] := ReadCount shr 8;
+        Inc(DataOffset);
+        Buffer^[DataOffset] := ReadCount;
+        Inc(DataOffset);
+      end else
+      begin
+        Buffer^[DataOffset] := ReadCount;
+        Inc(DataOffset);
+      end;
     end;
   end;
 end;
@@ -226,9 +229,9 @@ begin
   DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, ReadCount, DataOffset);
 
   if AddressSpace < MSI_CONFIG then
-    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
+    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, True, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
   else
-    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
+    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, True, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
   EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, True);
 
   DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
@@ -381,9 +384,9 @@ begin
     end;
 
     if AddressSpace < MSI_CONFIG then
-    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
+    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, True, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
     else
-    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
+    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, True,  AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
     EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, False);
 
     DatagramBufferPtr^.DataBufferSize := DataOffset;

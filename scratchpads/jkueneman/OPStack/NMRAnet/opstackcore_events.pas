@@ -321,13 +321,11 @@ begin
        begin
          Node^.Flags := Node^.Flags and not MF_DUPLICATE_NODE_ID;             // Clear the Flag
          Node^.iStateMachine := STATE_NODE_DUPLICATE_FULL_ID;
-         Result := True;
        end else
        if Node^.Flags and MF_DUPLICATE_ALIAS <> 0 then
        begin
          Node^.Flags := Node^.Flags and not MF_DUPLICATE_ALIAS;               // Clear the Flag
          Node^.iStateMachine := STATE_NODE_INHIBITED;
-         Result := True;
        end else
        if Node^.Flags and MF_DUPLICATE_ALIAS_RID <> 0 then                    // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
        begin
