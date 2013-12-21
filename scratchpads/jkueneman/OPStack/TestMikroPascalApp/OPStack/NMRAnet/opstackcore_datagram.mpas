@@ -28,7 +28,8 @@ procedure DatagramRejectedReply(AMessage: POPStackMessage; DestNode: PNMRAnetNod
 function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
 function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 
-procedure DatagramFlushDestinationMessages(var DestID: TNodeInfo);
+procedure AddWaitingForAckResponseMessage(OPStackMessage: POPStackMessage);
+procedure FlushDestinationMessages(var DestID: TNodeInfo);
 
 implementation
 
@@ -101,7 +102,7 @@ begin
   end;
 end;
 
-procedure DatagramFlushDestinationMessages(var DestID: TNodeInfo);
+procedure FlushDestinationMessages(var DestID: TNodeInfo);
 var
   LocalMessage, MatchingMessage: POPStackMessage;
 begin
@@ -111,9 +112,9 @@ begin
     if NMRAnetUtilities_EqualNodeIDInfo(DestID, LocalMessage^.Dest) then
     begin
       MatchingMessage := LocalMessage;
-      LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck); // Get the next one so we can remove the current one
-      RemoveWaitingForAckResponseMessage(MatchingMessage);                      // Remove that message
-      OPStackBuffers_DeAllocateMessage(MatchingMessage);                        // Free that message
+      LocalMessage := LocalMessage^.Next;
+      RemoveWaitingForAckResponseMessage(MatchingMessage);
+      OPStackBuffers_DeAllocateMessage(MatchingMessage);
     end else
       LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck);
   end;

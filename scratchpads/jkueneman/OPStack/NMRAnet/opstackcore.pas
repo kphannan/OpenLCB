@@ -1,7 +1,6 @@
 unit opstackcore;
 
 // TODOs
-//   1) Datagram Rejected: Try N times then give up, re-tries forever now
 //   2) Check for Abandon Datagrams/Streams then Free
 //   3) ACDI Read and Write not implemented correctly
 //   4) FDI not implemented correctly
@@ -93,7 +92,7 @@ begin
     if DestNode^.State and NS_RELEASING <> 0 then               // if Releasing don't add more messages
     begin
       if DestNode^.State and NS_ALLOCATED <> 0 then             // If is an allocated message then deallocate it
-        OPStackBuffers_DeAllocateMessage(AMessage);;
+        OPStackBuffers_DeAllocateMessage(AMessage);
       Exit;
     end
   end;
@@ -136,7 +135,7 @@ begin
                       {$IFDEF SUPPORT_STREAMS}
                       MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;
                       MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;
-                      MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;
+                      MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end
                       {$ENDIF}
                     else begin
                         OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
@@ -470,13 +469,13 @@ begin
           if NodeRunMessageBufferReply(Node, OPStackMessage) then
             OutgoingMessage(OPStackMessage);
 
-      {        if not (Node) then
+      (*        if not (Node) then
                 {$IFDEF SUPPORT_STREAMS}
                 if not NodeRunOutgoingStreamStateMachine(Node) then
                   if not NodeRunIncomingStreamStateMachine(Node) then
                 {$ENDIF}
 
-            }
+            }           *)
           ProcessMarkedForDelete(Node);                                           // Handle vNodes marked to be deleted
           ProcessAbandonMessages(Node);
         end;

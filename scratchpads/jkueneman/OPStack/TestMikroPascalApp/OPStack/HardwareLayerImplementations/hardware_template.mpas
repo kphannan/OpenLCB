@@ -139,9 +139,8 @@ procedure OutgoingMessage(AMessage: POPStackMessage);                           
 procedure ProcessOutgoingDatagrams;
 procedure ProcessOutgoingAcdiSnips;
 procedure ProcessOutgoingStreams;
-function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
 procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
-procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
+
 {$IFDEF SUPPORT_STREAMS}
 function FindStream(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo; SourceID, DestID, iStateMachine: Byte): POPStackMessage;
 {$ENDIF}
@@ -156,11 +155,8 @@ procedure OPStackCANStatemachine_ProcessOutgoingDatagramMessage; external;
 procedure OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
 procedure OPStackCANStatemachine_RemoveOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
 function OPStackCANStatemachine_FindAnyDatagramOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
-procedure OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(OPStackStreamMessage: POPStackMessage); external;
 function OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(NodeAlias: Word): POPStackMessage; external;
-function OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(NodeAlias: Word): POPStackMessage; external;
 procedure OPStackCANStatemachine_RemoveIncomingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
-function OPStackCANStatemachine_FindDatagramWaitingforACKStack(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage; external;
 procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
 function OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(NodeAlias: Word): POPStackMessage; external;
 procedure OPStackCANStatemachine_ProcessOutgoingAcdiSnipMessage; external;
@@ -336,19 +332,9 @@ begin
   OPStackCANStatemachine_ProcessOutgoingStreamMessage;
 end;
 
-function FindDatagramWaitingForAck(var SourceNodeID: TNodeInfo; var DestNodeID: TNodeInfo): POPStackMessage;
-begin
-  Result := OPStackCANStatemachine_FindDatagramWaitingforACKStack(SourceNodeID, DestNodeID)
-end;
-
 procedure AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage);
 begin
   OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage);
-end;
-
-procedure RemoveDatagramWaitingForAck(DatagramMessage: POPStackMessage);
-begin
-  OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage)
 end;
 
 {$IFDEF SUPPORT_STREAMS}
@@ -375,11 +361,11 @@ var
   DatagramRejectedBuffer: TDatagramBuffer;
   DatagramProcessErrorCode: Byte;
 begin
+  DestinationNode := nil;
   CanMessageType := (GridConnectBuffer.MTI shr 12) and $F000;                   // always true regardless
   SourceAlias := GridConnectBuffer.MTI and $00000FFF;                           // always true regardless
   if GridConnectBuffer.MTI and MTI_OLCB_MSG = 0 then                            // Is it a CAN message?
   begin
-    DestinationNode := nil;
     OPStackMessage.MessageType := MT_SIMPLE or MT_CAN_TYPE;                     // Created on the heap not the pool
     RawMTI := (GridConnectBuffer.MTI shr 12);
     if RawMTI and $F000 > 0 then
@@ -404,14 +390,6 @@ begin
                 OPStackCANStatemachine_RemoveIncomingDatagramMessage(DatagramMessage);
                 OPStackBuffers_DeAllocateMessage(DatagramMessage);
                 DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnIncomingStack(OPStackMessage.Source.AliasID);
-              end;
-
-              DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(OPStackMessage.Source.AliasID);
-              while DatagramMessage <> nil do
-              begin
-                OPStackCANStatemachine_RemoveDatagramWaitingforACKStack(DatagramMessage);
-                OPStackBuffers_DeAllocateMessage(DatagramMessage);
-                DatagramMessage := OPStackCANStatemachine_FindAnyDatagramOnWaitingForAckStack(OPStackMessage.Source.AliasID);
               end;
 
               AcdiSnipMessage := OPStackCANStatemachine_FindAnyAcdiSnipOnOutgoingStack(OPStackMessage.Source.AliasID);
@@ -505,6 +483,8 @@ var
   Buffer: TSimpleBuffer;
 begin
   GridConnectBuffer.MTI := 0;                                                   // Quite the compiler
+  OPStackBuffers_ZeroMessage(@OPStackMessage);
+  OPStackBuffers_ZeroSimpleBuffer(@Buffer, False);
   OPStackMessage.Buffer := @Buffer;
   GridConnectToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);           // Parse the string into a Grid Connect Data structure
   GridConnectBufferToOPStackBufferAndDispatch(GridConnectBuffer, OPStackMessage); // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement

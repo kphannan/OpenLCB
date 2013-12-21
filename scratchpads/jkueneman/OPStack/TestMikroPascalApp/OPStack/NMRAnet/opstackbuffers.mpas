@@ -53,7 +53,7 @@ procedure OPStackBuffers_Initialize;
 // Allocate Message helpers
 function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
+function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
 {$IFDEF SUPPORT_STREAMS}
 function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;
 {$ENDIF}
@@ -311,7 +311,7 @@ begin
     AMessage^.MessageType := AMessage^.MessageType or MT_CAN_TYPE;
 end;
 
-function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
+function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
 var
   DatagramBuffer: PDatagramBuffer;
 begin
@@ -321,7 +321,7 @@ begin
     AMessage^.MessageType := MT_DATAGRAM or MT_ALLOCATED;
     if AllocateDatagramBuffer(DatagramBuffer) then
     begin
-      OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, DestFlags);
+      OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, DestFlags);
       AMessage^.Buffer := PSimpleBuffer( PByte( DatagramBuffer));
       Result := True
     end else
@@ -381,6 +381,7 @@ end;
 
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 begin
+  if AMessage = nil then Exit;
   if AMessage^.MessageType and MT_ALLOCATED <> 0 then                           // Only deallocate if we allocated it
   begin
     if AMessage^.Buffer <> nil then
@@ -484,6 +485,8 @@ begin
   else
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
   ABuffer^.CurrentCount := 0;
+  ABuffer^.ResendCount := 0;
+  ABuffer^.NextWaitingForAck := nil;
 end;
 
 {$IFDEF SUPPORT_STREAMS}
