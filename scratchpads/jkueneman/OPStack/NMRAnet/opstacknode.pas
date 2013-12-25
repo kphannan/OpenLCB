@@ -14,7 +14,6 @@ uses
   {$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
-  opstacktypes,
   nmranetutilities,
   opstackdefines;
 
@@ -69,9 +68,9 @@ procedure OPStackNode_ClearPCER_Flags(Node: PNMRAnetNode);
 function OPStackNode_NextPCER_Flag(Node: PNMRAnetNode): Integer;
 function OPStackNode_IsAnyPCER_Set(Node: PNMRAnetNode): Boolean;
 
-procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
+procedure OPStackNode_IncomingMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure OPStackNode_IncomingMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+function OPStackNode_NextIncomingMessage(Node: PNMRAnetNode): POPStackMessage;
 
 procedure OPStackNode_StateMachineMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OPStackNode_StateMachineMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
@@ -195,7 +194,6 @@ begin
       end
   end
 end;
-
 
 // *****************************************************************************
 //  procedure OPStackNode_FindByID;
@@ -567,7 +565,7 @@ end;
 // *****************************************************************************
 procedure OPStackNode_SetPCER_Flag(Node: PNMRAnetNode; EventIndex: Integer; Clear: Boolean);
 var
-  ByteOffset, NormalizedIndex: Integer;
+  ByteOffset: Integer;
   Mask: Byte;
 begin
   ByteOffset := EventIndex div 8;    // There are 8 PCERs supported in each Byte
@@ -648,12 +646,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_MessageLink;
+//  procedure OPStackNode_IncomingMessageLink;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_MessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure OPStackNode_IncomingMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
   Temp: POPStackMessage;
 begin
@@ -661,19 +659,19 @@ begin
     Node^.IncomingMessages := AMessage
   else begin                                  // Tack it to the end of the chain
     Temp := Node^.IncomingMessages;
-    while Temp^.Next <> nil do
-      Temp := Temp^.Next;
-    Temp^.Next := AMessage
+    while Temp^.NextIncoming <> nil do
+      Temp := Temp^.NextIncoming;
+    Temp^.NextIncoming := AMessage
   end
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_MessageUnLink;
+//  procedure OPStackNode_IncomingMessageUnLink;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_MessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure OPStackNode_IncomingMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
   Temp, Parent: POPStackMessage;
 begin
@@ -681,31 +679,31 @@ begin
   begin
     if Node^.IncomingMessages = AMessage then                                           // Root Buffer match case is easy
     begin
-      Node^.IncomingMessages := Node^.IncomingMessages^.Next;
-      AMessage^.Next := nil;
+      Node^.IncomingMessages := Node^.IncomingMessages^.NextIncoming;
+      AMessage^.NextIncoming := nil;
     end
     else begin
       Parent := Node^.IncomingMessages;                                                 // Already know it is not the root buffer so setup for the first level down
-      Temp := Node^.IncomingMessages^.Next;
+      Temp := Node^.IncomingMessages^.NextIncoming;
       while (Temp <> nil) and (Temp <> AMessage) do
       begin
         Parent := Temp;
-        Temp := Temp^.Next;
-        AMessage^.Next := nil;
+        Temp := Temp^.NextIncoming;
+        AMessage^.NextIncoming := nil;
       end;
       if Temp <> nil then
-        Parent^.Next := Temp^.Next
+        Parent^.NextIncoming := Temp^.NextIncoming
     end
   end
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_NextMessage;
+//  procedure OPStackNode_NextIncomingMessage;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_NextMessage(Node: PNMRAnetNode): POPStackMessage;
+function OPStackNode_NextIncomingMessage(Node: PNMRAnetNode): POPStackMessage;
 begin
   Result := Node^.IncomingMessages;
 end;
@@ -724,9 +722,9 @@ begin
     Node^.StateMachineMessages := AMessage
   else begin                                  // Tack it to the end of the chain
     Temp := Node^.StateMachineMessages;
-    while Temp^.Next <> nil do
-      Temp := Temp^.Next;
-    Temp^.Next := AMessage
+    while Temp^.NextIncoming <> nil do
+      Temp := Temp^.NextIncoming;
+    Temp^.NextIncoming := AMessage
   end
 end;
 
@@ -743,17 +741,17 @@ begin
   if Node^.StateMachineMessages <> nil then
   begin
     if Node^.StateMachineMessages = AMessage then                                           // Root Buffer match case is easy
-      Node^.StateMachineMessages := Node^.StateMachineMessages^.Next
+      Node^.StateMachineMessages := Node^.StateMachineMessages^.NextIncoming
     else begin
       Parent := Node^.StateMachineMessages;                                                 // Already know it is not the root buffer so setup for the first level down
-      Temp := Node^.StateMachineMessages^.Next;
+      Temp := Node^.StateMachineMessages^.NextIncoming;
       while (Temp <> nil) and (Temp <> AMessage) do
       begin
         Parent := Temp;
-        Temp := Temp^.Next
+        Temp := Temp^.NextIncoming
       end;
       if Temp <> nil then
-        Parent^.Next := Temp^.Next
+        Parent^.NextIncoming := Temp^.NextIncoming
     end
   end
 end;

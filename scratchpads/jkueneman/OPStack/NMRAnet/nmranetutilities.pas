@@ -7,10 +7,8 @@ interface
 {$I Options.inc}
 
 uses
-  nmranetdefines,
-  opstacktypes,
   opstackdefines,
-  opstackbuffers;
+  opstacktypes;
 
 
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;

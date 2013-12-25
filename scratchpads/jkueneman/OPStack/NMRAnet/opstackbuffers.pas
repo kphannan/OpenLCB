@@ -49,6 +49,7 @@ type
 
 
 procedure OPStackBuffers_Initialize;
+procedure OPStackBuffers_Timer;
 
 // Allocate Message helpers
 function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
@@ -62,7 +63,6 @@ procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
-procedure OPStackBuffers_LoadDatagramRejectedBuffer(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word);
 
@@ -113,7 +113,7 @@ implementation
 
 procedure OPStackBuffers_Initialize;
 var
-  i, j: Integer;
+  j: Integer;
 begin
   for j := 0 to USER_MAX_SIMPLE_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroSimpleBuffer(@SimpleBufferPool.Pool[j], True);
@@ -134,6 +134,18 @@ begin
   for j := 0 to USER_MAX_SIMPLE_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
+end;
+
+procedure OPStackBuffers_Timer;
+var
+  i: Integer;
+begin
+  i := 0;
+  while i < USER_MAX_SIMPLE_MESSAGE_BUFFERS do
+  begin
+    Inc(OPStackMessagePool.Pool[i].WatchDog);
+    Inc(i)
+  end;
 end;
 
 function AllocateSimpleBuffer(var Buffer: PSimpleBuffer): Boolean;
@@ -400,13 +412,6 @@ begin
   end;
 end;
 
-procedure OPStackBuffers_LoadDatagramRejectedBuffer(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; ErrorCode: PSimpleDataArray);
-begin
-  OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM_REJECTED_REPLY, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
-  AMessage^.MessageType := MT_SIMPLE;                                           // This is not Allocated because the DatagramRejected Message is a local copy
-  OPStackBuffers_CopyDataArray(AMessage^.Buffer, ErrorCode, 2, True)
-end;
-
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
 begin
   OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM_OK_REPLY, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
@@ -530,13 +535,14 @@ procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
 begin
   AMessage^.MessageType := 0;
   AMessage^.MTI := 0;
-  AMessage^.Next := nil;
+  AMessage^.NextIncoming := nil;
   AMessage^.Dest.AliasID := 0;
   AMessage^.Dest.ID := NULL_NODE_ID;
   AMessage^.Source.AliasID := 0;
   AMessage^.Source.ID := NULL_NODE_ID;
   AMessage^.Buffer := nil;
   AMessage^.DestFlags := 0;
+  AMessage^.WatchDog := 0;
 end;
 
 {$IFDEF SUPPORT_STREAMS}

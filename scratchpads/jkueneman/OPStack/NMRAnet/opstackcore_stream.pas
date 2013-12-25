@@ -9,12 +9,7 @@ interface
 {$I Options.inc}
 
 uses
-  template_node,
-  template_vnode,
-  opstacknode,
   opstackbuffers,
-  template_event_callbacks,
-  nmranetutilities,
   nmranetdefines,
   opstackdefines,
   template_buffers,
@@ -75,6 +70,7 @@ var
   StreamMessage: POPStackMessage;
   StreamBuffer: PStreamBuffer;
 begin
+  StreamMessage := nil;
 //  StreamMessage := FindStream(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer^.DataArray[0], AMessage^.Buffer^.DataArray[1], STATE_CONFIG_MEM_STREAM_WAIT_FOR_PROCEED);
   if StreamMessage <> nil then
   begin

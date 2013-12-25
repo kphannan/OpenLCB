@@ -15,13 +15,12 @@ interface
 
 uses
   // Compile in different hardware layer interfaces here
-  {$IFDEF HARDWARE_TEMPLATE}hardware_template, template_configmem,{$ENDIF}
+  {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
   {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
   {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
-  template_buffers,
   opstackbuffers,
   opstacktypes,
   opstacknode,
@@ -41,7 +40,7 @@ procedure OPStackCore_Process;                                                  
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 
 // Callback from the Hardware when a message is received
-procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode);
 
 var
   OPStack: TOPStack;
@@ -63,7 +62,17 @@ begin
   OPStackNode_Allocate;                                                         // Allocate the hardware Node
 end;
 
-
+// *****************************************************************************
+//  procedure CheckAndDeallocateMessage
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+procedure CheckAndDeallocateMessage(AMessage: POPStackMessage);
+begin
+  if AMessage^.MessageType and  MT_ALLOCATED <> 0 then
+    OPStackBuffers_DeAllocateMessage(AMessage);
+end;
 
 // *****************************************************************************
 //  procedure IncomingMessageDispatch
@@ -75,104 +84,97 @@ end;
 //                  DestNode: Pointer to a NMRAnet Node if the message contained a
 //                            destination ID (Alias or NodeID). If message is unaddressed
 //                            contains nil
+//                  SourceNode : Pointer to a NMRAnet Node if the source alias from
+//                               the message mactches.  This may be a problem so it
+//                               need to be looked at here.
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-var
-  i: Integer;
-  NewMessage: POPStackMessage;
-  BufferAllocFailed: Boolean;
-  SourceNode: PNMRAnetNode;
-  OptionalInteractionMessage: TOPStackMessage;
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode);
 begin
-  BufferAllocFailed := False;
-  if DestNode <> nil then
-  begin
-    if DestNode^.State and NS_RELEASING <> 0 then               // if Releasing don't add more messages
-    begin
-      if DestNode^.State and NS_ALLOCATED <> 0 then             // If is an allocated message then deallocate it
-        OPStackBuffers_DeAllocateMessage(AMessage);
-      Exit;
-    end
-  end;
 
-  // First thing is extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
-  SourceNode := OPStackNode_Find(AMessage, FIND_BY_SOURCE);
+  // If the Node is being Release then don't do anything except deallocate the message if needed
+  if DestNode <> nil then
+    if DestNode^.State and NS_RELEASING <> 0 then
+    begin
+      CheckAndDeallocateMessage(AMessage);
+      Exit;
+    end;
+
+  // Next is to extract the Source Alias and make sure it is not a duplicate of one of our Node or vNode Aliases
   if SourceNode <> nil then
   begin
-    if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
-      DuplicateSourceIdDetected(AMessage, SourceNode)
-    else
-      OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS);                      // Another node is using our Alias, we have to disconnect from the network
+    DuplicateSourceDetected(AMessage, SourceNode);
+    CheckAndDeallocateMessage(AMessage);
     Exit;
-  end else
-  begin
-    if AMessage^.MessageType and MT_CAN_TYPE <> 0 then                          // Is it a CAN message?
-    begin
-      case AMessage^.MTI of
-          MTI_CAN_AME : begin  AliasMappingEnquiry(AMessage, DestNode); Exit; end;
-          MTI_CAN_AMD : begin AliasMappingDefinition(AMessage, DestNode); Exit; end;
-          MTI_CAN_AMR : begin AliasMappingReset(AMessage, DestNode); Exit; end;
-        end {case}
-    end else
-    begin
-      case (AMessage^.MessageType) and MT_MASK of
-          MT_SIMPLE :
-              begin
-                if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
-                begin
-                  if DestNode <> nil then                                       // Destination messages come through so we can check for duplicate Aliases, if it is nil then done
-                  begin
-                    case AMessage^.MTI of
-                      MTI_SIMPLE_NODE_INFO_REQUEST      : begin SimpleNodeInfoRequest(AMessage, DestNode); Exit; end;
-                      MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;
-                      MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;
-                      MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;
-                      MTI_OPTIONAL_INTERACTION_REJECTED : begin end;
-                      MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;
-                      MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;
-                      {$IFDEF SUPPORT_STREAMS}
-                      MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;
-                      MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;
-                      MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end
-                      {$ENDIF}
-                    else begin
-                        OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
-                        OutgoingCriticalMessage(@OptionalInteractionMessage);
-                      end;
-                    end; {case}
-                  end else
-                    Exit;
-                end else
-                begin
-                  case AMessage^.MTI of
-                      MTI_VERIFY_NODE_ID_NUMBER   : begin VerifyNodeId(AMessage, DestNode); Exit; end;
-                      MTI_CONSUMER_IDENTIFY       : begin IdentifyConsumers(AMessage, DestNode); Exit; end;
-                      MTI_CONSUMER_IDENTIFY_RANGE : begin IdentifyRangeConsumers(AMessage, DestNode); Exit; end;
-                      MTI_PRODUCER_IDENDIFY       : begin IdentifyProducers(AMessage, DestNode); Exit; end;
-                      MTI_PRODUCER_IDENTIFY_RANGE : begin IdentifyRangeProducers(AMessage, DestNode); end;
-                      MTI_EVENT_LEARN             : begin Learn(AMessage, DestNode); end;
-                      MTI_EVENTS_IDENTIFY         : begin IdentifyEvents(AMessage, nil); Exit; end;
-                      // Handling unknown MTI for all nodes (virtual and physical) is difficult and not sure it is needed based on python scripts
-                  end; {case}
-                end;
-              end;
-          {$IFDEF SUPPORT_STREAMS}
-          MT_DATAGRAM,
-          MT_STREAM :
-          {$ELSE}
-          MT_DATAGRAM :
-          {$ENDIF}
-              begin
-                if DestNode <> nil then
-                  OPStackNode_MessageLink(DestNode, AMessage)
-                else
-                  OPStackBuffers_DeAllocateMessage(AMessage);
-              end;
-        end
-      end;
   end;
+
+  // If it is a CAN message then handle it
+  if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
+  begin
+    case AMessage^.MTI of
+        MTI_CAN_AME : AliasMappingEnquiry(AMessage, DestNode);
+        MTI_CAN_AMD : AliasMappingDefinition(AMessage, DestNode);
+        MTI_CAN_AMR : AliasMappingReset(AMessage, DestNode);
+    end; {case}
+    CheckAndDeallocateMessage(AMessage);
+    Exit;
+  end;
+
+  // It is a OLCB message
+  case (AMessage^.MessageType) and MT_MASK of
+      MT_SIMPLE :
+          begin
+            if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then   // Handle Simple Messages that may be addressed to one of our nodes
+            begin
+              if DestNode <> nil then                                           // If it is addressed and the DestNode = nil then it is not for us
+              begin                                                             // We send all messages in to test for Releasing so this test is necessary
+                case AMessage^.MTI of
+                  MTI_SIMPLE_NODE_INFO_REQUEST      : begin SimpleNodeInfoRequest(AMessage, DestNode); Exit; end;
+                  MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;
+                  MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;
+                  MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;
+                  MTI_OPTIONAL_INTERACTION_REJECTED : begin end;
+                  MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;
+                  MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;
+                  {$IFDEF SUPPORT_STREAMS}
+                  MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;
+                  MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;
+                  MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end
+                  {$ENDIF}
+                else
+                  OptionalInteractionRejected(AMessage, DestNode);              // Unknown message
+                end; {case}
+              end else
+                Exit;                                                           // It is not for of or our nodes
+            end else
+            begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
+              case AMessage^.MTI of
+                  MTI_VERIFY_NODE_ID_NUMBER   : begin VerifyNodeId(AMessage, DestNode); Exit; end;
+                  MTI_CONSUMER_IDENTIFY       : begin IdentifyConsumers(AMessage, DestNode); Exit; end;
+                  MTI_CONSUMER_IDENTIFY_RANGE : begin IdentifyRangeConsumers(AMessage, DestNode); Exit; end;
+                  MTI_PRODUCER_IDENDIFY       : begin IdentifyProducers(AMessage, DestNode); Exit; end;
+                  MTI_PRODUCER_IDENTIFY_RANGE : begin IdentifyRangeProducers(AMessage, DestNode); end;
+                  MTI_EVENT_LEARN             : begin Learn(AMessage, DestNode); end;
+                  MTI_EVENTS_IDENTIFY         : begin IdentifyEvents(AMessage, nil); Exit; end;
+              end; {case}
+            end;
+            CheckAndDeallocateMessage(AMessage);
+          end;
+      {$IFDEF SUPPORT_STREAMS}
+      MT_DATAGRAM,
+      MT_STREAM :
+      {$ELSE}
+      MT_DATAGRAM :
+      {$ENDIF}
+          begin
+            if DestNode <> nil then
+              OPStackNode_IncomingMessageLink(DestNode, AMessage)
+            else
+              CheckAndDeallocateMessage(AMessage);
+          end;
+    end
+
 end;
 
 // *****************************************************************************
@@ -263,10 +265,10 @@ var
 begin
   Result := False;
   MessageToSend := nil;
-  NextMessage := OPStackNode_NextMessage(Node);
+  NextMessage := OPStackNode_NextIncomingMessage(Node);
   if NextMessage <> nil then
   begin
-    if NextMessage^.MessageType and MT_RESEND = 0 then
+    if NextMessage^.MessageType and MT_SEND = 0 then
     begin
       case NextMessage^.MTI of
         MTI_SIMPLE_NODE_INFO_REQUEST :
@@ -274,7 +276,7 @@ begin
               SimpleNodeInfoReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
               if MessageToSend <> nil then
               begin
-                OPStackNode_MessageUnLink(Node, NextMessage);
+                OPStackNode_IncomingMessageUnLink(Node, NextMessage);
                 OPStackBuffers_DeAllocateMessage(NextMessage);
                 Result := True;
               end
@@ -284,7 +286,7 @@ begin
               ProtocolSupportReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
               if MessageToSend <> nil then
               begin
-                OPStackNode_MessageUnLink(Node, NextMessage);
+                OPStackNode_IncomingMessageUnLink(Node, NextMessage);
                 OPStackBuffers_DeAllocateMessage(NextMessage);
                 Result := True;
               end
@@ -296,13 +298,13 @@ begin
               Result :=  MessageToSend <> nil
             end
       else begin
-          OPStackNode_MessageUnLink(Node, NextMessage);                           // We don't handle these messages
+          OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
           OPStackBuffers_DeAllocateMessage(NextMessage);
         end;
       end;
     end else
     begin
-      OPStackNode_MessageUnLink(Node, NextMessage);
+      OPStackNode_IncomingMessageUnLink(Node, NextMessage);
       MessageToSend := NextMessage;
       Result := True
     end
@@ -321,7 +323,7 @@ var
 begin
   for i := 0 to NodePool.AllocatedCount - 1 do
     Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
- // NMRAnetBufferPools_100ms_TimeTick;
+  OPStackBuffers_Timer;
  // ServiceMode_100ms_TimeTick
 
 end;
@@ -447,7 +449,7 @@ begin
         begin
           Node^.iStateMachine := STATE_NODE_PERMITTED;
           Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
-          IncomingMessageDispatch(OPStackMessage, Node);
+          IncomingMessageDispatch(OPStackMessage, Node, nil);
           OPStackBuffers_DeAllocateMessage(OPStackMessage);
           Hardware_EnableInterrupts;
         end
@@ -544,10 +546,8 @@ begin
     Node := OPStackNode_NextNode;
     if Node <> nil then
       NodeRunStateMachine(Node);
-    ProcessOutgoingAcdiSnips;
-    ProcessOutgoingDatagrams;
-    ProcessOutgoingStreams;
-   end;
+    ProcessHardwareMessages;
+  end;
 end;
 
 end.

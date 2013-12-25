@@ -95,17 +95,17 @@ const
 // Message types
 
 const
-  MT_MASK            = $0F;                                                     // Strips off the CAN and Allocated flags
-  MT_UNALLOCATED     = $00;
-  MT_SIMPLE          = $01;                                                     // Message Type Identifiers
-  MT_DATAGRAM        = $02;
-  MT_STREAM          = $04;
-  MT_ACDISNIP        = $08;
+  MT_MASK               = $0F;                                                     // Strips off the CAN and Allocated flags
+  MT_UNALLOCATED        = $00;
+  MT_SIMPLE             = $01;                                                     // Message Type Identifiers
+  MT_DATAGRAM           = $02;
+  MT_STREAM             = $04;
+  MT_ACDISNIP           = $08;
 
-  MT_WAITING_FOR_ACK = $10;                                                     // Message is waiting for an ACK
-  MT_RESEND          = $20;                                                     // Set if the message should just be resent as is
-  MT_CAN_TYPE        = $40;                                                     // It is a CAN MTI
-  MT_ALLOCATED       = $80;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
+  MT_HIGH_PRIORITY_SEND = $10;
+  MT_SEND               = $20;                                                     // Set if the message should just be sent as is
+  MT_CAN_TYPE           = $40;                                                     // It is a CAN MTI
+  MT_ALLOCATED          = $80;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
 
 
 const
@@ -236,12 +236,13 @@ type
     Dest: TNodeInfo;
     DestFlags: Byte;                                                            // The upper 4 bits sent in the Destination (when used for the message)
     {$IFDEF FPC}
-    Next: POPStackMessage;
+    NextIncoming: POPStackMessage;
     {$ELSE}
-    Next: ^TOPStackMessage;
+    NextIncoming: ^TOPStackMessage;
     {$ENDIF}
     MTI: Word;
     Buffer: PSimpleBuffer;                                                      // This can be nil, CANBuffer, Datagram Buffer, or StreamBuffer based on the lower 4 bits of MessageType
+    WatchDog: Word;                                                             // Watches for a abandon message, incremented every 100ms
   end;
   {$IFNDEF FPC}
   POPStackMessage = ^TOPStackMessage;
@@ -266,6 +267,7 @@ const
   DATAGRAM_PROCESS_ERROR_BUFFER_FULL         = $02;
   DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        = $03;
   DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED = $04;
+  DATAGRAM_PROCESS_ERROR_QUIET_FAIL          = $05;
 
   STATE_CONFIG_MEM_STREAM_START                    = 0;
   STATE_CONFIG_MEM_STREAM_INIT                     = 1;
@@ -275,10 +277,13 @@ const
   STATE_CONFIG_MEM_STREAM_SEND_COMPLETE            = 5;
   STATE_CONFIG_MEM_STREAM_COMPLETE                 = 6;
 
-
 type
-  TSendMessageFunc = procedure(OutgoingMessage: POPStackMessage);
-  PSendMessageFunc = ^TSendMessageFunc;
+  TNMRAnetCanBuffer = record
+    MTI: DWord;
+    Payload: array[0..7] of byte;
+    PayloadCount: Byte;
+  end;
+  PNMRAnetCanBuffer = ^TNMRAnetCanBuffer;
 
 
 implementation

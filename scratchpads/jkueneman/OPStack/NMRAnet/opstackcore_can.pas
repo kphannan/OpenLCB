@@ -9,29 +9,30 @@ interface
 {$I Options.inc}
 
 uses
-  template_node,
-  template_vnode,
   opstacknode,
-  template_event_callbacks,
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
-  opstackcore_datagram,
-  opstacktypes;
+  opstackcore_datagram;
 
-procedure DuplicateSourceIdDetected(AMessage: POPStackMessage; SourceNode: PNMRAnetNode);
+procedure DuplicateSourceDetected(AMessage: POPStackMessage; SourceNode: PNMRAnetNode);
 procedure AliasMappingEnquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure AliasMappingDefinition(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure AliasMappingReset(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 
 implementation
 
-procedure DuplicateSourceIdDetected(AMessage: POPStackMessage; SourceNode: PNMRAnetNode);
+procedure DuplicateSourceDetected(AMessage: POPStackMessage; SourceNode: PNMRAnetNode);
 begin
-  if (AMessage^.MTI = MTI_CAN_CID0) or (AMessage^.MTI = MTI_CAN_CID1) or (AMessage^.MTI = MTI_CAN_CID2) or (AMessage^.MTI = MTI_CAN_CID3) then
-    OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS_RID)                 // Another node is trying to register our Alias, tell it NO!
-  else
-    OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS);                    // Another node is using our Alias, we have to disconnect from the network
+  if AMessage^.MessageType and MT_CAN_TYPE <> 0 then
+  begin
+    // It may be a "good" duplicate message or a "bad" duplicate message
+    if (AMessage^.MTI = MTI_CAN_CID0) or (AMessage^.MTI = MTI_CAN_CID1) or (AMessage^.MTI = MTI_CAN_CID2) or (AMessage^.MTI = MTI_CAN_CID3) then
+      OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS_RID)                   // "Good Duplicate" - Another node is trying to register our Alias, tell it NO!
+    else
+      OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS);                      // "Bad Duplicate" - Another node is using our Alias, we have to disconnect from the network
+  end else
+    OPStackNode_SetFlag(SourceNode, MF_DUPLICATE_ALIAS);                        // "Bad Duplicate" - Another node is using our Alias, we have to disconnect from the network
 end;
 
 procedure AliasMappingEnquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);

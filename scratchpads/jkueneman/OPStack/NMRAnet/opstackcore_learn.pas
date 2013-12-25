@@ -9,15 +9,7 @@ interface
 {$I Options.inc}
 
 uses
-  template_node,
-  template_vnode,
-  opstacknode,
-  opstackbuffers,
-  template_event_callbacks,
-  nmranetutilities,
-  nmranetdefines,
-  opstackdefines,
-  opstacktypes;
+  opstackdefines;
 
 procedure Learn(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 

@@ -1,7 +1,5 @@
 unit opstackcore_snip;
 
-// TODO:  OPTIONAL INTERACTION REJECTED if we can't allocate buffers
-
 {$IFDEF FPC}
 interface
 {$ENDIF}
@@ -9,12 +7,11 @@ interface
 {$I Options.inc}
 
 uses
+  opstackcore_basic,
   template_node,
   template_vnode,
   opstacknode,
   opstackbuffers,
-  template_event_callbacks,
-  nmranetutilities,
   nmranetdefines,
   opstackdefines,
   opstacktypes;
@@ -30,10 +27,9 @@ var
 begin
   NewMessage := nil;
   if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    OPStackNode_MessageLink(DestNode, NewMessage)
-  else begin
-
-  end;
+    OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+  else
+    OptionalInteractionRejected(AMessage, DestNode);                            // Try again if you wish
 end;
 
 procedure SimpleNodeInfoReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);

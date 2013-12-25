@@ -1,6 +1,5 @@
 unit opstackcore_pip;
 
-// TODO:  OPTIONAL INTERACTION REJECTED if we can't allocate buffers
 // TODO:  Extended Bits cause python scripts to complain
 
 {$IFDEF FPC}
@@ -12,13 +11,11 @@ interface
 uses
   template_node,
   template_vnode,
+  opstackcore_basic,
   opstacknode,
   opstackbuffers,
-  template_event_callbacks,
-  nmranetutilities,
   nmranetdefines,
-  opstackdefines,
-  opstacktypes;
+  opstackdefines;
 
 procedure ProtocolSupportInquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure ProtocolSupportReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
@@ -34,9 +31,9 @@ begin
   begin
     NewMessage := nil;
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-      OPStackNode_MessageLink(DestNode, NewMessage)
-    else begin
-    end;
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    else
+      OptionalInteractionRejected(AMessage, DestNode);                            // Try again if you wish
   end
 end;
 

@@ -139,16 +139,13 @@ end;
 function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
-  AddressSpace, DataOffset: Byte;
-  ConfigAddress, ReadCount: DWord;
-  i: Integer;
 begin
   Result := False;
+  DatagramMessage^.WatchDog := 0;
   DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
-  OPStackNode_MessageUnLink(Node, DatagramMessage);                             // Recycle the Datagram Message
+  OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);                             // Recycle the Datagram Message
   OPStackBuffers_SwapDestAndSourceIDs(DatagramMessage);
   DatagramMessage^.DestFlags := 0;
-  DatagramMessage^.Next := nil;
   DatagramBufferPtr^.CurrentCount := 0;
   DatagramBufferPtr^.ResendCount := 0;
   DatagramBufferPtr^.iStateMachine := 0;
@@ -211,10 +208,10 @@ begin
     RemoveWaitingForAckResponseMessage(WaitingMessage);
     if DatagramBuffer^.ResendCount < MAX_DATAGRAM_RESEND_ATTEMPTS then
     begin
-      WaitingMessage^.MessageType := WaitingMessage^.MessageType or MT_RESEND;
+      WaitingMessage^.MessageType := WaitingMessage^.MessageType or MT_SEND;
       Inc(DatagramBuffer^.ResendCount);
       DatagramBuffer^.CurrentCount := 0;
-      OPStackNode_MessageLink(DestNode, WaitingMessage);
+      OPStackNode_IncomingMessageLink(DestNode, WaitingMessage);
       AddWaitingForAckResponseMessage(WaitingMessage);
     end else
       OPStackBuffers_DeAllocateMessage(WaitingMessage);   // Giving Up
