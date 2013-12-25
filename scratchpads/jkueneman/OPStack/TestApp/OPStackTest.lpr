@@ -10,11 +10,12 @@ uses
   Forms, unitMain, OPStackCore, nmranetdefines, opstackdefines, opstacknode,
   template_node, template_vnode, hardware_template, nmranetutilities,
   opstackbuffers, template_buffers, opstacktypes, gridconnect,
-  template_event_callbacks, opstackcanstatemachines, template_configmem,
-  unitbuffertrace, template_Configuration, opstackcore_can, opstackcore_events,
-  opstackcore_pip, opstackcore_basic, opstackcore_stream, opstackcore_snip,
-  opstackcore_learn, opstackcore_datagram, opstackcore_configmem, 
-opstackcanstatemachinesbuffers;
+  template_event_callbacks, template_configmem, unitbuffertrace,
+  template_Configuration, opstackcore_can, opstackcore_events, opstackcore_pip,
+  opstackcore_basic, opstackcore_stream, opstackcore_snip, opstackcore_learn,
+  opstackcore_datagram, opstackcore_configmem, opstackcanstatemachines,
+  opstackcanstatemachinesbuffers, opstackcanstatemachinesdatagram,
+  opstackcanstatemachinessnip, opstackcanstatemachinesstream;
 
 {$R *.res}
 

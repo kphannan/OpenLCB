@@ -1,5 +1,7 @@
 unit opstackcanstatemachinesbuffers;
 
+//TODO:  The FirstInProcess functions will always find the first one in the list regardless of the order it was put in.  Need to make this a indexed list
+
 {$IFDEF FPC}
 interface
 {$ENDIF}
