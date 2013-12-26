@@ -13,11 +13,9 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils,
   {$ENDIF}
-  hardware_template,
   nmranetdefines,
   opstackdefines,
   opstackbuffers,
-  opstacktypes,
   opstackcanstatemachinesstream,
   opstackcanstatemachinessnip,
   opstackcanstatemachinesdatagram,
@@ -218,83 +216,4 @@ begin
   PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
 end;
 
-
-{ STREAM }
-{
-          MTI_FRAME_TYPE_STREAM_INIT_REQUEST  : begin  // Remote is asking to send data to us (we are the receiver)
-          Node := NMRAnetNode_FindByAlias(NMRAnetUtilities_ExtractDestinationAlias(CANBuffer));
-          if Node <> nil then
-          begin
-            if NMRAnetBufferPools_AllocateStreamBuffer(StreamBuffer, False) then
-            begin
-              StreamBuffer^.Alias := ((CANBuffer^.DataBytes[0] shl 8) or CANBuffer^.DataBytes[1]) and $0FFF;
-              StreamBuffer^.NegotiatedTransferSize := (CANBuffer^.DataBytes[2] shl 8) or CANBuffer^.DataBytes[3];
-              StreamBuffer^.Content.TypeIncluded := (CANBuffer^.DataBytes[4] and $01) <> 0;
-              StreamBuffer^.RemoteStreamID := CANBuffer^.DataBytes[6];
-              StreamBuffer^.State := StreamBuffer^.State or CBS_PROCESSING or CBS_OUTGOING; // Need to get the buffer into a Transmit mode
-              StreamBuffer^.StateMachine := STATE_STREAM_INITIATE_REQEUST_WAIT_FOR_REPLY;  // Now let the ProcessHardwareMessages decide how to reply to the other node
-              NMRAnetUtilities_StreamBufferLink(Node, StreamBuffer);
-            end else
-            begin
-              // High priority fail reply
-            end;
-          end;
-          end;
-          MTI_FRAME_TYPE_STREAM_INIT_REPLY    : begin  // We asked to send data to the Remote and has replied
-          Node := NMRAnetNode_FindByAlias(NMRAnetUtilities_ExtractDestinationAlias(CANBuffer));
-          if Node <> nil then
-          begin
-             // Find and inprocess Stream that matches the SID that we sent first, we don't know what the remote SID is yet
-             if NMRAnetUtilities_FindInProcessStreamInNode(Node, StreamBuffer, CANBuffer^.DataBytes[6], -1) then
-             begin
-               StreamBuffer^.iWatchdog := 0;
-               StreamBuffer^.NegotiatedTransferSize := (CANBuffer^.DataBytes[2] shl 8) or CANBuffer^.DataBytes[3];
-               StreamBuffer^.RemoteStreamID := CANBuffer^.DataBytes[7];
-               StreamBuffer^.StateMachine := STATE_STREAM_SEND;  // Start Sending to the Remote node
-               StreamBuffer^.State := StreamBuffer^.State or CBS_OUTGOING;
-               // NEED TO FIND THE "ACCEPT" BIT SOMEWHERE
-               if StreamBuffer^.NegotiatedTransferSize > 0 then
-               begin
-               end else
-               begin
-                 // The remote node did not want to play with us
-                 NMRAnetUtilities_StreamBufferUnLink(Node, StreamBuffer);
-                 NMRAnetBufferPools_ReleaseStreamBuffer(StreamBuffer);
-               end
-             end
-          end;
-          end;
-          MTI_FRAME_TYPE_STREAM_SEND          : begin  // Remote is asked (and is) to send data to us (we are the receiver)
-          Node := NMRAnetNode_FindByAlias( NMRAnetUtilities_ExtractDestinationCodedInMTIAlias(CANBuffer));
-          if Node <> nil then
-          begin
-            // HOW DO WE KNOW WHAT STREAM IS WHAT HERE?????
-            if NMRAnetUtilities_FindInProcessStreamInNode(Node, StreamBuffer, -1, -1) then
-            begin
-              StreamBuffer^.iWatchdog := 0;
-              for i := 0 to CANBuffer^.DataCount - 1 do
-              begin
-                StreamBuffer^.DataBytes[StreamBuffer^.iByteCount] := CANBuffer^.DataBytes[i];
-                Inc(StreamBuffer^.iByteCount)
-              end;
-              if StreamBuffer^.iByteCount >= StreamBuffer^.NegotiatedTransferSize then
-              begin
-          //      StreamBuffer^.StateMachine :=
-              end
-            end
-          end
-          end;
-          MTI_FRAME_TYPE_STREAM_PROCEED       : begin
-          Node := NMRAnetNode_FindByAlias(NMRAnetUtilities_ExtractDestinationAlias(CANBuffer));
-          if Node <> nil then
-          begin
-          end;
-          end;
-          MTI_FRAME_TYPE_STREAM_COMPLETE      : begin
-          Node := NMRAnetNode_FindByAlias(NMRAnetUtilities_ExtractDestinationAlias(CANBuffer));
-          if Node <> nil then
-          begin
-          end;
-          end;
-      }
 end.

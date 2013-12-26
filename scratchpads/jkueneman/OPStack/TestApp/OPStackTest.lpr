@@ -8,12 +8,12 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, unitMain, OPStackCore, nmranetdefines, opstackdefines, opstacknode,
-  template_node, template_vnode, hardware_template, nmranetutilities,
-  opstackbuffers, template_buffers, opstacktypes, gridconnect,
-  template_event_callbacks, template_configmem, unitbuffertrace,
-  template_Configuration, opstackcore_can, opstackcore_events, opstackcore_pip,
-  opstackcore_basic, opstackcore_stream, opstackcore_snip, opstackcore_learn,
-  opstackcore_datagram, opstackcore_configmem, opstackcanstatemachines,
+  template_node, template_vnode, nmranetutilities, opstackbuffers,
+  template_buffers, opstacktypes, gridconnect, template_event_callbacks,
+  template_configmem, unitbuffertrace, template_Configuration, opstackcore_can,
+  opstackcore_events, opstackcore_pip, opstackcore_basic, opstackcore_stream,
+  opstackcore_snip, opstackcore_learn, opstackcore_datagram,
+  opstackcore_configmem, hardware_template, opstackcanstatemachines,
   opstackcanstatemachinesbuffers, opstackcanstatemachinesdatagram,
   opstackcanstatemachinessnip, opstackcanstatemachinesstream;
 

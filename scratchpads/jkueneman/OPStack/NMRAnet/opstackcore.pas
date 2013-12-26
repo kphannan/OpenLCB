@@ -59,6 +59,9 @@ begin
   OPStackNode_Initialize;
   OPStackBuffers_Initialize;
   OPStackCoreDatagram_Initialize;
+  {$IFDEF SUPPORT_STREAMS}
+  OPStackCoreStream_Initialize;
+  {$ENDIF}
   OPStackNode_Allocate;                                                         // Allocate the hardware Node
 end;
 
@@ -140,10 +143,11 @@ begin
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;
                   MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;
-                  MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end
+                  MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;
+                  MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end
                   {$ENDIF}
                 else
-                  OptionalInteractionRejected(AMessage, DestNode);              // Unknown message
+                  OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
                 end; {case}
               end else
                 Exit;                                                           // It is not for of or our nodes
@@ -162,11 +166,9 @@ begin
             CheckAndDeallocateMessage(AMessage);
           end;
       {$IFDEF SUPPORT_STREAMS}
-      MT_DATAGRAM,
-      MT_STREAM :
-      {$ELSE}
-      MT_DATAGRAM :
+      MT_STREAM,
       {$ENDIF}
+      MT_DATAGRAM :
           begin
             if DestNode <> nil then
               OPStackNode_IncomingMessageLink(DestNode, AMessage)
@@ -252,10 +254,27 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure UnLinkAndDeAllocateMessage
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
+begin
+  if AMessage <> nil then
+  begin
+    OPStackNode_IncomingMessageUnLink(Node, AMessage);
+    OPStackBuffers_DeAllocateMessage(AMessage);
+    Result := True;
+  end else
+    Result := False;
+end;
+
+// *****************************************************************************
 //  procedure NodeRunMessageReply
 //     Parameters: Node: Node that has a message to send
-//                 MessageToSend: The buffer to load if the function is successfull in loading it
-//                                If loaded and needs sending return True to this funcions
+//                 MessageToSend: The buffer to load if the function is successful in loading it
+//                                If loaded and needs sending return True to this function
 //     Returns:    True if a message was loaded and ready to send, this function does NOT actually send the message
 //     Description: Picks up Buffers pending in the node and loads a message to send
 // *****************************************************************************
@@ -272,30 +291,45 @@ begin
     begin
       case NextMessage^.MTI of
         MTI_SIMPLE_NODE_INFO_REQUEST :
-            begin                                       //        REUSE THIS MESSAGE IN THE CALL
-              SimpleNodeInfoReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              if MessageToSend <> nil then
-              begin
-                OPStackNode_IncomingMessageUnLink(Node, NextMessage);
-                OPStackBuffers_DeAllocateMessage(NextMessage);
-                Result := True;
-              end
+            begin
+              SimpleNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
             end;
         MTI_PROTOCOL_SUPPORT_INQUIRY :
-            begin                                              //   REUSE THIS MESSAGE IN THE CALL
-              ProtocolSupportReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              if MessageToSend <> nil then
-              begin
-                OPStackNode_IncomingMessageUnLink(Node, NextMessage);
-                OPStackBuffers_DeAllocateMessage(NextMessage);
-                Result := True;
-              end
+            begin
+              ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
             end;
         MTI_DATAGRAM :
             begin
               if DatagramSendAckReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source, PDatagramBuffer( PByte( NextMessage^.Buffer))) then
                 DatagramReply(Node, MessageToSend, NextMessage);
               Result :=  MessageToSend <> nil
+            end;
+        MTI_STREAM_INIT_REQUEST :
+            begin
+              StreamInitRequestReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+            end;
+        MTI_STREAM_INIT_REPLY :
+            begin
+              StreamInitReplyReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+            end;
+        MTI_STEAM_SEND :
+            begin
+              StreamSendReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+            end;
+        MTI_STREAM_PROCEED :
+            begin
+              StreamProceedReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+            end;
+        MTI_STREAM_COMPLETE :
+            begin
+              StreamCompleteReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
             end
       else begin
           OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
@@ -324,8 +358,6 @@ begin
   for i := 0 to NodePool.AllocatedCount - 1 do
     Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
   OPStackBuffers_Timer;
- // ServiceMode_100ms_TimeTick
-
 end;
 
 // *****************************************************************************

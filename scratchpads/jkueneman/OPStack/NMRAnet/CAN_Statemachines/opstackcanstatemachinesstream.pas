@@ -10,11 +10,9 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils,
   {$ENDIF}
+  opstackdefines,
   hardware_template,
   nmranetdefines,
-  opstackdefines,
-  opstackbuffers,
-  opstacktypes,
   opstackcanstatemachinesbuffers;
 
 procedure PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
@@ -36,7 +34,7 @@ begin
   if LocalOutgoingMessage <> nil then                                           // We just work this stack from the top down, for now
     if IsOutgoingBufferAvailable then
     begin
-
+       LocalOutgoingMessage := LocalOutgoingMessage;
     end;
 end;
 

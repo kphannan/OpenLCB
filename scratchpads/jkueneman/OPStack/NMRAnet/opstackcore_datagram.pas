@@ -1,7 +1,6 @@
 unit opstackcore_datagram;
 
 // TODO : FindWaitingForAckResponseMessage - ONLY WORKS WITH ALIAS IDs,  Needs to work with Alias and/or Full IDs
-// TODO : I CAN'T USE THE MESSAGE^.NEXT FOR MORE THAN ONE LINKED LIST, SO INPROCESS CAN DATAGRAM AND WAITING FOR ACK CAN'T BE IN LISTS AT THE SAME TIME..... HOW TO FIX THAT?????
 
 {$IFDEF FPC}
 interface
@@ -23,23 +22,36 @@ const
 
 procedure OPStackCoreDatagram_Initialize;
 
+// Do not currently have a function that initiates a datagram from scratch, currently we mostly repond from a sent datagram
 procedure DatagramOkReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure DatagramRejectedReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
 function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 
-procedure DatagramFlushDestinationMessages(var DestID: TNodeInfo);
+procedure FlushWaitingForAckResponseMessagesByDestinationAlias(var DestID: TNodeInfo);
 
 implementation
 
 var
   WaitingForAckList: POPStackMessage;
 
+// *****************************************************************************
+//  procedure OPStackCoreDatagram_Initialize;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure OPStackCoreDatagram_Initialize;
 begin
   WaitingForAckList := nil;
 end;
 
+// *****************************************************************************
+//  procedure AddWaitingForAckResponseMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure AddWaitingForAckResponseMessage(OPStackMessage: POPStackMessage);
 var
   LocalMessage: POPStackMessage;
@@ -54,6 +66,12 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure FindWaitingForAckResponseMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 function FindWaitingForAckResponseMessage(var SourceID: TNodeInfo; var DestID: TNodeInfo): POPStackMessage;
 var
   LocalMessage: POPStackMessage;
@@ -71,6 +89,12 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure RemoveWaitingForAckResponseMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure RemoveWaitingForAckResponseMessage(OPStackMessage: POPStackMessage);
 var
   LocalMessage, LocalMessageParent: POPStackMessage;
@@ -101,7 +125,13 @@ begin
   end;
 end;
 
-procedure DatagramFlushDestinationMessages(var DestID: TNodeInfo);
+// *****************************************************************************
+//  procedure FlushWaitingForAckResponseMessagesByDestinationAlias;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure FlushWaitingForAckResponseMessagesByDestinationAlias(var DestID: TNodeInfo);
 var
   LocalMessage, MatchingMessage: POPStackMessage;
 begin
@@ -119,6 +149,12 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure DatagramSendAckReply;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
 var
   AckFlags: Byte;
@@ -136,6 +172,12 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure DatagramReply;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
@@ -184,6 +226,12 @@ begin
     AddWaitingForAckResponseMessage(DatagramMessage);
 end;
 
+// *****************************************************************************
+//  procedure DatagramOkReply;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure DatagramOkReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 var
   WaitingMessage: POPStackMessage;
@@ -196,6 +244,12 @@ begin
   end;
 end;
 
+// *****************************************************************************
+//  procedure DatagramRejectedReply;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure DatagramRejectedReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 var
   WaitingMessage: POPStackMessage;

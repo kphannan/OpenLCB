@@ -207,11 +207,13 @@ type
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray that are valid, for streams this is the negotiated buffer size
     DataArray: TStreamDataArray;
     // *******
-    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     SourceStreamID,
     DestStreamID: Byte;
     StreamTypeID: TStreamTypeID;
+    CurrentCount: DWord;                                                         // Current index of the number of bytes sent/received
     TotalMessageSize: DWord;                                                    // The total number of bytes to send in the interaction
+    NegotiatedBufferSize: Word;
+    NextActiveStream: PByte;
   end;
   PStreamBuffer = ^TStreamBuffer;
   {$ENDIF}

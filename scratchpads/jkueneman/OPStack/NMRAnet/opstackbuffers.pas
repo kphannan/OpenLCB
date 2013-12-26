@@ -64,7 +64,7 @@ procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 // Load Message helpers
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
-procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word);
+procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 
 // Load Buffer helpers
 procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
@@ -423,13 +423,20 @@ begin
    AMessage^.Buffer^.DataBufferSize := 0;
 end;
 
-procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word);
+procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 begin
   OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
   AMessage^.MessageType := MT_SIMPLE;
   AMessage^.Buffer^.DataBufferSize := 4;
-  AMessage^.Buffer^.DataArray[0] := $20;
-  AMessage^.Buffer^.DataArray[1] := $00;
+  if IsPermenent then
+  begin
+    AMessage^.Buffer^.DataArray[0] := $20;
+    AMessage^.Buffer^.DataArray[1] := $00;
+  end else
+  begin
+    AMessage^.Buffer^.DataArray[0] := $10;
+    AMessage^.Buffer^.DataArray[1] := $00;
+  end;
   AMessage^.Buffer^.DataArray[2] := Hi( RejectedMTI);
   AMessage^.Buffer^.DataArray[3] := Lo( RejectedMTI);
 end;
@@ -509,6 +516,8 @@ begin
   for i := 0 to MAX_STREAM_TYPE_ID - 1 do
     ABuffer^.StreamTypeID[i] := 0;
   ABuffer^.TotalMessageSize := 0;
+  ABuffer^.NextActiveStream := nil;
+  ABuffer^.NegotiatedBufferSize := USER_MAX_STREAM_BYTES;
 end;
 {$ENDIF}
 
@@ -568,6 +577,7 @@ var
   i: Integer;
 begin
   i := 0;
+  DestData^.DataBufferSize := SourceData^.DataBufferSize;
   while i < SourceData^.DataBufferSize do
   begin
     DestData^.DataArray[i] := SourceData^.DataArray[i];

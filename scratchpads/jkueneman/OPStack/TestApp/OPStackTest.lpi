@@ -83,126 +83,126 @@
         <UnitName Value="template_vnode"/>
       </Unit7>
       <Unit8>
-        <Filename Value="..\HardwareLayerImplementations\hardware_template.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="hardware_template"/>
-      </Unit8>
-      <Unit9>
         <Filename Value="..\NMRAnet\nmranetutilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="nmranetutilities"/>
-      </Unit9>
-      <Unit10>
+      </Unit8>
+      <Unit9>
         <Filename Value="..\NMRAnet\opstackbuffers.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackbuffers"/>
-      </Unit10>
-      <Unit11>
+      </Unit9>
+      <Unit10>
         <Filename Value="..\AppLayerTemplates\template_buffers.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_buffers"/>
-      </Unit11>
-      <Unit12>
+      </Unit10>
+      <Unit11>
         <Filename Value="..\NMRAnet\opstacktypes.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstacktypes"/>
-      </Unit12>
-      <Unit13>
+      </Unit11>
+      <Unit12>
         <Filename Value="..\NMRAnet\gridconnect.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="gridconnect"/>
-      </Unit13>
-      <Unit14>
+      </Unit12>
+      <Unit13>
         <Filename Value="..\AppLayerTemplates\template_callbacks.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_callbacks"/>
-      </Unit14>
-      <Unit15>
+      </Unit13>
+      <Unit14>
         <Filename Value="..\AppLayerTemplates\template_configmem.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_configmem"/>
-      </Unit15>
-      <Unit16>
+      </Unit14>
+      <Unit15>
         <Filename Value="unitbuffertrace.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="Form2"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitbuffertrace"/>
-      </Unit16>
-      <Unit17>
+      </Unit15>
+      <Unit16>
         <Filename Value="..\AppLayerTemplates\template_configuration.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_configuration"/>
-      </Unit17>
-      <Unit18>
+      </Unit16>
+      <Unit17>
         <Filename Value="..\NMRAnet\opstackcore_can.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_can"/>
-      </Unit18>
-      <Unit19>
+      </Unit17>
+      <Unit18>
         <Filename Value="..\NMRAnet\opstackcore_events.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_events"/>
-      </Unit19>
-      <Unit20>
+      </Unit18>
+      <Unit19>
         <Filename Value="..\NMRAnet\opstackcore_pip.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_pip"/>
-      </Unit20>
-      <Unit21>
+      </Unit19>
+      <Unit20>
         <Filename Value="..\NMRAnet\opstackcore_basic.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_basic"/>
-      </Unit21>
-      <Unit22>
+      </Unit20>
+      <Unit21>
         <Filename Value="..\NMRAnet\opstackcore_stream.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_stream"/>
-      </Unit22>
-      <Unit23>
+      </Unit21>
+      <Unit22>
         <Filename Value="..\NMRAnet\opstackcore_snip.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_snip"/>
-      </Unit23>
-      <Unit24>
+      </Unit22>
+      <Unit23>
         <Filename Value="..\NMRAnet\opstackcore_learn.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_learn"/>
-      </Unit24>
-      <Unit25>
+      </Unit23>
+      <Unit24>
         <Filename Value="..\NMRAnet\opstackcore_datagram.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_datagram"/>
-      </Unit25>
-      <Unit26>
+      </Unit24>
+      <Unit25>
         <Filename Value="..\NMRAnet\opstackcore_configmem.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_configmem"/>
-      </Unit26>
-      <Unit27>
+      </Unit25>
+      <Unit26>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachines"/>
-      </Unit27>
-      <Unit28>
+      </Unit26>
+      <Unit27>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinesbuffers"/>
-      </Unit28>
-      <Unit29>
+      </Unit27>
+      <Unit28>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinesdatagram"/>
-      </Unit29>
-      <Unit30>
+      </Unit28>
+      <Unit29>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinessnip"/>
-      </Unit30>
-      <Unit31>
+      </Unit29>
+      <Unit30>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinesstream"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="..\HardwareLayerImplementations\Lazarus\hardware_template.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="hardware_template"/>
       </Unit31>
     </Units>
   </ProjectOptions>
@@ -214,7 +214,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\AppLayerTemplates"/>
-      <OtherUnitFiles Value="..\NMRAnet;..\AppLayerTemplates;..\HardwareLayerImplementations;..\..\Components\synapse40\source\lib;..\Common;..\..\Library;..\NMRAnet\CAN_Statemachines"/>
+      <OtherUnitFiles Value="..\NMRAnet;..\AppLayerTemplates;..\..\Components\synapse40\source\lib;..\Common;..\..\Library;..\NMRAnet\CAN_Statemachines;..\HardwareLayerImplementations\Lazarus"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

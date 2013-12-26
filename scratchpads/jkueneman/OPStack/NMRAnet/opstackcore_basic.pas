@@ -15,7 +15,7 @@ uses
 
 procedure VerifyNodeIdByDestination(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure VerifyNodeId(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure OptionalInteractionRejected(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure OptionalInteractionRejected(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsPermenent: Boolean);
 
 implementation
 
@@ -37,7 +37,7 @@ begin
   end;
 end;
 
-procedure OptionalInteractionRejected(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure OptionalInteractionRejected(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsPermenent: Boolean);
 var
   OptionalInteractionMessage: TOPStackMessage;
   OptionalnteractionBuffer: TSimpleBuffer;
@@ -45,7 +45,7 @@ begin
   OPStackBuffers_ZeroSimpleBuffer(@OptionalnteractionBuffer, False);
   OPStackBuffers_ZeroMessage(@OptionalInteractionMessage);
   OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
-  OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI);    // Unknown MTI sent to addressed node
+  OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI, IsPermenent);    // Unknown MTI sent to addressed node
   OutgoingCriticalMessage(@OptionalInteractionMessage);
 end;
 

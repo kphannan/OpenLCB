@@ -18,7 +18,7 @@ uses
   opstackdefines;
 
 procedure ProtocolSupportInquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure ProtocolSupportReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
 
 implementation
 
@@ -33,11 +33,11 @@ begin
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
       OPStackNode_IncomingMessageLink(DestNode, NewMessage)
     else
-      OptionalInteractionRejected(AMessage, DestNode);                            // Try again if you wish
+      OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
   end
 end;
 
-procedure ProtocolSupportReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
 var
   i, j: Integer;
 begin

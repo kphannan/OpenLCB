@@ -48,7 +48,6 @@ begin
                   begin                                                         // Allocate a message for a full MTI_DATRGRAM and return the pointer to the message
                     if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID, 0) then
                     begin
-                      InProcessMessage^.Buffer^.DataBufferSize := OPStackMessage^.Buffer^.DataBufferSize;
                       OPStackBuffers_CopyData(InProcessMessage^.Buffer, OPStackMessage^.Buffer);
                       PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := 0;
                       DatagramMessage := InProcessMessage;
@@ -68,7 +67,6 @@ begin
           begin
             if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID, 0) then
             begin
-              InProcessMessage^.Buffer^.DataBufferSize := OPStackMessage^.Buffer^.DataBufferSize;
               OPStackBuffers_CopyData(InProcessMessage^.Buffer, OPStackMessage^.Buffer);
               PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := OPStackMessage^.Buffer^.DataBufferSize;
               OPStackCANStatemachineBuffers_AddIncomingDatagramMessage(InProcessMessage);

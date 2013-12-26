@@ -17,7 +17,7 @@ uses
   opstacktypes;
 
 procedure SimpleNodeInfoRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure SimpleNodeInfoReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure SimpleNodeInfoRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
 
 implementation
 
@@ -29,10 +29,10 @@ begin
   if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
     OPStackNode_IncomingMessageLink(DestNode, NewMessage)
   else
-    OptionalInteractionRejected(AMessage, DestNode);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
 end;
 
-procedure SimpleNodeInfoReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure SimpleNodeInfoRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
   j: Integer;
