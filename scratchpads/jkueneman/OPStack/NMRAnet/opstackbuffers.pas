@@ -67,10 +67,10 @@ procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; Source
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 
 // Load Buffer helpers
-procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 {$IFDEF SUPPORT_STREAMS}
-procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 {$ENDIF}
 
 // Zero buffer helpers
@@ -441,11 +441,10 @@ begin
   AMessage^.Buffer^.DataArray[3] := Lo( RejectedMTI);
 end;
 
-procedure LoadBuffer(ABuffer: PSimpleBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; BufferSize: Word; ArrayOffset: Integer);
+procedure LoadBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; BufferSize: Word; ArrayOffset: Integer);
 var
   i: Integer;
 begin
-  ABuffer^.iStateMachine := iStateMachine;
   ABuffer^.DataBufferSize := DataBufferSize;
   if DataArray <> nil then
   begin
@@ -454,20 +453,20 @@ begin
   end
 end;
 
-procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 begin
-  LoadBuffer(ABuffer, iStateMachine, DataBufferSize, DataArray, MAX_SIMPLE_BYTES, ArrayOffset);
+  LoadBuffer(ABuffer, DataBufferSize, DataArray, MAX_SIMPLE_BYTES, ArrayOffset);
 end;
 
-procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 begin
-  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), iStateMachine, DataBufferSize, DataArray, MAX_DATAGRAM_BYTES, ArrayOffset);
+  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), DataBufferSize, DataArray, MAX_DATAGRAM_BYTES, ArrayOffset);
 end;
 
 {$IFDEF SUPPORT_STREAMS}
-procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; iStateMachine: Byte; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
+procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
 begin
-  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), iStateMachine, DataBufferSize, DataArray, USER_MAX_STREAM_BYTES, ArrayOffset);
+  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), DataBufferSize, DataArray, USER_MAX_STREAM_BYTES, ArrayOffset);
 end;
 {$ENDIF}
 
@@ -475,7 +474,6 @@ procedure ZeroBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word);
 var
   i: Integer;
 begin
-  ABuffer^.iStateMachine := 0;
   ABuffer^.State := 0;
   ABuffer^.DataBufferSize := 0;
   for i := 0 to DataBufferSize - 1 do

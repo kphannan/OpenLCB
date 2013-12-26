@@ -89,7 +89,7 @@ begin
     OPStackMessage^.MTI := NMRAnetCanBuffer.MTI shr 12;                          // Create the generic MTI
     if OPStackMessage^.MTI and $F000 > 0 then                                    // There are some special ones that are only the upper nibble
        OPStackMessage^.MTI := OPStackMessage^.MTI and $F000;
-    OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, 0, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0);  // Copy over the payload
+    OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0);  // Copy over the payload
     case OPStackMessage^.MTI of
         MTI_CAN_AMD,                                                            // If another node has reset then we need to clear out any inprocess states with that node
         MTI_CAN_AMR :  FlushCanSpecificBuffers(OPStackMessage^.Source.AliasID); // This is only an issue with CAN so encapsulate it here in CAN only code
@@ -107,11 +107,11 @@ begin
               OPStackMessage^.Dest.AliasID := ((NMRAnetCanBuffer.Payload[0] shl 8) or NMRAnetCanBuffer.Payload[1]) and $0FFF; // General CAN messages have the Alias in the payload first two bytes  ;
               DestNode := OPStackNode_FindByAlias(OPStackMessage^.Dest.AliasID);
               OPStackMessage^.DestFlags := NMRAnetCanBuffer.Payload[0] and $F0; // The upper nibble of the destination may have special meaning, pull it out
-              OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, 0, NMRAnetCanBuffer.PayloadCount-2, @NMRAnetCanBuffer.Payload, 2);  // Copy over the payload, skipping the destination alias
+              OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount-2, @NMRAnetCanBuffer.Payload, 2);  // Copy over the payload, skipping the destination alias
               Result := True;
             end else
             begin
-              OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, 0, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0); // Copy over the payload
+              OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0); // Copy over the payload
               Result := True;
             end;
           end;
@@ -123,7 +123,7 @@ begin
             OPStackMessage^.Dest.AliasID := (NMRAnetCanBuffer.MTI shr 12) and $0FFF;
             DestNode := OPStackNode_FindByAlias(OPStackMessage^.Dest.AliasID);
             OPStackMessage^.MTI := (NMRAnetCanBuffer.MTI shr 12) and $F000;
-            OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, 0, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0);
+            OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0);
             if DestNode <> nil then
             begin
               DatagramProcessErrorCode := StackCANStatemachineDatagram_ProcessIncomingDatagramMessage(@OPStackMessage^, DatagramMessage);

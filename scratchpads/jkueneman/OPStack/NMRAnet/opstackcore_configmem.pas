@@ -222,7 +222,6 @@ begin
   EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, True, True, AddressSpace, ConfigAddress, ReadCount, AddressSpace < MSI_CONFIG, DataOffset);
   DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
   DatagramBufferPtr^.CurrentCount := 0;
-  DatagramBufferPtr^.iStateMachine := 0;
   case AddressSpace of
       MSI_CDI :
           begin
@@ -371,7 +370,6 @@ begin
     EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, True, True, AddressSpace, ConfigAddress, ReadCount, AddressSpace < MSI_CONFIG, DataOffset);
     DatagramBufferPtr^.DataBufferSize := DataOffset;
     DatagramBufferPtr^.CurrentCount := 0;
-    DatagramBufferPtr^.iStateMachine := 0;
     Result := True;
 end;
 
@@ -430,7 +428,6 @@ begin
    DatagramBufferPtr^.DataArray[6] := USER_CONFIGMEM_LOWEST_SPACE;
   end;
   DatagramBufferPtr^.DataBufferSize := 7;
-  DatagramBufferPtr^.iStateMachine := 0;
   DatagramBufferPtr^.CurrentCount := 0;
   Result := True;
 end;
@@ -470,7 +467,6 @@ begin
     DatagramBufferPtr^.DataArray[7] := $00;
   DatagramBufferPtr^.DataBufferSize := 8;
   DatagramBufferPtr^.CurrentCount := 0;
-  DatagramBufferPtr^.iStateMachine := 0;
   Result := True;
 end;
 

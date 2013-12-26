@@ -175,7 +175,6 @@ const
 type
   TSimpleBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
     DataBufferSize: Word;                                                       // Number of bytes in the DataBuffer
     DataArray: TSimpleDataArray;
   end;
@@ -183,7 +182,6 @@ type
 
   TDatagramBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray
     DataArray: TDatagramDataArray;
     // *******
@@ -203,7 +201,6 @@ type
 
   TStreamBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray that are valid, for streams this is the negotiated buffer size
     DataArray: TStreamDataArray;
     // *******
@@ -220,7 +217,6 @@ type
 
   TAcdiSnipBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
-    iStateMachine: Byte;                                                        // Local Statemachine
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray
     DataArray: TAcdiSnipDataArray;
     // *******

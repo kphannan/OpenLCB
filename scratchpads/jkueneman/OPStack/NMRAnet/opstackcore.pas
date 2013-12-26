@@ -259,9 +259,9 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
+function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; AMessage, MessageToSend: POPStackMessage): Boolean;
 begin
-  if AMessage <> nil then
+  if MessageToSend <> nil then
   begin
     OPStackNode_IncomingMessageUnLink(Node, AMessage);
     OPStackBuffers_DeAllocateMessage(AMessage);
@@ -293,12 +293,12 @@ begin
         MTI_SIMPLE_NODE_INFO_REQUEST :
             begin
               SimpleNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end;
         MTI_PROTOCOL_SUPPORT_INQUIRY :
             begin
               ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end;
         MTI_DATAGRAM :
             begin
@@ -309,27 +309,27 @@ begin
         MTI_STREAM_INIT_REQUEST :
             begin
               StreamInitRequestReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end;
         MTI_STREAM_INIT_REPLY :
             begin
               StreamInitReplyReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end;
         MTI_STEAM_SEND :
             begin
               StreamSendReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end;
         MTI_STREAM_PROCEED :
             begin
               StreamProceedReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end;
         MTI_STREAM_COMPLETE :
             begin
               StreamCompleteReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
             end
       else begin
           OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
@@ -341,7 +341,7 @@ begin
       OPStackNode_IncomingMessageUnLink(Node, NextMessage);
       MessageToSend := NextMessage;
       Result := True
-    end
+    end;
   end;
 end;
 

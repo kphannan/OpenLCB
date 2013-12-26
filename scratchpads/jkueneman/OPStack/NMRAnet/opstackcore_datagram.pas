@@ -190,7 +190,6 @@ begin
   DatagramMessage^.DestFlags := 0;
   DatagramBufferPtr^.CurrentCount := 0;
   DatagramBufferPtr^.ResendCount := 0;
-  DatagramBufferPtr^.iStateMachine := 0;
   DatagramBufferPtr^.DataBufferSize := 0;
   DatagramBufferPtr^.NextWaitingForAck := nil;
   case DatagramBufferPtr^.DataArray[0] of
