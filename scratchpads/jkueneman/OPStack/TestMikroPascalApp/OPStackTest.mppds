@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=OPStack\NMRAnet\opstackbuffers.mpas
+Value=OPStackTest.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -16,7 +16,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [FILES]
-Count=26
+Count=32
 File0=OPStackTest.mpas
 File1=OPStack\NMRAnet\nmranetdefines.mpas
 File2=OPStack\NMRAnet\nmranetutilities.mpas
@@ -30,39 +30,35 @@ File9=OPStack\AppLayerTemplates\template_node.mpas
 File10=OPStack\AppLayerTemplates\template_vnode.mpas
 File11=OPStack\NMRAnet\opstacktypes.mpas
 File12=OPStack\NMRAnet\gridconnect.mpas
-File13=OPStack\NMRAnet\opstackcanstatemachines.mpas
-File14=OPStack\AppLayerTemplates\template_configmem.mpas
-File15=OPStack\AppLayerTemplates\template_event_callbacks.mpas
-File16=OPStack\Common\HelperFunctions.mpas
-File17=OPStack\NMRAnet\opstackcore_basic.mpas
-File18=OPStack\NMRAnet\opstackcore_can.mpas
-File19=OPStack\NMRAnet\opstackcore_configmem.mpas
-File20=OPStack\NMRAnet\opstackcore_datagram.mpas
-File21=OPStack\NMRAnet\opstackcore_events.mpas
-File22=OPStack\NMRAnet\opstackcore_learn.mpas
-File23=OPStack\NMRAnet\opstackcore_pip.mpas
-File24=OPStack\NMRAnet\opstackcore_snip.mpas
-File25=OPStack\NMRAnet\opstackcore_stream.mpas
+File13=OPStack\AppLayerTemplates\template_configmem.mpas
+File14=OPStack\AppLayerTemplates\template_event_callbacks.mpas
+File15=OPStack\Common\HelperFunctions.mpas
+File16=OPStack\NMRAnet\opstackcore_basic.mpas
+File17=OPStack\NMRAnet\opstackcore_can.mpas
+File18=OPStack\NMRAnet\opstackcore_configmem.mpas
+File19=OPStack\NMRAnet\opstackcore_datagram.mpas
+File20=OPStack\NMRAnet\opstackcore_events.mpas
+File21=OPStack\NMRAnet\opstackcore_learn.mpas
+File22=OPStack\NMRAnet\opstackcore_pip.mpas
+File23=OPStack\NMRAnet\opstackcore_snip.mpas
+File24=OPStack\NMRAnet\opstackcore_stream.mpas
+File25=OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
+File26=OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
+File27=OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.mpas
+File28=OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.mpas
+File29=OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.mpas
+File30=OPStack\AppLayerTemplates\template_configuration.mpas
+File31=OPStack\HardwareLayerImplementations\Lazarus\hardware_template.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=13
+Count=3
 File0=OPStackTest.mpas
-File1=OPStack\NMRAnet\opstackcore.mpas
-File2=OPStack\Common\HelperFunctions.mpas
-File3=OPStack\HardwareLayerImplementations\hardware_template.mpas
-File4=OPStack\AppLayerTemplates\template_buffers.mpas
-File5=OPStack\NMRAnet\opstackcanstatemachines.mpas
-File6=OPStack\NMRAnet\opstacktypes.mpas
-File7=OPStack\NMRAnet\opstacknode.mpas
-File8=OPStack\NMRAnet\opstackcore_datagram.mpas
-File9=OPStack\NMRAnet\opstackdefines.mpas
-File10=OPStack\NMRAnet\opstackcore_events.mpas
-File11=OPStack\NMRAnet\opstackcore_configmem.mpas
-File12=OPStack\NMRAnet\opstackbuffers.mpas
+File1=OPStack\HardwareLayerImplementations\Lazarus\hardware_template.mpas
+File2=OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -72,18 +68,25 @@ Count=2
 File0=OPStack\AppLayerTemplates\NodeID.inc
 File1=OPStack\AppLayerTemplates\Options.inc
 [SEARCH_PATH]
-Count=11
+Count=18
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\
-Path3=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path4=E:\trunk\scratchpads\jkueneman\OPStack\AppLayerTemplates\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\
-Path6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\NMRAnet\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\HardwareLayerImplementations\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\AppLayerTemplates\
-Path10=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\Common\
+Path2=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\
+Path3=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\
+Path4=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path5=E:\trunk\scratchpads\jkueneman\OPStack\AppLayerTemplates\
+Path6=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\
+Path7=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path8=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\NMRAnet\
+Path9=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\HardwareLayerImplementations\
+Path10=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\AppLayerTemplates\
+Path11=E:\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\Common\
+Path12=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\NMRAnet\
+Path13=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\HardwareLayerImplementations\
+Path14=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\AppLayerTemplates\
+Path15=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\Common\
+Path16=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\NMRAnet\CAN_Statemachines\
+Path17=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\TestMikroPascalApp\OPStack\HardwareLayerImplementations\Lazarus\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -158,5 +161,6 @@ File62=Net_Ethernet_28j60
 File63=Net_Ethernet_28j60_Defs
 [EXPANDED NODES]
 Node1=Sources
-Node2=Other Files
-Count=2
+Node2=Output Files
+Node3=Other Files
+Count=3

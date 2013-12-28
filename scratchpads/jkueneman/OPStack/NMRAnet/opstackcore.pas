@@ -133,18 +133,18 @@ begin
               if DestNode <> nil then                                           // If it is addressed and the DestNode = nil then it is not for us
               begin                                                             // We send all messages in to test for Releasing so this test is necessary
                 case AMessage^.MTI of
-                  MTI_SIMPLE_NODE_INFO_REQUEST      : begin SimpleNodeInfoRequest(AMessage, DestNode); Exit; end;
-                  MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;
-                  MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;
-                  MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;
+                  MTI_SIMPLE_NODE_INFO_REQUEST      : begin SimpleNodeInfoRequest(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
+                  MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;     // Sets Flag(s) to be processed in main loop
+                  MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;                // Sets Flag(s) to be processed in main loop
+                  MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;        // Allocates Buffer to be processed in main loop
                   MTI_OPTIONAL_INTERACTION_REJECTED : begin end;
-                  MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;
-                  MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;
+                  MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;               // Updates internal states
+                  MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
                   {$IFDEF SUPPORT_STREAMS}
-                  MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;
-                  MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;
-                  MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;
-                  MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end
+                  MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;                // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end                // Allocates Buffer to be processed in main loop
                   {$ENDIF}
                 else
                   OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
@@ -154,13 +154,13 @@ begin
             end else
             begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
               case AMessage^.MTI of
-                  MTI_VERIFY_NODE_ID_NUMBER   : begin VerifyNodeId(AMessage, DestNode); Exit; end;
-                  MTI_CONSUMER_IDENTIFY       : begin IdentifyConsumers(AMessage, DestNode); Exit; end;
-                  MTI_CONSUMER_IDENTIFY_RANGE : begin IdentifyRangeConsumers(AMessage, DestNode); Exit; end;
-                  MTI_PRODUCER_IDENDIFY       : begin IdentifyProducers(AMessage, DestNode); Exit; end;
-                  MTI_PRODUCER_IDENTIFY_RANGE : begin IdentifyRangeProducers(AMessage, DestNode); end;
-                  MTI_EVENT_LEARN             : begin Learn(AMessage, DestNode); end;
-                  MTI_EVENTS_IDENTIFY         : begin IdentifyEvents(AMessage, nil); Exit; end;
+                  MTI_VERIFY_NODE_ID_NUMBER   : begin VerifyNodeId(AMessage, DestNode); Exit; end;              // Sets Flag(s) to be processed in main loop
+                  MTI_CONSUMER_IDENTIFY       : begin IdentifyConsumers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_CONSUMER_IDENTIFY_RANGE : begin IdentifyRangeConsumers(AMessage, DestNode); Exit; end;    // Sets Flag(s) to be processed in main loop
+                  MTI_PRODUCER_IDENDIFY       : begin IdentifyProducers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_PRODUCER_IDENTIFY_RANGE : begin IdentifyRangeProducers(AMessage, DestNode); end;          // Sets Flag(s) to be processed in main loop
+                  MTI_EVENT_LEARN             : begin Learn(AMessage, DestNode); end;                           // Sets Flag(s) to be processed in main loop
+                  MTI_EVENTS_IDENTIFY         : begin IdentifyEvents(AMessage, nil); Exit; end;                 // Sets Flag(s) to be processed in main loop
               end; {case}
             end;
             CheckAndDeallocateMessage(AMessage);
@@ -259,7 +259,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; AMessage, MessageToSend: POPStackMessage): Boolean;
+function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 begin
   if MessageToSend <> nil then
   begin
@@ -293,12 +293,12 @@ begin
         MTI_SIMPLE_NODE_INFO_REQUEST :
             begin
               SimpleNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         MTI_PROTOCOL_SUPPORT_INQUIRY :
             begin
-              ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         MTI_DATAGRAM :
             begin
@@ -309,27 +309,27 @@ begin
         MTI_STREAM_INIT_REQUEST :
             begin
               StreamInitRequestReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         MTI_STREAM_INIT_REPLY :
             begin
               StreamInitReplyReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         MTI_STEAM_SEND :
             begin
               StreamSendReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         MTI_STREAM_PROCEED :
             begin
               StreamProceedReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         MTI_STREAM_COMPLETE :
             begin
               StreamCompleteReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, NextMessage, MessageToSend);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end
       else begin
           OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages

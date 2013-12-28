@@ -140,16 +140,10 @@ function IsOutgoingBufferAvailable: Boolean;
 
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
-function OPStackCANStatemachine_GridConnectBufferToGridConnect(var GridConnectBuffer: TNMRAnetCanBuffer; var GridConnectStr: TGridConnectString): Integer; external;
-procedure OPStackCANStatemachine_AddOutgoingDatagramMessage(OPStackDatagramMessage: POPStackMessage); external;
-procedure OPStackCANStatemachine_AddOutgoingAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage); external;
-procedure OPStackCANStatemachine_AddOutgoingStreamMessage(OPStackDatagramMessage: POPStackMessage); external;
+procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
+function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var NMRAnetCanBuffer: TNMRAnetCanBuffer; var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean; external;
 procedure OPStackCANStatemachine_ProcessMessages; external;
-{$ENDIF}
-
-{$IFNDEF FPC}
-// Callback to push received messages into the OPStack
-procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode: PNMRAnetNode); external;
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 {$ENDIF}
 

@@ -187,7 +187,7 @@ begin
   DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
   OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);                             // Recycle the Datagram Message
   OPStackBuffers_SwapDestAndSourceIDs(DatagramMessage);
-  DatagramMessage^.DestFlags := 0;
+  DatagramMessage^.FramingBits := 0;
   DatagramBufferPtr^.CurrentCount := 0;
   DatagramBufferPtr^.ResendCount := 0;
   DatagramBufferPtr^.DataBufferSize := 0;

@@ -29,6 +29,7 @@ procedure OPStackCANStatemachine_ProcessMessages;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 {$ENDIF}
 
+
 implementation
 
 {$IFDEF FPC}

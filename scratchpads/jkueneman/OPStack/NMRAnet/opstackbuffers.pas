@@ -62,7 +62,7 @@ function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
-procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
+procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; FramingBits: Byte);
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 
@@ -528,14 +528,14 @@ begin
   ABuffer^.CurrentCount := 0;
 end;
 
-procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte);
+procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; FramingBits: Byte);
 begin
   AMessage^.MTI := MTI;
   AMessage^.Dest.AliasID := DestAlias;
   AMessage^.Dest.ID := DestNodeID;
   AMessage^.Source.AliasID := SourceNodeAlias;
   AMessage^.Source.ID := SourceNodeID;
-  AMessage^.DestFlags := DestFlags;
+  AMessage^.FramingBits := FramingBits;
 end;
 
 procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
@@ -548,7 +548,7 @@ begin
   AMessage^.Source.AliasID := 0;
   AMessage^.Source.ID := NULL_NODE_ID;
   AMessage^.Buffer := nil;
-  AMessage^.DestFlags := 0;
+  AMessage^.FramingBits := 0;
   AMessage^.WatchDog := 0;
 end;
 

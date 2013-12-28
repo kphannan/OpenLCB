@@ -232,7 +232,7 @@ type
     MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message, bottom 4 bits are the type of message u
     Source: TNodeInfo;
     Dest: TNodeInfo;
-    DestFlags: Byte;                                                            // The upper 4 bits sent in the Destination (when used for the message)
+    FramingBits: Byte;                                                          // The upper 4 bits sent in the Destination (when used for the message)
     {$IFDEF FPC}
     NextIncoming: POPStackMessage;
     {$ELSE}

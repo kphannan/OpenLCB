@@ -9,23 +9,13 @@ uses
   Classes, SysUtils,
   {$ENDIF}
   HelperFunctions,
-  nmranetdefines,
-  opstackdefines,
-  opstackbuffers;
-
-type
-  TGridConnectBuffer = record
-    MTI: DWord;
-    Payload: array[0..7] of byte;
-    PayloadCount: Byte;
-  end;
-  PGridConnectBuffer = ^TGridConnectBuffer;
+  opstackdefines;
 
 procedure GridConnect_Initialize;
 
-function GridConnectDecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
-procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
-function GridConnectBufferToGridConnect(var GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
+function GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
+procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TNMRAnetCanBuffer);
+function GridConnect_BufferToGridConnect(var GridConnectBuffer: TNMRAnetCanBuffer; var GridConnectStr: TGridConnectString): Integer;
 
 
 implementation
@@ -65,7 +55,7 @@ end;
 //     Description: Takes a single character at a time and tries to create a
 //                  GridConnect string from it in a statemachine
 // *****************************************************************************
-function GridConnectDecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
+function GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
 var
   HeaderArray: array[0..7] of Char;
   i, j: Integer;
@@ -167,7 +157,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure GridConnectToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TGridConnectBuffer);
+procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TNMRAnetCanBuffer);
 var
   ConvertStr: array[0..8] of char;
   {$IFDEF FPC}
@@ -212,7 +202,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-function GridConnectBufferToGridConnect(var GridConnectBuffer: TGridConnectBuffer; var GridConnectStr: TGridConnectString): Integer;
+function GridConnect_BufferToGridConnect(var GridConnectBuffer: TNMRAnetCanBuffer; var GridConnectStr: TGridConnectString): Integer;
 var
   ConvertString: array[0..8] of char;
   i: Integer;

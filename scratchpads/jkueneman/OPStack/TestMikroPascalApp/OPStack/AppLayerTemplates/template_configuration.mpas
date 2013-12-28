@@ -24,8 +24,7 @@ uses
   Classes,
   SysUtils,
   {$ENDIF}
-  opstacktypes,
-  opstackdefines;
+  opstacktypes;
 
 function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
 function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
@@ -80,7 +79,6 @@ end;
 function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
 var
   i: Integer;
-  Temp: Byte;
 begin
   for i := 0 to ReadCount - 1 do
   begin

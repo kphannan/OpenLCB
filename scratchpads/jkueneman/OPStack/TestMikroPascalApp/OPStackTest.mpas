@@ -7,16 +7,11 @@ begin
   OPStackCore_Timer;
 end;
 
-
-var
-  GridConnectBuffer: TGridConnectBuffer; 
-  OPStackMessage: TOPStackMessage;
-
 begin
   { Main program }
   
   // Just to get it compiled in for now:
-  GridConnectBufferToOPStackBufferAndDispatch(GridConnectBuffer, OPStackMessage);
+  DispatchGridConnectStr(nil);
   
   OPStackCore_Initialize;
   while True do

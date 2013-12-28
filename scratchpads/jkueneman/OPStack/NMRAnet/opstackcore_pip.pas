@@ -18,7 +18,7 @@ uses
   opstackdefines;
 
 procedure ProtocolSupportInquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 
 implementation
 
@@ -26,8 +26,8 @@ procedure ProtocolSupportInquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNo
 var
   NewMessage: POPStackMessage;
 begin
-  // Since we don't implement extended protocols yet just reply when we see the start bit set (active 0)
-  if AMessage^.DestFlags and PIP_EXTENSION_START_BIT_MASK = 0 then
+  // Since we don't implement extended protocols yet just reply when we see the start bit set
+  if AMessage^.FramingBits and PIP_EXTENSION_END_BIT = 0 then
   begin
     NewMessage := nil;
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
@@ -37,12 +37,12 @@ begin
   end
 end;
 
-procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   i, j: Integer;
 begin
   MessageToSend := nil;
-  if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_PROTOCOL_SUPPORT_REPLY, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID) then
+  if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_PROTOCOL_SUPPORT_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
     for i := 0 to 8 - 1 do                                            // Since we are OR'ing we need to start in a known state
       MessageToSend^.Buffer^.DataArray[i] := 0;
