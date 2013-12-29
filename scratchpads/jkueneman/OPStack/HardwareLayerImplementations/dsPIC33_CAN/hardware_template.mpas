@@ -4,7 +4,7 @@ unit hardware_template;
 {$I Options.inc}
 
 uses
-  gridconnect,
+  dsPIC33_CAN,
   opstackbuffers,
   opstackdefines,
   opstackcanstatemachinesbuffers;
@@ -21,6 +21,15 @@ procedure OutgoingMessage(AMessage: POPStackMessage);                           
 procedure ProcessHardwareMessages;
 function IsOutgoingBufferAvailable: Boolean;
 
+procedure ReceivedOnFilter0(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter1(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter2(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter3(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter4(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter5(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter6(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+
+
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
@@ -34,16 +43,46 @@ implementation
 
 type
   THardware = record
-    InterruptDisableCount: Integer;                                                // Allows stacked calls to Disable/Enable Interrupts (if used)
+    InterruptDisableCount: Integer;                                             // Allows stacked calls to Disable/Enable Interrupts (if used)
+    OutgoingTxBuffer: TNMRAnetCanBuffer;
+    OutgoingHighPriortyTxBuffer: TNMRAnetCanBuffer;
+    OutgoingTxBufferEmpty: Boolean;
+    OutgoingHighPriortyTxBufferEmpty: Boolean;
+    OutgoingBufferOverrun,
+    OutgoingHighPriorityBufferOverrun: Boolean;
   end;
 
 var
   Hardware: THardware;
 
+// *****************************************************************************
+//  procedure Hardware_Initialize
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure Hardware_Initialize;
 begin
+  dsPIC33_CAN_Initialize;
+  OPStackCANStatemachineBuffers_Initialize;
   Hardware.InterruptDisableCount := 0;
-  GridConnect_Initialize;                                                       // This is here because it only is needed if we are using a GridConnect interface
+  Hardware.OutgoingTxBufferEmpty := True;
+  Hardware.OutgoingHighPriortyTxBufferEmpty := True;
+  Hardware.OutgoingBufferOverrun := False;
+  Hardware.OutgoingHighPriorityBufferOverrun := False;
+end;
+
+// *****************************************************************************
+//  procedure Hardware_Initialize
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure CopyNMRAnetCanBuffers(SourceBuffer, DestBuffer: PNMRAnetCanBuffer);
+begin
+  DestBuffer^.MTI := SourceBuffer^.MTI;
+  DestBuffer^.PayloadCount := SourceBuffer^.PayloadCount;
+  DestBuffer^.Payload := SourceBuffer^.Payload;
 end;
 
 // *****************************************************************************
@@ -60,6 +99,8 @@ procedure Hardware_DisableInterrupts;
 begin
   // Disable Any interrupts here
   Inc(Hardware.InterruptDisableCount);
+  if Hardware.InterruptDisableCount = 1 then
+    dsPIC33_CAN_GlobalInterruptCAN_Event(False);
 end;
 
 // *****************************************************************************
@@ -78,13 +119,36 @@ begin
   if Hardware.InterruptDisableCount <= 0 then
   begin
     // Enable any Interrupts here
+    dsPIC33_CAN_GlobalInterruptCAN_Event(True);
     Hardware.InterruptDisableCount := 0;
   end;
 end;
 
+// *****************************************************************************
+//  procedure OutgoingCriticalMessage
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
 procedure OutgoingCriticalMessage(AMessage: POPStackMessage);
+var
+  NMRAnetCanBuffer: TNMRAnetCanBuffer;
 begin
-  OutgoingMessage(AMessage)  // For Ethernet this is no different than a nomral Message
+  if not dsPIC33_CAN_HighPriorityTransmitting then
+  begin
+    if AMessage^.MessageType and MT_MASK = MT_SIMPLE then
+    begin
+      OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
+   //   CopyNMRAnetCanBuffers(@NMRAnetCanBuffer, @Hardware.OutgoingTxBuffer);
+   //   dsPIC33_StartCANHighPriorityMessageEngine(@Hardware.OutgoingHighPriortyTxBuffer, True);
+      dsPIC33_StartCANHighPriorityMessageEngine(@NMRAnetCanBuffer, True);
+      Hardware.OutgoingHighPriortyTxBufferEmpty := True;
+      OPStackBuffers_DeAllocateMessage(AMessage);
+    end;
+  end else
+  begin
+    Hardware.OutgoingHighPriorityBufferOverrun := True;
+  end
 end;
 
 // *****************************************************************************
@@ -97,76 +161,117 @@ end;
 // *****************************************************************************
 procedure OutgoingMessage(AMessage: POPStackMessage);
 var
-  GridConnectStr: TGridConnectString;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
 begin
-  GridConnectStr[0] := #0;                                                       // Quiet the compiler
-  case AMessage^.MessageType and MT_MASK of
-    MT_SIMPLE :
-        begin
-          OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
-          GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GridConnectStr);
-          OPStackBuffers_DeAllocateMessage(AMessage);
-
-          {$IFDEF FPC}
-          if Assigned(ListenerThread) then
-            ListenerThread.Send(GridConnectStr)
-          else if Assigned(ClientThread) then
-            ClientThread.Send(GridConnectStr);
-          {$ENDIF}
-        end;
-    MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
-    MT_ACDISNIP : OPStackCANStatemachineBuffers_AddOutgoingAcdiSnipMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
-    {$IFDEF SUPPORT_STREAMS}
-    MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage)     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
-    {$ENDIF}
-  else
-     OPStackBuffers_DeAllocateMessage(AMessage);
+  if IsOutgoingBufferAvailable then
+  begin
+    case AMessage^.MessageType and MT_MASK of
+      MT_SIMPLE :
+          begin
+            OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
+       //     CopyNMRAnetCanBuffers(@NMRAnetCanBuffer, @Hardware.OutgoingTxBuffer);
+       //     dsPIC33_StartTransmission(@Hardware.OutgoingTxBuffer, True);
+            dsPIC33_StartTransmission(@NMRAnetCanBuffer, True);
+            Hardware.OutgoingTxBufferEmpty := True;
+            OPStackBuffers_DeAllocateMessage(AMessage);
+          end;
+      MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+      MT_ACDISNIP : OPStackCANStatemachineBuffers_AddOutgoingAcdiSnipMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+      {$IFDEF SUPPORT_STREAMS}
+      MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage)     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+      {$ENDIF}
+    else
+       OPStackBuffers_DeAllocateMessage(AMessage);
+    end;
+  end else
+  begin
+    Hardware.OutgoingBufferOverrun := True;
   end;
 end;
 
-function IsOutgoingBufferAvailable: Boolean;
-begin
-  Result := True
-end;
-
-procedure ProcessHardwareMessages;
-begin
-  if IsOutgoingBufferAvailable then
-    OPStackCANStatemachine_ProcessMessages;
-end;
-
 // *****************************************************************************
-//  procedure DispatchGridConnectStr
+//  procedure IsOutgoingBufferAvailable
 //    Parameters:
 //    Result:
-//    Description:   called to setup a received message in GridConnect format into
-//                   a format the OPStack can use.  NOTE: The buffer that is sent to
-//                   IncomingMessageCallback is NOT from the allocated buffer Pool
-//                   and will be gone when this function returns.  You MUST copy
-//                   the contents of it if needed
+//    Description:
 // *****************************************************************************
-procedure DispatchGridConnectStr(GridConnectStrPtr: PGridConnectString);
+function IsOutgoingBufferAvailable: Boolean;
+begin
+  Result := not dsPIC33_CAN_Transmitting
+end;
+
+// *****************************************************************************
+//  procedure ProcessHardwareMessages
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure ProcessHardwareMessages;
+begin
+  OPStackCANStatemachine_ProcessMessages;
+end;
+
+// *****************************************************************************
+//  procedure ReceivedOnFilter0
+//    Parameters:
+//    Result:
+//    Description: CAN Layer message on Filter 0
+// *****************************************************************************
+procedure ReceivedOnFilter0(NMRAnetCanBuffer: PNMRAnetCanBuffer);
 var
-  GridConnectBuffer: TNMRAnetCanBuffer;
   OPStackMessage: TOPStackMessage;
   OPStackMessagePtr: POPStackMessage;
   Buffer: TSimpleBuffer;
   SourceNode, DestNode: PNMRAnetNode;
 begin
-  GridConnectBuffer.MTI := 0;                                                   // Quite the compiler
   OPStackBuffers_ZeroMessage(@OPStackMessage);
   OPStackBuffers_ZeroSimpleBuffer(@Buffer, False);
   OPStackMessage.Buffer := @Buffer;
-  GridConnect_ToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);        // Parse the string into a Grid Connect Data structure
   OPStackMessagePtr := @OPStackMessage;                                         // The message object may change on us if it is a datagram, stream or SNIP/ACDI
-  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(GridConnectBuffer, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer^, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
   begin
     if OPStackMessagePtr^.MessageType and MT_HIGH_PRIORITY_SEND  <> 0 then      // The incoming message may not be able to be handled and we need to reply with a fast answer to a buffer that can never be full
       OutgoingCriticalMessage(OPStackMessagePtr)
     else
       IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
   end;
+end;
+
+// *****************************************************************************
+//  procedure ReceivedOnFilter1
+//    Parameters:
+//    Result:
+//    Description: NMRAnet Layer message on Filter 1    
+//                 In the new library the split is handled internally to it
+// *****************************************************************************
+procedure ReceivedOnFilter1(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+  ReceivedOnFilter0(NMRAnetCanBuffer);
+end; 
+
+procedure ReceivedOnFilter2(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter3(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter4(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter5(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter6(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
 end;
 
 end.

@@ -1,7 +1,34 @@
 program First_OPStack_Demo;
 
+uses
+  MCU_Setup_dsPIC33EPxxxGP5xx,
+  opstackcore,
+  hardware_template;
+
 { Declarations section }
 
+procedure OPStack_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT; ics ICS_AUTO;
 begin
-  { Main program }
+  T2IF_bit := 0;
+  OPStackCore_Timer;
+end;
+
+begin
+  { Main program }      
+  MCU_Setup_Initialize(True);
+  OPStackCore_Initialize;
+  MCU_Enable_CAN;
+  OPStackCore_Enable(True);
+  TON_T2CON_bit := 1;       // Turn on
+  
+  UART1_Write_Text('Configured' + LF);
+  
+  OPStackNode_PrintPool;
+  
+  while True do
+  begin
+    OPStackCore_Process;
+    //Delay_1mS;
+  end;
+  UART1_Write_Text('oops'+LF);
 end.

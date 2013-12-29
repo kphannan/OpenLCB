@@ -145,9 +145,9 @@ begin
                     if DatagramMessage <> nil then
                       OPStackBuffers_DeAllocateMessage(DatagramMessage);          // If there is an error need to flush the buffer
                     case DatagramProcessErrorCode of
-                      DATAGRAM_PROCESS_ERROR_BUFFER_FULL         : DatagramError := @DATAGRAM_RESULT_REJECTED_BUFFER_FULL;
-                      DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := @DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER;
-                      DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := @DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED;
+                      DATAGRAM_PROCESS_ERROR_BUFFER_FULL         : DatagramError := PSimpleDataArray( @DATAGRAM_RESULT_REJECTED_BUFFER_FULL);
+                      DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER);
+                      DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED);
                     end;
                     OPStackMessage^.MTI := MTI_DATAGRAM_REJECTED_REPLY;
                     OPStackMessage^.MessageType := OPStackMessage^.MessageType or MT_HIGH_PRIORITY_SEND;

@@ -7,13 +7,9 @@ interface
 {$I Options.inc}
 
 uses
-  {$IFDEF HARDWARE_TEMPLATE}
   hardware_template,
   template_node,
   template_vnode,
-  {$ENDIF}
-  {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
-  {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
   nmranetutilities,
   opstackdefines;
 
@@ -28,7 +24,7 @@ type
     Pool: array[0..USER_MAX_NODE_COUNT-1] of TNMRAnetNode;                      // Node [0] is ALWAYS the physical node
     AllocatedList: array[0..USER_MAX_NODE_COUNT-1] of PNMRAnetNode;             // Node List sorted by Alias
     AllocatedCount: Integer;                                                    // Number of Nodes Allocated
-    iActiveNode: Word;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
+    iActiveNode: Integer;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
   end;
   PNodePool = ^TNodePool;
 
@@ -79,10 +75,49 @@ function OPStackNode_NextStateMachineMessage(Node: PNMRAnetNode): POPStackMessag
 
 function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 
+procedure OPStackNode_PrintPool;
+
 var
   NodePool: TNodePool;
 
 implementation
+
+procedure OPStackNode_PrintPool;
+var
+  i: Integer;
+begin
+  UART1_Write_Text('NodePool Info' + LF);
+  WordToStr(USER_MAX_NODE_COUNT, s1);
+  UART1_Write_Text('Max Nodes Available: ' + s1 + LF);
+  IntToStr(NodePool.iActiveNode, s1);
+  UART1_Write_Text('ActiveNode: ' + s1 + LF);
+  IntToStr(NodePool.AllocatedCount, s1);
+  UART1_Write_Text('AllocatedCount: ' + s1 + LF);
+  
+  for i := 0 to USER_MAX_NODE_COUNT - 1 do
+  begin
+    IntToStr(i, s1);
+    UART1_Write_Text('Node: ' + s1 + LF);
+    ByteToStr(NodePool.Pool[i].iIndex, s1);
+    UART1_Write_Text('  iIndex: ' + s1 + LF);
+    ByteToHex(NodePool.Pool[i].State, s1);
+    UART1_Write_Text('  State: ' + s1 + LF);
+    WordToHex(NodePool.Pool[i].Flags, s1);
+    UART1_Write_Text('  Flags: ' + s1 + LF);
+    WordToStr(NodePool.Pool[i].IncomingMessages, s1);
+    UART1_Write_Text('  IncomingMessages: ' + s1 + LF);
+    WordToStr(NodePool.Pool[i].StateMachineMessages, s1);
+    UART1_Write_Text('  StateMachineMessages: ' + s1 + LF);
+    ByteToStr(NodePool.Pool[i].iStateMachine, s1);
+    UART1_Write_Text('  iStateMachine: ' + s1 + LF);
+  end;
+  
+  for i := 0 to USER_MAX_NODE_COUNT - 1 do
+  begin
+    WordToHex(NodePool.AllocatedList[i], s1);
+    UART1_Write_Text('AllocatedList: 0x' + s1 + LF);
+  end;
+end;
 
 // *****************************************************************************
 //  procedure FindFreeNodeToAllocate;
@@ -119,6 +154,9 @@ var
   i: Integer;
   Node: PNMRAnetNode;
 begin
+  NodePool.AllocatedCount := 0;                                                    // Number of Nodes Allocated
+  NodePool.iActiveNode := 0;
+  
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
   begin
     Node := @NodePool.Pool[i];
@@ -129,6 +167,7 @@ begin
     Node^.Info.ID[0] := NodeID_LO + i;         // Picked up from the NodeID.inc file
     Node^.Info.ID[1] := NodeID_HI;
     Node^.Login.Seed := Node^.Info.ID;
+    NodePool.AllocatedList[i] := nil;
   end;
 end;
 
@@ -273,7 +312,6 @@ end;
 // *****************************************************************************
 function OPStackNode_NextNode: PNMRAnetNode;
 begin
-  Hardware_DisableInterrupts;
   Result := PNMRAnetNode( nil);
   if NodePool.AllocatedCount > 0 then
   begin
@@ -282,7 +320,6 @@ begin
     Result := NodePool.AllocatedList[NodePool.iActiveNode];
     Inc(NodePool.iActiveNode);
   end;
-  Hardware_EnableInterrupts
 end;
 
 // *****************************************************************************
@@ -296,7 +333,7 @@ procedure OPStackNode_ZeroizeNode(Node: PNMRAnetNode);
 var
   j: Integer;
 begin
-
+  Node^.State := NS_EMPTY;
   Node^.Login.iCID := 0;
   Node^.Login.TimeCounter := 0;
   Node^.Info.AliasID := 0;
@@ -307,6 +344,9 @@ begin
     Node^.Events.Produced[j] := 0;
   for j := 0 to USER_MAX_PCER_BYTES - 1 do
     Node^.Events.PCER[j] := 0;
+  Node^.IncomingMessages := nil;
+  Node^.StateMachineMessages := nil;
+  Node^.Flags := 0;
 end;
 
 // *****************************************************************************

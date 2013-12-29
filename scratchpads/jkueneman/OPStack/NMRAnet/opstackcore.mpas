@@ -14,10 +14,7 @@ interface
 {$I Options.inc}
 
 uses
-  // Compile in different hardware layer interfaces here
-  {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
-  {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
-  {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
+  hardware_template,
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
@@ -35,11 +32,13 @@ uses
   opstackcore_learn,
   opstackcore_datagram;
 
+// User callable functions
 procedure OPStackCore_Initialize;                                               // Call once on program startup
 procedure OPStackCore_Process;                                                  // Call as often as possible
 procedure OPStackCore_Timer;                                                    // Call every 100ms
+procedure OPStackCore_Enable(DoEnable: Boolean);                                // Enable Process Statemachine
 
-// Callback from the Hardware when a message is received
+// Callback from the Hardware when a message is received do not call directly
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode);
 
 var
@@ -56,6 +55,7 @@ implementation
 procedure OPStackCore_Initialize;
 begin
   OPStack.State := 0;
+  Hardware_Initialize;
   OPStackNode_Initialize;
   OPStackBuffers_Initialize;
   OPStackCoreDatagram_Initialize;
@@ -205,49 +205,52 @@ var
   i, j: Integer;
   OPStackMessage: POPStackMessage;
 begin
-  if OPStackNode_TestState(Node, NS_RELEASING) then
+  if IsOutgoingBufferAvailable then
   begin
-    OPStackMessage := nil;
-    DoDeallocate := False;
-
-    if OPStackNode_TestState(Node, NS_PERMITTED) then
+    if OPStackNode_TestState(Node, NS_RELEASING) then
     begin
-       if not OPStackNode_IsAnyEventSet(Node^.Events.Consumed) then
-         if not OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
-           if not OPStackNode_IsAnyPCER_Set(Node) then
-             if Node^.Flags = 0 then
-               if Node^.IncomingMessages = nil then
-                 if Node^.StateMachineMessages = nil then
-                   if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
-                   begin
-                     NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
-                     OPStackMessage^.Buffer^.DataBufferSize := 6;
-                     OutgoingMessage(OPStackMessage); // Tell the network we are leaving
-                     DoDeallocate := True;
-                   end;
-    end else
-      DoDeallocate := True;                                                   // If it is not in the Permitted state then we are not allowed to send a AMR so just free it
+      OPStackMessage := nil;
+      DoDeallocate := False;
 
-    if DoDeallocate then
-    begin
-      i := 0;
-      while i < NodePool.AllocatedCount do                                         // Search the Allocated List to remove it if it has made it into the list
+      if OPStackNode_TestState(Node, NS_PERMITTED) then
       begin
-        if NodePool.AllocatedList[i] = Node then                                   // Found the node
+         if not OPStackNode_IsAnyEventSet(Node^.Events.Consumed) then
+           if not OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
+             if not OPStackNode_IsAnyPCER_Set(Node) then
+               if Node^.Flags = 0 then
+                 if Node^.IncomingMessages = nil then
+                   if Node^.StateMachineMessages = nil then
+                     if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                     begin
+                       NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+                       OPStackMessage^.Buffer^.DataBufferSize := 6;
+                       OutgoingMessage(OPStackMessage); // Tell the network we are leaving
+                       DoDeallocate := True;
+                     end;
+      end else
+        DoDeallocate := True;                                                   // If it is not in the Permitted state then we are not allowed to send a AMR so just free it
+
+      if DoDeallocate then
+      begin
+        i := 0;
+        while i < NodePool.AllocatedCount do                                         // Search the Allocated List to remove it if it has made it into the list
         begin
-          NodePool.AllocatedList[i] := PNMRAnetNode( nil);                         // Nil it in the Allocated List
-          j := i;
-          while j < NodePool.AllocatedCount - 1 do                                 // Now Pack the list, moving higher indexed Nodes down one
+          if NodePool.AllocatedList[i] = Node then                                   // Found the node
           begin
-            NodePool.AllocatedList[j] := NodePool.AllocatedList[j + 1];
-            NodePool.AllocatedList[j + 1] := PNMRAnetNode( nil);
-            Inc(j);
+            NodePool.AllocatedList[i] := PNMRAnetNode( nil);                         // Nil it in the Allocated List
+            j := i;
+            while j < NodePool.AllocatedCount - 1 do                                 // Now Pack the list, moving higher indexed Nodes down one
+            begin
+              NodePool.AllocatedList[j] := NodePool.AllocatedList[j + 1];
+              NodePool.AllocatedList[j + 1] := PNMRAnetNode( nil);
+              Inc(j);
+            end;
+            Dec(NodePool.AllocatedCount);
+            Node^.State := NS_EMPTY;                                               // Do this last so item is not allocated in an interrupt half way through this
+            Break
           end;
-          Dec(NodePool.AllocatedCount);
-          Node^.State := NS_EMPTY;                                               // Do this last so item is not allocated in an interrupt half way through this
-          Break
+          Inc(i);
         end;
-        Inc(i);
       end;
     end;
   end;
@@ -355,9 +358,12 @@ procedure OPStackCore_Timer;
 var
   i: Integer;
 begin
-  for i := 0 to NodePool.AllocatedCount - 1 do
-    Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
-  OPStackBuffers_Timer;
+  if OPStack.State and OPS_PROCESSING <> 0 then
+  begin
+    for i := 0 to NodePool.AllocatedCount - 1 do
+      Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
+    OPStackBuffers_Timer;
+  end;
 end;
 
 // *****************************************************************************
@@ -480,16 +486,13 @@ begin
         if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
         begin
           Node^.iStateMachine := STATE_NODE_PERMITTED;
-          Hardware_DisableInterrupts;                                             // don't get stomped on by an incoming message within an interrupt
           IncomingMessageDispatch(OPStackMessage, Node, nil);
           OPStackBuffers_DeAllocateMessage(OPStackMessage);
-          Hardware_EnableInterrupts;
         end
       end;
     STATE_NODE_PERMITTED :
       begin
-        Hardware_DisableInterrupts;
-        if IsOutgoingBufferAvailable then                                         // Make sure the Node is competely finished sending updates/datagrams/streams/etc
+        if IsOutgoingBufferAvailable then
         begin
           if NodeRunPCERFlagsReply(Node, OPStackMessage) then
             OutgoingMessage(OPStackMessage)
@@ -502,18 +505,9 @@ begin
           else
           if NodeRunMessageBufferReply(Node, OPStackMessage) then
             OutgoingMessage(OPStackMessage);
-
-      (*        if not (Node) then
-                {$IFDEF SUPPORT_STREAMS}
-                if not NodeRunOutgoingStreamStateMachine(Node) then
-                  if not NodeRunIncomingStreamStateMachine(Node) then
-                {$ENDIF}
-
-            }           *)
           ProcessMarkedForDelete(Node);                                           // Handle vNodes marked to be deleted
           ProcessAbandonMessages(Node);
         end;
-        Hardware_EnableInterrupts;
       end;
     STATE_NODE_INHIBITED :
       begin
@@ -575,11 +569,21 @@ var
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
+    Hardware_DisableInterrupts;
     Node := OPStackNode_NextNode;
     if Node <> nil then
       NodeRunStateMachine(Node);
     ProcessHardwareMessages;
+    Hardware_EnableInterrupts;
   end;
+end;
+
+procedure OPStackCore_Enable(DoEnable: Boolean);
+begin
+  if DoEnable then
+    OPStack.State := OPStack.State or OPS_PROCESSING
+  else
+    OPStack.State := OPStack.State and not OPS_PROCESSING;
 end;
 
 end.

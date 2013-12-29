@@ -29,16 +29,17 @@ implementation
 procedure PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
 var
   LocalOutgoingMessage: POPStackMessage;
-begin
-  LocalOutgoingMessage := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingStreamStack(0);
-  if LocalOutgoingMessage <> nil then                                           // We just work this stack from the top down, for now
-    if IsOutgoingBufferAvailable then
+begin   
+  if IsOutgoingBufferAvailable then
+  begin
+    LocalOutgoingMessage := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingStreamStack(0);
+    if LocalOutgoingMessage <> nil then                                           // We just work this stack from the top down, for now
     begin
        LocalOutgoingMessage := LocalOutgoingMessage;
     end;
+  end;
 end;
 
 {$ENDIF}
 
 end.
-
