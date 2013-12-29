@@ -142,12 +142,9 @@ function IsOutgoingBufferAvailable: Boolean;
 // Callback to push received messages into the OPStack
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
 function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var NMRAnetCanBuffer: TNMRAnetCanBuffer; var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean; external;
-procedure OPStackCANStatemachine_ProcessMessages; external;   
+procedure OPStackCANStatemachine_ProcessMessages; external;
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
-
-// Test Only
-procedure DispatchGridConnectStr(GridConnectStrPtr: PGridConnectString);
 {$ENDIF}
 
 implementation
