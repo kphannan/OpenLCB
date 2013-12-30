@@ -26,18 +26,16 @@ uses
   {$ENDIF}
   opstacktypes;
 
-function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
+procedure TemplateConfiguration_Initialize;
+function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
+function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 
 implementation
 
-{$IFDEF FPC}
-const
-  MAX_MAP = $FFFF;
-var
-  ConfigurationMap: array[0..MAX_MAP - 1] of Byte;
-  i: Integer;
-{$ENDIF}
+procedure TemplateConfiguration_Initialize;
+begin
+
+end;
 
   // *****************************************************************************
   //  procedure AppCallback_ReadConfiguration
@@ -50,18 +48,8 @@ var
   //     Description: Override to read from the configuration memory (could be
   //                  SPI EEPROM, internal EEPROM, files, etc)
   // *****************************************************************************
-function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-var
-  i: Integer;
+function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
 begin
-  for i := 0 to ReadCount - 1 do
-  begin
-    {$IFDEF FPC}
-    if ConfigAddress < MAX_MAP then
-      DatagramData^ := ConfigurationMap[ConfigAddress+i];
-    Inc(DatagramData);
-    {$ENDIF}
-  end;
   Result := ReadCount;
 end;
 
@@ -76,26 +64,9 @@ end;
 //     Description: Override to write from the configuration memory (could be
 //                  SPI EEPROM, internal EEPROM, files, etc)
 // *****************************************************************************
-function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-var
-  i: Integer;
+function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 begin
-  for i := 0 to ReadCount - 1 do
-  begin
-    {$IFDEF FPC}
-    if ConfigAddress < MAX_MAP then
-      ConfigurationMap[ConfigAddress+i] := DatagramData^;
-    Inc(DatagramData);
-    {$ENDIF}
-  end;
-  Result := ReadCount;
+  Result := WriteCount;
 end;
 
-{$IFDEF FPC}
-initialization
-  for i := 0 to MAX_MAP - 1 do
-    ConfigurationMap[i] := 0;
-{$ENDIF}
-
 end.
-

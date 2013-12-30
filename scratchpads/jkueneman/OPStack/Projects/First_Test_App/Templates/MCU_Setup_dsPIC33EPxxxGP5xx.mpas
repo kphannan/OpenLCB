@@ -171,16 +171,6 @@ begin
   SPI1CON := SPI1CON or $0003 or $0018;  // Setup for 5 Mhz (with the CAN plug in boards)     $10=5Mhz, $14=6.67Mhz, $18 = 10Mhz
   SPIEN_bit := 1;    // Enable the SPI
 
-  TCS_T2CON_bit := 0;       // internal cycle clock
-  T2IP_0_bit := 1;          // Timer 2 Interrupt Priority = 5   (1 means off)
-  T2IP_1_bit := 0;
-  T2IP_2_bit := 1;
-  TCKPS_0_T2CON_bit := 1;   // 256 Prescaler
-  TCKPS_1_T2CON_bit := 1;
-  PR2 := 12500;             // Clock ticks every 31.25ns * 256 * 12500 = 100ms interrupts
-  T2IF_bit := 0;            // Clear T2IF
-  T2IE_bit := 1;            // Enable the Interrupt
-
   TCS_T1CON_bit := 0;       // internal cycle clock
   T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 5   (1 means off)
   T1IP_1_bit := 0;
@@ -190,6 +180,18 @@ begin
   PR1 := $FFFF;            // Clock ticks every 31.25ns * 256 * 65535 = 524.28ms interrupts       (64Mhz = 15.625ns * 2 cycle/instruction = 31.25ns)
   T1IF_bit := 0;           // Clear T1IF
   T1IE_bit := 1;           // Enable the Interrupt
+  TON_T1CON_bit := 0;       // Turn Off
+  
+  TCS_T2CON_bit := 0;       // internal cycle clock
+  T2IP_0_bit := 1;          // Timer 2 Interrupt Priority = 5   (1 means off)
+  T2IP_1_bit := 0;
+  T2IP_2_bit := 1;
+  TCKPS_0_T2CON_bit := 1;   // 256 Prescaler
+  TCKPS_1_T2CON_bit := 1;
+  PR2 := 12500;             // Clock ticks every 31.25ns * 256 * 12500 = 100ms interrupts
+  T2IF_bit := 0;            // Clear T2IF
+  T2IE_bit := 1;            // Enable the Interrupt
+  TON_T2CON_bit := 1;       // Turn on 100ms Timer
 
   TCS_T3CON_bit := 0;       // internal cycle clock
   T3IP_0_bit := 1;          // Timer 1 Interrupt Priority = 5   (1 means off)

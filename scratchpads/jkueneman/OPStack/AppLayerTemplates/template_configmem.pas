@@ -18,6 +18,8 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils,
   {$ENDIF}
+  template_node,
+  template_vnode,
   nmranetdefines,
   opstackdefines;
 
@@ -40,10 +42,6 @@ implementation
 function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 begin
   Result := True;
-  case AddressSpace of
-    MSI_ACDI_USER,
-    MSI_ACDI_MFG : Result := False;  // Not fully implemented yet
-  end;
 end;
 
 // *****************************************************************************

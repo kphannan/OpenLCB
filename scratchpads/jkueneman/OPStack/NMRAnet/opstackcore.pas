@@ -15,6 +15,7 @@ interface
 
 uses
   hardware_template,
+  template_configuration,
   nmranetutilities,
   nmranetdefines,
   opstackdefines,
@@ -55,6 +56,7 @@ implementation
 procedure OPStackCore_Initialize;
 begin
   OPStack.State := 0;
+  TemplateConfiguration_Initialize;
   Hardware_Initialize;
   OPStackNode_Initialize;
   OPStackBuffers_Initialize;

@@ -185,12 +185,11 @@ begin
   Result := False;
   DatagramMessage^.WatchDog := 0;
   DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
-  OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);                             // Recycle the Datagram Message
+  OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);                     // Recycle the Datagram Message, but BE CAREFUL not to clear needed incoming information that is needed!
   OPStackBuffers_SwapDestAndSourceIDs(DatagramMessage);
   DatagramMessage^.FramingBits := 0;
   DatagramBufferPtr^.CurrentCount := 0;
   DatagramBufferPtr^.ResendCount := 0;
-  DatagramBufferPtr^.DataBufferSize := 0;
   DatagramBufferPtr^.NextWaitingForAck := nil;
   case DatagramBufferPtr^.DataArray[0] of
       DATAGRAM_TYPE_MEMORY_CONFIGURATION :

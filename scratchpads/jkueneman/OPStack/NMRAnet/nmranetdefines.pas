@@ -5,10 +5,6 @@ interface
 {$ENDIF}
 
 const
-  ACDI_MFG_VERSION       = 1;
-  ACDI_USER_VERSION      = 1;
-
-const
   MTI_OLCB_MSG                              = $08000000;                        //
 
   MTI_CAN_CID0                              = $7000;                            // First 12 Bits of 48 bit Node ID

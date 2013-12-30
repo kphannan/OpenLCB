@@ -24,58 +24,39 @@ uses
   Classes,
   SysUtils,
   {$ENDIF}
+  _25AAxxxx,
   opstacktypes;
 
 procedure TemplateConfiguration_Initialize;
-function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
+function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
+function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 
 function AppCallback_ReadAcdiUser(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
 function AppCallback_WriteAcdiUser(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 
 implementation
 
-{$IFDEF FPC}
-const
-  MAX_MAP = $FFFF;
-var
-  ConfigurationMap: array[0..MAX_MAP - 1] of Byte;
-  i: Integer;
-{$ENDIF}
-
-  // *****************************************************************************
-  //  procedure TemplateConfiguration_Initialize
-  //     Parameters: : 
-  //     Returns:    
-  //     Description: 
-  // *****************************************************************************
 procedure TemplateConfiguration_Initialize;
 begin
+  _25AAxxxx_Initialize
 end;
 
-  // *****************************************************************************
-  //  procedure AppCallback_ReadConfiguration
-  //     Parameters: : ConfigAddress:  The offset into the flat address space to
-  //                                   start reading from
-  //                   ReadCount    :  The number of bytes to read
-  //                   DatagramData :  Pointer to the start of the Datagram Array
-  //                                   were to write the data to
-  //     Returns:    The number of bytes actually read;
-  //     Description: Override to read from the configuration memory (could be
-  //                  SPI EEPROM, internal EEPROM, files, etc)
-  // *****************************************************************************
-function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-var
-  i: Integer;
+// *****************************************************************************
+//  procedure AppCallback_ReadConfiguration
+//     Parameters: : ConfigAddress:  The offset into the flat address space to
+//                                   start reading from
+//                   ReadCount    :  The number of bytes to read
+//                   DatagramData :  Pointer to the start of the Datagram Array
+//                                   were to write the data to
+//     Returns:    The number of bytes actually read;
+//     Description: Override to read from the configuration memory (could be
+//                  SPI EEPROM, internal EEPROM, files, etc)
+// *****************************************************************************
+function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
 begin
-  for i := 0 to ReadCount - 1 do
-  begin
-    {$IFDEF FPC}
-    if ConfigAddress < MAX_MAP then
-      DatagramData^ := ConfigurationMap[ConfigAddress+i];
-    Inc(DatagramData);
-    {$ENDIF}
-  end;
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Read(EEPROM_BANK_0, ConfigAddress, ReadCount, ConfigData);
   Result := ReadCount;
 end;
 
@@ -90,20 +71,14 @@ end;
 //     Description: Override to write from the configuration memory (could be
 //                  SPI EEPROM, internal EEPROM, files, etc)
 // *****************************************************************************
-function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-var
-  i: Integer;
+function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 begin
-  for i := 0 to ReadCount - 1 do
-  begin
-    {$IFDEF FPC}
-    if ConfigAddress < MAX_MAP then
-      ConfigurationMap[ConfigAddress+i] := DatagramData^;
-    Inc(DatagramData);
-    {$ENDIF}
-  end;
-  Result := ReadCount;
+  while _25AAxxxx_Busy(EEPROM_BANK_0) do
+    Delay_us(10);
+  _25AAxxxx_Write(EEPROM_BANK_0, ConfigAddress, WriteCount, ConfigData);
+  Result := WriteCount;
 end;
+
 
 // *****************************************************************************
 //  procedure AppCallback_ReadAcdiUser
@@ -122,7 +97,7 @@ begin
   // that data starts after the user strings
   // The user can completly override this if desired, the library has filled in
   // The first 128 Bytes of the Configuration Memory are for the User Strings in this example
-  // (Version ID + 63 + 64) as defined in the Template_Node and Template_VNode files
+  // (Version ID + 63 + 64)
    Result := AppCallback_ReadConfiguration(ConfigAddress, ReadCount, ConfigData)
 end;
 
@@ -143,15 +118,8 @@ begin
   // that data starts after the user strings
   // The user can completly override this if desired, the library has filled in
   // The first 128 Bytes of the Configuration Memory are for the User Strings in this example
-  // (Version ID + 63 + 64)  as defined in the Template_Node and Template_VNode files
+  // (Version ID + 63 + 64)
    Result := AppCallback_WriteConfiguration(ConfigAddress, WriteCount, ConfigData)
 end;
 
-{$IFDEF FPC}
-initialization
-  for i := 0 to MAX_MAP - 1 do
-    ConfigurationMap[i] := 0;
-{$ENDIF}
-
 end.
-

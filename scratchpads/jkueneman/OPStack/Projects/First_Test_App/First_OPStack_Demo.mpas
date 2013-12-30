@@ -2,10 +2,16 @@ program First_OPStack_Demo;
 
 uses
   MCU_Setup_dsPIC33EPxxxGP5xx,
-  opstackcore,
-  hardware_template;
+  opstackcore;
 
 { Declarations section }
+
+var
+  // EEPROM SPI PINS
+  CS_Bank_0                         : sbit at LATB6_bit;
+  CS_Bank_0_Direction               : sbit at TRISB6_bit;
+  EE_PROM_Hold                      : sbit at LATB5_bit;
+  EEPROM_Hold_Direction             : sbit at TRISB5_bit;
 
 procedure OPStack_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT; ics ICS_AUTO;
 begin
@@ -13,22 +19,23 @@ begin
   OPStackCore_Timer;
 end;
 
+var
+  EEPROM_Buffer: string[16];
+  
 begin
   { Main program }      
   MCU_Setup_Initialize(True);
   OPStackCore_Initialize;
   MCU_Enable_CAN;
   OPStackCore_Enable(True);
-  TON_T2CON_bit := 1;       // Turn on
   
   UART1_Write_Text('Configured' + LF);
-  
-  OPStackNode_PrintPool;
-  
+
+  //DumpEEProm(False, 0, 128);
+
   while True do
   begin
     OPStackCore_Process;
     //Delay_1mS;
   end;
-  UART1_Write_Text('oops'+LF);
 end.

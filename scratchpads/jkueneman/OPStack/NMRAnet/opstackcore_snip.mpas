@@ -42,30 +42,26 @@ begin
   begin
     AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
     AcdiSnipBufferPtr^.DataBufferSize := 0;
-    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := ACDI_MFG_VERSION;
-    Inc(AcdiSnipBufferPtr^.DataBufferSize);
-    j := 0;
     if Node^.State and NS_VIRTUAL <> 0 then
     begin
-      while j < USER_VNODE_MAX_ACDI_MFG_ARRAY do
+      while AcdiSnipBufferPtr^.DataBufferSize < USER_VNODE_MAX_ACDI_MFG_ARRAY do
       begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_VNODE_ACDI_MFG_STRINGS[j];
+        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_VNODE_ACDI_MFG_STRINGS[AcdiSnipBufferPtr^.DataBufferSize];
         Inc(AcdiSnipBufferPtr^.DataBufferSize);
-        Inc(j)
       end;
     end else
     begin
-      while j < USER_MAX_ACDI_MFG_ARRAY do
+      while AcdiSnipBufferPtr^.DataBufferSize < USER_MAX_ACDI_MFG_ARRAY do
       begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_ACDI_MFG_STRINGS[j];
+        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_ACDI_MFG_STRINGS[AcdiSnipBufferPtr^.DataBufferSize];
         Inc(AcdiSnipBufferPtr^.DataBufferSize);
-        Inc(j)
       end;
     end;
-    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := ACDI_USER_VERSION;
-    Inc(AcdiSnipBufferPtr^.DataBufferSize);
-
+    
+    
     // Need to read configuration memory here in a callback
+    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 1;
+    Inc(AcdiSnipBufferPtr^.DataBufferSize);
     j := 0;
     while j < 2 do
     begin
