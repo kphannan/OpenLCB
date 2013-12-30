@@ -75,13 +75,16 @@ function OPStackNode_NextStateMachineMessage(Node: PNMRAnetNode): POPStackMessag
 
 function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 
+{$IFNDEF FPC}
 procedure OPStackNode_PrintPool;
+{$ENDIF}
 
 var
   NodePool: TNodePool;
 
 implementation
 
+{$IFNDEF FPC}
 procedure OPStackNode_PrintPool;
 var
   i: Integer;
@@ -118,6 +121,7 @@ begin
     UART1_Write_Text('AllocatedList: 0x' + s1 + LF);
   end;
 end;
+{$ENDIF}
 
 // *****************************************************************************
 //  procedure FindFreeNodeToAllocate;

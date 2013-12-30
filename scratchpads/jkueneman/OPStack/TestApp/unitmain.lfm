@@ -112,7 +112,7 @@ object Form1: TForm1
     Left = 16
     Height = 18
     Top = 88
-    Width = 121
+    Width = 122
     Caption = 'Disable Logging'
     OnChange = CheckBoxDisableLoggingChange
     TabOrder = 8

@@ -10,9 +10,7 @@ uses
   Classes, SysUtils, FileUtil, SynEdit, SynMemo, Forms, Controls, Graphics,
   Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, opstackcore, opstacknode, SynEditKeyCmds,
   LCLType,
-  {$IFDEF HARDWARE_TEMPLATE}hardware_template,{$ENDIF}
-  {$IFDEF HARDWARE_DSPIC_CAN}hardware_dspic_CAN,{$ENDIF}
-  {$IFDEF HARDWARE_ENC28J60}hardware_ENC28j60,{$ENDIF}
+  hardware_template,
   opstackbuffers,
   olcb_utilities,
   opstacktypes,

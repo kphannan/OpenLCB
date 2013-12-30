@@ -33,9 +33,10 @@ var
   LocalOutgoingMessagePtr: POPStackMessage;
   LocalBuffer: TSimpleBuffer;
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
-begin
-  LocalOutgoingMessagePtr := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingAcdiSnipStack(0);
+begin            
   if IsOutgoingBufferAvailable then
+  begin
+    LocalOutgoingMessagePtr := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingAcdiSnipStack(0);
     if LocalOutgoingMessagePtr <> nil then
     begin
       AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
@@ -60,7 +61,7 @@ begin
         OPStackBuffers_DeAllocateMessage(LocalOutgoingMessagePtr);
       end;
     end;
+  end;
 end;
 
 end.
-

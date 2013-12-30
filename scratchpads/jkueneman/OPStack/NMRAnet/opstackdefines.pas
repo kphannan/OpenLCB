@@ -10,13 +10,14 @@ interface
 
 
 uses
-  {$IFDEF HARDWARE_TEMPLATE}
   template_node,
   template_vnode,
-  {$ENDIF}
   opstacktypes,
   template_buffers;
 
+const
+  LF = #13+#10;
+  
 const
   MAX_BUS_LOGIN_TIMEOUT = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
 
@@ -282,6 +283,9 @@ type
     PayloadCount: Byte;
   end;
   PNMRAnetCanBuffer = ^TNMRAnetCanBuffer;
+  
+var
+  s1: string[128];
 
 
 implementation
