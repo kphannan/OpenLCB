@@ -1,0 +1,52 @@
+// ****************************************************************************
+//  Uses FLASH to store a structure
+//  Store all non-volatile data in a structure that you need
+//  on power on. Size limit using this code is 1K.
+// ****************************************************************************
+unit dsPIC33_Flash_EEPROM;
+
+uses
+  opstacktypes;
+
+procedure EEsim_Clear(BaseAddress: LongInt);
+procedure EEsim_Write(BaseAddress: LongInt; DataBytes: PByte);
+procedure EEsim_Read(BaseAddress: LongInt; DataBytes: PByte; Count: Integer);
+
+implementation
+
+procedure EEsim_Clear(BaseAddress: LongInt);
+begin
+  FLASH_Erase(BaseAddress);  // setup 1K FLASH
+end;
+  
+procedure EEsim_Write(BaseAddress: LongInt; DataBytes: PByte);
+var
+  i: Integer;
+begin
+  for i := 0 to 7 do
+  begin
+    FLASH_Write_Compact(BaseAddress, DataBytes);
+    DataBytes := DataBytes + 128;
+    BaseAddress := BaseAddress + 128;
+  end;
+end;
+
+
+procedure EEsim_Read(BaseAddress: LongInt; DataBytes: PByte; Count: Integer);
+var
+  LoopCount, Remainder, i: Integer;
+begin
+  LoopCount := Count div 192;
+  Remainder := Count mod 192;
+  while LoopCount > 0 do
+  begin
+    FLASH_Read_Compact(BaseAddress, DataBytes, 192);
+    DataBytes := DataBytes + 128;
+    BaseAddress := BaseAddress + 128;
+    Dec(LoopCount);
+  end;
+  if Remainder > 0 then
+    FLASH_Read_Compact(BaseAddress, DataBytes, Remainder);
+end;
+
+end.

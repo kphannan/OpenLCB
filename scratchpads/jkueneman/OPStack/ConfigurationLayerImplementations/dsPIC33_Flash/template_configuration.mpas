@@ -13,22 +13,18 @@
 
 unit template_configuration;
 
-{$IFDEF FPC}
-interface
-{$ENDIF}
-
 {$I Options.inc}
 
 uses
-  {$IFDEF FPC}
-  Classes,
-  SysUtils,
-  {$ENDIF}
+  dsPIC33_Flash_EEPROM,
   opstacktypes;
 
 procedure TemplateConfiguration_Initialize;
 function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
 function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
+
+function AppCallback_ReadAcdiUser(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
+function AppCallback_WriteAcdiUser(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 
 implementation
 
@@ -67,6 +63,48 @@ end;
 function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
 begin
   Result := WriteCount;
+end;
+
+// *****************************************************************************
+//  procedure AppCallback_ReadAcdiUser
+//     Parameters: : ConfigAddress:  The offset into the flat address space to
+//                                   start reading from
+//                   ReadCount    :  The number of bytes to read
+//                   DatagramData :  Pointer to the start of the Datagram Array
+//                                   were to write the data to
+//     Returns:    The number of bytes actually read;
+//     Description: Override to read from the configuration memory (could be
+//                  SPI EEPROM, internal EEPROM, files, etc)
+// *****************************************************************************
+function AppCallback_ReadAcdiUser(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
+begin
+  // Here we use the same configuration memory for the AcdiUser strings as normal configuration memory
+  // that data starts after the user strings
+  // The user can completly override this if desired, the library has filled in
+  // The first 128 Bytes of the Configuration Memory are for the User Strings in this example
+  // (Version ID + 63 + 64)
+   Result := AppCallback_ReadConfiguration(ConfigAddress, ReadCount, ConfigData)
+end;
+
+// *****************************************************************************
+//  procedure AppCallback_WriteAcdiUser
+//     Parameters: : ConfigAddress:  Is the _beginning_ of the block of configruation memory
+//                                   for the node or vNode (offset 0)
+//                   ReadCount    :  The number of bytes to read
+//                   DatagramData :  Pointer to the start of the Datagram Array
+//                                   were to write the data to
+//     Returns:    The number of bytes actually written;
+//     Description: Override to read from the configuration memory (could be
+//                  SPI EEPROM, internal EEPROM, files, etc)
+// *****************************************************************************
+function AppCallback_WriteAcdiUser(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
+begin
+  // Here we use the same configuration memory for the AcdiUser strings as normal configuration memory
+  // that data starts after the user strings
+  // The user can completly override this if desired, the library has filled in
+  // The first 128 Bytes of the Configuration Memory are for the User Strings in this example
+  // (Version ID + 63 + 64)
+   Result := AppCallback_WriteConfiguration(ConfigAddress, WriteCount, ConfigData)
 end;
 
 end.
