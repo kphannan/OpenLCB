@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
+Value=First_OPStack_Demo.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -50,23 +50,25 @@ File29=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
 File30=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_DMA.mpas
 File31=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC_CAN_RawBuffers.mpas
 File32=Templates\MCU_Setup_dsPIC33EPxxxGP5xx.mpas
-File33=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\dsPIC33_Flash_EEPROM.mpas
-File34=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
+File33=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\_25AAxxxx.mpas
+File34=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\template_configuration.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=10
 File0=First_OPStack_Demo.mpas
 File1=..\..\NMRAnet\nmranetdefines.mpas
 File2=Templates\template_configmem.mpas
-File3=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\dsPIC33_Flash_EEPROM.mpas
-File4=..\..\NMRAnet\opstackcore.mpas
-File5=..\..\NMRAnet\opstacktypes.mpas
-File6=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
-File7=..\..\NMRAnet\opstackcore_configmem.mpas
+File3=..\..\NMRAnet\opstackcore.mpas
+File4=..\..\NMRAnet\opstacktypes.mpas
+File5=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
+File6=..\..\NMRAnet\opstackcore_configmem.mpas
+File7=..\..\NMRAnet\opstackcore_events.mpas
+File8=..\..\NMRAnet\opstacknode.mpas
+File9=Templates\MCU_Setup_dsPIC33EPxxxGP5xx.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -75,18 +77,17 @@ Count=0
 Count=1
 File0=Templates\Options.inc
 [SEARCH_PATH]
-Count=11
+Count=10
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\
+Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\FT800\Uses\
-Path5=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\Templates\
-Path6=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path8=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path9=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path10=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\dsPIC33_Flash\
+Path4=E:\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\Templates\
+Path5=E:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path6=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path7=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path8=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path9=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -103,5 +104,6 @@ File4=UART
 File5=FLASH
 [EXPANDED NODES]
 Node1=Sources
-Node2=Other Files
-Count=2
+Node2=Output Files
+Node3=Other Files
+Count=3

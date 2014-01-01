@@ -359,8 +359,8 @@ end;
 procedure OPStackCore_Timer;
 var
   i: Integer;
-begin
-  if OPStack.State and OPS_PROCESSING <> 0 then
+begin        
+  if OPStack.State and OPS_PROCESSING = OPS_PROCESSING then
   begin
     for i := 0 to NodePool.AllocatedCount - 1 do
       Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
@@ -492,7 +492,7 @@ begin
           OPStackBuffers_DeAllocateMessage(OPStackMessage);
         end
       end;
-    STATE_NODE_PERMITTED :
+    STATE_NODE_PERMITTED :                                                      // Saves 2us in the loop by putting this first and Exiting
       begin
         if IsOutgoingBufferAvailable then
         begin
@@ -510,6 +510,7 @@ begin
           ProcessMarkedForDelete(Node);                                           // Handle vNodes marked to be deleted
           ProcessAbandonMessages(Node);
         end;
+        Exit;
       end;
     STATE_NODE_INHIBITED :
       begin
@@ -569,7 +570,7 @@ procedure OPStackCore_Process;
 var
   Node: PNMRAnetnode;
 begin
-  if OPStack.State and OPS_PROCESSING <> 0 then
+  if OPStack.State and OPS_PROCESSING = OPS_PROCESSING then
   begin
     Hardware_DisableInterrupts;
     Node := OPStackNode_NextNode;

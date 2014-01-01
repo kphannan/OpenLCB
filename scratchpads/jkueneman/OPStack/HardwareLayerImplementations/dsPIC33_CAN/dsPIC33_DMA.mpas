@@ -22,16 +22,19 @@ unit dsPIC33_DMA;
 
 {$I Options.inc}
 
-{.$DEFINE PRINT_DMA_BUFFERS}
+{$DEFINE PRINT_DMA_BUFFERS}
 
 
 // WARNING:  For the dsPIC33EP this library only supports memory access in the DMAxSTAL and DMAxSBL space (16 bit memory address only)  The upper 8 bits MUST be 0 in the allocated RAM
 {$IFDEF P33EP64GP502} {$DEFINE dsPIC33EP_DMA} {$ENDIF}
 {$IFDEF P33EP128GP502} {$DEFINE dsPIC33EP_DMA}{$ENDIF}
 {$IFDEF P33EP256GP502} {$DEFINE dsPIC33EP_DMA}{$ENDIF}
+{$IFDEF P33EP512MU810} {$DEFINE dsPIC33EP_DMA}{$ENDIF}
 
 {$IFDEF P33FJ256GP710A} {$DEFINE dsPIC33_DMA} {$ENDIF}
 
+uses
+  dsPIC_CAN_RawBuffers;
 
 const
   ADDRESS_MODE_REG_INDIRECT_POST_INCREMENT    = 0;                              // The datasheet says this: The user application determines the latest DPSRAM transfer address offset by 
@@ -202,9 +205,9 @@ var
 begin
   RegPtr := MapToChannelReg(ChannelNumber, @DMA0CON);
   if Direction = DIRECTION_RAM_TO_PERIPHERAL then
-    RegPtr^.DIR_ := 1
+    RegPtr^.13 := 1                                 // DIR is not consistent across Def files, some have DIR_ some have DIR, just use the value
   else
-    RegPtr^.DIR_ := 0
+    RegPtr^.13 := 0
 end;
 
 // *****************************************************************************
@@ -560,10 +563,13 @@ end;
 
 {$IFDEF PRINT_DMA_BUFFERS}
 procedure PrintDMABuffers;
+const
+  LF = #13+#10;
 var
   i: Integer;
+  s1: array[128] of char;
 begin
-IntTohex(DMA0CON, s1);
+  IntTohex(DMA0CON, s1);
   UART1_Write_Text('DMA0CON = '+s1+'  ');
 
   IntTohex(DMA0REQ, s1);

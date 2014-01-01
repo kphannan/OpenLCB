@@ -29,13 +29,18 @@ begin
   MCU_Enable_CAN;
   OPStackCore_Enable(True);
   
+  TRISA4_bit := 0;  // Output
+  LATA4_bit := 0;
+  
   UART1_Write_Text('Configured' + LF);
 
   //DumpEEProm(False, 0, 128);
 
   while True do
   begin
+    LATA4_bit := 1;
     OPStackCore_Process;
-    //Delay_1mS;
+    LATA4_bit := 0;
+    Delay_10us;
   end;
 end.

@@ -79,6 +79,7 @@ const
   ICODE_RB30               = 30;        // RX Only
   ICODE_RB31               = 31;        // RX Only
   
+  
 procedure dsPIC33_CAN_Initialize;
 function dsPIC33_StartTransmission(Buffer: PNMRAnetCanBuffer; Extended: Boolean): Boolean;
 procedure dsPIC33_StartCANHighPriorityMessageEngine(Buffer: PNMRAnetCanBuffer; Extended: Boolean);
@@ -208,7 +209,10 @@ var
 
 implementation
 
-procedure dsPIC33_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var Extended: Boolean; Direction: Byte; CANPtr: ^Word); forward;
+type
+  TFarWord = Word; far;
+
+procedure dsPIC33_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var Extended: Boolean; Direction: Byte; CANPtr: ^TFarWord); forward;
 
 // ****************************************************************************
 // function dsPIC33_StartTransmission: Boolean;
@@ -360,7 +364,7 @@ end;
 //  The example code for the ECAN shows in the comments what is in the datasheet
 //  BUT.....  The code does exactly what I show above!!!!  Verified the datasheet is wrong
 // *****************************************************************************
-procedure dsPIC33_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var Extended: Boolean; Direction: Byte; CANPtr: ^Word);
+procedure dsPIC33_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var Extended: Boolean; Direction: Byte; CANPtr: ^TFarWord);
 begin
   if Direction = CAN_DIRECTION_WRITE then
   begin

@@ -1,0 +1,71 @@
+program UltimateCommandStation;
+
+{ Declarations section }
+
+// Serial Flash Chip Select connection
+var 
+  CS_Serial_Flash_bit: sbit at LATD14_bit;
+  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
+  
+// TFT module connections
+var 
+  TFT_DataPort : char  at LATE;
+  TFT_RST : sbit  at LATD7_bit;
+  TFT_BLED : sbit at LATD2_bit;
+  TFT_RS : sbit  at LATD9_bit;
+  TFT_CS : sbit  at LATD10_bit;
+  TFT_RD : sbit  at LATD5_bit;
+  TFT_WR : sbit  at LATD4_bit;
+  TFT_DataPort_Direction : char  at TRISE;
+  TFT_RST_Direction : sbit  at TRISD7_bit;
+  TFT_BLED_Direction : sbit at TRISD2_bit;
+  TFT_RS_Direction : sbit  at TRISD9_bit;
+  TFT_CS_Direction : sbit  at TRISD10_bit;
+  TFT_RD_Direction : sbit  at TRISD5_bit;
+  TFT_WR_Direction : sbit  at TRISD4_bit;
+// End TFT module connections
+
+
+procedure DrawFrame();
+begin
+  TFT_Fill_Screen(CL_WHITE);
+  TFT_Set_Pen(CL_BLACK, 1);
+  TFT_Line(20, 220, 300, 220);
+  TFT_LIne(20,  46, 300,  46);
+  TFT_Set_Font(@HandelGothic_BT21x22_Regular, CL_RED, FO_HORIZONTAL);
+  TFT_Write_Text('Ultimate DCC CommandStation', 15, 14);
+  TFT_Set_Font(@Verdana12x13_Regular, CL_BLACK, FO_HORIZONTAL);
+  TFT_Write_Text('OpenLCB', 19, 223);
+  TFT_Set_Font(@Verdana12x13_Regular, CL_RED, FO_HORIZONTAL);
+  TFT_Write_Text('www.openlcb.org', 200, 223);
+  TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+end;
+
+procedure OPStack_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT; ics ICS_AUTO;
+begin
+  T2IF_bit := 0;   
+  OPStackCore_Timer;
+end;
+
+begin
+  { Main program }
+  TRISB := 0;             // Initialize PORTB as output
+  LATB := 0;              // Set PORTB to zero
+  
+  MCU_Setup_Initialize;
+  MCU_EnableSerialFlash;
+  MCU_EnableUARTA;
+  MCU_EnableTFT;
+  TFT_BLED_Direction := 0;                  // Set TFT backlight pin as output
+  TFT_BLED := 1;                            // Turn on TFT backlight
+  DrawFrame();
+
+  OPStackCore_Initialize;
+  MCU_EnableCAN;
+  MCU_Enable100msTimer;
+  OPStackCore_Enable(True);
+  while True do
+  begin
+    OPStackCore_Process;
+  end;
+end.

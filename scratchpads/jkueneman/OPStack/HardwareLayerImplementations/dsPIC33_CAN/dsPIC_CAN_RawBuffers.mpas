@@ -48,16 +48,26 @@ type
   PCANRawBuffer = ^TCANRawBuffer;
   
 const
-  CAN_DMA_DATA_OFFSET = $1000;    // This is the start of the X-Data area.  Some of the dsPIC33s require DMA RAM to be 
-                                  // located in this lower area.  Look at your chips datasheet to make sure this is acceptable
+  CAN_DMA_DATA_OFFSET = $1000;             // This is the start of the X-Data area.  Some of the dsPIC33s require DMA RAM to be
+                                          // located in this lower area.  Look at your chips datasheet to make sure this is acceptable
 
 type
   TCAN_RxRawBufferArray = array[0..MAX_ECAN_RX_BUFFER-1] of TCANRawBuffer;
   TCAN_TxRawBufferArray = array[0..MAX_ECAN_TX_BUFFER-1] of TCANRawBuffer;
-  
+ 
+
+{$IFDEF P33EP512MU810}
+var
+  TX_Main_RawBufferArray: TCAN_TxRawBufferArray; far; dma;  // Transmit buffer for all filters.  The software pulls the data to the right list
+  RX_Main_RawBufferArray: TCAN_RxRawBufferArray; far; dma;  // Recieve buffer for all filters.  The software moves the data to the right list
+{$ELSE}
 var
   TX_Main_RawBufferArray: TCAN_TxRawBufferArray; absolute CAN_DMA_DATA_OFFSET;                                                 // Transmit buffer for all filters.  The software pulls the data to the right list
   RX_Main_RawBufferArray: TCAN_RxRawBufferArray; absolute (CAN_DMA_DATA_OFFSET + (SizeOf(TCANRawBuffer)*MAX_ECAN_TX_BUFFER));  // Recieve buffer for all filters.  The software moves the data to the right list
+{$ENDIF}
+
+var
+  Dummy: Word;
 
 implementation
 
