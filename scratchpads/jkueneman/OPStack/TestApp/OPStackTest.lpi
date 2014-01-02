@@ -38,7 +38,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="32">
+    <Units Count="34">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -190,9 +190,9 @@
         <UnitName Value="opstackcanstatemachinesdatagram"/>
       </Unit28>
       <Unit29>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.pas"/>
+        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesmultiframe.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinessnip"/>
+        <UnitName Value="opstackcanstatemachinesmultiframe"/>
       </Unit29>
       <Unit30>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.pas"/>
@@ -204,6 +204,16 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="hardware_template"/>
       </Unit31>
+      <Unit32>
+        <Filename Value="..\NMRAnet\opstackcore_traction.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore_traction"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcanstatemachinessnip"/>
+      </Unit33>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

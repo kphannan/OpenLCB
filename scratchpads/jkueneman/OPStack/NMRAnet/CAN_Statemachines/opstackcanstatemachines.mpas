@@ -16,6 +16,7 @@ uses
   nmranetdefines,
   opstackdefines,
   opstackbuffers,
+  opstackcanstatemachinesmultiframe,
   opstackcanstatemachinesstream,
   opstackcanstatemachinessnip,
   opstackcanstatemachinesdatagram,
@@ -68,6 +69,14 @@ begin
     OPStackCANStatemachineBuffers_RemoveAcdiSnipMessage(AMessage);
     OPStackBuffers_DeAllocateMessage(AMessage);
     AMessage := OPStackCANStatemachineBuffers_FindAnyAcdiSnipOnOutgoingStack(SourceAliasID);
+  end;
+
+  AMessage := OPStackCANStatemachineBuffers_FindAnyMultiFrameOnOutgoingStack(SourceAliasID);
+  while AMessage <> nil do
+  begin
+    OPStackCANStatemachineBuffers_RemoveMultiFrameMessage(AMessage);
+    OPStackBuffers_DeAllocateMessage(AMessage);
+    AMessage := OPStackCANStatemachineBuffers_FindAnyMultiFrameOnOutgoingStack(SourceAliasID);
   end;
 end;
 
@@ -217,7 +226,8 @@ procedure OPStackCANStatemachine_ProcessMessages;
 begin
   StackCANStatemachineDatagram_ProcessOutgoingDatagramMessage;
   OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
-  PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+  OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+  OPStackCANStatemachineMultiFrame_ProcessOutgoingMultiFrameMessage;
 end;
 
 end.

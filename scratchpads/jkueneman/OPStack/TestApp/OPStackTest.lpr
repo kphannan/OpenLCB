@@ -15,7 +15,8 @@ uses
   opstackcore_snip, opstackcore_learn, opstackcore_datagram,
   opstackcore_configmem, hardware_template, opstackcanstatemachines,
   opstackcanstatemachinesbuffers, opstackcanstatemachinesdatagram,
-  opstackcanstatemachinessnip, opstackcanstatemachinesstream;
+  opstackcanstatemachinesmultiframe, opstackcanstatemachinesstream,
+  opstackcanstatemachinessnip, opstackcore_traction;
 
 {$R *.res}
 

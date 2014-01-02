@@ -42,6 +42,12 @@ type
   end;
   PAcdiSnipBufferPool = ^TAcdiSnipBufferPool;
 
+  TMultiFramePool = record
+    Pool: array[0..USER_MAX_MULTI_FRAME_BYTES-1] of TMultiFrameBuffer;
+    Count: Word;
+  end;
+  PMultiFramePool = ^TMultiFramePool;
+
   TOPStackMessagePool = record
     Pool: array[0..USER_MAX_SIMPLE_MESSAGE_BUFFERS-1] of TOPStackMessage;
     Count: Word;
@@ -59,6 +65,7 @@ function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; S
 function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;
 {$ENDIF}
 function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
@@ -81,6 +88,7 @@ procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray:
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
 {$ENDIF}
 procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
+procedure OPStackBuffers_ZeroMultiFrameBuffer(ABuffer: PMultiFrameBuffer; ZeroArray: Boolean);
 
 {$IFDEF SUPPORT_STREAMS}
 function AllocateStreamSourceID: Byte;
@@ -105,8 +113,8 @@ var
   StreamDestID: Byte;
   {$ENDIF}
   AcdiSnipBufferPool: TAcdiSnipBufferPool;
+  MultiFramePool: TMultiFramePool;
   OPStackMessagePool: TOPStackMessagePool;
-
 
 implementation
 
@@ -122,7 +130,7 @@ begin
   for j := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroDatagramBuffer(@DatagramBufferPool.Pool[j], True);
   DatagramBufferPool.Count := 0;
-  
+
   for j := 0 to USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroAcdiSnipBuffer(@AcdiSnipBufferPool.Pool[j], True);
   AcdiSnipBufferPool.Count := 0;
@@ -235,6 +243,28 @@ begin
         OPStackBuffers_ZeroAcdiSnipBuffer(Buffer, False);
         AcdiSnipBufferPool.Pool[i].State := ABS_ALLOCATED;
         Inc(AcdiSnipBufferPool.Count);
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+function AllocateMultiFrameBuffer(var Buffer: PMultiFrameBuffer): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  if MultiFramePool.Count < USER_MAX_MULTI_FRAME_BYTES then
+  begin
+    for i := 0 to USER_MAX_MULTI_FRAME_BYTES - 1 do
+    begin
+      if MultiFramePool.Pool[i].State and ABS_ALLOCATED = 0 then
+      begin
+        Buffer := @MultiFramePool.Pool[i];
+        OPStackBuffers_ZeroMultiFrameBuffer(Buffer, False);
+        MultiFramePool.Pool[i].State := ABS_ALLOCATED;
+        Inc(MultiFramePool.Count);
         Result := True;
         Exit;
       end;
@@ -392,7 +422,27 @@ begin
       AMessage := nil;
     end;
   end;
+end;
 
+function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+var
+  MultiFrameBuffer: PMultiFrameBuffer;
+begin
+  Result := False;
+  if NextFreeOPStackMessage(AMessage) then
+  begin
+    AMessage^.MessageType := MT_MULTIFRAME or MT_ALLOCATED;
+    if AllocateMultiFrameBuffer(MultiFrameBuffer) then
+    begin
+      OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+      AMessage^.Buffer := PSimpleBuffer( PByte( MultiFrameBuffer));
+      Result := True
+    end else
+    begin
+      OPStackBuffers_DeAllocateMessage(AMessage);
+      AMessage := nil;
+    end;
+  end;
 end;
 
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
@@ -527,6 +577,15 @@ procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray:
 begin
   if ZeroArray then
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_ACDI_SNIP_BYTES)
+  else
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  ABuffer^.CurrentCount := 0;
+end;
+
+procedure OPStackBuffers_ZeroMultiFrameBuffer(ABuffer: PMultiFrameBuffer; ZeroArray: Boolean);
+begin
+  if ZeroArray then
+    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_MULTI_FRAME_BYTES)
   else
     ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
   ABuffer^.CurrentCount := 0;

@@ -351,6 +351,12 @@ begin
   Node^.IncomingMessages := nil;
   Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
+  {$IFDEF SUPPORT_TRACTION}
+  Node^.TrainData.Address := 0;
+  Node^.TrainData.Functions := 0;
+  Node^.TrainData.SpeedDir := 0;
+  Node^.TrainData.SpeedSteps := DEFAULT_SPEED_STEPS;
+  {$ENDIF}
 end;
 
 // *****************************************************************************

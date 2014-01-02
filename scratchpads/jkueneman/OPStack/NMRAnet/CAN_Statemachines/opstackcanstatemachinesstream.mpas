@@ -15,18 +15,18 @@ uses
   nmranetdefines,
   opstackcanstatemachinesbuffers;
 
-procedure PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+procedure OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
 
 implementation
 
 {$IFDEF SUPPORT_STREAMS}
 // *****************************************************************************
-//  procedure PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+//  procedure OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure PStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+procedure OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
 var
   LocalOutgoingMessage: POPStackMessage;
 begin   

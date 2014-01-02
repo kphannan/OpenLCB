@@ -10,6 +10,7 @@ interface
 
 
 uses
+  {$IFDEF SUPPORT_TRACTION}Float16,{$ENDIF}
   template_node,
   template_vnode,
   opstacktypes,
@@ -46,6 +47,7 @@ const
   MAX_SIMPLE_BYTES = 8;
   MAX_SNIP_BYTES = 64;
   MAX_DATAGRAM_BYTES = 72;             // 64 Data bytes + 8 Bytes for DG Header
+  USER_MAX_MULTI_FRAME_BYTES = 16;     // Could be shorter as only Traction Query Speed uses it right now....
 
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
@@ -60,6 +62,8 @@ type
   PStreamDataArray = ^TStreamDataArray;
   TAcdiSnipDataArray = array[0..USER_MAX_ACDI_SNIP_BYTES] of Byte;
   PAcdiSnipDataArray = ^TAcdiSnipDataArray;
+  TMultiFrameArray = array[0..USER_MAX_MULTI_FRAME_BYTES] of Byte;              // This is common mulit-frame buffer for those pesky multi frame messages that are only a few frames long such as the Traction QuerySpeed, this gives us flexibility in lengthing it in the future if needed
+  PMultiFrameArray = ^TMultiFrameArray;
 
   TSimpleData = record
     Count: Word;
@@ -96,17 +100,18 @@ const
 // Message types
 
 const
-  MT_MASK               = $0F;                                                     // Strips off the CAN and Allocated flags
-  MT_UNALLOCATED        = $00;
-  MT_SIMPLE             = $01;                                                     // Message Type Identifiers
-  MT_DATAGRAM           = $02;
-  MT_STREAM             = $04;
-  MT_ACDISNIP           = $08;
+  MT_MASK               = $00FF;                                                     // Strips off the CAN and Allocated flags
+  MT_UNALLOCATED        = $0000;
+  MT_SIMPLE             = $0001;                                                     // Message Type Identifiers
+  MT_DATAGRAM           = $0002;
+  MT_STREAM             = $0004;
+  MT_ACDISNIP           = $0008;
+  MT_MULTIFRAME         = $0010;
 
-  MT_HIGH_PRIORITY_SEND = $10;
-  MT_SEND               = $20;                                                     // Set if the message should just be sent as is
-  MT_CAN_TYPE           = $40;                                                     // It is a CAN MTI
-  MT_ALLOCATED          = $80;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
+  MT_HIGH_PRIORITY_SEND = $1000;
+  MT_SEND               = $2000;                                                     // Set if the message should just be sent as is
+  MT_CAN_TYPE           = $4000;                                                     // It is a CAN MTI
+  MT_ALLOCATED          = $8000;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
 
 
 const
@@ -225,12 +230,21 @@ type
   end;
   PAcdiSnipBuffer = ^TAcdiSnipBuffer;
 
+  TMultiFrameBuffer = record
+    State: Byte;                                                                // See ABS_xxxx flags
+    DataBufferSize: Word;                                                       // Number of bytes in the DataArray
+    DataArray: TMultiFrameArray;
+    // *******
+    CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
+  end;
+  PMultiFrameBuffer = ^TMultiFrameBuffer;
+
 type
   {$IFDEF FPC}
   POPStackMessage = ^TOPStackMessage;
   {$ENDIF}
-  TOPStackMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
-    MessageType: Byte;                                                          // MT_xxx Constant the identifies the type of message, bottom 4 bits are the type of message u
+  TOPStackMessage = record                                                      // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
+    MessageType: Word;                                                          // MT_xxx Constant the identifies the type of message, bottom 4 bits are the type of message u
     Source: TNodeInfo;
     Dest: TNodeInfo;
     FramingBits: Byte;                                                          // The upper 4 bits sent in the Destination (when used for the message)
@@ -247,6 +261,15 @@ type
   POPStackMessage = ^TOPStackMessage;
   {$ENDIF}
 
+  {$IFDEF SUPPORT_TRACTION}
+  TTrainDCCProxyData = record
+    SpeedDir: THalfFloat;                                                       // Speed and direction (encoded in the sign)
+    Functions: DWord;                                                           // F0..F28
+    Address: Word;                                                              // DCC Address
+    SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
+  end;
+  {$ENDIF}
+
 type
   TNMRAnetNode = record
     iIndex: Byte;                                                               // Index in the main array
@@ -258,6 +281,7 @@ type
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
     StateMachineMessages: POPStackMessage;                                      // Linked List of Messages that need to run statemachine to operate allocated for this node
+    {$IFDEF SUPPORT_TRACTION}TrainData: TTrainDCCProxyData;{$ENDIF}             // Realtime information about the DCC Train Proxy Node
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 
@@ -283,6 +307,100 @@ type
     PayloadCount: Byte;
   end;
   PNMRAnetCanBuffer = ^TNMRAnetCanBuffer;
+
+const
+  TRACTION_OPERATION_MASK            = $F0;
+  TRACTION_CMD                       = $00;
+  TRACTION_QUERY                     = $10;
+  TRACTION_DCC_PROXY                 = $80;
+
+  TRACTION_SPEED_DIR                 = $00;
+  TRACTION_FUNCTION                  = $01;
+  TRACTION_E_STOP                    = $02;
+  TRACTION_QUERY_SPEED               = $10;
+  TRACTION_QUERY_FUNCTION            = $11;
+  TRACTION_CONFIGURE_DCC_PROXY       = $80;
+  TRACTION_MANAGE_DCC_PROXY          = $82;
+
+  TRACTION_QUERY_SPEED_REPLY         = $10;
+  TRACTION_QUERY_FUNCTION_REPLY      = $11;
+  TRACTION_CONFIGURE_PROXY_REPLY     = $80;
+  TRACTION_MANAGE_PROXY_REPLY        = $82;
+
+  TRACTION_ATTACH_NODE               = $01;
+  TRACTION_DETACH_NODE               = $02;
+  TRACTION_ATTACH_DCC_ADDRESS        = $81;
+  TRACTION_DETACH_DCC_ADDRESS        = $82;
+
+  TRACTION_ATTACH_NODE_REPLY         = $01;
+  TRACTION_DETACH_NODE_REPLY         = $02;
+  TRACTION_ATTACH_DCC_ADDRESS_REPLY  = $81;
+  TRACTION_DETACH_DCC_ADDRESS_REPLY  = $82;
+
+  TRACTION_MANAGE_PROXY_RESERVE      = $01;
+  TRACTION_MANAGE_PROXY_RELEASE      = $02;
+  TRACTION_MANAGE_PROXY_QUERY        = $03;
+
+  TRACTION_MANAGE_RESERVE_REPLY      = $01;
+  TRACTION_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
+  TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed is not 0
+  TRACTION_MANAGE_QUERY_REPLY        = $03;
+
+  DEFAULT_SPEED_STEPS = 28;
+
+  const
+  _28_STEP_TABLE: array[0..28] of Byte = (
+    %00000000,    // Stop
+    %00000010,    // Step 1
+    %00010010,    // Step 2
+    %00000011,    // Step 3
+    %00010011,    // Step 4
+    %00000100,    // Step 5
+    %00010100,    // Step 6
+    %00000101,    // Step 7
+    %00010101,    // Step 8
+    %00000110,    // Step 9
+    %00010110,    // Step 10
+    %00000111,    // Step 11
+    %00010111,    // Step 12
+    %00001000,    // Step 13
+    %00011000,    // Step 14
+    %00001001,    // Step 15
+    %00011001,    // Step 16
+    %00001010,    // Step 17
+    %00011010,    // Step 18
+    %00001011,    // Step 19
+    %00011011,    // Step 20
+    %00001100,    // Step 21
+    %00011100,    // Step 22
+    %00001101,    // Step 23
+    %00011101,    // Step 24
+    %00001110,    // Step 25
+    %00011110,    // Step 26
+    %00001111,    // Step 27
+    %00011111     // Step 28
+  );
+
+  _14_STEP_TABLE: array[0..14] of Byte = (
+    %00000000,    // Stop
+    %00000010,    // Step 1
+    %00000011,    // Step 3
+    %00000100,    // Step 5
+    %00000101,    // Step 7
+    %00000110,    // Step 9
+    %00000111,    // Step 11
+    %00001000,    // Step 13
+    %00001001,    // Step 15
+    %00001010,    // Step 17
+    %00001011,    // Step 19
+    %00001100,    // Step 21
+    %00001101,    // Step 23
+    %00001110,    // Step 25
+    %00001111     // Step 27
+  );
+
+  NMRA_LONGADDRESS_MASK_BYTE         = $C0;
+  NMRA_LONGADDRESS_MASK_WORD         = $C000;
   
 var
   s1: string[128];

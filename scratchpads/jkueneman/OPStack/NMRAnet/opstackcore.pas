@@ -26,9 +26,8 @@ uses
   opstackcore_can,
   opstackcore_pip,
   opstackcore_basic,
-  {$IFDEF SUPPORT_STREAMS}
-  opstackcore_stream,
-  {$ENDIF}
+  {$IFDEF SUPPORT_STREAMS}opstackcore_stream,{$ENDIF}
+  {$IFDEF SUPPORT_TRACTION}opstackcore_traction,{$ENDIF}
   opstackcore_snip,
   opstackcore_learn,
   opstackcore_datagram;
@@ -142,6 +141,9 @@ begin
                   MTI_OPTIONAL_INTERACTION_REJECTED : begin end;
                   MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;               // Updates internal states
                   MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
+                  {$IFDEF SUPPORT_TRACTION}
+                  MTI_TRACTION_PROTOCOL             : begin TractionProtocol(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
+                  {$ENDIF}
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
                   MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
@@ -311,6 +313,13 @@ begin
                 DatagramReply(Node, MessageToSend, NextMessage);
               Result :=  MessageToSend <> nil
             end;
+        {$IFDEF SUPPORT_TRACTION}
+        MTI_TRACTION_PROTOCOL :
+            begin
+              TractionProtocolReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+            end;
+        {$ENDIF}
         MTI_STREAM_INIT_REQUEST :
             begin
               StreamInitRequestReply(Node, MessageToSend, NextMessage);

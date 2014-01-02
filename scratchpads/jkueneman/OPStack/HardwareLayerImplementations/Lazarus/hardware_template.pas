@@ -241,8 +241,9 @@ begin
     MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
     MT_ACDISNIP : OPStackCANStatemachineBuffers_AddOutgoingAcdiSnipMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
     {$IFDEF SUPPORT_STREAMS}
-    MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage)     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+    MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage);     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
     {$ENDIF}
+    MT_MULTIFRAME : OPStackCANStateMachineBuffer_AddOutgoingMultiFrameMessage(AMessage)
   else
      OPStackBuffers_DeAllocateMessage(AMessage);
   end;
