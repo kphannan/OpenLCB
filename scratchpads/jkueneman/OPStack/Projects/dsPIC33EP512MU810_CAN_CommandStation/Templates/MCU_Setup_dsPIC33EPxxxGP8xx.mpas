@@ -1,6 +1,7 @@
 unit MCU_Setup_dsPIC33EPxxxGP8xx;
 
 uses
+  NMRAnetDCC,
   M25P80_Driver,
   dsPIC_CAN_RawBuffers,
   dsPIC33_CAN,
@@ -30,6 +31,8 @@ const
   procedure MCU_EnableRS485(Protocol: Word);                                    // PROTOCOL_xxxx contants
   procedure MCU_Enable100msTimer;
   procedure MCU_EnableTFT;
+  
+  procedure MCU_EnableDCCTimer;
 
 implementation
 
@@ -38,6 +41,20 @@ begin
   TFT_Set_Default_Mode();                   // Set TFT in default mode
   TFT_Init_ILI9341_8bit(320, 240);          // Initialize TFT display
   Delay_ms(10);
+end;
+
+procedure MCU_EnableDCCTimer;
+begin
+  TCS_T1CON_bit := 0;       // internal cycle clock
+  T1IP_0_bit := 1;          // Timer 2 Interrupt Priority = 7   (1 means off)
+  T1IP_1_bit := 1;
+  T1IP_2_bit := 1;
+  TCKPS_0_T1CON_bit := 0;   // 1 Prescaler
+  TCKPS_1_T1CON_bit := 0;
+  PR1 := DCC_TIMER_58US;
+  T1IF_bit := 0;            // Clear T1IF
+  T1IE_bit := 1;            // Enable the Interrupt
+  TON_T1CON_bit := 1;       // Turn on DCC Timer
 end;
 
 procedure MCU_Enable100msTimer;
