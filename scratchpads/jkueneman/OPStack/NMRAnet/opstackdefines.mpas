@@ -150,7 +150,10 @@ const                                                                           
 type
   // Each Byte contains the state of up to 4 Events, as each event can have 3 state (2 bits)
   // The Index of the 2 bits block is mapped to the index into the defined array of Event ID values
-  TNodeEventArray = array[0..USER_MAX_EVENTS_BYTES] of Byte;                    // Holds the current state (set, clear, unknown) of each Event.  Used when Consumer/Producer Indentifed messages need to be sent
+  TNodeEventStateArray = array[0..USER_MAX_EVENTS_BYTES] of Byte;               // Holds the current state (set, clear, unknown) of each Event.  Used when Consumer/Producer Indentifed messages need to be sent
+  // Each Byte contains the state of up to 8 Events, as each event can have 1 state (1 bits)
+  // The Index of the 1 bits block is mapped to the index into the defined array of Event ID values
+  TNodeEventArray =  array[0..USER_MAX_PCER_BYTES] of Byte;                     // This flags if the Event State should be sent
   // Each Byte contains the state of up to 8 Events, as each event can have 1 state (1 bits)
   // The Index of the 1 bits block is mapped to the index into the defined array of Event ID values
   TNodePCERArray  = array[0..USER_MAX_PCER_BYTES] of Byte;                      // Holds a flag for if an Event requires a PCER message to be sent becuase that event has changed state
@@ -167,9 +170,11 @@ type
   end;
 
   TNodeEvents = record
+    ProducedState,
+    ConsumedState  : TNodeEventStateArray;
     Produced,
-    Consumed  : TNodeEventArray;
-    PCER      : TNodePCERArray;
+    Consumed  : TNodeEventArray;                                                // Flags if the Event message should be sent
+    PCER      : TNodePCERArray;                                                 // Flags if the PCER for the event should be sent
   end;
 
 const
@@ -243,7 +248,7 @@ type
   {$IFDEF FPC}
   POPStackMessage = ^TOPStackMessage;
   {$ENDIF}
-  TOPStackMessage = record                                                       // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
+  TOPStackMessage = record                                                      // Used as the "base class" for all the message records, allows this class to be overlayed the other to fake inheritance
     MessageType: Word;                                                          // MT_xxx Constant the identifies the type of message, bottom 4 bits are the type of message u
     Source: TNodeInfo;
     Dest: TNodeInfo;

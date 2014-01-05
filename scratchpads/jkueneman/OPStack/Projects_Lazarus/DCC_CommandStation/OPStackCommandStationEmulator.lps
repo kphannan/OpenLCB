@@ -301,8 +301,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="149"/>
-        <CursorPos X="82" Y="167"/>
+        <TopLine Value="75"/>
+        <CursorPos X="1" Y="80"/>
         <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit31>
@@ -611,8 +611,8 @@
         <UnitName Value="opstackdefines"/>
         <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="86"/>
-        <CursorPos X="3" Y="98"/>
+        <TopLine Value="143"/>
+        <CursorPos X="3" Y="153"/>
         <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit68>
@@ -621,8 +621,8 @@
         <UnitName Value="opstacknode"/>
         <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="332"/>
-        <CursorPos X="1" Y="344"/>
+        <TopLine Value="45"/>
+        <CursorPos X="56" Y="56"/>
         <UsageCount Value="14"/>
         <Loaded Value="True"/>
       </Unit69>
@@ -684,7 +684,7 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="29" HistoryIndex="28">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
         <Caret Line="139" Column="1" TopLine="119"/>
@@ -801,6 +801,10 @@
         <Filename Value="Templates/template_event_callbacks.pas"/>
         <Caret Line="68" Column="38" TopLine="52"/>
       </Position29>
+      <Position30>
+        <Filename Value="../../NMRAnet/opstacknode.pas"/>
+        <Caret Line="56" Column="56" TopLine="45"/>
+      </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
