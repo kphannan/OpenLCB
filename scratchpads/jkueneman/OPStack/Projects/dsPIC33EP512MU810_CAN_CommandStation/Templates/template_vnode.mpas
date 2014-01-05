@@ -27,7 +27,7 @@ uses
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
 const
-  USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 2;
+  USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 1;
 {$ELSE}
 const
   USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 0;
@@ -44,8 +44,7 @@ const
 {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
 const
   USER_VNODE_SUPPORTED_EVENTS_CONSUMED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
-    ($01, $01, $00, $00, $00, $00, $FF, $FF),                                    // EVENT_EMERGENCY_STOP
-    ($05, $02, $01, $02, $02, $00, $00, $00)                                    // TEST
+    ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
   );
 {$ENDIF}
 
@@ -54,7 +53,7 @@ const
 //  conditional define from the Options.inc file
 {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
 const
-  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 2;
+  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 4;
 {$ELSE}
 const
   USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 0;
@@ -64,14 +63,16 @@ const
 // the library will callback on the AppCallback_DynamicEvent_Produced with and index from
 // 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1.
 const
-  USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED = 0;
+  USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED = 1;                         // IsProxiedDccAddress
 
 // Define the UIDs of Events that are Produced by this Node
   {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
   const
     USER_VNODE_SUPPORTED_EVENTS_PRODUCED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
       ($01, $01, $00, $00, $00, $00, $FF, $FF),                                 // EVENT_EMERGENCY_STOP
-      ($05, $02, $01, $02, $02, $00, $00, $00)                                  // TEST
+      ($01, $01, $00, $00, $00, $00, $03, $03),                                 // Is Train
+      ($01, $01, $00, $00, $00, $00, $03, $04),                                 // Is Idle Proxy
+      ($01, $01, $00, $00, $00, $00, $03, $05)                                  // Is InUse Proxy
     );
   {$ENDIF}
 
@@ -110,7 +111,7 @@ const
       $30,$2E,$31,$00,  // 0.1
       $30,$2E,$39,$00  // 0.9
     );
-    
+
   // **************************************************************************************************************************************************************
   // ACDI User Memory ($FB) Space Implementation
   //   Defines the Configuration Memory size and offsets into the configuration memory
@@ -207,9 +208,9 @@ const
     $3C, $2F, $73, $65, $67, $6D, $65, $6E, $74, $3E,    // </segment>
     $3C, $2F, $63, $64, $69, $3E, $00   // </cdi>
   );
-  
+
 // **************************************************************************************************************************************************************
-// Size of Configuration Memory block, 
+// Size of Configuration Memory block,
 //  This may need to be a multiple of some 2^n number depending on what the
 //  harware implementation of the Configuration Memory is.  This allows the library
 //  to linearly line up the configruation memory block for multiple nodes, i.e.

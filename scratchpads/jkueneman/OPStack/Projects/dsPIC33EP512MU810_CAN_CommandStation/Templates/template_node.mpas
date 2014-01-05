@@ -26,7 +26,7 @@ uses
 // Enter the number of nodes this build will emulate, must be at least 1, if more than
 // one then SUPPORT_VIRTUAL_NODES must be enabled in the Options.inc file
 const
-  USER_MAX_NODE_COUNT = 1;
+  USER_MAX_NODE_COUNT = 10;
 
 // Calculate the number of bytes needed for internal OPStack structures for Events
 // Do this by selecting the Largest number of Events either Consumed or Produced in
@@ -37,7 +37,7 @@ const
 // physical node and the virtual nodes so the maximum number of events is 1 so:
 //  1/4 = 0.25 which rounds up to 1
 const
-  USER_MAX_EVENTS_BYTES = 1;
+  USER_MAX_EVENTS_BYTES = 2;
 
 // Calculate the number of bytes needed for internal OPStack structures for Events
 // Do this by selecting the Largest number of Events either Consumed or Produced in
@@ -133,7 +133,7 @@ const
  // **************************************************************************************************************************************************************
 const
   USER_ACDI_MFG_VERSION = 1;
-  
+
 const
   USER_MAX_ACDI_MFG_ARRAY = 27;
   USER_ACDI_MFG_STRINGS: array[0..USER_MAX_ACDI_MFG_ARRAY - 1] of byte = (
@@ -143,7 +143,7 @@ const
       $30,$2E,$31,$00,  // 0.1
       $30,$2E,$33,$00  // 0.3
     );
-    
+
     // **************************************************************************************************************************************************************
   // ACDI User Memory ($FB) Space Implementation
   //   Defines the Configuration Memory size and offsets into the configuration memory
@@ -164,7 +164,7 @@ const
   USER_MAX_ACDI_USER_NAME_CONFIG_DATA_OFFSET = 0;
   USER_MAX_ACDI_USER_NAME_CONFIG_DATA = 63;      // This MUST MATCH the value defined in the CDI segment for $FB
   USER_MAX_ACDI_USER_DESC_CONFIG_DATA = 64;      // This MUST MATCH the value defined in the CDI segment for $FB
-  
+
 
   // **************************************************************************************************************************************************************
   // CDI Memory ($FF) Space Implementation
@@ -246,7 +246,7 @@ const
     $3C, $2F, $73, $65, $67, $6D, $65, $6E, $74, $3E,    // </segment>
     $3C, $2F, $63, $64, $69, $3E, $00   // </cdi>
   );
-  
+
 // **************************************************************************************************************************************************************
 // Size of Configuration Memory block,
 //  This may need to be a multiple of some 2^n number depending on what the

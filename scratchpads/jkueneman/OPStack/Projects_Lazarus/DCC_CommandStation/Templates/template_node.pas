@@ -37,7 +37,7 @@ const
 // physical node and the virtual nodes so the maximum number of events is 1 so:
 //  1/4 = 0.25 which rounds up to 1
 const
-  USER_MAX_EVENTS_BYTES = 1;
+  USER_MAX_EVENTS_BYTES = 2;
 
 // Calculate the number of bytes needed for internal OPStack structures for Events
 // Do this by selecting the Largest number of Events either Consumed or Produced in

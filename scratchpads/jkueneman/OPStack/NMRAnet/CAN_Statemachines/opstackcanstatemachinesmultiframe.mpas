@@ -56,9 +56,9 @@ begin
 
       // Set Framing Bits
       if MultiFrameBufferPtr^.CurrentCount >= MultiFrameBufferPtr^.DataBufferSize then
-        LocalBuffer.DataArray[0] := LocalBuffer.DataArray[0] or $20                        // Upper nibble = $20 means last frame
+        LocalMessage.FramingBits := $20                             // Upper nibble = $20 means last frame
       else
-        LocalBuffer.DataArray[0] := LocalBuffer.DataArray[0] or $10;                       // Upper nibble = $10 mean more frames coming
+        LocalMessage.FramingBits := $10;                            // Upper nibble = $10 mean more frames coming
 
       OutgoingMessage(@LocalMessage);
 

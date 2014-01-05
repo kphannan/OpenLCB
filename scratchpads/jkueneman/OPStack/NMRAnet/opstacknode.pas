@@ -360,6 +360,7 @@ begin
   Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
   {$IFDEF SUPPORT_TRACTION}
+  Node^.TrainData.State := 0;
   Node^.TrainData.Address := 0;
   Node^.TrainData.Functions := 0;
   Node^.TrainData.SpeedDir := 0;

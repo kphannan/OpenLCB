@@ -140,6 +140,9 @@ const                                                                           
   NS_VIRTUAL              = $08;                                                // NodeState If is a virtual node
   NS_RELEASING            = $10;                                                // Node is tagged to send and AMD and be removed from the bus (while this is set what happens??)
 
+  TS_RESERVED             = $01;                                                // Train State = Reserved
+  TS_ALLOCATED            = $02;                                                // DCC Address Assigned
+
   // MsgFlags in order of precidence (= 0 highest precidence)
   MF_DUPLICATE_NODE_ID        = $0001;                                          // MsgFlag, a Duplicate Node ID was detected, critical fault
   MF_DUPLICATE_ALIAS          = $0002;                                          // MsgFlag, a Duplicate Alias was Detected, critical fault
@@ -268,6 +271,7 @@ type
 
   {$IFDEF SUPPORT_TRACTION}
   TTrainDCCProxyData = record
+    State: Word;                                                                // Train State (see Train State (TS_xxxx) constants
     SpeedDir: THalfFloat;                                                       // Speed and direction (encoded in the sign)
     Functions: DWord;                                                           // F0..F28
     Address: Word;                                                              // DCC Address
@@ -341,6 +345,9 @@ const
   TRACTION_DETACH_NODE_REPLY         = $02;
   TRACTION_ATTACH_DCC_ADDRESS_REPLY  = $81;
   TRACTION_DETACH_DCC_ADDRESS_REPLY  = $82;
+
+  TRACTION_ATTACH_NODE_REPLY_CODE_OK  = $00;
+  TRACTION_DETTACH_NODE_REPLY_CODE_OK = $00;
 
   TRACTION_MANAGE_PROXY_RESERVE      = $01;
   TRACTION_MANAGE_PROXY_RELEASE      = $02;

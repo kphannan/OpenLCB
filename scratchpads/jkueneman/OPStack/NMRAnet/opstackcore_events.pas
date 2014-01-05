@@ -373,132 +373,178 @@ var
   DynamicEvent: TEventID;
 begin
   Result := False;
+  OPStackMessage := nil;
+
   // First see if there are any Consumed Events that need to be broadcast
   if OPStackNode_IsAnyEventSet(Node^.Events.Consumed) then
   begin
     EventIndex := OPStackNode_NextEventFlag(Node^.Events.Consumed);             // what index  and clear it
+    // This index can be beyond the number of actual events depending as each byte carries 8 flags for 8 Events
     if EventIndex > -1  then
     begin
-      OPStackMessage := nil;
-      State := OPStackNode_GetEventState(Node^.Events.ConsumedState, EventIndex);
-      case State of
-        EVENT_STATE_UNKNOWN : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
-        EVENT_STATE_VALID   : MTI := MTI_CONSUMER_IDENTIFIED_SET;
-        EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR
-      else
-        Exit;                                                                   // Error
-      end;
-
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
       if Node^.State and NS_VIRTUAL <> 0 then
       begin
-        if EventIndex >= USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED then
+        // Make sure the event index is in the range of defined events
+        if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
         begin
-          if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
+          State := OPStackNode_GetEventState(Node^.Events.ConsumedState, EventIndex);
+          case State of
+            EVENT_STATE_UNKNOWN : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
+            EVENT_STATE_VALID   : MTI := MTI_CONSUMER_IDENTIFIED_SET;
+            EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR
+          else
+            Exit;                                                                   // Error
+          end;
+          if EventIndex >= USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED then
+          begin
+            // It is a Dynamic Index
             if AppCallback_DynamicVNodeConsumedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 Result := True;
-              end
-        end else
-        begin
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                Exit;
+              end;
+          end else
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
-            OPStackMessage^.Buffer^.DataBufferSize := 8;
-            Result := True;
+            // It is a Static Index
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              OPStackMessage^.Buffer^.DataBufferSize := 8;
+              Result := True;
+              Exit;
+            end;
           end
-        end
+        end;
       end else
       {$ENDIF}
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
-        if EventIndex >= USER_MAX_SUPPORTED_EVENTS_CONSUMED then
+        // Make sure the event index is in the range of defined events
+        if EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
         begin
-          if EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED then
+          State := OPStackNode_GetEventState(Node^.Events.ConsumedState, EventIndex);
+          case State of
+            EVENT_STATE_UNKNOWN : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
+            EVENT_STATE_VALID   : MTI := MTI_CONSUMER_IDENTIFIED_SET;
+            EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR
+          else
+            Exit;                                                                   // Error
+          end;
+          if EventIndex >= USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED then
+          begin
+            // It is a Dynamic Event
             if AppCallback_DynamicConsumedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 Result := True;
-              end
-        end else
-        begin
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                Exit;
+              end;
+          end else
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
-            OPStackMessage^.Buffer^.DataBufferSize := 8;
-            Result := True;
-          end
-        end
+            // It is a Static Event
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              OPStackMessage^.Buffer^.DataBufferSize := 8;
+              Result := True;
+              Exit;
+            end;
+          end;
+        end;
         {$ENDIF}
       end;
-    end
-  end else
+    end;
+  end;
+
+
   if OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
   begin
     EventIndex := OPStackNode_NextEventFlag(Node^.Events.Produced);             // what index  and clear it
+    // This index can be beyond the number of actual events depending as each byte carries 8 flags for 8 Events
     if EventIndex > -1  then
     begin
-      OPStackMessage := nil;
-      State := OPStackNode_GetEventState(Node^.Events.ProducedState, EventIndex);
-      case State of
-        EVENT_STATE_UNKNOWN : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
-        EVENT_STATE_VALID   : MTI := MTI_PRODUCER_IDENTIFIED_SET;
-        EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR
-      else
-        Exit;                                                                   // Error
-      end;
-
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
       if Node^.State and NS_VIRTUAL <> 0 then
       begin
-        if EventIndex >= USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED then
+        // Make sure the event index is in the range of defined events
+        if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
         begin
-          if EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
+          State := OPStackNode_GetEventState(Node^.Events.ProducedState, EventIndex);
+          case State of
+            EVENT_STATE_UNKNOWN : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
+            EVENT_STATE_VALID   : MTI := MTI_PRODUCER_IDENTIFIED_SET;
+            EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR
+          else
+            Exit;                                                                   // Error
+          end;
+          if EventIndex >= USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED then
+          begin
+            // It is a Dynamic Event
             if AppCallback_DynamicVNodeProducedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 Result := True;
-              end
-        end else
-        begin
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                Exit;
+              end;
+          end else
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
-            OPStackMessage^.Buffer^.DataBufferSize := 8;
-            Result := True;
+            // It is a Static Event
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              OPStackMessage^.Buffer^.DataBufferSize := 8;
+              Result := True;
+              Exit;
+            end;
           end
-        end
+        end;
       end else
       {$ENDIF}
       begin
-        {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-        if EventIndex >= USER_MAX_SUPPORTED_EVENTS_PRODUCED then
+        // Make sure the event index is in the range of defined events
+        if EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
         begin
-          if EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
+          State := OPStackNode_GetEventState(Node^.Events.ProducedState, EventIndex);
+          case State of
+            EVENT_STATE_UNKNOWN : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
+            EVENT_STATE_VALID   : MTI := MTI_PRODUCER_IDENTIFIED_SET;
+            EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR
+          else
+            Exit;                                                                   // Error
+          end;
+          {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
+          if EventIndex >= USER_MAX_SUPPORTED_EVENTS_PRODUCED then
+          begin
+            // It is a Dynamic Event
             if AppCallback_DynamicProducedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
               if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)) ;
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
                 Result := True;
-              end
-        end else
-        begin
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                Exit;
+              end;
+          end else
           begin
-            NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
-            OPStackMessage^.Buffer^.DataBufferSize := 8;
-            Result := True;
+            // It is a Static Event
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            begin
+              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              OPStackMessage^.Buffer^.DataBufferSize := 8;
+              Result := True;
+              Exit;
+            end
           end
+          {$ENDIF}
         end
-        {$ENDIF}
       end
     end
   end

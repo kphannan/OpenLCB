@@ -272,7 +272,8 @@ end;
 
 procedure TForm1.ButtonStartStackClick(Sender: TObject);
 begin
-  OPStack.State := OPStack.State or OPS_PROCESSING;
+  OPStackCore_Enable(True);
+  OPStackNode_Allocate;
 end;
 
 procedure TForm1.CheckBoxDisableLoggingChange(Sender: TObject);

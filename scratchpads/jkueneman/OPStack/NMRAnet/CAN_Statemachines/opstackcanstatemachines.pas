@@ -204,7 +204,7 @@ begin
     NMRAnetCanBuffer^.MTI := (AMessage^.MTI shl 12) or AMessage^.Source.AliasID or $19000000;
     if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
     begin
-      NMRAnetCanBuffer^.Payload[0] := Hi( AMessage^.Dest.AliasID);
+      NMRAnetCanBuffer^.Payload[0] := Hi( AMessage^.Dest.AliasID) or AMessage^.FramingBits;
       NMRAnetCanBuffer^.Payload[1] := Lo( AMessage^.Dest.AliasID);
       NMRAnetCanBuffer^.PayloadCount := 2;
     end;

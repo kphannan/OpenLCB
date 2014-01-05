@@ -271,12 +271,11 @@ end;
 // *****************************************************************************
 function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 begin
+  OPStackNode_IncomingMessageUnLink(Node, AMessage);
+  OPStackBuffers_DeAllocateMessage(AMessage);
   if MessageToSend <> nil then
-  begin
-    OPStackNode_IncomingMessageUnLink(Node, AMessage);
-    OPStackBuffers_DeAllocateMessage(AMessage);
-    Result := True;
-  end else
+    Result := True
+   else
     Result := False;
 end;
 

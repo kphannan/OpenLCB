@@ -88,7 +88,11 @@ end;
 //                  a virtual node or not
 // *****************************************************************************
 procedure AppCallback_InitializeDynamicEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
-begin            Exit;
+begin
+
+  Exit;
+
+
   case ConsumedProduced of
     EVENT_TYPE_CONSUMED :
         begin
@@ -155,14 +159,14 @@ end;
 function AppCallback_DynamicVNodeProducedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 begin
   Result := False;
-  if Node^.TrainData.Address > 0 then
+  if Node^.TrainData.State and TS_ALLOCATED <> 0 then
   begin
     EventID[0] := $06;
     EventID[1] := $01;
     EventID[2] := $00;
-    EventID[3] := $CC;
-    EventID[4] := $AA;
-    EventID[5] := $AA;
+    EventID[3] := $00;
+    EventID[4] := Hi( Node^.TrainData.Address);
+    EventID[5] := Lo( Node^.TrainData.Address);
     EventID[6] := $03;
     EventID[7] := $03;
     Result := True
