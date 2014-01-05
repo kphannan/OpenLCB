@@ -223,8 +223,8 @@
       <Filename Value="CompiledBinaries\$(TargetOS)\$(TargetCPU)\OPStackTest.app\Contents\MacOS\OpStackTest"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir);..\AppLayerTemplates"/>
-      <OtherUnitFiles Value="..\NMRAnet;..\AppLayerTemplates;..\..\Components\synapse40\source\lib;..\Common;..\..\Library;..\NMRAnet\CAN_Statemachines;..\HardwareLayerImplementations\Lazarus"/>
+      <IncludeFiles Value="$(ProjOutDir);..\..\AppLayerTemplates"/>
+      <OtherUnitFiles Value="..\..\NMRAnet;..\..\AppLayerTemplates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus;..\..\..\Components\synapse40\source\lib;..\..\..\Library"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

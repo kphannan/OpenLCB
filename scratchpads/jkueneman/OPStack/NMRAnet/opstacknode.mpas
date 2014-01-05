@@ -47,15 +47,19 @@ procedure OPStackNode_ClearFlag(Node: PNMRAnetNode; Flag: Byte);
 procedure OPStackNode_ClearFlags(Node: PNMRAnetNode);
 function OPStackNode_TestFlags(Node: PNMRAnetNode; Flag: Word; DoClear: Boolean): Boolean;
 
-procedure OPStackNode_SetState(Node: PNMRAnetNode; State: Byte);
-procedure OPStackNode_ClearState(Node: PNMRAnetNode; State: Byte);
-function OPStackNode_TestState(Node: PNMRAnetNode; State: Byte): Boolean;
+procedure OPStackNode_SetState(Node: PNMRAnetNode; NodeState: Byte);
+procedure OPStackNode_ClearState(Node: PNMRAnetNode; NodeState: Byte);
+function OPStackNode_TestState(Node: PNMRAnetNode; NodeState: Byte): Boolean;
 
-procedure OPStackNode_SetEventConsumedFlags(Node: PNMRAnetNode; State: Byte);
-procedure OPStackNode_SetEventProducedFlags(Node: PNMRAnetNode; State: Byte);
-procedure OPStackNode_SetEventFlag(var Events: TNodeEventArray; EventIndex: Integer; State: Byte);
+procedure OPStackNode_SetEventConsumedState(Node: PNMRAnetNode; EventState: Byte);                            // EVENT_STATE_CLEAR
+procedure OPStackNode_SetEventProducedState(Node: PNMRAnetNode; EventState: Byte);                            //  EVENT_STATE_VALID
+procedure OPStackNode_SetEventState(var Events: TNodeEventStateArray; EventIndex: Integer; EventState: Byte);  //  EVENT_STATE_INVALID
+function OPStackNode_GetEventState(var Events: TNodeEventStateArray; EventIndex: Integer): Byte;               //  EVENT_STATE_UNKNOWN
+
+procedure OPStackNode_SetEventFlags(var Events: TNodeEventArray);
+procedure OPStackNode_SetEventFlag(EventIndex: Integer; Clear: Boolean; var Events: TNodeEventArray);
 procedure OPStackNode_ClearEventFlags(var Events: TNodeEventArray);
-function OPStackNode_NextEventFlag(var Events: TNodeEventArray; var State: Byte): Integer;
+function OPStackNode_NextEventFlag(var Events: TNodeEventArray): Integer;
 function OPStackNode_IsAnyEventSet(var Events: TNodeEventArray): Boolean;
 
 procedure OPStackNode_SetPCER_Flags(Node: PNMRAnetNode);
@@ -343,11 +347,15 @@ begin
   Node^.Info.AliasID := 0;
   Node^.iStateMachine := 0;
   for j := 0 to USER_MAX_EVENTS_BYTES - 1 do
-    Node^.Events.Consumed[j] := 0;
-  for j := 0 to USER_MAX_EVENTS_BYTES - 1 do
-    Node^.Events.Produced[j] := 0;
+    Node^.Events.ConsumedState[j] := $FF;          // Default is EVENT_STATE_UNKNOWN
+  for j := 0 to USER_MAX_EVENTS_BYTES - 1 do       // Default is EVENT_STATE_UNKNOWN
+    Node^.Events.ProducedState[j] := $FF;
   for j := 0 to USER_MAX_PCER_BYTES - 1 do
     Node^.Events.PCER[j] := 0;
+  for j := 0 to USER_MAX_PCER_BYTES - 1 do
+    Node^.Events.Consumed[j] := 0;
+  for j := 0 to USER_MAX_PCER_BYTES - 1 do
+    Node^.Events.Produced[j] := 0;
   Node^.IncomingMessages := nil;
   Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
@@ -433,9 +441,9 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_SetState(Node: PNMRAnetNode; State: Byte);
+procedure OPStackNode_SetState(Node: PNMRAnetNode; NodeState: Byte);
 begin
-  Node^.State := Node^.State or State;
+  Node^.State := Node^.State or NodeState;
 end;
 
 // *****************************************************************************
@@ -444,9 +452,9 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_ClearState(Node: PNMRAnetNode; State: Byte);
+procedure OPStackNode_ClearState(Node: PNMRAnetNode; NodeState: Byte);
 begin
-  Node^.State := Node^.State and not State;
+  Node^.State := Node^.State and not NodeState;
 end;
 
 // *****************************************************************************
@@ -455,140 +463,157 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackNode_TestState(Node: PNMRAnetNode; State: Byte): Boolean;
+function OPStackNode_TestState(Node: PNMRAnetNode; NodeState: Byte): Boolean;
 begin
-  Result := Node^.State and State = State;
+  Result := Node^.State and NodeState = NodeState;
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_SetEventConsumedFlags;
+//  procedure OPStackNode_SetEventConsumedState;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_SetEventConsumedFlags(Node: PNMRAnetNode; State: Byte);
+procedure OPStackNode_SetEventConsumedState(Node: PNMRAnetNode; EventState: Byte);
 var
   i: Integer;
 begin
   if OPStackNode_TestState(Node, NS_VIRTUAL) then
   begin
     for i := 0 to (USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
-      OPStackNode_SetEventFlag(Node^.Events.Consumed, i, State);
+      OPStackNode_SetEventState(Node^.Events.ConsumedState, i, EventState);
   end else
   begin
     for i := 0 to (USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
-      OPStackNode_SetEventFlag(Node^.Events.Consumed, i, State);
+      OPStackNode_SetEventState(Node^.Events.ConsumedState, i, EventState);
   end
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_SetEventProducedFlags;
+//  procedure OPStackNode_SetEventProducedState;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_SetEventProducedFlags(Node: PNMRAnetNode; State: Byte);
+procedure OPStackNode_SetEventProducedState(Node: PNMRAnetNode; EventState: Byte);
 var
   i: Integer;
 begin
   if OPStackNode_TestState(Node, NS_VIRTUAL) then
   begin
     for i := 0 to (USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
-      OPStackNode_SetEventFlag(Node^.Events.Produced, i, State);
+      OPStackNode_SetEventState(Node^.Events.ProducedState, i, EventState);
   end else
   begin
     for i := 0 to (USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
-      OPStackNode_SetEventFlag(Node^.Events.Produced, i, State);
+      OPStackNode_SetEventState(Node^.Events.ProducedState, i, EventState);
   end
-
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_SetEventFlag;
+//  procedure OPStackNode_SetEventState;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_SetEventFlag(var Events: TNodeEventArray; EventIndex: Integer; State: Byte);
+procedure OPStackNode_SetEventState(var Events: TNodeEventStateArray; EventIndex: Integer; EventState: Byte);
 var
   ByteOffset, {EventOffset} NormalizedIndex: Integer;
   Mask: Byte;
 begin
   ByteOffset := EventIndex div 4;    // There are 4 Events supported in each Byte
   NormalizedIndex := EventIndex - (ByteOffset*4);
- // EventOffset := EventIndex mod 4;   // There are
   Mask := %00000011;
   Mask := Mask shl (NormalizedIndex * 2);  // 2 bits per event
   Mask := not Mask;
   Events[ByteOffset] := Events[ByteOffset] and Mask;
-  Mask := State shl (NormalizedIndex * 2);
+  Mask := EventState shl (NormalizedIndex * 2);
   Events[ByteOffset] := Events[ByteOffset] or Mask;
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_ClearEventFlags;
+//  function OPStackNode_GetEventState;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OPStackNode_ClearEventFlags(var Events: TNodeEventArray);
+function OPStackNode_GetEventState(var Events: TNodeEventStateArray; EventIndex: Integer): Byte;
 var
-    i: Integer;
+  ByteOffset, NormalizedIndex: Integer;
 begin
-  for i := 0 to USER_MAX_EVENTS_BYTES - 1 do                                   // Shortcut to clear them all
-    Events[i] := 0;
+  ByteOffset := EventIndex div 4;    // There are 4 Events supported in each Byte
+  NormalizedIndex := EventIndex - (ByteOffset*4);
+  Result := (Events[ByteOffset] shr (NormalizedIndex * 2)) and $03; // 2 bits per event
 end;
 
-// *****************************************************************************
-//  procedure OPStackNode_NextEventFlag;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-function OPStackNode_NextEventFlag(var Events: TNodeEventArray; var State: Byte): Integer;
+procedure OPStackNode_SetEventFlags(var Events: TNodeEventArray);
+var
+  i: Integer;
+begin
+  for i := 0 to USER_MAX_PCER_BYTES - 1 do
+    Events[i] := $FF
+end;
+
+procedure OPStackNode_SetEventFlag(EventIndex: Integer; Clear: Boolean; var Events: TNodeEventArray);
+var
+  ByteOffset: Integer;
+  Mask: Byte;
+begin
+  ByteOffset := EventIndex div 8;    // There are 8 PCERs supported in each Byte
+  Mask := $01;
+  Mask := Mask shl (EventIndex mod 8);
+  if Clear then
+  begin
+    Mask := not Mask;
+    Events[ByteOffset] := Events[ByteOffset] and Mask;
+  end else
+    Events[ByteOffset] := Events[ByteOffset] or Mask;
+end;
+
+procedure OPStackNode_ClearEventFlags(var Events: TNodeEventArray);
+var
+  i: Integer;
+begin
+  for i := 0 to USER_MAX_PCER_BYTES - 1 do
+    Events[i] := $00
+end;
+
+function OPStackNode_NextEventFlag(var Events: TNodeEventArray): Integer;
 var
   i, j: Integer;
   Temp: Byte;
 begin
   Result := -1;
-  for i := 0 to USER_MAX_EVENTS_BYTES - 1 do
+  for i := 0 to USER_MAX_PCER_BYTES - 1 do
   begin
     if Events[i] <> 0 then
     begin
       Temp := Events[i];
-      for j := 0 to 3 do                                                      // Find the first non zero state in the byte
+      for j := 0 to 7 do                                                        // Find the first non zero state in the byte
       begin
-        State := Temp and $03;
-        if State <> 0 then
+        if Temp and $01 <> 0 then
         begin
-          Result := (i*4) + j;
-          OPStackNode_SetEventFlag(Events, Result, EVENT_STATE_CLEAR); // Clear the flag
+          Result := (i*8) + j;
+          OPStackNode_SetEventFlag(Result, True, Events);                 // Clear the flag
           Exit;
         end else
-          Temp := Temp shr 2;
+          Temp := Temp shr 1;
       end
     end
   end
-
 end;
 
-// *****************************************************************************
-//  procedure OPStackNode_IsAnyEventSet;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
 function OPStackNode_IsAnyEventSet(var Events: TNodeEventArray): Boolean;
 var
   i: Integer;
 begin
   Result := False;
-  for i := 0 to USER_MAX_EVENTS_BYTES - 1 do
+  for i := 0 to USER_MAX_PCER_BYTES - 1 do
   begin
     if Events[i] <> 0 then
     begin
       Result := True;
-      Exit
+      Break;
     end
   end
 end;

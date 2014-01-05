@@ -51,6 +51,30 @@ implementation
 // *****************************************************************************
 procedure AppCallback_InitializeEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
 begin
+  case ConsumedProduced of
+    EVENT_TYPE_CONSUMED :
+        begin
+          case EventIndex of
+            0 : OPStackNode_SetEventState(Node^.Events.ConsumedState, EventIndex, EVENT_STATE_INVALID);     // Emergeny Stop
+          end;
+        end;
+    EVENT_TYPE_PRODUCED :
+        begin
+          case EventIndex of
+            0 : OPStackNode_SetEventState(Node^.Events.ProducedState, EventIndex, EVENT_STATE_INVALID)     // Emergeny Stop
+          else begin
+              if OPStackNode_TestState(Node, NS_VIRTUAL) then
+              begin
+                case EventIndex of
+                  1 :  OPStackNode_SetEventState(Node^.Events.ProducedState, EventIndex, EVENT_STATE_VALID);    // IsTrain
+                  2 :  OPStackNode_SetEventState(Node^.Events.ProducedState, EventIndex, EVENT_STATE_VALID);    // IsIdleProxy
+                  3 :  OPStackNode_SetEventState(Node^.Events.ProducedState, EventIndex, EVENT_STATE_INVALID);  // IsInUseProxy
+                end;
+              end;
+            end;
+          end;
+        end;
+  end;
 end;
 
 // *****************************************************************************
@@ -64,7 +88,21 @@ end;
 //                  a virtual node or not
 // *****************************************************************************
 procedure AppCallback_InitializeDynamicEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
-begin
+begin            Exit;
+  case ConsumedProduced of
+    EVENT_TYPE_CONSUMED :
+        begin
+          case EventIndex of
+            0 : OPStackNode_SetEventState(Node^.Events.ProducedState, EventIndex, EVENT_STATE_INVALID);
+          end;
+        end;
+    EVENT_TYPE_PRODUCED :
+        begin
+          case EventIndex of
+            0 : OPStackNode_SetEventState(Node^.Events.ProducedState, EventIndex, EVENT_STATE_INVALID);
+          end;
+        end;
+  end;
 end;
 
 // *****************************************************************************
@@ -117,6 +155,18 @@ end;
 function AppCallback_DynamicVNodeProducedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 begin
   Result := False;
+  if Node^.TrainData.Address > 0 then
+  begin
+    EventID[0] := $06;
+    EventID[1] := $01;
+    EventID[2] := $00;
+    EventID[3] := $CC;
+    EventID[4] := $AA;
+    EventID[5] := $AA;
+    EventID[6] := $03;
+    EventID[7] := $03;
+    Result := True
+  end;
 end;
 
 end.

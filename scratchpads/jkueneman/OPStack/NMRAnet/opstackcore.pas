@@ -22,6 +22,9 @@ uses
   opstackbuffers,
   opstacktypes,
   opstacknode,
+  template_event_callbacks,
+  template_node,
+  template_vnode,
   opstackcore_events,
   opstackcore_can,
   opstackcore_pip,
@@ -387,6 +390,7 @@ procedure NodeRunStateMachine(Node: PNMRAnetNode);
 var
   OPStackMessage: POPStackMessage;
   CAN_MTI: DWord;
+  i: Integer;
 begin
   OPStackMessage := nil;
   case Node^.iStateMachine of
@@ -494,8 +498,33 @@ begin
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
-        if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
+        if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
         begin
+          if Node^.State and NS_VIRTUAL <> 0 then
+          begin
+            for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
+              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);
+            for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
+              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_PRODUCED);
+
+            for i := 0 to USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1 do
+              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_CONSUMED);
+            for i := 0 to USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
+              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
+
+          end else
+          begin
+            for i := 0 to USER_MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
+              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);
+            for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
+              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_PRODUCED);
+
+            for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1 do
+              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_CONSUMED);
+            for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
+              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
+          end;
+
           Node^.iStateMachine := STATE_NODE_PERMITTED;
           IncomingMessageDispatch(OPStackMessage, Node, nil);
           OPStackBuffers_DeAllocateMessage(OPStackMessage);

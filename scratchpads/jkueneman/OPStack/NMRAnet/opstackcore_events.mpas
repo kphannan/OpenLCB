@@ -191,16 +191,16 @@ var
 begin
   if DestNode <> nil then
   begin
-    OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
-    OPStackNode_SetEventProducedFlags(DestNode, EVENT_STATE_UNKNOWN);
+    OPStackNode_SetEventFlags(DestNode^.Events.Consumed);
+    OPStackNode_SetEventFlags(DestNode^.Events.Produced);
     Exit;
   end else
   begin
     for i := 0 to NodePool.AllocatedCount - 1 do
     begin
       DestNode := NodePool.AllocatedList[i];
-      OPStackNode_SetEventProducedFlags(DestNode, EVENT_STATE_UNKNOWN);
-      OPStackNode_SetEventConsumedFlags(DestNode, EVENT_STATE_UNKNOWN);
+      OPStackNode_SetEventFlags(DestNode^.Events.Consumed);
+      OPStackNode_SetEventFlags(DestNode^.Events.Produced);
     end;
     Exit;
   end;
@@ -220,12 +220,12 @@ begin
     if LocalDestNode^.State and NS_VIRTUAL <> 0 then
     begin
       if SupportsVNodeEventAsConsumer(LocalDestNode, @AMessage^.Buffer^.DataArray, VNodeEventIndex) then
-        OPStackNode_SetEventFlag(LocalDestNode^.Events.Consumed, VNodeEventIndex, EVENT_STATE_UNKNOWN);
+        OPStackNode_SetEventFlag(VNodeEventIndex, False, LocalDestNode^.Events.Consumed);
     end else
     {$ENDIF}
     begin
       if SupportsEventAsConsumer(LocalDestNode, @AMessage^.Buffer^.DataArray, NodeEventIndex) then
-        OPStackNode_SetEventFlag(LocalDestNode^.Events.Consumed, NodeEventIndex, EVENT_STATE_UNKNOWN);
+        OPStackNode_SetEventFlag(NodeEventIndex, False, LocalDestNode^.Events.Consumed);
     end
   end;
 end;
@@ -244,12 +244,12 @@ begin
     if LocalDestNode^.State and NS_VIRTUAL <> 0 then
     begin
       if SupportsVNodeEventAsProducer(LocalDestNode, @AMessage^.Buffer^.DataArray, VNodeEventIndex) then
-        OPStackNode_SetEventFlag(LocalDestNode^.Events.Produced, VNodeEventIndex, EVENT_STATE_UNKNOWN);
+        OPStackNode_SetEventFlag(VNodeEventIndex, False, LocalDestNode^.Events.Produced);
     end else
     {$ENDIF}
     begin
       if SupportsEventAsProducer(LocalDestNode, @AMessage^.Buffer^.DataArray, NodeEventIndex) then
-        OPStackNode_SetEventFlag(LocalDestNode^.Events.Produced, NodeEventIndex, EVENT_STATE_UNKNOWN);
+        OPStackNode_SetEventFlag(NodeEventIndex, False, LocalDestNode^.Events.Produced);
     end
   end;
 end;
@@ -373,17 +373,20 @@ var
   DynamicEvent: TEventID;
 begin
   Result := False;
+  // First see if there are any Consumed Events that need to be broadcast
   if OPStackNode_IsAnyEventSet(Node^.Events.Consumed) then
   begin
-    State := 0;
-    EventIndex := OPStackNode_NextEventFlag(Node^.Events.Consumed, State);      // what index and what state is it in, and clear it
+    EventIndex := OPStackNode_NextEventFlag(Node^.Events.Consumed);             // what index  and clear it
     if EventIndex > -1  then
     begin
       OPStackMessage := nil;
+      State := OPStackNode_GetEventState(Node^.Events.ConsumedState, EventIndex);
       case State of
         EVENT_STATE_UNKNOWN : MTI := MTI_CONSUMER_IDENTIFIED_UNKNOWN;
         EVENT_STATE_VALID   : MTI := MTI_CONSUMER_IDENTIFIED_SET;
-        EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR;
+        EVENT_STATE_INVALID : MTI := MTI_CONSUMER_IDENTIFIED_CLEAR
+      else
+        Exit;                                                                   // Error
       end;
 
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
@@ -437,13 +440,17 @@ begin
   end else
   if OPStackNode_IsAnyEventSet(Node^.Events.Produced) then
   begin
-    EventIndex := OPStackNode_NextEventFlag(Node^.Events.Produced, State);      // what index and what state is it in, and clear it
-    if EventIndex > -1 then
+    EventIndex := OPStackNode_NextEventFlag(Node^.Events.Produced);             // what index  and clear it
+    if EventIndex > -1  then
     begin
+      OPStackMessage := nil;
+      State := OPStackNode_GetEventState(Node^.Events.ProducedState, EventIndex);
       case State of
         EVENT_STATE_UNKNOWN : MTI := MTI_PRODUCER_IDENTIFIED_UNKNOWN;
         EVENT_STATE_VALID   : MTI := MTI_PRODUCER_IDENTIFIED_SET;
-        EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR;
+        EVENT_STATE_INVALID : MTI := MTI_PRODUCER_IDENTIFIED_CLEAR
+      else
+        Exit;                                                                   // Error
       end;
 
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
@@ -498,3 +505,4 @@ begin
 end;
 
 end.
+
