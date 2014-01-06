@@ -8,7 +8,7 @@ var
   CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
   
 // TFT module connections
-var 
+var
   TFT_DataPort : char  at LATE;
   TFT_RST : sbit  at LATD7_bit;
   TFT_BLED : sbit at LATD2_bit;
@@ -23,22 +23,25 @@ var
   TFT_CS_Direction : sbit  at TRISD10_bit;
   TFT_RD_Direction : sbit  at TRISD5_bit;
   TFT_WR_Direction : sbit  at TRISD4_bit;
+
 // End TFT module connections
 
 // DCC Connection Pins
   H_Bridge_A_Lo                     : sbit at LATB4_bit;
   H_Bridge_A_Hi                     : sbit at LATB5_bit;
   H_Bridge_B_Lo                     : sbit at LATB6_bit;
-  H_Bridge_B_Hi                     : sbit at LATB7_bit;
-
+  H_Bridge_B_Hi                     : sbit at LATB7_bit;  
+  PreambleSyncPin                   : sbit at LATB1_bit;                         // Output at the end of the preamble
+  DCC_Programming_ACK_Pin           : sbit at RB0_bit;                          // Input so use the port and not the latch
+  
   H_Bridge_A_Lo_Direction           : sbit at TRISB4_bit;
   H_Bridge_A_Hi_Direction           : sbit at TRISB5_bit;
   H_Bridge_B_Lo_Direction           : sbit at TRISB6_bit;
-  H_Bridge_B_Hi_Direction           : sbit at TRISB7_bit;
-
-  DCC_Programming_ACK_Pin           : sbit at RB0_bit;                          // Input so use the port and not the latch
+  H_Bridge_B_Hi_Direction           : sbit at TRISB7_bit;     
+  PreambleSyncPinDirection          : sbit at TRISB1_bit;
   DCC_Programming_ACK_Direction     : sbit at TRISB0_bit;
-  
+
+
   Dcc_Timer_PR                      : Word at PR1;                              // DCC Interrupt Rollover
 // End DCC Connection Pins
 
@@ -110,10 +113,10 @@ begin
       // Now we can update the xxxx_DCC_PIN_BIT flags for the next 56us time slot
       NMRA_DCC_58us_TimeTick(@Track);                                                         // < 1us
   //    NMRA_DCC_TransmitterStateMachine(@Track, False, CommandStationConfigurationShadowRam.RailComEnable = CONFIG_RAILCOM_ENABLED);   // < 5us
-      NMRA_DCC_TransmitterStateMachine(@Track, False, True);   // < 5us
+      NMRA_DCC_TransmitterStateMachine(@Track, False, False);   // < 5us
       NMRA_DCC_LoadPacketIntoTransmitterStateMachine(@Track, PREAMBLE_BIT_COUNT_NORMAL);      // < 11us    Max
     end
-  end
+  end;
 end;
 
 procedure OPStack_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT; ics ICS_AUTO;
@@ -123,10 +126,11 @@ begin
 end;
 
 begin
+  H_Bridge_A_Lo_Direction          := 0;
+  H_Bridge_A_Hi_Direction          := 0;
+  H_Bridge_B_Lo_Direction          := 0;
+  H_Bridge_B_Hi_Direction          := 0;
   { Main program }
-  TRISB := 0;             // Initialize PORTB as output
-  LATB := 0;              // Set PORTB to zero
-  
   NMRA_DCC_Initialize;
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
@@ -141,7 +145,10 @@ begin
   MCU_Enable100msTimer;
   MCU_EnableDCCTimer;
   OPStackCore_Enable(True);
-
+  
+  delay_ms(100);
+  OPStackNode_Allocate;        // Allocate the first Train Node
+  
   while True do
   begin
     OPStackCore_Process;

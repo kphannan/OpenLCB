@@ -22,7 +22,15 @@ interface
 
 uses
   opstacktypes,
+  opstacknode,
   opstackdefines;
+
+const
+  EVENT_TYPE_CONSUMED = 1;
+  EVENT_TYPE_PRODUCED = 2;
+
+procedure AppCallback_InitializeEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
+procedure AppCallback_InitializeDynamicEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
 
 function AppCallback_DynamicConsumedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 function AppCallback_DynamicProducedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
@@ -30,6 +38,34 @@ function AppCallback_DynamicVNodeConsumedEvent(Node: PNMRAnetNode; EventIndex: I
 function AppCallback_DynamicVNodeProducedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 
 implementation
+
+// *****************************************************************************
+//  procedure AppCallback_InitializeEvents
+//     Parameters: Node:  Node that is requesting a Dynamic Consumed Event definition
+//                 EventIndex: Index of the Static Event, 0 indexed
+//                 ConsumedProduced: EVENT_TYPE_xxxx flag
+//     Returns:     None
+//     Description: Allows event states to be initalized (set/clear) on node creation
+//                  The Node^.State can be tested for NS_VIRTUAL to decide if it is
+//                  a virtual node or not
+// *****************************************************************************
+procedure AppCallback_InitializeEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
+begin
+end;
+
+// *****************************************************************************
+//  procedure AppCallback_InitializeDynamicEvents
+//     Parameters: Node:  Node that is requesting a Dynamic Consumed Event definition
+//                 EventIndex: Index of the Dynamic Event, 0 indexed
+//                 ConsumedProduced: EVENT_TYPE_xxxx flag
+//     Returns:     None
+//     Description: Allows event states to be initalized (set/clear) on node creation
+//                  The Node^.State can be tested for NS_VIRTUAL to decide if it is
+//                  a virtual node or not
+// *****************************************************************************
+procedure AppCallback_InitializeDynamicEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
+begin
+end;
 
 // *****************************************************************************
 //  procedure AppCallback_DynamicConsumedEvent
@@ -80,8 +116,7 @@ end;
 // *****************************************************************************
 function AppCallback_DynamicVNodeProducedEvent(Node: PNMRAnetNode; EventIndex: Integer; var EventID: TEventID): Boolean;
 begin
-  Result := False
+  Result := False;
 end;
 
 end.
-

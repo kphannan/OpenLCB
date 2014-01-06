@@ -139,7 +139,6 @@ begin
   dsPIC33_DMA_AddressOffsetA(CAN_TX_0_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_0_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_0_DMA_CHANNEL, True);
 
-
   // Setup the CAN Transmitter
   dsPIC33_CAN_SetBufferAsTransmitter(CAN_TX_1_BUFFER, True);                    // Setup Buffer 1 as a Transmit Buffer
 
@@ -170,14 +169,13 @@ begin
   dsPIC33_DMA_InterruptSelect(CAN_RX_0_DMA_CHANNEL, IRQ_ECAN1_RX_DATA_READY);                      // Assign the DMA Channel to the ECAN 1 RX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, Word( @RX_Main_RawBufferArray[0]));             // Point the Receive Buffer Offset into the CAN Layer Buffer
   dsPIC33_DMA_Enable(CAN_RX_0_DMA_CHANNEL, True);                                                  // Enable DMA Channel 2
-
+            
   dsPIC33_CAN_InterruptFlagRXBufferOverflow(True);                              // Clear the flag
   dsPIC33_CAN_InterruptFlagRXBuffer(True);                                      // RX Interrupt Flag Reset
   dsPIC33_CAN_InterruptFlagTXBuffer(True);                                      // TX Interrupt Flag Reset
   dsPIC33_CAN_RXBufferOverflowInterrupt(True);                                  // If we don't enable this and an interrupt occurs then it hangs the loop because you can't clear the Rx Interrupt until this is serviced
   dsPIC33_CAN_TXBufferInterrupt(True);                                          // Enable the TX Done Event Interrupt
   dsPIC33_CAN_RXBufferInterrupt(True);                                          // Enable the RX Done Event Interrupt
-
   dsPIC33_CAN_GlobalInterruptCAN_EventPriority(6);                              // CAN Event Interrupt has a priority of 6 out of 7
   dsPIC33_CAN_GlobalInterruptCAN_Event(True);                                   // Enable the CAN Event Interrupt
   CANCKS_C1CTRL1_bit := 1;

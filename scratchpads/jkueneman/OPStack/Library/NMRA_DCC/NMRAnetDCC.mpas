@@ -163,6 +163,8 @@ var
   Programming: TDCCBufferInfo;
   
   Dcc_Timer_PR: Word; sfr; external;                                            //
+  PreambleSyncPin: sbit; sfr; external;
+  PreambleSyncPinDirection: sbit; sfr; external;
 
 // Call once on start up
 procedure NMRA_DCC_Initialize; forward;
@@ -235,6 +237,7 @@ procedure NMRA_DCC_ResetTransmitter(ABuffer: PDCCBufferInfo); forward;
 // ****************************************************************************
 procedure NMRA_DCC_Initialize;
 begin
+  PreambleSyncPinDirection := 0; // output
   InitializeBuffer(@Track, @TrackQueue, @TrackQueuePriority, MAX_TRACK_BUFFER_DEPTH, MAX_TRACK_PRIORITY_BUFFER_DEPTH);
   InitializeBuffer(@Programming, nil, nil, 0, 0);
 end;
@@ -687,7 +690,8 @@ end;
 //
 // ****************************************************************************
 procedure NMRA_DCC_TransmitterStateMachineHandlePreamble(ABuffer: PDCCBufferInfo);
-begin
+begin     
+  PreambleSyncPin := 1;
   ABuffer^.TX_Flags.TRANSMITTING_FLAG_CURRENT_BIT := 1;
   if ABuffer^.TX_PreambleBitCount > 0 then
   begin
@@ -733,6 +737,7 @@ end;
 // ****************************************************************************
 procedure NMRA_DCC_TransmitterStateMachineHandleStartBit(ABuffer: PDCCBufferInfo);
 begin
+  PreambleSyncPin := 0;
   ABuffer^.TX_iBit := STATE_NMRA_DCC_BIT_7;                                              // Reset Bit index for the next Byte
   ABuffer^.TX_Flags.TRANSMITTING_FLAG_CURRENT_BIT := 0;                         // Current Bit = 0 (start bit)
   Inc(ABuffer^.TX_iStateMachine)                                                // Move to the next State
