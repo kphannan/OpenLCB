@@ -3451,7 +3451,7 @@ begin
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
          (Helper.Data[2] = TRACTION_QUERY_SPEED_REPLY) and
-         (Helper.Data[0] and $F0 = $10) then
+         (Helper.FramingBits = $10) then
       begin
         MessageWaitTimerReset;
         Result := True;
@@ -3473,7 +3473,7 @@ begin
       if (Helper.MTI = MTI_TRACTION_REPLY) and
          (Helper.SourceAliasID = DestinationAlias) and
          (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[0] and $F0 = $20) then
+         (Helper.FramingBits = $20) then
       begin
         MessageWaitTimerReset;
         Result := True;

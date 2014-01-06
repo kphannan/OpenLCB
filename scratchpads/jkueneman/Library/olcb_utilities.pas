@@ -72,6 +72,7 @@ type
   TOpenLCBMessageHelper = class( TOlcbMessage)
   private
     FDestinationAliasID: Word;
+    FFramingBits: Byte;
     FHasDestinationAddress: Boolean;
     FForwardingBitNotSet: Boolean;
     FSourceAliasID: Word;
@@ -90,6 +91,7 @@ type
     property SourceAliasID: Word read FSourceAliasID write FSourceAliasID;
     property DestinationAliasID: Word read FDestinationAliasID write FDestinationAliasID;
     property ForwardingBitNotSet: Boolean read FForwardingBitNotSet write FForwardingBitNotSet;
+    property FramingBits: Byte read FFramingBits write FFramingBits;
     property UnimplementedBitsSet: Boolean read FUnimplementedBitsSet write FUnimplementedBitsSet;
     property HasDestinationAddress: Boolean read FHasDestinationAddress write FHasDestinationAddress;
 
@@ -526,6 +528,7 @@ begin
   FDestinationAliasID := 0;
   FForwardingBitNotSet := False;
   FUnimplementedBitsSet := False;
+  FFramingBits := 0;
 end;
 
 destructor TOpenLCBMessageHelper.Destroy;
@@ -603,6 +606,7 @@ begin
 
           // Determine if the message has a destination address and if so store it
           HasDestinationAddress := False;
+          FramingBits := 0;
           if Layer = ol_OpenLCB then
           begin
             if MTI and MTI_FRAME_TYPE_MASK > MTI_FRAME_TYPE_GENERAL then        // See if the destination Alias is in the MTI
@@ -615,6 +619,7 @@ begin
               if MTI and MTI_ADDRESS_PRESENT = MTI_ADDRESS_PRESENT then
               begin
                 DestinationAliasID := Word( (Data[0] shl 8) and $0FFF) or (Data[1]);
+                FramingBits := Data[0] and $F0;
                 HasDestinationAddress := True;
               end
             end
@@ -650,7 +655,7 @@ begin
       if (i < 2) and (DestinationAliasID <> 0) then
       begin
         if i = 0 then
-          Result := Result + IntToHex((DestinationAliasID shr 8) and $00FF, 2)
+          Result := Result + IntToHex(((DestinationAliasID shr 8) or FramingBits) and $00FF, 2)
         else
           Result := Result + IntToHex(DestinationAliasID and $00FF, 2)
       end else
@@ -1149,7 +1154,7 @@ end;
 
 function DotHexToEvent(Event: string): TEventID;
 var
-  Str, SubStr: string;
+  SubStr: string;
   i, iByteCount: Integer;
 begin
   Result[0] := 0;
