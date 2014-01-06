@@ -12,7 +12,7 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
   OnHide = FormHide
   OnShow = FormShow
   Position = poDefault
-  LCLVersion = '1.0.8.0'
+  LCLVersion = '1.2.0.1'
   object GroupBoxAllocation: TGroupBox
     Left = 392
     Height = 368
@@ -24,9 +24,9 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     TabOrder = 0
     object LabelAddress: TLabel
       Left = 10
-      Height = 17
+      Height = 16
       Top = 110
-      Width = 52
+      Width = 51
       Caption = 'Address'
       ParentColor = False
     end
@@ -148,17 +148,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object LabelMaxSpeed: TLabel
       Left = 46
-      Height = 17
+      Height = 16
       Top = 5
-      Width = 55
+      Width = 54
       Caption = '100 m/s'
       ParentColor = False
     end
     object LabelMinSpeed: TLabel
       Left = 44
-      Height = 17
+      Height = 16
       Top = 164
-      Width = 39
+      Width = 38
       Caption = '0 m/s'
       ParentColor = False
     end
@@ -236,17 +236,17 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     end
     object LabelSpeedPos: TLabel
       Left = 100
-      Height = 17
+      Height = 16
       Top = 94
-      Width = 27
+      Width = 26
       Caption = 'm/s'
       ParentColor = False
     end
     object LabelPosValue: TLabel
       Left = 62
-      Height = 17
+      Height = 16
       Top = 94
-      Width = 9
+      Width = 8
       Caption = '0'
       ParentColor = False
     end
@@ -297,7 +297,6 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
         Height = 22
         Top = 325
         Width = 23
-        NumGlyphs = 0
       end
     end
   end

@@ -379,6 +379,8 @@ end;
 procedure TFormAwesomeThrottle.ActionControlStopExecute(Sender: TObject);
 begin
   TrackBarSpeed.Position := 0;
+  RunTractionSpeed(AllocatedAlias, False);
+  RunTractionSpeed(AllocatedAlias, False);
 end;
 
 procedure TFormAwesomeThrottle.ActionFunction0Execute(Sender: TObject);
