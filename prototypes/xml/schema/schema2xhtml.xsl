@@ -530,9 +530,9 @@ pattern:<span style="font-weight:normal; color:blue">&#9;
 
 	<xsl:template name="howmany">
 		<xsl:choose>
-			<xsl:when test="@minOccurs='0' and @maxOccurs='unbounded'"> {zero or more}</xsl:when>
+			<xsl:when test="@minOccurs='0' and @maxOccurs='unbounded'"> {0 or more}</xsl:when>
 			<xsl:when test="@minOccurs='0' and (not(@maxOccurs) or @maxOccurs='1')"> {0 or 1}</xsl:when>
-			<xsl:when test="(not(@minOccurs) or @minOccurs='1') and @maxOccurs='unbounded'"> {one or more}</xsl:when>
+			<xsl:when test="(not(@minOccurs) or @minOccurs='1') and @maxOccurs='unbounded'"> {at least 1}</xsl:when>
 			<xsl:otherwise>
 				<xsl:if test="@minOccurs and @maxOccurs!='1'"> {
 					<xsl:value-of select="@minOccurs"/>
