@@ -3852,7 +3852,7 @@ procedure TTaskOlcbBase.SendTractionQueryDccAddressProxyMessage(Address: Word; S
 begin
   if not Short then
     Address := Address or $C000;
-  MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $06, $01, $00, $00, Hi(Address), Lo(Address), $00, $01);
+  MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $06, $01, $00, $00, Hi(Address), Lo(Address), $03, $03);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;

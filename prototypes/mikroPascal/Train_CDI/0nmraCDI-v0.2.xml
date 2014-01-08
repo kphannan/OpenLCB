@@ -4,8 +4,8 @@
   <identification>
     <manufacturer>NMRA</manufacturer>
     <model>NMRA standard CV definitions</model>
-    <hardwareVersion />
-    <softwareVersion />
+    <hardwareVersion/>
+    <softwareVersion/>
     <map>
       <relation>
         <property>Model</property>
@@ -13,7 +13,7 @@
       </relation>
     </map>
   </identification>
-  <acdi />
+  <acdi/>
   <segment space="253" origin="256">
     <name>DCC Controls</name>
     <description>DCC-specific control items</description>
@@ -44,6 +44,7 @@
     </int>
   </segment>
   <segment origin="4278190081" space="253">
+    <name>Raw CV Access</name>
     <group replication="256">
       <name>CVs</name>
       <description>Raw CV access</description>
@@ -55,6 +56,7 @@
     </group>
   </segment>
   <segment space="253">
+    <name>Detailed Decoder Access</name>
     <int origin="4278190081">
       <name>Primary Address</name>
       <description>Short address</description>

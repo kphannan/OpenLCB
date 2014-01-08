@@ -7,7 +7,7 @@ Value=-1
 Value=0
 [ACTIVE_TAB]
 <<<<<<< .mine
-Value=..\Library\NMRAnet\NMRAnetNode.mpas
+Value=NMRAnetAppCallbacks.mpas
 =======
 Value=NMRAnetAppCallbacks.mpas
 >>>>>>> .r3258
