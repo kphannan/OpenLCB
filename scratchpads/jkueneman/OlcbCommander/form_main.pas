@@ -1993,7 +1993,7 @@ var
   i: Integer;
   Done: Boolean;
 begin
-  if not Sender.ForceTermination then
+  if not Sender.ForceTermination and (not( csDestroying in ComponentState)) then
   begin
     if Sender is TTaskAddressSpaceMemoryReadWithDatagram then
     begin

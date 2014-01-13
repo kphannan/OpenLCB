@@ -1,7 +1,7 @@
 object FormOLCB_Commander: TFormOLCB_Commander
-  Left = 479
+  Left = 437
   Height = 405
-  Top = 326
+  Top = 287
   Width = 788
   Caption = 'OpenLCB Commander'
   ClientHeight = 405

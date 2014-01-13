@@ -1200,7 +1200,7 @@ procedure TFormAwesomeThrottle.EventTaskReceived(EventTask: TTaskOlcbBase);
             MTI_PRODUCER_IDENTIFIED_SET,
             MTI_PRODUCER_IDENTIFIED_CLEAR :
               begin
-                if (Event[0] = $06) and (Event[1] = $01) and (Event[6] = $00) and (Event[7] = $01) then
+                if (Event[0] = $06) and (Event[1] = $01) and (Event[6] = $03) and (Event[7] = $03) then
                 begin
                   if IsShortAddress then
                   begin
