@@ -137,7 +137,7 @@ const                                                                           
   NS_ALLOCATED            = $01;                                                // NodeState the node is allocated
   NS_PERMITTED            = $02;                                                // NodeState CAN Frame Layer is permitted (Node ID's resolved with bus)
   NS_INITIALIZED          = $04;                                                // NodeState Message Layer has sent its first Initialize Complete Message
-  NS_VIRTUAL              = $08;                                                // NodeState If is a virtual node
+  {$IFDEF SUPPORT_VIRTUAL_NODES}NS_VIRTUAL              = $08; {$ENDIF}                                               // NodeState If is a virtual node
   NS_RELEASING            = $10;                                                // Node is tagged to send and AMD and be removed from the bus (while this is set what happens??)
 
   TS_RESERVED             = $01;                                                // Train State = Reserved

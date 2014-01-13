@@ -141,7 +141,6 @@ begin
                   MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;     // Sets Flag(s) to be processed in main loop
                   MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;                // Sets Flag(s) to be processed in main loop
                   MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;        // Allocates Buffer to be processed in main loop
-                  MTI_OPTIONAL_INTERACTION_REJECTED : begin end;
                   MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;               // Updates internal states
                   MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
                   {$IFDEF SUPPORT_TRACTION}
@@ -151,8 +150,9 @@ begin
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
                   MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
                   MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;                // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end                // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end;               // Allocates Buffer to be processed in main loop
                   {$ENDIF}
+                  MTI_OPTIONAL_INTERACTION_REJECTED : begin end
                 else
                   OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
                 end; {case}
@@ -309,12 +309,6 @@ begin
               ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage);
               Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
-        MTI_DATAGRAM :
-            begin
-              if DatagramSendAckReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source, PDatagramBuffer( PByte( NextMessage^.Buffer))) then
-                DatagramReply(Node, MessageToSend, NextMessage);
-              Result :=  MessageToSend <> nil
-            end;
         {$IFDEF SUPPORT_TRACTION}
         MTI_TRACTION_PROTOCOL :
             begin
@@ -322,6 +316,7 @@ begin
               Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
+        {$IFDEF SUPPORT_STREAMS}
         MTI_STREAM_INIT_REQUEST :
             begin
               StreamInitRequestReply(Node, MessageToSend, NextMessage);
@@ -346,6 +341,13 @@ begin
             begin
               StreamCompleteReply(Node, MessageToSend, NextMessage);
               Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+            end;
+        {$ENDIF}
+        MTI_DATAGRAM :
+            begin
+              if DatagramSendAckReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source, PDatagramBuffer( PByte( NextMessage^.Buffer))) then
+                DatagramReply(Node, MessageToSend, NextMessage);
+              Result :=  MessageToSend <> nil
             end
       else begin
           OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
@@ -499,6 +501,7 @@ begin
         // Fake an Identify Events to allow the AppCallbacks to be called
         if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
         begin
+          {$IFDEF SUPPORT_VIRTUAL_NODES}
           if Node^.State and NS_VIRTUAL <> 0 then
           begin
             for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
@@ -512,6 +515,7 @@ begin
               AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
 
           end else
+          {$ENDIF}
           begin
             for i := 0 to USER_MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
               AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);

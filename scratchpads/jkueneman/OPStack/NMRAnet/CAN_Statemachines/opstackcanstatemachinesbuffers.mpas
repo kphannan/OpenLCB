@@ -52,12 +52,14 @@ function OPStackCANStatemachineBuffers_FindMessageOnOutgoingAcdiSnipStack(OPStac
 function OPStackCANStatemachineBuffers_FirstMessageOnOutgoingAcdiSnipStack(Dummy: Word): POPStackMessage;
 procedure OPStackCANStatemachineBuffers_RemoveAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
 
+{$IFDEF SUPPORT_STREAMS}
 // Outgoing Stream
 procedure OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(OPStackStreamMessage: POPStackMessage);
-function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte): POPStackMessage;
+function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Integer): POPStackMessage;
 function OPStackCANStatemachineBuffers_FindMessageOnOutgoingStreamStack(OPStackDatagramMessage: POPStackMessage): POPStackMessage;
 function OPStackCANStatemachineBuffers_FirstMessageOnOutgoingStreamStack(Dummy: Word): POPStackMessage;
 procedure OPStackCANStatemachineBuffers_RemoveStreamMessage(OPStackStreamMessage: POPStackMessage);
+{$ENDIF}
 
 // MultiFrame Messages
 procedure OPStackCANStateMachineBuffer_AddOutgoingMultiFrameMessage(OPStackMultiFrameMessage: POPStackMessage);
@@ -424,7 +426,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte): POPStackMessage;
+function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Integer): POPStackMessage;
 var
   LocalStack: POPStackMessage;
 begin
@@ -433,8 +435,8 @@ begin
   while LocalStack <> nil do
   begin
     if (LocalStack^.Dest.AliasID = DestNodeAlias) then
-      if (PStreamBuffer( PByte( LocalStack^.Buffer))^.DestStreamID = DestStreamID) then
-        if (PStreamBuffer( PByte( LocalStack^.Buffer))^.SourceStreamID = SourceStreamID) then
+      if (DestStreamID < 0) or (PStreamBuffer( PByte( LocalStack^.Buffer))^.DestStreamID = DestStreamID) then
+        if (SourceStreamID < 0) or (PStreamBuffer( PByte( LocalStack^.Buffer))^.SourceStreamID = SourceStreamID) then
         begin
           Result := LocalStack;
           Exit;
@@ -475,6 +477,8 @@ procedure OPStackCANStatemachineBuffers_RemoveStreamMessage(OPStackStreamMessage
 begin
   RemoveInprocessMessage(OPStackStreamMessage, @StreamOutgoingProcessStack);
 end;
+
+{$ENDIF}
 
 // *****************************************************************************
 //  procedure OPStackCANStatemachineBuffers_RemoveStreamDatagramMessage;
@@ -531,7 +535,5 @@ procedure OPStackCANStatemachineBuffers_RemoveMultiFrameMessage(OPStackMultiFram
 begin
   RemoveInprocessMessage(OPStackMultiFrameMessage, @MultiFrameOutgoingProcessStack);
 end;
-
-{$ENDIF}
 
 end.

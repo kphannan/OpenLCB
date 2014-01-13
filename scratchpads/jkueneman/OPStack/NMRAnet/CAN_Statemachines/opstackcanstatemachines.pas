@@ -17,7 +17,9 @@ uses
   opstackdefines,
   opstackbuffers,
   opstackcanstatemachinesmultiframe,
+  {$IFDEF SUPPORT_STREAMS}
   opstackcanstatemachinesstream,
+  {$ENDIF}
   opstackcanstatemachinessnip,
   opstackcanstatemachinesdatagram,
   opstackcanstatemachinesbuffers;
@@ -70,6 +72,16 @@ begin
     OPStackBuffers_DeAllocateMessage(AMessage);
     AMessage := OPStackCANStatemachineBuffers_FindAnyAcdiSnipOnOutgoingStack(SourceAliasID);
   end;
+  
+  {$IFDEF SUPPORT_STREAMS}
+  AMessage := OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(SourceAliasID, -1, -1);
+  while AMessage <> nil do
+  begin
+    OPStackCANStatemachineBuffers_RemoveStreamMessage(AMessage);
+    OPStackBuffers_DeAllocateMessage(AMessage);
+    AMessage := OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(SourceAliasID, -1, -1);
+  end;
+  {$ENDIF}
 
   AMessage := OPStackCANStatemachineBuffers_FindAnyMultiFrameOnOutgoingStack(SourceAliasID);
   while AMessage <> nil do
@@ -226,7 +238,9 @@ procedure OPStackCANStatemachine_ProcessMessages;
 begin
   StackCANStatemachineDatagram_ProcessOutgoingDatagramMessage;
   OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
+  {$IFDEF SUPPORT_STREAMS}
   OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+  {$ENDIF}
   OPStackCANStatemachineMultiFrame_ProcessOutgoingMultiFrameMessage;
 end;
 

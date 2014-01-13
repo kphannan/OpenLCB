@@ -17,8 +17,10 @@ uses
   opstackdefines,
   opstacktypes;
 
+const
+  MAX_PROCESS_STACK_ARRAY = 10;
 type
-  TProcessStackArray = array[0..USER_MAX_DATAGRAM_ARRAY_BUFFERS-1] of POPStackMessage;
+  TProcessStackArray = array[0..MAX_PROCESS_STACK_ARRAY-1] of POPStackMessage;
   TProcessStack = record
     Stack: TProcessStackArray;
     Count: Word;
@@ -50,12 +52,14 @@ function OPStackCANStatemachineBuffers_FindMessageOnOutgoingAcdiSnipStack(OPStac
 function OPStackCANStatemachineBuffers_FirstMessageOnOutgoingAcdiSnipStack(Dummy: Word): POPStackMessage;
 procedure OPStackCANStatemachineBuffers_RemoveAcdiSnipMessage(OPStackAcdiSnipMessage: POPStackMessage);
 
+{$IFDEF SUPPORT_STREAMS}
 // Outgoing Stream
 procedure OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(OPStackStreamMessage: POPStackMessage);
-function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte): POPStackMessage;
+function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Integer): POPStackMessage;
 function OPStackCANStatemachineBuffers_FindMessageOnOutgoingStreamStack(OPStackDatagramMessage: POPStackMessage): POPStackMessage;
 function OPStackCANStatemachineBuffers_FirstMessageOnOutgoingStreamStack(Dummy: Word): POPStackMessage;
 procedure OPStackCANStatemachineBuffers_RemoveStreamMessage(OPStackStreamMessage: POPStackMessage);
+{$ENDIF}
 
 // MultiFrame Messages
 procedure OPStackCANStateMachineBuffer_AddOutgoingMultiFrameMessage(OPStackMultiFrameMessage: POPStackMessage);
@@ -87,24 +91,24 @@ procedure OPStackCANStatemachineBuffers_Initialize;
 var
   i: Integer;
 begin
-  for i := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS - 1 do
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     DatagramInProcessStack.Stack[i] := nil;
   DatagramInProcessStack.Count := 0;
-  for i := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS - 1 do
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     DatagramOutgoingProcessStack.Stack[i] := nil;
   DatagramOutgoingProcessStack.Count := 0;
-  for i := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS - 1 do
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     AcdiSnipOutgoingProcessStack.Stack[i] := nil;
   AcdiSnipOutgoingProcessStack.Count := 0;
   {$IFDEF SUPPORT_STREAMS}
-  for i := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS - 1 do
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     StreamInProcessStack.Stack[i] := nil;
   StreamInProcessStack.Count := 0;
-  for i := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS - 1 do
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     StreamOutgoingProcessStack.Stack[i] := nil;
   StreamOutgoingProcessStack.Count := 0;
   {$ENDIF}
-  for i := 0 to USER_MAX_MULTI_FRAME_BYTES - 1 do
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameOutgoingProcessStack.Stack[i] := nil;
   MultiFrameOutgoingProcessStack.Count := 0;
 end;
@@ -422,7 +426,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Byte): POPStackMessage;
+function OPStackCANStatemachineBuffers_FindAnyStreamOnOutgoingStack(DestNodeAlias: Word; SourceStreamID, DestStreamID: Integer): POPStackMessage;
 var
   LocalStack: POPStackMessage;
 begin
@@ -431,8 +435,8 @@ begin
   while LocalStack <> nil do
   begin
     if (LocalStack^.Dest.AliasID = DestNodeAlias) then
-      if (PStreamBuffer( PByte( LocalStack^.Buffer))^.DestStreamID = DestStreamID) then
-        if (PStreamBuffer( PByte( LocalStack^.Buffer))^.SourceStreamID = SourceStreamID) then
+      if (DestStreamID < 0) or (PStreamBuffer( PByte( LocalStack^.Buffer))^.DestStreamID = DestStreamID) then
+        if (SourceStreamID < 0) or (PStreamBuffer( PByte( LocalStack^.Buffer))^.SourceStreamID = SourceStreamID) then
         begin
           Result := LocalStack;
           Exit;
@@ -473,6 +477,8 @@ procedure OPStackCANStatemachineBuffers_RemoveStreamMessage(OPStackStreamMessage
 begin
   RemoveInprocessMessage(OPStackStreamMessage, @StreamOutgoingProcessStack);
 end;
+
+{$ENDIF}
 
 // *****************************************************************************
 //  procedure OPStackCANStatemachineBuffers_RemoveStreamDatagramMessage;
@@ -530,7 +536,4 @@ begin
   RemoveInprocessMessage(OPStackMultiFrameMessage, @MultiFrameOutgoingProcessStack);
 end;
 
-{$ENDIF}
-
 end.
-

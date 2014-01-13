@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC_CAN_RawBuffers.mpas
+Value=..\..\NMRAnet\opstackcore_configmem.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -58,19 +58,20 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=12
+Count=13
 File0=First_OPStack_Demo.mpas
 File1=..\..\NMRAnet\nmranetdefines.mpas
-File2=Templates\template_configmem.mpas
-File3=..\..\NMRAnet\opstackcore.mpas
-File4=..\..\NMRAnet\opstacktypes.mpas
-File5=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
-File6=..\..\NMRAnet\opstackcore_configmem.mpas
-File7=..\..\NMRAnet\opstackcore_events.mpas
-File8=..\..\NMRAnet\opstacknode.mpas
-File9=Templates\MCU_Setup_dsPIC33EPxxxGP5xx.mpas
-File10=Templates\template_event_callbacks.mpas
-File11=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC_CAN_RawBuffers.mpas
+File2=..\..\NMRAnet\opstackcore.mpas
+File3=..\..\NMRAnet\opstacktypes.mpas
+File4=..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
+File5=..\..\NMRAnet\opstackcore_configmem.mpas
+File6=..\..\NMRAnet\opstacknode.mpas
+File7=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.mpas
+File8=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
+File9=..\..\NMRAnet\opstackcore_stream.mpas
+File10=..\..\NMRAnet\opstackdefines.mpas
+File11=..\..\NMRAnet\opstackcore_events.mpas
+File12=..\..\NMRAnet\opstackcore_snip.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -79,17 +80,24 @@ Count=0
 Count=1
 File0=Templates\Options.inc
 [SEARCH_PATH]
-Count=10
+Count=17
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\
-Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path4=E:\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\Templates\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path2=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\
+Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path5=E:\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\Templates\
+Path6=E:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path8=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path9=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path10=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path11=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Projects\First_Test_App\Templates\
+Path12=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Common\
+Path13=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path14=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path15=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path16=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
 [HEADER_PATH]
 Count=0
 [HEADERS]

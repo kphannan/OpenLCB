@@ -20,6 +20,7 @@ uses
   opstackcore_basic,
   opstacktypes;
 
+{$IFDEF SUPPORT_STREAMS}
 procedure OPStackCoreStream_Initialize;
 
 // Calls from received messages
@@ -35,11 +36,15 @@ procedure StreamSendReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage
 procedure StreamProceedReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; StreamMessage: POPStackMessage);
 procedure StreamCompleteReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; StreamMessage: POPStackMessage);
 
+{$ENDIF}
+
 implementation
 
 var
   ActiveStreamList: POPStackMessage;
   StreamIDPool: Byte;
+  
+{$IFDEF SUPPORT_STREAMS}
 
 // *****************************************************************************
 //  procedure OPStackCoreStream_Initialize;
@@ -349,6 +354,6 @@ procedure StreamCompleteReply(Node: PNMRAnetNode; var MessageToSend: POPStackMes
 begin
 
 end;
+{$ENDIF}
 
 end.
-

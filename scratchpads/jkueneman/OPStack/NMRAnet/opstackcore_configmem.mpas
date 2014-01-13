@@ -8,7 +8,9 @@ interface
 
 uses
   template_node,
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
+  {$ENDIF}
   template_configuration,
   template_configmem,
   nmranetdefines,

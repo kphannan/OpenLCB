@@ -8,7 +8,9 @@ interface
 
 uses
   template_node,
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
+  {$ENDIF}
   template_configuration,
   template_configmem,
   nmranetdefines,
@@ -103,7 +105,7 @@ begin
     MCP_COMMAND_READ_STREAM  : ReadCount := DWord( Buffer^[DataOffset] shl 24) or DWord( Buffer^[DataOffset+1] shl 16) or DWord( Buffer^[DataOffset+2] shl 8) or DWord( Buffer^[DataOffset+3]);
     MCP_COMMAND_READ         : ReadCount := Buffer^[DataOffset] and $7F         // Ignore the upper bit per the spec
   else
-     ReadCount := 0;
+    ReadCount := 0;
   end;
 
      // Test the size against the size of the Address Space and adjust to the Max size if necessary
@@ -227,7 +229,7 @@ begin
 
   if Node^.iIndex > 0 then
     ConfigAddress := USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE;
-
+    
   case AddressSpace of
       MSI_CDI :
           begin
@@ -303,7 +305,7 @@ begin
    // Also do I do this on the Receive Side?  Is there any reason to let this propogate to here?  All this does is try to
    // allocate a stream buffer then wait for the caller to reply before setting up the stream.  This could be all done when
    // the message is first received on the other end....  It is constistent if done here with the datagram read/writes....
-
+  
   // Zero the array to avoid confusion on debugging
 
 (*
@@ -345,14 +347,14 @@ function CommandWriteReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage):
 var
   DatagramBufferPtr: PDatagramBuffer;
   AddressSpace, DataOffset: Byte;
-  ConfigAddress, ReadCount: DWord;
+  ConfigAddress: DWord;
   i: Integer;
   WriteCount: Byte;
 begin
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
-  DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, ReadCount, DataOffset);
+  DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, WriteCount, DataOffset); // WriteCount is not used in a Write call to this function
   WriteCount := DatagramBufferPtr^.DataBufferSize-DataOffset;
-
+  
   if Node^.iIndex > 0 then
     ConfigAddress := USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE;
 
@@ -371,16 +373,13 @@ begin
        end;
     MSI_ACDI_USER :
        begin
-      // How do I know were to write this in the Configuration Memory?
-      //   AppCallback_WriteConfiguration(ConfigAddress, DatagramBufferPtr^.DataBufferSize-DataOffset, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
-      //   for i := 0 to WriteCount - 1 do
-      //     DatagramBufferPtr^.DataArray[DataOffset+i] := $AA;      // TEMPORARY
+         AppCallback_WriteAcdiUser(ConfigAddress, WriteCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
        end;
     end;
-
+    
     for i := 0 to (WriteCount+DataOffset) - 1 do
       DatagramBufferPtr^.DataArray[i] := 0;
-
+      
     EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, True, True, AddressSpace, ConfigAddress, WriteCount, AddressSpace < MSI_CONFIG, DataOffset);
     DatagramBufferPtr^.DataBufferSize := DataOffset;
     DatagramBufferPtr^.CurrentCount := 0;

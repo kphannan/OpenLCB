@@ -15,7 +15,9 @@ uses
   nmranetdefines,
   opstackcanstatemachinesbuffers;
 
+{$IFDEF SUPPORT_STREAMS}
 procedure OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
+{$ENDIF}
 
 implementation
 

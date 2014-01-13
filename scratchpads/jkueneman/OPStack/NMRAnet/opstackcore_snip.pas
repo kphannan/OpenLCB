@@ -42,6 +42,7 @@ begin
   begin
     AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
     AcdiSnipBufferPtr^.DataBufferSize := 0;
+    {$IFDEF SUPPORT_VIRTUAL_NODES}
     if Node^.State and NS_VIRTUAL <> 0 then
     begin
       while AcdiSnipBufferPtr^.DataBufferSize < USER_VNODE_MAX_ACDI_MFG_ARRAY do
@@ -50,6 +51,7 @@ begin
         Inc(AcdiSnipBufferPtr^.DataBufferSize);
       end;
     end else
+    {$ENDIF}
     begin
       while AcdiSnipBufferPtr^.DataBufferSize < USER_MAX_ACDI_MFG_ARRAY do
       begin
@@ -57,8 +59,8 @@ begin
         Inc(AcdiSnipBufferPtr^.DataBufferSize);
       end;
     end;
-
-
+    
+    
     // Need to read configuration memory here in a callback
     AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 1;
     Inc(AcdiSnipBufferPtr^.DataBufferSize);

@@ -9,7 +9,9 @@ interface
 uses
   hardware_template,
   template_node,
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
+  {$ENDIF}
   nmranetutilities,
   opstackdefines;
 
@@ -35,9 +37,10 @@ procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
 function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;    // See FIND_BY_xxxx constants
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode;
 function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode;
+{$IFDEF SUPPORT_VIRTUAL_NODES}
 function OPStackNode_FindFirstVirtualNode: PNMRAnetNode;
 function OPStackNode_FindLastVirtualNode: PNMRAnetNode;
-
+{$ENDIF}
 function OPStackNode_NextNode: PNMRAnetNode;
 procedure OPStackNode_ZeroizeNode(Node: PNMRAnetNode);
 
@@ -195,8 +198,10 @@ begin
     begin
       OPStackNode_ZeroizeNode(Result);                                          // The NodeID was already created in the initialization but we need to zeroize it
       OPStackNode_SetState(Result, NS_ALLOCATED);                               // Mark as Allocated
+      {$IFDEF SUPPORT_VIRTUAL_NODES}
       if Result^.iIndex > 0 then
         OPStackNode_SetState(Result, NS_VIRTUAL);                               // Mark as Virtual
+      {$ENDIF}
       Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Login.Seed, False); // Pregenerate it so it can be sorted
       NodePool.AllocatedList[NodePool.AllocatedCount] := Result;                // Add it to the end if the Allocated List
       Inc(NodePool.AllocatedCount);                                             // One more Allocated
@@ -215,8 +220,10 @@ procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
 begin
   if Node <> nil then
   begin
+    {$IFDEF SUPPORT_VIRTUAL_NODES}
     if Node^.State and NS_VIRTUAL = NS_VIRTUAL then                             // Only release Virtual Nodes
       Node^.State := Node^.State or NS_RELEASING;                               // Tag it to send and AMR
+    {$ENDIF}
   end
 end;
 
@@ -265,6 +272,7 @@ begin
   end;
 end;
 
+{$IFDEF SUPPORT_VIRTUAL_NODES}
 // *****************************************************************************
 //  procedure OPStackNode_FindFirstVirtualNode;
 //    Parameters:
@@ -309,8 +317,8 @@ begin
     end;
     Dec(i);
   end;
-
 end;
+{$ENDIF}
 
 // *****************************************************************************
 //  procedure OPStackNode_NextNode;
@@ -479,11 +487,13 @@ procedure OPStackNode_SetEventConsumedState(Node: PNMRAnetNode; EventState: Byte
 var
   i: Integer;
 begin
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   if OPStackNode_TestState(Node, NS_VIRTUAL) then
   begin
     for i := 0 to (USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
       OPStackNode_SetEventState(Node^.Events.ConsumedState, i, EventState);
   end else
+  {$ENDIF}
   begin
     for i := 0 to (USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
       OPStackNode_SetEventState(Node^.Events.ConsumedState, i, EventState);
@@ -500,11 +510,13 @@ procedure OPStackNode_SetEventProducedState(Node: PNMRAnetNode; EventState: Byte
 var
   i: Integer;
 begin
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   if OPStackNode_TestState(Node, NS_VIRTUAL) then
   begin
     for i := 0 to (USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED + USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
       OPStackNode_SetEventState(Node^.Events.ProducedState, i, EventState);
   end else
+  {$ENDIF}
   begin
     for i := 0 to (USER_MAX_SUPPORTED_EVENTS_CONSUMED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED) - 1 do
       OPStackNode_SetEventState(Node^.Events.ProducedState, i, EventState);

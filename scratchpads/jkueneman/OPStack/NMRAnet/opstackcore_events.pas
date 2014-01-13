@@ -8,7 +8,9 @@ interface
 
 uses
   template_node,
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
+  {$ENDIF}
   opstacknode,
   template_event_callbacks,
   nmranetutilities,
@@ -284,12 +286,14 @@ begin
       if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+        {$IFDEF SUPPORT_VIRTUAL_NODES}
         if Node^.State and NS_VIRTUAL <> 0 then
           NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray))
         else
         {$ENDIF}
+        {$ENDIF}
         begin
-          {$IFDEF SUPPORT_AT_LEAST_ONE_NODE_PRODUCED_EVENT}
+          {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
           NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
           {$ENDIF}
         end;
@@ -383,6 +387,7 @@ begin
     if EventIndex > -1  then
     begin
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
+      {$IFDEF SUPPORT_VIRUAL_NODES}
       if Node^.State and NS_VIRTUAL <> 0 then
       begin
         // Make sure the event index is in the range of defined events
@@ -421,6 +426,7 @@ begin
         end;
       end else
       {$ENDIF}
+      {$ENDIF}
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT}
         // Make sure the event index is in the range of defined events
@@ -434,7 +440,7 @@ begin
           else
             Exit;                                                                   // Error
           end;
-          if EventIndex >= USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED then
+          if EventIndex >= USER_MAX_SUPPORTED_EVENTS_CONSUMED then
           begin
             // It is a Dynamic Event
             if AppCallback_DynamicConsumedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
@@ -470,6 +476,7 @@ begin
     if EventIndex > -1  then
     begin
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+      {$IFDEF SUPPORT_VIRTUAL_NODES}
       if Node^.State and NS_VIRTUAL <> 0 then
       begin
         // Make sure the event index is in the range of defined events
@@ -508,7 +515,9 @@ begin
         end;
       end else
       {$ENDIF}
+      {$ENDIF}
       begin
+        {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
         // Make sure the event index is in the range of defined events
         if EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED + USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED then
         begin
@@ -520,7 +529,6 @@ begin
           else
             Exit;                                                                   // Error
           end;
-          {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
           if EventIndex >= USER_MAX_SUPPORTED_EVENTS_PRODUCED then
           begin
             // It is a Dynamic Event
@@ -543,12 +551,11 @@ begin
               Exit;
             end
           end
-          {$ENDIF}
-        end
+        end;
+      {$ENDIF}
       end
     end
   end
 end;
 
 end.
-
