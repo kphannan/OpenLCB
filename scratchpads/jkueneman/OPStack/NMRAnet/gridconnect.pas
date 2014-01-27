@@ -148,7 +148,6 @@ begin
         end else
           GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START;              // Invalidate State Index
     end;  // Case
-
 end;
 
 // *****************************************************************************
@@ -225,20 +224,20 @@ begin
   GridConnectStr[10] := 'N';
   Result := 11;
 
-    if GridConnectBuffer.PayloadCount > 0 then
+  if GridConnectBuffer.PayloadCount > 0 then
+  begin
+    for i := 0 to GridConnectBuffer.PayloadCount - 1 do
     begin
-      for i := 0 to GridConnectBuffer.PayloadCount - 1 do
-      begin
-        {$IFDEF FPC}
-        ConvertString := IntToHex(GridConnectBuffer.Payload[i], 2);
-        {$ELSE}
-        WordToHex(GridConnectBuffer.Payload[i], ConvertString);
-        {$ENDIF}
-        GridConnectStr[Result]     := ConvertString[0];
-        GridConnectStr[Result + 1] := ConvertString[1];
-        Result := Result + 2;
-      end;
+      {$IFDEF FPC}
+      ConvertString := IntToHex(GridConnectBuffer.Payload[i], 2);
+      {$ELSE}
+      WordToHex(GridConnectBuffer.Payload[i], ConvertString);
+      {$ENDIF}
+      GridConnectStr[Result]     := ConvertString[0];
+      GridConnectStr[Result + 1] := ConvertString[1];
+      Result := Result + 2;
     end;
+  end;
   GridConnectStr[Result] := ';';
   Inc(Result);
   GridConnectStr[Result] := #0;

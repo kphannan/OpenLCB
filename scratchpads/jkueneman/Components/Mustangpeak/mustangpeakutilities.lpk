@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <Name Value="MustangpeakUtilities"/>
+    <Author Value="Jim Kueneman"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <SearchPaths>
+        <OtherUnitFiles Value="../synapse40/source/lib"/>
+        <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+      <Other>
+        <CompilerMessages>
+          <MsgFileName Value=""/>
+        </CompilerMessages>
+        <CompilerPath Value="$(CompPath)"/>
+      </Other>
+    </CompilerOptions>
+    <Description Value="Contains many helper components to use Synapse TCP/IP and COM Ports in threads.  It also includes components to help with the creation and testing of the OpenLCB (NMRAnet) code"/>
+    <Version Build="89"/>
+    <Files Count="3">
+      <Item1>
+        <Filename Value="mustangpeakcomconnection.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="mustangpeakcomconnection"/>
+      </Item1>
+      <Item2>
+        <Filename Value="mustangpeakethernetconnection.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="mustangpeakethernetconnection"/>
+      </Item2>
+      <Item3>
+        <Filename Value="threadedstringlist.pas"/>
+        <UnitName Value="threadedstringlist"/>
+      </Item3>
+    </Files>
+    <Type Value="RunAndDesignTime"/>
+    <RequiredPkgs Count="2">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="FCL"/>
+      </Item2>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+    <CustomOptions Items="ExternHelp" Version="2">
+      <_ExternHelp Items="Count"/>
+    </CustomOptions>
+  </Package>
+</CONFIG>
