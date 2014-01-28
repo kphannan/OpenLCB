@@ -17,8 +17,8 @@
       </Other>
     </CompilerOptions>
     <Description Value="Contains many helper components to use Synapse TCP/IP and COM Ports in threads.  It also includes components to help with the creation and testing of the OpenLCB (NMRAnet) code"/>
-    <Version Build="89"/>
-    <Files Count="3">
+    <Version Build="90"/>
+    <Files Count="4">
       <Item1>
         <Filename Value="mustangpeakcomconnection.pas"/>
         <HasRegisterProc Value="True"/>
@@ -33,6 +33,10 @@
         <Filename Value="threadedstringlist.pas"/>
         <UnitName Value="threadedstringlist"/>
       </Item3>
+      <Item4>
+        <Filename Value="nodeidresolutionprotocol.pas"/>
+        <UnitName Value="nodeidresolutionprotocol"/>
+      </Item4>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs,
   blcksock, synsock, LCLIntf, LCLType, LMessages, threadedstringlist,
-  ExtCtrls;
+  ExtCtrls, nodeidresolutionprotocol;
 
 const
   LM_ETHERNET_RECEIVE      = LM_USER + 123;
@@ -26,6 +26,9 @@ const
   GRIDCONNECT_STATE_SYNC_FIND_X = 1;
   GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
   GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
+
+  RAWETHERNET_STATE_SYNC_START = 0;
+  RAWETHERNET_STATE_SYNC_FIND_DATA = 1;
 
 const
   // :X19170640N0501010107015555;#0  Example.....
@@ -68,6 +71,7 @@ type
   TMustangpeakEthernetConnectionLink = record
     ReceiveThread    : TMustangpeakEthernetThread;
     TransmitThread   : TMustangpeakEthernetThread;
+    NrpList: TNrpList;
   end;
   PMustangpeakEthernetConnectionLink = ^TMustangpeakEthernetConnectionLink;
 
@@ -135,13 +139,20 @@ type
   TMustangpeakEthernetRxThread = class(TMustangpeakEthernetThread)                            // Reads a Packet from the Socket (terminated with a #13, #10 or both
   private
     FGridConnectReceiveState: Integer;
+    FRawEthernetReceiveState: Integer;
     FReceiveGridConnectBuffer: TGridConnectString;
     FReceiveGridConnectBufferIndex: Integer;
+    FReceiveRawEthernetBuffer: TGridConnectString;
+    FReceiveRawEthernetBufferIndex: Integer;
   protected
     property ReceiveGridConnectBufferIndex: Integer read FReceiveGridConnectBufferIndex write FReceiveGridConnectBufferIndex;
     property ReceiveGridConnectBuffer: TGridConnectString read FReceiveGridConnectBuffer write FReceiveGridConnectBuffer;
     property GridConnectReceiveState: Integer read FGridConnectReceiveState write FGridConnectReceiveState;
+    property ReceiveRawEthernetBufferIndex: Integer read FReceiveRawEthernetBufferIndex write FReceiveRawEthernetBufferIndex;
+    property ReceiveRawEthernetBuffer: TGridConnectString read FReceiveRawEthernetBuffer write FReceiveRawEthernetBuffer;
+    property RawEthernetReceiveState: Integer read FRawEthernetReceiveState write FRawEthernetReceiveState;
     function GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
+    function RawEthernet_DecodeMachine(NextChar: Char; var Packet: string): Boolean;
     function IsValidHexChar(AChar: Char): Boolean;
   public
     constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt=DefaultStackSize);
@@ -573,6 +584,7 @@ end;
 function TMustangpeakEthernetConnector.CreateNewConnectionPair(ASocketHandle: TSocket): PMustangpeakEthernetConnectionLink;
 begin
   New(Result);  //TMustangpeakEthernetConnectionLink
+  Result^.NrpList := TNrpList.Create;
   Result^.ReceiveThread := TMustangpeakEthernetRxThread.Create(True);
   Result^.ReceiveThread.SocketType := st_Connect;
   Result^.ReceiveThread.hSocket := ASocketHandle;    // Back create the sockets with this handle
@@ -619,7 +631,8 @@ begin
           while not Link^.TransmitThread.IsTerminated do
             ThreadSwitch;
         end;
-        FreeAndNil(Link^.TransmitThread)
+        FreeAndNil(Link^.TransmitThread);
+        FreeAndNil(Link^.NrpList);
       finally
         Dispose(Link);
       end
@@ -1001,6 +1014,39 @@ begin
     end;  // Case
 end;
 
+function TMustangpeakEthernetRxThread.RawEthernet_DecodeMachine(NextChar: Char; var Packet: string): Boolean;
+begin
+ Result := False;
+ case RawEthernetReceiveState of
+      RAWETHERNET_STATE_SYNC_START :                                            // Find a starting ':'
+        begin
+          if (NextChar <> #13) and (NextChar <> #10) then
+          begin
+            ReceiveRawEthernetBufferIndex := 0;
+            ReceiveRawEthernetBuffer[ReceiveRawEthernetBufferIndex] := NextChar;
+            Inc(FReceiveGridConnectBufferIndex);
+            GridConnectReceiveState := RAWETHERNET_STATE_SYNC_FIND_DATA
+          end
+        end;
+      RAWETHERNET_STATE_SYNC_FIND_DATA :
+        begin
+          if (NextChar <> #13) and (NextChar <> #10) then
+          begin
+            ReceiveRawEthernetBuffer[ReceiveRawEthernetBufferIndex] := NextChar;
+            Inc(FReceiveGridConnectBufferIndex);
+          end else
+          begin
+            ReceiveRawEthernetBuffer[ReceiveRawEthernetBufferIndex] := #0;
+            RawEthernetReceiveState := RAWETHERNET_STATE_SYNC_START;
+            Packet := ReceiveRawEthernetBuffer;
+            Result := True;
+          end
+        end
+  else
+    RawEthernetReceiveState := RAWETHERNET_STATE_SYNC_START                     // Confused, reset
+  end
+end;
+
 function TMustangpeakEthernetRxThread.IsValidHexChar(AChar: Char): Boolean;
 begin
   Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
@@ -1011,11 +1057,14 @@ begin
   inherited Create(CreateSuspended, StackSize);
   FGridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START;
   FReceiveGridConnectBufferIndex := 0;
+  FReceiveRawEthernetBufferIndex := 0;
+  FRawEthernetReceiveState := RAWETHERNET_STATE_SYNC_START;
 end;
 
 procedure TMustangpeakEthernetRxThread.EthernetAction;
 var
   ReceiveStr: string;
+  Packet: string;
   i: Integer;
   GridConnectStrPtr: PGridConnectString;
 begin
@@ -1028,18 +1077,26 @@ begin
       begin
         if GridConnect then
         begin
+          GridConnectStrPtr := nil;
           for i := 1 to Length(ReceiveStr) do
           begin
             if GridConnect_DecodeMachine(ReceiveStr[i], GridConnectStrPtr) then
             begin
-              IncomingPackets.Add({IpAddressTarget + IntToStr(PortTarget) + '=' +} GridConnectStrPtr^);
+              IncomingPackets.Add(GridConnectStrPtr^);
               RTLeventSetEvent(Connector.Event);
             end;
           end;
         end else
         begin
-          IncomingPackets.Add({IpAddressTarget + IntToStr(PortTarget) + '=' +} ReceiveStr);
-          RTLeventSetEvent(Connector.Event);
+          Packet := '';
+          for i := 1 to Length(ReceiveStr) do
+          begin
+            if RawEthernet_DecodeMachine(ReceiveStr[i], Packet) then
+            begin
+              IncomingPackets.Add(Packet);
+              RTLeventSetEvent(Connector.Event);
+            end;
+          end;
         end
       end else
         Terminate;

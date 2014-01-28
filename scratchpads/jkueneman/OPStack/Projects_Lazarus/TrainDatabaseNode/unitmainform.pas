@@ -7,8 +7,9 @@ interface
 uses
   Classes, SysUtils, FileUtil, SynMemo, Forms, Controls, Graphics, Dialogs,
   ComCtrls, ActnList, Menus, ExtCtrls, StdCtrls,
-  blcksock, synsock, SynEditKeyCmds, SynEditMarkupHighAll, LMessages,
-  mustangpeakethernetconnection, mustangpeakcomconnection;
+  blcksock, synsock, SynEditKeyCmds, SynEditMarkupHighAll,
+  mustangpeakethernetconnection, mustangpeakcomconnection,
+  opstackcore, hardware_template;
 
 type
 
@@ -50,11 +51,13 @@ type
     MustangpeakEthernetConnection: TMustangpeakEthernetConnection;
     Panel1: TPanel;
     PopupMenuSynMemo: TPopupMenu;
-    Splitter1: TSplitter;
+    Splitter: TSplitter;
     StatusBar: TStatusBar;
     SynMemo: TSynMemo;
     SynMemoStatus: TSynMemo;
     TimerStateMachine: TTimer;
+    TimerStateMachine100ms: TTimer;
+    ToggleBoxEnableStateMachine: TToggleBox;
     procedure ActionSynMemoPasteExecute(Sender: TObject);
     procedure ActionEthernetConnectClientExecute(Sender: TObject);
     procedure ActionEthernetConnectServerExecute(Sender: TObject);
@@ -68,7 +71,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure MustangpeakEthernetConnectionEthernetReceive(Sender: TObject; Packet: string);
     procedure MustangpeakEthernetConnectionEthernetSocketEvent(Sender: TObject; var Event: TSocketEventBuffer);
+    procedure TimerStateMachine100msTimer(Sender: TObject);
     procedure TimerStateMachineTimer(Sender: TObject);
+    procedure ToggleBoxEnableStateMachineChange(Sender: TObject);
   private
 
   public
@@ -126,12 +131,18 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   ActionEthernetDisconnect.Execute;
+  OPStackCore_Initialize;
 end;
 
-procedure TForm1.MustangpeakEthernetConnectionEthernetReceive(Sender: TObject;
-  Packet: string);
+procedure TForm1.MustangpeakEthernetConnectionEthernetReceive(Sender: TObject; Packet: string);
+var
+  GridConnectStr: TGridConnectString;
+  i: Integer;
 begin
   SynMemo.Lines.Add(Packet);
+  for i := 1 to Length(Packet) do
+    GridConnectStr[i-1] := Packet[i];
+  DispatchGridConnectStr(@GridConnectStr);
 end;
 
 procedure TForm1.MustangpeakEthernetConnectionEthernetSocketEvent(
@@ -174,9 +185,20 @@ begin
   end;
 end;
 
+procedure TForm1.TimerStateMachine100msTimer(Sender: TObject);
+begin
+  OPStackCore_Timer
+end;
+
 procedure TForm1.TimerStateMachineTimer(Sender: TObject);
 begin
-  StatusBar.Panels[0].Text := 'Thread Count: ' + IntToStr(ThreadObjectCount);
+  //StatusBar.Panels[0].Text := 'Thread Count: ' + IntToStr(ThreadObjectCount);
+  OPStackCore_Process;
+end;
+
+procedure TForm1.ToggleBoxEnableStateMachineChange(Sender: TObject);
+begin
+  OPStackCore_Enable(ToggleBoxEnableStateMachine.Checked);
 end;
 
 procedure TForm1.ActionEthernetConnectServerExecute(Sender: TObject);

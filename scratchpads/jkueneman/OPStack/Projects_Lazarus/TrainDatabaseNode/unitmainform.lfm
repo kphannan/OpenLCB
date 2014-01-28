@@ -535,6 +535,15 @@ object Form1: TForm1
       TabOrder = 1
       Text = 'Send Me'
     end
+    object ToggleBoxEnableStateMachine: TToggleBox
+      Left = 416
+      Height = 22
+      Top = 11
+      Width = 154
+      Caption = 'StateMaching Enable'
+      OnChange = ToggleBoxEnableStateMachineChange
+      TabOrder = 2
+    end
   end
   inline SynMemoStatus: TSynMemo
     Cursor = crIBeam
@@ -1022,7 +1031,7 @@ object Form1: TForm1
       end
     end
   end
-  object Splitter1: TSplitter
+  object Splitter: TSplitter
     Cursor = crVSplit
     Left = 0
     Height = 8
@@ -1677,6 +1686,7 @@ object Form1: TForm1
     end
   end
   object TimerStateMachine: TTimer
+    Interval = 1
     OnTimer = TimerStateMachineTimer
     left = 120
     top = 232
@@ -1695,5 +1705,11 @@ object Form1: TForm1
     Baud = 0
     left = 472
     top = 53
+  end
+  object TimerStateMachine100ms: TTimer
+    Interval = 100
+    OnTimer = TimerStateMachine100msTimer
+    left = 248
+    top = 232
   end
 end

@@ -349,7 +349,7 @@ var
   AddressSpace, DataOffset: Byte;
   ConfigAddress: DWord;
   i: Integer;
-  WriteCount: Byte;
+  WriteCount: DWord;
 begin
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, WriteCount, DataOffset); // WriteCount is not used in a Write call to this function

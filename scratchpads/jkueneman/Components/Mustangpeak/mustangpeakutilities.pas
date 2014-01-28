@@ -8,7 +8,7 @@ interface
 
 uses
   mustangpeakcomconnection, mustangpeakethernetconnection, threadedstringlist, 
-  LazarusPackageIntf;
+  nodeidresolutionprotocol, LazarusPackageIntf;
 
 implementation
 
