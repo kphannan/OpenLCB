@@ -227,9 +227,6 @@ begin
   DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
   DatagramBufferPtr^.CurrentCount := 0;
 
-  if Node^.iIndex > 0 then
-    ConfigAddress := USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE;
-    
   case AddressSpace of
       MSI_CDI :
           begin
@@ -237,11 +234,11 @@ begin
             if Node^.State and NS_VIRTUAL <> 0 then
             begin
                for i := 0 to ReadCount - 1 do
-                DatagramBufferPtr^.DataArray[DataOffset+i] := USER_CDI_VNODE_ARRAY[i+ConfigAddress]
+                 DatagramBufferPtr^.DataArray[DataOffset+i] := USER_CDI_VNODE_ARRAY[i+ConfigAddress]
             end else {$ENDIF}
             begin
               for i := 0 to ReadCount - 1 do
-                 DatagramBufferPtr^.DataArray[DataOffset+i] := USER_CDI_ARRAY[i+ConfigAddress];
+                DatagramBufferPtr^.DataArray[DataOffset+i] := USER_CDI_ARRAY[i+ConfigAddress];
             end;
           end;
        MSI_ALL :
@@ -251,6 +248,8 @@ begin
           end;
       MSI_CONFIG :
           begin
+            if Node^.iIndex > 0 then
+              ConfigAddress := USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE;
             AppCallback_ReadConfiguration(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
           end;
       MSI_ACDI_MFG :

@@ -1,19 +1,19 @@
 object Form1: TForm1
-  Left = 682
+  Left = 651
   Height = 374
-  Top = 359
+  Top = 241
   Width = 605
   Caption = 'Form1'
-  ClientHeight = 374
+  ClientHeight = 354
   ClientWidth = 605
   Menu = MainMenu
   OnClose = FormClose
   OnCreate = FormCreate
-  LCLVersion = '1.2.0.1'
+  LCLVersion = '1.0.8.0'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 359
+    Height = 23
+    Top = 331
     Width = 605
     Panels = <    
       item
@@ -37,7 +37,7 @@ object Form1: TForm1
     ParentFont = False
     PopupMenu = PopupMenuSynMemo
     TabOrder = 1
-    Gutter.Width = 55
+    Gutter.Width = 51
     Gutter.MouseActions = <>
     Keystrokes = <    
       item
@@ -462,25 +462,22 @@ object Form1: TForm1
       end>
     MouseActions = <>
     MouseSelActions = <>
-    SelectedColor.FrameEdges = sfeAround
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50
     SelectedColor.BoldPriority = 50
     SelectedColor.ItalicPriority = 50
     SelectedColor.UnderlinePriority = 50
-    SelectedColor.StrikeOutPriority = 50
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterMarks1: TSynGutterMarks
         Width = 24
         MouseActions = <>
       end
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 15
+        Width = 11
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
-        MarkupInfo.FrameEdges = sfeAround
         DigitCount = 2
         ShowOnlyLineNumbersMultiplesOf = 1
         ZeroStart = False
@@ -497,13 +494,11 @@ object Form1: TForm1
         MouseActions = <>
         MarkupInfo.Background = clWhite
         MarkupInfo.Foreground = clGray
-        MarkupInfo.FrameEdges = sfeAround
       end
       object SynGutterCodeFolding1: TSynGutterCodeFolding
         MouseActions = <>
         MarkupInfo.Background = clNone
         MarkupInfo.Foreground = clGray
-        MarkupInfo.FrameEdges = sfeAround
         MouseActionsExpanded = <>
         MouseActionsCollapsed = <>
       end
@@ -512,7 +507,7 @@ object Form1: TForm1
   object Panel1: TPanel
     Left = 0
     Height = 50
-    Top = 309
+    Top = 281
     Width = 605
     Align = alBottom
     ClientHeight = 50
@@ -529,7 +524,7 @@ object Form1: TForm1
     end
     object EditSend: TEdit
       Left = 24
-      Height = 22
+      Height = 21
       Top = 11
       Width = 188
       TabOrder = 1
@@ -548,7 +543,7 @@ object Form1: TForm1
   inline SynMemoStatus: TSynMemo
     Cursor = crIBeam
     Left = 0
-    Height = 85
+    Height = 57
     Top = 224
     Width = 605
     Align = alClient
@@ -559,7 +554,7 @@ object Form1: TForm1
     ParentColor = False
     ParentFont = False
     TabOrder = 3
-    Gutter.Width = 55
+    Gutter.Width = 51
     Gutter.MouseActions = <>
     Keystrokes = <    
       item
@@ -984,25 +979,22 @@ object Form1: TForm1
       end>
     MouseActions = <>
     MouseSelActions = <>
-    SelectedColor.FrameEdges = sfeAround
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
     SelectedColor.FramePriority = 50
     SelectedColor.BoldPriority = 50
     SelectedColor.ItalicPriority = 50
     SelectedColor.UnderlinePriority = 50
-    SelectedColor.StrikeOutPriority = 50
     inline SynLeftGutterPartList1: TSynGutterPartList
       object SynGutterMarks1: TSynGutterMarks
         Width = 24
         MouseActions = <>
       end
       object SynGutterLineNumber1: TSynGutterLineNumber
-        Width = 15
+        Width = 11
         MouseActions = <>
         MarkupInfo.Background = clBtnFace
         MarkupInfo.Foreground = clNone
-        MarkupInfo.FrameEdges = sfeAround
         DigitCount = 2
         ShowOnlyLineNumbersMultiplesOf = 1
         ZeroStart = False
@@ -1019,13 +1011,11 @@ object Form1: TForm1
         MouseActions = <>
         MarkupInfo.Background = clWhite
         MarkupInfo.Foreground = clGray
-        MarkupInfo.FrameEdges = sfeAround
       end
       object SynGutterCodeFolding1: TSynGutterCodeFolding
         MouseActions = <>
         MarkupInfo.Background = clNone
         MarkupInfo.Foreground = clGray
-        MarkupInfo.FrameEdges = sfeAround
         MouseActionsExpanded = <>
         MouseActionsCollapsed = <>
       end

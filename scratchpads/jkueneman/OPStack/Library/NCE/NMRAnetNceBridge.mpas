@@ -1,0 +1,615 @@
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2014.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2011-01-28:   Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//    Defines the interface between OLCB and the NCE Bus
+//
+// ******************************************************************************
+
+unit NMRAnetNceBridge;
+
+{.$DEFINE DEBUG_MAIN_STATEMACHINE}
+
+
+uses
+  opstacknode,
+  opstackdefines,
+  template_node,
+  NMRAnetNceBridgeDefines;
+
+procedure NceBusStateMachine_Process(NodeBuffer: PNMRAnetNode);
+procedure NceBusStateMachine_Initialize;
+procedure NceBusStateMachine_UART_RX_StateMachine(NceBusBuffer: PNceBusStateMachineInfo; ReceivedByte: Byte);
+procedure NceBusStateMachine_525ms_TimeTick;
+
+function NceBusStateMachine_GetDeviceData(Node: PNMRAnetNode): PNceBusDeviceVolatileData;
+
+var
+  NceBus_RS485_Select              : sbit; sfr; external;
+  NceBus_RS485_Select_Direction    : sbit; sfr; external;
+
+
+implementation
+
+//function InsertHiBitParity(DataByte: Byte): Byte; forward;
+procedure WriteNceBusByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word); forward;
+procedure NceBus_HandleDeviceInstruction(NceBusMessage: PNceBusMessage; iDevice: Byte); forward;
+procedure SendNceBusMessage(NceBusMessage: PNceBusMessage; Command: Byte; iDevice: Byte); forward;
+
+procedure NceBusStateMachine_Initialize;
+var
+  i: Integer;
+begin
+  NceBus_RS485_Select := 0;                // Default in Receive
+  NceBus_RS485_Select_Direction := 0;      // Output
+  NceBusStateMachineInfo.iState := STATE_BUILD_INITIAL_CABS;
+  NceBusStateMachineInfo.Discovering := False;
+  NceBusStateMachineInfo.iActiveDevice := 0;
+  NceBusStateMachineInfo.DiscoveryCount := 0;
+  NceBusStateMachineInfo.WatchdogCount := 0;
+
+  // Device ID Initialization
+  for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
+  begin
+    NceBusStateMachineInfo.DeviceList[i].State := DS_NceBus_DEVICE_INACTIVE;
+    NceBusStateMachineInfo.DeviceList[i].Node := nil;
+    NceBusStateMachineInfo.DeviceList[i].MissedPingCount := 0;
+  end;
+  
+  for i := 0 to USER_MAX_NODE_COUNT - 1 do
+  begin
+    NceBusDeviceVolatileDataArray[i].DeviceID := 0;
+  end
+end;
+
+function NceBusStateMachine_GetDeviceData(Node: PNMRAnetNode): PNceBusDeviceVolatileData;
+begin
+  Result := @NceBusDeviceVolatileDataArray[Node^.iIndex]
+end;
+
+// ****************************************************************************
+//
+// function NextAvailableDevice(iDevice: Byte): Byte;
+//
+//  Parameters:
+//           iDevice: Device ID that is used as the starting point to find the next installed
+//                      device ID
+//
+//  Result:
+//          Index into the DeviceList of the next installed device
+//
+//  Description:
+//         Returns the next installed Device index on the bus after the passed index.
+//           If there are no Devices installed it returns ID_NO_DEVICE
+//
+// *****************************************************************************
+function NextAvailableDevice(iDevice: Byte): Byte;
+var
+  i: Integer;
+  Device: pDevice;
+begin
+  Result := ID_NO_DEVICE;
+  
+  if iDevice = ID_NO_DEVICE then
+    iDevice := ID_MIN_DEVICE;
+
+  i := iDevice;
+  repeat
+    Inc(i);
+    if i > ID_MAX_DEVICE then
+      i := ID_MIN_DEVICE;
+      
+    Device := @NceBusStateMachineInfo.DeviceList[i];
+    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
+      if Device^.Node^.State and NS_PERMITTED = NS_PERMITTED then     // If it is active then the Node MUST be valid//     if not Device_InServiceMode(i) then
+      begin
+        Result := i;
+        Exit
+      end;
+  until i = iDevice;
+end;
+
+// ****************************************************************************
+//
+// function FirstActiveDevice: Byte;
+//
+//  Parameters:
+//           None
+//
+//  Result:
+//          Index into the DeviceList of the first installed device
+//
+//  Description:
+//          Returns the first installed Device index on the bus. If there are no Devices
+//            installed it returns 0
+//
+// *****************************************************************************
+function FirstActiveDevice: Byte;
+var
+  i: Integer;
+  Device: PDevice;
+begin
+  Result := ID_NO_DEVICE;
+  for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
+  begin
+    Device := @NceBusStateMachineInfo.DeviceList[i];
+    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
+      if Device^.Node^.State and NS_PERMITTED = NS_PERMITTED then
+      begin
+        Result := i;
+        Exit
+      end;
+  end
+end;
+
+procedure PrepareUARTReceiver;
+var
+  Temp: Word;
+begin
+  while (URXDA_U2STA_bit = 1) do Temp := U2RXREG;                                                         // Flush the RX Buffer
+  U2RXIF_Bit := 0;                                                                                        // Clear the interrupt flag to receive the next byte
+  NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex := STATE_RS485_READ_CAB_BYTE_1;        // Reset the RS485 RX statemachine
+  NceBusStateMachineInfo.RS485.Done := False;
+end;
+
+procedure SendInquiryMessage(Device: Byte);
+begin
+  NceBus_RS485_Select := 1;                                                     // Select the 485 chip to transmit mode
+  WriteNceBusByte(NCEBUS_PING or Device, @U2TXREG, @U2STA);               // Write to the Bus for a query
+  NceBus_RS485_Select := 0;                                                     // Select the 485 chip to receive mode ASAP
+end;
+
+// *****************************************************************************
+//
+// procedure NceBusStateMachine_525ms_TimeTick;
+//
+//  Parameters:
+//                None
+//  Returns:
+//                None
+//  Description:
+//              Updates internal flags to track for various timeout conditions
+//    mainly for the bus
+//
+// *****************************************************************************
+procedure NceBusStateMachine_525ms_TimeTick;
+begin
+   // Count up to the time out then freeze.  The Timer Count will be reset after the
+  // main loop is done rediscovering
+  if NceBusStateMachineInfo.DiscoveryCount < REDISCOVERY_TIME then
+    Inc(NceBusStateMachineInfo.DiscoveryCount);
+
+  // Count up to the hung time then freeze.  Once Hung it is hung until the next
+  // device ID is queried and it is reset
+  if NceBusStateMachineInfo.WatchdogCount < NCEBUS_BUS_HUNG_COUNT then
+    Inc(NceBusStateMachineInfo.WatchdogCount);
+  
+  if NceBusStateMachineInfo.Bridge.WatchdogCount < NCEBUS_OLCB_BUS_TIMEOUT then
+    Inc(NceBusStateMachineInfo.Bridge.WatchdogCount)
+end;
+
+// *****************************************************************************
+//
+// procedure DetectDeviceResponse;
+//
+//  Parameters:
+//                None
+//  Returns:
+//                None
+//  Description:
+//
+// *****************************************************************************
+procedure DetectDeviceResponse(Device: PDevice; DetectedState, NoDetectedState: Word);
+var
+  NodeData: PNceBusDeviceVolatileData;
+  Node: PNMRAnetNode;
+begin
+  if (U2STA.RIDLE = 0) or (U2STA.URXDA = 1) or (NceBusStateMachineInfo.RS485.Done)  then  // Did we detect a Device starting to transmit on the UART?
+  begin
+    if Device^.Node = nil then                                                  // Does the Device have a Node assigned to it?
+    begin
+      Device^.Node := OPStackNode_Allocate;                                       // No, allocate one and link it to the Device
+      NodeData := NceBusStateMachine_GetDeviceData(Device^.Node);                 // Get the RAM struture associated with the Node
+      NodeData^.DeviceID := NceBusStateMachineInfo.iActiveDevice;                 // Link the Device to the Node
+      Device^.State := Device^.State or DS_NCEBUS_DEVICE_ACTIVE and not DS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Active
+    end;
+    Device^.MissedPingCount := 0;                                               // Reset Missed Count
+    NceBusStateMachineInfo.WatchdogCount := 0;                                  // Reset the Watchdog for a hung bus
+    NceBusStateMachineInfo.iState := DetectedState;                             // Next State = Ping Response
+  end else
+  begin 
+    // If a Device has nothing to say we can fall into this branch it is not a signal
+    // the device is has disappeared
+    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
+    begin   
+     { Inc(Device^.MissedPingCount);
+      if Device^.MissedPingCount > MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS then
+      begin
+        Node := Device^.Node;                                                   // Copy the address of the node for later use
+        NodeData := GetDeviceData(Device^.Node);
+        NodeData^.DeviceID := ID_NO_DEVICE;                                     // Unlink the Device from the Node
+        Device^.Node := nil;                                                    // Unlink the Node from the Device
+        NMRAnetNode_MarkForRelease(Node);                                       // Unallocate the node
+        Device^.State := Device^.State and not XDS_NCEBUS_DEVICE_ACTIVE or XDS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Inactive
+      end;    }
+    end;
+    NceBusStateMachineInfo.iState := NoDetectedState;
+  end;
+end;
+
+// *****************************************************************************
+//
+// procedure NceBusStateMachine_UART_RX_StateMachine;
+//
+//  Parameters:
+//                NceBusMessage:   The Message to work on
+//                ReceivedByte:       The new Byte received by the UART
+//                IsPCMessage:        The Message is from the PC so we need to handle the CTS line
+//
+//  Returns:
+//                None
+//  Description:
+//              Updates internal flags to track for various timeout conditions
+//    mainly for the bus
+//
+//  WARNING:  This is called from the NceBus_UART_RX_Interrupt and the
+//            NceBus_UART_RX_Interrupt so make sure anything done is "ThreadSafe"
+//
+// *****************************************************************************
+procedure NceBusStateMachine_UART_RX_StateMachine(NceBusBuffer: PNceBusStateMachineInfo; ReceivedByte: Byte);
+var
+  Error: Byte;
+  i: Integer;
+begin
+  case NceBusBuffer^.RS485.NceBusData.StateMachineIndex of
+    STATE_RS485_READ_CAB_BYTE_1 :
+      begin
+        NceBusBuffer^.RS485.NceBusData.DataCount := 2;         // Per the Spec
+        NceBusBuffer^.RS485.NceBusData.Bytes[0] := ReceivedByte;
+        Inc(NceBusBuffer^.RS485.NceBusData.StateMachineIndex)
+      end;
+    STATE_RS485_READ_CAB_BYTE_2 :
+      begin
+        NceBusBuffer^.RS485.NceBusData.Bytes[1] := ReceivedByte;
+        NceBusBuffer^.RS485.Done := True;                           // Must be cleared in the main program
+        Inc(NceBusBuffer^.RS485.NceBusData.StateMachineIndex)
+      end;
+    STATE_RS485_FULL :
+      begin                                                                     // Spin here until the system resets the statemachine
+
+      end;
+  end
+end;
+// *****************************************************************************
+//
+// procedure NceBusStateMachine_Process
+//
+//  Parameters:
+//             Node: The physical Node of the Bridge
+//   Returns:
+//             None
+//
+// Description:
+//             There is no reason to send Device Nodes as internally the statemachine
+//             checks the Device Nodes for the Permitted state to use them.
+//
+// *****************************************************************************
+procedure NceBusStateMachine_Process(Node: PNMRAnetNode);
+var
+  Temp: Word;
+  i: Integer;
+  Device: PDevice;
+  NodeData: PNceBusDeviceVolatileData;
+begin
+  if Node = nil then Exit;
+  
+  if OPStackNode_TestState(Node, NS_PERMITTED) then
+  begin
+    case NceBusStateMachineInfo.iState of
+      STATE_BUILD_INITIAL_CABS :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_BUILD_INITIAL_CABS'+LF);{$ENDIF}
+          for i := ID_MIN_DEVICE to ID_MIN_DEVICE + NCE_CAB_BUS_PADDING - 1 do
+          begin
+            Device := @NceBusStateMachineInfo.DeviceList[i];
+            Device^.Node := OPStackNode_Allocate ;                              // Allocate one and link it to the Device
+            NodeData := NceBusStateMachine_GetDeviceData(Device^.Node);         // Get the RAM struture associated with the Node
+            NodeData^.DeviceID := i;                                            // Link the Device to the Node
+            Device^.State := Device^.State or DS_NCEBUS_DEVICE_ACTIVE and not DS_NCEBUS_DEVICE_INACTIVE;  // Set the Device Active
+          end;
+          NceBusStateMachineInfo.iState := STATE_DISCOVERDEVICES;
+        end;
+      STATE_DISCOVERDEVICES :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_DISCOVERDEVICES'+LF);{$ENDIF}
+          NceBusStateMachineInfo.Discovering := True;
+          NceBusStateMachineInfo.iActiveDevice := 1;
+          NceBusStateMachineInfo.iState := STATE_SENDDEVICESYNC;
+        end;
+      STATE_SENDDEVICESYNC :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_SENDDEVICESYNC'+LF);{$ENDIF}
+       //   LATB4_bit := 1;     // Scope Sync on the NCE Sync
+
+          PrepareUARTReceiver;
+          SendInquiryMessage(0);
+          Delay_us(900);
+          NceBusStateMachineInfo.iState := STATE_SENDDEVICEINQUIRY;
+
+       //   LATB4_bit := 0;
+        end;
+      STATE_DISCOVERNEXTDEVICE  :
+        begin
+         {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_DISCOVERNEXTDEVICE'+LF);{$ENDIF}
+          Inc(NceBusStateMachineInfo.iActiveDevice);
+          if NceBusStateMachineInfo.iActiveDevice > ID_MAX_DEVICE then
+          begin
+            NceBusStateMachineInfo.Discovering := False;
+            NceBusStateMachineInfo.DiscoveryCount := 0;
+            NceBusStateMachineInfo.iActiveDevice := FirstActiveDevice;
+            NceBusStateMachineInfo.iState := STATE_ENUMERATEACTIVEDEVICES;
+          end else
+            NceBusStateMachineInfo.iState := STATE_SENDDEVICEINQUIRY;
+        end;
+      STATE_SENDDEVICEINQUIRY :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_SENDDEVICEINQUIRY'+LF);{$ENDIF}
+          PrepareUARTReceiver;
+          SendInquiryMessage(NceBusStateMachineInfo.iActiveDevice);
+          Delay_us(1800);    // In parallel the UART Interrupt may be called and
+          Device := @NceBusStateMachineInfo.DeviceList[NceBusStateMachineInfo.iActiveDevice];
+          DetectDeviceResponse(Device, STATE_WAITFORDEVICEMESSAGE, STATE_TESTFORDISCOVERYMODE);
+        end;
+      STATE_WAITFORDEVICEMESSAGE :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_WAITFORDEVICEMESSAGE'+LF);{$ENDIF}
+          if NceBusStateMachineInfo.RS485.Done then
+            NceBusStateMachineInfo.iState := STATE_HANDLEMESSAGE;
+          if NceBusStateMachineInfo.WatchdogCount > NCEBUS_BUS_HUNG_COUNT then
+            NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE;
+        end;
+      STATE_HANDLEMESSAGE :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_HANDLEMESSAGE'+LF);{$ENDIF}
+          Device := @NceBusStateMachineInfo.DeviceList[NceBusStateMachineInfo.iActiveDevice];
+          NceBusStateMachineInfo.Bridge.RequiresReply := False;           // The HandleDeviceInstruction call will set up the OlcbBridge info if needed.
+          NceBusStateMachineInfo.Bridge.ReplyRead := False;
+          NceBusStateMachineInfo.Bridge.WatchdogCount := 0;
+          NceBus_HandleDeviceInstruction( @NceBusStateMachineInfo.RS485.NceBusData, NceBusStateMachineInfo.iActiveDevice);
+          if NceBusStateMachineInfo.Bridge.RequiresReply then
+            NceBusStateMachineInfo.iState := STATE_SEND_NMRANET_MESSAGE
+          else
+            NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE
+        end;
+       STATE_SEND_NMRANET_MESSAGE :
+         begin
+           // Spin until we can send the message/datagram then jump to wait for the reply with the NMRAnetStateMachine_TrySendxxx functions or similar.
+           // NMRAnetStateMachine_TrySendxxxx
+            NceBusStateMachineInfo.iState := STATE_WAIT_FOR_NMRANET_REPLY
+         end;
+       STATE_WAIT_FOR_NMRANET_REPLY :
+        begin
+        {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_WAIT_FOR_OLCB_REPLY'+LF);{$ENDIF}
+          if NceBusStateMachineInfo.Bridge.ReplyRead then
+            NceBusStateMachineInfo.iState := STATE_SEND_INSTRUCTION_REPLY;
+          if NceBusStateMachineInfo.Bridge.WatchdogCount > NCEBUS_OLCB_BUS_TIMEOUT then
+            NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE;
+        end;
+      STATE_SEND_INSTRUCTION_REPLY :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_SEND_INSTRUCTION_REPLY'+LF);{$ENDIF}
+           // The NceBus message was created in the NMRAnetAppCallbacks.mpas
+     //      SendNceBusMessage(@NceBusStateMachineInfo.Bridge.NceBusMessage, CALLBYTE_RESPONSE, NceBusStateMachineInfo.iActiveDevice);
+           NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE;
+        end;
+      STATE_WAITFORACKRESPONSE :                                                                                    // Error detected earlier so sending an ACK to see if it is really broken
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_WAITFORACKRESPONSE'+LF);{$ENDIF}
+          if NceBusStateMachineInfo.RS485.Done then
+            NceBusStateMachineInfo.iState := STATE_DEVICEACKRESPONSE;
+          if NceBusStateMachineInfo.WatchdogCount > NCEBUS_BUS_HUNG_COUNT then
+            NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE;
+        end;
+      STATE_DEVICEACKRESPONSE :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_DEVICEACKRESPONSE'+LF);{$ENDIF}
+          Device := @NceBusStateMachineInfo.DeviceList[NceBusStateMachineInfo.iActiveDevice];
+          NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE
+        end;
+      STATE_TESTFORDISCOVERYMODE :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_TESTFORDISCOVERYMODE'+LF);{$ENDIF}
+          if NceBusStateMachineInfo.Discovering then
+            NceBusStateMachineInfo.iState := STATE_DISCOVERNEXTDEVICE
+          else
+            NceBusStateMachineInfo.iState := STATE_ENUMERATEACTIVEDEVICES
+        end;
+      STATE_ENUMERATEACTIVEDEVICES :
+        begin
+          {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_ENUMERATEACTIVEDEVICES'+LF);{$ENDIF}
+          NceBusStateMachineInfo.iActiveDevice := NextAvailableDevice(NceBusStateMachineInfo.iActiveDevice);
+          if NceBusStateMachineInfo.iActiveDevice <> ID_NO_DEVICE then
+          begin
+            if NceBusStateMachineInfo.iActiveDevice = FirstActiveDevice then
+              NceBusStateMachineInfo.iState := STATE_SENDDEVICESYNC
+            else
+              NceBusStateMachineInfo.iState := STATE_SENDDEVICEINQUIRY
+          end;
+
+          if NceBusStateMachineInfo.DiscoveryCount >= REDISCOVERY_TIME then
+            NceBusStateMachineInfo.iState := STATE_DISCOVERDEVICES
+        end;
+     end;
+  end
+end;
+
+// *****************************************************************************
+//
+// procedure WriteNceBusMessage(MessageInfo: PNceBusMessage; TxReg: PWord; StatusReg: PWord);
+//
+//  Parameters:
+//             MessageInfo:       Tranmitter Data to send over the NceBus bus
+//             TxReg:             Pointer to the SFR of the Transmitter register for the desired UART
+//             TxStaReg:          Pointer to the SFR of the Transmitter status register for the desired UART
+//   Returns:
+//             None
+//
+// Description:
+//             Correctly formats the passed parameters and sends the entire
+//  Reqeust packet to the device
+//
+//
+// *****************************************************************************
+procedure WriteNceBusMessage(MessageInfo: PNceBusMessage; TxReg: ^Word; StatusReg: ^Word);
+var
+  i: Integer;
+  XorError: Byte;
+begin
+  if MessageInfo^.CabID <> 0 then
+    WriteNceBusByte(MessageInfo^.CabID, TxReg, StatusReg);     // Send the Call Byte if <> 0
+  //WriteNceBusByte(MessageInfo^.HeaderByte, False, TxReg, StatusReg);    // Send the Header Byte
+  //XorError := MessageInfo^.HeaderByte;                                     // Start Calculating the Error Byte
+  for i := 0 to MessageInfo^.DataCount - 1 do
+  //begin
+    //WriteNceBusByte(MessageInfo^.Bytes[i], False, TxReg, StatusReg);
+   // XorError := XorError xor MessageInfo^.Bytes[i]
+  //end;
+  WriteNceBusByte(XorError, TxReg, StatusReg)
+end;
+
+// *****************************************************************************
+//
+// procedure SendNceBusMessage(NceBusMessage: PNceBusMessage; Command: Byte; iDevice: Byte);
+//
+//  Parameters:
+//              NceBusMessage: Global structure to hold the message information
+//              Command:    Upper new bits of the command (the lower bits are the number of bytes in the message)
+//              iDevice:    The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
+//
+//
+// *****************************************************************************
+procedure SendNceBusMessage(NceBusMessage: PNceBusMessage; Command: Byte; iDevice: Byte);
+var
+  OldMode: bit;
+begin
+  if iDevice <> ID_PC_DEVICE then
+  begin
+    OldMode := NceBus_RS485_Select;
+    NceBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
+    NceBusMessage^.CabID := Command or Byte( iDevice);   // Send Message to the NceBus UART
+    WriteNceBusMessage(NceBusMessage, @U2TXREG, @U2STA);
+    Delay_us(200);
+    NceBus_RS485_Select := OldMode
+  end else
+  begin
+    NceBusMessage^.CabID := 0;                                              // Very Important to strip the CallByte from the PC Packet, Send to the PC UART
+    WriteNceBusMessage(NceBusMessage, @U1TXREG, @U1STA);
+  end;
+end;
+
+// *****************************************************************************
+//
+// procedure Broadcast_NceBusMessage;
+//
+//  Parameters:
+//              NceBusMessage: Global structure to hold the message information
+//              Command:    Upper new bits of the command (the lower bits are the number of bytes in the message)
+//
+//
+// *****************************************************************************
+procedure Broadcast_NceBusMessage(NceBusMessage: PNceBusMessage; Command: Byte);
+var
+  i: Byte;
+begin
+  SendNceBusMessage(NceBusMessage, Command, ID_PC_DEVICE);
+  SendNceBusMessage(NceBusMessage, Command, 0);
+  for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
+  begin
+    if NceBusStateMachineInfo.DeviceList[i].State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
+       SendNceBusMessage(NceBusMessage, Command, i);
+  end
+end;
+// *****************************************************************************
+//
+// procedure WriteNceBusByte(DataByte: Word; SetAddressBit: Boolean);
+//
+//   Parameters:
+//              DataByte:      The Byte to send
+//              SetAddressBit: True if the 9th bit should be set to signify it as an address
+//
+//   Returns:
+//      None
+//
+//  Description:
+//                The workhorse function that places the data onto the
+//    UART NceBus bus RS485 but in RS485 format
+//
+// *****************************************************************************
+procedure WriteNceBusByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word);
+begin
+  TxReg^ := DataByte;
+  StatusReg^.UTXEN := 1;          // Force the Register in to the TSR so the Idle check is not "too fast" to start
+  while StatusReg^.TRMT = 1 do;   // Wait for the UART to start transmitting
+  while StatusReg^.TRMT = 0 do;   // Wait for the UART to finsh transmitting to make sure the ENceBus timing is met
+end;
+
+procedure WriteByte(DataByte: Byte);
+begin
+  NceBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
+  WriteNceBusByte(DataByte, @U2TXREG, @U2STA);
+  NceBus_RS485_Select := 0;      // Select the 485 chip to receive mode
+end;
+
+// *****************************************************************************
+// procedure HandleDeviceInstruction(NceBusMessage: PNceBusMessage; iDevice: Byte);
+//
+//  Parameters:
+//              NceBusMessage: Global structure to hold the message information
+//              iDevice: The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
+//
+//  Description:
+//              Dispatches the instruction sent by the Device
+//
+// *****************************************************************************
+procedure NceBus_HandleDeviceInstruction(NceBusMessage: PNceBusMessage; iDevice: Byte);
+var
+  i: Integer;
+  Node: PNMRAnetNode;
+begin
+  Node := NceBusStateMachineInfo.DeviceList[iDevice].Node;
+  if Node <> nil then
+  begin
+    if NceBusMessage^.Bytes[0] <> NCE_NO_KEY_TO_REPORT then
+    begin
+      case NceBusMessage^.Bytes[0] of 
+        NCE_CAB_SELECT_MACRO,
+        NCE_CAB_SELECT_LOCO : begin WriteByte(NCE_CMD_CURSOR_ON); end;
+        NCE_CAB_ENTER       : begin WriteByte(NCE_CMD_CURSOR_OFF); end;
+      end;
+
+      ByteToHex(NceBusMessage^.Bytes[0], s1);
+      UART1_Write_Text('Key Press: 0x' + s1);
+      ByteToHex(iDevice, s1);
+      UART1_Write_Text(', CabID = ' + s1 + LF);
+    end;
+    
+    if NceBusMessage^.Bytes[1] <> NCE_NO_SPEED_TO_REPORT then
+    begin
+      ByteToStr(NceBusMessage^.Bytes[1] and NCE_SPEED_MASK, s1);
+      UART1_Write_Text('Speed: ' + s1 + LF);
+    end;
+
+  end
+end;
+
+end.

@@ -37,7 +37,7 @@ uses
 
 // User callable functions
 procedure OPStackCore_Initialize;                                               // Call once on program startup
-procedure OPStackCore_Process;                                                  // Call as often as possible
+function OPStackCore_Process: PNMRAnetnode;                                     // Call as often as possible
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 procedure OPStackCore_Enable(DoEnable: Boolean);                                // Enable Process Statemachine
 
@@ -606,16 +606,14 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure OPStackCore_Process;
-var
-  Node: PNMRAnetnode;
+function OPStackCore_Process: PNMRAnetnode;
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
     Hardware_DisableInterrupts;
-    Node := OPStackNode_NextNode;
-    if Node <> nil then
-      NodeRunStateMachine(Node);
+    Result := OPStackNode_NextNode;
+    if Result <> nil then
+      NodeRunStateMachine(Result);
     ProcessHardwareMessages;
     Hardware_EnableInterrupts;
   end;

@@ -96,7 +96,7 @@ begin
   //  end else
     begin
       // Command Station is in Main Line Mode
-      if CommandStationConfigurationShadowRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
+   //   if CommandStationConfigurationShadowRam.DccBusMode = CONFIG_NMRA_DCC_TRANSMITTER then // If we are a DCC Transmitter then handle that
    //     RunNmraDccTranmitter;
 
     //  if CommandStationConfigurationShadowRam.RailComEnable = CONFIG_RAILCOM_ENABLED then

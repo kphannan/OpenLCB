@@ -1,0 +1,162 @@
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2014.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2011-01-28:   Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//    Defines global constants for NCE Bus Bridge
+//
+// ******************************************************************************
+unit NMRAnetNceBridgeDefines;
+
+uses
+  opstacknode,
+  opstackdefines,
+  template_node,
+  NMRAnetDefines;
+
+const
+  NCEBUS_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a NCE message
+  
+  STATE_BUILD_INITIAL_CABS        = 0;
+  STATE_DISCOVERDEVICES           = 1;
+  STATE_DISCOVERNEXTDEVICE        = 2;
+  STATE_SENDDEVICEINQUIRY         = 3;
+  STATE_SENDDEVICESYNC            = 4;
+  STATE_HANDLEMESSAGE             = 5;
+  STATE_WAIT_FOR_NMRANET_REPLY    = 6;
+  STATE_SEND_NMRANET_MESSAGE      = 7;
+  STATE_SEND_INSTRUCTION_REPLY    = 8;
+  STATE_DEVICEACKRESPONSE         = 9;
+  STATE_TESTFORDISCOVERYMODE      = 10;
+  STATE_ENUMERATEACTIVEDEVICES    = 11;
+  STATE_WAITFORDEVICEMESSAGE      = 12;
+  STATE_WAITFORACKRESPONSE        = 13;
+
+  STATE_RS485_READ_CAB_BYTE_1   = 0;  // State machine states for the RS485 receiver
+  STATE_RS485_READ_CAB_BYTE_2   = 1;
+  STATE_RS485_FULL              = 2;
+
+  ID_NO_DEVICE                         = $FE;
+  ID_MIN_DEVICE                        = 2;
+  ID_MAX_DEVICE                        = 63;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
+  ID_PC_DEVICE                         = $FF;  // PC Device = $FF
+  NCEBUS_PING                          = %10000000;   // P10A AAAA
+  MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
+  NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
+
+  NCEBUS_BUS_HUNG_COUNT = 2;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
+  REDISCOVERY_TIME         = 4;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
+  NCEBUS_OLCB_BUS_TIMEOUT = 6;   // how long to count before giving up on a OLCB reply (~525ms steps)
+  
+  DS_NCEBUS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
+  DS_NCEBUS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
+  
+  NCE_NO_SPEED_TO_REPORT    = %01111111;
+  NCE_NO_KEY_TO_REPORT      = %01111101;
+  NCE_SPEED_MASK            = %01111111;
+  
+  NCE_CAB_SELECT_LOCO       = $48;   // 72
+  NCE_CAB_ENTER             = $40;   // 64   
+  NCE_CAB_DIR_TOGGLE        = $43;
+  NCE_HORN_KEY_DOWN         = $49;
+  NCE_CAB_ONE_STEP_FASTER   = $4A;
+  NCE_CAB_ONE_STEP_SLOWER   = $4B;
+  NCE_CAB_EMERGENCY_STOP    = $4C;
+  NCE_CAB_BELL              = $4D;
+  NCE_CAB_TOGGLE_F0_0       = $50;
+  NCE_CAB_TOGGLE_F1_1       = $51;
+  NCE_CAB_TOGGLE_F2_2       = $52;
+  NCE_CAB_TOGGLE_F3_3       = $53;
+  NCE_CAB_TOGGLE_F4_4       = $54;
+  NCE_CAB_TOGGLE_F5_5       = $55;
+  NCE_CAB_TOGGLE_F6_6       = $56;
+  NCE_CAB_TOGGLE_F7_7       = $57;
+  NCE_CAB_TOGGLE_F8_8       = $58;
+  NCE_CAB_9                 = $59;
+  NCE_HORN_KEY_UP           = $5F;
+  NCE_CAB_FIVE_STEPS_FASTER = $5A;
+  NCE_CAB_FIVE_STEPS_SLOWER = $5B;
+  NCE_CAB_SELECT_MACRO      = $5C;
+  NCE_CAB_DIR_FORWARD       = $6A;
+  NCE_CAB_DIR_REVERSE       = $6B;
+
+  
+  NCE_CMD_CURSOR_ON         = $CF;  // 207
+  NCE_CMD_CURSOR_OFF        = $CE;  // 206
+
+type
+  TNceBusDataArray = array[0..NCEBUS_MAX_DATA_BYTE-1] of Byte;
+  PNceBusDataArray = ^TNceBusDataArray;
+
+  TNceBusMessage = record
+    Bytes: TNceBusDataArray;             // [RX, TX] The NceBus data that was recieved from Data Byte 1...Data Byte 15.  Does NOT include the Header Byte or the XOR Byte
+    DataCount: Byte;                     // [RX, TX] Number of Valid Data Bytes
+    MessageReadResult: Word;             // [RX] Error Message Result, see the E_SUCCESS, E_BUS_HUNG, E_WINDOW_TIMEOUT, etc constants
+    CabID,                               // [TX] The CabID is the address of the Device to communicate with, sent with the 9th bit address UART protocol, Call Byte = 0 then it is not sent (for sending to the PC)
+    StateMachineIndex,                   // [RX] The current state of the RX state machine that is run in UART RX interrupt
+    StateMachineIndexDataByte: Byte;     // [RX] The current TNceBusDataArray index the RX state machine is operating on that is run in UART RX interrupt
+  end;
+  PNceBusMessage = ^TNceBusMessage;
+
+ // Information about the Devices found on the NceBus bus
+  TDevice = record
+    State: Byte;                     // See XDS_NceBus_xxxxx Flags
+    MissedPingCount: Byte;           // Number of times the Device did not respond to a ping, determine if it is taken off line
+    Node: PNMRAnetNode;
+  end;
+  PDevice = ^TDevice;
+  TDeviceList = array[ID_MIN_DEVICE..ID_MAX_DEVICE] of TDevice;  // Don't reserve a slot for device 0
+  
+type
+  TNceBusDeviceVolatileData = record
+    DeviceID: Word;
+  end;
+  PNceBusDeviceVolatileData = ^TNceBusDeviceVolatileData;
+  
+  TNceBusDeviceVolatileDataArray = array[0..USER_MAX_NODE_COUNT] of TNceBusDeviceVolatileData;
+  
+
+  // Buffer to hold the data as it comes in on the RS485 bus
+  TUARTReception = record
+    NceBusData: TNceBusMessage;           // Syncronous message recieved from the command station pinging the NceBus bus begin dispatched
+    Done: Boolean;                        // True when the reception is complete
+  end;
+
+  TNceBusBridgeInfo = record
+    NceBusMessage: TNceBusMessage;         // This is the data from the Instruction that needs a reply before the OLCB message is sent and the data that needs to be sent back out the NceBus Bus after the OLCB replies
+    RequiresReply: Boolean;                // The messages needs a replay from the OLCB
+    ReplyRead: Boolean;                    // True when the NceBusMessage contains the information that needs to go out the NceBus bus
+    WatchdogCount: Byte;                   // Counts (~525ms steps) before the Olcb reply is declared timed out, see NceBus_OLCB_BUS_TIMEOUT
+  //  DataBuffer: TDataBuffer;                // NMRAnet message to send
+    Datagram: TDatagramBuffer;             // NMRAnet datagram to send
+  end;
+  
+type
+  TNceBusStateMachineInfo = record
+    DeviceList: TDeviceList;              // List of NceBus Devices (TDevice)
+    iState: Short;                        // Current State the StateMachine is in
+    Discovering: Boolean;                 // Discovering new Devices on the NceBus Bus
+    iActiveDevice: Byte;                  // The Device currently being communicated with
+    DiscoveryCount: Byte;                 // Counts (~525ms steps) between rediscovery intervals
+    WatchdogCount: Byte;                  // Counts (~525ms steps) before the NceBus Bus is declared hung, see NceBus_BUS_HUNG_COUNT
+    Bridge: TNceBusBridgeInfo;            // Info for messages that require querying information from the OLCB bus
+    RS485: TUARTReception;                // Hold information about the UART reception on the NceBusBus
+  end;
+  PNceBusStateMachineInfo = ^TNceBusStateMachineInfo;
+  
+var
+  NceBusStateMachineInfo: TNceBusStateMachineInfo;
+  NceBusDeviceVolatileDataArray: TNceBusDeviceVolatileDataArray;
+
+implementation
+
+end.

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <CONFIG>
   <ProjectOptions>
     <Version Value="9"/>
@@ -39,7 +39,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="2">
       <Unit0>
         <Filename Value="TrainDatabaseNode.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -53,13 +53,6 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitmainform"/>
       </Unit1>
-      <Unit2>
-        <Filename Value="..\..\..\Components\Mustangpeak\mustangpeakethernetoptionsframe.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="FrameEthernetOptions"/>
-        <ResourceBaseClass Value="Frame"/>
-        <UnitName Value="mustangpeakethernetoptionsframe"/>
-      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
