@@ -337,12 +337,12 @@ type
     procedure RefreshCommandStationTreeAliasEvents(NodeAlias: Word; NodeID: QWord; LocalHelper: TOpenLCBMessageHelper);
     procedure RefreshNetworkTreeAliasSnip(NodeAlias: Word; Snip: TOlcbStructureSNIP);
     procedure RefreshNetworkTreeAliasProtocolSupport(NodeAlias: Word; Protocols: QWord);
-    procedure SyncErrorCOMPortMessage(MessageStr: String);
-    procedure SyncReceiveCOMPortMessage(MessageStr: String);
-    procedure SyncSendCOMPortMessage(MessageStr: String);
-    procedure SyncErrorEthernetMessage(MessageStr: String);
-    procedure SyncReceiveEthernetMessage(MessageStr: String);
-    procedure SyncSendEthernetMessage(MessageStr: String);
+    procedure SyncErrorCOMPortMessage(Sender: TObject; MessageStr: String);
+    procedure SyncReceiveCOMPortMessage(Sender: TObject; MessageStr: String);
+    procedure SyncSendCOMPortMessage(Sender: TObject; MessageStr: String);
+    procedure SyncErrorEthernetMessage(Sender: TObject; MessageStr: String);
+    procedure SyncReceiveEthernetMessage(Sender: TObject; MessageStr: String);
+    procedure SyncSendEthernetMessage(Sender: TObject; MessageStr: String);
     procedure SyncHubConnect(HostIP: string; HostPort: Integer);
     procedure SyncHubDisconnect(HostIP: string; HostPort: Integer);
     procedure SyncHubNewClient(SocketCount: Integer);
@@ -1801,7 +1801,7 @@ begin
   end
 end;
 
-procedure TFormOLCB_Commander.SyncReceiveCOMPortMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncReceiveCOMPortMessage(Sender: TObject; MessageStr: String);
 begin
   MessageHelper.Decompose(MessageStr);
   if FormMessageLog.Visible and not FormMessageLog.Paused then
@@ -1813,7 +1813,7 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.SyncSendCOMPortMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncSendCOMPortMessage(Sender: TObject; MessageStr: String);
 begin
   if MessageHelper.Decompose(MessageStr) then
   begin
@@ -1827,13 +1827,13 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.SyncErrorEthernetMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncErrorEthernetMessage(Sender: TObject; MessageStr: String);
 begin
  // UpdateUI;
  // ShowMessage(MessageStr);
 end;
 
-procedure TFormOLCB_Commander.SyncReceiveEthernetMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncReceiveEthernetMessage(Sender: TObject; MessageStr: String);
 begin
   MessageHelper.Decompose(MessageStr);
   if FormEthernetMessageLog.Visible and not FormEthernetMessageLog.Paused then
@@ -1845,7 +1845,7 @@ begin
   end;
 end;
 
-procedure TFormOLCB_Commander.SyncSendEthernetMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncSendEthernetMessage(Sender: TObject; MessageStr: String);
 begin
   if MessageHelper.Decompose(MessageStr) then
   begin
@@ -1920,7 +1920,7 @@ begin
 end;
 {$ENDIF}
 
-procedure TFormOLCB_Commander.SyncErrorCOMPortMessage(MessageStr: String);
+procedure TFormOLCB_Commander.SyncErrorCOMPortMessage(Sender: TObject; MessageStr: String);
 begin
   UpdateUI;
   ShowMessage(MessageStr);

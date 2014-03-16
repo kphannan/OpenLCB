@@ -54,7 +54,6 @@ type
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ListViewSelectBarSelectItem(Sender: TObject; Item: TListItem; Selected: boolean);
-    procedure PanelThrottleClick(Sender: TObject);
   private
     FSettingsFilePath: WideString;
     { private declarations }
@@ -120,11 +119,6 @@ begin
       PanelComPort.Visible := False;
     end;
   end;
-end;
-
-procedure TFormSettings.PanelThrottleClick(Sender: TObject);
-begin
-
 end;
 
 procedure TFormSettings.ScanComPorts;
