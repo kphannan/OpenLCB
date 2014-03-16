@@ -5,6 +5,7 @@ unit opstackcore;
 //   3) ACDI Read and Write not implemented correctly
 //   4) FDI not implemented correctly
 //   5) Do something with MTI_STREAM_INIT_REPLY error code results
+//   6) Handle Optional Interaction Rejected messages.... Buffer them??????
 
 
 {$IFDEF FPC}

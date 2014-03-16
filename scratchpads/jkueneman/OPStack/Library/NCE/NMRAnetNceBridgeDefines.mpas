@@ -41,9 +41,10 @@ const
   STATE_WAITFORDEVICEMESSAGE      = 12;
   STATE_WAITFORACKRESPONSE        = 13;
 
-  STATE_RS485_READ_CAB_BYTE_1   = 0;  // State machine states for the RS485 receiver
-  STATE_RS485_READ_CAB_BYTE_2   = 1;
-  STATE_RS485_FULL              = 2;
+  STATE_RS485_READ_CAB_KEY_PRESS   = 0;  // State machine states for the RS485 receiver
+  STATE_RS485_READ_CAB_SPEED       = 1;
+  STATE_RS485_CONTINUE_INPUT       = 2;
+  STATE_RS485_FULL                 = 3;
 
   ID_NO_DEVICE                         = $FE;
   ID_MIN_DEVICE                        = 2;
@@ -60,9 +61,9 @@ const
   DS_NCEBUS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
   DS_NCEBUS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
   
-  NCE_NO_SPEED_TO_REPORT    = %01111111;
-  NCE_NO_KEY_TO_REPORT      = %01111101;
-  NCE_SPEED_MASK            = %01111111;
+  NCE_NO_SPEED_TO_REPORT    = %01111111;              // $7F
+  NCE_NO_KEY_TO_REPORT      = %01111101;              // $7D
+  NCE_SPEED_MASK            = %01111111;              // $7F
   
   NCE_CAB_SELECT_LOCO       = $48;   // 72
   NCE_CAB_ENTER             = $40;   // 64   
