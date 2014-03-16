@@ -54,7 +54,11 @@ const
   XML_ELECMENT_TEST_MATRIX        = 'TestMatrix';
 
 type
-  TSyncRawMessageFunc = procedure(MessageStr: String) of object;
+  TConnectionState = (csConnecting, csConnected, csDisconnected);
+
+type
+  TSyncRawMessageFunc = procedure(Sender: TObject; MessageStr: String) of object;
+  TSyncConnectionStateFunc = procedure (Sender: TObject; ConnectionState: TConnectionState) of object;
 
   TCANByteArray = array[0..CAN_BYTE_COUNT-1] of Byte;
   PCANByteArray = ^TCANByteArray;

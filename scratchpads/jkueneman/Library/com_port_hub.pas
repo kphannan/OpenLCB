@@ -51,6 +51,7 @@ type
     FEnableReceiveMessages: Boolean;
     FEnableSendMessages: Boolean;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;
+    FSyncConnectionStateFunc: TSyncConnectionStateFunc;
     FSyncErrorMessageFunc: TSyncRawMessageFunc;
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;
     FSyncSendMessageFunc: TSyncRawMessageFunc;
@@ -58,6 +59,7 @@ type
     procedure SetEnableReceiveMessages(AValue: Boolean);
     procedure SetEnableSendMessages(AValue: Boolean);
   protected
+    procedure DoBeforeThreadDestroy(Sender: TObject); virtual;
     property ComPortThreadList: TComPortThreadList read FComPortThreadList write FComPortThreadList;
   public
     constructor Create;
@@ -70,6 +72,7 @@ type
     property EnableReceiveMessages: Boolean read FEnableReceiveMessages write SetEnableReceiveMessages;
     property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+    property SyncConnectionStateFunc: TSyncConnectionStateFunc read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
     property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
     property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
     property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
@@ -164,12 +167,26 @@ begin
   FSyncErrorMessageFunc := nil;
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
+  FSyncConnectionStateFunc := nil;
 end;
 
 destructor TComPortHub.Destroy;
 begin
+  RemoveComPort(nil);
   FreeAndNil(FComPortThreadList);
   inherited Destroy
+end;
+
+procedure TComPortHub.DoBeforeThreadDestroy(Sender: TObject);
+var
+  List: TList;
+begin
+  List := ComPortThreadList.LockList;
+  try
+    List.Remove(Sender);
+  finally
+    ComPortThreadList.UnlockList;
+  end;
 end;
 
 function TComPortHub.AddTask(NewTask: TTaskOlcbBase): Boolean;
@@ -212,7 +229,10 @@ begin
   Result.SyncErrorMessageFunc := SyncErrorMessageFunc;
   Result.SyncReceiveMessageFunc := SyncReceiveMessageFunc;
   Result.SyncSendMessageFunc := SyncSendMessageFunc;
+  Result.SyncConnectionStateFunc := SyncConnectionStateFunc;
   Result.OnBeforeDestroyTask := OnBeforeDestroyTask;
+  Result.OnBeforeDestroy := @DoBeforeThreadDestroy;
+
   List := ComPortThreadList.LockList;
   try
     List.Add(Result);
@@ -241,26 +261,23 @@ var
   List: TList;
   i: Integer;
 begin
-  if ComPort = nil then
-  begin
-    List := ComPortThreadList.LockList;
-    try
-      for i := List.Count - 1 downto 0  do
+  List := ComPortThreadList.LockList;
+  try
+    for i := List.Count - 1 downto 0  do
+    begin
+      if (ComPort = TComPortThread( List[i])) or (ComPort = nil) then
       begin
-        if (ComPort = TComPortThread( List[i])) or (ComPort = nil) then
-        begin
-          TComPortThread( List[i]).SyncReceiveMessageFunc := nil;
-          TComPortThread( List[i]).SyncSendMessageFunc := nil;
-          TComPortThread( List[i]).SyncErrorMessageFunc := nil;
-          TComPortThread( List[i]).OnBeforeDestroyTask := nil;
-          TComPortThread( List[i]).RemoveAndFreeTasks(0);
-          TComPortThread( List[i]).Terminate;
-          List.Delete(i);
-        end;
+        TComPortThread( List[i]).SyncReceiveMessageFunc := nil;
+        TComPortThread( List[i]).SyncSendMessageFunc := nil;
+        TComPortThread( List[i]).SyncErrorMessageFunc := nil;
+        TComPortThread( List[i]).OnBeforeDestroyTask := nil;
+        TComPortThread( List[i]).RemoveAndFreeTasks(0);
+        TComPortThread( List[i]).Terminate;
+        List.Delete(i);
       end;
-    finally
-      ComPortThreadList.UnLockList;
     end;
+  finally
+    ComPortThreadList.UnLockList;
   end;
 end;
 
@@ -285,6 +302,8 @@ begin
     begin
       Serial.Config(BaudRate, 8, 'N', 0, False, False);                         // FTDI Driver uses no stop bits for non-standard baud rates.
       Connected:=True;
+      ConnectionState := csConnected;
+      Synchronize(@SyncConnectionState);
       while not Terminated do
       begin
         ThreadSwitch;

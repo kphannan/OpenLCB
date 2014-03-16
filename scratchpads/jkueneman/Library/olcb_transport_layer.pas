@@ -81,13 +81,16 @@ type
     FConnected: Boolean;                                                        // True if connected to the port
     FCANFrameParserDatagramReceiveManager: TCANFrameParserDatagramReceiveManager;
     FCANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager;
+    FConnectionState: TConnectionState;
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
     FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sen
     FOlcbTaskManager: TOlcbTaskEngine;
+    FOnBeforeDestroy: TNotifyEvent;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
     FRunning: Boolean;
     FCANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager;
     FCANFrameParserStreamSendManager: TCANFrameParserStreamSendManager;
+    FSyncConnectionStateFunc: TSyncConnectionStateFunc;
     FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
     FSyncSendMessageFunc: TSyncRawMessageFunc;                                  // Function to callback through Syncronize if EnableSendMessages is true
@@ -104,6 +107,7 @@ type
     procedure SyncErrorMessage;
     procedure SyncReceiveMessage;
     procedure SyncSendMessage;
+    procedure SyncConnectionState;
 
     property AliasList: TAliasTaskContainerList read FAliasList write FAliasList;                 // Tracks the Alias that have been registered with Olcb through this Transport Thread
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
@@ -111,6 +115,7 @@ type
     property CANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager read FCANFrameParserDatagramSendManager write FCANFrameParserDatagramSendManager;
     property CANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager read FCANFrameParserStreamReceiveManager write FCANFrameParserStreamReceiveManager;
     property CANFrameParserStreamSendManager: TCANFrameParserStreamSendManager read FCANFrameParserStreamSendManager write FCANFrameParserStreamSendManager;
+    property ConnectionState: TConnectionState read FConnectionState write FConnectionState;
     property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
   public
     constructor Create(CreateSuspended: Boolean); virtual;
@@ -122,12 +127,14 @@ type
     property ThreadListSendStrings: TThreadList read FThreadListSendStrings write FThreadListSendStrings;
     property Terminated;
     property TerminateComplete: Boolean read FTerminateComplete;
+    property SyncConnectionStateFunc: TSyncConnectionStateFunc read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
     property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
     property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
     property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
     property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
     property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+    property OnBeforeDestroy: TNotifyEvent read FOnBeforeDestroy write FOnBeforeDestroy;
     property Running: Boolean read FRunning;
     property SourceAlias: Word read GetSourceAlias;
     property TaskCount: Integer read GetTaskCount;
@@ -2081,10 +2088,16 @@ end;
 procedure TTransportLayerThread.ExecuteBegin;
 begin
   FRunning := True;
+  ConnectionState := csConnecting;
+  Synchronize(@SyncConnectionState);
 end;
 
 procedure TTransportLayerThread.ExecuteEnd;
 begin
+  ConnectionState := csDisconnected;
+  Synchronize(@SyncConnectionState);
+  if Assigned(OnBeforeDestroy) then
+    OnBeforeDestroy(Self);
   FRunning := False;
   FTerminateComplete := True;
 end;
@@ -2092,19 +2105,19 @@ end;
 procedure TTransportLayerThread.SyncErrorMessage;
 begin
   if Assigned(SyncErrorMessageFunc) then
-    SyncErrorMessageFunc(BufferRawMessage)
+    SyncErrorMessageFunc(Self, BufferRawMessage)
 end;
 
 procedure TTransportLayerThread.SyncReceiveMessage;
 begin
   if Assigned(SyncReceiveMessageFunc) then
-    SyncReceiveMessageFunc(BufferRawMessage)
+    SyncReceiveMessageFunc(Self, BufferRawMessage)
 end;
 
 procedure TTransportLayerThread.SyncSendMessage;
 begin
   if Assigned(SyncSendMessageFunc) then
-    SyncSendMessageFunc(BufferRawMessage)
+    SyncSendMessageFunc(Self, BufferRawMessage)
 end;
 
 constructor TTransportLayerThread.Create(CreateSuspended: Boolean);
@@ -2123,7 +2136,9 @@ begin
   FSyncErrorMessageFunc := nil;
   FSyncReceiveMessageFunc := nil;
   FSyncSendMessageFunc := nil;
-  OnBeforeDestroyTask := nil;
+  FOnBeforeDestroyTask := nil;
+  FOnBeforeDestroy := nil;
+  FSyncConnectionStateFunc := nil;
 end;
 
 destructor TTransportLayerThread.Destroy;
@@ -2265,6 +2280,12 @@ begin
     OlcbTaskManager.TaskList.UnlockList;
     end;
   until Wait = False;
+end;
+
+procedure TTransportLayerThread.SyncConnectionState;
+begin
+  if Assigned(SyncConnectionStateFunc) then
+    SyncConnectionStateFunc(Self, ConnectionState)
 end;
 
 

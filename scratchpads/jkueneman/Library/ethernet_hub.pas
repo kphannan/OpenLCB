@@ -556,19 +556,19 @@ end;
 procedure TEthernetHub.SyncErrorMessage;
 begin
   if Assigned(SyncErrorMessageFunc) then
-    SyncErrorMessageFunc(BufferRawMessage)
+    SyncErrorMessageFunc(Self, BufferRawMessage)
 end;
 
 procedure TEthernetHub.SyncReceiveMessage;
 begin
   if Assigned(SyncReceiveMessageFunc) then
-    SyncReceiveMessageFunc(BufferRawMessage)
+    SyncReceiveMessageFunc(Self, BufferRawMessage)
 end;
 
 procedure TEthernetHub.SyncSendMessage;
 begin
   if Assigned(SyncSendMessageFunc) then
-    SyncSendMessageFunc(BufferRawMessage)
+    SyncSendMessageFunc(Self, BufferRawMessage)
 end;
 
 constructor TEthernetHub.Create;
