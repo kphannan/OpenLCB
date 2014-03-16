@@ -1,0 +1,543 @@
+object FormThrottle: TFormThrottle
+  Left = 775
+  Height = 467
+  Top = 264
+  Width = 584
+  BorderStyle = bsToolWindow
+  Caption = 'Open LCB Awesome Throttle - Unassiged'
+  ClientHeight = 467
+  ClientWidth = 584
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnHide = FormHide
+  OnShow = FormShow
+  Position = poDefault
+  LCLVersion = '1.2.0.1'
+  object GroupBoxAllocation: TGroupBox
+    Left = 392
+    Height = 368
+    Top = 8
+    Width = 185
+    Caption = 'Train Allocation'
+    ClientHeight = 346
+    ClientWidth = 177
+    TabOrder = 0
+    object LabelAddress: TLabel
+      Left = 10
+      Height = 16
+      Top = 110
+      Width = 51
+      Caption = 'Address'
+      ParentColor = False
+    end
+    object ButtonAllocateTrainByAddress: TButton
+      Left = 10
+      Height = 22
+      Top = 214
+      Width = 155
+      Action = ActionAllocationByAddress
+      TabOrder = 0
+    end
+    object ButtonReleaseTrain: TButton
+      Left = 10
+      Height = 22
+      Top = 278
+      Width = 155
+      Action = ActionAllocationRelease
+      TabOrder = 1
+    end
+    object ButtonFreeTrain: TButton
+      Left = 10
+      Height = 22
+      Top = 310
+      Width = 155
+      Action = ActionAllocationFree
+      TabOrder = 2
+    end
+    object RadioGroupSpeedStep: TRadioGroup
+      Left = 10
+      Height = 100
+      Top = 6
+      Width = 161
+      AutoFill = True
+      Caption = 'Speed Step'
+      ChildSizing.LeftRightSpacing = 6
+      ChildSizing.TopBottomSpacing = 6
+      ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+      ChildSizing.EnlargeVertical = crsHomogenousChildResize
+      ChildSizing.ShrinkHorizontal = crsScaleChilds
+      ChildSizing.ShrinkVertical = crsScaleChilds
+      ChildSizing.Layout = cclLeftToRightThenTopToBottom
+      ChildSizing.ControlsPerLine = 1
+      ClientHeight = 78
+      ClientWidth = 153
+      ItemIndex = 1
+      Items.Strings = (
+        '14 Step'
+        '28 Step'
+        '128 Step'
+      )
+      OnClick = RadioGroupSpeedStepClick
+      TabOrder = 3
+    end
+    object ButtonSearchForTrain: TButton
+      Left = 10
+      Height = 22
+      Top = 246
+      Width = 155
+      Action = ActionAllocationSearchForTrain
+      TabOrder = 4
+    end
+    object SpinEditAddress: TSpinEdit
+      Left = 10
+      Height = 16
+      Top = 130
+      Width = 157
+      Font.Height = -16
+      ParentFont = False
+      TabOrder = 5
+      Value = 3
+    end
+    object RadioGroupShortLong: TRadioGroup
+      Left = 10
+      Height = 44
+      Top = 158
+      Width = 155
+      AutoFill = True
+      Caption = 'Length'
+      ChildSizing.LeftRightSpacing = 6
+      ChildSizing.TopBottomSpacing = 6
+      ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+      ChildSizing.EnlargeVertical = crsHomogenousChildResize
+      ChildSizing.ShrinkHorizontal = crsScaleChilds
+      ChildSizing.ShrinkVertical = crsScaleChilds
+      ChildSizing.Layout = cclLeftToRightThenTopToBottom
+      ChildSizing.ControlsPerLine = 2
+      ClientHeight = 22
+      ClientWidth = 147
+      Columns = 2
+      ItemIndex = 0
+      Items.Strings = (
+        'Short'
+        'Long'
+      )
+      OnClick = RadioGroupShortLongClick
+      TabOrder = 6
+    end
+  end
+  object GroupBoxControl: TGroupBox
+    Left = 8
+    Height = 377
+    Top = 80
+    Width = 184
+    Caption = 'Control'
+    ClientHeight = 355
+    ClientWidth = 176
+    TabOrder = 1
+    object TrackBarSpeed: TTrackBar
+      Left = 12
+      Height = 178
+      Top = 3
+      Width = 34
+      Max = 100
+      OnChange = TrackBarSpeedChange
+      Orientation = trVertical
+      Position = 0
+      Reversed = True
+      TabOrder = 0
+    end
+    object LabelMaxSpeed: TLabel
+      Left = 46
+      Height = 16
+      Top = 5
+      Width = 54
+      Caption = '100 m/s'
+      ParentColor = False
+    end
+    object LabelMinSpeed: TLabel
+      Left = 44
+      Height = 16
+      Top = 164
+      Width = 38
+      Caption = '0 m/s'
+      ParentColor = False
+    end
+    object RadioGroupDirection: TRadioGroup
+      Left = 12
+      Height = 49
+      Top = 190
+      Width = 155
+      AutoFill = True
+      Caption = 'Direction'
+      ChildSizing.LeftRightSpacing = 6
+      ChildSizing.TopBottomSpacing = 6
+      ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+      ChildSizing.EnlargeVertical = crsHomogenousChildResize
+      ChildSizing.ShrinkHorizontal = crsScaleChilds
+      ChildSizing.ShrinkVertical = crsScaleChilds
+      ChildSizing.Layout = cclLeftToRightThenTopToBottom
+      ChildSizing.ControlsPerLine = 2
+      ClientHeight = 27
+      ClientWidth = 147
+      Columns = 2
+      ItemIndex = 0
+      Items.Strings = (
+        'Fwd'
+        'Rev'
+      )
+      OnClick = RadioGroupDirectionClick
+      TabOrder = 1
+    end
+    object ButtonStop: TButton
+      Left = 12
+      Height = 22
+      Top = 246
+      Width = 155
+      Action = ActionControlStop
+      TabOrder = 2
+    end
+    object ButtonEStop: TButton
+      Left = 12
+      Height = 22
+      Top = 270
+      Width = 155
+      Action = ActionControlEmergencyStop
+      TabOrder = 3
+    end
+    object LabelSpeedPos: TLabel
+      Left = 100
+      Height = 16
+      Top = 94
+      Width = 26
+      Caption = 'm/s'
+      ParentColor = False
+    end
+    object LabelPosValue: TLabel
+      Left = 62
+      Height = 16
+      Top = 94
+      Width = 8
+      Caption = '0'
+      ParentColor = False
+    end
+    object ButtonQuerySpeed: TButton
+      Left = 12
+      Height = 22
+      Top = 302
+      Width = 155
+      Action = ActionQuerySpeed
+      TabOrder = 4
+    end
+    object ButtonQueryFunctions: TButton
+      Left = 12
+      Height = 22
+      Top = 326
+      Width = 155
+      Action = ActionQueryFunctions
+      TabOrder = 5
+    end
+  end
+  object GroupBoxFunctions: TGroupBox
+    Left = 200
+    Height = 416
+    Top = 8
+    Width = 184
+    Caption = 'Functions'
+    ClientHeight = 394
+    ClientWidth = 176
+    TabOrder = 2
+    object ScrollBoxFunctions: TScrollBox
+      Left = 4
+      Height = 386
+      Top = 4
+      Width = 168
+      HorzScrollBar.Page = 168
+      VertScrollBar.Increment = 38
+      VertScrollBar.Page = 386
+      VertScrollBar.Smooth = True
+      VertScrollBar.Tracking = True
+      Align = alClient
+      BorderSpacing.Around = 4
+      BorderStyle = bsNone
+      ClientHeight = 386
+      ClientWidth = 168
+      TabOrder = 0
+      object SpeedButton1: TSpeedButton
+        Left = 55
+        Height = 22
+        Top = 325
+        Width = 23
+      end
+    end
+  end
+  object GroupBoxConfiguration: TGroupBox
+    Left = 392
+    Height = 78
+    Top = 379
+    Width = 185
+    Caption = 'Configuration'
+    ClientHeight = 56
+    ClientWidth = 177
+    TabOrder = 3
+    object ButtonEditConfiguration: TButton
+      Left = 12
+      Height = 22
+      Top = 9
+      Width = 155
+      Action = ActionAllocationEditCustomization
+      TabOrder = 0
+    end
+  end
+  object ButtonShowHideAllocatePanel: TButton
+    Left = 200
+    Height = 22
+    Top = 428
+    Width = 184
+    Action = ActionToggleAllocationPanel
+    TabOrder = 4
+  end
+  object GroupBoxAddress: TGroupBox
+    Left = 7
+    Height = 58
+    Top = 8
+    Width = 185
+    Caption = 'Address'
+    ClientHeight = 36
+    ClientWidth = 177
+    TabOrder = 5
+    object LabelAllocatedAddress: TLabel
+      Left = 0
+      Height = 36
+      Top = 0
+      Width = 177
+      Align = alClient
+      Alignment = taCenter
+      Caption = 'Unassigned'
+      Font.Height = -27
+      ParentColor = False
+      ParentFont = False
+    end
+  end
+  object ActionListThrottle: TActionList
+    left = 248
+    top = 104
+    object ActionToggleAllocationPanel: TAction
+      Category = 'Allocation'
+      Caption = 'Toggle Allocation Panel'
+      ImageIndex = 26
+      OnExecute = ActionToggleAllocationPanelExecute
+    end
+    object ActionAllocationByAddress: TAction
+      Category = 'Allocation'
+      Caption = 'Allocate by Address'
+      OnExecute = ActionAllocationByAddressExecute
+    end
+    object ActionAllocationSearchForTrain: TAction
+      Category = 'Allocation'
+      Caption = 'Search For Train'
+    end
+    object ActionAllocationRelease: TAction
+      Category = 'Allocation'
+      Caption = 'Release'
+      OnExecute = ActionAllocationReleaseExecute
+    end
+    object ActionAllocationFree: TAction
+      Category = 'Allocation'
+      Caption = 'Free'
+      OnExecute = ActionAllocationFreeExecute
+    end
+    object ActionAllocationLoadEffectsFile: TAction
+      Category = 'Allocation'
+      Caption = 'Load FDI File...'
+    end
+    object ActionAllocationEditCustomization: TAction
+      Category = 'Allocation'
+      Caption = 'Edit Customization...'
+      OnExecute = ActionAllocationEditCustomizationExecute
+    end
+    object ActionFunction0: TAction
+      Category = 'Functions'
+      Caption = 'F0 (Light)'
+      OnExecute = ActionFunction0Execute
+    end
+    object ActionFunction1: TAction
+      Category = 'Functions'
+      Caption = 'F1'
+      OnExecute = ActionFunction1Execute
+    end
+    object ActionFunction2: TAction
+      Category = 'Functions'
+      Caption = 'F2'
+      OnExecute = ActionFunction2Execute
+    end
+    object ActionFunction3: TAction
+      Category = 'Functions'
+      Caption = 'F3'
+      OnExecute = ActionFunction3Execute
+    end
+    object ActionFunction4: TAction
+      Category = 'Functions'
+      Caption = 'F4'
+      OnExecute = ActionFunction4Execute
+    end
+    object ActionFunction5: TAction
+      Category = 'Functions'
+      Caption = 'F5'
+      OnExecute = ActionFunction5Execute
+    end
+    object ActionFunction6: TAction
+      Category = 'Functions'
+      Caption = 'F6'
+      OnExecute = ActionFunction6Execute
+    end
+    object ActionFunction7: TAction
+      Category = 'Functions'
+      Caption = 'F7'
+      OnExecute = ActionFunction7Execute
+    end
+    object ActionFunction8: TAction
+      Category = 'Functions'
+      Caption = 'F8'
+      OnExecute = ActionFunction8Execute
+    end
+    object ActionFunction9: TAction
+      Category = 'Functions'
+      Caption = 'F9'
+      OnExecute = ActionFunction9Execute
+    end
+    object ActionFunction10: TAction
+      Category = 'Functions'
+      Caption = 'F10'
+      OnExecute = ActionFunction10Execute
+    end
+    object ActionFunction11: TAction
+      Category = 'Functions'
+      Caption = 'F11'
+      OnExecute = ActionFunction11Execute
+    end
+    object ActionFunction12: TAction
+      Category = 'Functions'
+      Caption = 'F12'
+      OnExecute = ActionFunction12Execute
+    end
+    object ActionControlStop: TAction
+      Category = 'Control'
+      Caption = 'Stop'
+      OnExecute = ActionControlStopExecute
+    end
+    object ActionControlEmergencyStop: TAction
+      Category = 'Control'
+      Caption = 'Emergency Stop'
+      OnExecute = ActionControlEmergencyStopExecute
+    end
+    object ActionFunction13: TAction
+      Category = 'Functions'
+      Caption = 'F13'
+      OnExecute = ActionFunction13Execute
+    end
+    object ActionFunction14: TAction
+      Category = 'Functions'
+      Caption = 'F14'
+      OnExecute = ActionFunction14Execute
+    end
+    object ActionFunction15: TAction
+      Category = 'Functions'
+      Caption = 'F15'
+      OnExecute = ActionFunction15Execute
+    end
+    object ActionFunction16: TAction
+      Category = 'Functions'
+      Caption = 'F16'
+      OnExecute = ActionFunction16Execute
+    end
+    object ActionFunction17: TAction
+      Category = 'Functions'
+      Caption = 'F17'
+      OnExecute = ActionFunction17Execute
+    end
+    object ActionFunction18: TAction
+      Category = 'Functions'
+      Caption = 'F18'
+      OnExecute = ActionFunction18Execute
+    end
+    object ActionFunction19: TAction
+      Category = 'Functions'
+      Caption = 'F19'
+      OnExecute = ActionFunction19Execute
+    end
+    object ActionFunction20: TAction
+      Category = 'Functions'
+      Caption = 'F20'
+      OnExecute = ActionFunction20Execute
+    end
+    object ActionFunction21: TAction
+      Category = 'Functions'
+      Caption = 'F21'
+      OnExecute = ActionFunction21Execute
+    end
+    object ActionFunction22: TAction
+      Category = 'Functions'
+      Caption = 'F22'
+      OnExecute = ActionFunction22Execute
+    end
+    object ActionFunction23: TAction
+      Category = 'Functions'
+      Caption = 'F23'
+      OnExecute = ActionFunction23Execute
+    end
+    object ActionFunction24: TAction
+      Category = 'Functions'
+      Caption = 'F24'
+      OnExecute = ActionFunction24Execute
+    end
+    object ActionFunction25: TAction
+      Category = 'Functions'
+      Caption = 'F25'
+      OnExecute = ActionFunction25Execute
+    end
+    object ActionFunction26: TAction
+      Category = 'Functions'
+      Caption = 'F26'
+      OnExecute = ActionFunction26Execute
+    end
+    object ActionFunction27: TAction
+      Category = 'Functions'
+      Caption = 'F27'
+      OnExecute = ActionFunction27Execute
+    end
+    object ActionFunction28: TAction
+      Category = 'Functions'
+      Caption = 'F28'
+      OnExecute = ActionFunction28Execute
+    end
+    object ActionQuerySpeed: TAction
+      Category = 'Query'
+      Caption = 'Query Speed'
+      OnExecute = ActionQuerySpeedExecute
+    end
+    object ActionQueryFunctions: TAction
+      Category = 'Query'
+      Caption = 'Query Functions'
+      OnExecute = ActionQueryFunctionsExecute
+    end
+  end
+  object TimerToggleAnimation: TTimer
+    Enabled = False
+    Interval = 50
+    OnTimer = TimerToggleAnimationTimer
+    left = 248
+    top = 160
+  end
+  object TimerGeneralTimeout: TTimer
+    Enabled = False
+    OnTimer = TimerGeneralTimeoutTimer
+    left = 248
+    top = 216
+  end
+  object OpenDialog: TOpenDialog
+    Filter = 'OpenLCB FDI Files|*.xml'
+    Options = [ofFileMustExist, ofEnableSizing, ofViewDetail]
+    left = 244
+    top = 283
+  end
+end

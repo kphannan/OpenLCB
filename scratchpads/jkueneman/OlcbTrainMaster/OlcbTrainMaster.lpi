@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
+      <Title Value="OlcbTrainMaster"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+    </General>
+    <i18n>
+      <EnableI18N LFM="False"/>
+    </i18n>
+    <VersionInfo>
+      <StringTable ProductVersion=""/>
+    </VersionInfo>
+    <BuildModes Count="1">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="1">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+    </RequiredPackages>
+    <Units Count="12">
+      <Unit0>
+        <Filename Value="OlcbTrainMaster.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="OlcbTrainMaster"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="Forms\main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormOlcbTrainMaster"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="main"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="Forms\form_throttle_multiple_trains.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="form_throttle_multiple_trains"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="Forms\form_config_mem_viewer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMemConfigViewer"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_config_mem_viewer"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="Forms\form_train_config_editor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="form_train_config_editor"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\Library\unit_cdi_parser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="unit_cdi_parser"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\Library\olcb_transport_layer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_transport_layer"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\Library\olcb_defines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_defines"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\Library\math_float16.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="math_float16"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\Library\olcb_app_common_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_app_common_settings"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\Library\olcb_utilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_utilities"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="Forms\form_throttle.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormThrottle"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_throttle"/>
+      </Unit11>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\OlcbTrainMaster"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir)"/>
+      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;Forms"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Conditionals Value="if TargetOS = 'darwin' then
+begin
+  CustomOptions += '-k-macosx_version_min -k10.4';
+  CustomOptions += '-XR/Developer/SDKs/MacOSX10.4u.sdk/';
+  CustomOptions += ' -dUseCThreads';
+end;
+if TargetOS = 'linux' then
+  CustomOptions += ' -dUseCThreads';"/>
+    <BuildMacros>
+      <Count Value="1"/>
+      <Item1>
+        <Identifier Value="MustangpeakCompilerOptions"/>
+        <Description Value="Compiler Options for Platforms"/>
+      </Item1>
+    </BuildMacros>
+    <CodeGeneration>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <UseValgrind Value="True"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerMessages>
+        <MsgFileName Value=""/>
+      </CompilerMessages>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="9"/>
+    <BuildModes Active="Default"/>
+    <Units Count="23">
+      <Unit0>
+        <Filename Value="OlcbTrainMaster.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="OlcbTrainMaster"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="120" Y="23"/>
+        <UsageCount Value="28"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="Forms/main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormOlcbTrainMaster"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="main"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="207"/>
+        <CursorPos X="38" Y="211"/>
+        <UsageCount Value="28"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="Forms/form_throttle_multiple_trains.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="form_throttle_multiple_trains"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="33" Y="10"/>
+        <UsageCount Value="28"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="Forms/form_config_mem_viewer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMemConfigViewer"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_config_mem_viewer"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="19" Y="13"/>
+        <UsageCount Value="28"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="Forms/form_train_config_editor.pas"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <UnitName Value="form_train_config_editor"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="64" Y="9"/>
+        <UsageCount Value="28"/>
+        <Loaded Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="../Library/unit_cdi_parser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="unit_cdi_parser"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="28"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_transport_layer"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="118"/>
+        <CursorPos X="131" Y="130"/>
+        <UsageCount Value="28"/>
+        <Loaded Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="../Library/olcb_defines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_defines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="28"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="../Library/math_float16.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="math_float16"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="28"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="../Library/olcb_app_common_settings.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_app_common_settings"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="28"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="../Library/olcb_utilities.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="olcb_utilities"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="40" Y="61"/>
+        <UsageCount Value="28"/>
+        <Loaded Value="True"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormThrottle"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_throttle"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="282"/>
+        <CursorPos X="42" Y="325"/>
+        <UsageCount Value="28"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="/Developer/lazarus/lcl/forms.pp"/>
+        <UnitName Value="Forms"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="428"/>
+        <CursorPos X="21" Y="429"/>
+        <UsageCount Value="10"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="/Developer/lazarus/lcl/comctrls.pp"/>
+        <UnitName Value="ComCtrls"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="2883"/>
+        <CursorPos X="14" Y="2895"/>
+        <UsageCount Value="10"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="/Developer/lazarus/lcl/include/treeview.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="49"/>
+        <CursorPos X="1" Y="62"/>
+        <UsageCount Value="10"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/classes/lists.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="/Developer/lazarus/lcl/include/customform.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="938"/>
+        <CursorPos X="1" Y="951"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <UnitName Value="com_port_hub"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="220"/>
+        <CursorPos X="60" Y="232"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="../OlcbCommander/form_settings.pas"/>
+        <ComponentName Value="FormSettings"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_settings"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="56" Y="3"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="/Developer/lazarus/lcl/include/containedaction.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="85"/>
+        <CursorPos X="1" Y="98"/>
+        <UsageCount Value="10"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="../Components/synapse40/source/lib/synaser.pas"/>
+        <UnitName Value="synaser"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="682"/>
+        <CursorPos X="14" Y="693"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/classes/classesh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="108"/>
+        <CursorPos X="3" Y="120"/>
+        <UsageCount Value="10"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="../Library/ethernet_hub.pas"/>
+        <UnitName Value="ethernet_hub"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="254"/>
+        <CursorPos X="48" Y="267"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit22>
+    </Units>
+    <General>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="108" Column="45" TopLine="96"/>
+      </Position1>
+      <Position2>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="199" Column="62" TopLine="187"/>
+      </Position2>
+      <Position3>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="202" Column="29" TopLine="189"/>
+      </Position3>
+      <Position4>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="155" Column="1" TopLine="142"/>
+      </Position4>
+      <Position5>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="74" Column="110" TopLine="62"/>
+      </Position5>
+      <Position6>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="165" Column="24" TopLine="144"/>
+      </Position6>
+      <Position7>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="226" Column="44" TopLine="205"/>
+      </Position7>
+      <Position8>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="74" Column="44" TopLine="62"/>
+      </Position8>
+      <Position9>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="107" Column="30" TopLine="101"/>
+      </Position9>
+      <Position10>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="116" Column="93" TopLine="98"/>
+      </Position10>
+      <Position11>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="109" Column="35" TopLine="91"/>
+      </Position11>
+      <Position12>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="130" Column="124" TopLine="124"/>
+      </Position12>
+      <Position13>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="2139" Column="4" TopLine="2120"/>
+      </Position13>
+      <Position14>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="94" Column="39" TopLine="82"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="2286" Column="37" TopLine="2274"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="2092" Column="36" TopLine="2087"/>
+      </Position16>
+      <Position17>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="301" Column="14" TopLine="289"/>
+      </Position17>
+      <Position18>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="118" Column="36" TopLine="108"/>
+      </Position18>
+      <Position19>
+        <Filename Value="../Library/olcb_utilities.pas"/>
+        <Caret Line="57" Column="48" TopLine="45"/>
+      </Position19>
+      <Position20>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="130" Column="56" TopLine="118"/>
+      </Position20>
+      <Position21>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="109" Column="38" TopLine="100"/>
+      </Position21>
+      <Position22>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="218" Column="40" TopLine="217"/>
+      </Position22>
+      <Position23>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="11" Column="17" TopLine="1"/>
+      </Position23>
+      <Position24>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="226" Column="8" TopLine="213"/>
+      </Position24>
+      <Position25>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="116" Column="30" TopLine="104"/>
+      </Position25>
+      <Position26>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="75" Column="131" TopLine="54"/>
+      </Position26>
+      <Position27>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="114" Column="102" TopLine="97"/>
+      </Position27>
+      <Position28>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="284" Column="53" TopLine="268"/>
+      </Position28>
+      <Position29>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="205" Column="3" TopLine="202"/>
+      </Position29>
+      <Position30>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="203" Column="79" TopLine="200"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectSession>
+  <Debugging>
+    <BreakPoints Count="2">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="/usr/local/share/fpcsrc/rtl/objpas/classes/lists.inc"/>
+        <Line Value="0"/>
+      </Item1>
+      <Item2>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="Forms/form_throttle.pas"/>
+        <Line Value="359"/>
+      </Item2>
+    </BreakPoints>
+    <Watches Count="1">
+      <Item1>
+        <Expression Value="FComPort"/>
+      </Item1>
+    </Watches>
+  </Debugging>
+  <EditorMacros Count="0"/>
+</CONFIG>
