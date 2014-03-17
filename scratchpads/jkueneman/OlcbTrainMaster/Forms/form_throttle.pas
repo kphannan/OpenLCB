@@ -49,7 +49,7 @@ type
     procedure DoThrottleHide(Throttle: TFormThrottle);
   public
     constructor Create; virtual;
-    function CreateThrottle: TFormThrottle;
+    function CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList): TFormThrottle;
     procedure Clear; override;
     procedure CloseThrottle(Throttle: TFormThrottle);
     procedure HideAll;
@@ -302,7 +302,7 @@ begin
   Clear;
 end;
 
-function TThrottleList.CreateThrottle: TFormThrottle;
+function TThrottleList.CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList): TFormThrottle;
 begin
   Result := TFormThrottle.Create(Application.MainForm);
   if Result <> nil then
@@ -310,6 +310,8 @@ begin
     Self.Add(Result);
     Result.OnThrottleClose := @DoThrottleClose;
     Result.OnThrottleHide := @DoThrottleHide;
+    Result.InitTransportLayers(AnEthernetHub, AComPortHub, ADispatchTaskFunc);
+    Result.ImageList16x16 := ImageList16x16;
     Result.Show
   end;
 end;

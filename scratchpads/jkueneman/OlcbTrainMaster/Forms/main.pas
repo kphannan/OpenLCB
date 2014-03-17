@@ -8,10 +8,14 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   ExtCtrls, StdCtrls, ActnList, Menus, Buttons, Spin, form_throttle,
   com_port_hub, ethernet_hub, olcb_app_common_settings, file_utilities,
-  olcb_utilities;
+  olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer;
+
+const
+  BUNDLENAME             = 'OpenLCB TrainMaster';
+  PATH_LINUX_APP_FOLDER  = 'olcbtrainmaster/';
+  PATH_SETTINGS_FILE     = 'settings.ini';
 
 type
-
   { TOlcbThrottleTreeNode }
 
   TOlcbThrottleTreeNode = class(TTreeNode)
@@ -25,6 +29,9 @@ type
   { TFormOlcbTrainMaster }
 
   TFormOlcbTrainMaster = class(TForm)
+    ActionToolsSettingsShowWin: TAction;
+    ActionToolsPreferenceShowMac: TAction;
+    ActionHelpAboutShow: TAction;
     ActionShowAllThrottles: TAction;
     ActionHideAllThrottles: TAction;
     ActionCloseAllThrottles: TAction;
@@ -39,7 +46,6 @@ type
     ButtonCloseAllThrottles: TButton;
     ButtonShowAllThrottles: TButton;
     ButtonHideAllThrottles: TButton;
-    CheckBoxAutoScanAtStart: TCheckBox;
     ComboBoxBaud: TComboBox;
     ComboBoxComPort: TComboBox;
     ComboBoxDataBits: TComboBox;
@@ -49,7 +55,7 @@ type
     EditAliasID: TEdit;
     EditEthernetLocalIP: TEdit;
     EditNodeID: TEdit;
-    ImageList: TImageList;
+    ImageList16x16: TImageList;
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
@@ -68,10 +74,16 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
+    MenuItemHelp: TMenuItem;
     MenuItemActionsNewThrottle: TMenuItem;
     MenuItemActionsDeleteThrottles: TMenuItem;
     MenuItemActions: TMenuItem;
     MenuItemFile: TMenuItem;
+    {$IFDEF DARWIN}
+    FOSXMenu: TMenuItem;
+    FOSXSep1Cmd: TMenuItem;
+    FOSXPrefCmd: TMenuItem;
+    {$ENDIF}
     PageControlMain: TPageControl;
     PanelBkGnd: TPanel;
     SpinEditEthernetLocalPort: TSpinEdit;
@@ -81,7 +93,7 @@ type
     TabSheetGeneral: TTabSheet;
     TabSheetMain: TTabSheet;
     TabSheetEthernet: TTabSheet;
-    TabSheetCAN: TTabSheet;
+    TabSheetCom: TTabSheet;
     ToolBarMain: TToolBar;
     ToolButtonCOM: TToolButton;
     ToolButtonEthernet: TToolButton;
@@ -96,26 +108,50 @@ type
     procedure ActionEthernetConnectionExecute(Sender: TObject);
     procedure ActionHideAllThrottlesExecute(Sender: TObject);
     procedure ActionShowAllThrottlesExecute(Sender: TObject);
+    procedure BitBtnRescanPortsClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure TabSheetComHide(Sender: TObject);
+    procedure TabSheetComShow(Sender: TObject);
+    procedure TabSheetEthernetHide(Sender: TObject);
+    procedure TabSheetEthernetShow(Sender: TObject);
+    procedure TabSheetGeneralHide(Sender: TObject);
+    procedure TabSheetGeneralShow(Sender: TObject);
     procedure TreeViewThrottlesCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
+    FAppAboutCmd: TMenuItem;
     FComConnectionState: TConnectionState;
     FComPortHub: TComPortHub;
+    FEthernetHub: TEthernetHub;
+    FSettingsFilePath: WideString;
+    FShownOnce: Boolean;
     FThrottles: TThrottleList;
     { private declarations }
   protected
     procedure ComPortError(Sender: TObject; MessageStr: String);
-    procedure ComPortConnectionState(Sender: TObject; ConnectionState: TConnectionState);
+    procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
+    procedure LoadSettings;
+    procedure ScanComPorts;
+    procedure StoreSettings;
     procedure ThrottleClosing(Throttle: TFormThrottle);
     procedure ThrottleHiding(Throttle: TFormThrottle);
+    function DispatchTask(Task: TTaskOlcbBase): Boolean;
+
+    property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
     property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
+    {$IFDEF DARWIN}
+    property OSXMenu: TMenuItem read FOSXMenu write FOSXMenu;
+    property OSXSep1Cmd: TMenuItem read FOSXSep1Cmd write FOSXSep1Cmd;
+    property OSXPrefCmd: TMenuItem read FOSXPrefCmd write FOSXPrefCmd;
+    {$ENDIF}
+    property ShownOnce: Boolean read FShownOnce write FShownOnce;
   public
     { public declarations }
-
     property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
+    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
+    property SettingsFilePath: WideString read FSettingsFilePath write FSettingsFilePath;
     property Throttles: TThrottleList read FThrottles write FThrottles;
     procedure UpdateUI;
   end;
@@ -134,7 +170,7 @@ var
   Throttle: TFormThrottle;
   Node: TOlcbThrottleTreeNode;
 begin
-  Throttle := Throttles.CreateThrottle;
+  Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, @DispatchTask, ImageList16x16);
   if Assigned(Throttle) then
   begin
     Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
@@ -200,9 +236,68 @@ begin
   Throttles.ShowAll;
 end;
 
-procedure TFormOlcbTrainMaster.ComPortConnectionState(Sender: TObject; ConnectionState: TConnectionState);
+procedure TFormOlcbTrainMaster.BitBtnRescanPortsClick(Sender: TObject);
 begin
+  ScanComPorts;
+end;
+
+procedure TFormOlcbTrainMaster.ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
+begin
+  ComConnectionState := NewConnectionState;
   UpdateUI;
+end;
+
+procedure TFormOlcbTrainMaster.LoadSettings;
+begin
+  //Ethernet
+  EditEthernetLocalIP.Text := GlobalSettings.Ethernet.LocalIP;
+  SpinEditEthernetLocalPort.Value := GlobalSettings.Ethernet.LocalPort;
+
+  // ComPort
+  ScanComPorts;
+  ComboBoxComPort.ItemIndex := ComboBoxComPort.Items.IndexOf(GlobalSettings.ComPort.Port);
+  if (ComboBoxComPort.ItemIndex < 0) and (ComboBoxComPort.Items.Count > 0) then
+    ComboBoxComPort.ItemIndex := 0;
+  ComboBoxBaud.ItemIndex := ComboBoxBaud.Items.IndexOf(IntToStr(GlobalSettings.ComPort.BaudRate));
+  ComboBoxDataBits.ItemIndex := ComboBoxDataBits.Items.IndexOf(IntToStr( GlobalSettings.ComPort.DataBits));
+  ComboBoxStopBits.ItemIndex := ComboBoxStopBits.Items.IndexOf(IntToStr( GlobalSettings.ComPort.StopBits));
+  ComboBoxParity.ItemIndex := Integer( GlobalSettings.ComPort.Parity);
+  ComboBoxFlowControl.ItemIndex := Integer( GlobalSettings.ComPort.FlowControl);
+
+  // General
+  SpinEditSendPacketDelay.Value := GlobalSettings.General.SendPacketDelay;
+  EditAliasID.Caption := ValidateHex( GlobalSettings.General.AliasID);
+  EditNodeID.Caption := ValidateHex(GlobalSettings.General.NodeID);
+end;
+
+procedure TFormOlcbTrainMaster.ScanComPorts;
+begin
+  ComboBoxComPort.Items.Delimiter := ';';
+  ComboBoxComPort.Items.DelimitedText := StringReplace(GetSerialPortNames, ',', ';', [rfReplaceAll, rfIgnoreCase]);
+  if ComboBoxComPort.Items.Count > 0 then
+    ComboBoxComPort.ItemIndex := 0;
+end;
+
+procedure TFormOlcbTrainMaster.StoreSettings;
+begin
+  // ComPort
+  GlobalSettings.ComPort.Port := ComboBoxComPort.Caption;
+  GlobalSettings.ComPort.BaudRate := StrToInt( ComboBoxBaud.Caption);
+  GlobalSettings.ComPort.DataBits := StrToInt( ComboBoxDataBits.Caption);
+  GlobalSettings.ComPort.StopBits := StrToInt( ComboBoxStopBits.Caption);
+  GlobalSettings.ComPort.Parity := TComPortParity( ComboBoxParity.ItemIndex);
+  GlobalSettings.ComPort.FlowControl := TComPortFlowControl( ComboBoxFlowControl.ItemIndex);
+
+  // General
+  GlobalSettings.General.SendPacketDelay := SpinEditSendPacketDelay.Value;
+  GlobalSettings.General.AliasID := ValidateHex(EditAliasID.Caption);
+  GlobalSettings.General.NodeID := ValidateHex(EditNodeID.Caption);
+
+  // Ethernet
+  GlobalSettings.Ethernet.LocalIP := EditEthernetLocalIP.Text;      // Should validate this
+  GlobalSettings.Ethernet.LocalPort := SpinEditEthernetLocalPort.Value;
+
+  GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
 end;
 
 procedure TFormOlcbTrainMaster.ComPortError(Sender: TObject; MessageStr: String);
@@ -215,7 +310,8 @@ procedure TFormOlcbTrainMaster.FormClose(Sender: TObject;
   var CloseAction: TCloseAction);
 begin
   Throttles.CloseAll;
-  ComPortHub.Destroy;
+  FreeAndNil(FEthernetHub);
+  FreeAndNil(FComPortHub);
 end;
 
 procedure TFormOlcbTrainMaster.FormCreate(Sender: TObject);
@@ -226,7 +322,9 @@ begin
   ComPortHub := TComPortHub.Create;
   ComPortHub.SyncErrorMessageFunc := @ComPortError;
   ComPortHub.SyncConnectionStateFunc := @ComPortConnectionState;
+  EthernetHub := TEthernetHub.Create;
   FComConnectionState := csDisconnected;
+  FShownOnce := False;
 end;
 
 procedure TFormOlcbTrainMaster.FormDestroy(Sender: TObject);
@@ -236,7 +334,77 @@ end;
 
 procedure TFormOlcbTrainMaster.FormShow(Sender: TObject);
 begin
+  if not ShownOnce then
+  begin
+    {$IFDEF DARWIN}
+    OSXMenu := TMenuItem.Create(Self);  {Application menu}
+    OSXMenu.Caption := #$EF#$A3#$BF;  {Unicode Apple logo char}
+    MainMenu.Items.Insert(0, OSXMenu);
+
+    AppAboutCmd := TMenuItem.Create(Self);
+    AppAboutCmd.Action := ActionHelpAboutShow;
+    AppAboutCmd.Caption := 'About ' + BUNDLENAME;
+    OSXMenu.Add(AppAboutCmd);  {Add About as item in application menu}
+
+    OSXSep1Cmd := TMenuItem.Create(Self);
+    OSXSep1Cmd.Caption := '-';
+    OSXMenu.Add(OSXSep1Cmd);
+
+    ActionToolsPreferenceShowMac.ShortCut := ShortCut(VK_OEM_COMMA, [ssMeta]);
+    OSXPrefCmd := TMenuItem.Create(Self);
+    OSXPrefCmd.Action := ActionToolsPreferenceShowMac;
+    OSXMenu.Add(OSXPrefCmd);
+    ActionToolsSettingsShowWin.Visible := False;
+ //   MenuItemToolsSep2.Visible := False;
+ //   FormMessageLog.SynMemo.Font.Height := 0;
+ //   FormEthernetMessageLog.SynMemo.Font.Height := 0;
+    {$ELSE}
+    AppAboutCmd := TMenuItem.Create(Self);
+    AppAboutCmd.Action := ActionHelpAboutShow;
+    MenuItemHelp.Add(AppAboutCmd);
+    {$ENDIF}
+ //   FormMessageLog.HideCallback := @SyncMessageLogHide;
+ //   FormEthernetMessageLog.HideCallback := @SyncEthernetMessageLogHide;
+    {$IFDEF Linux}
+    FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
+    GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
+    {$ELSE}
+    SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;
+    GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + PATH_SETTINGS_FILE));
+    {$ENDIF}
+    ShownOnce := True;
+  end;
   UpdateUI
+end;
+
+procedure TFormOlcbTrainMaster.TabSheetComHide(Sender: TObject);
+begin
+  StoreSettings
+end;
+
+procedure TFormOlcbTrainMaster.TabSheetComShow(Sender: TObject);
+begin
+  LoadSettings
+end;
+
+procedure TFormOlcbTrainMaster.TabSheetEthernetHide(Sender: TObject);
+begin
+  StoreSettings
+end;
+
+procedure TFormOlcbTrainMaster.TabSheetEthernetShow(Sender: TObject);
+begin
+  LoadSettings
+end;
+
+procedure TFormOlcbTrainMaster.TabSheetGeneralHide(Sender: TObject);
+begin
+  StoreSettings
+end;
+
+procedure TFormOlcbTrainMaster.TabSheetGeneralShow(Sender: TObject);
+begin
+  LoadSettings
 end;
 
 procedure TFormOlcbTrainMaster.ThrottleClosing(Throttle: TFormThrottle);
@@ -257,6 +425,26 @@ end;
 procedure TFormOlcbTrainMaster.ThrottleHiding(Throttle: TFormThrottle);
 begin
   //
+end;
+
+function TFormOlcbTrainMaster.DispatchTask(Task: TTaskOlcbBase): Boolean;
+begin
+  Result := False;
+  if Task.DestinationAlias = 0 then
+  begin
+    Result := EthernetHub.AddTask(Task);
+    if not Result then
+      Result := ComPortHub.AddTask(Task)
+    else ComPortHub.AddTask(Task)
+  end else
+  begin
+    if EthernetHub.AddTask(Task) then
+      Result := True
+    else
+    if ComPortHub.AddTask(Task) then
+      Result := True
+  end;
+  Task.Free;  // Task is Cloned
 end;
 
 procedure TFormOlcbTrainMaster.TreeViewThrottlesCreateNodeClass(

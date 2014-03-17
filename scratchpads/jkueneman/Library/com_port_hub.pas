@@ -293,7 +293,7 @@ var
 begin
   ExecuteBegin;
   Helper := TOpenLCBMessageHelper.Create;
-  Serial := TBlockSerial.Create;                           // Create the Serial object in the context of the thread
+  Serial := TBlockSerial.Create;                                                // Create the Serial object in the context of the thread
   Serial.LinuxLock:=False;
   Serial.RaiseExcept:=False;
   Serial.Connect(Port);
@@ -322,7 +322,7 @@ begin
           ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
         end;
 
-        CANFrameParserDatagramSendManager.ProcessSend;                                        // *** See if there is a datagram that will add a message to send ***
+        CANFrameParserDatagramSendManager.ProcessSend;                          // *** See if there is a datagram that will add a message to send ***
         CANFrameParserStreamSendManager.ProcessSend;
         OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
         if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***

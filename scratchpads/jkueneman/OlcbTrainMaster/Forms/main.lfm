@@ -4,7 +4,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
   Top = 171
   Width = 564
   Caption = 'OpenLCB TrainMaster'
-  ClientHeight = 394
+  ClientHeight = 374
   ClientWidth = 564
   Menu = MainMenu
   OnClose = FormClose
@@ -12,10 +12,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
   OnDestroy = FormDestroy
   OnShow = FormShow
   ShowHint = True
-  LCLVersion = '1.2.0.1'
+  LCLVersion = '1.2.0.3'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 394
+    Height = 374
     Top = 0
     Width = 564
     ActivePage = TabSheetMain
@@ -23,27 +23,27 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     TabIndex = 0
     TabOrder = 0
     object TabSheetMain: TTabSheet
-      Caption = 'Main'
-      ClientHeight = 355
-      ClientWidth = 558
+      Caption = 'Trains'
+      ClientHeight = 348
+      ClientWidth = 556
       object TreeViewThrottles: TTreeView
         Left = 0
-        Height = 296
+        Height = 281
         Top = 44
         Width = 160
         Align = alLeft
-        DefaultItemHeight = 18
+        DefaultItemHeight = 16
         TabOrder = 0
         OnCreateNodeClass = TreeViewThrottlesCreateNodeClass
       end
       object PanelBkGnd: TPanel
         Left = 165
-        Height = 296
+        Height = 281
         Top = 44
-        Width = 393
+        Width = 391
         Align = alClient
-        ClientHeight = 296
-        ClientWidth = 393
+        ClientHeight = 281
+        ClientWidth = 391
         TabOrder = 1
         object ButtonAddThrottles: TButton
           Left = 16
@@ -88,15 +88,15 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object Splitter1: TSplitter
         Left = 160
-        Height = 296
+        Height = 281
         Top = 44
         Width = 5
       end
       object StatusBar: TStatusBar
         Left = 0
-        Height = 15
-        Top = 340
-        Width = 558
+        Height = 23
+        Top = 325
+        Width = 556
         Panels = <        
           item
             Text = 'COM: Disconnected'
@@ -112,12 +112,12 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Left = 0
         Height = 44
         Top = 0
-        Width = 558
+        Width = 556
         AutoSize = True
         ButtonHeight = 42
         ButtonWidth = 45
         Caption = 'ToolBarMain'
-        Images = ImageList
+        Images = ImageList16x16
         ParentShowHint = False
         ShowCaptions = True
         TabOrder = 4
@@ -128,17 +128,17 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           Style = tbsCheck
         end
         object ToolButtonNewThrottle: TToolButton
-          Left = 117
+          Left = 106
           Top = 2
           Action = ActionAddNewThrottle
         end
         object ToolButtonDeleteThrottle: TToolButton
-          Left = 205
+          Left = 174
           Top = 2
           Action = ActionCloseSelectedThrottles
         end
         object ToolButtonSeparator: TToolButton
-          Left = 107
+          Left = 96
           Top = 2
           Width = 10
           Caption = 'ToolButtonSeparator'
@@ -151,16 +151,18 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         end
       end
     end
-    object TabSheetCAN: TTabSheet
-      Caption = 'CAN'
+    object TabSheetCom: TTabSheet
+      Caption = 'ComPort'
       ClientHeight = 355
       ClientWidth = 558
+      OnHide = TabSheetComHide
+      OnShow = TabSheetComShow
       object ComboBoxComPort: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 32
         Width = 226
-        ItemHeight = 0
+        ItemHeight = 13
         Style = csDropDownList
         TabOrder = 0
       end
@@ -185,7 +187,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Height = 21
         Top = 80
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           '19200'
@@ -201,10 +203,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxDataBits: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 128
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           '5'
@@ -235,10 +237,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxStopBits: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 176
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           '0'
@@ -259,10 +261,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxParity: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 224
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           'None'
@@ -285,10 +287,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxFlowControl: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 272
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           'None'
@@ -306,6 +308,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Top = 32
         Width = 144
         Caption = 'Rescan Ports'
+        OnClick = BitBtnRescanPortsClick
         TabOrder = 6
       end
     end
@@ -313,6 +316,8 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       Caption = 'Ethernet'
       ClientHeight = 355
       ClientWidth = 558
+      OnHide = TabSheetEthernetHide
+      OnShow = TabSheetEthernetShow
       object EditEthernetLocalIP: TEdit
         Left = 37
         Height = 22
@@ -350,6 +355,8 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       Caption = 'General'
       ClientHeight = 355
       ClientWidth = 558
+      OnHide = TabSheetGeneralHide
+      OnShow = TabSheetGeneralShow
       object Label1: TLabel
         Left = 11
         Height = 16
@@ -407,18 +414,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = 'milliseconds'
         ParentColor = False
       end
-      object CheckBoxAutoScanAtStart: TCheckBox
-        Left = 36
-        Height = 18
-        Top = 160
-        Width = 211
-        Caption = 'Auto-scan network at connect'
-        TabOrder = 3
-      end
     end
   end
   object ActionList: TActionList
-    Images = ImageList
+    Images = ImageList16x16
     left = 426
     top = 114
     object ActionCOMConnection: TAction
@@ -462,10 +461,20 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       Caption = 'Show All Throttles'
       OnExecute = ActionShowAllThrottlesExecute
     end
+    object ActionHelpAboutShow: TAction
+      Caption = 'About'
+    end
+    object ActionToolsPreferenceShowMac: TAction
+      Caption = 'Preferences...'
+      Enabled = False
+    end
+    object ActionToolsSettingsShowWin: TAction
+      Caption = 'Show Settings...'
+    end
   end
-  object ImageList: TImageList
-    left = 373
-    top = 174
+  object ImageList16x16: TImageList
+    left = 480
+    top = 114
     Bitmap = {
       4C69E80300001000000010000000FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
       FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
@@ -32499,6 +32508,9 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       object MenuItem1: TMenuItem
         Action = ActionHideAllThrottles
       end
+    end
+    object MenuItemHelp: TMenuItem
+      Caption = 'Help'
     end
   end
 end
