@@ -1,7 +1,7 @@
 object FormThrottle: TFormThrottle
-  Left = 775
+  Left = 613
   Height = 467
-  Top = 264
+  Top = 169
   Width = 584
   BorderStyle = bsToolWindow
   Caption = 'Open LCB Awesome Throttle - Unassiged'
@@ -85,7 +85,7 @@ object FormThrottle: TFormThrottle
       Height = 22
       Top = 246
       Width = 155
-      Action = ActionAllocationSearchForTrain
+      Action = ActionAllocationByList
       TabOrder = 4
     end
     object SpinEditAddress: TSpinEdit
@@ -259,15 +259,7 @@ object FormThrottle: TFormThrottle
       Align = alClient
       BorderSpacing.Around = 4
       BorderStyle = bsNone
-      ClientHeight = 386
-      ClientWidth = 168
       TabOrder = 0
-      object SpeedButton1: TSpeedButton
-        Left = 55
-        Height = 22
-        Top = 325
-        Width = 23
-      end
     end
   end
   object GroupBoxConfiguration: TGroupBox
@@ -332,9 +324,9 @@ object FormThrottle: TFormThrottle
       Caption = 'Allocate by Address'
       OnExecute = ActionAllocationByAddressExecute
     end
-    object ActionAllocationSearchForTrain: TAction
+    object ActionAllocationByList: TAction
       Category = 'Allocation'
-      Caption = 'Search For Train'
+      Caption = 'Allocate by List'
     end
     object ActionAllocationRelease: TAction
       Category = 'Allocation'

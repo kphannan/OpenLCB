@@ -20,6 +20,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="58"/>
@@ -636,10 +637,9 @@
       <Unit71>
         <Filename Value="../../HardwareLayerImplementations/Lazarus/hardware_template.pas"/>
         <UnitName Value="hardware_template"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="498"/>
+        <TopLine Value="499"/>
         <CursorPos X="53" Y="510"/>
         <UsageCount Value="17"/>
         <Loaded Value="True"/>

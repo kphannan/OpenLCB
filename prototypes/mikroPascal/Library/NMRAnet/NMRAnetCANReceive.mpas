@@ -15,7 +15,7 @@ unit NMRAnetCANReceive;
 //
 // * Description:
 //    Implements NMRAnet CAN Receive StateMachine.  The user program does not need
-//    to interact with this statemachine unless it needs to hook in for special purposes
+//    to interact with this statemachine unless it needs to ho` in for special purposes
 //
 // ******************************************************************************
 

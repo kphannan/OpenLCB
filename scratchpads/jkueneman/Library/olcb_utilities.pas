@@ -459,17 +459,32 @@ begin
   if EqualEvents(EventID, @EVENT_TRAIN) then
     Result := 'EVENT_TRAIN'
   else
-  if EqualEvents(EventID, @EVENT_TRAIN_PROXY_IDLE) then
-    Result := 'EVENT_TRAIN_PROXY_IDLE'
+  if EqualEvents(EventID, @EVENT_DCC_PROXY) then
+    Result := 'EVENT_DCC_PROXY'
   else
-  if EqualEvents(EventID, @EVENT_TRAIN_PROXY_INUSE) then
-    Result := 'EVENT_TRAIN_PROXY_INUSE'
+  if EqualEvents(EventID, @EVENT_DC_PROXY) then
+    Result := 'EVENT_DC_PROXY'
+  else
+  if EqualEvents(EventID, @EVENT_MARKLIN_DIGITAL_PROXY) then
+    Result := 'EVENT_MARKLIN_DIGITAL_PROXY'
+  else
+  if EqualEvents(EventID, @EVENT_MARKLIN_DELTA_PROXY) then
+    Result := 'EVENT_MARKLIN_DELTA_PROXY'
+  else
+  if EqualEvents(EventID, @EVENT_MARKLIN_ESU_DIGITAL_PROXY) then
+    Result := 'EVENT_MARKLIN_ESU_DIGITAL_PROXY'
+  else
+  if EqualEvents(EventID, @EVENT_SELECTRIX_PROXY) then
+    Result := 'EVENT_SELECTRIX_PROXY'
+  else
+  if EqualEvents(EventID, @EVENT_MTH_DCS_PROXY) then
+    Result := 'EVENT_MTH_DCS_PROXY'
+  else
+  if EqualEvents(EventID, @EVENT_LIONEL_TMCC_PROXY) then
+    Result := 'EVENT_LIONEL_TMCC_PROXY'
   else
   if EqualEvents(EventID, @EVENT_TRAIN) then
     Result := 'EVENT_TRAIN'
-  else
-  if EqualEvents(EventID, @EVENT_TRAIN_RESERVED_1) then
-    Result := 'EVENT_TRAIN_RESERVED_1'
   else
   if EqualEvents(EventID, @EVENT_DUPLICATE_NODE_ID) then
     Result := 'EVENT_DUPLICATE_NODE_ID'
@@ -482,9 +497,6 @@ begin
   else
   if EqualEvents(EventID, @EVENT_IDENT_BUTTON_PRESSED) then
     Result := 'EVENT_IDENT_BUTTON_PRESSED'
-  else
-  if EqualEvents(EventID, @EVENT_COMMAND_STATION) then
-    Result := 'EVENT_COMMAND_STATION'
   else
   if (EventID^[0] = $06) and (EventID^[1] = $01) then
   begin

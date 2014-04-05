@@ -65,6 +65,8 @@ begin
   end
 end;
 
+var
+  ActiveNode: PNMRAnetnode;
 begin
   { Main program }   
   MCU_Setup_Initialize;
@@ -88,7 +90,9 @@ begin
   UART1_Write_Text('Starting'+LF);
   
   while True do
-  begin
-    NceBusStateMachine_Process( OPStackCore_Process);
+  begin                           
+    ActiveNode := OPStackCore_Process;
+    NceBusStateMachine_Process( ActiveNode);
+    NceBusStateMachine_ProcessNextUserCommand( ActiveNode);
   end;
 end.

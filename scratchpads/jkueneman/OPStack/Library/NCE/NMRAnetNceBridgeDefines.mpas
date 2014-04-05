@@ -26,20 +26,19 @@ uses
 const
   NCEBUS_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a NCE message
   
+  //  NCE bus statemachine
   STATE_BUILD_INITIAL_CABS        = 0;
   STATE_DISCOVERDEVICES           = 1;
   STATE_DISCOVERNEXTDEVICE        = 2;
   STATE_SENDDEVICEINQUIRY         = 3;
   STATE_SENDDEVICESYNC            = 4;
   STATE_HANDLEMESSAGE             = 5;
-  STATE_WAIT_FOR_NMRANET_REPLY    = 6;
-  STATE_SEND_NMRANET_MESSAGE      = 7;
-  STATE_SEND_INSTRUCTION_REPLY    = 8;
-  STATE_DEVICEACKRESPONSE         = 9;
-  STATE_TESTFORDISCOVERYMODE      = 10;
-  STATE_ENUMERATEACTIVEDEVICES    = 11;
-  STATE_WAITFORDEVICEMESSAGE      = 12;
-  STATE_WAITFORACKRESPONSE        = 13;
+  STATE_TESTFORDISCOVERYMODE      = 6;
+  STATE_ENUMERATEACTIVEDEVICES    = 7;
+  STATE_WAITFORDEVICEMESSAGE      = 8;
+  
+  // Olcb bus statemachine
+  STATE_WAIT_FOR_USER_MESSAGE     = 0;
 
   STATE_RS485_READ_CAB_KEY_PRESS   = 0;  // State machine states for the RS485 receiver
   STATE_RS485_READ_CAB_SPEED       = 1;
@@ -99,7 +98,7 @@ type
   PNceBusDataArray = ^TNceBusDataArray;
 
   TNceBusMessage = record
-    Bytes: TNceBusDataArray;             // [RX, TX] The NceBus data that was recieved from Data Byte 1...Data Byte 15.  Does NOT include the Header Byte or the XOR Byte
+    Bytes: TNceBusDataArray;             // [RX, TX] The NceBus data that was recieved
     DataCount: Byte;                     // [RX, TX] Number of Valid Data Bytes
     MessageReadResult: Word;             // [RX] Error Message Result, see the E_SUCCESS, E_BUS_HUNG, E_WINDOW_TIMEOUT, etc constants
     CabID,                               // [TX] The CabID is the address of the Device to communicate with, sent with the 9th bit address UART protocol, Call Byte = 0 then it is not sent (for sending to the PC)
@@ -131,25 +130,29 @@ type
     NceBusData: TNceBusMessage;           // Syncronous message recieved from the command station pinging the NceBus bus begin dispatched
     Done: Boolean;                        // True when the reception is complete
   end;
-
-  TNceBusBridgeInfo = record
-    NceBusMessage: TNceBusMessage;         // This is the data from the Instruction that needs a reply before the OLCB message is sent and the data that needs to be sent back out the NceBus Bus after the OLCB replies
-    RequiresReply: Boolean;                // The messages needs a replay from the OLCB
-    ReplyRead: Boolean;                    // True when the NceBusMessage contains the information that needs to go out the NceBus bus
-    WatchdogCount: Byte;                   // Counts (~525ms steps) before the Olcb reply is declared timed out, see NceBus_OLCB_BUS_TIMEOUT
-  //  DataBuffer: TDataBuffer;                // NMRAnet message to send
-    Datagram: TDatagramBuffer;             // NMRAnet datagram to send
+  
+  TNceBusMessagePingPongBufferRec = record
+    Msg: TNceBusMessage;
+    Device: Word;
+    Full: Boolean;
+  end;
+  
+  TNceBusMessagePingPongBuffer = record
+    BufferArray: array[0..1] of TNceBusMessagePingPongBufferRec;
+    iProcessing: Integer;                                                       // points to the buffer index that is being serviced by the OLCB bus (-1 of the buffer is empty)
+    WatchdogCount: Byte;                                                        // Counts (~525ms steps) before the Olcb reply is declared timed out, see NceBus_OLCB_BUS_TIMEOUT
   end;
   
 type
   TNceBusStateMachineInfo = record
     DeviceList: TDeviceList;              // List of NceBus Devices (TDevice)
-    iState: Short;                        // Current State the StateMachine is in
+    iState: Short;                        // Current State the StateMachine that the NCE bus is in
+    iStateUserCommand: Short;             // Current State of the Statemachine that processes the OLCB messages
     Discovering: Boolean;                 // Discovering new Devices on the NceBus Bus
     iActiveDevice: Byte;                  // The Device currently being communicated with
     DiscoveryCount: Byte;                 // Counts (~525ms steps) between rediscovery intervals
     WatchdogCount: Byte;                  // Counts (~525ms steps) before the NceBus Bus is declared hung, see NceBus_BUS_HUNG_COUNT
-    Bridge: TNceBusBridgeInfo;            // Info for messages that require querying information from the OLCB bus
+    PingPong: TNceBusMessagePingPongBuffer; // Info for messages that require querying information from the OLCB bus
     RS485: TUARTReception;                // Hold information about the UART reception on the NceBusBus
   end;
   PNceBusStateMachineInfo = ^TNceBusStateMachineInfo;

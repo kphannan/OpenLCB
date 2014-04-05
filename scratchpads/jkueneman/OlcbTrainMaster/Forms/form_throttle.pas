@@ -105,7 +105,7 @@ type
     ActionAllocationLoadEffectsFile: TAction;
     ActionAllocationFree: TAction;
     ActionAllocationRelease: TAction;
-    ActionAllocationSearchForTrain: TAction;
+    ActionAllocationByList: TAction;
     ActionAllocationByAddress: TAction;
     ActionToggleAllocationPanel: TAction;
     ActionListThrottle: TActionList;
@@ -136,7 +136,6 @@ type
     RadioGroupSpeedStep: TRadioGroup;
     RadioGroupSpeedScale: TRadioGroup;
     ScrollBoxFunctions: TScrollBox;
-    SpeedButton1: TSpeedButton;
     SpinEditAddress: TSpinEdit;
     TimerGeneralTimeout: TTimer;
     TimerToggleAnimation: TTimer;
@@ -212,8 +211,8 @@ type
     procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
     procedure RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
     procedure RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
-    procedure RunTractionQueryDccAddress(WaitTime: Cardinal);
-    procedure RunTractionQueryIsIdle(WaitTime: Cardinal);
+ //   procedure RunTractionQueryDccAddress(WaitTime: Cardinal);
+ //   procedure RunTractionQueryIsIdle(WaitTime: Cardinal);
     procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
     procedure RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
     procedure RunTractionQueryFunctions(AliasID: Word; Address: DWord);
@@ -413,7 +412,7 @@ end;
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
   AliasList.Clear;
-  RunTractionQueryDccAddress(TIME_QUERY_DCC_ADDRESS);  // We need to query looking for any nodes that are current assigned for the address
+//  RunTractionQueryDccAddress(TIME_QUERY_DCC_ADDRESS);  // We need to query looking for any nodes that are current assigned for the address
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
@@ -844,6 +843,7 @@ begin
   end;
 end;
 
+{
 procedure TFormThrottle.RunTractionQueryDccAddress(WaitTime: Cardinal);
 var
   Task: TTaskTractionQueryDccAddressProxy;
@@ -872,7 +872,7 @@ begin
     TimerGeneralTimeout.Enabled := True;
     WaitTimeTask := gwttQueryIsIdle;
   end;
-end;
+end; }
 
 procedure TFormThrottle.RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
 var
@@ -1001,7 +1001,7 @@ begin
                 // User wants to create a new one
                 WaitTimeTask := gwttQueryIsIdle;
                 AliasList.Clear;
-                RunTractionQueryIsIdle(TIME_QUERY_DCC_ADDRESS);
+  //              RunTractionQueryIsIdle(TIME_QUERY_DCC_ADDRESS);
               end;
             mrCancel :
               begin
@@ -1014,7 +1014,7 @@ begin
         begin
           WaitTimeTask := gwttQueryIsIdle;
           AliasList.Clear;
-          RunTractionQueryIsIdle(TIME_QUERY_DCC_ADDRESS);
+  //        RunTractionQueryIsIdle(TIME_QUERY_DCC_ADDRESS);
         end;
       end;
     gwttQueryIsIdle :
@@ -1304,7 +1304,7 @@ begin
     gwttQueryIsIdle :
       begin
         // Looking for any Idle Proxy, if found handle here and drop only errors to the General Timer
-        if (EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_IDLE) then
+        if (EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) {and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_IDLE)} then
         begin
           TimerGeneralTimeout.Enabled := False;   // Done
           PotentialAlias := EventTask.MessageHelper.SourceAliasID;
@@ -1327,7 +1327,7 @@ end;
 
 procedure TFormThrottle.UpdateUI;
 begin
-  ActionAllocationSearchForTrain.Enabled := not Allocated;
+  ActionAllocationByList.Enabled := not Allocated;
   ActionAllocationByAddress.Enabled := not Allocated;
   ActionAllocationFree.Enabled := Allocated;
   ActionAllocationRelease.Enabled := Allocated;

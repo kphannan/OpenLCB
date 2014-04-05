@@ -84,8 +84,13 @@ const
   MTI_SIMPLE_NODE_INFO_REQUEST       = $09DE8000;                                // Databytes = Destination Alias
   MTI_SIMPLE_NODE_INFO_REPLY         = $09A08000;                                // Databytes = Destination Alias, ACDI Data
 
+  MTI_SIMPLE_TRAIN_INFO_REQUEST      = $09DA8000;                                // Databytes = Destination Alias
+  MTI_SIMPLE_TRAIN_INFO_REPLY        = $099C8000;                                // Databytes = Destination Alias, ACDI Data
+
   MTI_TRACTION_PROTOCOL              = $095EA000;                                // Databyte = depends
+  MTI_TRACTION_PROXY_PROTOCOL        = $091FA000;
   MTI_TRACTION_REPLY                 = $095E8000;                                // Databyte = depends
+  MTI_TRACTION_PROXY_REPLY           = $091F8000;
 
   MTI_STREAM_INIT_REQUEST            = $09CC8000;
   MTI_STREAM_INIT_REPLY              = $09868000;
@@ -285,13 +290,23 @@ const
   EVENT_NEW_LOG_ENTRY        : TEventID  = ($01, $01, $00, $00, $00, $00, $FF, $F8);
   EVENT_IDENT_BUTTON_PRESSED : TEventID  = ($01, $01, $00, $00, $00, $00, $FE, $00);
   EVENT_DUPLICATE_NODE_ID    : TEventID  = ($01, $01, $00, $00, $00, $00, $02, $01);
-  EVENT_TRAIN_RESERVED_1     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $01);
-  EVENT_TRAIN_RESERVED_2     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $02);
-  EVENT_TRAIN                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $03);
-  EVENT_TRAIN_PROXY_IDLE     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
-  EVENT_TRAIN_PROXY_INUSE    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $05);
 
-  EVENT_COMMAND_STATION      : TEventID  = ($01, $01, $00, $00, $00, $00, $04, $01);
+  EVENT_TRAIN                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $03);
+
+  EVENT_DCC_PROXY                    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
+  EVENT_DC_PROXY                     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $05);
+  EVENT_MARKLIN_DIGITAL_PROXY        : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $06);
+  EVENT_MARKLIN_DELTA_PROXY          : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $07);
+  EVENT_MARKLIN_ESU_DIGITAL_PROXY    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $08);
+  EVENT_SELECTRIX_PROXY              : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $09);
+  EVENT_MTH_DCS_PROXY                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $0A);
+  EVENT_LIONEL_TMCC_PROXY            : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $0B);
+
+//  EVENT_TRAIN_RESERVED_1     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $01);
+//  EVENT_TRAIN_RESERVED_2     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $02);
+//  EVENT_TRAIN_PROXY_IDLE     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
+//  EVENT_TRAIN_PROXY_INUSE    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $05);
+//  EVENT_COMMAND_STATION      : TEventID  = ($01, $01, $00, $00, $00, $00, $04, $01);
 
 implementation
 
