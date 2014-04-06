@@ -32,6 +32,7 @@ uses
   opstackcore_basic,
   {$IFDEF SUPPORT_STREAMS}opstackcore_stream,{$ENDIF}
   {$IFDEF SUPPORT_TRACTION}opstackcore_traction,{$ENDIF}
+  {$IFDEF SUPPORT_TRACTION_PROXY}opstackcore_traction_proxy,{$ENDIF}
   opstackcore_snip,
   opstackcore_learn,
   opstackcore_datagram;
@@ -146,6 +147,9 @@ begin
                   MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
                   {$IFDEF SUPPORT_TRACTION}
                   MTI_TRACTION_PROTOCOL             : begin TractionProtocol(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
+                  {$ENDIF}
+                  {$IFDEF SUPPORT_TRACTION_PROXY}
+                  MTI_TRACTION_PROXY_PROTOCOL       : begin TractionProxyProtocol(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
                   {$ENDIF}
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
@@ -314,6 +318,13 @@ begin
         MTI_TRACTION_PROTOCOL :
             begin
               TractionProtocolReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+            end;
+        {$ENDIF}
+        {$IFDEF SUPPORT_TRACTION_PROTOCOL}
+        MTI_TRACTION_PROXY_PROTOCOL :
+            begin
+              TractionProxyProtocolReply(Node, MessageToSend, NextMessage);
               Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
