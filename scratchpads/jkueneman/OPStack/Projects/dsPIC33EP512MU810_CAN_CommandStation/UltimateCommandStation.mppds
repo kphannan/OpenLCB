@@ -16,7 +16,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [FILES]
-Count=46
+Count=47
 File0=UltimateCommandStation.mpas
 File1=Resources.mpas
 File2=Templates\MCU_Setup_dsPIC33EPxxxGP8xx.mpas
@@ -63,23 +63,27 @@ File42=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.mpas
 File43=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesmultiframe.mpas
 File44=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.mpas
 File45=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.mpas
+File46=..\..\NMRAnet\opstackcore_traction_proxy.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=10
+Count=13
 File0=UltimateCommandStation.mpas
 File1=Templates\MCU_Setup_dsPIC33EPxxxGP8xx.mpas
 File2=..\..\NMRAnet\opstackcore.mpas
 File3=..\..\NMRAnet\opstackcore_events.mpas
-File4=..\..\ConfigurationLayerImplementations\_M25P80_SPI\template_configuration.mpas
-File5=..\..\ConfigurationLayerImplementations\_M25P80_SPI\M25P80_Driver.mpas
-File6=..\..\NMRAnet\opstackdefines.mpas
-File7=..\..\NMRAnet\nmranetdefines.mpas
-File8=..\..\NMRAnet\opstackcore_traction.mpas
-File9=..\..\NMRAnet\opstackcore_traction_proxy.mpas
+File4=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC_CAN_RawBuffers.mpas
+File5=..\..\ConfigurationLayerImplementations\_M25P80_SPI\template_configuration.mpas
+File6=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
+File7=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
+File8=Templates\template_buffers.mpas
+File9=..\..\NMRAnet\opstackcore_traction.mpas
+File10=..\..\NMRAnet\opstackdefines.mpas
+File11=Templates\template_event_callbacks.mpas
+File12=..\..\Common\Float16.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -91,8 +95,8 @@ File0=Templates\Options.inc
 Count=21
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
-Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
+Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
+Path3=\\VBOXSVR\OpenLCB\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
 Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
 Path5=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
 Path6=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\FAT32 Library\Uses\

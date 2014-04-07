@@ -459,32 +459,8 @@ begin
   if EqualEvents(EventID, @EVENT_TRAIN) then
     Result := 'EVENT_TRAIN'
   else
-  if EqualEvents(EventID, @EVENT_DCC_PROXY) then
-    Result := 'EVENT_DCC_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_DC_PROXY) then
-    Result := 'EVENT_DC_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_MARKLIN_DIGITAL_PROXY) then
-    Result := 'EVENT_MARKLIN_DIGITAL_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_MARKLIN_DELTA_PROXY) then
-    Result := 'EVENT_MARKLIN_DELTA_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_MARKLIN_ESU_DIGITAL_PROXY) then
-    Result := 'EVENT_MARKLIN_ESU_DIGITAL_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_SELECTRIX_PROXY) then
-    Result := 'EVENT_SELECTRIX_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_MTH_DCS_PROXY) then
-    Result := 'EVENT_MTH_DCS_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_LIONEL_TMCC_PROXY) then
-    Result := 'EVENT_LIONEL_TMCC_PROXY'
-  else
-  if EqualEvents(EventID, @EVENT_TRAIN) then
-    Result := 'EVENT_TRAIN'
+  if EqualEvents(EventID, @EVENT_PROXY) then
+    Result := 'EVENT_PROXY'
   else
   if EqualEvents(EventID, @EVENT_DUPLICATE_NODE_ID) then
     Result := 'EVENT_DUPLICATE_NODE_ID'

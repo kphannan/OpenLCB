@@ -292,21 +292,7 @@ const
   EVENT_DUPLICATE_NODE_ID    : TEventID  = ($01, $01, $00, $00, $00, $00, $02, $01);
 
   EVENT_TRAIN                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $03);
-
-  EVENT_DCC_PROXY                    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
-  EVENT_DC_PROXY                     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $05);
-  EVENT_MARKLIN_DIGITAL_PROXY        : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $06);
-  EVENT_MARKLIN_DELTA_PROXY          : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $07);
-  EVENT_MARKLIN_ESU_DIGITAL_PROXY    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $08);
-  EVENT_SELECTRIX_PROXY              : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $09);
-  EVENT_MTH_DCS_PROXY                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $0A);
-  EVENT_LIONEL_TMCC_PROXY            : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $0B);
-
-//  EVENT_TRAIN_RESERVED_1     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $01);
-//  EVENT_TRAIN_RESERVED_2     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $02);
-//  EVENT_TRAIN_PROXY_IDLE     : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
-//  EVENT_TRAIN_PROXY_INUSE    : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $05);
-//  EVENT_COMMAND_STATION      : TEventID  = ($01, $01, $00, $00, $00, $00, $04, $01);
+  EVENT_PROXY                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
 
 implementation
 

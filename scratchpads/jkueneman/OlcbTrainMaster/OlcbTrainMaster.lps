@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="16">
+    <Units Count="17">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -23,8 +23,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="350"/>
-        <CursorPos X="30" Y="352"/>
+        <TopLine Value="633"/>
+        <CursorPos X="48" Y="645"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -56,7 +56,7 @@
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
         <UnitName Value="form_train_config_editor"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="64" Y="9"/>
@@ -76,10 +76,10 @@
         <Filename Value="../Library/olcb_transport_layer.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_transport_layer"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="118"/>
-        <CursorPos X="131" Y="130"/>
+        <TopLine Value="2053"/>
+        <CursorPos X="12" Y="2074"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
       </Unit6>
@@ -87,10 +87,10 @@
         <Filename Value="../Library/olcb_defines.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_defines"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="290"/>
-        <CursorPos X="46" Y="303"/>
+        <TopLine Value="267"/>
+        <CursorPos X="1" Y="296"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
       </Unit7>
@@ -109,8 +109,8 @@
         <UnitName Value="olcb_app_common_settings"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="165"/>
-        <CursorPos X="24" Y="185"/>
+        <TopLine Value="93"/>
+        <CursorPos X="26" Y="107"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
       </Unit9>
@@ -118,10 +118,10 @@
         <Filename Value="../Library/olcb_utilities.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="olcb_utilities"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="489"/>
-        <CursorPos X="7" Y="500"/>
+        <TopLine Value="43"/>
+        <CursorPos X="70" Y="60"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
       </Unit10>
@@ -132,10 +132,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1252"/>
-        <CursorPos X="48" Y="1292"/>
+        <TopLine Value="1253"/>
+        <CursorPos X="8" Y="1257"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -143,10 +143,10 @@
       <Unit12>
         <Filename Value="../Library/com_port_hub.pas"/>
         <UnitName Value="com_port_hub"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="137"/>
-        <CursorPos X="42" Y="151"/>
+        <TopLine Value="60"/>
+        <CursorPos X="40" Y="77"/>
         <UsageCount Value="214"/>
         <Loaded Value="True"/>
       </Unit12>
@@ -156,157 +156,160 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_settings"/>
-        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="56" Y="3"/>
-        <UsageCount Value="214"/>
-        <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
+        <TopLine Value="42"/>
+        <CursorPos X="15" Y="59"/>
+        <UsageCount Value="209"/>
       </Unit13>
       <Unit14>
         <Filename Value="../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="149"/>
-        <CursorPos X="15" Y="160"/>
+        <TopLine Value="627"/>
+        <CursorPos X="41" Y="640"/>
         <UsageCount Value="213"/>
         <Loaded Value="True"/>
       </Unit14>
       <Unit15>
         <Filename Value="/Developer/lazarus/lcl/include/custompage.inc"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="184"/>
         <CursorPos X="1" Y="196"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="9"/>
       </Unit15>
+      <Unit16>
+        <Filename Value="../Library/common_utilities.pas"/>
+        <UnitName Value="common_utilities"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="5"/>
+      </Unit16>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="../Library/olcb_app_common_settings.pas"/>
-        <Caret Line="342" Column="17" TopLine="333"/>
+        <Filename Value="../Library/olcb_transport_layer.pas"/>
+        <Caret Line="921" Column="3" TopLine="905"/>
       </Position1>
       <Position2>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="323" Column="38" TopLine="309"/>
+        <Caret Line="11" Column="36" TopLine="1"/>
       </Position2>
       <Position3>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="397" Column="22" TopLine="377"/>
+        <Caret Line="12" Column="15" TopLine="1"/>
       </Position3>
       <Position4>
-        <Filename Value="../Library/olcb_app_common_settings.pas"/>
-        <Caret Line="327" Column="21" TopLine="318"/>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="274" Column="17" TopLine="256"/>
       </Position4>
       <Position5>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="397" Column="22" TopLine="377"/>
+        <Caret Line="275" Column="17" TopLine="256"/>
       </Position5>
       <Position6>
-        <Filename Value="Forms/main.pas"/>
-        <Caret Line="314" Column="35" TopLine="305"/>
+        <Filename Value="../Library/ethernet_hub.pas"/>
+        <Caret Line="640" Column="41" TopLine="627"/>
       </Position6>
       <Position7>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="324" Column="62" TopLine="305"/>
+        <Caret Line="275" Column="18" TopLine="256"/>
       </Position7>
       <Position8>
-        <Filename Value="Forms/main.pas"/>
-        <Caret Line="335" Column="14" TopLine="332"/>
+        <Filename Value="../Library/olcb_utilities.pas"/>
+        <Caret Line="1" Column="1" TopLine="110"/>
       </Position8>
       <Position9>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="336" Column="2" TopLine="312"/>
+        <Caret Line="275" Column="18" TopLine="256"/>
       </Position9>
       <Position10>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="340" Column="46" TopLine="292"/>
+        <Caret Line="273" Column="65" TopLine="256"/>
       </Position10>
       <Position11>
-        <Filename Value="Forms/main.pas"/>
-        <Caret Line="418" Column="25" TopLine="416"/>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="347" Column="20" TopLine="325"/>
       </Position11>
       <Position12>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="338" Column="27" TopLine="333"/>
+        <Caret Line="262" Column="58" TopLine="254"/>
       </Position12>
       <Position13>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="313" Column="1" TopLine="302"/>
+        <Caret Line="263" Column="58" TopLine="255"/>
       </Position13>
       <Position14>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="320" Column="1" TopLine="309"/>
+        <Caret Line="264" Column="58" TopLine="256"/>
       </Position14>
       <Position15>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="262" Column="3" TopLine="250"/>
+        <Caret Line="265" Column="58" TopLine="257"/>
       </Position15>
       <Position16>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="441" Column="3" TopLine="438"/>
+        <Caret Line="264" Column="58" TopLine="256"/>
       </Position16>
       <Position17>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="486" Column="3" TopLine="484"/>
+        <Caret Line="280" Column="37" TopLine="257"/>
       </Position17>
       <Position18>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="485" Column="3" TopLine="483"/>
+        <Caret Line="281" Column="37" TopLine="258"/>
       </Position18>
       <Position19>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="261" Column="43" TopLine="259"/>
+        <Caret Line="288" Column="37" TopLine="260"/>
       </Position19>
       <Position20>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="349" Column="6" TopLine="347"/>
+        <Caret Line="459" Column="27" TopLine="445"/>
       </Position20>
       <Position21>
-        <Filename Value="Forms/main.pas"/>
-        <Caret Line="273" Column="28" TopLine="271"/>
+        <Filename Value="../Library/com_port_hub.pas"/>
+        <Caret Line="77" Column="40" TopLine="60"/>
       </Position21>
       <Position22>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="269" Column="28" TopLine="267"/>
+        <Caret Line="171" Column="73" TopLine="158"/>
       </Position22>
       <Position23>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="280" Column="28" TopLine="278"/>
+        <Caret Line="363" Column="3" TopLine="350"/>
       </Position23>
       <Position24>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="291" Column="28" TopLine="289"/>
+        <Caret Line="170" Column="28" TopLine="153"/>
       </Position24>
       <Position25>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="292" Column="28" TopLine="290"/>
+        <Caret Line="640" Column="45" TopLine="639"/>
       </Position25>
       <Position26>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="288" Column="28" TopLine="286"/>
+        <Caret Line="485" Column="47" TopLine="468"/>
       </Position26>
       <Position27>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="549" Column="3" TopLine="547"/>
+        <Caret Line="486" Column="39" TopLine="468"/>
       </Position27>
       <Position28>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="348" Column="29" TopLine="346"/>
+        <Caret Line="170" Column="28" TopLine="157"/>
       </Position28>
       <Position29>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="551" Column="30" TopLine="549"/>
+        <Caret Line="640" Column="45" TopLine="639"/>
       </Position29>
       <Position30>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="567" Column="30" TopLine="565"/>
+        <Caret Line="171" Column="30" TopLine="158"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
