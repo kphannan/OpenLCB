@@ -38,7 +38,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="34">
+    <Units Count="33">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -200,20 +200,15 @@
         <UnitName Value="opstackcanstatemachinesstream"/>
       </Unit30>
       <Unit31>
-        <Filename Value="..\HardwareLayerImplementations\Lazarus\hardware_template.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="hardware_template"/>
-      </Unit31>
-      <Unit32>
         <Filename Value="..\NMRAnet\opstackcore_traction.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_traction"/>
-      </Unit32>
-      <Unit33>
+      </Unit31>
+      <Unit32>
         <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinessnip"/>
-      </Unit33>
+      </Unit32>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

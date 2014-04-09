@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="9"/>
+    <BuildModes Active="Default"/>
+    <Units Count="24">
+      <Unit0>
+        <Filename Value="commandstation_project.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="commandstation_project"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="37" Y="10"/>
+        <UsageCount Value="23"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="unitmain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitmain"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="3" Y="10"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ethernet_hub"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="477"/>
+        <CursorPos X="60" Y="493"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="609"/>
+        <CursorPos X="18" Y="627"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="Templates/hardware_template.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="hardware_template"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="30"/>
+        <CursorPos X="3" Y="44"/>
+        <UsageCount Value="23"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="../../Common/helperfunctions.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="HelperFunctions"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="16"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="23"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcanstatemachines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="23"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="/Developer/lazarus/lcl/include/customcheckbox.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="104"/>
+        <CursorPos X="1" Y="117"/>
+        <UsageCount Value="10"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="Templates/Options.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="../../NMRAnet/nmranetutilities.pas"/>
+        <UnitName Value="nmranetutilities"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="../../NMRAnet/gridconnect.pas"/>
+        <UnitName Value="gridconnect"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="3" Y="11"/>
+        <UsageCount Value="10"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="../../NMRAnet/opstackdefines.pas"/>
+        <UnitName Value="opstackdefines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="3"/>
+        <UsageCount Value="10"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="../../NMRAnet/opstacknode.pas"/>
+        <UnitName Value="opstacknode"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="10"/>
+        <UsageCount Value="10"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="../../NMRAnet/opstackcore_basic.pas"/>
+        <UnitName Value="opstackcore_basic"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="10"/>
+        <UsageCount Value="10"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <UnitName Value="opstackcore_traction"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="14"/>
+        <UsageCount Value="10"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.pas"/>
+        <UnitName Value="opstackcore_traction_proxy"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="11"/>
+        <UsageCount Value="10"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinesmultiframe.pas"/>
+        <UnitName Value="opstackcanstatemachinesmultiframe"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="13"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinesstream.pas"/>
+        <UnitName Value="opstackcanstatemachinesstream"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="14"/>
+        <UsageCount Value="10"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinessnip.pas"/>
+        <UnitName Value="opstackcanstatemachinessnip"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="13"/>
+        <UsageCount Value="10"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinesdatagram.pas"/>
+        <UnitName Value="opstackcanstatemachinesdatagram"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="20" Y="13"/>
+        <UsageCount Value="10"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="Templates/template_hardware.pas"/>
+        <UnitName Value="template_hardware"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="174"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="12"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <UnitName Value="olcb_transport_layer"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="664"/>
+        <CursorPos X="26" Y="1"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="../../../Library/olcb_utilities.pas"/>
+        <UnitName Value="olcb_utilities"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="48"/>
+        <CursorPos X="70" Y="60"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus/template_hardware.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_hardware"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="7"/>
+        <CursorPos X="66" Y="22"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit23>
+    </Units>
+    <General>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="82" Column="26" TopLine="82"/>
+      </Position1>
+      <Position2>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="83" Column="26" TopLine="83"/>
+      </Position2>
+      <Position3>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="125" Column="76" TopLine="112"/>
+      </Position3>
+      <Position4>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="77" Column="19" TopLine="63"/>
+      </Position4>
+      <Position5>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="166" Column="68" TopLine="155"/>
+      </Position5>
+      <Position6>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="129" Column="34" TopLine="119"/>
+      </Position6>
+      <Position7>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="79" Column="48" TopLine="74"/>
+      </Position7>
+      <Position8>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="114" Column="31" TopLine="111"/>
+      </Position8>
+      <Position9>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="121" Column="31" TopLine="118"/>
+      </Position9>
+      <Position10>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="130" Column="9" TopLine="116"/>
+      </Position10>
+      <Position11>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="136" Column="39" TopLine="116"/>
+      </Position11>
+      <Position12>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="623" Column="1" TopLine="617"/>
+      </Position12>
+      <Position13>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="632" Column="1" TopLine="617"/>
+      </Position13>
+      <Position14>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="136" Column="1" TopLine="115"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="623" Column="1" TopLine="617"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="632" Column="1" TopLine="609"/>
+      </Position16>
+      <Position17>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="136" Column="1" TopLine="115"/>
+      </Position17>
+      <Position18>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="137" Column="1" TopLine="116"/>
+      </Position18>
+      <Position19>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="162" Column="41" TopLine="145"/>
+      </Position19>
+      <Position20>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="646" Column="64" TopLine="621"/>
+      </Position20>
+      <Position21>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="91" Column="21" TopLine="76"/>
+      </Position21>
+      <Position22>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="93" Column="27" TopLine="76"/>
+      </Position22>
+      <Position23>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="159" Column="38" TopLine="145"/>
+      </Position23>
+      <Position24>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="43" Column="53" TopLine="27"/>
+      </Position24>
+      <Position25>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="124" Column="8" TopLine="121"/>
+      </Position25>
+      <Position26>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="126" Column="3" TopLine="123"/>
+      </Position26>
+      <Position27>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="155" Column="55" TopLine="141"/>
+      </Position27>
+      <Position28>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="17" Column="112" TopLine="10"/>
+      </Position28>
+      <Position29>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="10" Column="14" TopLine="1"/>
+      </Position29>
+      <Position30>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="16" Column="42" TopLine="1"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectSession>
+  <EditorMacros Count="0"/>
+</CONFIG>

@@ -15,7 +15,7 @@ interface
 {$I Options.inc}
 
 uses
-  hardware_template,
+  template_hardware,
   template_configuration,
   nmranetutilities,
   nmranetdefines,

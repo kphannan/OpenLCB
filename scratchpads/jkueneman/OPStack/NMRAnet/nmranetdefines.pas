@@ -57,6 +57,8 @@ const
   MTI_PC_EVENT_REPORT                = $05B4;                                // Databytes = EventID  (Infamouse PCER)
   MTI_TRACTION_PROTOCOL              = $05EA;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
   MTI_TRACTION_REPLY                 = $05E8;                                // Databytes = Reply data/information
+  MTI_TRACTION_PROXY_PROTOCOL        = $01FA;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
+  MTI_TRACTION_PROXY_REPLY           = $01F8;                                // Databytes = Reply data/information
   MTI_XPRESSNET                      = $0820;
   MTI_REMOTE_BUTTON_REQUEST          = $0948;
   MTI_REMOTE_BUTTON_REPLY            = $0949;

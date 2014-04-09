@@ -10,7 +10,7 @@ uses
   {$IFDEF FPC}
   Classes, SysUtils,
   {$ENDIF}
-  hardware_template,
+  template_hardware,
   nmranetdefines,
   opstackdefines,
   opstackbuffers,

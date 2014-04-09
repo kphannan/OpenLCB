@@ -5,6 +5,7 @@ unit opstackcore;
 //   3) ACDI Read and Write not implemented correctly
 //   4) FDI not implemented correctly
 //   5) Do something with MTI_STREAM_INIT_REPLY error code results
+//   6) Handle Optional Interaction Rejected messages.... Buffer them??????
 
 
 {$IFDEF FPC}
@@ -14,7 +15,7 @@ interface
 {$I Options.inc}
 
 uses
-  hardware_template,
+  template_hardware,
   template_configuration,
   nmranetutilities,
   nmranetdefines,
@@ -31,13 +32,14 @@ uses
   opstackcore_basic,
   {$IFDEF SUPPORT_STREAMS}opstackcore_stream,{$ENDIF}
   {$IFDEF SUPPORT_TRACTION}opstackcore_traction,{$ENDIF}
+  {$IFDEF SUPPORT_TRACTION_PROXY}opstackcore_traction_proxy,{$ENDIF}
   opstackcore_snip,
   opstackcore_learn,
   opstackcore_datagram;
 
 // User callable functions
 procedure OPStackCore_Initialize;                                               // Call once on program startup
-procedure OPStackCore_Process;                                                  // Call as often as possible
+function OPStackCore_Process: PNMRAnetnode;                                     // Call as often as possible
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 procedure OPStackCore_Enable(DoEnable: Boolean);                                // Enable Process Statemachine
 
@@ -145,6 +147,9 @@ begin
                   MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
                   {$IFDEF SUPPORT_TRACTION}
                   MTI_TRACTION_PROTOCOL             : begin TractionProtocol(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
+                  {$ENDIF}
+                  {$IFDEF SUPPORT_TRACTION_PROXY}
+                  MTI_TRACTION_PROXY_PROTOCOL       : begin TractionProxyProtocol(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
                   {$ENDIF}
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
@@ -313,6 +318,13 @@ begin
         MTI_TRACTION_PROTOCOL :
             begin
               TractionProtocolReply(Node, MessageToSend, NextMessage);
+              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+            end;
+        {$ENDIF}
+        {$IFDEF SUPPORT_TRACTION_PROTOCOL}
+        MTI_TRACTION_PROXY_PROTOCOL :
+            begin
+              TractionProxyProtocolReply(Node, MessageToSend, NextMessage);
               Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
@@ -606,16 +618,14 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure OPStackCore_Process;
-var
-  Node: PNMRAnetnode;
+function OPStackCore_Process: PNMRAnetnode;
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
     Hardware_DisableInterrupts;
-    Node := OPStackNode_NextNode;
-    if Node <> nil then
-      NodeRunStateMachine(Node);
+    Result := OPStackNode_NextNode;
+    if Result <> nil then
+      NodeRunStateMachine(Result);
     ProcessHardwareMessages;
     Hardware_EnableInterrupts;
   end;

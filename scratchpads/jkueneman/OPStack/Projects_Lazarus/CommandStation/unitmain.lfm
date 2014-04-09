@@ -1,165 +1,67 @@
 object Form1: TForm1
-  Left = 599
-  Height = 369
-  Top = 422
-  Width = 791
-  Caption = 'OPStack Test App'
-  ClientHeight = 369
-  ClientWidth = 791
-  Menu = MainMenu1
-  OnClose = FormClose
+  Left = 490
+  Height = 223
+  Top = 183
+  Width = 669
+  Caption = 'Form1'
+  ClientHeight = 223
+  ClientWidth = 669
   OnCreate = FormCreate
   OnShow = FormShow
   LCLVersion = '1.2.0.3'
+  object ToggleBoxConnect: TToggleBox
+    Left = 30
+    Height = 23
+    Top = 13
+    Width = 90
+    Caption = 'Connect'
+    OnChange = ToggleBoxConnectChange
+    TabOrder = 0
+  end
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
-    Top = 354
-    Width = 791
+    Top = 208
+    Width = 669
     Panels = <    
       item
-        Text = 'Not Connected'
-        Width = 120
+        Width = 200
       end    
       item
-        Text = 'Allocated Nodes:'
-        Width = 130
+        Width = 150
       end    
       item
-        Text = 'Message Buffers:'
-        Width = 120
+        Width = 150
       end    
       item
-        Text = 'CAN Buffers'
-        Width = 130
-      end    
-      item
-        Text = 'Datagram Buffers'
-        Width = 130
-      end    
-      item
-        Text = 'Stream Buffers'
-        Width = 130
+        Width = 150
       end>
     SimplePanel = False
   end
-  object ButtonAllocateNode: TButton
-    Left = 240
-    Height = 22
-    Top = 8
-    Width = 272
-    Caption = 'Allocate Virtual Node'
-    OnClick = ButtonAllocateNodeClick
-    TabOrder = 0
-  end
-  object ButtonDeallocateNode: TButton
-    Left = 240
-    Height = 22
-    Top = 32
-    Width = 272
-    Caption = 'Mark for Virtual Node for Deallocation'
-    OnClick = ButtonDeallocateNodeClick
-    TabOrder = 1
-  end
-  object ButtonSendGlobalNotify: TButton
-    Left = 16
-    Height = 22
-    Top = 8
-    Width = 216
-    Caption = 'Send Verify Nodes Global'
-    OnClick = ButtonSendGlobalNotifyClick
-    TabOrder = 3
-  end
-  object ButtonStartStack: TButton
-    Left = 16
-    Height = 22
-    Top = 32
-    Width = 216
-    Caption = 'Start the OPStack'
+  object ToggleBoxStartNode: TToggleBox
+    Left = 144
+    Height = 23
+    Top = 13
+    Width = 90
+    Caption = 'Start Node'
     Enabled = False
-    OnClick = ButtonStartStackClick
-    TabOrder = 4
-  end
-  object CheckBoxAutoConnect: TCheckBox
-    Left = 16
-    Height = 18
-    Top = 64
-    Width = 165
-    Caption = 'Auto-Start On Connect'
-    Checked = True
-    State = cbChecked
-    TabOrder = 5
-  end
-  object ButtonClear: TButton
-    Left = 536
-    Height = 22
-    Top = 8
-    Width = 224
-    Caption = 'Clear'
-    OnClick = ButtonClearClick
-    TabOrder = 6
-  end
-  object ButtonRefreshBufferTracking: TButton
-    Left = 536
-    Height = 22
-    Top = 36
-    Width = 224
-    Caption = 'Refresh Buffer Tracking'
-    OnClick = ButtonRefreshBufferTrackingClick
-    TabOrder = 7
-  end
-  object CheckBoxDisableLogging: TCheckBox
-    Left = 16
-    Height = 18
-    Top = 88
-    Width = 122
-    Caption = 'Disable Logging'
-    OnChange = CheckBoxDisableLoggingChange
-    TabOrder = 8
-  end
-  object RadioGroupEthernet: TRadioGroup
-    Left = 240
-    Height = 44
-    Top = 64
-    Width = 273
-    AutoFill = True
-    Caption = 'Ethernet Connection'
-    ChildSizing.LeftRightSpacing = 6
-    ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
-    ChildSizing.EnlargeVertical = crsHomogenousChildResize
-    ChildSizing.ShrinkHorizontal = crsScaleChilds
-    ChildSizing.ShrinkVertical = crsScaleChilds
-    ChildSizing.Layout = cclLeftToRightThenTopToBottom
-    ChildSizing.ControlsPerLine = 3
-    ClientHeight = 22
-    ClientWidth = 265
-    Columns = 3
-    ItemIndex = 0
-    Items.Strings = (
-      'Disconnected'
-      'Listener'
-      'Client'
-    )
-    OnClick = RadioGroupEthernetClick
-    TabOrder = 9
+    OnChange = ToggleBoxStartNodeChange
+    TabOrder = 2
   end
   inline SynMemo: TSynMemo
     Cursor = crIBeam
-    Left = 0
-    Height = 226
-    Top = 128
-    Width = 791
-    Align = alBottom
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    Color = clWindow
+    Left = 16
+    Height = 153
+    Top = 48
+    Width = 640
+    Anchors = [akTop, akLeft, akRight]
     Font.Height = 12
     Font.Name = 'Monaco'
     Font.Pitch = fpFixed
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
-    TabOrder = 10
-    OnKeyDown = SynMemoKeyDown
+    TabOrder = 3
     Gutter.Width = 55
     Gutter.MouseActions = <>
     Keystrokes = <    
@@ -585,7 +487,6 @@ object Form1: TForm1
       end>
     MouseActions = <>
     MouseSelActions = <>
-    ScrollBars = ssAutoBoth
     SelectedColor.FrameEdges = sfeAround
     SelectedColor.BackPriority = 50
     SelectedColor.ForePriority = 50
@@ -633,23 +534,25 @@ object Form1: TForm1
       end
     end
   end
-  object TimerCore: TTimer
+  object ButtonClear: TButton
+    Left = 288
+    Height = 22
+    Top = 13
+    Width = 75
+    Caption = 'Clear'
+    OnClick = ButtonClearClick
+    TabOrder = 4
+  end
+  object TimerOpStackTimer: TTimer
     Interval = 100
-    OnTimer = TimerCoreTimer
-    left = 104
-    top = 160
+    OnTimer = TimerOpStackTimerTimer
+    left = 73
+    top = 59
   end
-  object TimerStatemachine: TTimer
-    Interval = 1
-    OnTimer = TimerStatemachineTimer
-    left = 176
-    top = 160
-  end
-  object MainMenu1: TMainMenu
-    left = 272
+  object TimerOpStackProcess: TTimer
+    Interval = 10
+    OnTimer = TimerOpStackProcessTimer
+    left = 73
     top = 120
-    object MenuItemTrackBuffer: TMenuItem
-      Caption = 'Track Buffers'
-    end
   end
 end

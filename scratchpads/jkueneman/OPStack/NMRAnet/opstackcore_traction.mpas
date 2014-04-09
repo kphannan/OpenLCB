@@ -11,7 +11,7 @@ uses
   {$IFNDEF FPC}
   NMRAnetDCC,
   {$ENDIF}
-  hardware_template,
+  template_hardware,
   Float16,
   opstacknode,
   opstackcore_basic,

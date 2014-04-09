@@ -147,6 +147,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    function AddGridConnectStr(GridConnectStr: ansistring): Boolean;
     function AddTask(NewTask: TTaskOlcbBase): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
@@ -622,6 +623,23 @@ begin
       TClientSocketThread( List[i]).InternalAddDatagramToSendByCANParsing(Datagram);
   finally
     ClientThreadList.UnlockList;
+  end;
+end;
+
+function TEthernetHub.AddGridConnectStr(GridConnectStr: ansistring): Boolean;
+var
+  List: TList;
+  i: Integer;
+  Done: Boolean;
+begin
+  Done := False;
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).InternalAdd(GridConnectStr);
+  finally
+    ClientThreadList.UnlockList;
+    Result := Done;
   end;
 end;
 

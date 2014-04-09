@@ -11,6 +11,7 @@ uses
   {$IFNDEF FPC}
   NMRAnetDCC,
   {$ENDIF}
+  template_hardware,
   Float16,
   opstacknode,
   opstackcore_basic,
@@ -19,11 +20,66 @@ uses
   opstackbuffers,
   opstacktypes;
 
-procedure TractionProtocol(AMessage: POPStackMessage;DestNode: PNMRAnetNode);
+procedure TractionProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+
+function TrySendFunctionSet(SourceNode, DestNode: PNMRAnetNode; FunctionAddress: DWord; Value: Word): Boolean;
+function TrySendSpeedSet(SourceNode, DestNode: PNMRAnetNode; Speed: Byte): Boolean;
+function TrySendDirectionSet(SourceNode, DestNode: PNMRAnetNode; IsForward: Boolean): Boolean;
 
 implementation
 
+function TrySendFunctionSet(SourceNode, DestNode: PNMRAnetNode; FunctionAddress: DWord; Value: Word): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, SourceNode^.Info.AliasID, SourceNode^.Info.ID, DestNode^.Info.AliasID, DestNode^.Info.ID) then
+    begin
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
+function TrySendSpeedSet(SourceNode, DestNode: PNMRAnetNode; Speed: Byte): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, SourceNode^.Info.AliasID, SourceNode^.Info.ID, DestNode^.Info.AliasID, DestNode^.Info.ID) then
+    begin
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
+function TrySendDirectionSet(SourceNode, DestNode: PNMRAnetNode; IsForward: Boolean): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, SourceNode^.Info.AliasID, SourceNode^.Info.ID, DestNode^.Info.AliasID, DestNode^.Info.ID) then
+    begin
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
+//******************************************************************************
+// procedure TractionProtocol
+// Parameters:
+//    AMessage: The incoming OPStack Message
+//    DestNode: The node the message is meant for
+// Description:
+//    Takes incoming Traction Protocol and posts it to be disected and handled
+//    later in the Reply
+//******************************************************************************
 procedure TractionProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 var
   NewMessage: POPStackMessage;
@@ -313,7 +369,7 @@ begin
               MessageToSend^.Buffer^.DataArray := NextMessage^.Buffer^.DataArray;
               MessageToSend^.Buffer^.DataArray[5] := TRACTION_ATTACH_NODE_REPLY_CODE_OK;
               MessageToSend^.Buffer^.DataBufferSize := 6;
-
+              
               // HOW DO I GENERALIZE WHERE THESE EVENT ARE BY INDEX??????????
               OPStackNode_SetEventState(Node^.Events.ProducedState, 2, EVENT_STATE_INVALID);       // IsIdleProxy is not true now
               OPStackNode_SetEventState(Node^.Events.ProducedState, 3, EVENT_STATE_VALID);         // IsInUseProxy is true now

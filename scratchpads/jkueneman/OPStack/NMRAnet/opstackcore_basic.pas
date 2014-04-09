@@ -7,7 +7,7 @@ interface
 {$I Options.inc}
 
 uses
-  hardware_template,
+  template_hardware,
   opstackbuffers,
   opstacknode,
   nmranetutilities,

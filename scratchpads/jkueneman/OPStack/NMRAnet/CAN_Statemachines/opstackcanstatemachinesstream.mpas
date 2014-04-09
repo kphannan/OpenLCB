@@ -11,7 +11,7 @@ uses
   Classes, SysUtils,
   {$ENDIF}
   opstackdefines,
-  hardware_template,
+  template_hardware,
   nmranetdefines,
   opstackcanstatemachinesbuffers;
 

@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="48">
+    <Units Count="52">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -23,11 +23,10 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2"/>
-        <CursorPos X="3" Y="15"/>
+        <TopLine Value="7"/>
+        <CursorPos X="30" Y="18"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
-        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="../NMRAnet/opstackcore.pas"/>
@@ -296,31 +295,30 @@
         <UsageCount Value="201"/>
       </Unit30>
       <Unit31>
-        <Filename Value="../HardwareLayerImplementations/Lazarus/hardware_template.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="hardware_template"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="155"/>
-        <CursorPos X="24" Y="260"/>
-        <UsageCount Value="200"/>
-      </Unit31>
-      <Unit32>
         <Filename Value="../NMRAnet/opstackcore_traction.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcore_traction"/>
         <WindowIndex Value="0"/>
         <TopLine Value="241"/>
         <CursorPos X="30" Y="252"/>
-        <UsageCount Value="137"/>
-      </Unit32>
-      <Unit33>
+        <UsageCount Value="140"/>
+      </Unit31>
+      <Unit32>
         <Filename Value="../NMRAnet/CAN_Statemachines/opstackcanstatemachinessnip.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinessnip"/>
         <WindowIndex Value="0"/>
         <TopLine Value="29"/>
         <CursorPos X="9" Y="60"/>
-        <UsageCount Value="105"/>
+        <UsageCount Value="108"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="../HardwareLayerImplementations/Lazarus/hardware_template.pas"/>
+        <UnitName Value="hardware_template"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="155"/>
+        <CursorPos X="24" Y="260"/>
+        <UsageCount Value="200"/>
       </Unit33>
       <Unit34>
         <Filename Value="../HardwareLayerImplementations/hardware_template.pas"/>
@@ -432,15 +430,117 @@
         <CursorPos X="20" Y="10"/>
         <UsageCount Value="10"/>
       </Unit47>
+      <Unit48>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus/hardware_template2.pas"/>
+        <UnitName Value="hardware_template2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="32"/>
+        <CursorPos X="36" Y="89"/>
+        <UsageCount Value="10"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <UnitName Value="opstackcore"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="9"/>
+        <CursorPos X="17" Y="15"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit49>
+      <Unit50>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.mpas"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="5" Y="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="None"/>
+      </Unit50>
+      <Unit51>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.pas"/>
+        <UnitName Value="opstackcore_traction_proxy"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="27"/>
+        <CursorPos X="10" Y="5"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit51>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="1" HistoryIndex="0">
+    <JumpHistory Count="17" HistoryIndex="16">
       <Position1>
         <Filename Value="unitmain.pas"/>
         <Caret Line="227" Column="3" TopLine="224"/>
       </Position1>
+      <Position2>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="15" Column="3" TopLine="2"/>
+      </Position2>
+      <Position3>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="276" Column="3" TopLine="264"/>
+      </Position3>
+      <Position4>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="270" Column="3" TopLine="268"/>
+      </Position4>
+      <Position5>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="259" Column="3" TopLine="257"/>
+      </Position5>
+      <Position6>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="252" Column="3" TopLine="250"/>
+      </Position6>
+      <Position7>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="70" Column="38" TopLine="46"/>
+      </Position7>
+      <Position8>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="11" Column="51" TopLine="1"/>
+      </Position8>
+      <Position9>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="20" Column="1" TopLine="1"/>
+      </Position9>
+      <Position10>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="19" Column="16" TopLine="5"/>
+      </Position10>
+      <Position11>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position11>
+      <Position12>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.mpas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position12>
+      <Position13>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.mpas"/>
+        <Caret Line="7" Column="24" TopLine="1"/>
+      </Position13>
+      <Position14>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="38" Column="24" TopLine="24"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="35" Column="60" TopLine="22"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position16>
+      <Position17>
+        <Filename Value="../../NMRAnet/opstackcore_traction_proxy.mpas"/>
+        <Caret Line="5" Column="10" TopLine="1"/>
+      </Position17>
     </JumpHistory>
   </ProjectSession>
   <Debugging>

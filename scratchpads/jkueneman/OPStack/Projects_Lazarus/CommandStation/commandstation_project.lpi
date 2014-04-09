@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectOptions>
+    <Version Value="9"/>
+    <PathDelim Value="\"/>
+    <General>
+      <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
+      <Title Value="commandstation_project"/>
+      <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <Icon Value="0"/>
+    </General>
+    <i18n>
+      <EnableI18N LFM="False"/>
+    </i18n>
+    <VersionInfo>
+      <StringTable ProductVersion=""/>
+    </VersionInfo>
+    <BuildModes Count="1">
+      <Item1 Name="Default" Default="True"/>
+    </BuildModes>
+    <PublishOptions>
+      <Version Value="2"/>
+    </PublishOptions>
+    <RunParams>
+      <local>
+        <FormatVersion Value="1"/>
+      </local>
+    </RunParams>
+    <RequiredPackages Count="2">
+      <Item1>
+        <PackageName Value="SynEdit"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="LCL"/>
+      </Item2>
+    </RequiredPackages>
+    <Units Count="8">
+      <Unit0>
+        <Filename Value="commandstation_project.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="commandstation_project"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="unitmain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="unitmain"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\..\..\Library\ethernet_hub.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ethernet_hub"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\NMRAnet\opstackcore.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcore"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="Templates\hardware_template.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="hardware_template"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\..\Common\helperfunctions.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="HelperFunctions"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcanstatemachines"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\..\HardwareLayerImplementations\Lazarus\template_hardware.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_hardware"/>
+      </Unit7>
+    </Units>
+  </ProjectOptions>
+  <CompilerOptions>
+    <Version Value="11"/>
+    <PathDelim Value="\"/>
+    <Target>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\commandstation_project.app\MacOS"/>
+    </Target>
+    <SearchPaths>
+      <IncludeFiles Value="$(ProjOutDir);Templates"/>
+      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus"/>
+      <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
+    </SearchPaths>
+    <Conditionals Value="if TargetOS = 'darwin' then
+begin
+  CustomOptions += '-k-macosx_version_min -k10.4';
+  CustomOptions += '-XR/Developer/SDKs/MacOSX10.4u.sdk/';
+  CustomOptions += ' -dUseCThreads';
+end;
+if TargetOS = 'linux' then
+  CustomOptions += ' -dUseCThreads';"/>
+    <BuildMacros>
+      <Count Value="1"/>
+      <Item1>
+        <Identifier Value="MustangpeakCompilerOptions"/>
+        <Description Value="Compiler Options for Platforms"/>
+      </Item1>
+    </BuildMacros>
+    <CodeGeneration>
+      <Optimizations>
+        <OptimizationLevel Value="0"/>
+      </Optimizations>
+    </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <UseValgrind Value="True"/>
+      </Debugging>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
+    <Other>
+      <CompilerMessages>
+        <MsgFileName Value=""/>
+      </CompilerMessages>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
+  </CompilerOptions>
+  <Debugging>
+    <Exceptions Count="3">
+      <Item1>
+        <Name Value="EAbort"/>
+      </Item1>
+      <Item2>
+        <Name Value="ECodetoolError"/>
+      </Item2>
+      <Item3>
+        <Name Value="EFOpenError"/>
+      </Item3>
+    </Exceptions>
+  </Debugging>
+</CONFIG>

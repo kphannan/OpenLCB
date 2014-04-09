@@ -15,6 +15,7 @@ uses
   olcb_utilities,
   opstacktypes,
   template_node;
+
 type
 
   { TForm1 }

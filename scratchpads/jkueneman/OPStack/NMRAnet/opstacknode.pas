@@ -7,7 +7,7 @@ interface
 {$I Options.inc}
 
 uses
-  hardware_template,
+  template_hardware,
   template_node,
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
