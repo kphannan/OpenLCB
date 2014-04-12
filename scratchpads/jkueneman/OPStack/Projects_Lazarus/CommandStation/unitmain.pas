@@ -146,7 +146,6 @@ type
     ToolButton4: TToolButton;
     ToolButton5: TToolButton;
     ToolButton6: TToolButton;
-    ToolButton7: TToolButton;
     ToolButtonCOM: TToolButton;
     ToolButtonDeleteThrottle: TToolButton;
     ToolButtonEthernet: TToolButton;
