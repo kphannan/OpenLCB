@@ -7,9 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, unitmain, ethernet_hub, opstackcore, opstackcanstatemachines,
-  HelperFunctions, template_configuration, template_hardware
-  { you can add units after this };
+  Forms, unitmain;
 
 {$R *.res}
 

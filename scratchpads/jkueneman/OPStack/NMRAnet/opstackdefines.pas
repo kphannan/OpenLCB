@@ -51,6 +51,7 @@ const
 
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used
+  PNodeID = ^TNodeID;
 
   // = array[0..0] of Byte;
  // PDataArray = ^TDataArray;
@@ -294,6 +295,7 @@ type
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
     StateMachineMessages: POPStackMessage;                                      // Linked List of Messages that need to run statemachine to operate allocated for this node
+    UserData: ^Byte;                                                            // Pointer to User Data
     {$IFDEF SUPPORT_TRACTION}TrainData: TTrainDCCProxyData;{$ENDIF}             // Realtime information about the DCC Train Proxy Node
   end;
   PNMRAnetNode = ^TNMRAnetNode;

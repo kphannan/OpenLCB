@@ -649,7 +649,7 @@ object Form1: TForm1
           Left = 12
           Height = 18
           Top = 53
-          Width = 309
+          Width = 307
           Caption = 'Fake Train Node to fail connection of Throttle'
           TabOrder = 0
         end
@@ -657,7 +657,7 @@ object Form1: TForm1
           Left = 12
           Height = 18
           Top = 75
-          Width = 361
+          Width = 359
           Caption = 'Fake Connected Throttle to fail connection of Throttle'
           TabOrder = 1
         end

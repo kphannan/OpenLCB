@@ -22,8 +22,6 @@ uses
 procedure IdentifyEvents(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure IdentifyConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure IdentifyProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure IdentifyRangeConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure IdentifyRangeProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 
 function NodeRunPCERFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
 function NodeRunEventFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
@@ -254,16 +252,6 @@ begin
         OPStackNode_SetEventFlag(NodeEventIndex, False, LocalDestNode^.Events.Produced);
     end
   end;
-end;
-
-procedure IdentifyRangeConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-begin
-
-end;
-
-procedure IdentifyRangeProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-begin
-
 end;
 
 // *****************************************************************************

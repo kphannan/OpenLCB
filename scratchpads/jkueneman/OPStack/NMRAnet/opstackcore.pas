@@ -35,7 +35,8 @@ uses
   {$IFDEF SUPPORT_TRACTION_PROXY}opstackcore_traction_proxy,{$ENDIF}
   opstackcore_snip,
   opstackcore_learn,
-  opstackcore_datagram;
+  opstackcore_datagram,
+  template_userstatemachine;
 
 // User callable functions
 procedure OPStackCore_Initialize;                                               // Call once on program startup
@@ -66,6 +67,7 @@ begin
   OPStackNode_Initialize;
   OPStackBuffers_Initialize;
   OPStackCoreDatagram_Initialize;
+  UserStateMachine_Initialize;
   {$IFDEF SUPPORT_STREAMS}
   OPStackCoreStream_Initialize;
   {$ENDIF}
@@ -101,9 +103,11 @@ end;
 //     Description:
 // *****************************************************************************
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode);
+var
+  NodeID: TNodeID;
 begin
 
-  // If the Node is being Release then don't do anything except deallocate the message if needed
+  // If the Node is being Released then don't do anything except deallocate the message if needed
   if DestNode <> nil then
     if DestNode^.State and NS_RELEASING <> 0 then
     begin
@@ -158,7 +162,8 @@ begin
                   MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;                // Allocates Buffer to be processed in main loop
                   MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end;               // Allocates Buffer to be processed in main loop
                   {$ENDIF}
-                  MTI_OPTIONAL_INTERACTION_REJECTED : begin end
+
+                  MTI_OPTIONAL_INTERACTION_REJECTED : begin {AppCallback_OptionalInteractionRejected(} end
                 else
                   OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
                 end; {case}
@@ -167,13 +172,24 @@ begin
             end else
             begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
               case AMessage^.MTI of
-                  MTI_VERIFY_NODE_ID_NUMBER   : begin VerifyNodeId(AMessage, DestNode); Exit; end;              // Sets Flag(s) to be processed in main loop
-                  MTI_CONSUMER_IDENTIFY       : begin IdentifyConsumers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_CONSUMER_IDENTIFY_RANGE : begin IdentifyRangeConsumers(AMessage, DestNode); Exit; end;    // Sets Flag(s) to be processed in main loop
-                  MTI_PRODUCER_IDENDIFY       : begin IdentifyProducers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_PRODUCER_IDENTIFY_RANGE : begin IdentifyRangeProducers(AMessage, DestNode); end;          // Sets Flag(s) to be processed in main loop
-                  MTI_EVENT_LEARN             : begin Learn(AMessage, DestNode); end;                           // Sets Flag(s) to be processed in main loop
-                  MTI_EVENTS_IDENTIFY         : begin IdentifyEvents(AMessage, nil); Exit; end;                 // Sets Flag(s) to be processed in main loop
+                  MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(AMessage, DestNode); Exit; end;              // Sets Flag(s) to be processed in main loop
+                  MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_PRODUCER_IDENDIFY           : begin IdentifyProducers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_EVENT_LEARN                 : begin Learn(AMessage, DestNode); end;                           // Sets Flag(s) to be processed in main loop
+                  MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(AMessage, nil); Exit; end;                 // Sets Flag(s) to be processed in main loop
+
+                  MTI_CONSUMER_IDENTIFIED_RANGE,
+                  MTI_CONSUMER_IDENTIFIED_CLEAR,
+                  MTI_CONSUMER_IDENTIFIED_RESERVED,
+                  MTI_CONSUMER_IDENTIFIED_SET,
+                  MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(DestNode, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                  MTI_PRODUCER_IDENTIFIED_RANGE,
+                  MTI_PRODUCER_IDENTIFIED_CLEAR,
+                  MTI_PRODUCER_IDENTIFIED_RESERVED,
+                  MTI_PRODUCER_IDENTIFIED_SET,
+                  MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(DestNode, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                  MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(DestNode,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
+                  MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(DestNode,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
               end; {case}
             end;
             CheckAndDeallocateMessage(AMessage);
@@ -628,6 +644,7 @@ begin
     if Result <> nil then
       NodeRunStateMachine(Result);
     ProcessHardwareMessages;
+    AppCallback_UserStateMachine_Process;
     Hardware_EnableInterrupts;
   end;
 end;

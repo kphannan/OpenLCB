@@ -94,7 +94,10 @@ end;
 
 // *****************************************************************************
 //  procedure OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer;
-//    Parameters:
+//    Parameters: NMRAnetCanBuffer - Buffer to convert to a message buffer
+//                OPStackMessage   - Empty message buffer to convert the Buffer into
+//                DestNode         - The internal PNMRAnetNode the message is destined for (nil, if the message was not inteded for any of our nodes)
+//                SourceNode       - The internal PNMRAnetNode that matches the source node ID (this SHOULD be nil if not then there is a duplicate Alias out there)
 //    Result:
 //    Description: OPStackMessage MUST be zeroized before calling this function
 // *****************************************************************************

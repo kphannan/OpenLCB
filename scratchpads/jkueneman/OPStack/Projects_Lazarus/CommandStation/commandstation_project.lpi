@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="9">
+    <Units Count="2">
       <Unit0>
         <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -50,41 +50,6 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitmain"/>
       </Unit1>
-      <Unit2>
-        <Filename Value="..\..\..\Library\ethernet_hub.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="ethernet_hub"/>
-      </Unit2>
-      <Unit3>
-        <Filename Value="..\..\NMRAnet\opstackcore.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore"/>
-      </Unit3>
-      <Unit4>
-        <Filename Value="Templates\hardware_template.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="hardware_template"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="..\..\Common\helperfunctions.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="HelperFunctions"/>
-      </Unit5>
-      <Unit6>
-        <Filename Value="..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachines"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="..\..\HardwareLayerImplementations\Lazarus_Ethernet\template_hardware.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_hardware"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="..\..\ConfigurationLayerImplementations\Lazarus_File\template_configuration.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_configuration"/>
-      </Unit8>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

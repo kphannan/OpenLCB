@@ -13,7 +13,8 @@ uses
   template_vnode,
   {$ENDIF}
   nmranetutilities,
-  opstackdefines;
+  opstackdefines,
+  template_userstatemachine;
 
 {$I NodeID.inc}
 
@@ -205,7 +206,6 @@ begin
       Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Login.Seed, False); // Pregenerate it so it can be sorted
       NodePool.AllocatedList[NodePool.AllocatedCount] := Result;                // Add it to the end if the Allocated List
       Inc(NodePool.AllocatedCount);                                             // One more Allocated
-  //    AppCallback_NodeAllocate(Result);                                         // Allow the App layer to initialize it
     end;
   end;
 end;
@@ -367,6 +367,7 @@ begin
   Node^.IncomingMessages := nil;
   Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
+  Node^.UserData := nil;
   {$IFDEF SUPPORT_TRACTION}
   Node^.TrainData.State := 0;
   Node^.TrainData.Address := 0;
@@ -374,6 +375,7 @@ begin
   Node^.TrainData.SpeedDir := 0;
   Node^.TrainData.SpeedSteps := DEFAULT_SPEED_STEPS;
   {$ENDIF}
+  AppCallback_NodeInitialize(Node);                                             // Allow the App layer to initialize it
 end;
 
 // *****************************************************************************

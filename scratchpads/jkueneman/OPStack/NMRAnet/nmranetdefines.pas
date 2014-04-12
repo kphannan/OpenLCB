@@ -40,13 +40,13 @@ const
   MTI_PROTOCOL_SUPPORT_INQUIRY       = $0828;                                // Databytes = Destination Alias
   MTI_PROTOCOL_SUPPORT_REPLY         = $0668;                                // Databytes = Destination Alias, Protocol Flags
   MTI_CONSUMER_IDENTIFY              = $08F4;                                // Databytes = EventID
-  MTI_CONSUMER_IDENTIFY_RANGE        = $04A4;                                // Databytes = EventID with Mask
+  MTI_CONSUMER_IDENTIFIED_RANGE      = $04A4;                                // Databytes = EventID with Mask
   MTI_CONSUMER_IDENTIFIED_UNKNOWN    = $04C7;                                // Databytes = EventID
   MTI_CONSUMER_IDENTIFIED_SET        = $04C4;                                // Databytes = EventID
   MTI_CONSUMER_IDENTIFIED_CLEAR      = $04C5;                                // Databytes = EventID
   MTI_CONSUMER_IDENTIFIED_RESERVED   = $04C6;                                // Databytes = EventID
   MTI_PRODUCER_IDENDIFY              = $0914;                                // Databytes = EventID
-  MTI_PRODUCER_IDENTIFY_RANGE        = $0524;                                // Databytes = EventID with Mask
+  MTI_PRODUCER_IDENTIFIED_RANGE      = $0524;                                // Databytes = EventID with Mask
   MTI_PRODUCER_IDENTIFIED_UNKNOWN    = $0547;                                // Databytes = EventID
   MTI_PRODUCER_IDENTIFIED_SET        = $0544;                                // Databytes = EventID
   MTI_PRODUCER_IDENTIFIED_CLEAR      = $0545;                                // Databytes = EventID
