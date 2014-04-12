@@ -29,6 +29,7 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    ActionZeroizeConfigMemory: TAction;
     ActionAddNewThrottle: TAction;
     ActionCloseAllThrottles: TAction;
     ActionCloseSelectedThrottles: TAction;
@@ -52,8 +53,8 @@ type
     ActionToolsPreferenceShowMac: TAction;
     ActionToolsSettingsShowWin: TAction;
     BitBtnRescanPorts: TBitBtn;
-    Button1: TButton;
-    Button2: TButton;
+    ButtonLocalHost: TButton;
+    ButtonRemoteLocalHost: TButton;
     CheckBoxFakeConnectedThrottleConnnectionFail: TCheckBox;
     CheckBoxFakeTrainNodeConnectionFail: TCheckBox;
     ComboBoxBaud: TComboBox;
@@ -69,6 +70,7 @@ type
     GroupBoxDatabase: TGroupBox;
     GroupBoxLogging: TGroupBox;
     GroupBoxThrottle: TGroupBox;
+    Image1: TImage;
     ImageList16x16: TImageList;
     Label1: TLabel;
     Label10: TLabel;
@@ -81,13 +83,39 @@ type
     Label8: TLabel;
     Label9: TLabel;
     LabelBaud: TLabel;
+    LabelBuild1: TLabel;
+    LabelBuildDate: TLabel;
     LabelComPort: TLabel;
+    LabelCPU: TLabel;
     LabelDataBits: TLabel;
     LabelFlowControl: TLabel;
+    LabelIcon: TLabel;
+    LabelMyName: TLabel;
+    LabelNodeExplorer: TLabel;
     LabelParity: TLabel;
     LabelStopBits: TLabel;
+    LabelTargetCPU: TLabel;
+    LabelTargetOperatingSystem: TLabel;
+    LabelTargetOS: TLabel;
+    LabelURLFreePascal: TLabel;
+    LabelURLIcons: TLabel;
+    LabelURLLazarus: TLabel;
+    LabelWrittenIn: TLabel;
     MainMenu: TMainMenu;
-    MenuItem1: TMenuItem;
+    MenuItemCommonToolsClearLog: TMenuItem;
+    MenuItemCommonToolsComPort: TMenuItem;
+    MenuItemCommonToolsDetailedLogging: TMenuItem;
+    MenuItemCommonToolsEthernetClient: TMenuItem;
+    MenuItemCommonToolsEthernetListen: TMenuItem;
+    MenuItemCommonToolsLogging: TMenuItem;
+    MenuItemCommonToolsSep1: TMenuItem;
+    MenuItemCommonToolsSep2: TMenuItem;
+    MenuItemCommonToolsSep4: TMenuItem;
+    MenuItemCommonToolsStartNode: TMenuItem;
+    MenuItemCommonToolsZeroizeConfigMem: TMenuItem;
+    MenuItemFile: TMenuItem;
+    MenuItemTools: TMenuItem;
+    MenuItemHelp: TMenuItem;
     MenuItemSynMemoLogClear: TMenuItem;
     MenuItemSynMemoLogCopy: TMenuItem;
     MenuItemSynMemoLogCut: TMenuItem;
@@ -96,13 +124,15 @@ type
     MenuItemSynMemoLogSep2: TMenuItem;
     MenuItemSynMemoLogSep3: TMenuItem;
     MenuItemSynMemoSelectAll: TMenuItem;
-    PageControl1: TPageControl;
+    PageControlMain: TPageControl;
+    PopupMenuCommonTools: TPopupMenu;
     PopupMenuSynEditLog: TPopupMenu;
     SpinEditEtherneRemotePort: TSpinEdit;
     SpinEditEthernetLocalPort: TSpinEdit;
     SpinEditSendPacketDelay: TSpinEdit;
     StatusBar: TStatusBar;
     SynMemoLog: TSynMemo;
+    TabSheetAbout: TTabSheet;
     TabSheetComPort: TTabSheet;
     TabSheetCommandStation: TTabSheet;
     TabSheetEthernet: TTabSheet;
@@ -115,6 +145,8 @@ type
     ToolButton3: TToolButton;
     ToolButton4: TToolButton;
     ToolButton5: TToolButton;
+    ToolButton6: TToolButton;
+    ToolButton7: TToolButton;
     ToolButtonCOM: TToolButton;
     ToolButtonDeleteThrottle: TToolButton;
     ToolButtonEthernet: TToolButton;
@@ -125,6 +157,7 @@ type
     procedure ActionDetailedLoggingExecute(Sender: TObject);
     procedure ActionEthernetClientConnectionExecute(Sender: TObject);
     procedure ActionEthernetListenerConnectionExecute(Sender: TObject);
+    procedure ActionHelpAboutShowExecute(Sender: TObject);
     procedure ActionLogClearExecute(Sender: TObject);
     procedure ActionLogCopyExecute(Sender: TObject);
     procedure ActionLogCutExecute(Sender: TObject);
@@ -133,13 +166,26 @@ type
     procedure ActionLogPauseExecute(Sender: TObject);
     procedure ActionLogSelectAllExecute(Sender: TObject);
     procedure ActionStartNodeExecute(Sender: TObject);
+    procedure ActionZeroizeConfigMemoryExecute(Sender: TObject);
+    procedure ButtonLocalHostClick(Sender: TObject);
     procedure ButtonLoggingClearClick(Sender: TObject);
+    procedure ButtonRemoteLocalHostClick(Sender: TObject);
     procedure EditAliasIDChange(Sender: TObject);
     procedure EditEthernetLocalIPChange(Sender: TObject);
     procedure EditEthernetRemoteIPChange(Sender: TObject);
     procedure EditNodeIDChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure Image1Click(Sender: TObject);
+    procedure LabelURLFreePascalClick(Sender: TObject);
+    procedure LabelURLFreePascalMouseEnter(Sender: TObject);
+    procedure LabelURLFreePascalMouseLeave(Sender: TObject);
+    procedure LabelURLIconsClick(Sender: TObject);
+    procedure LabelURLIconsMouseEnter(Sender: TObject);
+    procedure LabelURLIconsMouseLeave(Sender: TObject);
+    procedure LabelURLLazarusClick(Sender: TObject);
+    procedure LabelURLLazarusMouseEnter(Sender: TObject);
+    procedure LabelURLLazarusMouseLeave(Sender: TObject);
     procedure SpinEditEtherneRemotePortChange(Sender: TObject);
     procedure SpinEditEthernetLocalPortChange(Sender: TObject);
     procedure SpinEditSendPacketDelayChange(Sender: TObject);
@@ -159,9 +205,9 @@ type
     FOSXMenu: TMenuItem;
     FOSXPrefCmd: TMenuItem;
     FOSXSep1Cmd: TMenuItem;
-    FPaused: Boolean;
-    FSettingsFilePath: WideString;
     {$ENDIF}
+    FSettingsFilePath: WideString;
+    FPaused: Boolean;
     FSettingsLocked: Boolean;
     FShownOnce: Boolean;
     { private declarations }
@@ -245,6 +291,11 @@ begin
   EthernetHub.Enabled := ActionEthernetListenerConnection.Checked;
 end;
 
+procedure TForm1.ActionHelpAboutShowExecute(Sender: TObject);
+begin
+  PageControlMain.ActivePage := TabSheetAbout;
+end;
+
 procedure TForm1.ActionLogClearExecute(Sender: TObject);
 begin
     SynMemoLog.ClearAll;
@@ -297,6 +348,16 @@ begin
   end;
 end;
 
+procedure TForm1.ActionZeroizeConfigMemoryExecute(Sender: TObject);
+begin
+  ZeroConfiguration
+end;
+
+procedure TForm1.ButtonLocalHostClick(Sender: TObject);
+begin
+  EditEthernetLocalIP.Text := '127.0.0.1';
+end;
+
 procedure TForm1.ButtonLoggingClearClick(Sender: TObject);
 begin
   SynMemoLog.BeginUpdate();
@@ -305,6 +366,11 @@ begin
   finally
     SynMemoLog.EndUpdate;
   end;
+end;
+
+procedure TForm1.ButtonRemoteLocalHostClick(Sender: TObject);
+begin
+  EditEthernetRemoteIP.Text := '127.0.0.1';
 end;
 
 procedure TForm1.EditAliasIDChange(Sender: TObject);
@@ -355,6 +421,9 @@ begin
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
+var
+  i: Integer;
+  Child: TMenuItem;
 begin
   if not ShownOnce then
   begin
@@ -377,7 +446,6 @@ begin
     OSXPrefCmd.Action := ActionToolsPreferenceShowMac;
     OSXMenu.Add(OSXPrefCmd);
     ActionToolsSettingsShowWin.Visible := False;
- //   MenuItemToolsSep2.Visible := False;
  //   FormMessageLog.SynMemo.Font.Height := 0;
  //   FormEthernetMessageLog.SynMemo.Font.Height := 0;
     {$ELSE}
@@ -385,8 +453,6 @@ begin
     AppAboutCmd.Action := ActionHelpAboutShow;
     MenuItemHelp.Add(AppAboutCmd);
     {$ENDIF}
- //   FormMessageLog.HideCallback := @SyncMessageLogHide;
- //   FormEthernetMessageLog.HideCallback := @SyncEthernetMessageLogHide;
     {$IFDEF Linux}
     FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
@@ -397,11 +463,73 @@ begin
     SetConfigurationFile(ConfigurationFile);
     {$ENDIF}
 
+    MenuItemTools.AddSeparator;
+    for i := 0 to PopupMenuCommonTools.Items.Count - 1 do
+    begin
+      Child := PopupMenuCommonTools.Items.Items[0];
+      PopupMenuCommonTools.Items.Remove(Child);
+      MenuItemTools.Add(Child);
+    end;
+
+    LabelBuildDate.Caption := {$I %DATE%} + ': ' + {$I %TIME%};
+    LabelTargetOS.Caption := {$I %FPCTARGETOS%};
+    LabelTargetCPU.Caption := {$I %FPCTARGETCPU%};
+
     ActionLogging.Execute;       // Set Logging by default
 
     ShownOnce := True;
   end;
   UpdateUI
+end;
+
+procedure TForm1.Image1Click(Sender: TObject);
+begin
+  OpenURL('http://www.openlcb.org');
+end;
+
+procedure TForm1.LabelURLFreePascalClick(Sender: TObject);
+begin
+  OpenURL('http://' + LabelURLFreePascal.Caption);
+end;
+
+procedure TForm1.LabelURLFreePascalMouseEnter(Sender: TObject);
+begin
+  LabelURLFreePascal.Font.Style := [fsUnderline];
+end;
+
+procedure TForm1.LabelURLFreePascalMouseLeave(Sender: TObject);
+begin
+  LabelURLFreePascal.Font.Style := [];
+end;
+
+procedure TForm1.LabelURLIconsClick(Sender: TObject);
+begin
+  OpenURL('http://' + LabelURLIcons.Caption);
+end;
+
+procedure TForm1.LabelURLIconsMouseEnter(Sender: TObject);
+begin
+  LabelURLIcons.Font.Style := [fsUnderline];
+end;
+
+procedure TForm1.LabelURLIconsMouseLeave(Sender: TObject);
+begin
+  LabelURLIcons.Font.Style := [];
+end;
+
+procedure TForm1.LabelURLLazarusClick(Sender: TObject);
+begin
+  OpenURL('http://' + LabelURLLazarus.Caption);
+end;
+
+procedure TForm1.LabelURLLazarusMouseEnter(Sender: TObject);
+begin
+   LabelURLLazarus.Font.Style := [fsUnderline];
+end;
+
+procedure TForm1.LabelURLLazarusMouseLeave(Sender: TObject);
+begin
+   LabelURLLazarus.Font.Style := [];
 end;
 
 procedure TForm1.EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);

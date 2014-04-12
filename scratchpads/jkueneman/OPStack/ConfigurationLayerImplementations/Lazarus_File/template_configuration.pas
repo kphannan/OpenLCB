@@ -29,6 +29,7 @@ uses
 
 {$IFDEF FPC}
 procedure SetConfigurationFile(FilePath: WideString);
+procedure ZeroConfiguration;
 {$ENDIF}
 
 procedure TemplateConfiguration_Initialize;
@@ -54,7 +55,16 @@ var
 procedure SetConfigurationFile(FilePath: WideString);
 begin
   ConfigurationFile := FilePath;
+  if FileExists(UTF8ToSys(ConfigurationFile)) then
+    AddressSpace.LoadFromFile(ConfigurationFile);
 end;
+
+procedure ZeroConfiguration;
+begin
+  for i := 0 to MAX_ADDRESS_SPACE - 1 do
+    AddressSpace.WriteByte(0);
+end;
+
 {$ENDIF}
 
   // *****************************************************************************
@@ -90,6 +100,7 @@ begin
     for iCount := 0 to ReadCount do
     begin
       DatagramData^ := AddressSpace.ReadByte;
+      Inc(DatagramData);
       Inc(Result);
     end;
   end;
@@ -119,6 +130,7 @@ begin
     for iCount := 0 to ReadCount do
     begin
       AddressSpace.WriteByte( DatagramData^);
+      Inc(DatagramData);
       Inc(Result);
     end;
   end;
@@ -175,8 +187,7 @@ initialization
   AddressSpace := TMemoryStream.Create;
   AddressSpace.Size := MAX_ADDRESS_SPACE;
   AddressSpace.Position := 0;
-  for i := 0 to MAX_ADDRESS_SPACE - 1 do
-    AddressSpace.WriteByte(0);
+  ZeroConfiguration;
 
 finalization
   FreeAndNil(AddressSpace)

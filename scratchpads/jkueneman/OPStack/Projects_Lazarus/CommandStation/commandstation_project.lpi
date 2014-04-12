@@ -91,7 +91,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\commandstationemulator.app\MacOS\commandstationemulator"/>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\commandstationemulator.app\Contents\MacOS\CommandStationEmulator"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
