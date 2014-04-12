@@ -12,7 +12,7 @@ object FormOLCB_Commander: TFormOLCB_Commander
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '1.2.0.1'
+  LCLVersion = '1.2.0.3'
   object PageControlMain: TPageControl
     Left = 0
     Height = 390

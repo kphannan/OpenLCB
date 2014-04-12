@@ -23,8 +23,13 @@ uses
   {$IFDEF FPC}
   Classes,
   SysUtils,
+  FileUtil,
   {$ENDIF}
   opstacktypes;
+
+{$IFDEF FPC}
+procedure SetConfigurationFile(FilePath: WideString);
+{$ENDIF}
 
 procedure TemplateConfiguration_Initialize;
 function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
@@ -36,11 +41,20 @@ function AppCallback_WriteAcdiUser(ConfigAddress: DWord; WriteCount: Word; Confi
 implementation
 
 {$IFDEF FPC}
+uses
+  template_vnode, template_node;
+
 const
-  MAX_MAP = $FFFF;
+  MAX_ADDRESS_SPACE = USER_VNODE_CONFIGURATION_MEMORY_SIZE * (USER_MAX_NODE_COUNT-1) + USER_CONFIGURATION_MEMORY_SIZE;
 var
-  ConfigurationMap: array[0..MAX_MAP - 1] of Byte;
   i: Integer;
+  AddressSpace: TMemoryStream;
+  ConfigurationFile: WideString;
+
+procedure SetConfigurationFile(FilePath: WideString);
+begin
+  ConfigurationFile := FilePath;
+end;
 {$ENDIF}
 
   // *****************************************************************************
@@ -66,17 +80,20 @@ end;
   // *****************************************************************************
 function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
 var
-  i: Integer;
+  iCount: Integer;
 begin
-  for i := 0 to ReadCount - 1 do
+  Result := 0;
+  {$IFDEF FPC}
+  if ConfigAddress + ReadCount < AddressSpace.Size then
   begin
-    {$IFDEF FPC}
-    if ConfigAddress < MAX_MAP then
-      DatagramData^ := ConfigurationMap[ConfigAddress+i];
-    Inc(DatagramData);
-    {$ENDIF}
+    AddressSpace.Position := ConfigAddress;
+    for iCount := 0 to ReadCount do
+    begin
+      DatagramData^ := AddressSpace.ReadByte;
+      Inc(Result);
+    end;
   end;
-  Result := ReadCount;
+  {$ENDIF}
 end;
 
 // *****************************************************************************
@@ -92,17 +109,22 @@ end;
 // *****************************************************************************
 function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
 var
-  i: Integer;
+  iCount: Integer;
 begin
-  for i := 0 to ReadCount - 1 do
+  Result := 0;
+  {$IFDEF FPC}
+  if ConfigAddress + ReadCount < AddressSpace.Size then
   begin
-    {$IFDEF FPC}
-    if ConfigAddress < MAX_MAP then
-      ConfigurationMap[ConfigAddress+i] := DatagramData^;
-    Inc(DatagramData);
-    {$ENDIF}
+    AddressSpace.Position := ConfigAddress;
+    for iCount := 0 to ReadCount do
+    begin
+      AddressSpace.WriteByte( DatagramData^);
+      Inc(Result);
+    end;
   end;
-  Result := ReadCount;
+  if (Result > 0) and (DirectoryExists( ExtractFilePath( UTF8ToSys(ConfigurationFile)))) then
+    AddressSpace.SaveToFile(UTF8ToSys(ConfigurationFile));
+  {$ENDIF}
 end;
 
 // *****************************************************************************
@@ -149,9 +171,17 @@ end;
 
 {$IFDEF FPC}
 initialization
-  for i := 0 to MAX_MAP - 1 do
-    ConfigurationMap[i] := 0;
+  ConfigurationFile := '';
+  AddressSpace := TMemoryStream.Create;
+  AddressSpace.Size := MAX_ADDRESS_SPACE;
+  AddressSpace.Position := 0;
+  for i := 0 to MAX_ADDRESS_SPACE - 1 do
+    AddressSpace.WriteByte(0);
+
+finalization
+  FreeAndNil(AddressSpace)
 {$ENDIF}
+
 
 end.
 

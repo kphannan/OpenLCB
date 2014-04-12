@@ -13,7 +13,8 @@ uses
   common_objects, form_awesome_throttle, form_awesome_throttle_deallocate_error,
   form_awesome_throttle_duplicate_address, form_train_config_editor,
   unit_cdi_parser, olcb_defines, olcb_utilities, form_messagelog,
-  olcb_transport_layer, ethernet_hub;
+  olcb_transport_layer, ethernet_hub, opstackdefines, Float16, template_node,
+  opstackcanstatemachines;
 
 {$R *.res}
 

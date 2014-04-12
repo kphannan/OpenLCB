@@ -124,7 +124,11 @@ const
   GRID_CONNECT_DATA_OFFSET = 11;
 
 type
+  {$IFDEF FPC}
+  TGridConnectString = array[0..MAX_GRID_CONNECT_LEN-1] of ansichar;
+  {$ELSE}
   TGridConnectString = array[0..MAX_GRID_CONNECT_LEN-1] of char;
+  {$ENDIF}
   PGridConnectString = ^TGridConnectString;
 
 

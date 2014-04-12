@@ -30,8 +30,27 @@ const
   HEADER_MEMCONFIG_SPACE_INFO_UNKNOWN_REQUEST: TCANByteArray          = (DATAGRAM_PROTOCOL_CONFIGURATION, MCP_OP_GET_ADD_SPACE_INFO, $00, $00, $00, $00, $00, $00);
 
 
+const
+  GRIDCONNECT_STATE_SYNC_START = 0;
+  GRIDCONNECT_STATE_SYNC_FIND_X = 1;
+  GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
+  GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
+
+const
+  // :X19170640N0501010107015555;#0  Example.....
+  // ^         ^                  ^
+  // 0         10                28
+  MAX_GRID_CONNECT_LEN = 29;
+  GRID_CONNECT_HEADER_OFFSET_HI = 2;
+  GRID_CONNECT_HEADER_OFFSET_LO = 4;
+  GRID_CONNECT_DATA_OFFSET = 11;
 
 type
+  TGridConnectString = array[0..MAX_GRID_CONNECT_LEN-1] of char;
+  PGridConnectString = ^TGridConnectString;
+
+type
+  TTransportLayerThread                 = class;
   TTaskOlcbBase                         = class;
   TOlcbTaskEngine                       = class;
   TCANFrameParserDatagramReceiveManager = class;
@@ -78,22 +97,29 @@ type
   private
     FAliasList: TAliasTaskContainerList;
     FBufferRawMessage: string;                                                  // Shared data to pass string between thread and the Syncronized callbacks
-    FConnected: Boolean;                                                        // True if connected to the port
     FCANFrameParserDatagramReceiveManager: TCANFrameParserDatagramReceiveManager;
     FCANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager;
     FConnectionState: TConnectionState;
+    FEnableOPStackCallback: Boolean;
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
     FEnableSendMessages: Boolean;                                               // Callback through Syncronize with the message that is about to be sen
+    FGridConnectReceiveState: Integer;
     FOlcbTaskManager: TOlcbTaskEngine;
     FOnBeforeDestroy: TNotifyEvent;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;                               // Links the Task handler to this thread for Tasks that this thread creates when it receives unsolicited messages
+    FOnOPstackCallback: TOnOPStackCallback;
+    FOnStatus: THookSocketStatus;
+    FReceiveGridConnectBuffer: TGridConnectString;
+    FReceiveGridConnectBufferIndex: Integer;
     FRunning: Boolean;
     FCANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager;
     FCANFrameParserStreamSendManager: TCANFrameParserStreamSendManager;
-    FSyncConnectionStateFunc: TSyncConnectionStateFunc;
-    FSyncErrorMessageFunc: TSyncRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
-    FSyncReceiveMessageFunc: TSyncRawMessageFunc;                               // Function to callback through Syncronize if EnableReceiveMessages is true
-    FSyncSendMessageFunc: TSyncRawMessageFunc;                                  // Function to callback through Syncronize if EnableSendMessages is true
+    FStatusReason: THookSocketReason;
+    FStatusValue: string;
+    FOnConnectionStateChange: TOnConnectionStateChange;
+    FOnErrorMessage: TOnRawMessage;                                 // Function to callback through Syncronize if an error connecting occured
+    FOnReceiveMessage: TOnRawMessage;                               // Function to callback through Syncronize if EnableReceiveMessages is true
+    FOnSendMessage: TOnRawMessage;                                  // Function to callback through Syncronize if EnableSendMessages is true
     FTerminateComplete: Boolean;                                                 // True if the thread has terminated
     FThreadListSendStrings: TThreadList;                                        // List of strings waiting to be sent
     function GetSourceAlias: Word;
@@ -102,12 +128,17 @@ type
     procedure DecomposeAndDispatchGridConnectString(ReceiveStr: AnsiString; Helper: TOpenLCBMessageHelper);
     procedure ExecuteBegin;
     procedure ExecuteEnd;
+    function GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
     procedure InternalAdd(Msg: AnsiString);
     procedure InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
-    procedure SyncErrorMessage;
-    procedure SyncReceiveMessage;
-    procedure SyncSendMessage;
-    procedure SyncConnectionState;
+    function IsValidHexChar(AChar: Char): Boolean;
+    procedure ShowErrorMessageAndTerminate(Message: string);
+    procedure SyncOnConnectionState; virtual;
+    procedure SyncOnErrorMessage;
+    procedure SyncOnReceiveMessage;
+    procedure SyncOnSendMessage;
+    procedure SyncOnStatus;
+    procedure SyncOnOPStackCallback;
 
     property AliasList: TAliasTaskContainerList read FAliasList write FAliasList;                 // Tracks the Alias that have been registered with Olcb through this Transport Thread
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
@@ -116,25 +147,32 @@ type
     property CANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager read FCANFrameParserStreamReceiveManager write FCANFrameParserStreamReceiveManager;
     property CANFrameParserStreamSendManager: TCANFrameParserStreamSendManager read FCANFrameParserStreamSendManager write FCANFrameParserStreamSendManager;
     property ConnectionState: TConnectionState read FConnectionState write FConnectionState;
+    property GridConnectReceiveState: Integer read FGridConnectReceiveState write FGridConnectReceiveState;
+    property ReceiveGridConnectBuffer: TGridConnectString read FReceiveGridConnectBuffer write FReceiveGridConnectBuffer;
+    property ReceiveGridConnectBufferIndex: Integer read FReceiveGridConnectBufferIndex write FReceiveGridConnectBufferIndex;
     property OlcbTaskManager: TOlcbTaskEngine read FOlcbTaskManager write FOlcbTaskManager;
+    property StatusReason: THookSocketReason read FStatusReason write FStatusReason;
+    property StatusValue: string read FStatusValue write FStatusValue;
   public
     constructor Create(CreateSuspended: Boolean); virtual;
     destructor Destroy; override;
     function AddTask(NewTask: TTaskOlcbBase; CopyTask: Boolean): Boolean;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
 
-    property Connected: Boolean read FConnected write FConnected;
+    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
+    property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
+    property EnableOPStackCallback: Boolean read FEnableOPStackCallback write FEnableOPStackCallback;
     property ThreadListSendStrings: TThreadList read FThreadListSendStrings write FThreadListSendStrings;
     property Terminated;
     property TerminateComplete: Boolean read FTerminateComplete;
-    property SyncConnectionStateFunc: TSyncConnectionStateFunc read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
-    property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
-    property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
-    property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
-    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write FEnableReceiveMessages;
-    property EnableSendMessages: Boolean read FEnableSendMessages write FEnableSendMessages;
+    property OnConnectionStateChange: TOnConnectionStateChange read FOnConnectionStateChange write FOnConnectionStateChange;
+    property OnErrorMessage: TOnRawMessage read FOnErrorMessage write FOnErrorMessage;
+    property OnReceiveMessage: TOnRawMessage read FOnReceiveMessage write FOnReceiveMessage;
+    property OnSendMessage: TOnRawMessage read FOnSendMessage write FOnSendMessage;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
     property OnBeforeDestroy: TNotifyEvent read FOnBeforeDestroy write FOnBeforeDestroy;
+    property OnStatus: THookSocketStatus read FOnStatus write FOnStatus;
+    property OnOPStackCallback: TOnOPStackCallback read FOnOPStackCallback write FOnOPStackCallback;
     property Running: Boolean read FRunning;
     property SourceAlias: Word read GetSourceAlias;
     property TaskCount: Integer read GetTaskCount;
@@ -1970,6 +2008,101 @@ begin
   end;
 end;
 
+function TTransportLayerThread.GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
+var
+  HeaderArray: array[0..7] of Char;
+  i, j: Integer;
+begin
+ Result := False;
+ case GridConnectReceiveState of
+      GRIDCONNECT_STATE_SYNC_START :                                            // Find a starting ':'
+        begin
+          if NextChar = ':' then
+          begin
+            ReceiveGridConnectBufferIndex := 0;
+            ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := ':';
+            Inc(FReceiveGridConnectBufferIndex);
+            GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_X
+          end
+        end;
+      GRIDCONNECT_STATE_SYNC_FIND_X :
+        begin
+          if NextChar <> ':' then                                               // Handle double ":"'s by doing nothing if the next byte is a ":", just wait for the next byte to see if it is a "X"
+          begin
+            if (NextChar = 'X') or (NextChar = 'x') then
+            begin
+              ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := 'X';
+              Inc(FReceiveGridConnectBufferIndex);
+              GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_HEADER
+            end else
+               GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START          // Error, start over
+          end
+        end;
+      GRIDCONNECT_STATE_SYNC_FIND_HEADER :
+        begin
+          if ReceiveGridConnectBufferIndex < 11 then
+          begin
+            if (NextChar = 'n') or (NextChar = 'N') then
+            begin
+              if ReceiveGridConnectBufferIndex = 10 then                        // Just right number of characters, all done
+              begin
+                ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := 'N';
+                Inc(FReceiveGridConnectBufferIndex);                             // Skip over the "N"
+                GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_DATA;
+              end else
+              begin
+                for i := 0 to 7 do
+                  HeaderArray[i] := '0';
+                j := 7;
+                for i := ReceiveGridConnectBufferIndex - 1 downto (11 - ReceiveGridConnectBufferIndex) do
+                begin
+                  HeaderArray[j] := ReceiveGridConnectBuffer[i];
+                  Dec(j);
+                end;
+                for i := 0 to 7 do
+                  ReceiveGridConnectBuffer[2 + i] := HeaderArray[i];
+                ReceiveGridConnectBuffer[10] := 'N';
+                ReceiveGridConnectBufferIndex := 11;                             // Skip over the "N"
+                GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_FIND_DATA;
+              end;
+            end else
+            begin
+              if IsValidHexChar(NextChar) then
+              begin
+                ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := NextChar;
+                Inc(FReceiveGridConnectBufferIndex);
+              end else
+              GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START         // Error start over
+            end
+          end else
+            GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START         // Error start over
+        end;
+      GRIDCONNECT_STATE_SYNC_FIND_DATA :
+        begin
+           if NextChar = ';'then
+           begin
+             if (ReceiveGridConnectBufferIndex + 1) mod 2 = 0 then              // 0 index, add 1 for the actual character count, if not true the result is broken
+             begin
+               ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := ';';
+               ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex + 1] := #0;
+               GridConnectStrPtr := @ReceiveGridConnectBuffer;
+               Result := True;
+             end;
+             GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START            // Done
+           end else
+           begin
+             if IsValidHexChar(NextChar) then
+             begin
+               ReceiveGridConnectBuffer[ReceiveGridConnectBufferIndex] := NextChar;
+               Inc(FReceiveGridConnectBufferIndex);
+             end else
+               GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START;         // Error start over
+           end
+        end else
+          GridConnectReceiveState := GRIDCONNECT_STATE_SYNC_START;              // Invalidate State Index
+    end;  // Case
+end;
+
 procedure TTransportLayerThread.DecomposeAndDispatchGridConnectString(ReceiveStr: AnsiString; Helper: TOpenLCBMessageHelper);
 var
   CANLayerTask: TTaskCANLayer;
@@ -1985,10 +2118,17 @@ begin
   ReceiveStr := Trim(ReceiveStr);
   if Helper.Decompose(ReceiveStr) then
   begin
+
+    if EnableOPStackCallback then
+    begin
+      BufferRawMessage := ReceiveStr;         // NEED TO DECIDE IF WE BYBASS THE TASK CODE BELOW IF WE DO THIS>>>>>>
+      Synchronize(@SyncOnOPStackCallback);
+    end;
+
     if EnableReceiveMessages then                                         // *** Communicate back to the app the raw message string
     begin
       BufferRawMessage := ReceiveStr;
-      Synchronize(@SyncReceiveMessage);
+      Synchronize(@SyncOnReceiveMessage);
     end;
 
     if AliasList.FindByAlias(Helper.SourceAliasID) = nil then             // Any message from a node is on our segement
@@ -2089,35 +2229,47 @@ procedure TTransportLayerThread.ExecuteBegin;
 begin
   FRunning := True;
   ConnectionState := csConnecting;
-  Synchronize(@SyncConnectionState);
+  Synchronize(@SyncOnConnectionState);
 end;
 
 procedure TTransportLayerThread.ExecuteEnd;
 begin
   ConnectionState := csDisconnected;
-  Synchronize(@SyncConnectionState);
+  Synchronize(@SyncOnConnectionState);
   if Assigned(OnBeforeDestroy) then
     OnBeforeDestroy(Self);
   FRunning := False;
   FTerminateComplete := True;
 end;
 
-procedure TTransportLayerThread.SyncErrorMessage;
+procedure TTransportLayerThread.SyncOnErrorMessage;
 begin
-  if Assigned(SyncErrorMessageFunc) then
-    SyncErrorMessageFunc(Self, BufferRawMessage)
+  if Assigned(OnErrorMessage) then
+    OnErrorMessage(Self, BufferRawMessage)
 end;
 
-procedure TTransportLayerThread.SyncReceiveMessage;
+procedure TTransportLayerThread.SyncOnOPStackCallback;
 begin
-  if Assigned(SyncReceiveMessageFunc) then
-    SyncReceiveMessageFunc(Self, BufferRawMessage)
+  if Assigned(FOnOPstackCallback) then
+    OnOPStackCallback(@BufferRawMessage[1]);
 end;
 
-procedure TTransportLayerThread.SyncSendMessage;
+procedure TTransportLayerThread.SyncOnStatus;
 begin
-  if Assigned(SyncSendMessageFunc) then
-    SyncSendMessageFunc(Self, BufferRawMessage)
+  if Assigned(OnStatus) then
+    OnStatus(Self, StatusReason, StatusValue);
+end;
+
+procedure TTransportLayerThread.SyncOnReceiveMessage;
+begin
+  if Assigned(OnReceiveMessage) then
+    OnReceiveMessage(Self, BufferRawMessage)
+end;
+
+procedure TTransportLayerThread.SyncOnSendMessage;
+begin
+  if Assigned(OnSendMessage) then
+    OnSendMessage(Self, BufferRawMessage)
 end;
 
 constructor TTransportLayerThread.Create(CreateSuspended: Boolean);
@@ -2132,13 +2284,18 @@ begin
   FAliasList := TAliasTaskContainerList.Create;
   FTerminateComplete := False;
   FEnableReceiveMessages := True;
+  FEnableOPStackCallback := False;
   FEnableSendMessages := True;
-  FSyncErrorMessageFunc := nil;
-  FSyncReceiveMessageFunc := nil;
-  FSyncSendMessageFunc := nil;
+  FOnErrorMessage := nil;
+  FOnReceiveMessage := nil;
+  FOnSendMessage := nil;
   FOnBeforeDestroyTask := nil;
   FOnBeforeDestroy := nil;
-  FSyncConnectionStateFunc := nil;
+  FOnConnectionStateChange := nil;
+  FOnStatus := nil;
+  FOnOPstackCallback := nil;
+  FGridConnectReceiveState := 0;
+  FReceiveGridConnectBufferIndex := 0;
 end;
 
 destructor TTransportLayerThread.Destroy;
@@ -2202,6 +2359,11 @@ begin
     end;
   end else
     Datagram.Free
+end;
+
+function TTransportLayerThread.IsValidHexChar(AChar: Char): Boolean;
+begin
+  Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
 end;
 
 function TTransportLayerThread.AddTask(NewTask: TTaskOlcbBase; CopyTask: Boolean): Boolean;
@@ -2282,10 +2444,17 @@ begin
   until Wait = False;
 end;
 
-procedure TTransportLayerThread.SyncConnectionState;
+procedure TTransportLayerThread.ShowErrorMessageAndTerminate(Message: string);
 begin
-  if Assigned(SyncConnectionStateFunc) then
-    SyncConnectionStateFunc(Self, ConnectionState)
+  BufferRawMessage := Message;
+  Synchronize(@SyncOnErrorMessage);
+  Terminate;
+end;
+
+procedure TTransportLayerThread.SyncOnConnectionState;
+begin
+  if Assigned(OnConnectionStateChange) then
+    OnConnectionStateChange(Self, ConnectionState)
 end;
 
 

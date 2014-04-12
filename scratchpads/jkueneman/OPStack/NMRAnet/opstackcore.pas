@@ -42,6 +42,7 @@ procedure OPStackCore_Initialize;                                               
 function OPStackCore_Process: PNMRAnetnode;                                     // Call as often as possible
 procedure OPStackCore_Timer;                                                    // Call every 100ms
 procedure OPStackCore_Enable(DoEnable: Boolean);                                // Enable Process Statemachine
+function OPStackCore_IsRunning: Boolean;
 
 // Callback from the Hardware when a message is received do not call directly
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode);
@@ -637,6 +638,11 @@ begin
     OPStack.State := OPStack.State or OPS_PROCESSING
   else
     OPStack.State := OPStack.State and not OPS_PROCESSING;
+end;
+
+function OPStackCore_IsRunning: Boolean;
+begin
+  Result := OPStack.State and OPS_PROCESSING <> 0
 end;
 
 end.

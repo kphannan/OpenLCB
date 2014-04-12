@@ -7,14 +7,19 @@ interface
 uses
   Classes, SysUtils, FileUtil, SynMemo, Forms, Controls, Graphics, Dialogs,
   ComCtrls, ExtCtrls, StdCtrls, ActnList, Menus, Buttons, Spin, form_throttle,
-  com_port_hub, ethernet_hub, olcb_app_common_settings, file_utilities,
+  ethernet_hub, olcb_app_common_settings, file_utilities,
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
-  types, olcb_defines;
+  types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
+  SynEditMarkupHighAll,
+  template_hardware, opstackcore, template_configuration;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';
   PATH_LINUX_APP_FOLDER  = 'olcbtrainmaster/';
   PATH_SETTINGS_FILE     = 'settings.ini';
+  PATH_CONFIGURATION_FILE = 'configuration.dat';
+
+  WM_CLOSE_CONNECTIONS = WM_USER + 234;
 
 type
 
@@ -37,6 +42,15 @@ type
   { TFormOlcbTrainMaster }
 
   TFormOlcbTrainMaster = class(TForm)
+    ActionStartNode: TAction;
+    ActionLogCopy: TAction;
+    ActionLogPaste: TAction;
+    ActionLogSelectAll: TAction;
+    ActionLogCut: TAction;
+    ActionLogPause: TAction;
+    ActionLogClear: TAction;
+    ActionDetailedLogging: TAction;
+    ActionEthernetClientConnection: TAction;
     ActionLogging: TAction;
     ActionRediscoverProxies: TAction;
     ActionToolsSettingsShowWin: TAction;
@@ -47,18 +61,18 @@ type
     ActionCloseAllThrottles: TAction;
     ActionCloseSelectedThrottles: TAction;
     ActionAddNewThrottle: TAction;
-    ActionEthernetConnection: TAction;
+    ActionEthernetListenerConnection: TAction;
     ActionCOMConnection: TAction;
     ActionList: TActionList;
     BitBtnRescanPorts: TBitBtn;
     Button1: TButton;
+    Button2: TButton;
     ButtonAddThrottles: TButton;
     ButtonCloseAllThrottles: TButton;
     ButtonDeleteSelectedThrottles: TButton;
     ButtonHideAllThrottles: TButton;
     ButtonRediscoverProxies: TButton;
     ButtonShowAllThrottles: TButton;
-    CheckBoxLoggingEnabled: TCheckBox;
     ComboBoxBaud: TComboBox;
     ComboBoxComPort: TComboBox;
     ComboBoxDataBits: TComboBox;
@@ -67,6 +81,7 @@ type
     ComboBoxStopBits: TComboBox;
     EditAliasID: TEdit;
     EditEthernetLocalIP: TEdit;
+    EditEthernetRemoteIP: TEdit;
     EditNodeID: TEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
@@ -78,6 +93,8 @@ type
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
     LabelBaud: TLabel;
     LabelComPort: TLabel;
     LabelDataBits: TLabel;
@@ -85,6 +102,16 @@ type
     LabelParity: TLabel;
     LabelStopBits: TLabel;
     MainMenu: TMainMenu;
+    MenuItemSynMemoLogPause: TMenuItem;
+    MenuItemSynMemoLogSep3: TMenuItem;
+    MenuItemSynMemoLogClear: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItemSynMemoSelectAll: TMenuItem;
+    MenuItemSynMemoLogSep2: TMenuItem;
+    MenuItemSynMemoLogCut: TMenuItem;
+    MenuItemSynMemoLogCopy: TMenuItem;
+    MenuItemSynMemoLogSep1: TMenuItem;
+    MenuItemToolsSep1: TMenuItem;
     MenuItemToolsLogging: TMenuItem;
     MenuItemToolsRediscoverProxies: TMenuItem;
     MenuItemTools: TMenuItem;
@@ -105,16 +132,27 @@ type
     {$ENDIF}
     PageControlMain: TPageControl;
     PanelBkGnd: TPanel;
+    PopupMenuSynEditLog: TPopupMenu;
     SpinEditEthernetLocalPort: TSpinEdit;
+    SpinEditEtherneRemotePort: TSpinEdit;
     SpinEditSendPacketDelay: TSpinEdit;
     Splitter1: TSplitter;
     StatusBar: TStatusBar;
-    SynMemoLogging: TSynMemo;
+    SynMemoLog: TSynMemo;
     TabSheetGeneral: TTabSheet;
     TabSheetMain: TTabSheet;
     TabSheetEthernet: TTabSheet;
     TabSheetCom: TTabSheet;
+    TimerOpStackProcess: TTimer;
+    TimerOpStackTimer: TTimer;
     ToolBarMain: TToolBar;
+    ToolButton1: TToolButton;
+    ToolButton2: TToolButton;
+    ToolButton4: TToolButton;
+    ToolButton5: TToolButton;
+    ToolButton6: TToolButton;
+    ToolButtonLog: TToolButton;
+    ToolButton3: TToolButton;
     ToolButtonCOM: TToolButton;
     ToolButtonEthernet: TToolButton;
     ToolButtonDeleteThrottle: TToolButton;
@@ -126,11 +164,20 @@ type
     procedure ActionCloseAllThrottlesExecute(Sender: TObject);
     procedure ActionCOMConnectionExecute(Sender: TObject);
     procedure ActionCloseSelectedThrottlesExecute(Sender: TObject);
-    procedure ActionEthernetConnectionExecute(Sender: TObject);
+    procedure ActionDetailedLoggingExecute(Sender: TObject);
+    procedure ActionEthernetClientConnectionExecute(Sender: TObject);
+    procedure ActionEthernetListenerConnectionExecute(Sender: TObject);
     procedure ActionHideAllThrottlesExecute(Sender: TObject);
+    procedure ActionLogClearExecute(Sender: TObject);
+    procedure ActionLogCopyExecute(Sender: TObject);
+    procedure ActionLogCutExecute(Sender: TObject);
     procedure ActionLoggingExecute(Sender: TObject);
+    procedure ActionLogPasteExecute(Sender: TObject);
+    procedure ActionLogPauseExecute(Sender: TObject);
+    procedure ActionLogSelectAllExecute(Sender: TObject);
     procedure ActionRediscoverProxiesExecute(Sender: TObject);
     procedure ActionShowAllThrottlesExecute(Sender: TObject);
+    procedure ActionStartNodeExecute(Sender: TObject);
     procedure BitBtnRescanPortsClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure ComboBoxBaudChange(Sender: TObject);
@@ -148,19 +195,22 @@ type
     procedure FormShow(Sender: TObject);
     procedure SpinEditEthernetLocalPortChange(Sender: TObject);
     procedure SpinEditSendPacketDelayChange(Sender: TObject);
+    procedure SynMemoLogKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure TabSheetComHide(Sender: TObject);
     procedure TabSheetComShow(Sender: TObject);
     procedure TabSheetEthernetHide(Sender: TObject);
     procedure TabSheetEthernetShow(Sender: TObject);
     procedure TabSheetGeneralHide(Sender: TObject);
     procedure TabSheetGeneralShow(Sender: TObject);
+    procedure TimerOpStackProcessTimer(Sender: TObject);
+    procedure TimerOpStackTimerTimer(Sender: TObject);
     procedure TreeViewThrottlesCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
     FComConnectionState: TConnectionState;
-    FComPortHub: TComPortHub;
+    FConfigurationFile: WideString;
     FEthernetConnectionState: TConnectionState;
-    FEthernetHub: TEthernetHub;
+    FPaused: Boolean;
     FSettingsFilePath: WideString;
     FSettingsLocked: Boolean;
     FShownOnce: Boolean;
@@ -169,33 +219,34 @@ type
   protected
     procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
     procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
+    procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
+    procedure EthernetError(Sender: TObject; MessageStr: string);
     procedure ComPortError(Sender: TObject; MessageStr: String);
     procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
     procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
     procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
-    procedure HubConnect(HostIP: string; HostPort: Integer) ;
-    procedure HubDisconnect(HostIP: string; HostPort: Integer) ;
     procedure LoadSettings(SettingType: TLoadSettingType);
     procedure ScanComPorts;
     procedure StoreSettings(SettingType: TLoadSettingType);
     procedure ThrottleClosing(Throttle: TFormThrottle);
     procedure ThrottleHiding(Throttle: TFormThrottle);
     function DispatchTask(Task: TTaskOlcbBase): Boolean;
+    procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
 
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
     property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
+    property ConfigurationFile: WideString read FConfigurationFile write FConfigurationFile;
     property EthernetConnectionState: TConnectionState read FEthernetConnectionState write FEthernetConnectionState;
     {$IFDEF DARWIN}
     property OSXMenu: TMenuItem read FOSXMenu write FOSXMenu;
     property OSXSep1Cmd: TMenuItem read FOSXSep1Cmd write FOSXSep1Cmd;
     property OSXPrefCmd: TMenuItem read FOSXPrefCmd write FOSXPrefCmd;
     {$ENDIF}
+    property Paused: Boolean read FPaused write FPaused;
     property ShownOnce: Boolean read FShownOnce write FShownOnce;
     property SettingsLocked: Boolean read FSettingsLocked write FSettingsLocked;
   public
     { public declarations }
-    property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
-    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property SettingsFilePath: WideString read FSettingsFilePath write FSettingsFilePath;
     property Throttles: TThrottleList read FThrottles write FThrottles;
     procedure UpdateUI;
@@ -242,11 +293,8 @@ begin
       ComPortHub.AddComPort(GlobalSettings.ComPort.BaudRate, PATH_LINUX_DEV + GlobalSettings.ComPort.Port);
       {$ENDIF}
     {$ENDIF}
- //   ComPortHub.EnableReceiveMessages := ActionToolsCOMPortMessageLogShow.Checked;
- //   ComPortHub.EnableSendMessages := ActionToolsCOMPortMessageLogShow.Checked;
-
- //   if GlobalSettings.General.AutoScanNetworkAtBoot then
- //     ActionOpenLCBCommandIdentifyIDGlobal.Execute;
+    ComPortHub.EnableReceiveMessages := ActionLogging.Checked;
+    ComPortHub.EnableSendMessages := ActionLogging.Checked;
   end
   else begin
     ComPortHub.RemoveComPort(nil);
@@ -254,25 +302,50 @@ begin
   UpdateUI
 end;
 
+procedure TFormOlcbTrainMaster.ActionDetailedLoggingExecute(Sender: TObject);
+begin
+  ;
+end;
+
+procedure TFormOlcbTrainMaster.ActionEthernetClientConnectionExecute(Sender: TObject);
+begin
+  EthernetHub.Listener := False;
+  EthernetHub.EnableSendMessages := ActionLogging.Checked;
+  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
+  EthernetHub.Enabled := ActionEthernetClientConnection.Checked;
+end;
+
 procedure TFormOlcbTrainMaster.ActionCloseSelectedThrottlesExecute(Sender: TObject);
 begin
   ;
 end;
 
-procedure TFormOlcbTrainMaster.ActionEthernetConnectionExecute(Sender: TObject);
+procedure TFormOlcbTrainMaster.ActionEthernetListenerConnectionExecute(Sender: TObject);
 begin
-  if ActionEthernetConnection.Checked then
-  begin
-    EthernetHub.Enabled := True;
-  end
-  else begin
-    EthernetHub.Enabled := False;
-  end;
+  EthernetHub.Listener := True;
+  EthernetHub.EnableSendMessages := ActionLogging.Checked;
+  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
+  EthernetHub.Enabled := ActionEthernetListenerConnection.Checked;
 end;
 
 procedure TFormOlcbTrainMaster.ActionHideAllThrottlesExecute(Sender: TObject);
 begin
   Throttles.HideAll;
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogClearExecute(Sender: TObject);
+begin
+  SynMemoLog.ClearAll;
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogCopyExecute(Sender: TObject);
+begin
+  SynMemoLog.CommandProcessor(TSynEditorCommand(ecCopy), ' ', nil)
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogCutExecute(Sender: TObject);
+begin
+  SynMemoLog.CommandProcessor(TSynEditorCommand(ecCut), ' ', nil);
 end;
 
 procedure TFormOlcbTrainMaster.ActionLoggingExecute(Sender: TObject);
@@ -281,6 +354,21 @@ begin
   ComPortHub.EnableSendMessages := ActionLogging.Checked;
   EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.EnableSendMessages := ActionLogging.Checked;
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogPasteExecute(Sender: TObject);
+begin
+  SynMemoLog.CommandProcessor(TSynEditorCommand(ecPaste), ' ', nil);
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogPauseExecute(Sender: TObject);
+begin
+  Paused := not Paused;
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogSelectAllExecute(Sender: TObject);
+begin
+  SynMemoLog.SelectAll;
 end;
 
 procedure TFormOlcbTrainMaster.ActionRediscoverProxiesExecute(Sender: TObject);
@@ -302,6 +390,22 @@ begin
   Throttles.ShowAll;
 end;
 
+procedure TFormOlcbTrainMaster.ActionStartNodeExecute(Sender: TObject);
+begin
+  if OPStackCore_IsRunning then
+  begin
+    OPStackCore_Enable(False);
+    ActionStartNode.ImageIndex := 239;
+    ActionStartNode.Caption := 'Node Stopped';
+  end else
+  begin
+    ActionStartNode.ImageIndex := 240;
+    OPStackCore_Initialize;
+    OPStackCore_Enable(True);
+    ActionStartNode.Caption := 'Node Running';
+  end;
+end;
+
 procedure TFormOlcbTrainMaster.BitBtnRescanPortsClick(Sender: TObject);
 begin
   ScanComPorts;
@@ -309,7 +413,7 @@ end;
 
 procedure TFormOlcbTrainMaster.Button1Click(Sender: TObject);
 begin
-  EditEthernetLocalIP.Text := '127.0.0.1';
+  EditEthernetRemoteIP.Text := '127.0.0.1';
 end;
 
 procedure TFormOlcbTrainMaster.ComboBoxBaudChange(Sender: TObject);
@@ -350,21 +454,21 @@ end;
 
 procedure TFormOlcbTrainMaster.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  SynMemoLogging.BeginUpdate;
+  SynMemoLog.BeginUpdate;
   try
-    SynMemoLogging.Lines.Add(MessageStr);
+    SynMemoLog.Lines.Add(MessageStr);
   finally
-    SynMemoLogging.EndUpdate;
+    SynMemoLog.EndUpdate;
   end;
 end;
 
 procedure TFormOlcbTrainMaster.ComPortSendLogging(Sender: TObject; MessageStr: String);
 begin
-  SynMemoLogging.BeginUpdate;
+  SynMemoLog.BeginUpdate;
   try
-    SynMemoLogging.Lines.Add(MessageStr);
+    SynMemoLog.Lines.Add(MessageStr);
   finally
-    SynMemoLogging.EndUpdate;
+    SynMemoLog.EndUpdate;
   end;
 end;
 
@@ -390,7 +494,9 @@ begin
         lstEthernet:
           begin
             EditEthernetLocalIP.Text := GlobalSettings.Ethernet.LocalIP;
-            SpinEditEthernetLocalPort.Value := GlobalSettings.Ethernet.LocalPort;
+            EditEthernetRemoteIP.Text := GlobalSettings.Ethernet.RemoteIP;
+            SpinEditEthernetLocalPort.Value := GlobalSettings.Ethernet.ListenPort;
+            SpinEditEtherneRemotePort.Value := GlobalSettings.Ethernet.ClientPort;
           end;
         lstGeneral:
           begin
@@ -440,7 +546,9 @@ begin
       lstEthernet:
         begin
           GlobalSettings.Ethernet.LocalIP := EditEthernetLocalIP.Text;      // Should validate this
-          GlobalSettings.Ethernet.LocalPort := SpinEditEthernetLocalPort.Value;
+          GlobalSettings.Ethernet.RemoteIP := EditEthernetRemoteIP.Text;      // Should validate this
+          GlobalSettings.Ethernet.ListenPort := SpinEditEthernetLocalPort.Value;
+          GlobalSettings.Ethernet.ClientPort := SpinEditEtherneRemotePort.Value;
         end;
       lstGeneral:
         begin
@@ -453,37 +561,69 @@ begin
   end;
 end;
 
+procedure TFormOlcbTrainMaster.SynMemoLogKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+      // Windows/Linux/OSX already handled by SynEdit using the Windows Shortcuts
+  {$IFDEF darwin}
+  if (Shift = [ssMeta]) then
+  begin
+    case Key of
+    VK_C: SynMemoLog.CommandProcessor(TSynEditorCommand(ecCopy), ' ', nil);
+    VK_V: SynMemoLog.CommandProcessor(TSynEditorCommand(ecPaste), ' ', nil);
+    VK_X: SynMemoLog.CommandProcessor(TSynEditorCommand(ecCut), ' ', nil);
+    end;
+  end;
+  {$ENDIF}
+end;
+
 procedure TFormOlcbTrainMaster.ComPortError(Sender: TObject; MessageStr: String);
 begin
  ShowMessage(MessageStr);
- ActionCOMConnection.Checked := False;
+ PostMessage(Handle, WM_CLOSE_CONNECTIONS, 0, 0);
 end;
 
 procedure TFormOlcbTrainMaster.FormClose(Sender: TObject;
   var CloseAction: TCloseAction);
 begin
   Throttles.CloseAll;
-  FreeAndNil(FEthernetHub);
-  FreeAndNil(FComPortHub);
 end;
 
 procedure TFormOlcbTrainMaster.FormCreate(Sender: TObject);
+var
+  Markup: TSynEditMarkupHighlightAllCaret;
 begin
   Throttles := TThrottleList.Create;
   Throttles.OnThrottleClose := @ThrottleClosing;
   Throttles.OnThrottleHide := @ThrottleHiding;
-  ComPortHub := TComPortHub.Create;
-  ComPortHub.SyncErrorMessageFunc := @ComPortError;
-  ComPortHub.SyncConnectionStateFunc := @ComPortConnectionState;
-  EthernetHub := TEthernetHub.Create;
+  ComPortHub.OnReceiveMessage := @ComPortReceiveLogging;
+  ComPortHub.OnSendMessage := @ComPortSendLogging;
+  ComPortHub.OnErrorMessage := @ComPortError;
+  ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
+
+  EthernetHub.OnReceiveMessage := @EthernetReceiveLogging;
+  EthernetHub.OnSendMessage := @EthernetSendLogging;
+  EthernetHub.OnErrorMessage := @EthernetError;
+  EthernetHub.OnConnectionStateChange := @EthernetConnectState;
+
   FComConnectionState := csDisconnected;
   FEthernetConnectionState := csDisconnected;
   FShownOnce := False;
   FSettingsLocked := False;
-  ComPortHub.SyncReceiveMessageFunc := @ComPortReceiveLogging;
-  ComPortHub.SyncSendMessageFunc := @ComPortSendLogging;
-  EthernetHub.SyncReceiveMessageFunc := @EthernetReceiveLogging;
-  EthernetHub.SyncSendMessageFunc := @EthernetSendLogging;
+  FPaused := False;
+
+  Markup := SynMemoLog.MarkupByClass[TSynEditMarkupHighlightAllCaret] as TSynEditMarkupHighlightAllCaret;
+  Markup.MarkupInfo.FrameColor := clSkyBlue;
+  Markup.MarkupInfo.Background := clSkyBlue;
+  Markup.WaitTime := 500;
+  Markup.Trim := True;
+  Markup.FullWord := False;
+  Markup.IgnoreKeywords := False;
+
+  FConfigurationFile := '';
+
+//  EthernetHub.OnBeforeDestroyTask := @HubDestroyTask;
+
 end;
 
 procedure TFormOlcbTrainMaster.FormDestroy(Sender: TObject);
@@ -528,22 +668,15 @@ begin
     FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
     {$ELSE}
-    SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;
+   SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;
+    ConfigurationFile := GetSettingsPath + PATH_CONFIGURATION_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + PATH_SETTINGS_FILE));
+    SetConfigurationFile(ConfigurationFile);
     {$ENDIF}
+    ActionLogging.Execute;       // Set Logging by default
     ShownOnce := True;
   end;
   UpdateUI
-end;
-
-procedure TFormOlcbTrainMaster.HubConnect(HostIP: string; HostPort: Integer);
-begin
-
-end;
-
-procedure TFormOlcbTrainMaster.HubDisconnect(HostIP: string; HostPort: Integer);
-begin
-
 end;
 
 procedure TFormOlcbTrainMaster.TabSheetComHide(Sender: TObject);
@@ -596,6 +729,16 @@ begin
   //
 end;
 
+procedure TFormOlcbTrainMaster.TimerOpStackProcessTimer(Sender: TObject);
+begin
+  OPStackCore_Process;
+end;
+
+procedure TFormOlcbTrainMaster.TimerOpStackTimerTimer(Sender: TObject);
+begin
+  OPStackCore_Timer;
+end;
+
 function TFormOlcbTrainMaster.DispatchTask(Task: TTaskOlcbBase): Boolean;
 begin
   Result := False;
@@ -631,6 +774,19 @@ begin
   StoreSettings(lstGeneral)
 end;
 
+procedure TFormOlcbTrainMaster.EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
+begin
+  if (Sender is TEthernetListenDameonThread) or (not EthernetHub.Listener) then
+    EthernetConnectionState := ConnectionState;
+  UpdateUI
+end;
+
+procedure TFormOlcbTrainMaster.EthernetError(Sender: TObject; MessageStr: string);
+begin
+ ShowMessage(MessageStr);
+ PostMessage(Handle, WM_CLOSE_CONNECTIONS, 0, 0);
+end;
+
 procedure TFormOlcbTrainMaster.TreeViewThrottlesCreateNodeClass(
   Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
 begin
@@ -639,56 +795,105 @@ end;
 
 procedure TFormOlcbTrainMaster.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-
+  if not Paused then
+  begin
+    SynMemoLog.BeginUpdate();
+     try
+       if ActionDetailedLogging.Checked then
+         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
+       else
+         SynMemoLog.Lines.Add(MessageStr);
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
+  end;
 end;
 
 procedure TFormOlcbTrainMaster.EthernetSendLogging(Sender: TObject; MessageStr: String);
 begin
-
+  if not Paused then
+  begin
+     SynMemoLog.BeginUpdate();
+     try
+       if ActionDetailedLogging.Checked then
+         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, True))
+       else
+         SynMemoLog.Lines.Add(MessageStr);
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
+  end;
 end;
 
 procedure TFormOlcbTrainMaster.UpdateUI;
 begin
-  ActionCloseSelectedThrottles.Enabled := TreeViewThrottles.Selected <> nil;
-  ActionShowAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
-  ActionCloseAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
-  ActionHideAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
+  if ComponentState * [csDestroying] = [] then
+  begin
+    ActionCloseSelectedThrottles.Enabled := TreeViewThrottles.Selected <> nil;
+    ActionShowAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
+    ActionCloseAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
+    ActionHideAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
 
-  case ComConnectionState of
-    csDisconnected :
-      begin
-        ActionCOMConnection.ImageIndex := 892;
-        Statusbar.Panels[0].Text := 'COM: Disconnected';
-      end;
-    csConnecting :
-      begin
-        ActionCOMConnection.ImageIndex := 892;
-        Statusbar.Panels[0].Text := 'COM: Connecting';
-      end;
-    csConnected :
-      begin
-        ActionCOMConnection.ImageIndex := 891;
-        Statusbar.Panels[0].Text := 'COM: Connected';
-      end;
-  end;
+    case ComConnectionState of
+      csDisconnected :
+        begin
+          ActionCOMConnection.ImageIndex := 892;
+          Statusbar.Panels[0].Text := 'COM: Disconnected';
+        end;
+      csConnecting :
+        begin
+          ActionCOMConnection.ImageIndex := 892;
+          Statusbar.Panels[0].Text := 'COM: Connecting';
+        end;
+      csConnected :
+        begin
+          ActionCOMConnection.ImageIndex := 891;
+          Statusbar.Panels[0].Text := 'COM: Connected';
+        end;
+    end;
 
-  case EthernetConnectionState of
-    csDisconnected :
-      begin
-        ActionEthernetConnection.ImageIndex := 989;
-        Statusbar.Panels[1].Text := 'Ethernet: Disconnected';
-      end;
-    csConnecting :
-      begin
-        ActionEthernetConnection.ImageIndex := 989;
-       Statusbar.Panels[1].Text := 'Ethernet: Connecting';
-      end;
-    csConnected :
-      begin
-        ActionEthernetConnection.ImageIndex := 988;
-        Statusbar.Panels[1].Text := 'Ethernet: Connected';
-      end;
+    case EthernetConnectionState of
+      csDisconnected :
+        begin
+          ActionEthernetListenerConnection.ImageIndex := 989;
+          Statusbar.Panels[1].Text := 'Ethernet: Disconnected';
+        end;
+      csConnecting :
+        begin
+          ActionEthernetListenerConnection.ImageIndex := 989;
+         Statusbar.Panels[1].Text := 'Ethernet: Connecting';
+        end;
+      csDisconnecting :
+        begin
+          ActionEthernetListenerConnection.ImageIndex := 989;
+          Statusbar.Panels[1].Text := 'Ethernet: Disconnecting';
+        end;
+      csConnected :
+        begin
+          ActionEthernetListenerConnection.ImageIndex := 988;
+          if EthernetHub.Listener then
+            Statusbar.Panels[1].Text := 'Connected - Listening on: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort)
+          else
+            Statusbar.Panels[1].Text := 'Connected - Client: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ClientPort)
+        end;
+    end;
+
+    if Assigned(EthernetHub) then
+      Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetHub.ClientThreadList.Count);
   end;
+end;
+
+procedure TFormOlcbTrainMaster.WMCloseConnections(var Message: TMessage);
+begin
+  if ActionEthernetListenerConnection.Checked then
+    ActionEthernetListenerConnection.Execute;
+  if ActionEthernetClientConnection.Checked then
+    ActionEthernetClientConnection.Execute;
+  if ActionCOMConnection.Checked then
+    ActionCOMConnection.Execute;
+  UpdateUI
 end;
 
 end.

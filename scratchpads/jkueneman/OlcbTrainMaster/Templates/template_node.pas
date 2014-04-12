@@ -26,7 +26,7 @@ uses
 // Enter the number of nodes this build will emulate, must be at least 1, if more than
 // one then SUPPORT_VIRTUAL_NODES must be enabled in the Options.inc file
 const
-  USER_MAX_NODE_COUNT = 65;                                                     // Command Station + 64 Train Nodes
+  USER_MAX_NODE_COUNT = 65;                                                     // One Server + 64 Throttles
 
 // Calculate the number of bytes needed for internal OPStack structures for Events
 // Do this by selecting the Largest number of Events either Consumed or Produced in
@@ -105,7 +105,7 @@ const
 
 // Set Protocols that the node(s) will support and return in the Protocol Identification Protcol
 const
-  USER_PIV_SUPPORTED_PROTOCOL_COUNT = 9;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
+  USER_PIV_SUPPORTED_PROTOCOL_COUNT = 7;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
   USER_PIV_SUPPORTED_PROTOCOLS: array[0..USER_PIV_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (     // Look at the PIV_xxxx constants for more Protocols
     ($80, $00, $00, $00, $00, $00),                                             // Protocol
     ($40, $00, $00, $00, $00, $00),                                             // Datagram Protocol
@@ -113,9 +113,7 @@ const
     ($10, $00, $00, $00, $00, $00),                                             // Memory Configruation Protocol
     ($00, $08, $00, $00, $00, $00),                                             // CDI Protocol
     ($00, $10, $00, $00, $00, $00),                                             // SNIP Protocol
-    ($00, $40, $00, $00, $00, $00),                                             // ACDI Protocol
-    ($00, $04, $00, $00, $00, $00),                                             // Traction Protocol
-    ($00, $01, $00, $00, $00, $00)                                              // Traction Proxy Protocol
+    ($00, $40, $00, $00, $00, $00)                                              // ACDI Protocol
     );
 
 
@@ -125,7 +123,7 @@ const
   USER_CONFIGMEM_OPTIONS = MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES or MCO_UNALIGNED_WRITES;  // The commands that are avialable to the system, see the MCO_xxx constants
   USER_CONFIGMEM_WRITE_LENGTH = MCWL_ONE_BYTE or MCWL_TWO_BYTE or MCWL_FOUR_BYTE or MCWL_64_BYTE or MCWL_ARBITRARY_BYTE;                      // The length of writes supported by the EEPROM, see the MCWL_xxx constants
   USER_CONFIGMEM_HIGHEST_SPACE = MSI_CDI;                                                                                                     // Highest space, see MSI_xxx constants
-  USER_CONFIGMEM_LOWEST_SPACE = MSI_ACDI_USER;                                                                                                // Lowest space, see MSI_xxx constants
+  USER_CONFIGMEM_LOWEST_SPACE = MSI_ACDI_USER;                                                                                                      // Lowest space, see MSI_xxx constants
 
 
  // **************************************************************************************************************************************************************
@@ -133,18 +131,18 @@ const
  // **************************************************************************************************************************************************************
 const
   USER_ACDI_MFG_VERSION = 1;
-
+  
 const
   USER_MAX_ACDI_MFG_ARRAY = 27;
   USER_ACDI_MFG_STRINGS: array[0..USER_MAX_ACDI_MFG_ARRAY - 1] of byte = (
       $01,                                              // Version ID
       $4D,$75,$73,$74,$61,$6E,$67,$70,$65,$61,$6B,$00,  // Mustangpeak
-      $43,$45,$31,$30,$30,$00,  // CE100
+      $54,$4D,$31,$30,$30,$00,  // TM100
       $31,$2E,$30,$00,  // 1.0
-      $31,$2E,$30,$00  // 1.0
+      $31,$2E,$30,$00   // 1.0
     );
-
-    // **************************************************************************************************************************************************************
+    
+  // **************************************************************************************************************************************************************
   // ACDI User Memory ($FB) Space Implementation
   //   Defines the Configuration Memory size and offsets into the configuration memory
   //   where the user definable string is found.  There are 2 user definable strings:
@@ -164,26 +162,26 @@ const
   USER_MAX_ACDI_USER_NAME_CONFIG_DATA_OFFSET = 0;
   USER_MAX_ACDI_USER_NAME_CONFIG_DATA = 63;      // This MUST MATCH the value defined in the CDI segment for $FB
   USER_MAX_ACDI_USER_DESC_CONFIG_DATA = 64;      // This MUST MATCH the value defined in the CDI segment for $FB
-
+  
 
   // **************************************************************************************************************************************************************
   // CDI Memory ($FF) Space Implementation
   // **************************************************************************************************************************************************************
 const
-  USER_MAX_CDI_ARRAY = 1751;
+  USER_MAX_CDI_ARRAY = 1757;
   USER_CDI_ARRAY: array[0..USER_MAX_CDI_ARRAY-1] of byte = (
     $3C, $3F, $78, $6D, $6C, $20, $76, $65, $72, $73, $69, $6F, $6E, $3D, $22, $31, $2E, $30, $22, $20, $65, $6E, $63, $6F, $64, $69, $6E, $67, $3D, $22, $55, $54, $46, $2D, $38, $22, $3F, $3E,    // <?xml version="1.0" encoding="UTF-8"?>
     $3C, $3F, $78, $6D, $6C, $2D, $73, $74, $79, $6C, $65, $73, $68, $65, $65, $74, $20, $74, $79, $70, $65, $3D, $22, $74, $65, $78, $74, $2F, $78, $73, $6C, $22, $20, $68, $72, $65, $66, $3D, $22, $68, $74, $74, $70, $3A, $2F, $2F, $6F, $70, $65, $6E, $6C, $63, $62, $2E, $6F, $72, $67, $2F, $74, $72, $75, $6E, $6B, $2F, $70, $72, $6F, $74, $6F, $74, $79, $70, $65, $73, $2F, $78, $6D, $6C, $2F, $78, $73, $6C, $74, $2F, $63, $64, $69, $2E, $78, $73, $6C, $22, $3F, $3E,    // <?xml-stylesheet type="text/xsl" href="http://openlcb.org/trunk/prototypes/xml/xslt/cdi.xsl"?>
     $3C, $63, $64, $69, $20, $78, $6D, $6C, $6E, $73, $3A, $78, $73, $69, $3D, $22, $68, $74, $74, $70, $3A, $2F, $2F, $77, $77, $77, $2E, $77, $33, $2E, $6F, $72, $67, $2F, $32, $30, $30, $31, $2F, $58, $4D, $4C, $53, $63, $68, $65, $6D, $61, $2D, $69, $6E, $73, $74, $61, $6E, $63, $65, $22, $20, $78, $73, $69, $3A, $6E, $6F, $4E, $61, $6D, $65, $73, $70, $61, $63, $65, $53, $63, $68, $65, $6D, $61, $4C, $6F, $63, $61, $74, $69, $6F, $6E, $3D, $22, $68, $74, $74, $70, $3A, $2F, $2F, $6F, $70, $65, $6E, $6C, $63, $62, $2E, $6F, $72, $67, $2F, $74, $72, $75, $6E, $6B, $2F, $73, $70, $65, $63, $73, $2F, $73, $63, $68, $65, $6D, $61, $2F, $63, $64, $69, $2E, $78, $73, $64, $22, $3E,    // <cdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/specs/schema/cdi.xsd">
     $3C, $69, $64, $65, $6E, $74, $69, $66, $69, $63, $61, $74, $69, $6F, $6E, $3E,    // <identification>
     $3C, $6D, $61, $6E, $75, $66, $61, $63, $74, $75, $72, $65, $72, $3E, $4D, $75, $73, $74, $61, $6E, $67, $70, $65, $61, $6B, $3C, $2F, $6D, $61, $6E, $75, $66, $61, $63, $74, $75, $72, $65, $72, $3E,    // <manufacturer>Mustangpeak</manufacturer>
-    $3C, $6D, $6F, $64, $65, $6C, $3E, $43, $45, $31, $30, $30, $3C, $2F, $6D, $6F, $64, $65, $6C, $3E,    // <model>CE100</model>
+    $3C, $6D, $6F, $64, $65, $6C, $3E, $54, $4D, $31, $30, $30, $3C, $2F, $6D, $6F, $64, $65, $6C, $3E,    // <model>TM100</model>
     $3C, $68, $61, $72, $64, $77, $61, $72, $65, $56, $65, $72, $73, $69, $6F, $6E, $3E, $31, $2E, $30, $3C, $2F, $68, $61, $72, $64, $77, $61, $72, $65, $56, $65, $72, $73, $69, $6F, $6E, $3E,    // <hardwareVersion>1.0</hardwareVersion>
     $3C, $73, $6F, $66, $74, $77, $61, $72, $65, $56, $65, $72, $73, $69, $6F, $6E, $3E, $31, $2E, $30, $3C, $2F, $73, $6F, $66, $74, $77, $61, $72, $65, $56, $65, $72, $73, $69, $6F, $6E, $3E,    // <softwareVersion>1.0</softwareVersion>
     $3C, $6D, $61, $70, $3E,    // <map>
     $3C, $72, $65, $6C, $61, $74, $69, $6F, $6E, $3E,    // <relation>
     $3C, $70, $72, $6F, $70, $65, $72, $74, $79, $3E, $44, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3C, $2F, $70, $72, $6F, $70, $65, $72, $74, $79, $3E,    // <property>Description</property>
-    $3C, $76, $61, $6C, $75, $65, $3E, $4D, $75, $73, $74, $61, $6E, $67, $70, $65, $61, $6B, $20, $43, $6F, $6D, $6D, $61, $6E, $64, $20, $53, $74, $61, $74, $69, $6F, $6E, $20, $45, $6D, $75, $6C, $61, $74, $6F, $72, $3C, $2F, $76, $61, $6C, $75, $65, $3E,    // <value>Mustangpeak Command Station Emulator</value>
+    $3C, $76, $61, $6C, $75, $65, $3E, $4D, $75, $73, $74, $61, $6E, $67, $70, $65, $61, $6B, $20, $54, $72, $61, $69, $6E, $4D, $61, $73, $74, $65, $72, $20, $54, $68, $72, $6F, $74, $74, $6C, $65, $20, $53, $65, $72, $76, $65, $72, $3C, $2F, $76, $61, $6C, $75, $65, $3E,    // <value>Mustangpeak TrainMaster Throttle Server</value>
     $3C, $2F, $72, $65, $6C, $61, $74, $69, $6F, $6E, $3E,    // </relation>
     $3C, $72, $65, $6C, $61, $74, $69, $6F, $6E, $3E,    // <relation>
     $3C, $70, $72, $6F, $70, $65, $72, $74, $79, $3E, $53, $74, $61, $74, $75, $73, $3C, $2F, $70, $72, $6F, $70, $65, $72, $74, $79, $3E,    // <property>Status</property>
@@ -194,7 +192,7 @@ const
     $3C, $61, $63, $64, $69, $20, $66, $69, $78, $65, $64, $3D, $22, $31, $22, $20, $76, $61, $72, $3D, $22, $31, $22, $20, $2F, $3E,    // <acdi fixed="1" var="1" />
     $3C, $73, $65, $67, $6D, $65, $6E, $74, $20, $6F, $72, $69, $67, $69, $6E, $3D, $22, $30, $22, $20, $73, $70, $61, $63, $65, $3D, $22, $32, $35, $33, $22, $3E,    // <segment origin="0" space="253">
     $3C, $6E, $61, $6D, $65, $3E, $4F, $70, $74, $69, $6F, $6E, $73, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>Options</name>
-    $3C, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E, $4F, $70, $74, $69, $6F, $6E, $73, $20, $66, $6F, $72, $20, $74, $68, $65, $20, $43, $6F, $6D, $6D, $61, $6E, $64, $20, $53, $74, $61, $74, $69, $6F, $6E, $20, $45, $6D, $75, $6C, $61, $74, $6F, $72, $3C, $2F, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E,    // <description>Options for the Command Station Emulator</description>
+    $3C, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E, $4F, $70, $74, $69, $6F, $6E, $73, $20, $66, $6F, $72, $20, $74, $68, $65, $20, $54, $72, $61, $69, $6E, $4D, $61, $73, $74, $65, $72, $20, $54, $68, $72, $6F, $74, $74, $6C, $65, $20, $53, $65, $72, $76, $65, $72, $3C, $2F, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E,    // <description>Options for the TrainMaster Throttle Server</description>
     $3C, $67, $72, $6F, $75, $70, $20, $6F, $66, $66, $73, $65, $74, $3D, $22, $31, $22, $3E,    // <group offset="1">
     $3C, $6E, $61, $6D, $65, $3E, $55, $73, $65, $72, $20, $44, $61, $74, $61, $3C, $2F, $6E, $61, $6D, $65, $3E,    // <name>User Data</name>
     $3C, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E, $41, $64, $64, $20, $79, $6F, $75, $72, $20, $6F, $77, $6E, $20, $75, $6E, $69, $71, $75, $65, $20, $6E, $6F, $64, $65, $20, $69, $6E, $66, $6F, $20, $68, $65, $72, $65, $3C, $2F, $64, $65, $73, $63, $72, $69, $70, $74, $69, $6F, $6E, $3E,    // <description>Add your own unique node info here</description>

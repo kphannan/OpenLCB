@@ -12,7 +12,7 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
   OnHide = FormHide
   OnShow = FormShow
   Position = poDefault
-  LCLVersion = '1.2.0.1'
+  LCLVersion = '1.2.0.3'
   object GroupBoxAllocation: TGroupBox
     Left = 392
     Height = 368
@@ -366,7 +366,6 @@ object FormAwesomeThrottle: TFormAwesomeThrottle
     object ActionAllocationSearchForTrain: TAction
       Category = 'Allocation'
       Caption = 'Search For Train'
-      OnExecute = ActionAllocationSearchForTrainExecute
     end
     object ActionAllocationRelease: TAction
       Category = 'Allocation'

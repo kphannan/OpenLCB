@@ -135,7 +135,6 @@ type
     procedure ActionAllocationEditCustomizationExecute(Sender: TObject);
     procedure ActionAllocationFreeExecute(Sender: TObject);
     procedure ActionAllocationReleaseExecute(Sender: TObject);
-    procedure ActionAllocationSearchForTrainExecute(Sender: TObject);
     procedure ActionControlEmergencyStopExecute(Sender: TObject);
     procedure ActionControlStopExecute(Sender: TObject);
     procedure ActionFunction0Execute(Sender: TObject);
@@ -361,11 +360,6 @@ begin
   Allocated := False;
   AllocatedAlias := 0;
   UpdateUI;
-end;
-
-procedure TFormAwesomeThrottle.ActionAllocationSearchForTrainExecute(Sender: TObject);
-begin
-
 end;
 
 procedure TFormAwesomeThrottle.ActionControlEmergencyStopExecute(Sender: TObject);
@@ -786,7 +780,7 @@ procedure TFormAwesomeThrottle.RunTractionQueryIsIdle(WaitTime: Cardinal);
 var
   Task: TTaskIdentifyProducer;
 begin
-  Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
+ { Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   if DispatchTask(Task) then
   begin
@@ -794,7 +788,7 @@ begin
     TimerGeneralTimeout.Interval := WaitTime;
     TimerGeneralTimeout.Enabled := True;
     WaitTimeTask := gwttQueryIsIdle;
-  end;
+  end;  }
 end;
 
 procedure TFormAwesomeThrottle.RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
@@ -1227,7 +1221,7 @@ begin
     gwttQueryIsIdle :
       begin
         // Looking for any Idle Proxy, if found handle here and drop only errors to the General Timer
-        if (EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_IDLE) then
+   //     if (EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_IDLE) then
         begin
           TimerGeneralTimeout.Enabled := False;   // Done
           PotentialAlias := EventTask.MessageHelper.SourceAliasID;

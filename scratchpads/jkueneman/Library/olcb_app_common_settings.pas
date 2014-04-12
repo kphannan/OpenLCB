@@ -31,7 +31,9 @@ const
 
   STR_INI_ETHERNET_SECTION = 'Ethernet';
   STR_INI_ETHERNET_LOCAL_IP = 'LocalIP';
-  STR_INI_ETHERNET_LOCAL_PORT = 'LocalPort';
+  STR_INI_ETHERNET_REMOTE_IP = 'RemoteIP';
+  STR_INI_ETHERNET_CLIENT_PORT = 'ClientPort';
+  STR_INI_ETHERNET_LISTEN_PORT = 'ListenPort';
 
 
 
@@ -131,14 +133,18 @@ type
 
   TEthernetSettings = class
   private
+    FClientPort: Integer;
+    FListenPort: Integer;
     FLocalIP: string;
-    FLocalPort: Integer;
+    FRemoteIP: string;
   public
     constructor Create;
     procedure LoadFromFile(IniFile: TIniFile);
     procedure SaveToFile(IniFile: TIniFile);
     property LocalIP: string read FLocalIP write FLocalIP;
-    property LocalPort: Integer read FLocalPort write FLocalPort;
+    property RemoteIP: string read FRemoteIP write FRemoteIP;
+    property ListenPort: Integer read FListenPort write FListenPort;            // Storage if the connection is a listener
+    property ClientPort: Integer read FClientPort write FClientPort;             // Storage if the connection is a client
   end;
 
   // Settings that all OLCB Applications will have in common
@@ -173,19 +179,25 @@ implementation
 constructor TEthernetSettings.Create;
 begin
   LocalIP := '0.0.0.0';
-  LocalPort := 12021;
+  RemoteIP := '0.0.0.0';
+  ListenPort := 12021;
+  ClientPort := 12022;
 end;
 
 procedure TEthernetSettings.LoadFromFile(IniFile: TIniFile);
 begin
   LocalIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_IP, '0.0.0.0');
-  LocalPort := IniFile.ReadInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_PORT, 12021);
+  RemoteIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_REMOTE_IP, '0.0.0.0');
+  ListenPort := IniFile.ReadInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LISTEN_PORT, 12021);
+  ClientPort := IniFile.ReadInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_CLIENT_PORT, 12022);
 end;
 
 procedure TEthernetSettings.SaveToFile(IniFile: TIniFile);
 begin
   IniFile.WriteString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_IP, FLocalIP);
-  IniFile.WriteInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_PORT, FLocalPort);
+  IniFile.WriteString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_REMOTE_IP, FRemoteIP);
+  IniFile.WriteInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_CLIENT_PORT, FClientPort);
+  IniFile.WriteInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LISTEN_PORT, FListenPort);
 end;
 
 { TThrottleSettings }

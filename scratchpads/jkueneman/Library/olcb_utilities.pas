@@ -28,7 +28,7 @@ uses
   {$ELSE}
   LclIntf,
   {$ENDIF}
-  Math, DOM, XMLRead, math_float16;
+  Math, DOM, XMLRead, math_float16, opstackdefines;
 
 const
   LF = #13+#10;
@@ -54,11 +54,12 @@ const
   XML_ELECMENT_TEST_MATRIX        = 'TestMatrix';
 
 type
-  TConnectionState = (csConnecting, csConnected, csDisconnected);
+  TConnectionState = (csConnecting, csConnected, csDisconnecting, csDisconnected);
 
 type
-  TSyncRawMessageFunc = procedure(Sender: TObject; MessageStr: String) of object;
-  TSyncConnectionStateFunc = procedure (Sender: TObject; ConnectionState: TConnectionState) of object;
+  TOnRawMessage = procedure(Sender: TObject; MessageStr: String) of object;
+  TOnConnectionStateChange = procedure (Sender: TObject; ConnectionState: TConnectionState) of object;
+  TOnOPStackCallback = procedure(GridConnectStrPtr: PGridConnectString);
 
   TCANByteArray = array[0..CAN_BYTE_COUNT-1] of Byte;
   PCANByteArray = ^TCANByteArray;

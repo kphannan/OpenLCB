@@ -8,7 +8,7 @@ interface
 
 uses
   {$IFDEF FPC}
-  Classes, SysUtils, blcksock, synsock, Forms, Dialogs, ethernet_hub,
+  Classes, SysUtils, blcksock, synsock, Forms, Dialogs, com_port_hub,
   {$ENDIF}
   gridconnect,
   opstackbuffers,
@@ -41,7 +41,7 @@ function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 
 {$IFDEF FPC}
 var
-  EthernetHub: TEthernetHub;
+  ComPortHub: TComPortHub;
 {$ENDIF}
 
 implementation
@@ -129,8 +129,8 @@ begin
           OPStackBuffers_DeAllocateMessage(AMessage);
 
           {$IFDEF FPC}
-          if EthernetHub.Enabled then
-            EthernetHub.AddGridConnectStr(GridConnectStr);
+          if ComPortHub.Enabled then
+            ComPortHub.AddGridConnectStr(GridConnectStr);
           {$ENDIF}
         end;
     MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
@@ -190,10 +190,10 @@ end;
 
 {$IFDEF FPC}
 initialization
-  EthernetHub := TEthernetHub.Create;
+  ComPortHub := TComPortHub.Create;
 
 finalization
-  EthernetHub.Enabled := False;
+  ComportHub.Enabled := False;
 {$ENDIF}
 
 end.

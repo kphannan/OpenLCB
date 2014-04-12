@@ -48,13 +48,15 @@ type
   TComPortHub = class
   private
     FComPortThreadList: TComPortThreadList;
+    FEnableOPStackCallback: Boolean;
     FEnableReceiveMessages: Boolean;
     FEnableSendMessages: Boolean;
     FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;
-    FSyncConnectionStateFunc: TSyncConnectionStateFunc;
-    FSyncErrorMessageFunc: TSyncRawMessageFunc;
-    FSyncReceiveMessageFunc: TSyncRawMessageFunc;
-    FSyncSendMessageFunc: TSyncRawMessageFunc;
+    FOnOPstackCallback: TOnOPStackCallback;
+    FSyncConnectionStateFunc: TOnConnectionStateChange;
+    FOnErrorMessage: TOnRawMessage;
+    FOnReceiveMessage: TOnRawMessage;
+    FOnSendMessage: TOnRawMessage;
     function GetConnected: Boolean;
     procedure SetEnableReceiveMessages(AValue: Boolean);
     procedure SetEnableSendMessages(AValue: Boolean);
@@ -64,6 +66,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    function AddGridConnectStr(GridConnectStr: ansistring): Boolean;
     function AddTask(NewTask: TTaskOlcbBase): Boolean;
     function AddComPort(BaudRate: DWord; Port: String): TComPortThread;
     procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
@@ -71,11 +74,13 @@ type
     property Connected: Boolean read GetConnected;
     property EnableReceiveMessages: Boolean read FEnableReceiveMessages write SetEnableReceiveMessages;
     property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
+    property EnableOPStackCallback: Boolean read FEnableOPStackCallback write FEnableOPStackCallback;
     property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
-    property SyncConnectionStateFunc: TSyncConnectionStateFunc read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
-    property SyncErrorMessageFunc: TSyncRawMessageFunc read FSyncErrorMessageFunc write FSyncErrorMessageFunc;
-    property SyncReceiveMessageFunc: TSyncRawMessageFunc read FSyncReceiveMessageFunc write FSyncReceiveMessageFunc;
-    property SyncSendMessageFunc: TSyncRawMessageFunc read FSyncSendMessageFunc write FSyncSendMessageFunc;
+    property OnConnectionStateChange: TOnConnectionStateChange read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
+    property OnErrorMessage: TOnRawMessage read FOnErrorMessage write FOnErrorMessage;
+    property OnReceiveMessage: TOnRawMessage read FOnReceiveMessage write FOnReceiveMessage;
+    property OnSendMessage: TOnRawMessage read FOnSendMessage write FOnSendMessage;
+    property OnOPStackCallback: TOnOPStackCallback read FOnOPstackCallback write FOnOPStackCallback;
   end;
 
 
@@ -164,10 +169,12 @@ begin
   inherited Create;
   ComPortThreadList := TComPortThreadList.Create;
   FOnBeforeDestroyTask := nil;
-  FSyncErrorMessageFunc := nil;
-  FSyncReceiveMessageFunc := nil;
-  FSyncSendMessageFunc := nil;
+  FOnErrorMessage := nil;
+  FOnReceiveMessage := nil;
+  FOnSendMessage := nil;
   FSyncConnectionStateFunc := nil;
+  FOnOPStackCallback := nil;
+  FEnableOPStackCallback := False;
 end;
 
 destructor TComPortHub.Destroy;
@@ -226,12 +233,16 @@ begin
   Result.FreeOnTerminate := True;
   Result.BaudRate := BaudRate;
   Result.Port := Port;
-  Result.SyncErrorMessageFunc := SyncErrorMessageFunc;
-  Result.SyncReceiveMessageFunc := SyncReceiveMessageFunc;
-  Result.SyncSendMessageFunc := SyncSendMessageFunc;
-  Result.SyncConnectionStateFunc := SyncConnectionStateFunc;
+  Result.OnErrorMessage := OnErrorMessage;
+  Result.OnReceiveMessage := OnReceiveMessage;
+  Result.OnSendMessage := OnSendMessage;
+  Result.OnConnectionStateChange := OnConnectionStateChange;
   Result.OnBeforeDestroyTask := OnBeforeDestroyTask;
   Result.OnBeforeDestroy := @DoBeforeThreadDestroy;
+  Result.OnOPStackCallback := OnOPStackCallback;
+  Result.EnableOPStackCallback := EnableOPStackCallback;
+  Result.EnableReceiveMessages := EnableReceiveMessages;
+  Result.EnableSendMessages := EnableSendMessages;
 
   List := ComPortThreadList.LockList;
   try
@@ -240,6 +251,20 @@ begin
     ComPortThreadList.UnlockList;
   end;
   Result.Suspended := False;
+end;
+
+function TComPortHub.AddGridConnectStr(GridConnectStr: ansistring): Boolean;
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ComPortThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TComPortThread( List[i]).InternalAdd(GridConnectStr);
+  finally
+    ComPortThreadList.UnlockList;
+  end;
 end;
 
 procedure TComPortHub.RemoveAndFreeTasks(RemoveKey: PtrInt);
@@ -267,9 +292,9 @@ begin
     begin
       if (ComPort = TComPortThread( List[i])) or (ComPort = nil) then
       begin
-        TComPortThread( List[i]).SyncReceiveMessageFunc := nil;
-        TComPortThread( List[i]).SyncSendMessageFunc := nil;
-        TComPortThread( List[i]).SyncErrorMessageFunc := nil;
+        TComPortThread( List[i]).OnReceiveMessage := nil;
+        TComPortThread( List[i]).OnSendMessage := nil;
+        TComPortThread( List[i]).OnErrorMessage := nil;
         TComPortThread( List[i]).OnBeforeDestroyTask := nil;
         TComPortThread( List[i]).RemoveAndFreeTasks(0);
         TComPortThread( List[i]).Terminate;
@@ -297,64 +322,67 @@ begin
   Serial.LinuxLock:=False;
   Serial.RaiseExcept:=False;
   Serial.Connect(Port);
-  try
-    if Serial.InstanceActive then
-    begin
-      Serial.Config(BaudRate, 8, 'N', 0, False, False);                         // FTDI Driver uses no stop bits for non-standard baud rates.
-      Connected:=True;
+  if Serial.LastError = 0 then
+  begin
+    Serial.Config(BaudRate, 8, 'N', 0, False, False);                         // FTDI Driver uses no stop bits for non-standard baud rates.
+    if Serial.LastError = 0 then
       ConnectionState := csConnected;
-      Synchronize(@SyncConnectionState);
-      while not Terminated do
-      begin
-        ThreadSwitch;
+  end;
 
-        List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
-        try
-          if List.Count > 0 then
-          begin
-            if TStringList( List[0]).Count > 0 then
-            begin
-              SendStr := TStringList( List[0])[0];
-              TStringList( List[0]).Delete(0);
-            end;
-          end;
-        finally
-          ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
-        end;
+  if Serial.LastError <> 0 then
+  begin
+    BufferRawMessage := Serial.LastErrorDesc;
+    Synchronize(@SyncOnErrorMessage);
+  end;
 
-        CANFrameParserDatagramSendManager.ProcessSend;                          // *** See if there is a datagram that will add a message to send ***
-        CANFrameParserStreamSendManager.ProcessSend;
-        OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
-        if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
-        begin
-          if Helper.Decompose(SendStr) then
-          begin
-            if GlobalSettings.General.SendPacketDelay > 0 then
-              Sleep(GlobalSettings.General.SendPacketDelay);
-            if EnableSendMessages then
-            begin
-              BufferRawMessage := SendStr;
-              Synchronize(@SyncSendMessage);
-            end;
-            Serial.SendString(SendStr + LF);
-          end;
-          SendStr := '';
-        end;
+  Synchronize(@SyncOnConnectionState);
 
-        if GlobalSettings.General.SendPacketDelay > 0 then                      // *** Grab the next message from the wire ***
-          Sleep(GlobalSettings.General.SendPacketDelay);
-
-        DecomposeAndDispatchGridConnectString(Serial.Recvstring(0), Helper);
-      end;
-    end else
+  try
+    while not Terminated and (ConnectionState = csConnected) do
     begin
-      BufferRawMessage := Serial.LastErrorDesc;
-      Synchronize(@SyncErrorMessage)
+      ThreadSwitch;
+
+      List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
+      try
+        if List.Count > 0 then
+        begin
+          if TStringList( List[0]).Count > 0 then
+          begin
+            SendStr := TStringList( List[0])[0];
+            TStringList( List[0]).Delete(0);
+          end;
+        end;
+      finally
+        ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
+      end;
+
+      CANFrameParserDatagramSendManager.ProcessSend;                          // *** See if there is a datagram that will add a message to send ***
+      CANFrameParserStreamSendManager.ProcessSend;
+      OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
+      if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
+      begin
+        if Helper.Decompose(SendStr) then
+        begin
+          if GlobalSettings.General.SendPacketDelay > 0 then
+            Sleep(GlobalSettings.General.SendPacketDelay);
+          if EnableSendMessages then
+          begin
+            BufferRawMessage := SendStr;
+            Synchronize(@SyncOnSendMessage);
+          end;
+          Serial.SendString(SendStr + LF);
+        end;
+        SendStr := '';
+      end;
+
+      if GlobalSettings.General.SendPacketDelay > 0 then                      // *** Grab the next message from the wire ***
+        Sleep(GlobalSettings.General.SendPacketDelay);
+
+      DecomposeAndDispatchGridConnectString(Serial.Recvstring(0), Helper);
     end;
   finally
-    if Connected then
+    if Serial.InstanceActive then
       Serial.CloseSocket;
-    Connected := False;
     Serial.Free;
     Helper.Free;
     ExecuteEnd;

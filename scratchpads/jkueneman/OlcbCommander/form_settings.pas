@@ -152,7 +152,7 @@ begin
 
   // Ethernet
   GlobalSettings.Ethernet.LocalIP := EditEthernetLocalIP.Text;      // Should validate this
-  GlobalSettings.Ethernet.LocalPort := SpinEditEthernetLocalPort.Value;
+  GlobalSettings.Ethernet.ClientPort := SpinEditEthernetLocalPort.Value;
 
   GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
 
@@ -183,7 +183,7 @@ begin
 
   //Ethernet
   EditEthernetLocalIP.Text := GlobalSettings.Ethernet.LocalIP;
-  SpinEditEthernetLocalPort.Value := GlobalSettings.Ethernet.LocalPort;
+  SpinEditEthernetLocalPort.Value := GlobalSettings.Ethernet.ClientPort;
 end;
 
 procedure TFormSettings.FormHide(Sender: TObject);

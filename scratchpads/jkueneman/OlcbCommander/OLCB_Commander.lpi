@@ -42,7 +42,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="22">
+    <Units Count="27">
       <Unit0>
         <Filename Value="OLCB_Commander.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -183,6 +183,30 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="ethernet_hub"/>
       </Unit21>
+      <Unit22>
+        <Filename Value="..\OPStack\NMRAnet\opstackdefines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackdefines"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="..\OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachines.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="opstackcanstatemachines"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="..\OPStack\AppLayerTemplates\Options.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="..\OPStack\Common\Float16.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Float16"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="..\OPStack\AppLayerTemplates\template_node.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_node"/>
+      </Unit26>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -192,8 +216,8 @@
       <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\OlcbCommander.app\Contents\MacOS\OlcbCommander"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls"/>
+      <IncludeFiles Value="$(ProjOutDir);..\OPStack\AppLayerTemplates"/>
+      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;..\OPStack\NMRAnet;..\OPStack\NMRAnet\CAN_Statemachines;..\OPStack\Common;..\OPStack\AppLayerTemplates"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

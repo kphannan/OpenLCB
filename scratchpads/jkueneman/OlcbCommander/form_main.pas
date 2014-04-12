@@ -832,20 +832,20 @@ begin
   FLazyLoadTaskList := TList.Create;
   FEthernetHub := TEthernetHub.Create;
 
-  FEthernetHub.SyncErrorMessageFunc := @SyncErrorEthernetMessage;
-  FEthernetHub.SyncReceiveMessageFunc := @SyncReceiveEthernetMessage;
-  FEthernetHub.SyncSendMessageFunc := @SyncSendEthernetMessage;
+  FEthernetHub.OnErrorMessage := @SyncErrorEthernetMessage;
+  FEthernetHub.OnReceiveMessage := @SyncReceiveEthernetMessage;
+  FEthernetHub.OnSendMessage := @SyncSendEthernetMessage;
   FEthernetHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
-  FEthernetHub.OnHubConnect := @SyncHubConnect;
-  FEthernetHub.OnHubDisconnect := @SyncHubDisconnect;
-  FEthernetHub.OnClientClientConnect := @SyncHubNewClient;
-  FEthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
-  FEthernetHub.OnSyncStatus := @SyncHubOnStatus;
+ // FEthernetHub.OnHubConnect := @SyncHubConnect;
+ // FEthernetHub.OnHubDisconnect := @SyncHubDisconnect;
+ // FEthernetHub.OnClientClientConnect := @SyncHubNewClient;
+ // FEthernetHub.OnClientDisconnect := @SyncHubDroppedClient;
+//  FEthernetHub.OnStatus := @SyncHubOnStatus;
 
   FComPortHub := TComPortHub.Create;
-  FComPortHub.SyncReceiveMessageFunc := @SyncReceiveCOMPortMessage;
-  FComPortHub.SyncSendMessageFunc := @SyncSendCOMPortMessage;
-  FComPortHub.SyncErrorMessageFunc := @SyncErrorCOMPortMessage;
+  FComPortHub.OnReceiveMessage := @SyncReceiveCOMPortMessage;
+  FComPortHub.OnSendMessage := @SyncSendCOMPortMessage;
+  FComPortHub.OnErrorMessage := @SyncErrorCOMPortMessage;
   FComPortHub.OnBeforeDestroyTask := @OnBeforeDestroyTask;
 end;
 
@@ -1679,7 +1679,7 @@ begin
   if EqualEvents(@EventID, @EVENT_TRAIN) then
     Node := AddNetworkTrainAlias(NodeAlias, NodeID)
   else
-  if EqualEvents(@EventID, @EVENT_TRAIN_PROXY_IDLE) then
+ { if EqualEvents(@EventID, @EVENT_TRAIN_PROXY_IDLE) then
   begin
     Node := AddNetworkTrainAlias(NodeAlias, NodeID);
     if Assigned(Node) then
@@ -1698,8 +1698,8 @@ begin
         end
       end
     end
-  end else
-  if EqualEvents(@EventID, @EVENT_TRAIN_PROXY_INUSE) then
+  end else      }
+ { if EqualEvents(@EventID, @EVENT_TRAIN_PROXY_INUSE) then
   begin
     Node := AddNetworkTrainAlias(NodeAlias, NodeID);
     if Assigned(Node) then
@@ -1714,7 +1714,7 @@ begin
         end
       end
     end
-  end else
+  end else  }
   if (EventID[0] = $06) and (EventID[1] = $01) then
     UpdateDccAddressEventCaption(EventID, 1)
 end;
@@ -1724,7 +1724,7 @@ var
   EventID: TEventID;
 begin
   EventID := LocalHelper.Data;
-  if EqualEvents(@EventID, @EVENT_COMMAND_STATION) then
+  if EqualEvents(@EventID, @EVENT_PROXY) then
     AddNetworkCommandStationAlias(NodeAlias, NodeID);
 end;
 

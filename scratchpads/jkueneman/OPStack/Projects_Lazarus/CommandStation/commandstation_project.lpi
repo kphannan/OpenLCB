@@ -6,7 +6,7 @@
     <General>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="commandstation_project"/>
+      <Title Value="CommandStationEmulator"/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
       <Icon Value="0"/>
@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="8">
+    <Units Count="9">
       <Unit0>
         <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -76,21 +76,26 @@
         <UnitName Value="opstackcanstatemachines"/>
       </Unit6>
       <Unit7>
-        <Filename Value="..\..\HardwareLayerImplementations\Lazarus\template_hardware.pas"/>
+        <Filename Value="..\..\HardwareLayerImplementations\Lazarus_Ethernet\template_hardware.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="template_hardware"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="..\..\ConfigurationLayerImplementations\Lazarus_File\template_configuration.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_configuration"/>
+      </Unit8>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\commandstation_project.app\MacOS"/>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\commandstationemulator.app\MacOS\commandstationemulator"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus"/>
+      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

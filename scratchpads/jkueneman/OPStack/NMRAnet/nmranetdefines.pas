@@ -100,6 +100,9 @@ const
   PIV_PROTOCOL_ID_REMOTE_BUTTON: TPIVProtocolValueArray      = ($00, $80, $00, $00, $00, $00);
   PIV_PROTOCOL_ID_CDI: TPIVProtocolValueArray                = ($00, $40, $00, $00, $00, $00);
   PIV_PROTOCOL_ID_DISPLAY: TPIVProtocolValueArray            = ($00, $20, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_TRACTION: TPIVProtocolValueArray           = ($00, $04, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_FDI: TPIVProtocolValueArray                = ($00, $02, $00, $00, $00, $00);
+  PIV_PROTOCOL_ID_TRACTION_PROXY: TPIVProtocolValueArray     = ($00, $01, $00, $00, $00, $00);
 
 const
   DATAGRAM_TYPE_MEMORY_CONFIGURATION        = $20;                              // Memory Configuration Protocol
