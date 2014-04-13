@@ -4,6 +4,9 @@ unit nmranetdefines;
 interface
 {$ENDIF}
 
+uses
+  opstacktypes;
+
 const
   MTI_OLCB_MSG                              = $08000000;                        //
 
@@ -45,7 +48,7 @@ const
   MTI_CONSUMER_IDENTIFIED_SET        = $04C4;                                // Databytes = EventID
   MTI_CONSUMER_IDENTIFIED_CLEAR      = $04C5;                                // Databytes = EventID
   MTI_CONSUMER_IDENTIFIED_RESERVED   = $04C6;                                // Databytes = EventID
-  MTI_PRODUCER_IDENDIFY              = $0914;                                // Databytes = EventID
+  MTI_PRODUCER_IDENTIFY              = $0914;                                // Databytes = EventID
   MTI_PRODUCER_IDENTIFIED_RANGE      = $0524;                                // Databytes = EventID with Mask
   MTI_PRODUCER_IDENTIFIED_UNKNOWN    = $0547;                                // Databytes = EventID
   MTI_PRODUCER_IDENTIFIED_SET        = $0544;                                // Databytes = EventID
@@ -62,6 +65,8 @@ const
   MTI_XPRESSNET                      = $0820;
   MTI_REMOTE_BUTTON_REQUEST          = $0948;
   MTI_REMOTE_BUTTON_REPLY            = $0949;
+  MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST = $0DA8;
+  MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   = $09C8;
   MTI_SIMPLE_NODE_INFO_REQUEST       = $0DE8;                                // Databytes = Destination Alias
   MTI_SIMPLE_NODE_INFO_REPLY         = $0A08;                                // Databytes = Destination Alias, ACDI Data
   MTI_DATAGRAM                       = $1C48;
@@ -203,6 +208,15 @@ const
   MCP_OP_UPDATE_COMPLETE             = $A8;                                     // MemoryConfigurationProtocol Operation - Update Complete
   MCP_OP_RESETS                      = $A9;                                     // MemoryConfigurationProtocol Operation - Resets
 
+const
+  NULL_EVENT_ID              : TEventID = (0, 0, 0, 0, 0, 0, 0, 0);
+  EVENT_EMERGENCY_STOP       : TEventID = ($01, $00, $00, $00, $00, $00, $FF, $FF);
+  EVENT_NEW_LOG_ENTRY        : TEventID = ($01, $00, $00, $00, $00, $00, $FF, $F8);
+  EVENT_IDENT_BUTTON_PRESSED : TEventID = ($01, $00, $00, $00, $00, $00, $FE, $00);
+  EVENT_DUPLICATE_ID_DETECTED: TEventID = ($01, $10, $00, $00, $00, $00, $02, $01);
+  EVENT_IS_TRAIN             : TEventID = ($01, $01, $00, $00, $00, $00, $03, $03);
+  EVENT_IS_PROXY             : TEventID = ($01, $01, $00, $00, $00, $00, $03, $04);
+  EVENT_DELIVERS_CLOCK       : TEventID = ($01, $01, $00, $00, $00, $00, $05, $01);
 
 
 implementation

@@ -63,6 +63,7 @@ type
   PStreamDataArray = ^TStreamDataArray;
   TAcdiSnipDataArray = array[0..USER_MAX_ACDI_SNIP_BYTES] of Byte;
   PAcdiSnipDataArray = ^TAcdiSnipDataArray;
+
   TMultiFrameArray = array[0..USER_MAX_MULTI_FRAME_BYTES] of Byte;              // This is common mulit-frame buffer for those pesky multi frame messages that are only a few frames long such as the Traction QuerySpeed, this gives us flexibility in lengthing it in the future if needed
   PMultiFrameArray = ^TMultiFrameArray;
 
@@ -85,12 +86,6 @@ type
 const
   NULL_NODE_ID: TNodeID = (0, 0);
 
-const
-  NULL_EVENT_ID : TEventID = (0, 0, 0, 0, 0, 0, 0, 0);
-  EVENT_EMERGENCY_STOP_ALL: TEventID = ($01, $01, $00, $00, $00, $00, $FF, $FF);
-  EVENT_LOG_ENTRY_RECORDED: TEventID = ($01 ,$10, $00, $00, $00, $00, $FF, $F8);
-  EVENT_IDENT_BUTTON_PRESSED: TEventID = ($01, $10, $00, $00, $00, $00, $FE, $00);
-  EVENT_DUPLICATE_ID_DETECTED: TEventID = ($01, $10, $00, $00, $00, $00, $02, $01);
 
 const
   EVENT_STATE_CLEAR                 = $00;
@@ -170,6 +165,7 @@ type
     ID: TNodeID;                                                                // Unique 48 Bit ID for Node
     AliasID: Word;                                                              // 12 Bit Alias ID
   end;
+  PNodeInfo = ^TNodeInfo;
 
   TNMRAnetNodeLoginInfo = record
     TimeCounter: Byte;                                                          // Number of timer ticks into the time waiting for a RID response from another node for our RID broadcasts

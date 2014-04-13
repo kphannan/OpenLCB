@@ -315,6 +315,7 @@ var
   i: Integer;
 begin
   Result := False;
+  OPStackMessage := nil;
   for i := 0 to USER_MAX_SIMPLE_MESSAGE_BUFFERS - 1 do
   begin
     if OPStackMessagePool.Pool[i].MessageType and MT_ALLOCATED = 0 then
@@ -347,7 +348,7 @@ begin
       OPStackBuffers_DeAllocateMessage(AMessage);
       AMessage := nil;
     end;
-  end;
+  end
 end;
 
 function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;

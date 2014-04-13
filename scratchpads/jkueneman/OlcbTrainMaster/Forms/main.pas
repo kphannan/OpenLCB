@@ -270,6 +270,7 @@ type
     procedure ThrottleClosing(Throttle: TFormThrottle);
     procedure ThrottleHiding(Throttle: TFormThrottle);
     function DispatchTask(Task: TTaskOlcbBase): Boolean;
+    procedure TaskDestroy(Sender: TTaskOlcbBase);
     procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
 
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
@@ -295,6 +296,9 @@ var
   FormOlcbTrainMaster: TFormOlcbTrainMaster;
 
 implementation
+
+uses
+  template_userstatemachine;
 
 {$R *.lfm}
 
@@ -420,7 +424,7 @@ var
   Task: TTaskIdentifyProducer;
 begin
   // Send a IsProxy Message and collect the results
-  Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_PROXY);
+  Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_IS_PROXY);
   try
     ComPortHub.AddTask(Task);
     EthernetHub.AddTask(Task);
@@ -676,6 +680,8 @@ begin
 
   FConfigurationFile := '';
 
+  Template_UserStateMachine_OnTaskDestroy := @TaskDestroy;
+
 //  EthernetHub.OnBeforeDestroyTask := @HubDestroyTask;
 
 end;
@@ -711,16 +717,11 @@ begin
     OSXPrefCmd.Action := ActionToolsPreferenceShowMac;
     OSXMenu.Add(OSXPrefCmd);
     ActionToolsSettingsShowWin.Visible := False;
- //   MenuItemToolsSep2.Visible := False;
- //   FormMessageLog.SynMemo.Font.Height := 0;
- //   FormEthernetMessageLog.SynMemo.Font.Height := 0;
     {$ELSE}
     AppAboutCmd := TMenuItem.Create(Self);
     AppAboutCmd.Action := ActionHelpAboutShow;
     MenuItemHelp.Add(AppAboutCmd);
     {$ENDIF}
- //   FormMessageLog.HideCallback := @SyncMessageLogHide;
- //   FormEthernetMessageLog.HideCallback := @SyncEthernetMessageLogHide;
     {$IFDEF Linux}
     FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
@@ -827,6 +828,16 @@ end;
 procedure TFormOlcbTrainMaster.TabSheetGeneralShow(Sender: TObject);
 begin
   LoadSettings(lstGeneral)
+end;
+
+procedure TFormOlcbTrainMaster.TaskDestroy(Sender: TTaskOlcbBase);
+var
+  Node: TTreeNode;
+begin
+  if Sender is TTaskSimpleNodeInformation then
+  begin
+    TreeViewProxies.Items.AddChild(nil, (Sender as TTaskSimpleNodeInformation).Snip.SniiMfgName);
+  end;
 end;
 
 procedure TFormOlcbTrainMaster.ThrottleClosing(Throttle: TFormThrottle);

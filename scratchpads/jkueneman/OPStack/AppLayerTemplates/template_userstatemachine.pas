@@ -16,24 +16,16 @@ uses
   {$ENDIF}
   opstacktypes,
   opstackdefines,
-  template_node,
-  opstack_api,
-  nmranetutilities;
+  template_node;
 
 procedure UserStateMachine_Initialize;
 procedure AppCallback_UserStateMachine_Process;
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 
-// Called every 100ms typically from another thread so only use to update flags
-procedure AppCallback_Timer_100ms;
-
 // These message are called from the mainstatemachine loop.  They have been stored in
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
-procedure AppCallback_SimpleNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; NodeInfo: PAcdiSnipBuffer);
-procedure AppCallBack_ProtocolSupportReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);  // This could be 2 replies per call.. read docs
 {$IFDEF SUPPORT_TRACTION}
 function AppCallback_TractionProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: TAcdiSnipBuffer);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
@@ -41,15 +33,10 @@ function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage,
 
 // These messages are called directly from the hardware receive buffer.  See the notes to understand the
 // implications of this and how to use them correctly
-procedure AppCallback_InitializationComplete(var Source: TNodeInfo; NodeID: PNodeID);
-procedure AppCallback_VerifiedNodeID(var Source: TNodeInfo; NodeID: PNodeID);
 procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
-procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
-procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
-procedure AppCallback_TractionControlReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);  // Assumes we can make these all one frame long
-procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);    // Assumes we can make these all one frame long
-procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
+procedure AppCallback_VerifiedNodeID(var Source: TNodeInfo; NodeID: PNodeID);
+procedure AppCallback_InitializationComplete(var Source: TNodeInfo; NodeID: PNodeID);
 
 {$IFNDEF FPC}
   procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
@@ -59,19 +46,9 @@ procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; var Dest: TNodeIn
 implementation
 
 {$IFDEF FPC}
-  {$IFDEF SUPPORT_TRACTION and SUPPORT_TRACTION_PROXY}
-  uses
-    opstackcore_traction,
-    opstackcore_traction_proxy;
-  {$ELSE}
-    {$IFDEF SUPPORT_TRACTION}
-    uses
-      opstackcore_traction;
-    {$ELSE}
-    uses
-      opstackcore_traction_proxy;
-    {$ENDIF}
-  {$ENDIF}
+uses
+  opstackcore_traction,
+  opstackcore_traction_proxy;
 {$ENDIF}
 
 const
@@ -101,7 +78,6 @@ type
 var
   UserState: Word;
   UserDataArray: TSampleUserDataArray;
-
 
 // *****************************************************************************
 //  procedure ExtractUserData
@@ -145,10 +121,6 @@ end;
 procedure AppCallback_UserStateMachine_Process;
 begin
   case UserState of
-    STATE_USER_START :
-        begin
-
-        end;
     STATE_USER_1  :
         begin
 
@@ -205,6 +177,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 var
+  i: Integer;
   NodeData: PSampleUserNodeData;
 begin
   // Assign the user data record to the Node for future use
@@ -263,24 +236,6 @@ end;
 {$ENDIF}
 
 // *****************************************************************************
-//  procedure AppCallBack_ProtocolSupportReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer Raw data bytes, Byte 0 and 1 are the Alias
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallBack_ProtocolSupportReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
-begin
-
-end;
-
-// *****************************************************************************
 //  procedure AppCallback_ConsumerIdentified
 //     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
 //                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
@@ -314,144 +269,6 @@ end;
 //                   main statemachine.
 // *****************************************************************************
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_LearnEvent
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   EventID: pointer to the Event ID for the message
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallBack_PCEventReport
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   EventID: pointer to the Event ID for the message
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_TractionControlReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_TractionControlReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_TractionProxyReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_RemoteButtonReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
-begin
-
-end;
-
-{$IFDEF SUPPORT_TRACTION}
-// *****************************************************************************
-//  procedure AppCallback_SimpleTrainNodeInfoReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   TrainNodeInfo: pointer to the null terminated strings
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: TAcdiSnipBuffer);
-begin
-
-end;
-{$ENDIF}
-
-// *****************************************************************************
-//  procedure AppCallback_Timer_100ms
-//     Parameters: : None
-//     Returns     : None
-//     Description : Typcally called from another thread or interrupt, only use
-//                   to update asyncronous flags
-// *****************************************************************************
-procedure AppCallback_Timer_100ms;
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_SimpleNodeInfoReply
-//     Parameters: : Source   : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest     : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   NodeInfo : pointer to the null terminated strings
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_SimpleNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; NodeInfo: PAcdiSnipBuffer);
 begin
 
 end;

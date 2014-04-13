@@ -3,8 +3,11 @@
 // This file is the template for the application to define Dynamic Events.  If
 // the application does not need dynamic events then this file can be left as is.
 // Dynamic events are events that can change value or come and go based on
-// the application state.  The Traction Protocol uses events of this type when
-// Trains are allocated/deallocated
+// the application state.
+//
+// This file can also be used to initialize the state of static or dynamic events.
+// override the AppCallback_InitializeEvents or AppCallback_InitializeDynamicEvents
+// to set the event SET/CLEAR/UNKNOWN
 //
 // You must define the number of Dynamic Events in the template_node/template_vnode
 // files before these will be called

@@ -286,13 +286,14 @@ type
   THexArray = TEventID;
 
 const
-  EVENT_EMERGENCY_STOP       : TEventID  = ($01, $01, $00, $00, $00, $00, $FF, $FF);
-  EVENT_NEW_LOG_ENTRY        : TEventID  = ($01, $01, $00, $00, $00, $00, $FF, $F8);
-  EVENT_IDENT_BUTTON_PRESSED : TEventID  = ($01, $01, $00, $00, $00, $00, $FE, $00);
-  EVENT_DUPLICATE_NODE_ID    : TEventID  = ($01, $01, $00, $00, $00, $00, $02, $01);
-
-  EVENT_TRAIN                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $03);
-  EVENT_PROXY                : TEventID  = ($01, $01, $00, $00, $00, $00, $03, $04);
+  NULL_EVENT_ID : TEventID = (0, 0, 0, 0, 0, 0, 0, 0);
+  EVENT_EMERGENCY_STOP       : TEventID = ($01, $00, $00, $00, $00, $00, $FF, $FF);
+  EVENT_NEW_LOG_ENTRY        : TEventID = ($01, $00, $00, $00, $00, $00, $FF, $F8);
+  EVENT_IDENT_BUTTON_PRESSED : TEventID = ($01, $00, $00, $00, $00, $00, $FE, $00);
+  EVENT_DUPLICATE_ID_DETECTED: TEventID = ($01, $10, $00, $00, $00, $00, $02, $01);
+  EVENT_IS_TRAIN             : TEventID = ($01, $01, $00, $00, $00, $00, $03, $03);
+  EVENT_IS_PROXY             : TEventID = ($01, $01, $00, $00, $00, $00, $03, $04);
+  EVENT_DELIVERS_CLOCK       : TEventID = ($01, $01, $00, $00, $00, $00, $05, $01);
 
 implementation
 

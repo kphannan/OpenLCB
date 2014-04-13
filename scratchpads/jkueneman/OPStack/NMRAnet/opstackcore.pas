@@ -31,7 +31,7 @@ uses
   opstackcore_pip,
   opstackcore_basic,
   {$IFDEF SUPPORT_STREAMS}opstackcore_stream,{$ENDIF}
-  {$IFDEF SUPPORT_TRACTION}opstackcore_traction,{$ENDIF}
+  {$IFDEF SUPPORT_TRACTION}opstackcore_traction, opstackcore_stnip,{$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}opstackcore_traction_proxy,{$ENDIF}
   opstackcore_snip,
   opstackcore_learn,
@@ -61,13 +61,13 @@ implementation
 // *****************************************************************************
 procedure OPStackCore_Initialize;
 begin
-  OPStack.State := 0;  
+  OPStack.State := 0;
+  UserStateMachine_Initialize;
   TemplateConfiguration_Initialize;
   Hardware_Initialize;
   OPStackNode_Initialize;
   OPStackBuffers_Initialize;
   OPStackCoreDatagram_Initialize;
-  UserStateMachine_Initialize;
   {$IFDEF SUPPORT_STREAMS}
   OPStackCoreStream_Initialize;
   {$ENDIF}
@@ -106,7 +106,6 @@ procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNod
 var
   NodeID: TNodeID;
 begin
-
   // If the Node is being Released then don't do anything except deallocate the message if needed
   if DestNode <> nil then
     if DestNode^.State and NS_RELEASING <> 0 then
@@ -145,16 +144,22 @@ begin
               begin                                                             // We send all messages in to test for Releasing so this test is necessary
                 case AMessage^.MTI of
                   MTI_SIMPLE_NODE_INFO_REQUEST      : begin SimpleNodeInfoRequest(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
+                  MTI_SIMPLE_NODE_INFO_REPLY        : begin {TODO: Implement Statemachine to gather up frames then call AppCallback_SimpleNodeInfoReply()} Exit; end;
                   MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;     // Sets Flag(s) to be processed in main loop
                   MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;                // Sets Flag(s) to be processed in main loop
                   MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;        // Allocates Buffer to be processed in main loop
+                  MTI_PROTOCOL_SUPPORT_REPLY        : begin {TODO: Implement Statemachine to gather up frames then call AppCallBack_ProtocolSupportReply; } Exit; end;
                   MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;               // Updates internal states
                   MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
                   {$IFDEF SUPPORT_TRACTION}
+                  MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST : begin SimpleTrainNodeInfoRequest(AMessage, DestNode); Exit; end;
+                  MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin  {TODO: Implement Statemachine to gather up frames then call AppCallback_SimpleTrainNodeInfoReply()} Exit; end;
                   MTI_TRACTION_PROTOCOL             : begin TractionProtocol(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
+                  MTI_TRACTION_REPLY                : begin AppCallback_TractionControlReply(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer); Exit; end;
                   {$ENDIF}
                   {$IFDEF SUPPORT_TRACTION_PROXY}
                   MTI_TRACTION_PROXY_PROTOCOL       : begin TractionProxyProtocol(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
+                  MTI_TRACTION_PROXY_REPLY          : begin AppCallback_TractionProxyReply(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer); Exit; end;
                   {$ENDIF}
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
@@ -162,8 +167,9 @@ begin
                   MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;                // Allocates Buffer to be processed in main loop
                   MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end;               // Allocates Buffer to be processed in main loop
                   {$ENDIF}
-
-                  MTI_OPTIONAL_INTERACTION_REJECTED : begin {AppCallback_OptionalInteractionRejected(} end
+                  MTI_OPTIONAL_INTERACTION_REJECTED : begin {TODO: What to do if one of the messages is Rejected!} end;
+                  MTI_REMOTE_BUTTON_REQUEST         : begin {TODO: Understand if we just pass this to the application layer or can we do something automatically (doubt it)} Exit; end;
+                  MTI_REMOTE_BUTTON_REPLY           : begin AppCallback_RemoteButtonReply(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer); Exit; end
                 else
                   OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
                 end; {case}
@@ -174,22 +180,23 @@ begin
               case AMessage^.MTI of
                   MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(AMessage, DestNode); Exit; end;              // Sets Flag(s) to be processed in main loop
                   MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_PRODUCER_IDENDIFY           : begin IdentifyProducers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_EVENT_LEARN                 : begin Learn(AMessage, DestNode); end;                           // Sets Flag(s) to be processed in main loop
+                  MTI_PRODUCER_IDENTIFY           : begin IdentifyProducers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_EVENT_LEARN                 : begin AppCallback_LearnEvent(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;                           // Sets Flag(s) to be processed in main loop
                   MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(AMessage, nil); Exit; end;                 // Sets Flag(s) to be processed in main loop
 
                   MTI_CONSUMER_IDENTIFIED_RANGE,
                   MTI_CONSUMER_IDENTIFIED_CLEAR,
                   MTI_CONSUMER_IDENTIFIED_RESERVED,
                   MTI_CONSUMER_IDENTIFIED_SET,
-                  MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(DestNode, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                  MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(AMessage^.Source, AMessage^.Dest, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
                   MTI_PRODUCER_IDENTIFIED_RANGE,
                   MTI_PRODUCER_IDENTIFIED_CLEAR,
                   MTI_PRODUCER_IDENTIFIED_RESERVED,
                   MTI_PRODUCER_IDENTIFIED_SET,
-                  MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(DestNode, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
-                  MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(DestNode,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
-                  MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(DestNode,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
+                  MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(AMessage^.Source, AMessage^.Dest, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                  MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(AMessage^.Source, NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
+                  MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(AMessage^.Source,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
+                  MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
               end; {case}
             end;
             CheckAndDeallocateMessage(AMessage);
@@ -286,12 +293,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure UnLinkAndDeAllocateMessage
+//  procedure UnLinkDeAllocateAndTestForMessageToSend
 //     Parameters:
 //     Returns:
 //     Description:
 // *****************************************************************************
-function UnLinkAndDeAllocateMessage(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
+function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 begin
   OPStackNode_IncomingMessageUnLink(Node, AMessage);
   OPStackBuffers_DeAllocateMessage(AMessage);
@@ -324,52 +331,57 @@ begin
         MTI_SIMPLE_NODE_INFO_REQUEST :
             begin
               SimpleNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         MTI_PROTOCOL_SUPPORT_INQUIRY :
             begin
               ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         {$IFDEF SUPPORT_TRACTION}
         MTI_TRACTION_PROTOCOL :
             begin
-              TractionProtocolReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              if AppCallback_TractionProtocol(Node, MessageToSend, NextMessage) then
+                Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+            end;
+        MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST :
+            begin
+              SimpleTrainNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
-        {$IFDEF SUPPORT_TRACTION_PROTOCOL}
+        {$IFDEF SUPPORT_TRACTION_PROXY}
         MTI_TRACTION_PROXY_PROTOCOL :
             begin
-              TractionProxyProtocolReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              if AppCallback_TractionProxyProtocol(Node, MessageToSend, NextMessage) then
+                Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
         {$IFDEF SUPPORT_STREAMS}
         MTI_STREAM_INIT_REQUEST :
             begin
               StreamInitRequestReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         MTI_STREAM_INIT_REPLY :
             begin
               StreamInitReplyReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         MTI_STEAM_SEND :
             begin
               StreamSendReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         MTI_STREAM_PROCEED :
             begin
               StreamProceedReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         MTI_STREAM_COMPLETE :
             begin
               StreamCompleteReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkAndDeAllocateMessage(Node, MessageToSend, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
         MTI_DATAGRAM :
@@ -408,6 +420,7 @@ begin
       Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
     OPStackBuffers_Timer;
   end;
+  AppCallback_Timer_100ms;
 end;
 
 // *****************************************************************************

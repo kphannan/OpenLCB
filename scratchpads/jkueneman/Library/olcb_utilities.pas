@@ -457,13 +457,13 @@ function EventIDToString(EventID: PEventID): WideString;
 var
   Address: Word;
 begin
-  if EqualEvents(EventID, @EVENT_TRAIN) then
+  if EqualEvents(EventID, @EVENT_IS_TRAIN) then
     Result := 'EVENT_TRAIN'
   else
-  if EqualEvents(EventID, @EVENT_PROXY) then
+  if EqualEvents(EventID, @EVENT_IS_PROXY) then
     Result := 'EVENT_PROXY'
   else
-  if EqualEvents(EventID, @EVENT_DUPLICATE_NODE_ID) then
+  if EqualEvents(EventID, @EVENT_DUPLICATE_ID_DETECTED) then
     Result := 'EVENT_DUPLICATE_NODE_ID'
   else
   if EqualEvents(EventID, @EVENT_EMERGENCY_STOP) then

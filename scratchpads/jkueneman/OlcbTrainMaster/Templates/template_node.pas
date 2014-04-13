@@ -26,7 +26,7 @@ uses
 // Enter the number of nodes this build will emulate, must be at least 1, if more than
 // one then SUPPORT_VIRTUAL_NODES must be enabled in the Options.inc file
 const
-  USER_MAX_NODE_COUNT = 65;                                                     // One Server + 64 Throttles
+  USER_MAX_NODE_COUNT = 2;                                                     // One Server + 64 Throttles
 
 // Calculate the number of bytes needed for internal OPStack structures for Events
 // Do this by selecting the Largest number of Events either Consumed or Produced in

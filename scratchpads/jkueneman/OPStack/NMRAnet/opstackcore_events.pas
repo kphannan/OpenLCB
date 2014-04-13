@@ -375,7 +375,7 @@ begin
     if EventIndex > -1  then
     begin
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
-      {$IFDEF SUPPORT_VIRUAL_NODES}
+      {$IFDEF SUPPORT_VIRTUAL_NODES}
       if Node^.State and NS_VIRTUAL <> 0 then
       begin
         // Make sure the event index is in the range of defined events

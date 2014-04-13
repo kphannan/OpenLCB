@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="25">
+    <Units Count="7">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -71,106 +71,18 @@
         <UnitName Value="form_train_config_editor"/>
       </Unit4>
       <Unit5>
-        <Filename Value="..\Library\unit_cdi_parser.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="unit_cdi_parser"/>
-      </Unit5>
-      <Unit6>
-        <Filename Value="..\Library\olcb_transport_layer.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_transport_layer"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="..\Library\olcb_defines.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_defines"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="..\Library\math_float16.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="math_float16"/>
-      </Unit8>
-      <Unit9>
-        <Filename Value="..\Library\olcb_app_common_settings.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_app_common_settings"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="..\Library\olcb_utilities.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="olcb_utilities"/>
-      </Unit10>
-      <Unit11>
         <Filename Value="Forms\form_throttle.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormThrottle"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
-      </Unit11>
-      <Unit12>
-        <Filename Value="Templates\template_buffers.pas"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\OPStack\NMRAnet\opstack_api.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="template_buffers"/>
-      </Unit12>
-      <Unit13>
-        <Filename Value="Templates\NodeID.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit13>
-      <Unit14>
-        <Filename Value="Templates\Options.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit14>
-      <Unit15>
-        <Filename Value="Templates\template_configmem.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_configmem"/>
-      </Unit15>
-      <Unit16>
-        <Filename Value="Templates\template_event_callbacks.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_event_callbacks"/>
-      </Unit16>
-      <Unit17>
-        <Filename Value="Templates\template_node.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_node"/>
-      </Unit17>
-      <Unit18>
-        <Filename Value="Templates\template_vnode.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_vnode"/>
-      </Unit18>
-      <Unit19>
-        <Filename Value="..\OPStack\NMRAnet\opstackcore.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore"/>
-      </Unit19>
-      <Unit20>
-        <Filename Value="..\OPStack\Common\Float16.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="Float16"/>
-      </Unit20>
-      <Unit21>
-        <Filename Value="..\OPStack\Common\helperfunctions.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="HelperFunctions"/>
-      </Unit21>
-      <Unit22>
-        <Filename Value="..\OPStack\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinesstream"/>
-      </Unit22>
-      <Unit23>
-        <Filename Value="..\OPStack\ConfigurationLayerImplementations\Lazarus_File\template_configuration.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_configuration"/>
-      </Unit23>
-      <Unit24>
-        <Filename Value="..\OPStack\HardwareLayerImplementations\Lazarus_Ethernet\template_hardware.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_hardware"/>
-      </Unit24>
+        <UnitName Value="opstack_api"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -181,7 +93,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;Forms;Templates;..\OPStack\NMRAnet;..\OPStack\Common;..\OPStack\NMRAnet\CAN_Statemachines;..\OPStack\ConfigurationLayerImplementations\Lazarus_File;..\OPStack\HardwareLayerImplementations\Lazarus_Ethernet"/>
+      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;..\OPStack\Common;..\OPStack\NMRAnet;..\OPStack\NMRAnet\CAN_Statemachines;..\OPStack\ConfigurationLayerImplementations\Lazarus_File;..\OPStack\HardwareLayerImplementations\Lazarus_Ethernet;Templates;Forms"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then
