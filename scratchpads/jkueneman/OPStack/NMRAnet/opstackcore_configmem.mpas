@@ -216,7 +216,7 @@ function CommandReadReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): 
 var
   DatagramBufferPtr: PDatagramBuffer;
   AddressSpace, DataOffset: Byte;
-  ConfigAddress, ReadCount: DWord;
+  ConfigAddress, ReadCount, OffsetAddress: DWord;
   i: Integer;
 begin
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
@@ -228,7 +228,9 @@ begin
   DatagramBufferPtr^.CurrentCount := 0;
 
   if Node^.iIndex > 0 then
-    ConfigAddress := USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE;
+    OffsetAddress := ConfigAddress + (USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE)
+  else
+    OffsetAddress := ConfigAddress;
     
   case AddressSpace of
       MSI_CDI :
@@ -251,7 +253,7 @@ begin
           end;
       MSI_CONFIG :
           begin
-            AppCallback_ReadConfiguration(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
+            AppCallback_ReadConfiguration(OffsetAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
           end;
       MSI_ACDI_MFG :
           begin
@@ -268,7 +270,14 @@ begin
           end;
       MSI_ACDI_USER :
           begin
-            AppCallback_ReadAcdiUser(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
+            if ConfigAddress = 0 then
+            begin
+              DatagramBufferPtr^.DataArray[DataOffset] := USER_ACDI_USER_VERSION;
+              Inc(DataOffset);
+              Dec(ReadCount);
+            end;
+            if ReadCount > 0 then
+              AppCallback_ReadAcdiUser(OffsetAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
           end;
       MSI_FDI :
           begin
@@ -347,7 +356,7 @@ function CommandWriteReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage):
 var
   DatagramBufferPtr: PDatagramBuffer;
   AddressSpace, DataOffset: Byte;
-  ConfigAddress: DWord;
+  ConfigAddress, OffsetAddress: DWord;
   i: Integer;
   WriteCount: DWord;
 begin
@@ -356,7 +365,9 @@ begin
   WriteCount := DatagramBufferPtr^.DataBufferSize-DataOffset;
   
   if Node^.iIndex > 0 then
-    ConfigAddress := USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE;
+    OffsetAddress := ConfigAddress + (USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE)
+  else
+    OffsetAddress := ConfigAddress;
 
   case AddressSpace of
     MSI_CDI,
@@ -369,11 +380,12 @@ begin
        end;
     MSI_CONFIG :
        begin
-         AppCallback_WriteConfiguration(ConfigAddress, WriteCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
+         AppCallback_WriteConfiguration(OffsetAddress, WriteCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
        end;
     MSI_ACDI_USER :
        begin
-         AppCallback_WriteAcdiUser(ConfigAddress, WriteCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
+         if ConfigAddress > 0 then
+           AppCallback_WriteAcdiUser(OffsetAddress, WriteCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
        end;
     end;
     

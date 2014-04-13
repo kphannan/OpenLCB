@@ -296,6 +296,15 @@ type
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 
+type
+  TNodePool = record
+    Pool: array[0..USER_MAX_NODE_COUNT-1] of TNMRAnetNode;                      // Node [0] is ALWAYS the physical node
+    AllocatedList: array[0..USER_MAX_NODE_COUNT-1] of PNMRAnetNode;             // Node List sorted by Alias
+    AllocatedCount: Integer;                                                    // Number of Nodes Allocated
+    iActiveNode: Integer;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
+  end;
+  PNodePool = ^TNodePool;
+  
 const
   DATAGRAM_PROCESS_ERROR_OK                  = $00;
   DATAGRAM_PROCESS_ERROR_BUFFER_FULL         = $02;

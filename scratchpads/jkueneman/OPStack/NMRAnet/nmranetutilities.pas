@@ -104,6 +104,7 @@ end;
 // *****************************************************************************
 function NMRAnetUtilities_Load48BitNodeIDWithSimpleData(var NodeID: TNodeID; var DataArray: TSimpleDataArray): PNodeID;
 begin
+  Result := @NodeID;
   NodeID[1] := (DataArray[0] shl 16) or (DataArray[1] shl 16) or DataArray[2];
   NodeID[0] := (DataArray[3] shl 16) or (DataArray[4] shl 16) or DataArray[5];
 end;

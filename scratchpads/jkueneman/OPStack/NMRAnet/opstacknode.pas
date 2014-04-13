@@ -22,6 +22,7 @@ const
   FIND_BY_SOURCE = 0;
   FIND_BY_DEST = 1;
 
+{
 type
   TNodePool = record
     Pool: array[0..USER_MAX_NODE_COUNT-1] of TNMRAnetNode;                      // Node [0] is ALWAYS the physical node
@@ -30,7 +31,7 @@ type
     iActiveNode: Integer;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
   end;
   PNodePool = ^TNodePool;
-
+ }
 
 procedure OPStackNode_Initialize;
 function OPStackNode_Allocate: PNMRAnetNode;

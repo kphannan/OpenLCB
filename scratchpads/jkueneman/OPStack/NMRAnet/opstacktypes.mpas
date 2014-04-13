@@ -11,7 +11,7 @@ type
   PEventID = ^TEventID;
 
   PByte = ^Byte;
-
+  
 const
   MCO_WRITE_UNDER_MASK               = $8000;                                   // MemoryConfigurationOptions - Write under mask supported
   MCO_UNALIGNED_READS                = $4000;                                   // MemoryConfigurationOptions - Unaligned memory Reads supported

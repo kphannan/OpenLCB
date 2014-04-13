@@ -22,8 +22,6 @@ uses
 procedure IdentifyEvents(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure IdentifyConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure IdentifyProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure IdentifyRangeConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure IdentifyRangeProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 
 function NodeRunPCERFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
 function NodeRunEventFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
@@ -256,16 +254,6 @@ begin
   end;
 end;
 
-procedure IdentifyRangeConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-begin
-
-end;
-
-procedure IdentifyRangeProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-begin
-
-end;
-
 // *****************************************************************************
 //  procedure NodeRunPCERFlagsReply
 //     Parameters:
@@ -387,7 +375,7 @@ begin
     if EventIndex > -1  then
     begin
       {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
-      {$IFDEF SUPPORT_VIRUAL_NODES}
+      {$IFDEF SUPPORT_VIRTUAL_NODES}
       if Node^.State and NS_VIRTUAL <> 0 then
       begin
         // Make sure the event index is in the range of defined events

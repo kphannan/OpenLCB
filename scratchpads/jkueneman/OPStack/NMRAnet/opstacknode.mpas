@@ -13,7 +13,8 @@ uses
   template_vnode,
   {$ENDIF}
   nmranetutilities,
-  opstackdefines;
+  opstackdefines,
+  template_userstatemachine;
 
 {$I NodeID.inc}
 
@@ -21,6 +22,7 @@ const
   FIND_BY_SOURCE = 0;
   FIND_BY_DEST = 1;
 
+{
 type
   TNodePool = record
     Pool: array[0..USER_MAX_NODE_COUNT-1] of TNMRAnetNode;                      // Node [0] is ALWAYS the physical node
@@ -29,7 +31,7 @@ type
     iActiveNode: Integer;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
   end;
   PNodePool = ^TNodePool;
-
+ }
 
 procedure OPStackNode_Initialize;
 function OPStackNode_Allocate: PNMRAnetNode;
@@ -205,7 +207,6 @@ begin
       Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Login.Seed, False); // Pregenerate it so it can be sorted
       NodePool.AllocatedList[NodePool.AllocatedCount] := Result;                // Add it to the end if the Allocated List
       Inc(NodePool.AllocatedCount);                                             // One more Allocated
-  //    AppCallback_NodeAllocate(Result);                                         // Allow the App layer to initialize it
     end;
   end;
 end;
@@ -367,6 +368,7 @@ begin
   Node^.IncomingMessages := nil;
   Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
+  Node^.UserData := nil;
   {$IFDEF SUPPORT_TRACTION}
   Node^.TrainData.State := 0;
   Node^.TrainData.Address := 0;
@@ -374,6 +376,7 @@ begin
   Node^.TrainData.SpeedDir := 0;
   Node^.TrainData.SpeedSteps := DEFAULT_SPEED_STEPS;
   {$ENDIF}
+  AppCallback_NodeInitialize(Node);                                             // Allow the App layer to initialize it
 end;
 
 // *****************************************************************************

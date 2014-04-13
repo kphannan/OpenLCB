@@ -23,53 +23,7 @@ uses
 procedure TractionProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 
-function TrySendFunctionSet(SourceNode, DestNode: PNMRAnetNode; FunctionAddress: DWord; Value: Word): Boolean;
-function TrySendSpeedSet(SourceNode, DestNode: PNMRAnetNode; Speed: Byte): Boolean;
-function TrySendDirectionSet(SourceNode, DestNode: PNMRAnetNode; IsForward: Boolean): Boolean;
-
 implementation
-
-function TrySendFunctionSet(SourceNode, DestNode: PNMRAnetNode; FunctionAddress: DWord; Value: Word): Boolean;
-var
-  NewMessage: POPStackMessage;
-begin
-  Result := False;
-  NewMessage := nil;
-  if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, SourceNode^.Info.AliasID, SourceNode^.Info.ID, DestNode^.Info.AliasID, DestNode^.Info.ID) then
-    begin
-      OutgoingMessage(NewMessage);
-      Result := True;
-    end
-end;
-
-function TrySendSpeedSet(SourceNode, DestNode: PNMRAnetNode; Speed: Byte): Boolean;
-var
-  NewMessage: POPStackMessage;
-begin
-  Result := False;
-  NewMessage := nil;
-  if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, SourceNode^.Info.AliasID, SourceNode^.Info.ID, DestNode^.Info.AliasID, DestNode^.Info.ID) then
-    begin
-      OutgoingMessage(NewMessage);
-      Result := True;
-    end
-end;
-
-function TrySendDirectionSet(SourceNode, DestNode: PNMRAnetNode; IsForward: Boolean): Boolean;
-var
-  NewMessage: POPStackMessage;
-begin
-  Result := False;
-  NewMessage := nil;
-  if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, SourceNode^.Info.AliasID, SourceNode^.Info.ID, DestNode^.Info.AliasID, DestNode^.Info.ID) then
-    begin
-      OutgoingMessage(NewMessage);
-      Result := True;
-    end
-end;
 
 //******************************************************************************
 // procedure TractionProtocol
