@@ -10,7 +10,8 @@ uses
   olcb_transport_layer, olcb_app_common_settings,
   olcb_utilities, olcb_defines, form_throttle_multiple_trains,
   laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
-  form_train_config_editor, com_port_hub, ethernet_hub;
+  form_train_config_editor, com_port_hub, ethernet_hub,
+  template_userstatemachine;
 
 const
   ANIMATION_DELTA = 50;
@@ -211,7 +212,6 @@ type
     procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
     procedure RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
     procedure RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
- //   procedure RunTractionQueryDccAddress(WaitTime: Cardinal);
  //   procedure RunTractionQueryIsIdle(WaitTime: Cardinal);
     procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
     procedure RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
@@ -251,7 +251,6 @@ type
     procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
     procedure UpdateUI;
   end;
-
 
 implementation
 
@@ -412,6 +411,8 @@ end;
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
   AliasList.Clear;
+  EnterCriticalsection(OPStackCriticalSection);
+  LeaveCriticalsection(OPStackCriticalSection);
 //  RunTractionQueryDccAddress(TIME_QUERY_DCC_ADDRESS);  // We need to query looking for any nodes that are current assigned for the address
 end;
 
@@ -844,21 +845,6 @@ begin
 end;
 
 {
-procedure TFormThrottle.RunTractionQueryDccAddress(WaitTime: Cardinal);
-var
-  Task: TTaskTractionQueryDccAddressProxy;
-begin
-  Task := TTaskTractionQueryDccAddressProxy.Create(GlobalSettings.General.AliasIDAsVal, 0, True, SpinEditAddress.Value, IsShortAddress);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  if DispatchTask(Task) then
-  begin
-    TimerGeneralTimeout.Enabled := False;
-    TimerGeneralTimeout.Interval := WaitTime;
-    TimerGeneralTimeout.Enabled := True;
-    WaitTimeTask := gwttQueryAddress;
-  end;
-end;
-
 procedure TFormThrottle.RunTractionQueryIsIdle(WaitTime: Cardinal);
 var
   Task: TTaskIdentifyProducer;

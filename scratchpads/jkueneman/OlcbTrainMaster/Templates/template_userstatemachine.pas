@@ -1,8 +1,8 @@
 unit template_userstatemachine;
 
+{$IFDEF FPC}
 {$mode objfpc}{$H+}
 
-{$IFDEF FPC}
 interface
 {$ENDIF}
 
@@ -37,7 +37,7 @@ procedure AppCallback_SimpleNodeInfoReply(var Source: TNodeInfo; var Dest: TNode
 procedure AppCallBack_ProtocolSupportReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);  // This could be 2 replies per call.. read docs
 {$IFDEF SUPPORT_TRACTION}
 function AppCallback_TractionProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: TAcdiSnipBuffer);
+procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: PAcdiSnipBuffer);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
@@ -61,8 +61,22 @@ procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; var Dest: TNodeIn
 {$ENDIF}
 
 {$IFDEF FPC}
+type
+  TProcessState = (psClear, psReadyToProcess, psProcessing, psComplete);
+
+  TAllocateDCCByProxy = record
+    Process: TProcessState;
+  end;
+
+  TAllocateThrottleNode = record
+    Process: TProcessState;
+  end;
+
 var
   Template_UserStateMachine_OnTaskDestroy: TOlcbTaskBeforeDestroy;
+  OPStackCriticalSection: TRTLCriticalSection;
+  AllocateThrottleNodeRec: TAllocateThrottleNode;
+  AllocateDCCByProxyRec: TAllocateDCCByProxy;
 {$ENDIF}
 
 implementation
@@ -364,6 +378,8 @@ begin
         Task := TTaskSimpleNodeInformation.Create(GetPhysicalNode^.Info.AliasID, ProxyNode.AliasID, True);
         Task.OnBeforeDestroy := Template_UserStateMachine_OnTaskDestroy;
         EthernetHub.AddTask(Task);
+        ComPortHub.AddTask(Task);
+        Task.Free;
       end;
       {$ENDIF}
     end;
@@ -472,7 +488,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: TAcdiSnipBuffer);
+procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: PAcdiSnipBuffer);
 begin
 
 end;
@@ -545,6 +561,14 @@ end;
 {$IFDEF FPC}
 initialization
   Template_UserStateMachine_OnTaskDestroy := nil;
+  InitCriticalSection( OPStackCriticalSection);
+
+  AllocateThrottleNodeRec.Process := psClear;
+  AllocateDCCByProxyRec.Process := psClear;
+
+Finalization
+  DoneCriticalsection( OPStackCriticalSection);
+
 {$ENDIF}
 
 end.

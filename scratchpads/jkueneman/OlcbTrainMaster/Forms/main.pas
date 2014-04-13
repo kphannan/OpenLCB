@@ -423,11 +423,12 @@ procedure TFormOlcbTrainMaster.ActionRediscoverProxiesExecute(Sender: TObject);
 var
   Task: TTaskIdentifyProducer;
 begin
-  // Send a IsProxy Message and collect the results
+  TreeViewProxies.Items.Clear;
   Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_IS_PROXY);
   try
     ComPortHub.AddTask(Task);
     EthernetHub.AddTask(Task);
+    Task.Free;
   finally
     Task.Free;
   end;
