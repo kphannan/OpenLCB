@@ -216,6 +216,22 @@ const
   MCWL_STREAM_WRITE_SUPPORTED        = $01;                                     // MemoryConfigurationWriteLength - Stream Write Supported
   MCWL_RESERVED                      = $0C;
 
+  TRACTION_PROXY_ALLOCATE            = $01;
+  TRACTION_PROXY_ATTACH              = $02;
+  TRACTION_PROXY_DETACH              = $03;
+  TRACTION_PROXY_MANAGE              = $80;
+  TRACTION_PROXY_MANAGE_RESERVE      = $01;
+  TRACTION_PROXY_MANAGE_RELEASE      = $02;
+
+  TRACTION_PROXY_TECH_ID_DCC              = $01;
+  TRACTION_PROXY_TECH_ID_DC               = $02;
+  TRACTION_PROXY_TECH_ID_MARKLIN_DIG      = $03;
+  TRACTION_PROXY_TECH_ID_MARKLIN_DELTA    = $04;
+  TRACTION_PROXY_TECH_ID_MARKLIN_DIG_ESU  = $05;
+  TRACTION_PROXY_TECH_ID_SELECTRIX        = $06;
+  TRACTION_PROXY_TECH_ID_MTH_DCS          = $07;
+  TRACTION_PROXY_TECH_ID_LIONEL_TMCC      = $08;
+
 
   TRACTION_SPEED_DIR                 = $00;
   TRACTION_FUNCTION                  = $01;

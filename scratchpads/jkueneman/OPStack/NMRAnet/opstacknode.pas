@@ -22,17 +22,6 @@ const
   FIND_BY_SOURCE = 0;
   FIND_BY_DEST = 1;
 
-{
-type
-  TNodePool = record
-    Pool: array[0..USER_MAX_NODE_COUNT-1] of TNMRAnetNode;                      // Node [0] is ALWAYS the physical node
-    AllocatedList: array[0..USER_MAX_NODE_COUNT-1] of PNMRAnetNode;             // Node List sorted by Alias
-    AllocatedCount: Integer;                                                    // Number of Nodes Allocated
-    iActiveNode: Integer;                                                          // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
-  end;
-  PNodePool = ^TNodePool;
- }
-
 procedure OPStackNode_Initialize;
 function OPStackNode_Allocate: PNMRAnetNode;
 procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
@@ -369,12 +358,21 @@ begin
   Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
   Node^.UserData := nil;
+  Node^.iUserStateMachine := 0;
   {$IFDEF SUPPORT_TRACTION}
   Node^.TrainData.State := 0;
   Node^.TrainData.Address := 0;
   Node^.TrainData.Functions := 0;
   Node^.TrainData.SpeedDir := 0;
   Node^.TrainData.SpeedSteps := DEFAULT_SPEED_STEPS;
+  Node^.TrainData.Lock.AliasID := 0;
+  Node^.TrainData.Lock.ID[0] := 0;
+  Node^.TrainData.Lock.ID[1] := 0;
+  {$ENDIF}
+  {$IFDEF SUPPORT_TRACTION_PROXY}
+  Node^.ProxyData.Lock.AliasID := 0;
+  Node^.ProxyData.Lock.ID[0] := 0;
+  Node^.ProxyData.Lock.ID[1] := 0;
   {$ENDIF}
   AppCallback_NodeInitialize(Node);                                             // Allow the App layer to initialize it
 end;

@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="2">
+    <Units Count="3">
       <Unit0>
         <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -50,6 +50,14 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitmain"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="Forms\formtrainnode.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormIsTrainNode"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="formtrainnode"/>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -60,7 +68,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File"/>
+      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File;Forms"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

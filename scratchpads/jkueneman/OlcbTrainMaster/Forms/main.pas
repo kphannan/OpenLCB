@@ -11,7 +11,7 @@ uses
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
-  template_hardware, opstackcore, template_configuration;
+  template_hardware, opstackcore, template_configuration, template_node;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';
@@ -309,13 +309,28 @@ var
   Throttle: TFormThrottle;
   Node: TOlcbThrottleTreeNode;
 begin
-  Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, @DispatchTask, ImageList16x16);
-  if Assigned(Throttle) then
+  if  Throttles.Count < USER_MAX_NODE_COUNT - 1 then
   begin
-    Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
-    Node.Throttle := Throttle;
-    UpdateUI;
-  end;
+    Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, @DispatchTask, ImageList16x16);
+    Throttle.PanelMain.Enabled := False;  // Not until the Node is created
+    Throttle.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
+    if Assigned(Throttle) then
+    begin
+      Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
+      Node.Throttle := Throttle;
+      UpdateUI;
+
+      System.EnterCriticalsection(OPStackCriticalSection);
+      Sync.Link[Sync.NextLink].Throttle.ObjPtr := Throttle;
+      Sync.Link[Sync.NextLink].SyncState := SYNC_THROTTLE_OBJPTR;
+      Inc(Sync.NextLink);
+      Sync.DatabaseChanged := True;
+      System.LeaveCriticalsection(OPStackCriticalSection);
+      Throttle.TimerGeneralTimeout.Interval := 1000;
+      Throttle.TimerGeneralTimeout.Enabled := True;
+    end;
+  end else
+    ShowMessage('OpenLCB node stack exhausted, can not create any more throttles');
 end;
 
 procedure TFormOlcbTrainMaster.ActionCloseAllThrottlesExecute(Sender: TObject);
@@ -844,12 +859,25 @@ end;
 procedure TFormOlcbTrainMaster.ThrottleClosing(Throttle: TFormThrottle);
 var
   i: Integer;
+  Link: PLinkRec;
 begin
   for i := 0 to TreeViewThrottles.Items.Count - 1 do
   begin
     if (TreeViewThrottles.Items[i] as TOlcbThrottleTreeNode).Throttle = Throttle then
     begin
       TreeViewThrottles.Items.Delete(TreeViewThrottles.Items[i]);
+      System.EnterCriticalsection(OPStackCriticalSection);
+      try
+        Link := Throttle.FindSyncLink(False);
+        if Assigned(Link) then
+        begin
+          Link^.SyncState := SYNC_THROTTLE_OBJPTR;
+          Link^.Throttle.ObjPtr := nil;              // Deallocate
+          Sync.DatabaseChanged := True;
+        end;
+      finally
+        System.LeaveCriticalsection(OPStackCriticalSection);
+      end;
       Break;
     end;
   end;

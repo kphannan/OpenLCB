@@ -4,12 +4,13 @@ unit opstackcore_traction_proxy;
 interface
 {$ENDIF}
 
+{$I Options.inc}
+
 uses
   {$IFNDEF FPC}
   NMRAnetDCC,
   {$ENDIF}
   template_hardware,
-  Float16,
   opstacknode,
   opstackcore_basic,
   nmranetdefines,
@@ -46,7 +47,36 @@ end;
 
 procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 begin
-  MessageToSend := nil;
+  {$IFDEF SUPPORT_TRACTION_PROXY}
+  if NextMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_MANAGE then
+  begin
+    if NextMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
+    begin
+      if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_PROXY_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
+      begin
+        // Only reserve if the node is not locked
+        MessageToSend^.Buffer^.DataBufferSize := 3;
+        MessageToSend^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
+        MessageToSend^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
+        MessageToSend^.Buffer^.DataArray[2] := $FF;   // Fail
+        if (Node^.ProxyData.Lock.AliasID = 0) then
+          if (Node^.ProxyData.Lock.AliasID = 0) then
+            if (Node^.ProxyData.Lock.AliasID = 0) then
+              MessageToSend^.Buffer^.DataArray[2] := 0;   // OK
+      end
+    end else
+    begin
+      if (Node^.ProxyData.Lock.AliasID = NextMessage^.Source.AliasID) then
+        if (Node^.ProxyData.Lock.ID[0] = NextMessage^.Source.ID[0]) then
+          if (Node^.ProxyData.Lock.ID[1] = NextMessage^.Source.ID[1]) then
+          begin
+            Node^.ProxyData.Lock.AliasID := 0;
+            Node^.ProxyData.Lock.ID[0] := 0;
+            Node^.ProxyData.Lock.ID[1] := 0;
+          end;
+    end
+  end
+  {$ENDIF}
 end;
 
 end.

@@ -13,10 +13,12 @@ uses
   Classes,
   SysUtils,
   FileUtil,
-  ethernet_hub,
   olcb_transport_layer,
   template_hardware,
+ // LCLIntf,
+ // LCLType,
   {$ENDIF}
+  Float16,
   opstacktypes,
   opstackdefines,
   template_node,
@@ -25,7 +27,7 @@ uses
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
-procedure AppCallback_UserStateMachine_Process;
+procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 
 // Called every 100ms typically from another thread so only use to update flags
@@ -37,7 +39,7 @@ procedure AppCallback_SimpleNodeInfoReply(var Source: TNodeInfo; var Dest: TNode
 procedure AppCallBack_ProtocolSupportReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);  // This could be 2 replies per call.. read docs
 {$IFDEF SUPPORT_TRACTION}
 function AppCallback_TractionProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: PAcdiSnipBuffer);
+procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; Dest: PNMRAnetNode; TrainNodeInfo: PAcdiSnipBuffer);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
@@ -47,36 +49,77 @@ function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage,
 // implications of this and how to use them correctly
 procedure AppCallback_InitializationComplete(var Source: TNodeInfo; NodeID: PNodeID);
 procedure AppCallback_VerifiedNodeID(var Source: TNodeInfo; NodeID: PNodeID);
-procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
-procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
+procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
+procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
-procedure AppCallback_TractionControlReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);  // Assumes we can make these all one frame long
-procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);    // Assumes we can make these all one frame long
-procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
+procedure AppCallback_TractionControlReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);  // Assumes we can make these all one frame long
+procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);    // Assumes we can make these all one frame long
+procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
 
 {$IFNDEF FPC}
+  function OPStackNode_Allocate: PNMRAnetNode; external;
+  procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode); external;
+  function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;   external;   // See FIND_BY_xxxx constants
+  function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
+  function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode; external;
   procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
   procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
 {$ENDIF}
 
 {$IFDEF FPC}
-type
-  TProcessState = (psClear, psReadyToProcess, psProcessing, psComplete);
+const
+  SYNC_NONE                     = $0000;
+  SYNC_THROTTLE_OBJPTR          = $0001;
 
-  TAllocateDCCByProxy = record
-    Process: TProcessState;
+  SYNC_NODE_INFO                = $0010;
+
+  SYNC_STATE_SPEED_DIR          = $0100;
+  SYNC_STATE_FUNCTIONS          = $0200;
+  SYNC_STATE_ADDRESS            = $0400;
+  SYNC_SPEED_STEPS              = $0800;
+
+type
+
+  // Fields that the UI updates
+  TThrottleRec = record
+    ObjPtr: TObject;
   end;
 
-  TAllocateThrottleNode = record
-    Process: TProcessState;
+  // Fields that the OPStack Updates
+  TNodeRec = record
+    Info     : TNodeInfo;
+    Index    : Integer;
+  end;
+
+  // Fields that either Update
+  TThrottleState = record
+    SpeedDir     : THalfFloat;
+    Functions    : DWORD;
+    Address      : Word;
+    SpeedSteps   : Word;
+  end;
+
+  TLinkRec = record
+    SyncState     : Word;    // SYNC_xxxxx contants to tell what has changed
+    Throttle      : TThrottleRec;
+    Node          : TNodeRec;
+    ThrottleState  : TThrottleState;
+  end;
+  PLinkRec = ^TLinkRec;
+
+  TLinkArray = array[0..USER_MAX_NODE_COUNT-2] of TLinkRec;    // Don't need the physical node
+
+  TSync = record
+    NextLink: Integer;
+    Link: TLinkArray;
+    DatabaseChanged: Boolean;
   end;
 
 var
   Template_UserStateMachine_OnTaskDestroy: TOlcbTaskBeforeDestroy;
   OPStackCriticalSection: TRTLCriticalSection;
-  AllocateThrottleNodeRec: TAllocateThrottleNode;
-  AllocateDCCByProxyRec: TAllocateDCCByProxy;
+  Sync: TSync;
 {$ENDIF}
 
 implementation
@@ -84,6 +127,7 @@ implementation
 {$IFDEF FPC}
   {$IFDEF SUPPORT_TRACTION and SUPPORT_TRACTION_PROXY}
   uses
+    opstacknode,
     opstackcore_traction,
     opstackcore_traction_proxy;
   {$ELSE}
@@ -122,7 +166,6 @@ type
   TSampleUserDataArray = array[0..USER_MAX_NODE_COUNT-1] of TSampleUserNodeData;
 
 var
-  UserState: Word;
   UserDataArray: TSampleUserDataArray;
 
   ProxyNode: TNodeInfo;
@@ -134,6 +177,52 @@ begin
   ProxyNode.AliasID := 0;
   ProxyNode.ID[0] := 0;
   ProxyNode.ID[1] := 0;
+end;
+
+procedure ZeroLinkRec(LinkRec: PLinkRec);
+begin
+  LinkRec^.SyncState := SYNC_NONE;
+  LinkRec^.Node.Index := 0;
+  LinkRec^.Node.Info.AliasID := 0;
+  LinkRec^.Node.Info.ID[0] := 0;
+  LinkRec^.Node.Info.ID[1] := 0;
+  LinkRec^.ThrottleState.Address := 0;
+  LinkRec^.ThrottleState.Functions := 0;
+  LinkRec^.ThrottleState.SpeedDir := 0;
+  LinkRec^.ThrottleState.SpeedSteps := 28;
+  LinkRec^.Throttle.ObjPtr := nil;
+end;
+
+function FindLinkByNodeAlias(Node: PNMRAnetNode): PLinkRec;
+var
+  i: Integer;
+begin
+  // Find the Link for this Node
+  Result := nil;
+  for i := 0 to Sync.NextLink - 1 do
+  begin
+    if Sync.Link[i].Node.Info.AliasID = Node^.Info.AliasID then          // WARNING ONLY WORKS WITH CAN OR ETHERNET USING GRID CONNECT
+    begin
+      Result := @Sync.Link[i];
+      Break;
+    end;
+  end;
+end;
+
+function FindLinkByPoolIndex(Index: Integer): PLinkRec;
+var
+  i: Integer;
+begin
+  // Find the Link for this Node
+  Result := nil;
+  for i := 0 to Sync.NextLink - 1 do
+  begin
+    if Sync.Link[i].Node.Index = Index then
+    begin
+      Result := @Sync.Link[i];
+      Break;
+    end;
+  end;
 end;
 
 // *****************************************************************************
@@ -166,7 +255,6 @@ begin
     UserDataArray[i].UserData2 := 0;
   end;
    // Initialize the example statemachine
-  UserState := STATE_USER_START;
   ClearProxyNode;
 end;
 
@@ -176,68 +264,157 @@ end;
 //     Returns     : None
 //     Description : Called as often as possible to run the user statemachine
 // *****************************************************************************
-procedure AppCallback_UserStateMachine_Process;
+procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 var
-  Node: PNMRAnetNode;
+  TempNode: PNMRAnetNode;
+  i, j: Integer;
+  Link: PLinkRec;
 begin
-  case UserState of
-    STATE_USER_START :
-        begin
-          Node := GetPhysicalNode;
-          if Node^.State and NS_INITIALIZED <> 0 then
-          begin
-            GlobalTimer := 0;
-            if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
-              UserState := STATE_USER_1;
-          end;
-        end;
-    STATE_USER_1  :
-        begin
-          if (ProxyNode.AliasID > 0) or (ProxyNode.ID[0] > 0) or (ProxyNode.ID[1] > 0) then
-            UserState := STATE_USER_2
-          else begin
-            if GlobalTimer > 10 then
-              UserState := STATE_USER_START            // Try again
-          end;
-        end;
-    STATE_USER_2  :
-        begin
-
-        end;
-    STATE_USER_3  :
-        begin
-
-        end;
-    STATE_USER_4  :
-        begin
-
-        end;
-    STATE_USER_5  :
-        begin
-
-        end;
-    STATE_USER_6  :
-        begin
-
-        end;
-    STATE_USER_7  :
-        begin
-
-        end;
-    STATE_USER_8  :
-        begin
-
-        end;
-    STATE_USER_9   :
-        begin
-
-        end;
-    STATE_USER_10  :
-        begin
-
-        end
-  else begin
+  if Node = GetPhysicalNode then
+  begin
+    case Node^.iUserStateMachine of
+        STATE_USER_START :
+            begin
+              // Find the Proxy node (Command Station) on the network before progressing
+              if Node^.State and NS_INITIALIZED <> 0 then
+               begin
+                 GlobalTimer := 0;
+                 if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+                   Node^.iUserStateMachine := STATE_USER_1;
+               end;
+            end;
+        STATE_USER_1 :
+            begin
+              // Find the Proxy node (Command Station) on the network before progressing
+              if (ProxyNode.AliasID > 0) or (ProxyNode.ID[0] > 0) or (ProxyNode.ID[1] > 0) then
+                Node^.iUserStateMachine := STATE_USER_2
+              else begin
+                if GlobalTimer > 10 then
+                  Node^.iUserStateMachine := STATE_USER_START            // Try again
+              end;
+            end;
+        STATE_USER_2 :
+            begin
+              // Now the Physical node can be a Throttle Node Server
+              EnterCriticalSection(OPStackCriticalSection);
+              // Only do something if the number of links has changed
+              if Sync.DatabaseChanged then
+              begin
+                for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
+                begin
+                  if Sync.Link[i].SyncState <> SYNC_NONE then
+                  begin
+                    if Sync.Link[i].SyncState and SYNC_THROTTLE_OBJPTR <> 0 then
+                    begin
+                      if Sync.Link[i].Node.Info.AliasID = 0 then
+                      begin // Logging in
+                        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_THROTTLE_OBJPTR;
+                        TempNode := OPStackNode_Allocate;
+                        Sync.Link[i].Node.Index := TempNode^.iIndex;
+                        // Now need to wait for it to log in
+                      end else
+                      begin // Logging out
+                        if Sync.Link[i].Node.Index > 0 then   // Don't deallocate the physical node if we messed up!
+                        begin
+                          Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_THROTTLE_OBJPTR;
+                          OPStackNode_MarkForRelease(@NodePool.Pool[Sync.Link[i].Node.Index]);
+                          for j := i to (Sync.NextLink - 1) do
+                            Sync.Link[j] := Sync.Link[j+1];
+                          Dec(Sync.NextLink);
+                          ZeroLinkRec(@Sync.Link[Sync.NextLink]);
+                        end;
+                      end
+                    end;
+                  end;
+                end;
+                Sync.DatabaseChanged := False;
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+            end
     end;
+  end else
+  begin
+    // Throttle Node (Virtaul Node)
+    case Node^.iUserStateMachine of
+        STATE_USER_START :
+            begin
+              EnterCriticalSection(OPStackCriticalSection);
+              // Don't do anything until it is initialized
+              if Node^.State and NS_INITIALIZED <> 0 then
+              begin
+                Link := FindLinkByPoolIndex(Node^.iIndex);
+                Link^.SyncState := SYNC_NODE_INFO;
+                Link^.Node.Info := Node^.Info;
+                Node^.iUserStateMachine := STATE_USER_1;
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+            end;
+        STATE_USER_1 :
+            begin
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then                     // May not be found if the node is being freed
+              begin
+                if Link^.SyncState <> SYNC_NONE then
+                begin
+                  if Link^.SyncState and (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS) = (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS) then
+                  begin
+                    // This means the throttle want to create a new train node
+                    if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
+                    begin
+                      Link^.SyncState := Link^.SyncState and not (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS);
+                      Node^.iUserStateMachine := STATE_USER_2;
+                    end;
+                  end;
+                end;
+                LeaveCriticalSection(OPStackCriticalSection);
+              end;
+            end;
+        STATE_USER_2 :
+            begin
+              // Wait for a callback to be called
+            end;
+        STATE_USER_3  :
+        begin
+          // Proxy is Reserved
+          EnterCriticalSection(OPStackCriticalSection);
+          Link := FindLinkByNodeAlias(Node);
+          if Link <> nil then
+          begin
+            if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Link^.ThrottleState.Address, Link^.ThrottleState.SpeedSteps, 0) then
+              Node^.iUserStateMachine := STATE_USER_2;  // Wait for the callback Result
+          end;
+          LeaveCriticalSection(OPStackCriticalSection);
+        end;
+        STATE_USER_4  :
+            begin
+
+            end;
+        STATE_USER_5  :
+            begin
+
+            end;
+        STATE_USER_6  :
+            begin
+
+            end;
+        STATE_USER_7  :
+            begin
+
+            end;
+        STATE_USER_8  :
+            begin
+
+            end;
+        STATE_USER_9   :
+            begin
+
+            end;
+        STATE_USER_10  :
+            begin
+
+            end
+    end
   end
 end;
 
@@ -256,6 +433,7 @@ var
 begin
   // Assign the user data record to the Node for future use
   Node^.UserData := @UserDataArray[Node^.iIndex];
+  Node^.iUserStateMachine := STATE_USER_START;
 
   // Initialize the example data, evertime the node is reused!
   NodeData := ExtractUserData(Node);
@@ -341,7 +519,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
+procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 begin
 
 end;
@@ -360,7 +538,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: Word; EventID: PEventID);
+procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 {$IFDEF FPC}
 var
   Task: TTaskSimpleNodeInformation;
@@ -433,7 +611,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_TractionControlReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
+procedure AppCallback_TractionControlReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
 begin
 
 end;
@@ -451,9 +629,24 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
+procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
+var
+  Link: PLinkRec;
 begin
-
+  EnterCriticalsection(OPStackCriticalSection);
+  Link := FindLinkByNodeAlias(Dest);
+  if Link <> nil then
+  begin
+    if DataBytes^.DataArray[0] = TRACTION_PROXY_MANAGE then
+      if DataBytes^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
+      begin
+         if DataBytes^.DataArray[2] = 0 then
+           Dest^.iUserStateMachine := STATE_USER_3         // Move to next state after reserving
+         else
+           Dest^.iUserStateMachine := STATE_USER_1         // Can't reserve now go back to normal polling
+      end;
+  end;
+  LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 // *****************************************************************************
@@ -469,7 +662,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
+procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
 begin
 
 end;
@@ -488,7 +681,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: PAcdiSnipBuffer);
+procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; Dest: PNMRAnetNode; TrainNodeInfo: PAcdiSnipBuffer);
 begin
 
 end;
@@ -559,12 +752,21 @@ begin
 end;
 
 {$IFDEF FPC}
+var
+  i: Integer;
+
 initialization
   Template_UserStateMachine_OnTaskDestroy := nil;
-  InitCriticalSection( OPStackCriticalSection);
+  InitCriticalSection(OPStackCriticalSection);
 
-  AllocateThrottleNodeRec.Process := psClear;
-  AllocateDCCByProxyRec.Process := psClear;
+
+  EnterCriticalSection(OPStackCriticalSection);
+  Sync.NextLink := 0;
+  Sync.DatabaseChanged := False;
+  for i := 0 to USER_MAX_NODE_COUNT - 2 do
+    ZeroLinkRec(@Sync.Link[i]);
+  LeaveCriticalsection(OPStackCriticalSection);
+
 
 Finalization
   DoneCriticalsection( OPStackCriticalSection);

@@ -1,20 +1,21 @@
 object Form1: TForm1
-  Left = 362
-  Height = 568
-  Top = 160
-  Width = 794
+  Left = 385
+  Height = 394
+  Top = 203
+  Width = 672
   Caption = 'Mustangpeak OclbCommandStation Emulator'
-  ClientHeight = 568
-  ClientWidth = 794
+  ClientHeight = 394
+  ClientWidth = 672
   Menu = MainMenu
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   LCLVersion = '1.2.0.3'
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
-    Top = 553
-    Width = 794
+    Top = 379
+    Width = 672
     Panels = <    
       item
         Width = 250
@@ -34,7 +35,7 @@ object Form1: TForm1
     Left = 0
     Height = 44
     Top = 0
-    Width = 794
+    Width = 672
     AutoSize = True
     ButtonHeight = 42
     ButtonWidth = 45
@@ -110,33 +111,33 @@ object Form1: TForm1
   end
   object PageControlMain: TPageControl
     Left = 0
-    Height = 509
+    Height = 335
     Top = 44
-    Width = 794
+    Width = 672
     ActivePage = TabSheetCommandStation
     Align = alClient
     TabIndex = 0
     TabOrder = 2
     object TabSheetCommandStation: TTabSheet
       Caption = 'Command Station'
-      ClientHeight = 470
-      ClientWidth = 788
+      ClientHeight = 296
+      ClientWidth = 666
       object GroupBoxLogging: TGroupBox
-        Left = 272
-        Height = 341
-        Top = 125
-        Width = 506
+        Left = 233
+        Height = 224
+        Top = 64
+        Width = 423
         Anchors = [akTop, akLeft, akRight, akBottom]
         Caption = 'Logging'
-        ClientHeight = 319
-        ClientWidth = 498
+        ClientHeight = 202
+        ClientWidth = 415
         TabOrder = 0
         inline SynMemoLog: TSynMemo
           Cursor = crIBeam
           Left = 0
-          Height = 306
+          Height = 189
           Top = 9
-          Width = 492
+          Width = 409
           Anchors = [akTop, akLeft, akRight, akBottom]
           Font.Height = 12
           Font.Name = 'Monaco'
@@ -619,75 +620,48 @@ object Form1: TForm1
           end
         end
       end
-      object GroupBoxThrottle: TGroupBox
-        Left = 272
-        Height = 125
+      object GroupBoxThrottles: TGroupBox
+        Left = 233
+        Height = 64
         Top = 0
-        Width = 506
+        Width = 423
         Anchors = [akTop, akLeft, akRight]
-        Caption = 'Connected Throttle Information'
-        ClientHeight = 103
-        ClientWidth = 498
+        Caption = 'Trains'
+        ClientHeight = 42
+        ClientWidth = 415
         TabOrder = 1
-        object Label2: TLabel
-          Left = 8
-          Height = 16
-          Top = 9
-          Width = 51
-          Caption = 'Node ID'
-          ParentColor = False
-        end
-        object Label3: TLabel
-          Left = 8
-          Height = 16
-          Top = 27
-          Width = 48
-          Caption = 'Alias ID'
-          ParentColor = False
-        end
-        object CheckBoxFakeTrainNodeConnectionFail: TCheckBox
-          Left = 12
-          Height = 18
-          Top = 53
-          Width = 307
-          Caption = 'Fake Train Node to fail connection of Throttle'
+        object ButtonShowAllThrottles: TButton
+          Left = 4
+          Height = 22
+          Top = 6
+          Width = 152
+          Action = ActionShowAllTrains
           TabOrder = 0
         end
-        object CheckBoxFakeConnectedThrottleConnnectionFail: TCheckBox
-          Left = 12
-          Height = 18
-          Top = 75
-          Width = 359
-          Caption = 'Fake Connected Throttle to fail connection of Throttle'
+        object ButtonHideAllThrottles: TButton
+          Left = 168
+          Height = 22
+          Top = 6
+          Width = 153
+          Action = ActionHideAllTrains
           TabOrder = 1
         end
       end
-      object GroupBoxDatabase: TGroupBox
-        Left = 8
-        Height = 466
+      object TreeViewTrains: TTreeView
+        Left = 0
+        Height = 296
         Top = 0
-        Width = 255
-        Anchors = [akTop, akLeft, akBottom]
-        Caption = 'Command Station Node Database'
-        ClientHeight = 444
-        ClientWidth = 247
+        Width = 221
+        Align = alLeft
+        DefaultItemHeight = 18
         TabOrder = 2
-        object TreeViewDatabase: TTreeView
-          Left = 1
-          Height = 437
-          Top = 3
-          Width = 240
-          Anchors = [akTop, akLeft, akBottom]
-          BorderWidth = 2
-          DefaultItemHeight = 18
-          TabOrder = 0
-        end
+        OnCreateNodeClass = TreeViewTrainsCreateNodeClass
       end
     end
     object TabSheetComPort: TTabSheet
       Caption = 'ComPort'
-      ClientHeight = 462
-      ClientWidth = 931
+      ClientHeight = 316
+      ClientWidth = 666
       OnHide = TabSheetComPortHide
       OnShow = TabSheetComPortShow
       object LabelComPort: TLabel
@@ -846,8 +820,8 @@ object Form1: TForm1
     end
     object TabSheetEthernet: TTabSheet
       Caption = 'Ethernet'
-      ClientHeight = 462
-      ClientWidth = 931
+      ClientHeight = 316
+      ClientWidth = 666
       OnHide = TabSheetEthernetHide
       OnShow = TabSheetEthernetShow
       object EditEthernetLocalIP: TEdit
@@ -939,8 +913,8 @@ object Form1: TForm1
     end
     object TabSheetGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 462
-      ClientWidth = 931
+      ClientHeight = 316
+      ClientWidth = 666
       OnHide = TabSheetGeneralHide
       OnShow = TabSheetGeneralShow
       TabVisible = False
@@ -1007,13 +981,13 @@ object Form1: TForm1
     end
     object TabSheetAbout: TTabSheet
       Caption = 'About'
-      ClientHeight = 470
-      ClientWidth = 788
+      ClientHeight = 296
+      ClientWidth = 666
       object LabelNodeExplorer: TLabel
         Left = 0
         Height = 28
         Top = 0
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'OpenLCB Command Station Emulator v0.1'
@@ -1027,7 +1001,7 @@ object Form1: TForm1
         Left = 0
         Height = 17
         Top = 28
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'written by Jim Kueneman'
@@ -1039,7 +1013,7 @@ object Form1: TForm1
         Left = 0
         Height = 17
         Top = 55
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         BorderSpacing.Top = 10
@@ -1052,7 +1026,7 @@ object Form1: TForm1
         Left = 0
         Height = 17
         Top = 72
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'LabelBuildDate'
@@ -1064,7 +1038,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 99
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         BorderSpacing.Top = 10
@@ -1077,7 +1051,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 114
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'LabelTargetCPU'
@@ -1089,7 +1063,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 139
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         BorderSpacing.Top = 10
@@ -1102,7 +1076,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 154
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'LabelTargetOS'
@@ -1114,7 +1088,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 189
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         BorderSpacing.Top = 20
@@ -1128,7 +1102,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 204
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'www.freepascal.org'
@@ -1145,7 +1119,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 219
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'www.lazarus.freepascal.org'
@@ -1161,7 +1135,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 254
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         BorderSpacing.Top = 20
@@ -1175,7 +1149,7 @@ object Form1: TForm1
         Left = 0
         Height = 15
         Top = 269
-        Width = 788
+        Width = 666
         Align = alTop
         Alignment = taCenter
         Caption = 'www.famfamfam.com/lab/icons/'
@@ -1188,9 +1162,9 @@ object Form1: TForm1
         OnMouseLeave = LabelURLIconsMouseLeave
       end
       object Image1: TImage
-        Left = 341
+        Left = 13
         Height = 114
-        Top = 300
+        Top = 40
         Width = 114
         AutoSize = True
         OnClick = Image1Click
@@ -40343,27 +40317,29 @@ object Form1: TForm1
       ImageIndex = 989
       OnExecute = ActionEthernetListenerConnectionExecute
     end
-    object ActionAddNewThrottle: TAction
-      Category = 'Throttle'
-      Caption = 'Add Throttle'
+    object ActionAddNewTrain: TAction
+      Category = 'Train'
+      Caption = 'Add Train'
       ImageIndex = 105
     end
-    object ActionCloseSelectedThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Close Throttles'
+    object ActionCloseSelectedTrains: TAction
+      Category = 'Train'
+      Caption = 'Close Trains'
       ImageIndex = 106
     end
-    object ActionHideAllThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Hide All Throttles'
+    object ActionHideAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Hide All Trains'
+      OnExecute = ActionHideAllTrainsExecute
     end
-    object ActionCloseAllThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Close All Throttles'
+    object ActionCloseAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Close All Trains'
     end
-    object ActionShowAllThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Show All Throttles'
+    object ActionShowAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Show All Trains'
+      OnExecute = ActionShowAllTrainsExecute
     end
     object ActionHelpAboutShow: TAction
       Caption = 'About'
@@ -40534,5 +40510,10 @@ object Form1: TForm1
     object MenuItemCommonToolsZeroizeConfigMem: TMenuItem
       Action = ActionZeroizeConfigMemory
     end
+  end
+  object TimerGeneral: TTimer
+    OnTimer = TimerGeneralTimer
+    left = 142
+    top = 110
   end
 end

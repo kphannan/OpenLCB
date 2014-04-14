@@ -271,12 +271,18 @@ type
   {$ENDIF}
 
   {$IFDEF SUPPORT_TRACTION}
-  TTrainDCCProxyData = record
+  TTrainData = record
     State: Word;                                                                // Train State (see Train State (TS_xxxx) constants
     SpeedDir: THalfFloat;                                                       // Speed and direction (encoded in the sign)
     Functions: DWord;                                                           // F0..F28
     Address: Word;                                                              // DCC Address
     SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
+    Lock: TNodeInfo;                                                            // For the nodes lock managements
+  end;
+  {$ENDIF}
+  {$IFDEF SUPPORT_TRACTION_PROXY}
+  TProxyData = record
+    Lock: TNodeInfo;                                                            // For the proxies lock managements
   end;
   {$ENDIF}
 
@@ -292,7 +298,9 @@ type
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
     StateMachineMessages: POPStackMessage;                                      // Linked List of Messages that need to run statemachine to operate allocated for this node
     UserData: ^Byte;                                                            // Pointer to User Data
-    {$IFDEF SUPPORT_TRACTION}TrainData: TTrainDCCProxyData;{$ENDIF}             // Realtime information about the DCC Train Proxy Node
+    iUserStateMachine: Byte;                                                    // For user (application level) statemachine
+    {$IFDEF SUPPORT_TRACTION}TrainData: TTrainData;{$ENDIF}                     // Realtime information about the Train Node
+    {$IFDEF SUPPORT_TRACTION_PROXY}ProxyData: TProxyData;{$ENDIF}               // Realtime information about the Proxy Node
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 

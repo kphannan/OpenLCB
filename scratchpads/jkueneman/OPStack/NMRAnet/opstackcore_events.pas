@@ -20,8 +20,8 @@ uses
   opstacktypes;
 
 procedure IdentifyEvents(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure IdentifyConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure IdentifyProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure IdentifyConsumers(AMessage: POPStackMessage);
+procedure IdentifyProducers(AMessage: POPStackMessage);
 
 function NodeRunPCERFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
 function NodeRunEventFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
@@ -206,7 +206,7 @@ begin
   end;
 end;
 
-procedure IdentifyConsumers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure IdentifyConsumers(AMessage: POPStackMessage);
 var
   VNodeEventIndex, NodeEventIndex, i: Integer;
   LocalDestNode: PNMRAnetNode;
@@ -230,7 +230,7 @@ begin
   end;
 end;
 
-procedure IdentifyProducers(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure IdentifyProducers(AMessage: POPStackMessage);
 var
   VNodeEventIndex, NodeEventIndex, i: Integer;
   LocalDestNode: PNMRAnetNode;

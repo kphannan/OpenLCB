@@ -155,11 +155,11 @@ begin
                   MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST : begin SimpleTrainNodeInfoRequest(AMessage, DestNode); Exit; end;
                   MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin  {TODO: Implement Statemachine to gather up frames then call AppCallback_SimpleTrainNodeInfoReply()} Exit; end;
                   MTI_TRACTION_PROTOCOL             : begin TractionProtocol(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_REPLY                : begin AppCallback_TractionControlReply(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer); Exit; end;
+                  MTI_TRACTION_REPLY                : begin AppCallback_TractionControlReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end;
                   {$ENDIF}
                   {$IFDEF SUPPORT_TRACTION_PROXY}
                   MTI_TRACTION_PROXY_PROTOCOL       : begin TractionProxyProtocol(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_PROXY_REPLY          : begin AppCallback_TractionProxyReply(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer); Exit; end;
+                  MTI_TRACTION_PROXY_REPLY          : begin AppCallback_TractionProxyReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end;
                   {$ENDIF}
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
@@ -169,7 +169,7 @@ begin
                   {$ENDIF}
                   MTI_OPTIONAL_INTERACTION_REJECTED : begin {TODO: What to do if one of the messages is Rejected!} end;
                   MTI_REMOTE_BUTTON_REQUEST         : begin {TODO: Understand if we just pass this to the application layer or can we do something automatically (doubt it)} Exit; end;
-                  MTI_REMOTE_BUTTON_REPLY           : begin AppCallback_RemoteButtonReply(AMessage^.Source, AMessage^.Dest, AMessage^.Buffer); Exit; end
+                  MTI_REMOTE_BUTTON_REPLY           : begin AppCallback_RemoteButtonReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end
                 else
                   OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
                 end; {case}
@@ -179,8 +179,8 @@ begin
             begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
               case AMessage^.MTI of
                   MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(AMessage, DestNode); Exit; end;              // Sets Flag(s) to be processed in main loop
-                  MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_PRODUCER_IDENTIFY           : begin IdentifyProducers(AMessage, DestNode); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage); Exit; end;         // Sets Flag(s) to be processed in main loop
+                  MTI_PRODUCER_IDENTIFY           : begin IdentifyProducers(AMessage); Exit; end;         // Sets Flag(s) to be processed in main loop
                   MTI_EVENT_LEARN                 : begin AppCallback_LearnEvent(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;                           // Sets Flag(s) to be processed in main loop
                   MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(AMessage, nil); Exit; end;                 // Sets Flag(s) to be processed in main loop
 
@@ -188,12 +188,12 @@ begin
                   MTI_CONSUMER_IDENTIFIED_CLEAR,
                   MTI_CONSUMER_IDENTIFIED_RESERVED,
                   MTI_CONSUMER_IDENTIFIED_SET,
-                  MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(AMessage^.Source, AMessage^.Dest, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                  MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
                   MTI_PRODUCER_IDENTIFIED_RANGE,
                   MTI_PRODUCER_IDENTIFIED_CLEAR,
                   MTI_PRODUCER_IDENTIFIED_RESERVED,
                   MTI_PRODUCER_IDENTIFIED_SET,
-                  MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(AMessage^.Source, AMessage^.Dest, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                  MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
                   MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(AMessage^.Source, NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
                   MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(AMessage^.Source,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
                   MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
@@ -309,7 +309,7 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure NodeRunMessageReply
+//  procedure NodeRunMessageBufferReply
 //     Parameters: Node: Node that has a message to send
 //                 MessageToSend: The buffer to load if the function is successful in loading it
 //                                If loaded and needs sending return True to this function
@@ -341,8 +341,8 @@ begin
         {$IFDEF SUPPORT_TRACTION}
         MTI_TRACTION_PROTOCOL :
             begin
-              if AppCallback_TractionProtocol(Node, MessageToSend, NextMessage) then
-                Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+               AppCallback_TractionProtocol(Node, MessageToSend, NextMessage);
+               Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST :
             begin
@@ -353,8 +353,15 @@ begin
         {$IFDEF SUPPORT_TRACTION_PROXY}
         MTI_TRACTION_PROXY_PROTOCOL :
             begin
-              if AppCallback_TractionProxyProtocol(Node, MessageToSend, NextMessage) then
+              if (NextMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_MANAGE) then
+              begin
+                TractionProxyProtocolReply(Node, MessageToSend, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+              end else
+              begin
+                 AppCallback_TractionProxyProtocol(Node, MessageToSend, NextMessage);
+                 Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+              end;
             end;
         {$ENDIF}
         {$IFDEF SUPPORT_STREAMS}
@@ -655,9 +662,11 @@ begin
     Hardware_DisableInterrupts;
     Result := OPStackNode_NextNode;
     if Result <> nil then
+    begin
       NodeRunStateMachine(Result);
+      AppCallback_UserStateMachine_Process(Result);    // Do I want to let this run with nil?  Why should there be a nil?  There shouldn't
+    end;
     ProcessHardwareMessages;
-    AppCallback_UserStateMachine_Process;
     Hardware_EnableInterrupts;
   end;
 end;

@@ -10,7 +10,8 @@ uses
   com_port_hub, ethernet_hub, olcb_app_common_settings, file_utilities,
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds, SynEditMarkupHighAll,
-  template_hardware, opstackcore, template_configuration;
+  formtrainnode,
+  template_hardware, opstackcore, template_configuration, template_userstatemachine;
 
 const
   BUNDLENAME             = 'OpenLCB CommandStationEmulator';
@@ -26,15 +27,23 @@ type
     lstGeneral
   );
 
+  TOlcbTrainTreeNode = class(TTreeNode)
+  private
+    FTrain: TFormIsTrainNode;
+  public
+    property Train: TFormIsTrainNode read FTrain write FTrain;
+  end;
+  TOlcbTrainTreeNodeClass = class of TOlcbTrainTreeNode;
+
   { TForm1 }
 
   TForm1 = class(TForm)
     ActionZeroizeConfigMemory: TAction;
-    ActionAddNewThrottle: TAction;
-    ActionCloseAllThrottles: TAction;
-    ActionCloseSelectedThrottles: TAction;
+    ActionAddNewTrain: TAction;
+    ActionCloseAllTrains: TAction;
+    ActionCloseSelectedTrains: TAction;
     ActionDetailedLogging: TAction;
-    ActionHideAllThrottles: TAction;
+    ActionHideAllTrains: TAction;
     ActionLogClear: TAction;
     ActionLogCopy: TAction;
     ActionLogCut: TAction;
@@ -42,7 +51,7 @@ type
     ActionLogPause: TAction;
     ActionLogSelectAll: TAction;
     ActionRediscoverProxies: TAction;
-    ActionShowAllThrottles: TAction;
+    ActionShowAllTrains: TAction;
     ActionStartNode: TAction;
     ActionCOMConnection: TAction;
     ActionEthernetClientConnection: TAction;
@@ -53,10 +62,10 @@ type
     ActionToolsPreferenceShowMac: TAction;
     ActionToolsSettingsShowWin: TAction;
     BitBtnRescanPorts: TBitBtn;
+    ButtonHideAllThrottles: TButton;
     ButtonLocalHost: TButton;
     ButtonRemoteLocalHost: TButton;
-    CheckBoxFakeConnectedThrottleConnnectionFail: TCheckBox;
-    CheckBoxFakeTrainNodeConnectionFail: TCheckBox;
+    ButtonShowAllThrottles: TButton;
     ComboBoxBaud: TComboBox;
     ComboBoxComPort: TComboBox;
     ComboBoxDataBits: TComboBox;
@@ -67,15 +76,12 @@ type
     EditEthernetLocalIP: TEdit;
     EditEthernetRemoteIP: TEdit;
     EditNodeID: TEdit;
-    GroupBoxDatabase: TGroupBox;
     GroupBoxLogging: TGroupBox;
-    GroupBoxThrottle: TGroupBox;
+    GroupBoxThrottles: TGroupBox;
     Image1: TImage;
     ImageList16x16: TImageList;
     Label1: TLabel;
     Label10: TLabel;
-    Label2: TLabel;
-    Label3: TLabel;
     Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
@@ -137,6 +143,7 @@ type
     TabSheetCommandStation: TTabSheet;
     TabSheetEthernet: TTabSheet;
     TabSheetGeneral: TTabSheet;
+    TimerGeneral: TTimer;
     TimerOpStackProcess: TTimer;
     TimerOpStackTimer: TTimer;
     ToolBarMain: TToolBar;
@@ -151,12 +158,13 @@ type
     ToolButtonEthernet: TToolButton;
     ToolButtonNewThrottle: TToolButton;
     ToolButtonSeparator: TToolButton;
-    TreeViewDatabase: TTreeView;
+    TreeViewTrains: TTreeView;
     procedure ActionCOMConnectionExecute(Sender: TObject);
     procedure ActionDetailedLoggingExecute(Sender: TObject);
     procedure ActionEthernetClientConnectionExecute(Sender: TObject);
     procedure ActionEthernetListenerConnectionExecute(Sender: TObject);
     procedure ActionHelpAboutShowExecute(Sender: TObject);
+    procedure ActionHideAllTrainsExecute(Sender: TObject);
     procedure ActionLogClearExecute(Sender: TObject);
     procedure ActionLogCopyExecute(Sender: TObject);
     procedure ActionLogCutExecute(Sender: TObject);
@@ -164,6 +172,7 @@ type
     procedure ActionLogPasteExecute(Sender: TObject);
     procedure ActionLogPauseExecute(Sender: TObject);
     procedure ActionLogSelectAllExecute(Sender: TObject);
+    procedure ActionShowAllTrainsExecute(Sender: TObject);
     procedure ActionStartNodeExecute(Sender: TObject);
     procedure ActionZeroizeConfigMemoryExecute(Sender: TObject);
     procedure ButtonLocalHostClick(Sender: TObject);
@@ -174,6 +183,7 @@ type
     procedure EditEthernetRemoteIPChange(Sender: TObject);
     procedure EditNodeIDChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure Image1Click(Sender: TObject);
     procedure LabelURLFreePascalClick(Sender: TObject);
@@ -194,8 +204,11 @@ type
     procedure TabSheetEthernetShow(Sender: TObject);
     procedure TabSheetGeneralHide(Sender: TObject);
     procedure TabSheetGeneralShow(Sender: TObject);
+    procedure TimerGeneralTimer(Sender: TObject);
     procedure TimerOpStackProcessTimer(Sender: TObject);
     procedure TimerOpStackTimerTimer(Sender: TObject);
+    procedure TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView;
+      var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
     FConfigurationFile: WideString;
@@ -209,6 +222,7 @@ type
     FPaused: Boolean;
     FSettingsLocked: Boolean;
     FShownOnce: Boolean;
+    FTrainNodeList: TTrainNodeList;
     { private declarations }
   protected
     procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
@@ -236,6 +250,7 @@ type
     { public declarations }
 
     procedure UpdateUI;
+    property TrainNodeList: TTrainNodeList read FTrainNodeList write FTrainNodeList;
   end;
 
 var
@@ -295,19 +310,24 @@ begin
   PageControlMain.ActivePage := TabSheetAbout;
 end;
 
+procedure TForm1.ActionHideAllTrainsExecute(Sender: TObject);
+begin
+  TrainNodeList.HideAll;
+end;
+
 procedure TForm1.ActionLogClearExecute(Sender: TObject);
 begin
-    SynMemoLog.ClearAll;
+  SynMemoLog.ClearAll;
 end;
 
 procedure TForm1.ActionLogCopyExecute(Sender: TObject);
 begin
-    SynMemoLog.CommandProcessor(TSynEditorCommand(ecCopy), ' ', nil);
+  SynMemoLog.CommandProcessor(TSynEditorCommand(ecCopy), ' ', nil);
 end;
 
 procedure TForm1.ActionLogCutExecute(Sender: TObject);
 begin
-    SynMemoLog.CommandProcessor(TSynEditorCommand(ecCut), ' ', nil);
+  SynMemoLog.CommandProcessor(TSynEditorCommand(ecCut), ' ', nil);
 end;
 
 procedure TForm1.ActionLoggingExecute(Sender: TObject);
@@ -329,6 +349,11 @@ end;
 procedure TForm1.ActionLogSelectAllExecute(Sender: TObject);
 begin
     SynMemoLog.SelectAll;
+end;
+
+procedure TForm1.ActionShowAllTrainsExecute(Sender: TObject);
+begin
+  TrainNodeList.ShowAll;
 end;
 
 procedure TForm1.ActionStartNodeExecute(Sender: TObject);
@@ -417,6 +442,13 @@ begin
   Markup.Trim := True;
   Markup.FullWord := False;
   Markup.IgnoreKeywords := False;
+
+  TrainNodeList := TTrainNodeList.Create;
+end;
+
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FTrainNodeList);
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
@@ -707,6 +739,40 @@ begin
   LoadSettings(lstGeneral)
 end;
 
+procedure TForm1.TimerGeneralTimer(Sender: TObject);
+var
+  i: Integer;
+  Link: PLinkRec;
+  Node: TOlcbTrainTreeNode;
+  TrainForm: TFormIsTrainNode;
+begin
+  System.EnterCriticalsection(OPStackCriticalSection);
+  try
+    for i := 0 to Sync.NextLink - 1 do
+    begin
+      Link := @Sync.Link[i];
+      if Link^.SyncState and SYNC_NODE_INFO <> 0 then
+      begin
+        Link^.SyncState := Link^.SyncState and not SYNC_NODE_INFO;
+        TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
+        if Assigned(TrainForm) then
+        begin
+          TrainForm.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
+          TrainForm.LoadTrainState(Link);
+          Node := TreeViewTrains.Items.Add(nil, TrainForm.Caption) as TOlcbTrainTreeNode;
+          Node.Train := TrainForm;
+          UpdateUI;
+          TrainForm.Caption := 'Train Node [' + TrainForm.LabelAddress.Caption + ']';
+          TrainForm.UpdateStatus('Train Node Created');
+          Link^.Train.ObjPtr := TrainForm;
+        end;
+      end;
+    end;
+  finally
+    System.LeaveCriticalsection(OPStackCriticalSection);
+  end;
+end;
+
 procedure TForm1.TimerOpStackProcessTimer(Sender: TObject);
 begin
   OPStackCore_Process;
@@ -715,6 +781,12 @@ end;
 procedure TForm1.TimerOpStackTimerTimer(Sender: TObject);
 begin
   OPStackCore_Timer;
+end;
+
+procedure TForm1.TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView;
+  var NodeClass: TTreeNodeClass);
+begin
+  NodeClass := TOlcbTrainTreeNode
 end;
 
 procedure TForm1.UpdateUI;

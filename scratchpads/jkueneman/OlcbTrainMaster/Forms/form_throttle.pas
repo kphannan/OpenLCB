@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   ComCtrls, StdCtrls, ActnList, Spin, Buttons, math_float16,
   olcb_transport_layer, olcb_app_common_settings,
-  olcb_utilities, olcb_defines, form_throttle_multiple_trains,
+  olcb_utilities, olcb_defines,
   laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
   form_train_config_editor, com_port_hub, ethernet_hub,
   template_userstatemachine;
@@ -23,19 +23,6 @@ type
   TFormThrottle = class;
 
   TOnThrottleEvent = procedure(Throttle: TFormThrottle) of object;
-
-  TGeneralWaitTimeTask = (
-    gwttNone,
-    gwttQueryAddress,
-    gwttQueryIsIdle,
-    gwttAttachAddress,
-    gwttDeattachAddress
-  );
-
-  TThrottleWaitingAction = (
-    wa_None
-  );
-  TThrottleWaitingActions = set of TThrottleWaitingAction;
 
   { TThrottleList }
 
@@ -59,10 +46,6 @@ type
     property Throttles[Index: Integer]: TFormThrottle read GetThrottles write SetThrottles;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
-  end;
-
-  TAliasList = class(TList)
-
   end;
 
 
@@ -111,33 +94,35 @@ type
     ActionToggleAllocationPanel: TAction;
     ActionListThrottle: TActionList;
     ButtonAllocateTrainByAddress: TButton;
+    ButtonEditConfiguration: TButton;
+    ButtonEStop: TButton;
+    ButtonFreeTrain: TButton;
     ButtonQueryFunctions: TButton;
     ButtonQuerySpeed: TButton;
-    ButtonShowHideAllocatePanel: TButton;
-    ButtonEditConfiguration: TButton;
-    ButtonSearchForTrain: TButton;
     ButtonReleaseTrain: TButton;
-    ButtonFreeTrain: TButton;
+    ButtonSearchForTrain: TButton;
+    ButtonShowHideAllocatePanel: TButton;
     ButtonStop: TButton;
-    ButtonEStop: TButton;
     GroupBoxAddress: TGroupBox;
     GroupBoxAllocation: TGroupBox;
+    GroupBoxConfiguration: TGroupBox;
     GroupBoxControl: TGroupBox;
     GroupBoxFunctions: TGroupBox;
-    GroupBoxConfiguration: TGroupBox;
-    LabelAllocatedAddress: TLabel;
-    LabelPosValue: TLabel;
-    LabelSpeedPos: TLabel;
     LabelAddress: TLabel;
+    LabelAllocatedAddress: TLabel;
     LabelMaxSpeed: TLabel;
     LabelMinSpeed: TLabel;
+    LabelPosValue: TLabel;
+    LabelSpeedPos: TLabel;
     OpenDialog: TOpenDialog;
-    RadioGroupShortLong: TRadioGroup;
+    PanelMain: TPanel;
     RadioGroupDirection: TRadioGroup;
-    RadioGroupSpeedStep: TRadioGroup;
+    RadioGroupShortLong: TRadioGroup;
     RadioGroupSpeedScale: TRadioGroup;
+    RadioGroupSpeedStep: TRadioGroup;
     ScrollBoxFunctions: TScrollBox;
     SpinEditAddress: TSpinEdit;
+    StatusBar: TStatusBar;
     TimerGeneralTimeout: TTimer;
     TimerToggleAnimation: TTimer;
     TrackBarSpeed: TTrackBar;
@@ -181,7 +166,6 @@ type
     procedure ActionToggleAllocationPanelExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupDirectionClick(Sender: TObject);
@@ -191,7 +175,6 @@ type
     procedure TimerToggleAnimationTimer(Sender: TObject);
     procedure TrackBarSpeedChange(Sender: TObject);
   private
-    FAliasList: TAliasList;
     FAllocated: Boolean;
     FAllocatedAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
@@ -204,25 +187,18 @@ type
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
     FPotentialAlias: Word;
-    FWaitingActions: TThrottleWaitingActions;
-    FWaitTimeTask: TGeneralWaitTimeTask;
     procedure RunWriteFdiFile(AliasID: Word; FileName: string);
     procedure RunProtocolSupport(AliasID: Word);
     procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
     procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
-    procedure RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
-    procedure RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
- //   procedure RunTractionQueryIsIdle(WaitTime: Cardinal);
     procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
     procedure RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
     procedure RunTractionQueryFunctions(AliasID: Word; Address: DWord);
     procedure RunTractionQuerySpeed(AliasID: Word);
-    procedure SetAllocated(AValue: Boolean);
     procedure SetAllocatedAlias(AValue: Word);
   protected
     procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
-    procedure HandleGeneralTimerResults;
     function IsForward: Boolean;
     function IsShortAddress: Boolean;
     procedure OnBeforeDestroyTask(Sender: TTaskOlcbBase);
@@ -232,23 +208,20 @@ type
     procedure UpdateFunctionsWithDefault;
     procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
-    property AliasList: TAliasList read FAliasList write FAliasList;
     property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
     property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
     property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property PotentialAlias: Word read FPotentialAlias write FPotentialAlias;
-    property WaitTimeTask: TGeneralWaitTimeTask read FWaitTimeTask write FWaitTimeTask;
   public
     { public declarations }
-    property Allocated: Boolean read FAllocated write SetAllocated;
     property AllocatedAlias: Word read FAllocatedAlias write SetAllocatedAlias;
     property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
     property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
-    property WaitingActions: TThrottleWaitingActions read FWaitingActions write FWaitingActions;
-    procedure EventTaskReceived(EventTask: TTaskOlcbBase);
+    function FindSyncLink(UseCriticalSection: Boolean): PLinkRec;
     procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
+    procedure UpdateStatus(NewStatus: string);
     procedure UpdateUI;
   end;
 
@@ -387,19 +360,10 @@ end;
 
 procedure TFormThrottle.FormCreate(Sender: TObject);
 begin
-  Allocated := False;
-  FWaitTimeTask := gwttNone;
-  FWaitingActions := [wa_None];
   FComPortHub := nil;
   FEthernetHub := nil;
-  AliasList := TAliasList.Create;
   FConfigurationViewer := nil;
   FImageList16x16 := nil;
-end;
-
-procedure TFormThrottle.FormDestroy(Sender: TObject);
-begin
-  FreeAndNil(FAliasList);
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -409,11 +373,29 @@ begin
 end;
 
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
+var
+  Link: PLinkRec;
 begin
-  AliasList.Clear;
   EnterCriticalsection(OPStackCriticalSection);
-  LeaveCriticalsection(OPStackCriticalSection);
-//  RunTractionQueryDccAddress(TIME_QUERY_DCC_ADDRESS);  // We need to query looking for any nodes that are current assigned for the address
+  try
+    Link := FindSyncLink(False);
+    if Assigned(Link) then
+    begin
+      Link^.SyncState := Link^.SyncState or SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS;
+      Link^.ThrottleState.Address := SpinEditAddress.Value;
+      if RadioGroupShortLong.ItemIndex = 1 then
+        Link^.ThrottleState.Address := Link^.ThrottleState.Address or $C000;
+      case RadioGroupSpeedStep.ItemIndex of
+        0 : Link^.ThrottleState.SpeedSteps := 14;
+        1 : Link^.ThrottleState.SpeedSteps := 28;
+        2 : Link^.ThrottleState.SpeedSteps := 128;
+      end;
+      Link^.ThrottleState.SpeedDir := 0;
+      Link^.ThrottleState.Functions := 0;
+    end;
+  finally
+    LeaveCriticalsection(OPStackCriticalSection);
+  end;
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
@@ -434,13 +416,11 @@ end;
 procedure TFormThrottle.ActionAllocationFreeExecute(Sender: TObject);
 begin
   TrackBarSpeed.Position := 0;
-  RunTractionDeAllocateTrainByAddress(AllocatedAlias, TIME_DEALLOCATE_ADDRESS);
+
 end;
 
 procedure TFormThrottle.ActionAllocationReleaseExecute(Sender: TObject);
 begin
-  AliasList.Clear;        // Just let it go
-  Allocated := False;
   AllocatedAlias := 0;
   UpdateUI;
 end;
@@ -675,9 +655,40 @@ begin
 end;
 
 procedure TFormThrottle.TimerGeneralTimeoutTimer(Sender: TObject);
+var
+  i: Integer;
+  LinkFound: Boolean;
 begin
-  TimerGeneralTimeout.Enabled := False;
-  HandleGeneralTimerResults;
+  LinkFound := False;
+  System.EnterCriticalsection(OPStackCriticalSection);
+  for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
+  begin
+    // Look for links associated with this throttle
+    if Sync.Link[i].Throttle.ObjPtr = Self then
+    begin
+      LinkFound := True;
+
+      if Sync.Link[i].SyncState and SYNC_NODE_INFO <> 0 then
+      begin
+        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_NODE_INFO;
+        TimerGeneralTimeout.Enabled := False;
+        PanelMain.Enabled := True;
+        UpdateStatus('OpenLCB link established, Alias = 0x' + IntToHex(Sync.Link[i].Node.Info.AliasID, 4))
+      end;
+
+    end;
+
+  end;
+
+  // If the throttle is open there MUST be a link or it is broken
+  if not LinkFound then
+  begin
+    // Something is broken we don't have a link...
+    TimerGeneralTimeout.Enabled := False;
+    PanelMain.Enabled := False;
+    UpdateStatus('Fatal Error: Link with OpenLCB unexpectedly lost');
+  end;
+  System.LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 procedure TFormThrottle.TimerToggleAnimationTimer(Sender: TObject);
@@ -806,60 +817,6 @@ begin
   DispatchTask(Task);
 end;
 
-procedure TFormThrottle.RunTractionReserveAndAttachTrainByAddress(AliasID: Word; WaitTime: Cardinal);
-var
-  Task: TTaskTractionReserveAndAttachDccProxy;
-  SpeedStep: Byte;
-begin
-  case RadioGroupSpeedStep.ItemIndex of
-    0: SpeedStep := 14;
-    1: SpeedStep := 28;
-    2: SpeedStep := 128
-  else
-    SpeedStep := SPEEDSTEP_DEFAULT;
-  end;
-  Task := TTaskTractionReserveAndAttachDccProxy.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress, SpeedStep);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  if DispatchTask(Task) then
-  begin
-    TimerGeneralTimeout.Enabled := False;
-    TimerGeneralTimeout.Interval := WaitTime;
-    TimerGeneralTimeout.Enabled := True;
-    WaitTimeTask := gwttAttachAddress;
-  end;
-end;
-
-procedure TFormThrottle.RunTractionDeAllocateTrainByAddress(AliasID: Word; WaitTime: Cardinal);
-var
-  Task: TTaskTractionReserveAndDetachDccProxy;
-begin
-  Task := TTaskTractionReserveAndDetachDccProxy.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, SpinEditAddress.Value, IsShortAddress);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  if DispatchTask(Task) then
-  begin
-    TimerGeneralTimeout.Enabled := False;
-    TimerGeneralTimeout.Interval := WaitTime;
-    TimerGeneralTimeout.Enabled := True;
-    WaitTimeTask := gwttDeattachAddress;
-  end;
-end;
-
-{
-procedure TFormThrottle.RunTractionQueryIsIdle(WaitTime: Cardinal);
-var
-  Task: TTaskIdentifyProducer;
-begin
-  Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_TRAIN_PROXY_IDLE);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  if DispatchTask(Task) then
-  begin
-    TimerGeneralTimeout.Enabled := False;
-    TimerGeneralTimeout.Interval := WaitTime;
-    TimerGeneralTimeout.Enabled := True;
-    WaitTimeTask := gwttQueryIsIdle;
-  end;
-end; }
-
 procedure TFormThrottle.RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
 var
   Task: TTaskTractionSpeed;
@@ -900,12 +857,6 @@ begin
   Task := TTaskTractionQuerySpeed.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
-end;
-
-procedure TFormThrottle.SetAllocated(AValue: Boolean);
-begin
-  if FAllocated=AValue then Exit;
-  FAllocated:=AValue;
 end;
 
 procedure TFormThrottle.SetAllocatedAlias(AValue: Word);
@@ -959,81 +910,24 @@ begin
   GroupHeading.Parent := ScrollBoxFunctions;
 end;
 
-procedure TFormThrottle.HandleGeneralTimerResults;
+function TFormThrottle.FindSyncLink(UseCriticalSection: Boolean): PLinkRec;
 var
-  FormMulitipleTrains: TFormMulitipleTrains;
+  i: Integer;
 begin
-  case WaitTimeTask of
-    gwttQueryAddress :
+  if UseCriticalSection then
+    System.EnterCriticalsection(OPStackCriticalSection);
+  try
+    for i := 0 to Sync.NextLink - 1 do
+    begin
+      if Sync.Link[i].Throttle.ObjPtr = Self then
       begin
-        // We have collected up the nodes that are assigned the addres
-        if AliasList.Count > 0 then
-        begin
-          // Oops too many results, need user to choose
-          FormMulitipleTrains := TFormMulitipleTrains.Create(Application);
-          FormMulitipleTrains.LoadAliasList(AliasList);
-          case FormMulitipleTrains.ShowModal of
-            mrOk :
-              begin
-                // Dialog ensures ItemIndex is not -1
-                AllocatedAlias := StrToInt( FormMulitipleTrains.ListBoxTrains.Items[FormMulitipleTrains.ListBoxTrains.ItemIndex]);
-                Allocated := True;
-                AliasList.Clear;
-                WaitTimeTask := gwttNone;
-                UpdateUI
-              end;
-            mrClose :
-              begin
-                // User wants to create a new one
-                WaitTimeTask := gwttQueryIsIdle;
-                AliasList.Clear;
-  //              RunTractionQueryIsIdle(TIME_QUERY_DCC_ADDRESS);
-              end;
-            mrCancel :
-              begin
-                AliasList.Clear;
-                WaitTimeTask := gwttNone;
-              end;
-          end;
-          FormMulitipleTrains.Release
-        end else
-        begin
-          WaitTimeTask := gwttQueryIsIdle;
-          AliasList.Clear;
-  //        RunTractionQueryIsIdle(TIME_QUERY_DCC_ADDRESS);
-        end;
+        Result := @Sync.Link[i];
+        Break
       end;
-    gwttQueryIsIdle :
-      begin
-        if AliasList.Count = 0 then
-        begin
-          ShowMessage('Error encountered, could not find a free Proxy Node to allocate');
-          WaitTimeTask := gwttNone;
-        end;
-      end;
-    gwttAttachAddress :
-      begin
-        if AliasList.Count = 0 then
-        begin
-          AllocatedAlias := 0;
-          Allocated := False;
-          ShowMessage('No response from the Node, target did not respond that allocation succeeded');
-        end;
-        WaitTimeTask := gwttNone;
-      end;
-    gwttDeattachAddress :
-      begin
-        if AliasList.Count = 0 then
-        begin
-          // We failed, just warn the user and pretend it succeeded
-          ShowMessage('No response from the Node, unsure if deallocation succeeded');
-          Allocated := False;
-          AllocatedAlias := 0;
-          AliasList.Clear;
-          WaitTimeTask := gwttNone;
-          UpdateUI;
-        end;
-      end;
+    end;
+  finally
+    if UseCriticalSection then
+      System.LeaveCriticalsection(OPStackCriticalSection);
   end;
 end;
 
@@ -1049,64 +943,7 @@ end;
 
 procedure TFormThrottle.OnBeforeDestroyTask(Sender: TTaskOlcbBase);
 begin
-  if Sender is TTaskAddressSpaceMemoryWriteRawWithDatagram then
-  begin
 
-  end else
-  if Sender is TTaskAddressSpaceMemoryReadRawWithDatagram then
-  begin
-
-  end else
-  if Sender is TTaskProtocolSupport then
-  begin
-
-  end else
-  if Sender is TTaskTractionReserveAndAttachDccProxy then
-  begin
-    // Looking for the DCC Address Attach Result from our Allocated Alias and the correct Address, if found handle here and drop only errors to the General Timer
-    if PotentialAlias = TTaskTractionReserveAndAttachDccProxy( Sender).MessageHelper.DestinationAliasID then
-    begin
-      TimerGeneralTimeout.Enabled := False;   // Done
-      WaitTimeTask := gwttNone;
-      AliasList.Clear;
-      if TTaskTractionReserveAndAttachDccProxy( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
-      begin
-        AliasList.Add( Pointer( TTaskTractionReserveAndAttachDccProxy( Sender).MessageHelper.SourceAliasID));
-        AllocatedAlias := PotentialAlias;
-        Allocated := True;
-        UpdateUI;
-      end else
-      begin
-        ShowMessage('Error Code: ' + IntToStr(TTaskTractionReserveAndAttachDccProxy( Sender).ReplyCode) + ': Unable to Attach the DCC Address: ' + IntToStr(TTaskTractionReserveAndAttachDccProxy( Sender).ReplyCode));
-        AllocatedAlias := 0;
-        Allocated := False;
-        UpdateUI;
-      end;
-    end;
-  end else
-  if Sender is TTaskTractionReserveAndDetachDccProxy then
-  begin
-    // Looking for our Allocated Alias and Events that show it is now not allocated
-    if AllocatedAlias = TTaskTractionReserveAndDetachDccProxy( Sender).MessageHelper.DestinationAliasID then
-    begin
-      TimerGeneralTimeout.Enabled := False;   // Done
-      WaitTimeTask := gwttNone;
-      AliasList.Clear;
-      if TTaskTractionReserveAndDetachDccProxy( Sender).ReplyCode <= 0 then          // If it is zero or not sent then all is good .... for now..... this will change
-      begin
-        Allocated := False;
-        AllocatedAlias := 0;
-        UpdateUI;
-      end else
-      begin
-        ShowMessage('Error Code: ' + IntToStr(TTaskTractionReserveAndDetachDccProxy( Sender).ReplyCode) + ': Unable to detach the DCC Address: ' + IntToStr(TTaskTractionReserveAndDetachDccProxy( Sender).ReplyAddress));
-      end;
-    end
-  end else
-  if Sender is TTaskTractionQueryDccAddressProxy then
-  begin
-
-  end;
 end;
 
 procedure TFormThrottle.ToggleTagOnComponent(Sender: TComponent);
@@ -1246,60 +1083,9 @@ begin
   end;
 end;
 
-procedure TFormThrottle.EventTaskReceived(EventTask: TTaskOlcbBase);
-
-    procedure ValidateDccAddressEvent(Event: TEventID; MatchAllocatedAlias: Boolean);
-    var
-      DoCompare: Boolean;
-    begin
-      DoCompare := True;
-      if MatchAllocatedAlias then
-        DoCompare := (AllocatedAlias = EventTask.MessageHelper.SourceAliasID) or (PotentialAlias = EventTask.MessageHelper.SourceAliasID);
-
-      if DoCompare then
-      begin
-        case EventTask.MessageHelper.MTI of
-            MTI_PRODUCER_IDENTIFIED_UNKNOWN,
-            MTI_PRODUCER_IDENTIFIED_SET,
-            MTI_PRODUCER_IDENTIFIED_CLEAR :
-              begin
-                if (Event[0] = $06) and (Event[1] = $01) and (Event[6] = $03) and (Event[7] = $03) then
-                begin
-                  if IsShortAddress then
-                  begin
-                    if Integer((Event[4] shl 8) or Event[5]) = SpinEditAddress.Value then
-                      AliasList.Add( Pointer( EventTask.MessageHelper.SourceAliasID));
-                  end else
-                  begin
-                    if Integer((Event[4] shl 8) or Event[5]) = (SpinEditAddress.Value or $C000) then
-                      AliasList.Add( Pointer( EventTask.MessageHelper.SourceAliasID));
-                  end;
-                end;
-              end;
-          end;
-        end
-    end;
-
+procedure TFormThrottle.UpdateStatus(NewStatus: string);
 begin
-  case WaitTimeTask of
-    gwttQueryAddress :
-      begin
-        // Looking for any DCC Address Event with our requested Address, gather and decision made in the General Timer
-        ValidateDccAddressEvent(EventTask.MessageHelper.Data, False);
-      end;
-    gwttQueryIsIdle :
-      begin
-        // Looking for any Idle Proxy, if found handle here and drop only errors to the General Timer
-        if (EventTask.MessageHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) {and EqualEvents(@EventTask.MessageHelper.Data, @EVENT_TRAIN_PROXY_IDLE)} then
-        begin
-          TimerGeneralTimeout.Enabled := False;   // Done
-          PotentialAlias := EventTask.MessageHelper.SourceAliasID;
-          AliasList.Clear;
-          WaitTimeTask := gwttNone;
-          RunTractionReserveAndAttachTrainByAddress( PotentialAlias, TIME_QUERY_DCC_ADDRESS);
-        end
-      end;
-  end;
+  StatusBar.Panels[1].Text := NewStatus;
 end;
 
 procedure TFormThrottle.InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
@@ -1313,16 +1099,16 @@ end;
 
 procedure TFormThrottle.UpdateUI;
 begin
-  ActionAllocationByList.Enabled := not Allocated;
-  ActionAllocationByAddress.Enabled := not Allocated;
-  ActionAllocationFree.Enabled := Allocated;
-  ActionAllocationRelease.Enabled := Allocated;
-  GroupBoxFunctions.Enabled := Allocated;
-  GroupBoxControl.Enabled := Allocated;
-  GroupBoxConfiguration.Enabled := Allocated;
-  RadioGroupSpeedStep.Enabled := not Allocated;
-  SpinEditAddress.Enabled := not Allocated;
-  if Allocated then
+  ActionAllocationByList.Enabled :=  AllocatedAlias = 0;
+  ActionAllocationByAddress.Enabled := AllocatedAlias = 0;
+  ActionAllocationFree.Enabled := AllocatedAlias <> 0; ;
+  ActionAllocationRelease.Enabled := AllocatedAlias <> 0; ;
+  GroupBoxFunctions.Enabled := AllocatedAlias <> 0; ;
+  GroupBoxControl.Enabled := AllocatedAlias <> 0; ;
+  GroupBoxConfiguration.Enabled := AllocatedAlias <> 0; ;
+  RadioGroupSpeedStep.Enabled := AllocatedAlias = 0; ;
+  SpinEditAddress.Enabled := AllocatedAlias = 0; ;
+  if AllocatedAlias <> 0 then
     LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value)
   else
     LabelAllocatedAddress.Caption := STR_UNASSIGNED;
