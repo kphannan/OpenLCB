@@ -19,7 +19,7 @@ uses
   opstacktypes;
 
 procedure TractionProxyProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProxyProtocolReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 
 implementation
 
@@ -42,7 +42,7 @@ begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
     OPStackNode_IncomingMessageLink(DestNode, NewMessage)
   end else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
 end;
 
 procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
@@ -75,6 +75,9 @@ begin
             Node^.ProxyData.Lock.ID[1] := 0;
           end;
     end
+  end else
+  begin
+    // This a multi-frame messages so it has an allocated buffer
   end
   {$ENDIF}
 end;

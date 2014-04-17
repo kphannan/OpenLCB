@@ -88,9 +88,9 @@ const
   MTI_SIMPLE_TRAIN_INFO_REPLY        = $099C8000;                                // Databytes = Destination Alias, ACDI Data
 
   MTI_TRACTION_PROTOCOL              = $095EA000;                                // Databyte = depends
-  MTI_TRACTION_PROXY_PROTOCOL        = $091FA000;
+  MTI_TRACTION_PROXY_PROTOCOL        = $091EA000;
   MTI_TRACTION_REPLY                 = $095E8000;                                // Databyte = depends
-  MTI_TRACTION_PROXY_REPLY           = $091F8000;
+  MTI_TRACTION_PROXY_REPLY           = $091E8000;
 
   MTI_STREAM_INIT_REQUEST            = $09CC8000;
   MTI_STREAM_INIT_REPLY              = $09868000;
@@ -130,7 +130,7 @@ const
   PIP_CDI                            = $000800000000;
   PIP_TRACTION                       = $000400000000;
   PIP_FDI                            = $000200000000;
-  PIP_FSI                            = $000100000000;
+  PIP_TRACTION_PROXY                 = $000100000000;
 
   PIP_UNASSIGNED                     = $0000FFFFFFF0;
   PIP_RESERVED                       = $00000000000F;
@@ -150,7 +150,7 @@ const
   STR_PIP_CDI                        = 'Configuration Description Information (CDI) Protocol';
   STR_PIP_TRACTION                   = 'Traction Protocol';
   STR_PIP_FDI                        = 'Function Description Information (FDI) Protocol';
-  STR_PIP_FSI                        = 'Function State Information (FSI) Protocol';
+  STR_PIP_TRACTION_PROTOCOL                        = 'Traction Proxy Protocol';
 
 
   OIR_TEMPORARY_ERROR                 = $1000;

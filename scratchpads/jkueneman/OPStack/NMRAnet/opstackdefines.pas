@@ -47,7 +47,7 @@ const
   MAX_SIMPLE_BYTES = 8;
   MAX_SNIP_BYTES = 64;
   MAX_DATAGRAM_BYTES = 72;             // 64 Data bytes + 8 Bytes for DG Header
-  USER_MAX_MULTI_FRAME_BYTES = 16;     // Could be shorter as only Traction Query Speed uses it right now....
+  USER_MAX_MULTI_FRAME_BYTES = 16;     //
 
 type
   TNodeID = array[0..1] of DWORD;                                               // WARNING READ THIS:::::   The Bottom 3 Bytes = [0] and the Top 3 Bytes = [1] The ID is not continious across the both DWords the upper nibble of the bottom DWord is not used

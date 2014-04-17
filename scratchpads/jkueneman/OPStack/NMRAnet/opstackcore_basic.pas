@@ -15,7 +15,7 @@ uses
 
 procedure VerifyNodeIdByDestination(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 procedure VerifyNodeId(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure OptionalInteractionRejected(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsPermenent: Boolean);
+procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
 
 implementation
 
@@ -37,7 +37,7 @@ begin
   end;
 end;
 
-procedure OptionalInteractionRejected(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsPermenent: Boolean);
+procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
 var
   OptionalInteractionMessage: TOPStackMessage;
   OptionalnteractionBuffer: TSimpleBuffer;

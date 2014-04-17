@@ -33,7 +33,7 @@ begin
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
       OPStackNode_IncomingMessageLink(DestNode, NewMessage)
     else
-      OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
   end
 end;
 

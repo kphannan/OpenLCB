@@ -44,7 +44,7 @@ begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
     OPStackNode_IncomingMessageLink(DestNode, NewMessage)
   end else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
 end;
 
 procedure TractionProtocolReplySpeedDir(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);

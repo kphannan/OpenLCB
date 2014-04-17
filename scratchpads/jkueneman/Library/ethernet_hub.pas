@@ -229,7 +229,7 @@ var
   i: Integer;
   iSplit: Integer;
   List: TList;
-  SendStr, RcvStr: AnsiString;
+ { SendStr,} RcvStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
   SyncSendMessageList: TStringList;
   StrLen: Integer;
@@ -304,39 +304,31 @@ begin
               begin
                 BufferRawMessage := TStringList( List[0])[i] ;
                 if Helper.Decompose(BufferRawMessage) then
-                begin
-                  // Copy the message to a list that will be sent to the UI if enabled
-                  if EnableSendMessages then
-                    SyncSendMessageList.Add(BufferRawMessage);
-
-                  if i < TStringList( List[0]).Count - 1 then
-                    SendStr := SendStr + BufferRawMessage + #10
-                  else
-                    SendStr := SendStr + BufferRawMessage;
-                end;
+                  SyncSendMessageList.Add(BufferRawMessage);
               end;
               TStringList( List[0]).Clear;
             end;
           end;
         finally
           ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
-
-          // Send the strings to the logging windows OUTSIDE of the locked input string list
-          for i := 0 to SyncSendMessageList.Count - 1 do
-          begin
-            BufferRawMessage := SyncSendMessageList[i];
-            Synchronize(@SyncOnSendMessage);
-          end;
-          SyncSendMessageList.Clear;
         end;
 
         CANFrameParserStreamSendManager.ProcessSend;                              // *** See if there is a stream that is being disceted and frame out on a CAN connection ***
         CANFrameParserDatagramSendManager.ProcessSend;                            // *** See if there is a datagram that is being disceted and frame out on a CAN connection ***
         OlcbTaskManager.ProcessSending;                                           // *** See if there is a task what will add a message to send ***
-        if SendStr <> '' then                                                     // *** Put the message on the wire and communicate back the raw message sent ***
-        begin
-          ConnectedSocket.SendString(SendStr + LF);                               // Try to send the message
-          SendStr := '';
+       if SyncSendMessageList.Count > 0 then
+       begin
+
+          for i := 0 to SyncSendMessageList.Count - 1 do
+          begin
+            ConnectedSocket.SendString(SyncSendMessageList[i]);
+            if EnableSendMessages then
+            begin
+              BufferRawMessage := SyncSendMessageList[i];
+              Synchronize(@SyncOnSendMessage);
+            end;
+          end;
+          SyncSendMessageList.Clear;
 
           if ConnectedSocket.LastError <> 0 then
             ShowErrorMessageAndTerminate('Socket Error: ' + ConnectedSocket.LastErrorDesc);

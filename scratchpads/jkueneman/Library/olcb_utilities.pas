@@ -124,6 +124,7 @@ type
   function SpecDocFromObjectiveNode(ObjectiveNode: TDOMNode): WideString;
   function ExtractElementValue(Node: TDOMNode; ElementName: WideString): WideString;
   function MTI_ToString(MTI: DWord): WideString;
+  function TractionProxyTechnologyToStr(Technology: Byte): WideString;
   function EventIDToString(EventID: PEventID): WideString;
   function EqualEvents(Event1, Event2: PEventID): Boolean;
   function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
@@ -404,6 +405,9 @@ begin
     MTI_PROTOCOL_SUPPORT_INQUIRY  : Result := 'Protocol Support Inquiry';
     MTI_PROTOCOL_SUPPORT_REPLY    : Result := 'Protocol Support Reply';
 
+    MTI_TRACTION_PROXY_PROTOCOL   : Result := 'Protocol Traction Proxy';
+    MTI_TRACTION_PROXY_REPLY      : Result := 'Protocol Traction Proxy Reply';
+
     MTI_CONSUMER_IDENTIFY              : Result := 'Consumer Identify';
     MTI_CONSUMER_IDENTIFY_RANGE        : Result := 'Consumer Identify Range';
     MTI_CONSUMER_IDENTIFIED_UNKNOWN    : Result := 'Consumer Identified Unknown';
@@ -450,6 +454,20 @@ begin
     MTI_STREAM_COMPLETE                : Result := 'Stream Complete';
    else
     Result := 'Unknown MTI';
+  end;
+end;
+
+function TractionProxyTechnologyToStr(Technology: Byte): WideString;
+begin
+  case Technology of
+    TRACTION_PROXY_TECH_ID_DCC              : Result := 'DCC';
+    TRACTION_PROXY_TECH_ID_DC               : Result := 'DC';
+    TRACTION_PROXY_TECH_ID_MARKLIN_DIG      : Result := 'Marklin Digital';
+    TRACTION_PROXY_TECH_ID_MARKLIN_DELTA    : Result := 'Marklin Delta';
+    TRACTION_PROXY_TECH_ID_MARKLIN_DIG_ESU  : Result := 'Marklin Digital (ESU)';
+    TRACTION_PROXY_TECH_ID_SELECTRIX        : Result := 'Selectrix';
+    TRACTION_PROXY_TECH_ID_MTH_DCS          : Result := 'MTH DCS';
+    TRACTION_PROXY_TECH_ID_LIONEL_TMCC      : Result := 'Lionel TMCC';
   end;
 end;
 
@@ -612,7 +630,7 @@ begin
               if MTI and MTI_ADDRESS_PRESENT = MTI_ADDRESS_PRESENT then
               begin
                 DestinationAliasID := Word( (Data[0] shl 8) and $0FFF) or (Data[1]);
-                FramingBits := Data[0] and $F0;
+                FramingBits := Data[0] and $30;
                 HasDestinationAddress := True;
               end
             end
@@ -1064,6 +1082,45 @@ begin
       else
         Result := Result + 'Unknown Traction Operation';
       end;
+
+      if LocalHelper.MTI = MTI_TRACTION_PROXY_PROTOCOL then
+    begin
+      case LocalHelper.Data[2] of
+          TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+          TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+          TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+          TRACTION_PROXY_MANAGE   :
+            begin
+              case LocalHelper.Data[3] of
+                  TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Manage: Reserve';
+                  TRACTION_PROXY_MANAGE_RELEASE : Result := Result + 'Manage: Release'
+              else
+                Result := Result + 'Unknown Traction Manage Command'
+              end;
+            end
+      else
+        Result := Result + 'Unknown Traction Proxy Command';
+      end
+    end;
+
+    if LocalHelper.MTI = MTI_TRACTION_PROXY_REPLY then
+    begin
+      case LocalHelper.Data[2] of
+          TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: (multiframe...)';
+          TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Reply Code = ' + IntToStr(LocalHelper.Data[3]);
+          TRACTION_PROXY_MANAGE   :
+            begin
+              case LocalHelper.Data[3] of
+                  TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Result Code = ' + IntToStr(LocalHelper.Data[4])
+              else
+                Result := Result + 'Unknown Traction Proxy Reply Manage Command';
+              end;
+            end
+      else
+        Result := Result + 'Unknown Traction Proxy Reply Command';
+      end
+    end;
+
     end
   end;
 end;
@@ -1086,7 +1143,7 @@ begin
     PIP_CDI                    : Result := STR_PIP_CDI;
     PIP_TRACTION               : Result := STR_PIP_TRACTION;
     PIP_FDI                    : Result := STR_PIP_FDI;
-    PIP_FSI                    : Result := STR_PIP_FSI;
+    PIP_TRACTION_PROXY         : Result := STR_PIP_TRACTION_PROTOCOL;
   else
     Result := '[Unknown Protocol]';
   end;

@@ -270,14 +270,6 @@ begin
     case Node^.iUserStateMachine of
         STATE_USER_START :
             begin
-              Node^.iUserStateMachine := STATE_USER_2;
-            end;
-        STATE_USER_1 :
-            begin
-
-            end;
-        STATE_USER_2 :
-            begin
               // Now the Physical node can be a Throttle Node Server
               EnterCriticalSection(OPStackCriticalSection);
               // Only do something if the number of links has changed
@@ -292,7 +284,7 @@ begin
                       Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_REPLY_NODE;
                       TempNode := OPStackNode_Allocate;
                       Sync.Link[i].Node.Index := TempNode^.iIndex;
-                      // Now need to wait for it to log in
+                      // Now need to wait for it to log in from with in the virtual nodes statemachine, we are done here
                     end else
                     begin // Logging out
                       if Sync.Link[i].Node.Index > 0 then   // Don't deallocate the physical node if we messed up!
@@ -310,6 +302,14 @@ begin
                 Sync.DatabaseChanged := False;
               end;
               LeaveCriticalSection(OPStackCriticalSection);
+            end;
+        STATE_USER_1 :
+            begin
+
+            end;
+        STATE_USER_2 :
+            begin
+
             end
     end;
   end else
@@ -320,7 +320,7 @@ begin
             begin
               EnterCriticalSection(OPStackCriticalSection);
               // Don't do anything until it is initialized
-              if Node^.State and NS_INITIALIZED <> 0 then
+              if Node^.State and NS_PERMITTED <> 0 then
               begin
                 Link := FindLinkByPoolIndex(Node^.iIndex);
                 Link^.SyncState := SYNC_NODE_INFO;
@@ -331,13 +331,14 @@ begin
             end;
         STATE_USER_1 :
             begin
-     {         EnterCriticalSection(OPStackCriticalSection);
+              EnterCriticalSection(OPStackCriticalSection);
               Link := FindLinkByNodeAlias(Node);
               if Link <> nil then                     // May not be found if the node is being freed
               begin
+                if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Link^.ReplyNode, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Link^.TrainState.Address) then
+                  Node^.iUserStateMachine := STATE_USER_2;
               end;
               LeaveCriticalSection(OPStackCriticalSection);
-                }
             end;
         STATE_USER_2 :
             begin
@@ -441,19 +442,19 @@ procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage
 var
   Link: PLinkRec;
 begin
-  // Only the top node is the Proxy
+  // Only the top node is the Proxy that replies to this
   if Node = GetPhysicalNode then
     if RequestingMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_ALLOCATE then
     begin
       Sync.Link[Sync.NextLink].SyncState := SYNC_REPLY_NODE;
-      Sync.Link[Sync.NextLink].ReplyNode.AliasID := Node^.Info.AliasID;
-      Sync.Link[Sync.NextLink].ReplyNode.ID[0] := Node^.Info.ID[0];
-      Sync.Link[Sync.NextLink].ReplyNode.ID[1] := Node^.Info.ID[1];
+      Sync.Link[Sync.NextLink].ReplyNode.AliasID := RequestingMessage^.Source.AliasID;
+      Sync.Link[Sync.NextLink].ReplyNode.ID[0] := RequestingMessage^.Source.ID[0];
+      Sync.Link[Sync.NextLink].ReplyNode.ID[1] := RequestingMessage^.Source.ID[1];
       Sync.Link[Sync.NextLink].TrainState.Address := (RequestingMessage^.Buffer^.DataArray[2] shl 8) or RequestingMessage^.Buffer^.DataArray[3];
       Sync.Link[Sync.NextLink].TrainState.SpeedSteps := RequestingMessage^.Buffer^.DataArray[4];
       Inc(Sync.NextLink);
       Sync.DatabaseChanged := True;
-      Node^.iUserStateMachine := STATE_USER_2;
+      // Run the reply statemachine on the physical node will create a new Train Node eventually
     end;
 end;
 {$ENDIF}

@@ -340,7 +340,7 @@ begin
             begin
               EnterCriticalSection(OPStackCriticalSection);
               // Don't do anything until it is initialized
-              if Node^.State and NS_INITIALIZED <> 0 then
+              if Node^.State and NS_PERMITTED <> 0 then
               begin
                 Link := FindLinkByPoolIndex(Node^.iIndex);
                 Link^.SyncState := SYNC_NODE_INFO;
@@ -363,7 +363,7 @@ begin
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
                     begin
                       Link^.SyncState := Link^.SyncState and not (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS);
-                      Node^.iUserStateMachine := STATE_USER_2;
+                      Node^.iUserStateMachine := STATE_USER_10;                 // Wait for the Reserve callback
                     end;
                   end;
                 end;
@@ -372,20 +372,20 @@ begin
             end;
         STATE_USER_2 :
             begin
-              // Wait for a callback to be called
+              // Proxy is Reserved
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Link^.ThrottleState.Address, Link^.ThrottleState.SpeedSteps, 0) then
+                  Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Allocate Callback
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
             end;
         STATE_USER_3  :
-        begin
-          // Proxy is Reserved
-          EnterCriticalSection(OPStackCriticalSection);
-          Link := FindLinkByNodeAlias(Node);
-          if Link <> nil then
-          begin
-            if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Link^.ThrottleState.Address, Link^.ThrottleState.SpeedSteps, 0) then
-              Node^.iUserStateMachine := STATE_USER_2;  // Wait for the callback Result
-          end;
-          LeaveCriticalSection(OPStackCriticalSection);
-        end;
+            begin
+
+            end;
         STATE_USER_4  :
             begin
 
@@ -412,7 +412,7 @@ begin
             end;
         STATE_USER_10  :
             begin
-
+                // Wait for a callback to be called, this can be for many things
             end
     end
   end
@@ -482,8 +482,7 @@ end;
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage): Boolean;
 begin
   // Default reply handled automatically by OPStack
-  TractionProxyProtocolReply(Node, ReplyMessage, RequestingMessage);
-  Result := ReplyMessage <> nil
+
 end;
 {$ENDIF}
 
@@ -641,7 +640,7 @@ begin
       if DataBytes^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
       begin
          if DataBytes^.DataArray[2] = 0 then
-           Dest^.iUserStateMachine := STATE_USER_3         // Move to next state after reserving
+           Dest^.iUserStateMachine := STATE_USER_2         // Move to next state after reserving
          else
            Dest^.iUserStateMachine := STATE_USER_1         // Can't reserve now go back to normal polling
       end;

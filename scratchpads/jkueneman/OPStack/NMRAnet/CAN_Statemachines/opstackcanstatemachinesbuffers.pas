@@ -61,12 +61,19 @@ function OPStackCANStatemachineBuffers_FirstMessageOnOutgoingStreamStack(Dummy: 
 procedure OPStackCANStatemachineBuffers_RemoveStreamMessage(OPStackStreamMessage: POPStackMessage);
 {$ENDIF}
 
-// MultiFrame Messages
+// Outgoing MultiFrame Messages
 procedure OPStackCANStateMachineBuffer_AddOutgoingMultiFrameMessage(OPStackMultiFrameMessage: POPStackMessage);
 function OPStackCANStatemachineBuffers_FindAnyMultiFrameOnOutgoingStack(DestNodeAlias: Word): POPStackMessage;
 function OPStackCANStatemachineBuffers_FindMessageOnOutgoingMultiFrameStack(OPStackMultiFrameMessage: POPStackMessage): POPStackMessage;
 function OPStackCANStatemachineBuffers_FirstMessageOnOutgoingMultiFrameStack(Dummy: Word): POPStackMessage;
 procedure OPStackCANStatemachineBuffers_RemoveMultiFrameMessage(OPStackMultiFrameMessage: POPStackMessage);
+
+// MultiFrame Incomming Messages
+procedure OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(OPStackInProcessMessage: POPStackMessage);
+function OPStackCANStatemachineBuffers_FindAnyMultiFrameOnIncomingStack(NodeAlias: Word): POPStackMessage;
+function OPStackCANStatemachineBuffers_FindMessageOnIncomingMultiFrameStack(OPStackInProcessMessage: POPStackMessage): POPStackMessage;
+function OPStackCANStatemachineBuffers_FirstMessageOnIncomingFrameMessageStack(Dummy: Word): POPStackMessage;
+procedure OPStackCANStatemachineBuffers_RemoveIncomingMultiFrameMessage(OPStackInProcessMessage: POPStackMessage);
 
 
 implementation
@@ -76,6 +83,7 @@ var
   DatagramOutgoingProcessStack: TProcessStack;
   AcdiSnipOutgoingProcessStack: TProcessStack;
   MultiFrameOutgoingProcessStack: TProcessStack;
+  MultiFrameInProcessStack: TProcessStack;
   {$IFDEF SUPPORT_STREAMS}
   StreamInProcessStack: TProcessStack;
   StreamOutgoingProcessStack: TProcessStack;
@@ -111,6 +119,9 @@ begin
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameOutgoingProcessStack.Stack[i] := nil;
   MultiFrameOutgoingProcessStack.Count := 0;
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
+    MultiFrameInProcessStack.Stack[i] := nil;
+  MultiFrameInProcessStack.Count := 0;
 end;
 
 
@@ -534,6 +545,31 @@ end;
 procedure OPStackCANStatemachineBuffers_RemoveMultiFrameMessage(OPStackMultiFrameMessage: POPStackMessage);
 begin
   RemoveInprocessMessage(OPStackMultiFrameMessage, @MultiFrameOutgoingProcessStack);
+end;
+
+procedure OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(OPStackInProcessMessage: POPStackMessage);
+begin
+  AddInprocessMessage(OPStackInProcessMessage, @MultiFrameInProcessStack);
+end;
+
+function OPStackCANStatemachineBuffers_FindAnyMultiFrameOnIncomingStack(NodeAlias: Word): POPStackMessage;
+begin
+  Result := FindAnyMessageByNodeID(NodeAlias, @MultiFrameInProcessStack)
+end;
+
+function OPStackCANStatemachineBuffers_FindMessageOnIncomingMultiFrameStack(OPStackInProcessMessage: POPStackMessage): POPStackMessage;
+begin
+  Result := FindInprocessMessage(OPStackInProcessMessage, @MultiFrameInProcessStack)
+end;
+
+function OPStackCANStatemachineBuffers_FirstMessageOnIncomingFrameMessageStack(Dummy: Word): POPStackMessage;
+begin
+  Result := FirstInprocessMessage(@MultiFrameInProcessStack);
+end;
+
+procedure OPStackCANStatemachineBuffers_RemoveIncomingMultiFrameMessage(OPStackInProcessMessage: POPStackMessage);
+begin
+  RemoveInprocessMessage(OPStackInProcessMessage, @MultiFrameInProcessStack);
 end;
 
 end.

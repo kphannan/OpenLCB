@@ -15,9 +15,11 @@ uses
   opstackdefines,
   opstackbuffers,
   opstacktypes,
+  opstackcore_basic,
   opstackcanstatemachinesbuffers;
 
 procedure OPStackCANStatemachineMultiFrame_ProcessOutgoingMultiFrameMessage;
+function StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(OPStackMessage: POPStackMessage; var MultiFrameMessage: POPStackMessage): Boolean;
 
 implementation
 
@@ -55,10 +57,13 @@ begin
       end;
 
       // Set Framing Bits
-      if MultiFrameBufferPtr^.CurrentCount >= MultiFrameBufferPtr^.DataBufferSize then
-        LocalMessage.FramingBits := $20                             // Upper nibble = $20 means last frame
+      if MultiFrameBufferPtr^.CurrentCount = 6 then
+        LocalMessage.FramingBits := $10                                         // First Frame
       else
-        LocalMessage.FramingBits := $10;                            // Upper nibble = $10 mean more frames coming
+      if MultiFrameBufferPtr^.CurrentCount >= MultiFrameBufferPtr^.DataBufferSize then
+        LocalMessage.FramingBits := $20                                         // Upper nibble = $20 means last frame
+      else
+        LocalMessage.FramingBits := $30;                                        // Upper nibble = $30 means middle frame
 
       OutgoingMessage(@LocalMessage);
 
@@ -69,6 +74,47 @@ begin
       end;
     end;
   end;
+end;
+
+function StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(OPStackMessage: POPStackMessage; var MultiFrameMessage: POPStackMessage): Boolean;
+var
+  InProcessMessage: POPStackMessage;
+  i: Integer;
+  MultiFrameBuffer: PMultiFrameBuffer;
+begin
+  Result := False;
+  MultiFrameMessage := nil;
+  InProcessMessage := OPStackCANStatemachineBuffers_FindMessageOnIncomingMultiFrameStack(OPStackMessage);
+  if InProcessMessage = nil then
+  begin
+    if OPStackMessage^.FramingBits = $10 then
+    begin
+      if OPStackBuffers_AllocateMultiFrameMessage(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
+        OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(InProcessMessage);
+    end else
+    begin
+      if OPStackMessage^.FramingBits = $20 then                                 // If the last frame and there is no inprocess message we are dropping the message
+        OptionalInteractionRejected(OPStackMessage, False);
+      Exit;                                                                     // If a middle frame then just drop it if not in the stack
+    end
+  end;
+
+  MultiFrameBuffer := PMultiFrameBuffer( PByte( InProcessMessage^.Buffer));
+  // middle Frame, or last Frame
+  for i := 0 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
+  begin
+    MultiFrameBuffer^.DataArray[MultiFrameBuffer^.DataBufferSize] := OPStackMessage^.Buffer^.DataArray[i];
+    Inc(MultiFrameBuffer^.DataBufferSize);
+  end;
+
+  if OPStackMessage^.FramingBits = $20 then
+  begin
+    // Done
+    OPStackCANStatemachineBuffers_RemoveIncomingMultiFrameMessage(InProcessMessage);
+    MultiFrameMessage := InProcessMessage;
+    Result := True
+  end;
+
 end;
 
 end.

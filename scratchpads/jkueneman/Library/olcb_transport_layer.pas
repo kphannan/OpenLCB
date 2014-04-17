@@ -291,7 +291,7 @@ type
     function GetAbbreviatedCDIProtocol: Boolean;
     function GetConfigDescriptionInfoProtocol: Boolean;
     function GetDatagramProtocol: Boolean;
-    function GetFunctionStateInformationProtocol: Boolean;
+    function GetTractionProxyProtocol: Boolean;
     function GetDisplayProtocol: Boolean;
     function GetEventExchangeProtocol: Boolean;
     function GetFunctionDescriptionInfoProtocol: Boolean;
@@ -324,7 +324,7 @@ type
     property ConfigDescriptionInfoProtocol: Boolean read GetConfigDescriptionInfoProtocol;
     property TractionControlProtocol: Boolean read GetTractionControlProtocol;
     property FunctionDescriptionInfoProtocol: Boolean read GetFunctionDescriptionInfoProtocol;
-    property FunctionStateInformationProtocol: Boolean read GetFunctionStateInformationProtocol;
+    property TractionProxyProtocol: Boolean read GetTractionProxyProtocol;
   end;
 
   { TOlcbStructureSNIP }
@@ -2507,9 +2507,9 @@ begin
   Result := Mask and PIP_DATAGRAM = PIP_DATAGRAM;
 end;
 
-function TOlcbStructureProtocolIdentification.GetFunctionStateInformationProtocol: Boolean;
+function TOlcbStructureProtocolIdentification.GetTractionProxyProtocol: Boolean;
 begin
-  Result := Mask and PIP_FSI = PIP_FSI
+  Result := Mask and PIP_TRACTION_PROXY = PIP_TRACTION_PROXY
 end;
 
 function TOlcbStructureProtocolIdentification.GetDisplayProtocol: Boolean;

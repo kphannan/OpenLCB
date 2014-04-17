@@ -17,7 +17,8 @@ uses
   template_hardware,
   opstacktypes,
   opstackdefines,
-  template_node;
+  template_node,
+  nmranetutilities;
 
 function GetPhysicalNode: PNMRAnetNode;
 function GetVirtualNode(Index: Integer): PNMRAnetNode;
@@ -46,6 +47,7 @@ function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo;
 // Traction Proxy
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
+function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; var AllocatedNodeID: TNodeInfo; TrainID: Word): Boolean;
 
 
 
@@ -342,6 +344,31 @@ begin
       NewMessage^.Buffer^.DataArray[4] := Param0;        // DCC Speed Step
       NewMessage^.Buffer^.DataArray[5] := Param1;        //
       NewMessage^.Buffer^.DataBufferSize := 6;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
+function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; var AllocatedNodeID: TNodeInfo; TrainID: Word): Boolean;
+var
+  NewMessage: POPStackMessage;
+  MultiFrameBuffer: PMultiFrameBuffer;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    begin
+      MultiFrameBuffer := PMultiFrameBuffer( PByte( NewMessage^.Buffer));
+      MultiFrameBuffer^.DataBufferSize := 13;
+      MultiFrameBuffer^.DataArray[0] := $01;
+      MultiFrameBuffer^.DataArray[1] := TRACTION_PROXY_RESULT_FLAGS_ALIAS_INCLUDED;
+      MultiFrameBuffer^.DataArray[2] := TRACTION_PROXY_TECH_ID_DCC;
+      MultiFrameBuffer^.DataArray[3] := Hi(TrainID);
+      MultiFrameBuffer^.DataArray[4] := Lo(TrainID);
+      NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(AllocatedNodeID.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+      MultiFrameBuffer^.DataArray[11] := Hi(AllocatedNodeID.AliasID);
+      MultiFrameBuffer^.DataArray[12] := Lo(AllocatedNodeID.AliasID);
       OutgoingMessage(NewMessage);
       Result := True;
     end

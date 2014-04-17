@@ -159,7 +159,7 @@ begin
                   {$ENDIF}
                   {$IFDEF SUPPORT_TRACTION_PROXY}
                   MTI_TRACTION_PROXY_PROTOCOL       : begin TractionProxyProtocol(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_PROXY_REPLY          : begin AppCallback_TractionProxyReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end;
+                  MTI_TRACTION_PROXY_REPLY          : begin TractionProxyProtocolReply(DestNode, AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end;
                   {$ENDIF}
                   {$IFDEF SUPPORT_STREAMS}
                   MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
@@ -171,7 +171,7 @@ begin
                   MTI_REMOTE_BUTTON_REQUEST         : begin {TODO: Understand if we just pass this to the application layer or can we do something automatically (doubt it)} Exit; end;
                   MTI_REMOTE_BUTTON_REPLY           : begin AppCallback_RemoteButtonReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end
                 else
-                  OptionalInteractionRejected(AMessage, DestNode, True);        // Unknown message, permenent error
+                  OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
                 end; {case}
               end else
                 Exit;                                                           // It is not for of or our nodes

@@ -27,6 +27,14 @@ implementation
 //    Result:
 //    Description:
 // *****************************************************************************
+
+
+
+MOVE THIS INTO THE MULTI-FRAME CODE AND PUT THE FRAMING BITS IN THE SNIP, THERE IS NO REASON THAT IS NOT BACKWARDS COMPATIBLE.
+THAT ALSO MEANS TOSS THE TRAIN SIMPLE INFO FILE AS THAT WILL USE FRAMING BITS.
+opstackcanstatemachines.PStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer NEEDS TO CAHNGE AS IT USES THE FRAMING BITS TO DECIDE TO DROP INTO
+FRAMING MESSAGE INCOMING.  NEED TO INCLUDE SNIP MESSAGES AS WELL FOR NODES THAT DON''T USE FRAMING BITS ON SNIP
+
 procedure OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
 var
   LocalMessage: TOPStackMessage;

@@ -103,7 +103,7 @@ end;
 // *****************************************************************************
 function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var NMRAnetCanBuffer: TNMRAnetCanBuffer; var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean;
 var
-  DatagramMessage: POPStackMessage;
+  DatagramMessage, MultiFrameMessage: POPStackMessage;
   DatagramError: PSimpleDataArray;
   DatagramProcessErrorCode: Word;
 begin
@@ -134,9 +134,17 @@ begin
             begin                                                               // It is an addressed message so pull out the Destination
               OPStackMessage^.Dest.AliasID := ((NMRAnetCanBuffer.Payload[0] shl 8) or NMRAnetCanBuffer.Payload[1]) and $0FFF; // General CAN messages have the Alias in the payload first two bytes  ;
               DestNode := OPStackNode_FindByAlias(OPStackMessage^.Dest.AliasID);
-              OPStackMessage^.FramingBits := NMRAnetCanBuffer.Payload[0] and $F0; // The upper nibble of the destination may have special meaning, pull it out
+              OPStackMessage^.FramingBits := NMRAnetCanBuffer.Payload[0] and $30; // The upper nibble lower 2 bits (suppose to ignore the upper to for framing) of the destination may have special meaning, pull it out
               OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount-2, @NMRAnetCanBuffer.Payload, 2);  // Copy over the payload, skipping the destination alias
-              Result := True;
+              if OPStackMessage^.FramingBits <> 0 then
+              begin
+                if StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(OPStackMessage, MultiFrameMessage) then   // Don't dispatch it until it is fully received
+                begin
+                  OPStackMessage := MultiFrameMessage;                          // replace the last incoming frame with the full MultiFrame message
+                  Result := True;
+                end;
+              end else
+                Result := True;
             end else
             begin
               OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount, @NMRAnetCanBuffer.Payload, 0); // Copy over the payload
