@@ -23,8 +23,8 @@ const
 procedure OPStackCoreDatagram_Initialize;
 
 // Do not currently have a function that initiates a datagram from scratch, currently we mostly repond from a sent datagram
-procedure DatagramOkReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure DatagramRejectedReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure DatagramOkReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramRejectedReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
 function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 
@@ -230,7 +230,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure DatagramOkReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure DatagramOkReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   WaitingMessage: POPStackMessage;
 begin
@@ -248,7 +248,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure DatagramRejectedReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure DatagramRejectedReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   WaitingMessage: POPStackMessage;
   DatagramBuffer: PDatagramBuffer;

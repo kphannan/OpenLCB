@@ -83,10 +83,6 @@ const
   MTI_STREAM_PROCEED                 = $0888;
   MTI_STREAM_COMPLETE                = $08A8;
 
-  // These are Negavitve Logic so "xx01" = Start, "xx10" = End were the "0" is the bit of interest
-  PIP_EXTENSION_START_BIT            = $10;                                    // Flags in the Destination word for future extension of PIP
-  PIP_EXTENSION_END_BIT              = $20;                                    // Flags in the Destination word for future extension of PIP
-
 const
   LEN_PIV_PROTOCOL = 6;                                                         // 6 Bytes long
 

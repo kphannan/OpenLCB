@@ -30,6 +30,7 @@ uses
   opstackcore_can,
   opstackcore_pip,
   opstackcore_basic,
+  opstackcore_button,
   {$IFDEF SUPPORT_STREAMS}opstackcore_stream,{$ENDIF}
   {$IFDEF SUPPORT_TRACTION}opstackcore_traction, opstackcore_stnip,{$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}opstackcore_traction_proxy,{$ENDIF}
@@ -143,33 +144,33 @@ begin
               if DestNode <> nil then                                           // If it is addressed and the DestNode = nil then it is not for us
               begin                                                             // We send all messages in to test for Releasing so this test is necessary
                 case AMessage^.MTI of
-                  MTI_SIMPLE_NODE_INFO_REQUEST      : begin SimpleNodeInfoRequest(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_SIMPLE_NODE_INFO_REPLY        : begin {TODO: Implement Statemachine to gather up frames then call AppCallback_SimpleNodeInfoReply()} Exit; end;
-                  MTI_VERIFY_NODE_ID_NUMBER_DEST    : begin VerifyNodeIdByDestination(AMessage, DestNode); Exit; end;     // Sets Flag(s) to be processed in main loop
-                  MTI_EVENTS_IDENTIFY_DEST          : begin IdentifyEvents(AMessage, DestNode); Exit; end;                // Sets Flag(s) to be processed in main loop
-                  MTI_PROTOCOL_SUPPORT_INQUIRY      : begin ProtocolSupportInquiry(AMessage, DestNode); Exit; end;        // Allocates Buffer to be processed in main loop
-                  MTI_PROTOCOL_SUPPORT_REPLY        : begin {TODO: Implement Statemachine to gather up frames then call AppCallBack_ProtocolSupportReply; } Exit; end;
-                  MTI_DATAGRAM_OK_REPLY             : begin DatagramOkReply(AMessage, DestNode); Exit; end;               // Updates internal states
-                  MTI_DATAGRAM_REJECTED_REPLY       : begin DatagramRejectedReply(AMessage, DestNode); Exit; end;         // Updates internal states
+                  MTI_SIMPLE_NODE_INFO_REQUEST       : begin SimpleNodeInfoMessage(DestNode, AMessage, False); Exit; end;         // Allocates Buffer to be processed in main loop
+                  MTI_SIMPLE_NODE_INFO_REPLY         : begin SimpleNodeInfoMessage(DestNode, AMessage, True); Exit; end;
+                  MTI_VERIFY_NODE_ID_NUMBER_DEST     : begin VerifyNodeIdByDestination(DestNode, AMessage); Exit; end;     // Sets Flag(s) to be processed in main loop
+                  MTI_EVENTS_IDENTIFY_DEST           : begin IdentifyEvents(DestNode, AMessage); Exit; end;                // Sets Flag(s) to be processed in main loop
+                  MTI_PROTOCOL_SUPPORT_INQUIRY       : begin ProtocolSupportMessage(DestNode, AMessage, False); Exit; end;        // Allocates Buffer to be processed in main loop
+                  MTI_PROTOCOL_SUPPORT_REPLY         : begin ProtocolSupportMessage(DestNode, AMessage, True);  Exit; end;
+                  MTI_DATAGRAM_OK_REPLY              : begin DatagramOkReply(DestNode, AMessage); Exit; end;               // Updates internal states
+                  MTI_DATAGRAM_REJECTED_REPLY        : begin DatagramRejectedReply(DestNode, AMessage); Exit; end;         // Updates internal states
                   {$IFDEF SUPPORT_TRACTION}
-                  MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST : begin SimpleTrainNodeInfoRequest(AMessage, DestNode); Exit; end;
-                  MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin  {TODO: Implement Statemachine to gather up frames then call AppCallback_SimpleTrainNodeInfoReply()} Exit; end;
-                  MTI_TRACTION_PROTOCOL             : begin TractionProtocol(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_REPLY                : begin AppCallback_TractionControlReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end;
+                  MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST : begin SimpleTrainNodeInfoMessage(AMessage, DestNode, False); Exit; end;
+                  MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin SimpleTrainNodeInfoMessage(AMessage, DestNode, True); Exit; end;
+                  MTI_TRACTION_PROTOCOL              : begin TractionProtocolMessage(AMessage, DestNode, False); Exit; end;              // Allocates Buffer to be processed in main loop
+                  MTI_TRACTION_REPLY                 : begin TractionProtocolMessage(AMessage, DestNode, True); Exit; end;
                   {$ENDIF}
                   {$IFDEF SUPPORT_TRACTION_PROXY}
-                  MTI_TRACTION_PROXY_PROTOCOL       : begin TractionProxyProtocol(AMessage, DestNode); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_PROXY_REPLY          : begin TractionProxyProtocolReply(DestNode, AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end;
+                  MTI_TRACTION_PROXY_PROTOCOL        : begin TractionProxyProtocolMessage(DestNode ,AMessage, False); Exit; end;         // Allocates Buffer to be processed in main loop
+                  MTI_TRACTION_PROXY_REPLY           : begin TractionProxyProtocolMessage(DestNode ,AMessage, False); Exit; end;
                   {$ENDIF}
+                  MTI_REMOTE_BUTTON_REQUEST          : begin RemoteButtonMessage(DestNode, AMessage, False); Exit; end;
+                  MTI_REMOTE_BUTTON_REPLY            : begin RemoteButtonMessage(DestNode, AMessage, True); Exit; end;
                   {$IFDEF SUPPORT_STREAMS}
-                  MTI_STREAM_INIT_REQUEST           : begin StreamInitRequest(AMessage, DestNode); Exit; end;            // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_INIT_REPLY             : begin StreamInitReply(AMessage, DestNode); Exit; end;              // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_PROCEED                : begin StreamProceed(AMessage, DestNode); Exit; end;                // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_COMPLETE               : begin StreamComplete(AMessage, DestNode); Exit; end;               // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_INIT_REQUEST            : begin StreamInitRequest(DestNode, AMessage); Exit; end;            // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_INIT_REPLY              : begin StreamInitReply(DestNode, AMessage); Exit; end;              // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_PROCEED                 : begin StreamProceed(DestNode, AMessage); Exit; end;                // Allocates Buffer to be processed in main loop
+                  MTI_STREAM_COMPLETE                : begin StreamComplete(DestNode, AMessage); Exit; end;               // Allocates Buffer to be processed in main loop
                   {$ENDIF}
-                  MTI_OPTIONAL_INTERACTION_REJECTED : begin {TODO: What to do if one of the messages is Rejected!} end;
-                  MTI_REMOTE_BUTTON_REQUEST         : begin {TODO: Understand if we just pass this to the application layer or can we do something automatically (doubt it)} Exit; end;
-                  MTI_REMOTE_BUTTON_REPLY           : begin AppCallback_RemoteButtonReply(AMessage^.Source, DestNode, AMessage^.Buffer); Exit; end
+                  MTI_OPTIONAL_INTERACTION_REJECTED  : begin {TODO: What to do if one of the messages is Rejected!} end
                 else
                   OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
                 end; {case}
@@ -178,11 +179,11 @@ begin
             end else
             begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
               case AMessage^.MTI of
-                  MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(AMessage, DestNode); Exit; end;              // Sets Flag(s) to be processed in main loop
+                  MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(DestNode, AMessage); Exit; end;              // Sets Flag(s) to be processed in main loop
                   MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage); Exit; end;         // Sets Flag(s) to be processed in main loop
                   MTI_PRODUCER_IDENTIFY           : begin IdentifyProducers(AMessage); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_EVENT_LEARN                 : begin AppCallback_LearnEvent(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;                           // Sets Flag(s) to be processed in main loop
-                  MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(AMessage, nil); Exit; end;                 // Sets Flag(s) to be processed in main loop
+                  MTI_EVENT_LEARN                 : begin LearnEvent(AMessage); Exit; end;                           // Sets Flag(s) to be processed in main loop
+                  MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(nil, AMessage); Exit; end;                 // Sets Flag(s) to be processed in main loop
 
                   MTI_CONSUMER_IDENTIFIED_RANGE,
                   MTI_CONSUMER_IDENTIFIED_CLEAR,
@@ -293,22 +294,6 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure UnLinkDeAllocateAndTestForMessageToSend
-//     Parameters:
-//     Returns:
-//     Description:
-// *****************************************************************************
-function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
-begin
-  OPStackNode_IncomingMessageUnLink(Node, AMessage);
-  OPStackBuffers_DeAllocateMessage(AMessage);
-  if MessageToSend <> nil then
-    Result := True
-   else
-    Result := False;
-end;
-
-// *****************************************************************************
 //  procedure NodeRunMessageBufferReply
 //     Parameters: Node: Node that has a message to send
 //                 MessageToSend: The buffer to load if the function is successful in loading it
@@ -328,42 +313,22 @@ begin
     if NextMessage^.MessageType and MT_SEND = 0 then
     begin
       case NextMessage^.MTI of
-        MTI_SIMPLE_NODE_INFO_REQUEST :
-            begin
-              SimpleNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        MTI_PROTOCOL_SUPPORT_INQUIRY :
-            begin
-              ProtocolSupportInquiryReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
+        MTI_SIMPLE_NODE_INFO_REQUEST         : begin Result := SimpleNodeInfoRequestReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
+        MTI_SIMPLE_NODE_INFO_REPLY           : begin SimpleNodeInfoRequestReply(Node, NextMessage); Exit; end;
+        MTI_PROTOCOL_SUPPORT_INQUIRY         : begin Result := ProtocolSupportInquiryReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
+        MTI_PROTOCOL_SUPPORT_REPLY           : begin ProtocolSupportReply(Node, NextMessage); Exit; end;
         {$IFDEF SUPPORT_TRACTION}
-        MTI_TRACTION_PROTOCOL :
-            begin
-               AppCallback_TractionProtocol(Node, MessageToSend, NextMessage);
-               Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST :
-            begin
-              SimpleTrainNodeInfoRequestReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
+        MTI_TRACTION_PROTOCOL                : begin Result := TractionProtocolReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
+        MTI_TRACTION_REPLY                   : begin TractionProtocolReply(Node, NextMessage); Exit; end;
+        MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST   : begin Result := SimpleTrainNodeInfoRequestReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
+        MTI_SIMPLE_TRAIN_NODE_INFO_REPLY     : begin SimpleTrainNodeInfoReply(Node, NextMessage); Exit; end;
         {$ENDIF}
         {$IFDEF SUPPORT_TRACTION_PROXY}
-        MTI_TRACTION_PROXY_PROTOCOL :
-            begin
-              if (NextMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_MANAGE) then
-              begin
-                TractionProxyProtocolReply(Node, MessageToSend, NextMessage);
-                Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-              end else
-              begin
-                 AppCallback_TractionProxyProtocol(Node, MessageToSend, NextMessage);
-                 Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-              end;
-            end;
+        MTI_TRACTION_PROXY_PROTOCOL          : begin Result := TractionProxyProtocolReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
+        MTI_TRACTION_PROXY_REPLY             : begin TractionProxyProtocolReply(Node, NextMessage); Exit; end;
         {$ENDIF}
+        MTI_REMOTE_BUTTON_REQUEST            : begin Result := RemoteButtonReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
+        MTI_REMOTE_BUTTON_REPLY              : begin RemoteButtonReply(Node, NextMessage); Exit; end;
         {$IFDEF SUPPORT_STREAMS}
         MTI_STREAM_INIT_REQUEST :
             begin

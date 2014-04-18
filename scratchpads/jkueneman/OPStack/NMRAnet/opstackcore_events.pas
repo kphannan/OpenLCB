@@ -11,6 +11,7 @@ uses
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
   {$ENDIF}
+  template_userstatemachine,
   opstacknode,
   template_event_callbacks,
   nmranetutilities,
@@ -19,9 +20,10 @@ uses
   opstackbuffers,
   opstacktypes;
 
-procedure IdentifyEvents(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure IdentifyEvents(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure IdentifyConsumers(AMessage: POPStackMessage);
 procedure IdentifyProducers(AMessage: POPStackMessage);
+procedure LearnEvent(AMessage: POPStackMessage);
 
 function NodeRunPCERFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
 function NodeRunEventFlagsReply(Node: PNMRAnetNode; var OPStackMessage: POPStackMessage): Boolean;
@@ -185,7 +187,7 @@ begin
   {$ENDIF}
 end;
 
-procedure IdentifyEvents(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure IdentifyEvents(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   i: Integer;
 begin
@@ -252,6 +254,11 @@ begin
         OPStackNode_SetEventFlag(NodeEventIndex, False, LocalDestNode^.Events.Produced);
     end
   end;
+end;
+
+procedure LearnEvent(AMessage: POPStackMessage);
+begin
+  AppCallback_LearnEvent(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0])));
 end;
 
 // *****************************************************************************

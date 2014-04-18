@@ -13,19 +13,20 @@ uses
   nmranetutilities,
   opstackdefines;
 
-procedure VerifyNodeIdByDestination(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure VerifyNodeId(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
+function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 
 implementation
 
-procedure VerifyNodeIdByDestination(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
   if DestNode <> nil then
     OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID)      // All messages addressed to node get replies even if the payload is wrong!
 end;
 
-procedure VerifyNodeId(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
    if AMessage^.Buffer^.DataBufferSize = 0 then
     OPStackNode_SetFlags(MF_VERIFY_NODE_ID)
@@ -47,6 +48,22 @@ begin
   OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
   OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI, IsPermenent);    // Unknown MTI sent to addressed node
   OutgoingCriticalMessage(@OptionalInteractionMessage);
+end;
+
+// *****************************************************************************
+//  procedure UnLinkDeAllocateAndTestForMessageToSend
+//     Parameters:
+//     Returns:
+//     Description:
+// *****************************************************************************
+function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
+begin
+  OPStackNode_IncomingMessageUnLink(Node, AMessage);
+  OPStackBuffers_DeAllocateMessage(AMessage);
+  if MessageToSend <> nil then
+    Result := True
+   else
+    Result := False;
 end;
 
 end.

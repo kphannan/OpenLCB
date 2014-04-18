@@ -48,6 +48,7 @@ function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo;
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
 function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; var AllocatedNodeID: TNodeInfo; TrainID: Word): Boolean;
+function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
 
 
 
@@ -372,6 +373,25 @@ begin
       OutgoingMessage(NewMessage);
       Result := True;
     end
+end;
+
+function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 3;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
+      NewMessage^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
+      NewMessage^.Buffer^.DataArray[2] := ResultFlag;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end;
+  end;
 end;
 
 {$ENDIF}

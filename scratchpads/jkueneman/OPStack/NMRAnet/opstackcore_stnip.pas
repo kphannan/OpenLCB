@@ -14,31 +14,46 @@ uses
   opstackbuffers,
   nmranetdefines,
   opstackdefines,
+  template_userstatemachine,
   opstacktypes;
 
-procedure SimpleTrainNodeInfoRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure SimpleTrainNodeInfoRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
+function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
 implementation
 
-procedure SimpleTrainNodeInfoRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
 var
   NewMessage: POPStackMessage;
 begin
   NewMessage := nil;
-  if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-  else
-    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  if IsReply then
+  begin
+    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end;
+  end else
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end else
+      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  end;
 end;
 
-procedure SimpleTrainNodeInfoRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
   j: Integer;
 begin
+  Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID) then
+  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
     AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
     AcdiSnipBufferPtr^.DataBufferSize := 0;
@@ -72,6 +87,13 @@ begin
       Inc(j)
     end;
   end;
+  UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+end;
+
+procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
+begin
+  AppCallback_SimpleTrainNodeInfoReply(Node, NextMessage);
+  UnLinkDeAllocateAndTestForMessageToSend(Node, nil, NextMessage);
 end;
 
 end.

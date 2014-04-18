@@ -10,16 +10,19 @@ uses
   {$IFNDEF FPC}
   NMRAnetDCC,
   {$ENDIF}
+  opstack_api,
   template_hardware,
   opstacknode,
   opstackcore_basic,
   nmranetdefines,
   opstackdefines,
+  template_userstatemachine,
   opstackbuffers,
   opstacktypes;
 
-procedure TractionProxyProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure TractionProxyProtocolReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 implementation
 
@@ -32,54 +35,79 @@ implementation
 //    Takes incoming Traction Protocol and posts it to be disected and handled
 //    later in the Reply
 //******************************************************************************
-procedure TractionProxyProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
 var
   NewMessage: POPStackMessage;
+  MTI: Word;
 begin
   NewMessage := nil;
-  if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_PROTOCOL, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+  if IsReply then
   begin
-    OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-    OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    MTI := MTI_TRACTION_PROXY_REPLY;
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end;
   end else
-    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  begin
+    MTI := MTI_TRACTION_PROXY_PROTOCOL;
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end else
+      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  end;
 end;
 
-procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+{$IFDEF SUPPORT_TRACTION_PROXY}
+var
+  Flag: Byte;
+{$ENDIF}
 begin
+  Result := False;
+  MessageToSend := nil;
   {$IFDEF SUPPORT_TRACTION_PROXY}
   if NextMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_MANAGE then
   begin
     if NextMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
     begin
-      if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_PROXY_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
+      Flag := $FF;   // Fail
+      if (DestNode^.ProxyData.Lock.AliasID = 0) then
+            if (DestNode^.ProxyData.Lock.AliasID = 0) then
+              if (DestNode^.ProxyData.Lock.AliasID = 0) then
+                Flag := 0;   // OK
+      if TrySendTractionProxyManageReply(NextMessage^.Dest, NextMessage^.Source, Flag) then
       begin
-        // Only reserve if the node is not locked
-        MessageToSend^.Buffer^.DataBufferSize := 3;
-        MessageToSend^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
-        MessageToSend^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
-        MessageToSend^.Buffer^.DataArray[2] := $FF;   // Fail
-        if (Node^.ProxyData.Lock.AliasID = 0) then
-          if (Node^.ProxyData.Lock.AliasID = 0) then
-            if (Node^.ProxyData.Lock.AliasID = 0) then
-              MessageToSend^.Buffer^.DataArray[2] := 0;   // OK
+        DestNode^.ProxyData.Lock.AliasID := NextMessage^.Source.AliasID;
+        DestNode^.ProxyData.Lock.ID[0] := NextMessage^.Source.ID[0];
+        DestNode^.ProxyData.Lock.ID[1] := NextMessage^.Source.ID[1];
       end
     end else
     begin
-      if (Node^.ProxyData.Lock.AliasID = NextMessage^.Source.AliasID) then
-        if (Node^.ProxyData.Lock.ID[0] = NextMessage^.Source.ID[0]) then
-          if (Node^.ProxyData.Lock.ID[1] = NextMessage^.Source.ID[1]) then
+      if (DestNode^.ProxyData.Lock.AliasID = NextMessage^.Source.AliasID) then
+        if (DestNode^.ProxyData.Lock.ID[0] = NextMessage^.Source.ID[0]) then
+          if (DestNode^.ProxyData.Lock.ID[1] = NextMessage^.Source.ID[1]) then
           begin
-            Node^.ProxyData.Lock.AliasID := 0;
-            Node^.ProxyData.Lock.ID[0] := 0;
-            Node^.ProxyData.Lock.ID[1] := 0;
+            DestNode^.ProxyData.Lock.AliasID := 0;
+            DestNode^.ProxyData.Lock.ID[0] := 0;
+            DestNode^.ProxyData.Lock.ID[1] := 0;
           end;
     end
   end else
   begin
     // This a multi-frame messages so it has an allocated buffer
-  end
+  end;
+   Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   {$ENDIF}
+end;
+
+procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+begin
+  AppCallback_TractionProxyProtocol(DestNode, AMessage);
+  UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
 end.

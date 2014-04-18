@@ -36,14 +36,17 @@ procedure AppCallback_Timer_100ms;
 
 // These message are called from the mainstatemachine loop.  They have been stored in
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
-procedure AppCallback_SimpleNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; NodeInfo: PAcdiSnipBuffer);
-procedure AppCallBack_ProtocolSupportReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);  // This could be 2 replies per call.. read docs
+procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);  // This could be 2 replies per call.. read docs
+procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$IFDEF SUPPORT_TRACTION}
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage);
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: PAcdiSnipBuffer);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);  // Assumes we can make these all one frame long
+procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
-procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage);
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure AppCallback_TractionProxyProtocolReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);    // Assumes we can make these all one frame long
 {$ENDIF}
 
 // These messages are called directly from the hardware receive buffer.  See the notes to understand the
@@ -54,9 +57,6 @@ procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
-procedure AppCallback_TractionControlReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);  // Assumes we can make these all one frame long
-procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);    // Assumes we can make these all one frame long
-procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
 
 {$IFNDEF FPC}
   function OPStackNode_Allocate: PNMRAnetNode; external;
@@ -416,48 +416,54 @@ end;
 //                   will block that second message.  If that is required then return True with ReplyMessage = nil to
 //                   release the Requesting message then send the reply to this message at a later time
 // *****************************************************************************
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  // Default reply handled automatically by OPStack
-  TractionProtocolReply(Node, ReplyMessage, RequestingMessage);
+
 end;
 {$ENDIF}
 
 {$IFDEF SUPPORT_TRACTION_PROXY}
 // *****************************************************************************
-//  procedure AppCallback_TractionProtocol
+//  procedure AppCallback_TractionProxyProtocol
 //     Parameters: : Node           : Pointer to the node that the traction protocol has been called on
 //                   ReplyMessage   : The Reply Message that needs to be allocated, populated and returned so it can be sent
 //                   RequestingMessage    : Message that was sent to the node containing the requested information
 //     Returns     : True if the RequestingMessage is handled and the ReplyMessage is ready to send
 //                   False if the request has not been completed due to no available buffers or waiting on other information
-//     Description : This is called from the main statemachine so the Requesting Message is allocated from
-//                   the internal buffer queue.  It is recommended that the message get handled quickly and released.
-//                   The internal system can not process other incoming messages that require a reply until this message
-//                   is cleared.  This means that if a reply can not be sent until another message is sent/received this
-//                   will block that second message.  If that is required then return True with ReplyMessage = nil to
-//                   release the Requesting message then send the reply to this message at a later time
+//     Description :
 // *****************************************************************************
-procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; var ReplyMessage, RequestingMessage: POPStackMessage);
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
   Link: PLinkRec;
 begin
   // Only the top node is the Proxy that replies to this
   if Node = GetPhysicalNode then
-    if RequestingMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_ALLOCATE then
+    if AMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_ALLOCATE then
     begin
       Sync.Link[Sync.NextLink].SyncState := SYNC_REPLY_NODE;
-      Sync.Link[Sync.NextLink].ReplyNode.AliasID := RequestingMessage^.Source.AliasID;
-      Sync.Link[Sync.NextLink].ReplyNode.ID[0] := RequestingMessage^.Source.ID[0];
-      Sync.Link[Sync.NextLink].ReplyNode.ID[1] := RequestingMessage^.Source.ID[1];
-      Sync.Link[Sync.NextLink].TrainState.Address := (RequestingMessage^.Buffer^.DataArray[2] shl 8) or RequestingMessage^.Buffer^.DataArray[3];
-      Sync.Link[Sync.NextLink].TrainState.SpeedSteps := RequestingMessage^.Buffer^.DataArray[4];
+      Sync.Link[Sync.NextLink].ReplyNode.AliasID := AMessage^.Source.AliasID;
+      Sync.Link[Sync.NextLink].ReplyNode.ID[0] := AMessage^.Source.ID[0];
+      Sync.Link[Sync.NextLink].ReplyNode.ID[1] := AMessage^.Source.ID[1];
+      Sync.Link[Sync.NextLink].TrainState.Address := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
+      Sync.Link[Sync.NextLink].TrainState.SpeedSteps := AMessage^.Buffer^.DataArray[4];
       Inc(Sync.NextLink);
       Sync.DatabaseChanged := True;
       // Run the reply statemachine on the physical node will create a new Train Node eventually
     end;
 end;
-{$ENDIF}
+
+// *****************************************************************************
+//  procedure AppCallback_TractionProxyProtocolReply
+//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
+//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
+//                   DataBytes: pointer Raw data bytes, Byte 0 and 1 are the Alias
+//     Returns     : None
+//     Description :
+// *****************************************************************************
+procedure AppCallback_TractionProxyProtocolReply(var Source: TNodeInfo;  Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
+begin
+
+end;
 
 // *****************************************************************************
 //  procedure AppCallBack_ProtocolSupportReply
@@ -465,17 +471,13 @@ end;
 //                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
 //                   DataBytes: pointer Raw data bytes, Byte 0 and 1 are the Alias
 //     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
+//     Description :
 // *****************************************************************************
-procedure AppCallBack_ProtocolSupportReply(var Source: TNodeInfo; var Dest: TNodeInfo; DataBytes: PSimpleBuffer);
+procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
 
 end;
+{$ENDIF}
 
 // *****************************************************************************
 //  procedure AppCallback_ConsumerIdentified
@@ -568,19 +570,15 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure AppCallback_TractionProxyReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
+//  procedure AppCallback_TractionProtocolReply
+//     Parameters: : Node           : Pointer to the node that the traction protocol has been called on
+//                   ReplyMessage   : The Reply Message that needs to be allocated, populated and returned so it can be sent
+//                   RequestingMessage    : Message that was sent to the node containing the requested information
+//     Returns     : True if the RequestingMessage is handled and the ReplyMessage is ready to send
+//                   False if the request has not been completed due to no available buffers or waiting on other information
+//     Description : Called in response to a Traction Protcool request
 // *****************************************************************************
-procedure AppCallback_TractionProxyReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
+procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
 
 end;
@@ -598,7 +596,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_RemoteButtonReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
+procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
 
 end;
@@ -617,7 +615,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_SimpleTrainNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; TrainNodeInfo: PAcdiSnipBuffer);
+procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
 
 end;
@@ -648,7 +646,7 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallback_SimpleNodeInfoReply(var Source: TNodeInfo; var Dest: TNodeInfo; NodeInfo: PAcdiSnipBuffer);
+procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
 
 end;

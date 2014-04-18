@@ -18,10 +18,12 @@ uses
   nmranetdefines,
   opstackdefines,
   opstackbuffers,
+  template_userstatemachine,
   opstacktypes;
 
-procedure TractionProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
+function TractionProtocolReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+procedure TractionProtocolReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
 implementation
 
@@ -34,17 +36,27 @@ implementation
 //    Takes incoming Traction Protocol and posts it to be disected and handled
 //    later in the Reply
 //******************************************************************************
-procedure TractionProtocol(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
 var
   NewMessage: POPStackMessage;
 begin
   NewMessage := nil;
-  if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+  if IsReply then
   begin
-    OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-    OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end;
   end else
-    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end else
+      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  end;
 end;
 
 procedure TractionProtocolReplySpeedDir(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
@@ -57,6 +69,7 @@ var
   DCCPacket: TDCCPacket;
   {$ENDIF}
 begin
+  MessageToSend := nil;
   if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
     AddressHi := (Node^.TrainData.Address shr 8) and $00FF;                                                        // Split the address to make clear when loading bytes
@@ -137,6 +150,7 @@ var
   DCCPacket: TDCCPacket;
   {$ENDIF}
 begin
+  MessageToSend := nil;
   if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
     // Split the address to make clear when loading bytes
@@ -217,6 +231,7 @@ var
   DCCPacket: TDCCPacket;
   {$ENDIF}
 begin
+  MessageToSend := nil;
   if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
     // Split the address to make clear when loading bytes
@@ -402,8 +417,9 @@ begin
   end;
 end;
 
-procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+function TractionProtocolReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
+  Result := False;
   MessageToSend := nil;
   case NextMessage^.Buffer^.DataArray[0] and TRACTION_OPERATION_MASK of
       TRACTION_CMD :
@@ -427,8 +443,15 @@ begin
                  TRACTION_CONFIGURE_DCC_PROXY : begin TractionProtocolReplyConfigureDCCProxy(Node, MessageToSend, NextMessage); Exit; end;
                  TRACTION_MANAGE_DCC_PROXY    : begin TractionProtocolReplyManageDCCProxy(Node, MessageToSend, NextMessage); Exit; end;
                end;
-            end;
+           end;
   end;
+  Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+end;
+
+procedure TractionProtocolReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
+begin
+
+  UnLinkDeAllocateAndTestForMessageToSend(Node, nil, NextMessage);
 end;
 
 end.
