@@ -15,9 +15,11 @@ uses
   opstackdefines,
   opstackbuffers,
   opstacktypes,
+  opstackcore_basic,
   opstackcanstatemachinesbuffers;
 
 procedure OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
+function OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(OPStackMessage: POPStackMessage; var AcdiSnipMessage: POPStackMessage): Boolean;
 
 implementation
 
@@ -62,6 +64,45 @@ begin
         OPStackBuffers_DeAllocateMessage(LocalOutgoingMessagePtr);
       end;
     end;
+  end;
+end;
+
+function OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(OPStackMessage: POPStackMessage; var AcdiSnipMessage: POPStackMessage): Boolean;
+var
+  InProcessMessage: POPStackMessage;
+  i: Integer;
+  AcdiSnipBuffer: PAcdiSnipBuffer;
+begin
+  Result := False;
+  AcdiSnipBuffer := nil;
+
+  InProcessMessage := OPStackCANStatemachineBuffers_FindMessageOnIncomingAcdiSnipFrameStack(OPStackMessage);
+  if InProcessMessage = nil then
+  begin
+    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
+      OPStackCANStatemachineBuffers_AddIncomingAcdiSnipMessage(InProcessMessage)
+    else begin
+      OptionalInteractionRejected(OPStackMessage, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
+      Exit;
+    end;
+  end;
+
+  AcdiSnipBuffer := PAcdiSnipBuffer( PByte( InProcessMessage^.Buffer));
+
+  for i := 0 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
+  begin
+    AcdiSnipBuffer^.DataArray[AcdiSnipBuffer^.DataBufferSize] := OPStackMessage^.Buffer^.DataArray[i];
+    Inc(AcdiSnipBuffer^.DataBufferSize);
+    if OPStackMessage^.Buffer^.DataArray[i] = Ord( #0) then
+      Inc(AcdiSnipBuffer^.CurrentCount);
+  end;
+
+  if AcdiSnipBuffer^.CurrentCount = 5 then            // Found the 5 nulls?
+  begin
+    // Done
+    OPStackCANStatemachineBuffers_RemoveIncomingAcdiSnipMessage(InProcessMessage);
+    AcdiSnipMessage := InProcessMessage;
+    Result := True
   end;
 end;
 

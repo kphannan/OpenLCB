@@ -103,7 +103,7 @@ end;
 // *****************************************************************************
 function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var NMRAnetCanBuffer: TNMRAnetCanBuffer; var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean;
 var
-  DatagramMessage, MultiFrameMessage: POPStackMessage;
+  DatagramMessage, GeneralInProcessMessage: POPStackMessage;
   DatagramError: PSimpleDataArray;
   DatagramProcessErrorCode: Word;
 begin
@@ -138,10 +138,26 @@ begin
               OPStackBuffers_LoadSimpleBuffer(OPStackMessage^.Buffer, NMRAnetCanBuffer.PayloadCount-2, @NMRAnetCanBuffer.Payload, 2);  // Copy over the payload, skipping the destination alias
               if OPStackMessage^.FramingBits <> 0 then
               begin
-                if StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(OPStackMessage, MultiFrameMessage) then   // Don't dispatch it until it is fully received
+                if StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(OPStackMessage, GeneralInProcessMessage) then   // Don't dispatch it until it is fully received
                 begin
-                  OPStackMessage := MultiFrameMessage;                          // replace the last incoming frame with the full MultiFrame message
+                  OPStackMessage := GeneralInProcessMessage;                          // replace the last incoming frame with the full MultiFrame message
                   Result := True;
+                end;
+              end else
+              if OPStackMessage^.MTI = MTI_SIMPLE_NODE_INFO_REPLY then          // Does not use framing bits
+              begin
+                if OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(OpStackMessage, GeneralInProcessMessage) then
+                begin
+                  OPStackMessage := GeneralInProcessMessage;                          // replace the last incoming frame with the full MultiFrame message
+                  Result := True;
+                end;
+              end else
+              if OPStackMessage^.MTI = MTI_PROTOCOL_SUPPORT_REPLY then          // legacy does not use framing bits, need to support legacy
+              begin
+        //        if OPStackCANStatemachineSnip_ProcessIncomingProtocolSupportMessage(OpStackMessage, GeneralInProcessMessage) then
+                begin
+        //          OPStackMessage := GeneralInProcessMessage;                          // replace the last incoming frame with the full MultiFrame message
+       //           Result := True;
                 end;
               end else
                 Result := True;

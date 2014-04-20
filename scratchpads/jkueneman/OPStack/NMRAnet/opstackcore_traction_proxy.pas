@@ -61,6 +61,24 @@ begin
   end;
 end;
 
+function EmptyProxy(DestNode: PNMRAnetNode): Boolean;
+begin
+  Result := False;
+  if (DestNode^.ProxyData.Lock.AliasID = 0) then
+    if (DestNode^.ProxyData.Lock.AliasID = 0) then
+      if (DestNode^.ProxyData.Lock.AliasID = 0) then
+        Result := True;
+end;
+
+function SameLock(DestNode: PNMRAnetNode; NextMessage: POPStackMessage): Boolean;
+begin
+  Result := False;
+  if (DestNode^.ProxyData.Lock.AliasID = NextMessage^.Source.AliasID) then
+    if (DestNode^.ProxyData.Lock.ID[0] = NextMessage^.Source.ID[0]) then
+      if (DestNode^.ProxyData.Lock.ID[1] = NextMessage^.Source.ID[1]) then
+        Result := True;
+end;
+
 function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 {$IFDEF SUPPORT_TRACTION_PROXY}
 var
@@ -74,17 +92,18 @@ begin
   begin
     if NextMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
     begin
-      Flag := $FF;   // Fail
-      if (DestNode^.ProxyData.Lock.AliasID = 0) then
-            if (DestNode^.ProxyData.Lock.AliasID = 0) then
-              if (DestNode^.ProxyData.Lock.AliasID = 0) then
-                Flag := 0;   // OK
-      if TrySendTractionProxyManageReply(NextMessage^.Dest, NextMessage^.Source, Flag) then
+      Flag := $FF;
+      if EmptyProxy(DestNode) or SameLock(DestNode, NextMessage) then
       begin
-        DestNode^.ProxyData.Lock.AliasID := NextMessage^.Source.AliasID;
-        DestNode^.ProxyData.Lock.ID[0] := NextMessage^.Source.ID[0];
-        DestNode^.ProxyData.Lock.ID[1] := NextMessage^.Source.ID[1];
-      end
+        if TrySendTractionProxyManageReply(NextMessage^.Dest, NextMessage^.Source, $00) then
+        begin
+          DestNode^.ProxyData.Lock.AliasID := NextMessage^.Source.AliasID;
+          DestNode^.ProxyData.Lock.ID[0] := NextMessage^.Source.ID[0];
+          DestNode^.ProxyData.Lock.ID[1] := NextMessage^.Source.ID[1];
+          Result := True;
+        end
+      end else
+        Result := TrySendTractionProxyManageReply(NextMessage^.Dest, NextMessage^.Source, $FF)
     end else
     begin
       if (DestNode^.ProxyData.Lock.AliasID = NextMessage^.Source.AliasID) then
@@ -98,7 +117,7 @@ begin
     end
   end else
   begin
-    // This a multi-frame messages so it has an allocated buffer
+    AppCallback_TractionProxyProtocol(DestNode, NextMessage);
   end;
    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   {$ENDIF}
@@ -106,7 +125,7 @@ end;
 
 procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  AppCallback_TractionProxyProtocol(DestNode, AMessage);
+  AppCallback_TractionProxyProtocolReply(DestNode, AMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 

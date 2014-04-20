@@ -137,7 +137,9 @@ begin
 
   // It is a OLCB message
   case (AMessage^.MessageType) and MT_MASK of
-      MT_SIMPLE :
+      MT_SIMPLE,                                        //  HOW CAN I PUT DATAGRAMS AND STREAMS INTO THIS SAME FORMAT, THEY ARE ODD BALLS NOW
+      MT_MULTIFRAME,
+      MT_ACDISNIP :
           begin
             if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then   // Handle Simple Messages that may be addressed to one of our nodes
             begin
@@ -200,7 +202,7 @@ begin
                   MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
               end; {case}
             end;
-            CheckAndDeallocateMessage(AMessage);
+            CheckAndDeallocateMessage(AMessage);                                // We always free the message
           end;
       {$IFDEF SUPPORT_STREAMS}
       MT_STREAM,

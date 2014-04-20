@@ -23,6 +23,9 @@ const
 procedure OPStackCoreDatagram_Initialize;
 
 // Do not currently have a function that initiates a datagram from scratch, currently we mostly repond from a sent datagram
+procedure DatagramMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+
+
 procedure DatagramOkReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure DatagramRejectedReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
@@ -34,6 +37,15 @@ implementation
 
 var
   WaitingForAckList: POPStackMessage;
+
+procedure DatagramMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+var
+  NewMessage: POPStackMessage;
+  MTI: Word;
+begin
+  NewMessage := nil;
+
+end;
 
 // *****************************************************************************
 //  procedure OPStackCoreDatagram_Initialize;

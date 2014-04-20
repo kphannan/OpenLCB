@@ -615,12 +615,6 @@ end;
     function IsTractionFunctionQueryReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionSpeedsQueryFirstFrameReply(MessageInfo: TOlcbMessage): Boolean;
     function IsTractionSpeedsQuerySecondFrameReply(MessageInfo: TOlcbMessage): Boolean;
-    function IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
-    function IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
-    function IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
-    function IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
-    function IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
-    function IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
     procedure MessageWaitTimerReset;
     function MessageWaitTimerCheckTimeout: Boolean;
     procedure Process(MessageInfo: TOlcbMessage); virtual;                      // Must override this
@@ -635,16 +629,11 @@ end;
     procedure SendProtocolIdentificationProtocolMessage;
     procedure SendStreamInitReply(NegotiatedBuffer: Word; Flag, AdditionalFlags, SourceID, DestID: Byte);
     procedure SendSnipMessage;
-    procedure SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
-    procedure SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
     procedure SendTractionEStopMessage;
     procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
     procedure SendTractionQueryFunction(FunctionAddress: DWord);
     procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
     procedure SendTractionQuerySpeeds;
-    procedure SendTractionQueryProxyMessage;
-    procedure SendTractionReleaseProxyMessage;
-    procedure SendTractionReserveProxyMessage;
     procedure SendTractionSpeedMessage(Speed: THalfFloat);
     procedure SendVerifyNodeIDGlobalMessage;
     procedure SendVerifyNodeIDToDestinationMessage;
@@ -991,70 +980,6 @@ end;
   TTaskInitializationComplete = class(TTaskOlcbBase)
   public
     function Clone: TTaskOlcbBase; override;
-    procedure Process(MessageInfo: TOlcbMessage); override;
-  end;
-
-  { TTaskTractionReserveAndAttachDccProxy }
-
-  TTaskTractionReserveAndAttachDccProxy = class(TTaskOlcbBase)
-  private
-    FAddress: Word;
-    FReplyAddress: Word;
-    FReplyCode: Integer;
-    FReplySpeedSteps: Byte;
-    FIsShort: Boolean;
-    FSpeedStep: Byte;
-  protected
-    property Address: Word read FAddress write FAddress;
-    property IsShort: Boolean read FIsShort write FIsShort;
-    property SpeedStep: Byte read FSpeedStep write FSpeedStep;
-  public
-    constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte); reintroduce;
-    function Clone: TTaskOlcbBase; override;
-    procedure CopyTo(Target: TTaskOlcbBase); override;
-    procedure Process(MessageInfo: TOlcbMessage); override;
-
-    property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
-    property ReplySpeedSteps: Byte read FReplySpeedSteps;
-    property ReplyAddress: Word read FReplyAddress;
-  end;
-
-  { TTaskTractionReserveAndDetachDccProxy }
-
-  TTaskTractionReserveAndDetachDccProxy = class(TTaskOlcbBase)
-  private
-    FAddress: Word;
-    FIsShort: Boolean;
-    FReplyAddress: Word;
-    FReplyCode: Integer;
-    FReplySpeedSteps: Byte;
-  protected
-    property Address: Word read FAddress write FAddress;
-    property IsShort: Boolean read FIsShort write FIsShort;
-  public
-    constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
-    function Clone: TTaskOlcbBase; override;
-    procedure CopyTo(Target: TTaskOlcbBase); override;
-    procedure Process(MessageInfo: TOlcbMessage); override;
-
-    property ReplyCode: Integer read FReplyCode;        // -1 if the Reply Code was not sent
-    property ReplySpeedSteps: Byte read FReplySpeedSteps;
-    property ReplyAddress: Word read FReplyAddress;
-  end;
-
-  { TTaskTractionQueryDccAddressProxy }
-
-  TTaskTractionQueryDccAddressProxy = class(TTaskOlcbBase)
-  private
-    FAddress: Word;
-    FIsShort: Boolean;
-  protected
-    property Address: Word read FAddress write FAddress;
-    property IsShort: Boolean read FIsShort write FIsShort;
-  public
-    constructor Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean); reintroduce;
-    function Clone: TTaskOlcbBase; override;
-    procedure CopyTo(Target: TTaskOlcbBase); override;
     procedure Process(MessageInfo: TOlcbMessage); override;
   end;
 
@@ -3673,143 +3598,6 @@ begin
 
 end;
 
-function TTaskOlcbBase.IsTractionAttachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
-var
-  Helper: TOpenLCBMessageHelper;
-begin
-  Result := False;
-  if Assigned(MessageInfo) then
-  begin
-    if MessageInfo is TOpenLCBMessageHelper then
-    begin
-      Helper := TOpenLCBMessageHelper( MessageInfo);
-      if (Helper.MTI = MTI_TRACTION_REPLY) and
-         (Helper.SourceAliasID = DestinationAlias) and
-         (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
-         (Helper.Data[3] = TRACTION_ATTACH_DCC_ADDRESS_REPLY) then
-      begin
-        MessageWaitTimerReset;
-        Result := True;
-      end;
-    end;
-  end;
-end;
-
-function TTaskOlcbBase.IsTractionDetachDCCAddressReply(MessageInfo: TOlcbMessage): Boolean;
-var
-  Helper: TOpenLCBMessageHelper;
-begin
-  Result := False;
-  if Assigned(MessageInfo) then
-  begin
-    if MessageInfo is TOpenLCBMessageHelper then
-    begin
-      Helper := TOpenLCBMessageHelper( MessageInfo);
-      if (Helper.MTI = MTI_TRACTION_REPLY) and
-         (Helper.SourceAliasID = DestinationAlias) and
-         (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
-         (Helper.Data[3] = TRACTION_DETACH_DCC_ADDRESS_REPLY) then
-      begin
-        MessageWaitTimerReset;
-        Result := True;
-      end;
-    end;
-  end;
-end;
-
-function TTaskOlcbBase.IsTractionAttachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
-var
-  Helper: TOpenLCBMessageHelper;
-begin
-  Result := False;
-  if Assigned(MessageInfo) then
-  begin
-    if MessageInfo is TOpenLCBMessageHelper then
-    begin
-      Helper := TOpenLCBMessageHelper( MessageInfo);
-      if (Helper.MTI = MTI_TRACTION_REPLY) and
-         (Helper.SourceAliasID = DestinationAlias) and
-         (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
-         (Helper.Data[3] = TRACTION_ATTACH_NODE_REPLY) then
-      begin
-        MessageWaitTimerReset;
-        Result := True;
-      end;
-    end;
-  end;
-end;
-
-function TTaskOlcbBase.IsTractionDetachNodeQueryReply(MessageInfo: TOlcbMessage): Boolean;
-var
-  Helper: TOpenLCBMessageHelper;
-begin
-  Result := False;
-  if Assigned(MessageInfo) then
-  begin
-    if MessageInfo is TOpenLCBMessageHelper then
-    begin
-      Helper := TOpenLCBMessageHelper( MessageInfo);
-      if (Helper.MTI = MTI_TRACTION_REPLY) and
-         (Helper.SourceAliasID = DestinationAlias) and
-         (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_CONFIGURE_PROXY_REPLY) and
-         (Helper.Data[3] = TRACTION_DETACH_NODE_REPLY) then
-       begin
-         MessageWaitTimerReset;
-         Result := True;
-       end;
-    end;
-  end;
-end;
-
-function TTaskOlcbBase.IsTractionQueryProxyReply(MessageInfo: TOlcbMessage): Boolean;
-var
-  Helper: TOpenLCBMessageHelper;
-begin
-  Result := False;
-  if Assigned(MessageInfo) then
-  begin
-    if MessageInfo is TOpenLCBMessageHelper then
-    begin
-      Helper := TOpenLCBMessageHelper( MessageInfo);
-      if (Helper.MTI = MTI_TRACTION_REPLY) and
-         (Helper.SourceAliasID = DestinationAlias) and
-         (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
-         (Helper.Data[3] = TRACTION_MANAGE_PROXY_QUERY) then
-      begin
-        MessageWaitTimerReset;
-        Result := True;
-      end;
-    end;
-  end;
-end;
-
-function TTaskOlcbBase.IsTractionReserveProxyReply(MessageInfo: TOlcbMessage): Boolean;
-var
-  Helper: TOpenLCBMessageHelper;
-begin
-  Result := False;
-  if Assigned(MessageInfo) then
-  begin
-    if MessageInfo is TOpenLCBMessageHelper then
-    begin
-      Helper := TOpenLCBMessageHelper( MessageInfo);
-      if (Helper.MTI = MTI_TRACTION_REPLY) and
-         (Helper.SourceAliasID = DestinationAlias) and
-         (Helper.DestinationAliasID = SourceAlias) and
-         (Helper.Data[2] = TRACTION_MANAGE_PROXY_REPLY) and
-         (Helper.Data[3] = TRACTION_MANAGE_PROXY_RESERVE) then
-      begin
-        MessageWaitTimerReset;
-        Result := True;
-      end;
-    end;
-  end;
-end;
 procedure TTaskOlcbBase.MessageWaitTimerReset;
 begin
   MessageWaitTimeStart := GetTickCount;
@@ -4001,21 +3789,6 @@ begin
   MessageWaitTimerReset;
 end;
 
-procedure TTaskOlcbBase.SendTractionAttachDccProxyMessage(Address: Word; Short: Boolean; SpeedStep: Byte);
-begin
-  if not Short then
-    Address := Address or $C000;
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 7, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_ATTACH_DCC_ADDRESS, Hi(Address), Lo(Address), SpeedStep, $00);
-  TransportLayerThread.InternalAdd(MessageHelper.Encode);
-  MessageWaitTimerReset;
-end;
-
-procedure TTaskOlcbBase.SendTractionDetachDccAddressProxyMessage(Address: Word; Short: Boolean);
-begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_CONFIGURE_PROXY, TRACTION_DETACH_DCC_ADDRESS_REPLY, Hi(Address), Lo(Address), $00, $00);
-  TransportLayerThread.InternalAdd(MessageHelper.Encode);
-  MessageWaitTimerReset;
-end;
 
 procedure TTaskOlcbBase.SendTractionEStopMessage;
 begin
@@ -4050,27 +3823,6 @@ end;
 procedure TTaskOlcbBase.SendTractionQuerySpeeds;
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 3, $00, $00, TRACTION_QUERY_SPEED, $00, $00, $00, $00, $00);
-  TransportLayerThread.InternalAdd(MessageHelper.Encode);
-  MessageWaitTimerReset;
-end;
-
-procedure TTaskOlcbBase.SendTractionQueryProxyMessage;
-begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_QUERY, $00, $00, $00, $00);
-  TransportLayerThread.InternalAdd(MessageHelper.Encode);
-  MessageWaitTimerReset;
-end;
-
-procedure TTaskOlcbBase.SendTractionReleaseProxyMessage;
-begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RELEASE, $00, $00, $00, $00);
-  TransportLayerThread.InternalAdd(MessageHelper.Encode);
-  MessageWaitTimerReset;
-end;
-
-procedure TTaskOlcbBase.SendTractionReserveProxyMessage;
-begin
-  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 4, $00, $00, TRACTION_MANAGE_PROXY, TRACTION_MANAGE_PROXY_RESERVE, $00, $00, $00, $00);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;
@@ -4413,200 +4165,6 @@ begin
    case iState of
     0: begin
          SendIdentifyProducerMessage(Event);
-         iState := STATE_DONE;
-       end;
-    STATE_DONE:
-       begin
-         FDone := True;
-       end;
-  end;
-end;
-
-{ TTaskTractionReserveAndAttachDccProxy }
-
-constructor TTaskTractionReserveAndAttachDccProxy.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean; ASpeedStep: Byte);
-begin
-  inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
-  FSpeedStep := ASpeedStep;
-  FAddress := AnAddress;
-  FIsShort := IsShortAddress;
-  FReplyCode := -1;
-  FReplyAddress := 0;
-  FReplySpeedSteps := 0;
-end;
-
-function TTaskTractionReserveAndAttachDccProxy.Clone: TTaskOlcbBase;
-begin
-  Result := TTaskTractionReserveAndAttachDccProxy.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort, SpeedStep);
-end;
-
-procedure TTaskTractionReserveAndAttachDccProxy.CopyTo(Target: TTaskOlcbBase);
-begin
-  inherited CopyTo(Target);
-  (Target as TTaskTractionReserveAndAttachDccProxy).FAddress := FAddress;
-  (Target as TTaskTractionReserveAndAttachDccProxy).FReplyAddress := FReplyAddress;
-  (Target as TTaskTractionReserveAndAttachDccProxy).FReplyCode := FReplyCode;
-  (Target as TTaskTractionReserveAndAttachDccProxy).FReplySpeedSteps := FReplySpeedSteps;
-  (Target as TTaskTractionReserveAndAttachDccProxy).FIsShort := FIsShort;
-  (Target as TTaskTractionReserveAndAttachDccProxy).FSpeedStep := FSpeedStep;
-end;
-
-procedure TTaskTractionReserveAndAttachDccProxy.Process(MessageInfo: TOlcbMessage);
-begin
-  inherited Process(MessageInfo);
-  case iState of
-    0: begin
-         FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
-         SendTractionReserveProxyMessage;
-         Sending := False;
-         iState := 1;
-       end;
-    1: begin
-         if IsTractionReserveProxyReply(MessageInfo) then
-         begin
-           Sending := True;
-           if TOpenLCBMessageHelper(MessageInfo).Data[4] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-           begin
-             Sending := True;
-             iState := 2;
-           end else
-           begin
-             FReplyCode := TOpenLCBMessageHelper(MessageInfo).Data[4];
-             iState := STATE_DONE
-           end
-         end
-       end;
-    2: begin
-         SendTractionAttachDccProxyMessage(Address, IsShort, SpeedStep);
-         Sending := False;
-         iState := 3;
-       end;
-    3: begin
-         if IsTractionAttachDCCAddressReply(MessageInfo) then
-         begin
-           if TOpenLCBMessageHelper( MessageInfo).DataCount = 8 then
-             FReplyCode := TOpenLCBMessageHelper( MessageInfo).Data[7];
-           FReplySpeedSteps := TOpenLCBMessageHelper( MessageInfo).Data[6];
-           FReplyAddress := (TOpenLCBMessageHelper( MessageInfo).Data[4] shl 8) or TOpenLCBMessageHelper( MessageInfo).Data[5];
-           Sending := True;
-           iState := 4;
-         end;
-       end;
-    4: begin
-         SendTractionReleaseProxyMessage;
-         iState := STATE_DONE;
-       end;
-    STATE_DONE: begin
-         FDone := True;
-       end;
-  end;
-end;
-
-{ TTaskTractionReserveAndDetachDccProxy }
-
-constructor TTaskTractionReserveAndDetachDccProxy.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean);
-begin
-  inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
-  FAddress := AnAddress;
-  FIsShort := IsShortAddress;
-  FReplyCode := -1;
-  FReplyAddress := 0;
-  FReplySpeedSteps := 0;
-end;
-
-function TTaskTractionReserveAndDetachDccProxy.Clone: TTaskOlcbBase;
-begin
-  Result := TTaskTractionReserveAndDetachDccProxy.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
-end;
-
-procedure TTaskTractionReserveAndDetachDccProxy.CopyTo(Target: TTaskOlcbBase);
-begin
-  inherited CopyTo(Target);
-  (Target as TTaskTractionReserveAndDetachDccProxy).FAddress := FAddress;
-  (Target as TTaskTractionReserveAndDetachDccProxy).FIsShort := FIsShort;
-  (Target as TTaskTractionReserveAndDetachDccProxy).FReplyAddress := FReplyAddress;
-  (Target as TTaskTractionReserveAndDetachDccProxy).FReplyCode := FReplyCode;
-  (Target as TTaskTractionReserveAndDetachDccProxy).FReplySpeedSteps := FReplySpeedSteps
-end;
-
-procedure TTaskTractionReserveAndDetachDccProxy.Process(MessageInfo: TOlcbMessage);
-begin
-  inherited Process(MessageInfo);
-  case iState of
-    0: begin
-         FReplyCode := TRACTION_MANAGE_RESERVE_REPLY_OK;
-         SendTractionReserveProxyMessage;
-         Sending := False;
-         iState := 1;
-       end;
-    1: begin
-         if IsTractionReserveProxyReply(MessageInfo) then
-         begin
-           Sending := True;
-           if TOpenLCBMessageHelper(MessageInfo).Data[4] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-           begin
-             Sending := True;
-             iState := 2;
-           end else
-           begin
-             FReplyCode := TOpenLCBMessageHelper(MessageInfo).Data[4];
-             iState := STATE_DONE
-           end
-         end
-       end;
-    2: begin
-         SendTractionDetachDccAddressProxyMessage(Address, IsShort);
-         Sending := False;
-         iState := 3;
-       end;
-    3: begin
-         if IsTractionDetachDCCAddressReply(MessageInfo) then
-         begin
-           if TOpenLCBMessageHelper( MessageInfo).DataCount = 7 then
-             FReplyCode := TOpenLCBMessageHelper( MessageInfo).Data[6];
-           FReplyAddress := (TOpenLCBMessageHelper( MessageInfo).Data[4] shl 8) or TOpenLCBMessageHelper( MessageInfo).Data[5];
-           Sending := True;
-           iState := 4;
-         end;
-       end;
-    4: begin
-         SendTractionReleaseProxyMessage;
-         iState := STATE_DONE;
-       end;
-    STATE_DONE:
-       begin
-         FDone := True;
-       end;
-  end;
-end;
-
-{ TTaskTractionQueryDccAddressProxy }
-
-constructor TTaskTractionQueryDccAddressProxy.Create(ASourceAlias, ADestinationAlias: Word; DoesStartAsSending: Boolean; AnAddress: Word; IsShortAddress: Boolean);
-begin
-  inherited Create(ASourceAlias, ADestinationAlias, DoesStartAsSending);
-  FAddress := AnAddress;
-  FIsShort := IsShortAddress;
-end;
-
-function TTaskTractionQueryDccAddressProxy.Clone: TTaskOlcbBase;
-begin
-  Result := TTaskTractionQueryDccAddressProxy.Create(SourceAlias, DestinationAlias, Sending, Address, IsShort);
-end;
-
-procedure TTaskTractionQueryDccAddressProxy.CopyTo(Target: TTaskOlcbBase);
-begin
-  inherited CopyTo(Target);
-  (Target as TTaskTractionQueryDccAddressProxy).FAddress := FAddress;
-  (Target as TTaskTractionQueryDccAddressProxy).FIsShort := FIsShort;
-end;
-
-procedure TTaskTractionQueryDccAddressProxy.Process(MessageInfo: TOlcbMessage);
-begin
-  inherited Process(MessageInfo);
-  case iState of
-    0: begin
-         SendTractionQueryDccAddressProxyMessage(Address, IsShort);
          iState := STATE_DONE;
        end;
     STATE_DONE:

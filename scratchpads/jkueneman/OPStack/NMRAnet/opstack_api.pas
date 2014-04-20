@@ -44,6 +44,8 @@ function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSni
 function TrySendTractionFunctionSet(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord; Value: Word): Boolean;
 function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: Byte): Boolean;
 function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; IsForward: Boolean): Boolean;
+function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeInfo; var NodeID: TNodeInfo; Assign: Boolean): Boolean;
+function TrySendTractionControllerQuery(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 // Traction Proxy
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
@@ -309,6 +311,47 @@ begin
     end
 end;
 
+function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeInfo; var NodeID: TNodeInfo; Assign: Boolean): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    begin
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG; // Manage Proxy
+      if Assign then
+        NewMessage^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN
+      else
+        NewMessage^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_RELEASE;
+      NewMessage^.Buffer^.DataArray[2] := TRACTION_FLAGS_ALIAS_INCLUDED;
+      NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NodeID.ID, PSimpleDataArray( PByte( @NewMessage^.Buffer^.DataArray[3]))^);
+      NewMessage^.Buffer^.DataArray[9] := Hi( NodeID.AliasID);
+      NewMessage^.Buffer^.DataArray[10] := Lo( NodeID.AliasID);
+      NewMessage^.Buffer^.DataBufferSize := 11;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
+function TrySendTractionControllerQuery(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    begin
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG; // Manage Proxy
+      NewMessage^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
+      NewMessage^.Buffer^.DataBufferSize := 2;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 var
   NewMessage: POPStackMessage;
@@ -363,7 +406,7 @@ begin
       MultiFrameBuffer := PMultiFrameBuffer( PByte( NewMessage^.Buffer));
       MultiFrameBuffer^.DataBufferSize := 13;
       MultiFrameBuffer^.DataArray[0] := $01;
-      MultiFrameBuffer^.DataArray[1] := TRACTION_PROXY_RESULT_FLAGS_ALIAS_INCLUDED;
+      MultiFrameBuffer^.DataArray[1] := TRACTION_FLAGS_ALIAS_INCLUDED;
       MultiFrameBuffer^.DataArray[2] := TRACTION_PROXY_TECH_ID_DCC;
       MultiFrameBuffer^.DataArray[3] := Hi(TrainID);
       MultiFrameBuffer^.DataArray[4] := Lo(TrainID);
