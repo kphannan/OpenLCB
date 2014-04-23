@@ -46,6 +46,10 @@ function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Spe
 function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; IsForward: Boolean): Boolean;
 function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeInfo; var NodeID: TNodeInfo; Assign: Boolean): Boolean;
 function TrySendTractionControllerQuery(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+
+function TrySendTractionManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
+function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
+
 // Traction Proxy
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
@@ -350,6 +354,45 @@ begin
       OutgoingMessage(NewMessage);
       Result := True;
     end
+end;
+
+function TrySendTractionManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  NewMessage := nil;
+  if IsOutgoingBufferAvailable then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    begin
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_MANAGE; // Manage Proxy
+      if Reserve then
+        NewMessage^.Buffer^.DataArray[1] := TRACTION_MANAGE_RESERVE
+      else
+        NewMessage^.Buffer^.DataArray[1] := TRACTION_MANAGE_RELEASE;
+      NewMessage^.Buffer^.DataBufferSize := 2;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end
+end;
+
+function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_REPLY, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 3;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_MANAGE;
+      NewMessage^.Buffer^.DataArray[1] := TRACTION_MANAGE_RESERVE;
+      NewMessage^.Buffer^.DataArray[2] := ResultFlag;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end;
+  end;
 end;
 
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;

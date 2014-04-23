@@ -278,6 +278,7 @@ type
     Address: Word;                                                              // DCC Address
     SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
     Lock: TNodeInfo;                                                            // For the nodes lock managements
+    Controller: TNodeInfo;                                                      // Controller (throttle) running the train
   end;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
@@ -337,11 +338,6 @@ type
   PNMRAnetCanBuffer = ^TNMRAnetCanBuffer;
 
 const
-  TRACTION_OPERATION_MASK            = $F0;
-  TRACTION_CMD                       = $00;
-  TRACTION_QUERY                     = $10;
-  TRACTION_DCC_PROXY                 = $80;
-
   TRACTION_SPEED_DIR                 = $00;
   TRACTION_FUNCTION                  = $01;
   TRACTION_E_STOP                    = $02;
@@ -376,6 +372,9 @@ const
   TRACTION_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
   TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed is not 0
   TRACTION_MANAGE_QUERY_REPLY        = $03;
+
+  TRACTION_CONTROLLER_ASSIGN_REPLY_OK   = $00;    // Failed is not 0
+  TRACTION_CONTROLLER_ASSIGN_REPLY_FAIL = $FF;    // Failed is not 0
 
   DEFAULT_SPEED_STEPS = 28;
 

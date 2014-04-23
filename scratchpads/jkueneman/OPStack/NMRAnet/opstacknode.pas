@@ -368,6 +368,9 @@ begin
   Node^.TrainData.Lock.AliasID := 0;
   Node^.TrainData.Lock.ID[0] := 0;
   Node^.TrainData.Lock.ID[1] := 0;
+  Node^.TrainData.Controller.AliasID := 0;
+  Node^.TrainData.Controller.ID[0] := 0;
+  Node^.TrainData.Controller.ID[1] := 0;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
   Node^.ProxyData.Lock.AliasID := 0;

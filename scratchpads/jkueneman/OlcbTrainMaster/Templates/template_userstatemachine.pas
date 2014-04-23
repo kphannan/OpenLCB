@@ -39,13 +39,13 @@ procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStack
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);  // This could be 2 replies per call.. read docs
 procedure AppCallback_RemoteButtonReply(Dest: PNMRAnetNode; var Source: TNodeInfo; DataBytes: PSimpleBuffer);
 {$IFDEF SUPPORT_TRACTION}
-procedure AppCallback_TractionProtocol(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);  // Assumes we can make these all one frame long
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
-function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
-procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);    // Assumes we can make these all one frame long
+function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
+procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 
 // These messages are called directly from the hardware receive buffer.  See the notes to understand the
@@ -280,8 +280,8 @@ begin
               if Node^.State and NS_INITIALIZED <> 0 then
                begin
                  GlobalTimer := 0;
-                 if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
-                   Node^.iUserStateMachine := STATE_USER_1;
+     //            if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+     //              Node^.iUserStateMachine := STATE_USER_1;
                end;
             end;
         STATE_USER_1 :
@@ -389,7 +389,7 @@ begin
               if Link <> nil then
               begin
                 if TrySendTractionControllerConfig(Node^.Info, Link^.AllocatedNode, Node^.Info, True) then
-                  Node^.iUserStateMachine := STATE_USER_11;  // Wait for the Throttle allocate callback
+                  Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
               end;
               LeaveCriticalSection(OPStackCriticalSection);
             end;
@@ -474,7 +474,7 @@ end;
 //                   False if the request has not been completed due to no available buffers or waiting on other information
 //     Description : Called when a Traction Protocol message is received
 // *****************************************************************************
-function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
+function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
 begin
 
 end;
@@ -594,7 +594,7 @@ end;
 //     Returns     : None
 //     Description : Called when a Traction Protocol request comes in
 // *****************************************************************************
-procedure AppCallback_TractionProtocol(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 begin
 
 end;

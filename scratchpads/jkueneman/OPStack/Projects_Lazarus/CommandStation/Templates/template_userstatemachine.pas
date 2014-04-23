@@ -40,13 +40,13 @@ procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStack
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);  // This could be 2 replies per call.. read docs
 procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$IFDEF SUPPORT_TRACTION}
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);  // Assumes we can make these all one frame long
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
-procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
-procedure AppCallback_TractionProxyProtocolReply(var Source: TNodeInfo; Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);    // Assumes we can make these all one frame long
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 
 // These messages are called directly from the hardware receive buffer.  See the notes to understand the
@@ -416,7 +416,7 @@ end;
 //                   will block that second message.  If that is required then return True with ReplyMessage = nil to
 //                   release the Requesting message then send the reply to this message at a later time
 // *****************************************************************************
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 begin
 
 end;
@@ -432,7 +432,7 @@ end;
 //                   False if the request has not been completed due to no available buffers or waiting on other information
 //     Description :
 // *****************************************************************************
-procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 var
   Link: PLinkRec;
 begin
@@ -460,7 +460,7 @@ end;
 //     Returns     : None
 //     Description :
 // *****************************************************************************
-procedure AppCallback_TractionProxyProtocolReply(var Source: TNodeInfo;  Dest: PNMRAnetNode; DataBytes: PSimpleBuffer);
+procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
 
 end;
