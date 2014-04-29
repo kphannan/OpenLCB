@@ -212,6 +212,7 @@ begin
   LabelFunctions2.Caption := '00000000000000';
   LabelSpeedSteps.Caption := IntToStr(Link^.TrainState.SpeedSteps);
   LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(Link^.TrainState.SpeedDir)));
+  LabelThrottleAlias.Caption := '0x' + IntToHex(Link^.Controller.AliasID, 2);
 end;
 
 procedure TFormIsTrainNode.UpdateStatus(NewStatus: string);

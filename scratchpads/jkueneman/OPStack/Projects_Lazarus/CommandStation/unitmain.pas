@@ -766,6 +766,12 @@ begin
           TrainForm.UpdateStatus('Train Node Created');
           Link^.Train.ObjPtr := TrainForm;
         end;
+      end else
+      if Link^.SyncState and SYNC_CONTROLLER <> 0 then
+      begin
+        Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
+        TrainForm.LoadTrainState(Link);
+        TrainForm.UpdateStatus('Throttle assignment changed');
       end;
     end;
   finally

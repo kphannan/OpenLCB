@@ -46,7 +46,6 @@ function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Spe
 function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; IsForward: Boolean): Boolean;
 function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeInfo; var NodeID: TNodeInfo; Assign: Boolean): Boolean;
 function TrySendTractionControllerQuery(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
-
 function TrySendTractionManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
 

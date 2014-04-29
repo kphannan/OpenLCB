@@ -162,7 +162,7 @@ begin
                   {$ENDIF}
                   {$IFDEF SUPPORT_TRACTION_PROXY}
                   MTI_TRACTION_PROXY_PROTOCOL        : begin TractionProxyProtocolMessage(DestNode ,AMessage, False); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_PROXY_REPLY           : begin TractionProxyProtocolMessage(DestNode ,AMessage, False); Exit; end;
+                  MTI_TRACTION_PROXY_REPLY           : begin TractionProxyProtocolMessage(DestNode ,AMessage, True); Exit; end;
                   {$ENDIF}
                   MTI_REMOTE_BUTTON_REQUEST          : begin RemoteButtonMessage(DestNode, AMessage, False); Exit; end;
                   MTI_REMOTE_BUTTON_REPLY            : begin RemoteButtonMessage(DestNode, AMessage, True); Exit; end;
@@ -387,11 +387,18 @@ end;
 procedure OPStackCore_Timer;
 var
   i: Integer;
+  Node: PNMRAnetNode;
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
     for i := 0 to NodePool.AllocatedCount - 1 do
-      Inc(NodePool.AllocatedList[i]^.Login.TimeCounter);
+    begin
+      Node := NodePool.AllocatedList[i];
+      Inc(Node^.Login.TimeCounter);
+      {$IFDEF SUPPORT_TRACTION}
+      TractionProtocolTimerTick(Node);
+      {$ENDIF}
+    end;
     OPStackBuffers_Timer;
   end;
   AppCallback_Timer_100ms;

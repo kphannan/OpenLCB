@@ -280,8 +280,8 @@ begin
               if Node^.State and NS_INITIALIZED <> 0 then
                begin
                  GlobalTimer := 0;
-     //            if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
-     //              Node^.iUserStateMachine := STATE_USER_1;
+                 if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+                   Node^.iUserStateMachine := STATE_USER_1;
                end;
             end;
         STATE_USER_1 :
@@ -335,7 +335,7 @@ begin
     end;
   end else
   begin
-    // Throttle Node (Virtaul Node)
+    // Throttle Node (Virtual Node)
     case Node^.iUserStateMachine of
         STATE_USER_START :
             begin
@@ -349,8 +349,9 @@ begin
                 Node^.iUserStateMachine := STATE_USER_1;
               end;
               LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_1 :
+        STATE_USER_1 :    // Send message to Reserve the PROXY
             begin
               EnterCriticalSection(OPStackCriticalSection);
               Link := FindLinkByNodeAlias(Node);
@@ -370,6 +371,7 @@ begin
                 end;
                 LeaveCriticalSection(OPStackCriticalSection);
               end;
+              Exit;
             end;
         STATE_USER_2 :  // Proxy is Reserved, allocate the Train Node
             begin
@@ -381,8 +383,21 @@ begin
                   Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Allocate Callback
               end;
               LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_3  :     // Train has been created, assign the Throttle to the Train
+        STATE_USER_3  :     // Train has been created, Lock the Train
+            begin
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, True) then
+                  Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
+            end;
+        STATE_USER_4  :   //  Assign the Throttle to the Train
             begin
               EnterCriticalSection(OPStackCriticalSection);
               Link := FindLinkByNodeAlias(Node);
@@ -392,34 +407,41 @@ begin
                   Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
               end;
               LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_4  :
+        STATE_USER_5  :   // Throttle assigned, unlock it
             begin
-
-            end;
-        STATE_USER_5  :
-            begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, False) then
+                  Node^.iUserStateMachine := STATE_USER_6;  // No callback, just start looping
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
         STATE_USER_6  :
             begin
-
+              // Running with Train
+              Exit;
             end;
         STATE_USER_7  :
             begin
-
+              Exit;
             end;
         STATE_USER_8  :
             begin
-
+              Exit;
             end;
         STATE_USER_9   :
             begin
-
+              Exit;
             end;
         STATE_USER_10  :
             begin
                 // Wait for a callback to be called, this can be for many things
+              Exit;
             end
     end
   end
@@ -450,6 +472,18 @@ end;
 
 {$IFDEF SUPPORT_TRACTION}
 // *****************************************************************************
+//  procedure AppCallback_TractionControlReply
+//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
+//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
+//                   DataBytes: pointer to the raw data bytes
+//     Returns     : None
+//     Description : Called when a Traction Protocol request comes in
+// *****************************************************************************
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+begin
+end;
+
+// *****************************************************************************
 //  procedure AppCallback_TractionProtocolReply
 //     Parameters: : Node           : Pointer to the node that the traction protocol has been called on
 //                   ReplyMessage   : The Reply Message that needs to be allocated, populated and returned so it can be sent
@@ -459,8 +493,63 @@ end;
 //     Description : Called in response to a Traction Protcool request
 // *****************************************************************************
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+ Link: PLinkRec;
+ MultiFrameBuffer: PMultiFrameBuffer;
 begin
-
+  EnterCriticalsection(OPStackCriticalSection);
+  Link := FindLinkByNodeAlias(Node);
+  if Link <> nil then
+  begin
+    MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
+    case MultiFrameBuffer^.DataArray[0] of
+      TRACTION_CONTROLLER_CONFIG :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_CONTROLLER_CONFIG_ASSIGN :
+                  begin
+                    if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
+                      Node^.iUserStateMachine := STATE_USER_5
+                    else
+                      Node^.iUserStateMachine := STATE_USER_5 // Release the Train, error try again??????
+                  end;
+              TRACTION_CONTROLLER_CONFIG_QUERY :
+                  begin
+                  end;
+              TRACTION_CONTROLLER_CONFIG_NOTIFY :
+                  begin
+                  end
+            end;
+          end;
+      TRACTION_CONSIST :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_CONSIST_ATTACH :
+                  begin
+                  end;
+              TRACTION_CONSIST_DETACH :
+                  begin
+                  end;
+              TRACTION_CONSIST_QUERY :
+                  begin
+                  end
+            end // case
+          end;
+      TRACTION_MANAGE :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_MANAGE_RESERVE :
+                  begin
+                    if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                      Node^.iUserStateMachine := STATE_USER_4
+                    else
+                      Node^.iUserStateMachine := STATE_USER_3 // Keep trying to lock it for now
+                  end
+            end
+          end
+      end;
+  end;
+  LeaveCriticalsection(OPStackCriticalSection);
 end;
 {$ENDIF}
 
@@ -477,6 +566,46 @@ end;
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
 begin
 
+end;
+
+// *****************************************************************************
+//  procedure AppCallback_TractionProxyProtocolReply
+//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
+//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
+//                   DataBytes: pointer to the raw data bytes
+//     Returns     : None
+//     Description : Called in response to a Traction Proxy request
+// *****************************************************************************
+procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Link: PLinkRec;
+  MultiFrameBuffer: PMultiFrameBuffer;
+begin
+  EnterCriticalsection(OPStackCriticalSection);
+  Link := FindLinkByNodeAlias(Node);
+  if Link <> nil then
+  begin
+    case AMessage^.Buffer^.DataArray[0] of
+      TRACTION_PROXY_MANAGE :
+          begin
+            if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
+            begin
+               if AMessage^.Buffer^.DataArray[2] = 0 then
+                 Node^.iUserStateMachine := STATE_USER_2         // Move to next state after reserving
+               else
+                 Node^.iUserStateMachine := STATE_USER_1         // Can't reserve now go back to normal polling
+            end;
+          end;
+      TRACTION_PROXY_ALLOCATE :
+          begin
+            MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
+            Link^.AllocatedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
+            NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Link^.AllocatedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+            Node^.iUserStateMachine := STATE_USER_3;    // Now need to allocate the Throttle to the Train Node
+          end
+    end; // case
+  end;
+  LeaveCriticalsection(OPStackCriticalSection);
 end;
 {$ENDIF}
 
@@ -584,57 +713,6 @@ end;
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 begin
 
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_TractionControlReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : Called when a Traction Protocol request comes in
-// *****************************************************************************
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_TractionProxyProtocolReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : Called in response to a Traction Proxy request
-// *****************************************************************************
-procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
-var
-  Link: PLinkRec;
-  MultiFrameBuffer: PMultiFrameBuffer;
-begin
-  EnterCriticalsection(OPStackCriticalSection);
-  Link := FindLinkByNodeAlias(Node);
-  if Link <> nil then
-  begin
-    if AMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_MANAGE then
-    begin
-      if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
-      begin
-         if AMessage^.Buffer^.DataArray[2] = 0 then
-           Node^.iUserStateMachine := STATE_USER_2         // Move to next state after reserving
-         else
-           Node^.iUserStateMachine := STATE_USER_1         // Can't reserve now go back to normal polling
-      end;
-    end else
-    if AMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_ALLOCATE then
-    begin
-      MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
-      Link^.AllocatedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
-      NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Link^.AllocatedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
-      Node^.iUserStateMachine := STATE_USER_3;    // Now need to allocate the Throttle to the Train Node
-    end;
-  end;
-  LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 // *****************************************************************************

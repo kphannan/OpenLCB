@@ -279,6 +279,7 @@ type
     SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
     Lock: TNodeInfo;                                                            // For the nodes lock managements
     Controller: TNodeInfo;                                                      // Controller (throttle) running the train
+    Timer: Byte;
   end;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
@@ -338,39 +339,32 @@ type
   PNMRAnetCanBuffer = ^TNMRAnetCanBuffer;
 
 const
-  TRACTION_SPEED_DIR                 = $00;
-  TRACTION_FUNCTION                  = $01;
-  TRACTION_E_STOP                    = $02;
-  TRACTION_QUERY_SPEED               = $10;
-  TRACTION_QUERY_FUNCTION            = $11;
-  TRACTION_CONFIGURE_DCC_PROXY       = $80;
-  TRACTION_MANAGE_DCC_PROXY          = $82;
+  TRACTION_FLAGS_ALIAS_INCLUDED       = $01;
 
-  TRACTION_QUERY_SPEED_REPLY         = $10;
-  TRACTION_QUERY_FUNCTION_REPLY      = $11;
-  TRACTION_CONFIGURE_PROXY_REPLY     = $80;
-  TRACTION_MANAGE_PROXY_REPLY        = $82;
+  TRACTION_SPEED_DIR                  = $00;
+  TRACTION_FUNCTION                   = $01;
+  TRACTION_E_STOP                     = $02;
 
-  TRACTION_ATTACH_NODE               = $01;
-  TRACTION_DETACH_NODE               = $02;
-  TRACTION_ATTACH_DCC_ADDRESS        = $81;
-  TRACTION_DETACH_DCC_ADDRESS        = $82;
+  TRACTION_QUERY_SPEED                = $10;
+  TRACTION_QUERY_FUNCTION             = $11;
 
-  TRACTION_ATTACH_NODE_REPLY         = $01;
-  TRACTION_DETACH_NODE_REPLY         = $02;
-  TRACTION_ATTACH_DCC_ADDRESS_REPLY  = $81;
-  TRACTION_DETACH_DCC_ADDRESS_REPLY  = $82;
+  TRACTION_CONTROLLER_CONFIG          = $20;
+  TRACTION_CONTROLLER_CONFIG_ASSIGN   = $01;
+  TRACTION_CONTROLLER_CONFIG_RELEASE  = $02;
+  TRACTION_CONTROLLER_CONFIG_QUERY    = $03;
+  TRACTION_CONTROLLER_CONFIG_NOTIFY   = $04;
 
-  TRACTION_ATTACH_NODE_REPLY_CODE_OK  = $00;
-  TRACTION_DETTACH_NODE_REPLY_CODE_OK = $00;
+  TRACTION_CONSIST                    = $30;
+  TRACTION_CONSIST_ATTACH             = $01;
+  TRACTION_CONSIST_DETACH             = $02;
+  TRACTION_CONSIST_QUERY              = $03;
 
-  TRACTION_MANAGE_PROXY_RESERVE      = $01;
-  TRACTION_MANAGE_PROXY_RELEASE      = $02;
-  TRACTION_MANAGE_PROXY_QUERY        = $03;
+  TRACTION_MANAGE                     = $40;
+  TRACTION_MANAGE_RESERVE             = $01;
+  TRACTION_MANAGE_RELEASE             = $02;
 
-  TRACTION_MANAGE_RESERVE_REPLY      = $01;
   TRACTION_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
-  TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed is not 0
+  TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed
   TRACTION_MANAGE_QUERY_REPLY        = $03;
 
   TRACTION_CONTROLLER_ASSIGN_REPLY_OK   = $00;    // Failed is not 0

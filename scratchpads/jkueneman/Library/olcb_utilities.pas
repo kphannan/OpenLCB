@@ -138,6 +138,8 @@ type
   function DotHexToEvent(Event: string): TEventID;
   function IntToHexArray(Value: Integer): THexArray;
   function StrToHexArray(Value: string): THexArray;
+  function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper): string;
+
 
   function GetTickCount : DWORD;
 
@@ -787,17 +789,8 @@ begin
     Result := Result + 'From = 0x' + IntToHex( LocalHelper.SourceAliasID, 4);
 
     if IsDatagramMTI(LocalHelper.MTI, False) then
-    begin
-      Result := Result + '[';
-      for j := 0 to LocalHelper.DataCount - 1 do
-      begin
-        if IsPrintableChar( Char( LocalHelper.Data[j])) then
-          Result := Result + Char( LocalHelper.Data[j])
-        else
-          Result := Result + '.'
-      end;
-      Result := Result + ']  MTI: ' + MTI_ToString(LocalHelper.MTI);
-    end else
+      Result := Result + RawHelperDataToStr(LocalHelper) + ' MTI: ' + MTI_ToString(LocalHelper.MTI)
+    else
       Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
 
     if IsStreamMTI( LocalHelper.MTI, True) then
@@ -817,17 +810,7 @@ begin
 
     // SNII/SNIP
     if LocalHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
-    begin
-      Result := Result + ' [';
-      for j := 2 to LocalHelper.DataCount - 1 do                     // Skip the Address
-      begin
-        if IsPrintableChar( Chr( LocalHelper.Data[j])) then
-          Result := Result + Chr( LocalHelper.Data[j])
-        else
-          Result := Result + '.';
-      end;
-      Result := Result + ']';
-    end;
+      Result := Result + RawHelperDataToStr(LocalHelper);
 
     // Events
     if (LocalHelper.MTI = MTI_PRODUCER_IDENDIFY) or (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) or (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_CLEAR) or
@@ -837,13 +820,62 @@ begin
         Result := Result + 'EventID: ' + EventIDToString(@LocalHelper.Data);
     end;
 
+    // Traction Protocol
+    if LocalHelper.MTI = MTI_TRACTION_PROTOCOL then
+    begin
+      if (LocalHelper.FramingBits < $20)  then
+      begin
+        case LocalHelper.Data[2] of
+            TRACTION_SPEED_DIR :
+              begin
+                Result := Result + 'OLCB Speed/Dir Operation; Speed = ';
+                f := HalfToFloat( (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4]);
+                if f= 0 then
+                begin
+                  if DWord( f) and $80000000 = $80000000 then
+                    Result := Result + '-0.0'
+                  else
+                    Result := Result + '+0.0'
+                end else
+                  Result := Result + IntToStr( round(f));
+              end;
+            TRACTION_FUNCTION : Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';
+            TRACTION_E_STOP : Result := Result + 'OLCB Traction Emergency Stop';
+            TRACTION_QUERY_SPEED : Result := Result + 'Query Speeds';
+            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + ']';
+            TRACTION_CONTROLLER_CONFIG :
+              begin;
+                case LocalHelper.Data[3] of
+                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config Assign';
+                  TRACTION_CONTROLLER_CONFIG_RELEASE : Result := Result + 'Controller Config Release';
+                  TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config Query';
+                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Notify'
+                end
+              end;
+            TRACTION_CONSIST :
+              begin
+                case LocalHelper.Data[3] of
+                  TRACTION_CONSIST_ATTACH : Result := Result + 'Consist Config Attach';
+                  TRACTION_CONSIST_DETACH : Result := Result + 'Consist Config Detach';
+                  TRACTION_CONSIST_QUERY : Result := Result + 'Consit Config Query';
+                end
+              end
+        else
+          Result := Result + 'Unknown Traction Operation';
+        end;
+      end
+    end;
+
     // Traction Protocol Reply
     if LocalHelper.MTI = MTI_TRACTION_REPLY then
     begin
+      Result := Result + RawHelperDataToStr(LocalHelper);
+      if (LocalHelper.FramingBits < $20) then
+      begin
       // Are we in the middle of a SpeedQuery Message, if so must complete that message first
       if SpeedQueryReplyState > 0 then
       begin
-        if LocalHelper.Data[0] and $F0 = $20 then      // Second message block
+        if LocalHelper.FramingBits > $10 then      // Second message block
         begin
           Result := Result + 'Traction Speed Reply (second frame) : Actual Speed = ';
           Half := (LocalHelper.Data[2] shl 8) or LocalHelper.Data[3];
@@ -867,9 +899,9 @@ begin
       end else
       begin
         case LocalHelper.Data[2] of
-            TRACTION_QUERY_SPEED_REPLY :
+            TRACTION_QUERY_SPEED :
               begin
-                if LocalHelper.Data[0] and $F0 = $10 then            // First message block
+                if LocalHelper.FramingBits < $20 then            // First message block
                 begin
                   Result := Result + 'Traction Speed Reply (first frame) : Set Speed = ';
                   Half := (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4];
@@ -909,144 +941,77 @@ begin
                   SpeedQueryReplyState := 1;
                 end
               end;
-            TRACTION_QUERY_FUNCTION_REPLY :
+            TRACTION_QUERY_FUNCTION :
               begin
                 Result := Result + 'Traction Function Reply';
                 Result := Result + ' Function = ' + IntToStr( (LocalHelper.Data[3] shl 16) or (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) + '  Value = ' + IntToStr( (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7]);
               end;
-            TRACTION_CONFIGURE_PROXY_REPLY :
-              begin
+            TRACTION_CONTROLLER_CONFIG :
+              begin;
                 case LocalHelper.Data[3] of
-                    TRACTION_ATTACH_NODE_REPLY :
-                      begin
-                      end;
-                    TRACTION_DETACH_NODE_REPLY :
-                      begin
-                      end;
-                    TRACTION_ATTACH_DCC_ADDRESS_REPLY :
-                      begin
-                        Result := Result + 'DCC Proxy Attach: ';
-                        Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
-                        if LocalHelper.Data[5] and $C0 = $C0 then
-                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + '): Speed Steps = ' + IntToStr(LocalHelper.Data[6])
-                        else
-                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + '): Speed Steps = ' + IntToStr(LocalHelper.Data[6]);
-                        if LocalHelper.DataCount = 8 then
-                          Result := Result + ': Reply Code = ' + IntToStr(LocalHelper.Data[7])
-                        else
-                          Result := Result + ': Reply Code = Not Available';
-                      end;
-                    TRACTION_DETACH_DCC_ADDRESS_REPLY :
-                      begin
-                        Result := Result + 'DCC Proxy Detach: ';
-                        Address := ((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) and $3FFF;  // Strip off the Extended bits if they are there
-                        if LocalHelper.Data[5] and $C0 = $C0 then
-                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Extended Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')'
-                        else
-                          Result := Result + 'EVENT_TRAIN_DCC_ADDRESS : Short Address, Address = ' + IntToStr(Address) + ';  (0x' + IntToHex(Address, 4) + ')';
-                        if LocalHelper.DataCount = 7 then
-                          Result := Result + ': Reply Code = ' + IntToStr(LocalHelper.Data[6])
-                        else
-                          Result := Result + ': Reply Code = Not Available';
-                      end;
-                end; // Case
-              end;
-            TRACTION_MANAGE_PROXY_REPLY :
-              begin
-                case LocalHelper.Data[3] of
-                    TRACTION_MANAGE_RESERVE_REPLY :
-                      begin
-                        if LocalHelper.Data[4] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-                          Result := Result + 'Proxy Reserve Reply; Error Code = ' + IntToStr(LocalHelper.Data[4]) + ': OK'
-                        else
-                          Result := Result + 'Proxy Reserve Reply; Error Code = ' + IntToStr(LocalHelper.Data[4]) + ': FAIL';
-                      end;
-                    TRACTION_MANAGE_QUERY_REPLY :
-                      begin
-                        Result := Result + 'Proxy Query Reply; Max Nodes = ' + IntToStr(LocalHelper.Data[4]) + '; Node Count = ' + IntToStr(LocalHelper.Data[5]) + '; Max DCC Addresses = ' + IntToStr(LocalHelper.Data[6]) + '; DCC Address Count = ' + IntToStr(LocalHelper.Data[7]);
-                      end;
+                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config Assign Reply';
+                  TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config Query Reply';
+                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Notify Reply'
                 end
               end;
-          end;
+            TRACTION_CONSIST :
+              begin
+                case LocalHelper.Data[3] of
+                  TRACTION_CONSIST_ATTACH : Result := Result + 'Consist Config Attach';
+                  TRACTION_CONSIST_DETACH : Result := Result + 'Consist Config Detach';
+                  TRACTION_CONSIST_QUERY : Result := Result + 'Consit Config Query';
+                end
+              end
+           end
         end;
+      end
     end;
 
-    // Traction Protocol
-    if LocalHelper.MTI = MTI_TRACTION_PROTOCOL then
+    if LocalHelper.MTI = MTI_TRACTION_PROXY_PROTOCOL then
     begin
-      case LocalHelper.Data[2] of
-          TRACTION_SPEED_DIR :
-            begin
-              Result := Result + 'OLCB Speed/Dir Operation; Speed = ';
-              f := HalfToFloat( (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4]);
-              if f= 0 then
+      Result := Result + RawHelperDataToStr(LocalHelper);
+      if (LocalHelper.FramingBits < $20) then
+      begin
+        case LocalHelper.Data[2] of
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+            TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+            TRACTION_PROXY_MANAGE   :
               begin
-                if DWord( f) and $80000000 = $80000000 then
-                  Result := Result + '-0.0'
+                case LocalHelper.Data[3] of
+                    TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Manage: Reserve';
+                    TRACTION_PROXY_MANAGE_RELEASE : Result := Result + 'Manage: Release'
                 else
-                  Result := Result + '+0.0'
-              end else
-                Result := Result + IntToStr( round(f));
-            end;
-          TRACTION_FUNCTION :
-            begin
-              Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';
-            end;
-          TRACTION_E_STOP :
-            begin
-              Result := Result + 'OLCB Traction Emergency Stop';
-            end;
-          TRACTION_QUERY_SPEED :
-            begin
-              Result := Result + 'Query Speeds';
-            end;
-          TRACTION_QUERY_FUNCTION :
-            begin
-              Result := Result + 'Query Function ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + ']';
-            end
-      else
-        Result := Result + 'Unknown Traction Operation';
-      end;
-
-      if LocalHelper.MTI = MTI_TRACTION_PROXY_PROTOCOL then
-    begin
-      case LocalHelper.Data[2] of
-          TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
-          TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
-          TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
-          TRACTION_PROXY_MANAGE   :
-            begin
-              case LocalHelper.Data[3] of
-                  TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Manage: Reserve';
-                  TRACTION_PROXY_MANAGE_RELEASE : Result := Result + 'Manage: Release'
-              else
-                Result := Result + 'Unknown Traction Manage Command'
-              end;
-            end
-      else
-        Result := Result + 'Unknown Traction Proxy Command';
+                  Result := Result + 'Unknown Traction Manage Command'
+                end;
+              end
+        else
+          Result := Result + 'Unknown Traction Proxy Command';
+        end
       end
     end;
 
     if LocalHelper.MTI = MTI_TRACTION_PROXY_REPLY then
     begin
-      case LocalHelper.Data[2] of
-          TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: (multiframe...)';
-          TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Reply Code = ' + IntToStr(LocalHelper.Data[3]);
-          TRACTION_PROXY_MANAGE   :
-            begin
-              case LocalHelper.Data[3] of
-                  TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Result Code = ' + IntToStr(LocalHelper.Data[4])
-              else
-                Result := Result + 'Unknown Traction Proxy Reply Manage Command';
-              end;
-            end
-      else
-        Result := Result + 'Unknown Traction Proxy Reply Command';
+      Result := Result + RawHelperDataToStr(LocalHelper);
+      if (LocalHelper.FramingBits < $20) then
+      begin
+        case LocalHelper.Data[2] of
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate Train: (multiframe...)';
+            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Reply Code = ' + IntToStr(LocalHelper.Data[3]);
+            TRACTION_PROXY_MANAGE   :
+              begin
+                case LocalHelper.Data[3] of
+                    TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Result Code = ' + IntToStr(LocalHelper.Data[4])
+                else
+                  Result := Result + 'Unknown Traction Proxy Reply Manage Command';
+                end;
+              end
+        else
+          Result := Result + 'Unknown Traction Proxy Reply Command';
+        end
       end
     end;
-
-    end
   end;
 end;
 
@@ -1176,6 +1141,25 @@ end;
 function StrToHexArray(Value: string): THexArray;
 begin
   Result := IntToHexArray( StrToInt(Value))
+end;
+
+function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper): string;
+var
+  j, iStart: Integer;
+begin
+  if HelperData.HasDestinationAddress then
+    iStart := 2
+  else
+    iStart := 0;
+  Result := Result + ' [';
+  for j := iStart to HelperData.DataCount - 1 do                     // Skip the Address
+  begin
+    if IsPrintableChar( Chr( HelperData.Data[j])) then
+      Result := Result + Chr( HelperData.Data[j])
+    else
+      Result := Result + '.';
+  end;
+  Result := Result + ']';
 end;
 
 
