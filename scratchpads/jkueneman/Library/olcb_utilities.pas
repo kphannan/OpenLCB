@@ -138,16 +138,54 @@ type
   function DotHexToEvent(Event: string): TEventID;
   function IntToHexArray(Value: Integer): THexArray;
   function StrToHexArray(Value: string): THexArray;
-  function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper): string;
+  function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper; ASCII: Boolean): string;
 
 
   function GetTickCount : DWORD;
 
 implementation
 
+type
+
+  { TMultiFrameBuffer }
+
+  TMultiFrameBuffer = class
+  private
+    FAliasID: Word;
+    FCurrentIndex: Integer;
+    FDataArray: TMultiFrameArray;
+    FDataArraySize: Integer;
+  public
+    constructor Create;
+    function ExtractDataBytesAsInt(StartByteIndex, EndByteIndex: Integer): QWord;
+    function ExtractDataBytesAsHex(StartByteIndex, EndByteIndex: Integer): string;
+    property AliasID: Word read FAliasID write FAliasID;
+    property DataArray: TMultiFrameArray read FDataArray write FDataArray;
+    property DataArraySize: Integer read FDataArraySize;
+    property CurrentIndex: Integer read FCurrentIndex write FCurrentIndex;
+  end;
+
+  { TMultiFrameBufferList }
+
+  TMultiFrameBufferList = class
+  private
+    FList: TList;
+    function GetMultiFrameBuffer(Index: Integer): TMultiFrameBuffer;
+    procedure SetMultiFrameBuffer(Index: Integer; AValue: TMultiFrameBuffer);
+  protected
+    property List: TList read FList write FList;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    procedure Clear;
+    function FindByAlias(TestAliasID: Word): TMultiFrameBuffer;
+    function ProcessFrame(NewFrame: TOpenLCBMessageHelper): TMultiFrameBuffer;
+    property MultiFrameBuffers[Index: Integer]: TMultiFrameBuffer read GetMultiFrameBuffer write SetMultiFrameBuffer;
+  end;
+
 var
   LocalHelper: TOpenLCBMessageHelper;
-  SpeedQueryReplyState: Byte;                                                   // First or second CAN frame
+  MultiFrames: TMultiFrameBufferList;
 
 function GetTickCount : DWORD;
  {On Windows, this is number of milliseconds since Windows was
@@ -457,6 +495,21 @@ begin
    else
     Result := 'Unknown MTI';
   end;
+  if LocalHelper.HasDestinationAddress then
+  begin
+    if LocalHelper.FramingBits = $00 then
+      Result := Result + ' Only Frame'
+    else
+    if LocalHelper.FramingBits = $10 then
+      Result := Result + ' First Frame'
+    else
+    if LocalHelper.FramingBits = $20 then
+      Result := Result + ' Last Frame'
+    else
+    if LocalHelper.FramingBits = $30 then
+      Result := Result + ' Middle Frame'
+    else
+  end;
 end;
 
 function TractionProxyTechnologyToStr(Technology: Byte): WideString;
@@ -511,6 +564,114 @@ function EqualEvents(Event1, Event2: PEventID): Boolean;
 begin
   Result := (Event1^[0] = Event2^[0]) and (Event1^[1] = Event2^[1]) and (Event1^[2] = Event2^[2]) and (Event1^[3] = Event2^[3]) and
             (Event1^[4] = Event2^[4]) and (Event1^[5] = Event2^[5]) and (Event1^[6] = Event2^[6]) and (Event1^[7] = Event2^[7])
+end;
+
+constructor TMultiFrameBuffer.Create;
+begin
+   FAliasID := 0;
+   FDataArraySize := 0;
+   FCurrentIndex := 0;
+end;
+
+function TMultiFrameBuffer.ExtractDataBytesAsHex(StartByteIndex, EndByteIndex: Integer): string;
+begin
+  Result := IntToHex(ExtractDataBytesAsInt(StartByteIndex, EndByteIndex), EndByteIndex-StartByteIndex);
+end;
+
+function TMultiFrameBuffer.ExtractDataBytesAsInt(StartByteIndex,EndByteIndex: Integer): QWord;
+var
+  i, Offset, Shift: Integer;
+  ByteAsQ, ShiftedByte: QWord;
+begin
+  Result := 0;
+  Offset := EndByteIndex - StartByteIndex;
+  for i := StartByteIndex to EndByteIndex do
+  begin
+    Shift := Offset * 8;
+    ByteAsQ := QWord( DataArray[i]);
+    ShiftedByte := ByteAsQ shl Shift;
+    Result := Result or ShiftedByte;
+    Dec(Offset)
+  end;
+end;
+
+procedure TMultiFrameBufferList.Clear;
+var
+  i: Integer;
+begin
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+    List.Count := 0;
+  finally
+    FreeAndNil(FList);
+  end;
+end;
+
+constructor TMultiFrameBufferList.Create;
+begin
+  inherited Create;
+  FList := TList.Create;
+end;
+
+destructor TMultiFrameBufferList.Destroy;
+begin
+  Clear;
+  inherited Destroy
+end;
+
+function TMultiFrameBufferList.FindByAlias(TestAliasID: Word): TMultiFrameBuffer;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to List.Count - 1 do
+  begin
+    if MultiFrameBuffers[i].AliasID = TestAliasID then
+    begin
+      Result := MultiFrameBuffers[i];
+      Exit;
+    end;
+  end;
+end;
+
+function TMultiFrameBufferList.GetMultiFrameBuffer(Index: Integer): TMultiFrameBuffer;
+begin
+  Result := TMultiFrameBuffer( List[Index])
+end;
+
+function TMultiFrameBufferList.ProcessFrame(NewFrame: TOpenLCBMessageHelper): TMultiFrameBuffer;
+var
+  Buffer: TMultiFrameBuffer;
+  i: Integer;
+begin
+  Result := nil;
+
+  Buffer := FindByAlias(NewFrame.DestinationAliasID);
+  if not Assigned(Buffer) then
+  begin
+    Buffer := TMultiFrameBuffer.Create;
+    Buffer.AliasID := NewFrame.DestinationAliasID;
+    List.Add(Buffer);
+  end;
+
+  for i := 2 to NewFrame.DataCount - 1 do          // Skip the Alias
+  begin
+    Buffer.DataArray[Buffer.CurrentIndex] := NewFrame.Data[i];
+    Inc(Buffer.FDataArraySize);
+    Inc(Buffer.FCurrentIndex);
+  end;
+
+  if (NewFrame.FramingBits = $20) or (NewFrame.FramingBits = $00) then
+  begin
+    List.Remove(Buffer);
+    Result := Buffer
+  end;
+end;
+
+procedure TMultiFrameBufferList.SetMultiFrameBuffer(Index: Integer; AValue: TMultiFrameBuffer);
+begin
+  List[Index] := AValue
 end;
 
 
@@ -771,8 +932,8 @@ function MessageToDetailedMessage(MessageString: string; Sending: Boolean): stri
 var
   j, S_Len: Integer;
   f: single;
-  Address: Word;
   Half: Word;
+  MultiFrame: TMultiFrameBuffer;
 begin
   if LocalHelper.Decompose(MessageString) then
   begin
@@ -789,7 +950,7 @@ begin
     Result := Result + 'From = 0x' + IntToHex( LocalHelper.SourceAliasID, 4);
 
     if IsDatagramMTI(LocalHelper.MTI, False) then
-      Result := Result + RawHelperDataToStr(LocalHelper) + ' MTI: ' + MTI_ToString(LocalHelper.MTI)
+      Result := Result + RawHelperDataToStr(LocalHelper, True) + ' MTI: ' + MTI_ToString(LocalHelper.MTI)
     else
       Result := Result + '   MTI: ' + MTI_ToString(LocalHelper.MTI) + ' - ';
 
@@ -810,7 +971,7 @@ begin
 
     // SNII/SNIP
     if LocalHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
-      Result := Result + RawHelperDataToStr(LocalHelper);
+      Result := Result + RawHelperDataToStr(LocalHelper, True);
 
     // Events
     if (LocalHelper.MTI = MTI_PRODUCER_IDENDIFY) or (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_SET) or (LocalHelper.MTI = MTI_PRODUCER_IDENTIFIED_CLEAR) or
@@ -823,13 +984,14 @@ begin
     // Traction Protocol
     if LocalHelper.MTI = MTI_TRACTION_PROTOCOL then
     begin
-      if (LocalHelper.FramingBits < $20)  then
+      MultiFrame := MultiFrames.ProcessFrame(LocalHelper);
+      if Assigned(MultiFrame) then
       begin
-        case LocalHelper.Data[2] of
+        case MultiFrame.DataArray[0] of
             TRACTION_SPEED_DIR :
               begin
                 Result := Result + 'OLCB Speed/Dir Operation; Speed = ';
-                f := HalfToFloat( (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4]);
+                f := HalfToFloat( (MultiFrame.DataArray[1] shl 8) or MultiFrame.DataArray[2]);
                 if f= 0 then
                 begin
                   if DWord( f) and $80000000 = $80000000 then
@@ -839,72 +1001,68 @@ begin
                 end else
                   Result := Result + IntToStr( round(f));
               end;
-            TRACTION_FUNCTION : Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + '], Value = ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(6, 7)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(6, 7), 2) + ']';
+            TRACTION_FUNCTION : Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + '], Value = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 5)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(4, 5), 2) + ']';
             TRACTION_E_STOP : Result := Result + 'OLCB Traction Emergency Stop';
             TRACTION_QUERY_SPEED : Result := Result + 'Query Speeds';
-            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function ' + IntToStr( LocalHelper.ExtractDataBytesAsInt(3, 5)) + ' [0x' + IntToHex( LocalHelper.ExtractDataBytesAsInt(3, 5), 4) + ']';
+            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + ']';
             TRACTION_CONTROLLER_CONFIG :
               begin;
-                case LocalHelper.Data[3] of
-                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config Assign';
-                  TRACTION_CONTROLLER_CONFIG_RELEASE : Result := Result + 'Controller Config Release';
-                  TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config Query';
-                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Notify'
+                case MultiFrame.DataArray[1] of
+                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config - Assign - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
+                  TRACTION_CONTROLLER_CONFIG_RELEASE : Result := Result + 'Controller Config - Release - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
+                  TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config - Query';
+                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config - Notify - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']'
                 end
               end;
             TRACTION_CONSIST :
               begin
-                case LocalHelper.Data[3] of
+                case MultiFrame.DataArray[1] of
                   TRACTION_CONSIST_ATTACH : Result := Result + 'Consist Config Attach';
                   TRACTION_CONSIST_DETACH : Result := Result + 'Consist Config Detach';
                   TRACTION_CONSIST_QUERY : Result := Result + 'Consit Config Query';
+                end
+              end;
+            TRACTION_MANAGE :
+              begin
+                case MultiFrame.DataArray[1] of
+                    TRACTION_MANAGE_RESERVE : Result := Result + 'Traction Management - Reserve';
+                    TRACTION_MANAGE_RELEASE : Result := Result + 'Traction Management - Release'
                 end
               end
         else
           Result := Result + 'Unknown Traction Operation';
         end;
-      end
+
+        FreeAndNil(MultiFrame);
+      end;
     end;
 
     // Traction Protocol Reply
     if LocalHelper.MTI = MTI_TRACTION_REPLY then
     begin
-      Result := Result + RawHelperDataToStr(LocalHelper);
-      if (LocalHelper.FramingBits < $20) then
+      MultiFrame := MultiFrames.ProcessFrame(LocalHelper);
+      if Assigned(MultiFrame) then
       begin
-      // Are we in the middle of a SpeedQuery Message, if so must complete that message first
-      if SpeedQueryReplyState > 0 then
-      begin
-        if LocalHelper.FramingBits > $10 then      // Second message block
-        begin
-          Result := Result + 'Traction Speed Reply (second frame) : Actual Speed = ';
-          Half := (LocalHelper.Data[2] shl 8) or LocalHelper.Data[3];
-          if Half = $FFFF then
-          begin
-            Result := Result + 'NaN'
-          end else
-          begin
-            f := HalfToFloat( Half);
-            if f = 0 then
-            begin
-              if DWord( f) and $80000000 = $80000000 then
-                Result := Result + '-0.0'
-              else
-                Result := Result + '+0.0'
-            end else
-              Result := Result + IntToStr( round(f));
-          end
-        end;
-        SpeedQueryReplyState := 0;
-      end else
-      begin
-        case LocalHelper.Data[2] of
+        case MultiFrame.DataArray[0] of
+            TRACTION_SPEED_DIR :
+              begin
+                Result := Result + 'OLCB Speed/Dir Operation; Speed = ';
+                f := HalfToFloat( (MultiFrame.DataArray[1] shl 8) or MultiFrame.DataArray[2]);
+                if f= 0 then
+                begin
+                  if DWord( f) and $80000000 = $80000000 then
+                    Result := Result + '-0.0'
+                  else
+                    Result := Result + '+0.0'
+                end else
+                  Result := Result + IntToStr( round(f));
+              end;
+            TRACTION_FUNCTION : Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + '], Value = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 5)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(4, 5), 2) + ']';
+            TRACTION_E_STOP : Result := Result + 'OLCB Traction Emergency Stop';
             TRACTION_QUERY_SPEED :
               begin
-                if LocalHelper.FramingBits < $20 then            // First message block
-                begin
-                  Result := Result + 'Traction Speed Reply (first frame) : Set Speed = ';
-                  Half := (LocalHelper.Data[3] shl 8) or LocalHelper.Data[4];
+                Result := Result + 'Query Speed Reply : Set Speed = ';
+                  Half := (MultiFrame.DataArray[1] shl 8) or MultiFrame.DataArray[2];
                   if Half = $FFFF then
                   begin
                     Result := Result + 'NaN'
@@ -921,8 +1079,10 @@ begin
                       Result := Result + IntToStr( round(f));
                   end;
 
+                  Result := Result + ': Status = ' + MultiFrame.ExtractDataBytesAsHex(3, 3);
+
                   Result := Result + ': Commanded Speed = ';
-                  Half := (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7];
+                  Half := (MultiFrame.DataArray[4] shl 8) or MultiFrame.DataArray[5];
                   if Half = $FFFF then
                   begin
                     Result := Result + 'NaN'
@@ -938,44 +1098,65 @@ begin
                     end else
                       Result := Result + IntToStr( round(f));
                   end;
-                  SpeedQueryReplyState := 1;
-                end
+
+                  Result := Result + ': Actual Speed = ';
+                  Half := (MultiFrame.DataArray[6] shl 8) or MultiFrame.DataArray[7];
+                  if Half = $FFFF then
+                  begin
+                    Result := Result + 'NaN'
+                  end else
+                  begin
+                    f := HalfToFloat( Half);
+                    if f = 0 then
+                    begin
+                      if DWord( f) and $80000000 = $80000000 then
+                        Result := Result + '-0.0'
+                      else
+                        Result := Result + '+0.0'
+                    end else
+                      Result := Result + IntToStr( round(f));
+                  end
               end;
-            TRACTION_QUERY_FUNCTION :
-              begin
-                Result := Result + 'Traction Function Reply';
-                Result := Result + ' Function = ' + IntToStr( (LocalHelper.Data[3] shl 16) or (LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]) + '  Value = ' + IntToStr( (LocalHelper.Data[6] shl 8) or LocalHelper.Data[7]);
-              end;
+            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + ']';
             TRACTION_CONTROLLER_CONFIG :
               begin;
-                case LocalHelper.Data[3] of
-                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config Assign Reply';
-                  TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config Query Reply';
-                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Notify Reply'
+                case MultiFrame.DataArray[1] of
+                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config Reply - Assign - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2);
+                  TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config Reply - Query - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
+                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Reply - Notify - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2)
                 end
               end;
             TRACTION_CONSIST :
               begin
-                case LocalHelper.Data[3] of
-                  TRACTION_CONSIST_ATTACH : Result := Result + 'Consist Config Attach';
-                  TRACTION_CONSIST_DETACH : Result := Result + 'Consist Config Detach';
-                  TRACTION_CONSIST_QUERY : Result := Result + 'Consit Config Query';
+                case MultiFrame.DataArray[1] of
+                  TRACTION_CONSIST_ATTACH : Result := Result + 'Consist Config Reply Attach';
+                  TRACTION_CONSIST_DETACH : Result := Result + 'Consist Config Reply Detach';
+                  TRACTION_CONSIST_QUERY : Result := Result + 'Consit Config Reply Query';
+                end
+              end;
+            TRACTION_MANAGE :
+              begin
+                case MultiFrame.DataArray[1] of
+                    TRACTION_MANAGE_RESERVE : Result := Result + 'Traction Management Reply - Reserve';
                 end
               end
-           end
+        else
+          Result := Result + 'Unknown Traction Reply Operation';
         end;
-      end
+
+        FreeAndNil(MultiFrame);
+      end;
     end;
 
     if LocalHelper.MTI = MTI_TRACTION_PROXY_PROTOCOL then
     begin
-      Result := Result + RawHelperDataToStr(LocalHelper);
-      if (LocalHelper.FramingBits < $20) then
+      MultiFrame := MultiFrames.ProcessFrame(LocalHelper);
+      if Assigned(MultiFrame) then
       begin
-        case LocalHelper.Data[2] of
-            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
-            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
-            TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(LocalHelper.Data[3]) + ' Address = ' + IntToStr((LocalHelper.Data[4] shl 8) or LocalHelper.Data[5]);
+        case MultiFrame.DataArray[0] of
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3)) + ' Speed Steps = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 4));
+            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
+            TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
             TRACTION_PROXY_MANAGE   :
               begin
                 case LocalHelper.Data[3] of
@@ -987,30 +1168,34 @@ begin
               end
         else
           Result := Result + 'Unknown Traction Proxy Command';
-        end
-      end
+        end;
+
+        FreeAndNil(MultiFrame);
+      end;
     end;
 
     if LocalHelper.MTI = MTI_TRACTION_PROXY_REPLY then
     begin
-      Result := Result + RawHelperDataToStr(LocalHelper);
-      if (LocalHelper.FramingBits < $20) then
+      MultiFrame := MultiFrames.ProcessFrame(LocalHelper);
+      if Assigned(MultiFrame) then
       begin
-        case LocalHelper.Data[2] of
-            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate Train: (multiframe...)';
-            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Reply Code = ' + IntToStr(LocalHelper.Data[3]);
+         case MultiFrame.DataArray[0] of
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3)) + ' Speed Steps = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 4));
+            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
             TRACTION_PROXY_MANAGE   :
               begin
                 case LocalHelper.Data[3] of
-                    TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Result Code = ' + IntToStr(LocalHelper.Data[4])
+                    TRACTION_PROXY_MANAGE_RESERVE : Result := Result + 'Manage: Reserve';
                 else
-                  Result := Result + 'Unknown Traction Proxy Reply Manage Command';
+                  Result := Result + 'Unknown Traction Manage Command'
                 end;
               end
         else
-          Result := Result + 'Unknown Traction Proxy Reply Command';
-        end
-      end
+          Result := Result + 'Unknown Traction Proxy Command';
+        end;
+
+        FreeAndNil(MultiFrame);
+      end;
     end;
   end;
 end;
@@ -1143,10 +1328,11 @@ begin
   Result := IntToHexArray( StrToInt(Value))
 end;
 
-function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper): string;
+function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper; ASCII: Boolean): string;
 var
   j, iStart: Integer;
 begin
+  Result := '';
   if HelperData.HasDestinationAddress then
     iStart := 2
   else
@@ -1154,10 +1340,18 @@ begin
   Result := Result + ' [';
   for j := iStart to HelperData.DataCount - 1 do                     // Skip the Address
   begin
-    if IsPrintableChar( Chr( HelperData.Data[j])) then
-      Result := Result + Chr( HelperData.Data[j])
-    else
-      Result := Result + '.';
+    if ASCII then
+    begin
+      if IsPrintableChar( Chr( HelperData.Data[j])) then
+        Result := Result + Chr( HelperData.Data[j])
+      else
+        Result := Result + '.';
+    end else
+    begin
+      Result := Result + IntToHex(HelperData.Data[j], 2);
+      if j < HelperData.DataCount then
+        Result := Result + '.'
+    end;
   end;
   Result := Result + ']';
 end;
@@ -1165,9 +1359,10 @@ end;
 
 initialization
   LocalHelper := TOpenLCBMessageHelper.Create;
-  SpeedQueryReplyState := 0;
+  MultiFrames := TMultiFrameBufferList.Create;
 
 finalization
+  FreeAndNil(MultiFrames);
   FreeAndNil(LocalHelper);
 
 

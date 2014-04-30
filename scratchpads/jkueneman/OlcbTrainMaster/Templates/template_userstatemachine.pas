@@ -73,6 +73,7 @@ const
   SYNC_THROTTLE_OBJPTR          = $0001;
 
   SYNC_NODE_INFO                = $0010;
+  SYNC_CONTROLLER               = $0020;
 
   SYNC_STATE_SPEED_DIR          = $0100;
   SYNC_STATE_FUNCTIONS          = $0200;
@@ -83,7 +84,7 @@ type
 
   // Fields that the UI updates
   TThrottleRec = record
-    ObjPtr: TObject;
+    ObjPtr: TObject;           // pointer to the TForm throttle
   end;
 
   // Fields that the OPStack Updates
@@ -105,7 +106,8 @@ type
     Throttle      : TThrottleRec;
     Node          : TNodeRec;
     ThrottleState  : TThrottleState;
-    AllocatedNode : TNodeInfo;
+    AllocatedNode : TNodeInfo;    // Train ID assigned to Throttle
+    TrainAllocated: Boolean;
   end;
   PLinkRec = ^TLinkRec;
 
@@ -192,6 +194,7 @@ begin
   LinkRec^.ThrottleState.SpeedDir := 0;
   LinkRec^.ThrottleState.SpeedSteps := 28;
   LinkRec^.Throttle.ObjPtr := nil;
+  LinkRec^.TrainAllocated := False;
 end;
 
 function FindLinkByNodeAlias(Node: PNMRAnetNode): PLinkRec;
@@ -509,8 +512,11 @@ begin
               TRACTION_CONTROLLER_CONFIG_ASSIGN :
                   begin
                     if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
+                    begin
+                      Link^.TrainAllocated := True;
+                      Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
                       Node^.iUserStateMachine := STATE_USER_5
-                    else
+                    end else
                       Node^.iUserStateMachine := STATE_USER_5 // Release the Train, error try again??????
                   end;
               TRACTION_CONTROLLER_CONFIG_QUERY :

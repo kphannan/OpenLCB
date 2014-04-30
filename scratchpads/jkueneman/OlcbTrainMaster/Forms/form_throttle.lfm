@@ -546,7 +546,6 @@ object FormThrottle: TFormThrottle
     top = 160
   end
   object TimerGeneralTimeout: TTimer
-    Enabled = False
     OnTimer = TimerGeneralTimeoutTimer
     left = 248
     top = 216

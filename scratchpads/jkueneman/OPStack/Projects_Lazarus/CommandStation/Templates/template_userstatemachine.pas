@@ -448,7 +448,18 @@ begin
   if Link <> nil then
   begin
     case AMessage^.Buffer^.DataArray[0] of
-        TRACTION_CONTROLLER_CONFIG_ASSIGN : Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
+        TRACTION_CONTROLLER_CONFIG :
+            begin
+              case AMessage^.Buffer^.DataArray[1] of
+                  TRACTION_CONTROLLER_CONFIG_ASSIGN :
+                      begin
+                        Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
+                        Link^.Controller := Node^.TrainData.Controller;
+                      end;
+              end
+            end
+    else begin
+      end;
     end;
   end;
   LeaveCriticalSection(OPStackCriticalSection);

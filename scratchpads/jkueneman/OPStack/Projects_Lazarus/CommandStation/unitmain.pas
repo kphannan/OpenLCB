@@ -770,8 +770,12 @@ begin
       if Link^.SyncState and SYNC_CONTROLLER <> 0 then
       begin
         Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
-        TrainForm.LoadTrainState(Link);
-        TrainForm.UpdateStatus('Throttle assignment changed');
+        TrainForm := TFormIsTrainNode( Link^.Train.ObjPtr );
+        if Assigned(TrainForm) then
+        begin
+          TrainForm.LoadTrainState(Link);
+          TrainForm.UpdateStatus('Throttle assignment changed');
+        end;
       end;
     end;
   finally
