@@ -776,6 +776,26 @@ begin
           TrainForm.LoadTrainState(Link);
           TrainForm.UpdateStatus('Throttle assignment changed');
         end;
+      end else
+      if Link^.SyncState and SYNC_STATE_SPEED_DIR <> 0 then
+      begin
+    //    Link^.SyncState := Link^.SyncState and not SYNC_STATE_SPEED_DIR;
+        TrainForm := TFormIsTrainNode( Link^.Train.ObjPtr );
+        if Assigned(TrainForm) then
+        begin
+          TrainForm.LoadTrainState(Link);
+          TrainForm.UpdateStatus('Speed/Direction changed');
+        end;
+      end else
+      if Link^.SyncState and SYNC_STATE_FUNCTIONS <> 0 then
+      begin
+    //    Link^.SyncState := Link^.SyncState and not SYNC_STATE_FUNCTIONS;
+        TrainForm := TFormIsTrainNode( Link^.Train.ObjPtr );
+        if Assigned(TrainForm) then
+        begin
+          TrainForm.LoadTrainState(Link);
+          TrainForm.UpdateStatus('Functions changed');
+        end;
       end;
     end;
   finally

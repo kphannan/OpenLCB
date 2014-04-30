@@ -682,6 +682,7 @@ begin
 
       if Sync.Link[i].SyncState and SYNC_CONTROLLER <> 0 then
       begin
+         Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_CONTROLLER;
          if Sync.Link[i].TrainAllocated then
            TrainAlias := Sync.Link[i].AllocatedNode.AliasID
          else
@@ -783,7 +784,7 @@ begin
             while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
               BufferStream.WriteByte( MemStream.ReadByte);
 
-            Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(TrainAlias, AliasID, True, MSI_FDI, Offset, BufferStream);
+            Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(ThrottleAlias, AliasID, True, MSI_FDI, Offset, BufferStream);
             if MemStream.Position >= MemStream.Size then
             Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
             DispatchTask(Task);
@@ -804,7 +805,7 @@ procedure TFormThrottle.RunProtocolSupport(AliasID: Word);
 var
   Task: TTaskProtocolSupport;
 begin
-  Task := TTaskProtocolSupport.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True);
+  Task := TTaskProtocolSupport.Create(ThrottleAlias, AliasID, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
@@ -813,7 +814,7 @@ procedure TFormThrottle.RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
 var
   Task: TTaskAddressSpaceMemoryReadWithDatagram;
 begin
-  Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(TrainAlias,AliasID, True, AddressSpace, False);
+  Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(ThrottleAlias, AliasID, True, AddressSpace, False);
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
@@ -823,7 +824,7 @@ procedure TFormThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpace: Byte
 var
   Task: TTaskAddressSpaceMemoryReadRawWithDatagram;
 begin
-  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(TrainAlias, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
+  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(ThrottleAlias, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
   Task.ForceOptionalSpaceByte := False;
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
@@ -839,7 +840,7 @@ begin
   if not IsForward then
     Speed := -Speed;
   CalculatedSpeed := FloatToHalf( Speed);
-  Task := TTaskTractionSpeed.Create(TrainAlias, AliasID, True, CalculatedSpeed, EmergencyStop);
+  Task := TTaskTractionSpeed.Create(ThrottleAlias, AliasID, True, CalculatedSpeed, EmergencyStop);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
@@ -848,7 +849,7 @@ procedure TFormThrottle.RunTractionFunction(AliasID: Word; Address: DWord; Value
 var
   Task: TTaskTractionFunction;
 begin
-  Task := TTaskTractionFunction.Create(TrainAlias, AliasID, True, Address, Value);
+  Task := TTaskTractionFunction.Create(ThrottleAlias, AliasID, True, Address, Value);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
@@ -857,7 +858,7 @@ procedure TFormThrottle.RunTractionQueryFunctions(AliasID: Word; Address: DWord)
 var
   Task: TTaskTractionQueryFunction;
 begin
-  Task := TTaskTractionQueryFunction.Create(TrainAlias, AliasID, True, Address);
+  Task := TTaskTractionQueryFunction.Create(ThrottleAlias, AliasID, True, Address);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;
@@ -866,7 +867,7 @@ procedure TFormThrottle.RunTractionQuerySpeed(AliasID: Word);
 var
   Task: TTaskTractionQuerySpeed;
 begin
-  Task := TTaskTractionQuerySpeed.Create(TrainAlias, AliasID, True);
+  Task := TTaskTractionQuerySpeed.Create(ThrottleAlias, AliasID, True);
   Task.OnBeforeDestroy := @OnBeforeDestroyTask;
   DispatchTask(Task);
 end;

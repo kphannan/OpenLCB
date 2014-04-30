@@ -40512,6 +40512,7 @@ object Form1: TForm1
     end
   end
   object TimerGeneral: TTimer
+    Interval = 300
     OnTimer = TimerGeneralTimer
     left = 142
     top = 110

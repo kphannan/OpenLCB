@@ -78,7 +78,6 @@ const
   SYNC_STATE_SPEED_DIR          = $0100;
   SYNC_STATE_FUNCTIONS          = $0200;
   SYNC_STATE_ADDRESS            = $0400;
-  SYNC_SPEED_STEPS              = $0800;
   SYNC_CONTROLLER               = $0020;
 
   SYNC_REPLY_NODE               = $1000;
@@ -457,6 +456,21 @@ begin
                         Link^.Controller := Node^.TrainData.Controller;
                       end;
               end
+            end;
+        TRACTION_SPEED_DIR :
+            begin
+              Link^.SyncState := Link^.SyncState or SYNC_STATE_SPEED_DIR;
+              Link^.TrainState.SpeedDir := Node^.TrainData.SpeedDir;
+            end;
+        TRACTION_FUNCTION :
+            begin
+              Link^.SyncState := Link^.SyncState or SYNC_STATE_FUNCTIONS;
+              Link^.TrainState.Functions := Node^.TrainData.Functions;
+            end;
+        TRACTION_E_STOP :
+            begin
+              Link^.SyncState := Link^.SyncState or SYNC_STATE_SPEED_DIR;
+              Link^.TrainState.SpeedDir := Node^.TrainData.SpeedDir;
             end
     else begin
       end;

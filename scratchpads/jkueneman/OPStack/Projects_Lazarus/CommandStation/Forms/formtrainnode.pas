@@ -198,9 +198,12 @@ end;
 { TFormIsTrainNode }
 
 procedure TFormIsTrainNode.LoadTrainState(Link: PLinkRec);
+var
+  i: Integer;
+  Temp: DWORD;
 begin
   LabelAlias.Caption := '0x' + IntToHex(Link^.Node.Info.AliasID, 2);
-  if Link^.TrainState.SpeedDir and $80 = 0 then
+  if Link^.TrainState.SpeedDir and $8000 = 0 then
     LabelDirection.Caption := 'Forward'
   else
     LabelDirection.Caption := 'Reverse';
@@ -208,8 +211,28 @@ begin
     LabelAddress.Caption := IntToStr(Link^.TrainState.Address and not $C000) + ' - Long'
   else
     LabelAddress.Caption := IntToStr(Link^.TrainState.Address) + ' - Short';
-  LabelFunctions1.Caption := '00000000000000';
-  LabelFunctions2.Caption := '00000000000000';
+
+  Temp := Link^.TrainState.Functions;
+  LabelFunctions1.Caption := '';
+  for i := 0 to 13 do
+  begin
+    if Temp and $00000001 > 0 then
+      LabelFunctions1.Caption := LabelFunctions1.Caption + '1'
+    else
+      LabelFunctions1.Caption := LabelFunctions1.Caption + '0';
+    Temp := Temp shr 1;
+  end;
+
+  LabelFunctions2.Caption := '';
+  for i := 0 to 13 do
+  begin
+    if Temp and $00000001 > 0 then
+      LabelFunctions2.Caption := LabelFunctions2.Caption + '1'
+    else
+      LabelFunctions2.Caption := LabelFunctions2.Caption + '0';
+    Temp := Temp shr 1;
+  end;
+
   LabelSpeedSteps.Caption := IntToStr(Link^.TrainState.SpeedSteps);
   LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(Link^.TrainState.SpeedDir)));
   LabelThrottleAlias.Caption := '0x' + IntToHex(Link^.Controller.AliasID, 2);

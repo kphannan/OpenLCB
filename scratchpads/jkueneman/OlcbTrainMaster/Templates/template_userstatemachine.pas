@@ -484,6 +484,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 begin
+
 end;
 
 // *****************************************************************************
