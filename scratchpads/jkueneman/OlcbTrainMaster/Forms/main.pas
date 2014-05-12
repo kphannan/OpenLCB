@@ -219,6 +219,7 @@ type
     procedure EditEthernetLocalIPChange(Sender: TObject);
     procedure EditNodeIDChange(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -661,6 +662,20 @@ procedure TFormOlcbTrainMaster.FormClose(Sender: TObject;
   var CloseAction: TCloseAction);
 begin
   Throttles.CloseAll;
+end;
+
+procedure TFormOlcbTrainMaster.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  EthernetHub.OnReceiveMessage := nil;
+  EthernetHub.OnSendMessage := nil;
+  EthernetHub.OnErrorMessage := nil;
+  EthernetHub.OnConnectionStateChange := nil;
+  EthernetHub.OnStatus := nil;
+  EthernetHub.OnOPStackCallback := nil;
+  EthernetHub.EnableReceiveMessages := False;
+  EthernetHub.EnableSendMessages := False;
+  EthernetHub.OnBeforeDestroyTask := nil;
+  EthernetHub.EnableOPStackCallback := False;
 end;
 
 procedure TFormOlcbTrainMaster.FormCreate(Sender: TObject);

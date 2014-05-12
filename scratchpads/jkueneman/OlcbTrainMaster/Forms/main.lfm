@@ -9,6 +9,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
   Constraints.MinWidth = 700
   Menu = MainMenu
   OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow

@@ -38,7 +38,7 @@ begin
       MessageToSend^.Buffer^.DataBufferSize := 3;
       MessageToSend^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
       MessageToSend^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
-      if NMRAnetUtilities_NullNodeIDInfo(DestNode^.ProxyData.Lock) or NMRAnetUtilities_EqualNodeIDInfo(DestNode^.ProxyData.Lock, NextMessage^.Source) then
+      if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainProxyData.Lock) or NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainProxyData.Lock, NextMessage^.Source) then
       begin
         MessageToSend^.Buffer^.DataArray[2] := TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK;
         DestNode^.TrainData.Lock.AliasID := NextMessage^.Source.AliasID;
@@ -50,7 +50,7 @@ begin
     end
   end else
   begin
-    if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.ProxyData.Lock, NextMessage^.Source) then
+    if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainProxyData.Lock, NextMessage^.Source) then
     begin
       DestNode^.TrainData.Lock.AliasID := 0;
       DestNode^.TrainData.Lock.ID[0] := 0;

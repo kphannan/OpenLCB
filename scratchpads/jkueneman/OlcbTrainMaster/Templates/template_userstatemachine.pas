@@ -39,7 +39,7 @@ procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStack
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);  // This could be 2 replies per call.. read docs
 procedure AppCallback_RemoteButtonReply(Dest: PNMRAnetNode; var Source: TNodeInfo; DataBytes: PSimpleBuffer);
 {$IFDEF SUPPORT_TRACTION}
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
@@ -74,6 +74,8 @@ const
 
   SYNC_NODE_INFO                = $0010;
   SYNC_CONTROLLER               = $0020;
+  SYNC_CLOSING                  = $0040;
+  SYNC_CLOSED                   = $0080;
 
   SYNC_STATE_SPEED_DIR          = $0100;
   SYNC_STATE_FUNCTIONS          = $0200;
@@ -427,14 +429,50 @@ begin
         STATE_USER_6  :
             begin
               // Running with Train
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if Link^.SyncState and SYNC_CLOSING <> 0 then
+                begin
+                  if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, True) then
+                    Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
+                end;
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
               Exit;
             end;
         STATE_USER_7  :
             begin
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionControllerConfig(Node^.Info, Link^.AllocatedNode, Node^.Info, False) then
+                begin
+                  Link^.AllocatedNode.AliasID := 0;
+                  Link^.AllocatedNode.ID[0] := 0;
+                  Link^.AllocatedNode.ID[1] := 0;
+                  Link^.TrainAllocated := False;
+                  Node^.iUserStateMachine := STATE_USER_8;  // There is no reply for deall
+                end
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
               Exit;
             end;
         STATE_USER_8  :
             begin
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, False) then
+                begin
+                  Link^.SyncState := Link^.SyncState and not SYNC_CLOSING or SYNC_CLOSED;
+                  Node^.iUserStateMachine := STATE_USER_9;  // No callback, just start looping
+                end
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
               Exit;
             end;
         STATE_USER_9   :
@@ -482,9 +520,33 @@ end;
 //     Returns     : None
 //     Description : Called when a Traction Protocol request comes in
 // *****************************************************************************
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+ Link: PLinkRec;
+ MultiFrameBuffer: PMultiFrameBuffer;
 begin
-
+  EnterCriticalsection(OPStackCriticalSection);
+  Link := FindLinkByNodeAlias(Node);
+  if Link <> nil then
+  begin
+    MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
+    case MultiFrameBuffer^.DataArray[0] of
+      TRACTION_CONTROLLER_CONFIG :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_CONTROLLER_CONFIG_NOTIFY :
+                  begin
+                    Link^.TrainAllocated := False;
+                    Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
+                    Link^.AllocatedNode.AliasID := 0;
+                    Link^.AllocatedNode.ID[0] := 0;
+                    Link^.AllocatedNode.ID[1] := 0;
+                  end
+            end;
+          end;
+    end;
+  end;
+  LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 // *****************************************************************************
@@ -525,6 +587,11 @@ begin
                   end;
               TRACTION_CONTROLLER_CONFIG_NOTIFY :
                   begin
+                    Link^.TrainAllocated := False;
+                    Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
+                    Link^.AllocatedNode.AliasID := 0;
+                    Link^.AllocatedNode.ID[0] := 0;
+                    Link^.AllocatedNode.ID[1] := 0;
                   end
             end;
           end;
@@ -547,10 +614,19 @@ begin
             case MultiFrameBuffer^.DataArray[1] of
               TRACTION_MANAGE_RESERVE :
                   begin
-                    if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-                      Node^.iUserStateMachine := STATE_USER_4
-                    else
-                      Node^.iUserStateMachine := STATE_USER_3 // Keep trying to lock it for now
+                    if Link^.SyncState and SYNC_CLOSING <> 0 then       // Run the closing statemachine
+                    begin
+                      if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                        Node^.iUserStateMachine := STATE_USER_7
+                      else
+                        Node^.iUserStateMachine := STATE_USER_6  // Keep trying to lock it for now
+                    end else
+                    begin
+                      if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                        Node^.iUserStateMachine := STATE_USER_4
+                      else
+                        Node^.iUserStateMachine := STATE_USER_3 // Keep trying to lock it for now
+                    end
                   end
             end
           end

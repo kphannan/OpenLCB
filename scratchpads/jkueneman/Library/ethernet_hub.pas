@@ -576,6 +576,16 @@ begin
         ListenDameon.Suspended := False;
       end else
       begin
+        ListenDameon.OnReceiveMessage := nil;
+        ListenDameon.OnSendMessage := nil;
+        ListenDameon.OnErrorMessage := nil;
+        ListenDameon.OnConnectionStateChange := nil;
+        ListenDameon.OnBeforeDestroyTask := nil;
+        ListenDameon.OnStatus := nil;
+        ListenDameon.OnOPStackCallback := nil;
+        ListenDameon.EnableReceiveMessages := False;
+        ListenDameon.EnableSendMessages := False;
+        ListenDameon.EnableOPStackCallback := False;
         ListenDameon.Terminate;
         while not ListenDameon.TerminateComplete do
           Application.ProcessMessages;         // Yuck, but Syncronize needs the main thread to pump messages to complete and not deadlock
@@ -601,6 +611,16 @@ begin
         SingletonClient.Suspended := False;
       end else
       begin
+        SingletonClient.OnReceiveMessage := nil;
+        SingletonClient.OnSendMessage := nil;
+        SingletonClient.OnErrorMessage := nil;
+        SingletonClient.OnConnectionStateChange := nil;
+        SingletonClient.OnBeforeDestroyTask := nil;
+        SingletonClient.OnStatus := nil;
+        SingletonClient.OnOPStackCallback := nil;
+        SingletonClient.EnableReceiveMessages := False;
+        SingletonClient.EnableSendMessages := False;
+        SingletonClient.EnableOPStackCallback := False;
         SingletonClient.Terminate;
         while not SingletonClient.TerminateComplete do
           Application.ProcessMessages;

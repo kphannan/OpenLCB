@@ -182,6 +182,7 @@ type
     procedure EditEthernetLocalIPChange(Sender: TObject);
     procedure EditEthernetRemoteIPChange(Sender: TObject);
     procedure EditNodeIDChange(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -207,8 +208,7 @@ type
     procedure TimerGeneralTimer(Sender: TObject);
     procedure TimerOpStackProcessTimer(Sender: TObject);
     procedure TimerOpStackTimerTimer(Sender: TObject);
-    procedure TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView;
-      var NodeClass: TTreeNodeClass);
+    procedure TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
     FConfigurationFile: WideString;
@@ -615,6 +615,20 @@ begin
   end;
 end;
 
+procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+begin
+  EthernetHub.OnReceiveMessage := nil;
+  EthernetHub.OnSendMessage := nil;
+  EthernetHub.OnErrorMessage := nil;
+  EthernetHub.OnConnectionStateChange := nil;
+  EthernetHub.OnStatus := nil;
+  EthernetHub.OnOPStackCallback := nil;
+  EthernetHub.EnableReceiveMessages := False;
+  EthernetHub.EnableSendMessages := False;
+  EthernetHub.OnBeforeDestroyTask := nil;
+  EthernetHub.EnableOPStackCallback := False;
+end;
+
 procedure TForm1.LoadSettings(SettingType: TLoadSettingType);
 begin
   if not SettingsLocked then
@@ -754,7 +768,9 @@ begin
       if Link^.SyncState and SYNC_NODE_INFO <> 0 then
       begin
         Link^.SyncState := Link^.SyncState and not SYNC_NODE_INFO;
-        TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
+        TrainForm :=  TFormIsTrainNode( Link^.Train.ObjPtr);
+        if not Assigned(TrainForm) then
+          TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
         if Assigned(TrainForm) then
         begin
           TrainForm.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');

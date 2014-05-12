@@ -28,6 +28,9 @@ procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode);
 function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;    // See FIND_BY_xxxx constants
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode;
 function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode;
+{$IFDEF SUPPORT_TRACTION}
+function OPStackNode_FindByTrainID(TrainID: Word): PNMRANetNode;
+{$ENDIF}
 {$IFDEF SUPPORT_VIRTUAL_NODES}
 function OPStackNode_FindFirstVirtualNode: PNMRAnetNode;
 function OPStackNode_FindLastVirtualNode: PNMRAnetNode;
@@ -262,6 +265,25 @@ begin
   end;
 end;
 
+{$IFDEF SUPPORT_TRACTION}
+function OPStackNode_FindByTrainID(TrainID: Word): PNMRANetNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to NodePool.AllocatedCount - 1 do
+  begin
+    if NodePool.AllocatedList[i]^.TrainData.Address = TrainID then
+      if NodePool.AllocatedList[i]^.State and NS_RELEASING = 0 then
+      begin
+        Result := NodePool.AllocatedList[i];
+        Exit
+      end
+  end
+end;
+
+{$ENDIF}
+
 {$IFDEF SUPPORT_VIRTUAL_NODES}
 // *****************************************************************************
 //  procedure OPStackNode_FindFirstVirtualNode;
@@ -371,11 +393,14 @@ begin
   Node^.TrainData.Controller.AliasID := 0;
   Node^.TrainData.Controller.ID[0] := 0;
   Node^.TrainData.Controller.ID[1] := 0;
+  Node^.TrainData.NotifyController.AliasID := 0;
+  Node^.TrainData.NotifyController.ID[0] := 0;
+  Node^.TrainData.NotifyController.ID[1] := 0;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
-  Node^.ProxyData.Lock.AliasID := 0;
-  Node^.ProxyData.Lock.ID[0] := 0;
-  Node^.ProxyData.Lock.ID[1] := 0;
+  Node^.TrainProxyData.Lock.AliasID := 0;
+  Node^.TrainProxyData.Lock.ID[0] := 0;
+  Node^.TrainProxyData.Lock.ID[1] := 0;
   {$ENDIF}
   AppCallback_NodeInitialize(Node);                                             // Allow the App layer to initialize it
 end;

@@ -274,16 +274,17 @@ type
   TTrainData = record
     State: Word;                                                                // Train State (see Train State (TS_xxxx) constants
     SpeedDir: THalfFloat;                                                       // Speed and direction (encoded in the sign)
-    Functions: DWord;                                                           // F0..F28
+    Functions: DWord;                                                           // F0..F28 Does this go in the configuration space?
     Address: Word;                                                              // DCC Address
     SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
     Lock: TNodeInfo;                                                            // For the nodes lock managements
-    Controller: TNodeInfo;                                                      // Controller (throttle) running the train
+    Controller,
+    NotifyController: TNodeInfo;                                                // Controller (throttle) running the train
     Timer: Byte;
   end;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
-  TProxyData = record
+  TTrainProxyData = record
     Lock: TNodeInfo;                                                            // For the proxies lock managements
   end;
   {$ENDIF}
@@ -302,7 +303,7 @@ type
     UserData: ^Byte;                                                            // Pointer to User Data
     iUserStateMachine: Byte;                                                    // For user (application level) statemachine
     {$IFDEF SUPPORT_TRACTION}TrainData: TTrainData;{$ENDIF}                     // Realtime information about the Train Node
-    {$IFDEF SUPPORT_TRACTION_PROXY}ProxyData: TProxyData;{$ENDIF}               // Realtime information about the Proxy Node
+    {$IFDEF SUPPORT_TRACTION_PROXY}TrainProxyData: TTrainProxyData;{$ENDIF}               // Realtime information about the Proxy Node
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 

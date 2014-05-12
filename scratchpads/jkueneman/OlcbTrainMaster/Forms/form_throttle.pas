@@ -165,6 +165,7 @@ type
     procedure ActionQuerySpeedExecute(Sender: TObject);
     procedure ActionToggleAllocationPanelExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -176,6 +177,7 @@ type
     procedure TrackBarSpeedChange(Sender: TObject);
   private
     FAllocated: Boolean;
+    FClosing: Boolean;
     FThrottleAlias: Word;
     FTrainAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
@@ -213,6 +215,7 @@ type
     property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
     property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property PotentialAlias: Word read FPotentialAlias write FPotentialAlias;
+    property Closing: Boolean read FClosing write FClosing;
   public
     { public declarations }
     property TrainAlias: Word read FTrainAlias write SetAllocatedAlias;
@@ -360,6 +363,27 @@ begin
   CloseAction := caFree;
 end;
 
+procedure TFormThrottle.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+var
+  Link: PLinkRec;
+begin
+  if not Closing then
+  begin
+    CanClose := False;
+    Closing := True;
+    EnterCriticalsection(OPStackCriticalSection);
+    try
+      Link := FindSyncLink(False);
+      if Assigned(Link) then
+      begin
+        Link^.SyncState := Link^.SyncState or SYNC_CLOSING;
+      end;
+    finally
+      LeaveCriticalsection(OPStackCriticalSection);
+    end;
+  end;
+end;
+
 procedure TFormThrottle.FormCreate(Sender: TObject);
 begin
   FComPortHub := nil;
@@ -368,6 +392,7 @@ begin
   FImageList16x16 := nil;
   ThrottleAlias := 0;
   TrainAlias := 0;
+  FClosing := False;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -690,8 +715,13 @@ begin
          UpdateUI;
       end;
 
-    end;
+      if Sync.Link[i].SyncState and SYNC_CLOSED <> 0 then
+      begin
+         TimerGeneralTimeout.Enabled := False;
+         Close
+      end;
 
+    end;
   end;
 
   // If the throttle is open there MUST be a link or it is broken

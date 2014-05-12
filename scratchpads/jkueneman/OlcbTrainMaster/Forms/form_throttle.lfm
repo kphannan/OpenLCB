@@ -8,6 +8,7 @@ object FormThrottle: TFormThrottle
   ClientHeight = 481
   ClientWidth = 588
   OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnHide = FormHide
   OnShow = FormShow
@@ -356,20 +357,24 @@ object FormThrottle: TFormThrottle
     object ActionAllocationRelease: TAction
       Category = 'Allocation'
       Caption = 'Release'
+      Enabled = False
       OnExecute = ActionAllocationReleaseExecute
     end
     object ActionAllocationFree: TAction
       Category = 'Allocation'
       Caption = 'Free'
+      Enabled = False
       OnExecute = ActionAllocationFreeExecute
     end
     object ActionAllocationLoadEffectsFile: TAction
       Category = 'Allocation'
       Caption = 'Load FDI File...'
+      Enabled = False
     end
     object ActionAllocationEditCustomization: TAction
       Category = 'Allocation'
       Caption = 'Edit Customization...'
+      Enabled = False
       OnExecute = ActionAllocationEditCustomizationExecute
     end
     object ActionFunction0: TAction

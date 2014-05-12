@@ -40,7 +40,7 @@ procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStack
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);  // This could be 2 replies per call.. read docs
 procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$IFDEF SUPPORT_TRACTION}
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
@@ -80,7 +80,8 @@ const
   SYNC_STATE_ADDRESS            = $0400;
   SYNC_CONTROLLER               = $0020;
 
-  SYNC_REPLY_NODE               = $1000;
+  SYNC_REPLY_ALLOC_NODE         = $1000;
+  SYNC_REPLY_DEALLOC_NODE       = $2000;
 
 type
 
@@ -105,11 +106,11 @@ type
 
   TLinkRec = record
     SyncState   : Word;    // SYNC_xxxxx contants to tell what has changed
-    Train       : TTrainRec;
-    Node        : TNodeRec;
-    Controller  : TNodeInfo;
-    TrainState  : TTrainState;
-    ReplyNode   : TNodeInfo
+    Train       : TTrainRec;     // Train TForm Object for the UI
+    Node        : TNodeRec;      // Node ID for the Train Node
+    Controller  : TNodeInfo;     // Assigned Controller Node ID
+    TrainState  : TTrainState;   // Train metadata
+    ReplyNode   : TNodeInfo      // Node to reply back too when a Proxy Allocate message is called (for the Train Node Server)
   end;
   PLinkRec = ^TLinkRec;
 
@@ -190,6 +191,22 @@ begin
   LinkRec^.Controller.ID[0] := 0;
   LinkRec^.Controller.ID[1] := 0;
   LinkRec^.Train.ObjPtr := nil;
+end;
+
+function FindLinkByTrainID(TrainID: Word): PLinkRec;
+var
+  i: Integer;
+begin
+  // Find the Link for this Node
+  Result := nil;
+  for i := 0 to Sync.NextLink - 1 do
+  begin
+    if Sync.Link[i].TrainState.Address = TrainID then          // WARNING ONLY WORKS WITH CAN OR ETHERNET USING GRID CONNECT
+    begin
+      Result := @Sync.Link[i];
+      Break;
+    end;
+  end;
 end;
 
 function FindLinkByNodeAlias(Node: PNMRAnetNode): PLinkRec;
@@ -281,18 +298,20 @@ begin
               begin
                 for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
                 begin
-                  if Sync.Link[i].SyncState and SYNC_REPLY_NODE <> 0 then
+                  if Sync.Link[i].SyncState and SYNC_REPLY_ALLOC_NODE <> 0 then
                   begin
                     if Sync.Link[i].Node.Info.AliasID = 0 then
                     begin // Logging in
-                      Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_REPLY_NODE;
+                      Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_REPLY_ALLOC_NODE;
                       TempNode := OPStackNode_Allocate;
                       Sync.Link[i].Node.Index := TempNode^.iIndex;
                       // Now need to wait for it to log in from with in the virtual nodes statemachine, we are done here
                     end else
-                    begin // Logging out
+                    if Sync.Link[i].SyncState and SYNC_REPLY_DEALLOC_NODE <> 0 then
+                    begin
                       if Sync.Link[i].Node.Index > 0 then   // Don't deallocate the physical node if we messed up!
                       begin
+                        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_REPLY_DEALLOC_NODE;
                         Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_OBJPTR;
                         OPStackNode_MarkForRelease(@NodePool.Pool[Sync.Link[i].Node.Index]);
                         for j := i to (Sync.NextLink - 1) do
@@ -330,6 +349,8 @@ begin
                 Link^.SyncState := SYNC_NODE_INFO;
                 Link^.Node.Info := Node^.Info;
                 Node^.iUserStateMachine := STATE_USER_1;
+                Node^.TrainData.Address := Link^.TrainState.Address;
+                Node^.TrainData.SpeedSteps := Link^.TrainState.SpeedSteps;
               end;
               LeaveCriticalSection(OPStackCriticalSection);
             end;
@@ -438,7 +459,7 @@ end;
 //                   will block that second message.  If that is required then return True with ReplyMessage = nil to
 //                   release the Requesting message then send the reply to this message at a later time
 // *****************************************************************************
-procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
   Link: PLinkRec;
 begin
@@ -454,6 +475,16 @@ begin
                       begin
                         Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
                         Link^.Controller := Node^.TrainData.Controller;
+                      end;
+                  TRACTION_CONSIST_DETACH :
+                      begin
+                        Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
+                        Link^.Controller.AliasID := 0;
+                        Link^.Controller.ID[0] := 0;
+                        Link^.Controller.ID[1] := 0;
+                        Link^.ReplyNode.AliasID := 0;
+                        Link^.ReplyNode.ID[0] := 0;
+                        LInk^.ReplyNode.ID[1] := 0;
                       end;
               end
             end;
@@ -505,22 +536,46 @@ end;
 //     Description :
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
+var
+  i: Integer;
+  Link: PLinkRec;
+  TrainID: Word;
+  ANode: PNMRAnetNode;
 begin
   EnterCriticalsection(OPStackCriticalSection);
   // Only the top node is the Proxy that replies to this
   if Node = GetPhysicalNode then
+  begin
     if AMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_ALLOCATE then
     begin
-      Sync.Link[Sync.NextLink].SyncState := SYNC_REPLY_NODE;
-      Sync.Link[Sync.NextLink].ReplyNode.AliasID := AMessage^.Source.AliasID;
-      Sync.Link[Sync.NextLink].ReplyNode.ID[0] := AMessage^.Source.ID[0];
-      Sync.Link[Sync.NextLink].ReplyNode.ID[1] := AMessage^.Source.ID[1];
-      Sync.Link[Sync.NextLink].TrainState.Address := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
-      Sync.Link[Sync.NextLink].TrainState.SpeedSteps := AMessage^.Buffer^.DataArray[4];
-      Inc(Sync.NextLink);
-      Sync.DatabaseChanged := True;
+      TrainID := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
+      ANode := OPStackNode_FindByTrainID(TrainID);           // this is how to do it in the micro...
+
+      if Assigned(ANode) then
+      begin
+        Link := FindLinkByTrainID(TrainID);
+        if Assigned(Link) then
+        begin
+          ANode^.iUserStateMachine := STATE_USER_START;
+        end;
+      end else
+      begin
+        Link := @Sync.Link[Sync.NextLink];
+        Link^.SyncState := SYNC_REPLY_ALLOC_NODE;
+        Inc(Sync.NextLink);
+      end;
+      if Assigned(Link) then
+      begin
+        Link^.ReplyNode.AliasID := AMessage^.Source.AliasID;
+        Link^.ReplyNode.ID[0] := AMessage^.Source.ID[0];
+        Link^.ReplyNode.ID[1] := AMessage^.Source.ID[1];
+        Link^.TrainState.Address := TrainID;
+        Link^.TrainState.SpeedSteps := AMessage^.Buffer^.DataArray[4];
+        Sync.DatabaseChanged := True;
+      end;
       // Run the reply statemachine on the physical node will create a new Train Node eventually
     end;
+  end;
   LeaveCriticalSection(OPStackCriticalSection);
 end;
 

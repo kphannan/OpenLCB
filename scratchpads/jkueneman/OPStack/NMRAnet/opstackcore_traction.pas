@@ -108,7 +108,7 @@ begin
             {$ENDIF}
           end;
   end;
-  AppCallback_TractionProtocol(DestNode, NextMessage, True);
+  AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
@@ -190,7 +190,7 @@ begin
   // Queue the Packet
   NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
   {$ENDIF}
-  AppCallback_TractionProtocol(DestNode, NextMessage, True);
+  AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
@@ -243,7 +243,7 @@ begin
         {$ENDIF}
       end;
   end;
-  AppCallback_TractionProtocol(DestNode, NextMessage, True);
+  AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
@@ -262,7 +262,7 @@ begin
     MessageToSend^.Buffer^.DataArray[6] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataArray[7] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataBufferSize := 8;
-    AppCallback_TractionProtocol(DestNode, NextMessage, True);
+    AppCallback_TractionProtocol(DestNode, NextMessage);
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;
 end;
@@ -283,7 +283,7 @@ begin
     MessageToSend^.Buffer^.DataBufferSize := 5;
     FunctionAddress := (DWord( NextMessage^.Buffer^.DataArray[1]) shl 16) or (DWord( NextMessage^.Buffer^.DataArray[2]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[3]);
     MessageToSend^.Buffer^.DataArray[5] := Byte( (DestNode^.TrainData.Functions shr FunctionAddress) and $00000001);
-    AppCallback_TractionProtocol(DestNode, NextMessage, True);
+    AppCallback_TractionProtocol(DestNode, NextMessage);
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;
 end;
@@ -318,7 +318,7 @@ begin
         DestNode^.TrainData.State := DestNode^.TrainData.State or TS_LOCKED;
       end else
         MessageToSend^.Buffer^.DataArray[2] := TRACTION_MANAGE_RESERVE_REPLY_FAIL;
-      AppCallback_TractionProtocol(DestNode, NextMessage, True);
+      AppCallback_TractionProtocol(DestNode, NextMessage);
       Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
     end
   end else
@@ -330,7 +330,7 @@ begin
       DestNode^.TrainData.Lock.ID[1] := 0;
       DestNode^.TrainData.State := DestNode^.TrainData.State and not TS_LOCKED;
     end;
-    AppCallback_TractionProtocol(DestNode, NextMessage, True);
+    AppCallback_TractionProtocol(DestNode, NextMessage);
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;
 end;
@@ -358,7 +358,7 @@ begin
                 DestNode^.TrainData.Controller.AliasID := NextMessage^.Source.AliasID;
                 DestNode^.TrainData.Controller.ID[0] := NextMessage^.Source.ID[0];
                 DestNode^.TrainData.Controller.ID[1] := NextMessage^.Source.ID[1];
-                AppCallback_TractionProtocol(DestNode, NextMessage, True);
+                AppCallback_TractionProtocol(DestNode, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
               end
             end else
@@ -378,8 +378,10 @@ begin
                 MessageToSend^.Buffer^.DataArray[10] := Lo( NextMessage^.Source.AliasID);
                 DestNode^.TrainData.State := DestNode^.TrainData.State or TS_WAITING_FOR_CONTROLLER_NOTIFY;
                 DestNode^.TrainData.Timer := 0;
-                AppCallback_TractionProtocol(DestNode, NextMessage, True);
+                DestNode^.TrainData.NotifyController := NextMessage^.Source;    // Store the Controller who is asking for control
+                AppCallback_TractionProtocol(DestNode, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                // Timer started, either the current controller replies or it times out and the new controller is assigned
               end
             end
           end;
@@ -391,7 +393,7 @@ begin
               DestNode^.TrainData.Controller.ID[0] := 0;
               DestNode^.TrainData.Controller.ID[1] := 0;
             end;
-            AppCallback_TractionProtocol(DestNode, NextMessage, True);
+            AppCallback_TractionProtocol(DestNode, NextMessage);
             Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
           end;
       TRACTION_CONTROLLER_CONFIG_QUERY :
@@ -405,7 +407,7 @@ begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(DestNode^.TrainData.Controller.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3]))^);
               MessageToSend^.Buffer^.DataArray[9] := Hi( DestNode^.TrainData.Controller.AliasID);
               MessageToSend^.Buffer^.DataArray[10] := Lo( DestNode^.TrainData.Controller.AliasID);
-              AppCallback_TractionProtocol(DestNode, NextMessage, True);
+              AppCallback_TractionProtocol(DestNode, NextMessage);
               Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
             end;
           end
@@ -413,7 +415,18 @@ begin
       Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
     end
   end else
-   Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+  begin
+    // Handle messages that don't need a lock
+    case NextMessage^.Buffer^.DataArray[1] of
+      TRACTION_CONTROLLER_CONFIG_NOTIFY :
+          begin
+            AppCallback_TractionProtocol(DestNode, NextMessage);
+            Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+          end
+    else
+      Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+    end;
+  end
 end;
 
 function TractionProtocolConsist(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
@@ -423,7 +436,7 @@ begin
   begin
     // Only manage if the DestNode is locked
   end;
-  AppCallback_TractionProtocol(DestNode, NextMessage, True);
+  AppCallback_TractionProtocol(DestNode, NextMessage);
   Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
@@ -498,13 +511,29 @@ begin
 end;
 
 procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
+var
+  MessageToSend: POPStackMessage;
 begin
   if Node^.TrainData.State and TS_WAITING_FOR_CONTROLLER_NOTIFY <> 0 then
   begin
     Inc(Node^.TrainData.Timer);
     if Node^.TrainData.Timer > MAX_CONTROLLER_NOTIFY_TIME then
     begin
-      // Give the controller to the new request... where do I store this info to use!!!!!!
+      // The last controller did not reply so just take it
+      if IsOutgoingBufferAvailable then
+        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, Node^.Info.AliasID, Node^.Info.ID, Node^.TrainData.NotifyController.AliasID, Node^.TrainData.NotifyController.ID) then
+        begin
+          Node^.TrainData.State := Node^.TrainData.State and not TS_WAITING_FOR_CONTROLLER_NOTIFY;
+          MessageToSend^.Buffer^.DataBufferSize := 3;
+          MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
+          MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
+          MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
+          Node^.TrainData.Controller.AliasID := Node^.TrainData.NotifyController.AliasID;
+          Node^.TrainData.Controller.ID[0] := Node^.TrainData.NotifyController.ID[0];
+          Node^.TrainData.Controller.ID[1] := Node^.TrainData.NotifyController.ID[1];
+          AppCallback_TractionProtocol(Node, MessageToSend);
+          OutgoingMessage(MessageToSend);
+        end
     end;
   end;
 end;
