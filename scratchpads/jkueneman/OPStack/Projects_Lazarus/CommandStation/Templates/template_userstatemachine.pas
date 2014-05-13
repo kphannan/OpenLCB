@@ -16,6 +16,7 @@ uses
   ethernet_hub,
   olcb_transport_layer,
   template_hardware,
+  olcb_defines,
  // LCLIntf,
  // LCLType,
   {$ENDIF}
@@ -24,7 +25,6 @@ uses
   opstackdefines,
   template_node,
   opstack_api,
-  olcb_defines,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;

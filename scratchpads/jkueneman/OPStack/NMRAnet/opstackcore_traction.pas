@@ -336,6 +336,9 @@ begin
 end;
 
 function TractionProtocolController(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+var
+  i: Integer;
+  MultiFrameBuffer: PMultiFrameBuffer;
 begin
   MessageToSend := nil;
   Result := False;
@@ -372,10 +375,8 @@ begin
                 MessageToSend^.Buffer^.DataBufferSize := 11;
                 MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
                 MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_NOTIFY;
-                MessageToSend^.Buffer^.DataArray[2] := TRACTION_FLAGS_ALIAS_INCLUDED;
-                NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NextMessage^.Source.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3]))^);
-                MessageToSend^.Buffer^.DataArray[9] := Hi( NextMessage^.Source.AliasID);
-                MessageToSend^.Buffer^.DataArray[10] := Lo( NextMessage^.Source.AliasID);
+                for i := 2 to 10 do
+                  MessageToSend^.Buffer^.DataArray[i] := NextMessage^.Buffer^.DataArray[i];
                 DestNode^.TrainData.State := DestNode^.TrainData.State or TS_WAITING_FOR_CONTROLLER_NOTIFY;
                 DestNode^.TrainData.Timer := 0;
                 DestNode^.TrainData.NotifyController := NextMessage^.Source;    // Store the Controller who is asking for control
@@ -400,13 +401,14 @@ begin
           begin
             if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
             begin
-              MessageToSend^.Buffer^.DataBufferSize := 11;
-              MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
-              MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
-              MessageToSend^.Buffer^.DataArray[2] := $01;  // Alias included
+              MultiFrameBuffer := PMultiFrameBuffer( PByte( MessageToSend^.Buffer));
+              MultiFrameBuffer^.DataBufferSize := 11;
+              MultiFrameBuffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
+              MultiFrameBuffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
+              MultiFrameBuffer^.DataArray[2] := $01;  // Alias included
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(DestNode^.TrainData.Controller.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3]))^);
-              MessageToSend^.Buffer^.DataArray[9] := Hi( DestNode^.TrainData.Controller.AliasID);
-              MessageToSend^.Buffer^.DataArray[10] := Lo( DestNode^.TrainData.Controller.AliasID);
+              MultiFrameBuffer^.DataArray[9] := Hi( DestNode^.TrainData.Controller.AliasID);
+              MultiFrameBuffer^.DataArray[10] := Lo( DestNode^.TrainData.Controller.AliasID);
               AppCallback_TractionProtocol(DestNode, NextMessage);
               Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
             end;

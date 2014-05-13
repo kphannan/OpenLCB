@@ -310,6 +310,15 @@ begin
   end
 end;
 
+procedure DeAllocateMultiFrameBuffer(Buffer: PMultiFrameBuffer);
+begin
+  if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
+  begin
+    Dec(MultiFramePool.Count);
+    Buffer^.State := 0
+  end
+end;
+
 function NextFreeOPStackMessage(var OPStackMessage: POPStackMessage): Boolean;
 var
   i: Integer;
@@ -460,6 +469,7 @@ begin
         MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
         {$ENDIF}
         MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PAcdiSnipBuffer( PByte( AMessage^.Buffer)));
+        MT_MULTIFRAME : DeAllocateMultiFrameBuffer(PMultiFrameBuffer( PByte( AMessage^.Buffer)));
       end;
     end;
     AMessage^.MessageType := MT_UNALLOCATED;

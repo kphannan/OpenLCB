@@ -60,8 +60,8 @@ const
   MTI_PC_EVENT_REPORT                = $05B4;                                // Databytes = EventID  (Infamouse PCER)
   MTI_TRACTION_PROTOCOL              = $05EA;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
   MTI_TRACTION_REPLY                 = $05E8;                                // Databytes = Reply data/information
-  MTI_TRACTION_PROXY_PROTOCOL        = $01FA;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
-  MTI_TRACTION_PROXY_REPLY           = $01F8;                                // Databytes = Reply data/information
+  MTI_TRACTION_PROXY_PROTOCOL        = $01EA;                                // Databytes = Protocol (Train Protocol, DCC, etc), Operation, control
+  MTI_TRACTION_PROXY_REPLY           = $01E8;                                // Databytes = Reply data/information
   MTI_XPRESSNET                      = $0820;
   MTI_REMOTE_BUTTON_REQUEST          = $0948;
   MTI_REMOTE_BUTTON_REPLY            = $0949;
@@ -82,10 +82,6 @@ const
   MTI_STEAM_SEND                     = $1F88;
   MTI_STREAM_PROCEED                 = $0888;
   MTI_STREAM_COMPLETE                = $08A8;
-
-  // These are Negavitve Logic so "xx01" = Start, "xx10" = End were the "0" is the bit of interest
-  PIP_EXTENSION_START_BIT            = $10;                                    // Flags in the Destination word for future extension of PIP
-  PIP_EXTENSION_END_BIT              = $20;                                    // Flags in the Destination word for future extension of PIP
 
 const
   LEN_PIV_PROTOCOL = 6;                                                         // 6 Bytes long
@@ -217,6 +213,67 @@ const
   EVENT_IS_TRAIN             : TEventID = ($01, $01, $00, $00, $00, $00, $03, $03);
   EVENT_IS_PROXY             : TEventID = ($01, $01, $00, $00, $00, $00, $03, $04);
   EVENT_DELIVERS_CLOCK       : TEventID = ($01, $01, $00, $00, $00, $00, $05, $01);
+
+const
+  TS_WAITING_FOR_CONTROLLER_NOTIFY   = $01;
+  TS_LOCKED                          = $02;
+
+
+  TRACTION_PROXY_ALLOCATE            = $01;
+  TRACTION_PROXY_ATTACH              = $02;
+  TRACTION_PROXY_DETACH              = $03;
+  TRACTION_PROXY_MANAGE              = $80;
+  TRACTION_PROXY_MANAGE_RESERVE      = $01;
+  TRACTION_PROXY_MANAGE_RELEASE      = $02;
+
+  TRACTION_PROXY_TECH_ID_DCC              = $01;
+  TRACTION_PROXY_TECH_ID_DC               = $02;
+  TRACTION_PROXY_TECH_ID_MARKLIN_DIG      = $03;
+  TRACTION_PROXY_TECH_ID_MARKLIN_DELTA    = $04;
+  TRACTION_PROXY_TECH_ID_MARKLIN_DIG_ESU  = $05;
+  TRACTION_PROXY_TECH_ID_SELECTRIX        = $06;
+  TRACTION_PROXY_TECH_ID_MTH_DCS          = $07;
+  TRACTION_PROXY_TECH_ID_LIONEL_TMCC      = $08;
+
+  TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
+  TRACTION_PROXY_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed
+
+  //
+
+  TRACTION_FLAGS_ALIAS_INCLUDED       = $01;
+
+  TRACTION_SPEED_DIR                  = $00;
+  TRACTION_FUNCTION                   = $01;
+  TRACTION_E_STOP                     = $02;
+
+  TRACTION_QUERY_SPEED                = $10;
+  TRACTION_QUERY_FUNCTION             = $11;
+
+  TRACTION_CONTROLLER_CONFIG          = $20;
+  TRACTION_CONTROLLER_CONFIG_ASSIGN   = $01;
+  TRACTION_CONTROLLER_CONFIG_RELEASE  = $02;
+  TRACTION_CONTROLLER_CONFIG_QUERY    = $03;
+  TRACTION_CONTROLLER_CONFIG_NOTIFY   = $04;
+
+  TRACTION_CONSIST                    = $30;
+  TRACTION_CONSIST_ATTACH             = $01;
+  TRACTION_CONSIST_DETACH             = $02;
+  TRACTION_CONSIST_QUERY              = $03;
+
+  TRACTION_MANAGE                     = $40;
+  TRACTION_MANAGE_RESERVE             = $01;
+  TRACTION_MANAGE_RELEASE             = $02;
+
+  TRACTION_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
+  TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed
+
+  TRACTION_CONTROLLER_ASSIGN_REPLY_OK   = $00;    // Failed is not 0
+  TRACTION_CONTROLLER_ASSIGN_REPLY_FAIL = $FF;    // Failed is not 0
+
+  TRACTION_CONTROLLER_ASSIGN_REPLY_FAIL_CONTROLLER_DENIED = $01;
+  TRACTION_CONTROLLER_ASSIGN_REPLY_FAIL_TRAIN_DENIED      = $02;
+
+  TRACTION_MANAGE_QUERY_REPLY        = $03;
 
 
 implementation

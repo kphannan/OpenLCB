@@ -15,39 +15,57 @@ uses
   opstacknode,
   opstackbuffers,
   nmranetdefines,
+  template_userstatemachine,
   opstackdefines;
 
-procedure ProtocolSupportInquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+function ProtocolSupportInquiryReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+procedure ProtocolSupportReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 implementation
 
-procedure ProtocolSupportInquiry(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+//
+// When a message is received this function queues it up for later processing by the main statemachine
+//
+procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
 var
   NewMessage: POPStackMessage;
 begin
-  // Since we don't implement extended protocols yet just reply when we see the start bit set
-  if AMessage^.FramingBits and PIP_EXTENSION_END_BIT = 0 then
+  // If the reply message does not support Framing Bits then this will be called
+  if IsReply then
   begin
-    NewMessage := nil;
+    if AMessage^.MessageType and MT_MULTIFRAME = 0 then
+    begin
+      if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+        OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end else
+      OPStackNode_IncomingMessageLink(DestNode, AMessage)                       // If it was sent as a multi Frame then just link it
+  end else
+  begin
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
       OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    else
-      OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
-  end
+    else begin
+      if not IsReply then
+        OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+    end;
+  end;
 end;
 
-procedure ProtocolSupportInquiryReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+//
+//  Called to automatically reply to a Simple Node Info Request
+//
+function ProtocolSupportInquiryReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 var
   i, j: Integer;
 begin
+  Result := False;
   MessageToSend := nil;
   if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_PROTOCOL_SUPPORT_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
     for i := 0 to 8 - 1 do                                            // Since we are OR'ing we need to start in a known state
       MessageToSend^.Buffer^.DataArray[i] := 0;
     {$IFDEF SUPPORT_VIRTUAL_NODES}
-    if Node^.State and NS_VIRTUAL <> 0 then
+    if DestNode^.State and NS_VIRTUAL <> 0 then
     begin
       for i := 0 to LEN_PIV_PROTOCOL-1 do
         for j := 0 to USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT - 1 do
@@ -61,7 +79,17 @@ begin
           MessageToSend^.Buffer^.DataArray[i] := MessageToSend^.Buffer^.DataArray[i] or USER_PIV_SUPPORTED_PROTOCOLS[j][i];
       MessageToSend^.Buffer^.DataBufferSize := LEN_PIV_PROTOCOL;
     end;
+    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;
+end;
+
+//
+// Called when the reply to a request by us is received and needs to be handled
+//
+procedure ProtocolSupportReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+begin
+  AppCallBack_ProtocolSupportReply(DestNode, AMessage);
+  UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
 end.

@@ -14,36 +14,57 @@ uses
   opstackbuffers,
   nmranetdefines,
   opstackdefines,
+  template_userstatemachine,
   opstacktypes;
 
-procedure SimpleNodeInfoRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure SimpleNodeInfoRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+function SimpleNodeInfoRequestReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
+procedure SimpleNodeInfoRequestReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 implementation
 
-procedure SimpleNodeInfoRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+//
+// When a message is received this function queues it up for later processing by the main statemachine
+//
+procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
 var
   NewMessage: POPStackMessage;
 begin
   NewMessage := nil;
-  if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-  else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+  if IsReply then
+  begin
+    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(NewMessage, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end;
+  end else
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
+    begin
+      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
+      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
+    end else
+      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
+  end;
 end;
 
-procedure SimpleNodeInfoRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo);
+//
+//  Called to automatically reply to a Simple Node Info Request
+//
+function SimpleNodeInfoRequestReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
   j: Integer;
 begin
+  Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_NODE_INFO_REPLY, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID) then
+  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
   begin
     AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
     AcdiSnipBufferPtr^.DataBufferSize := 0;
     {$IFDEF SUPPORT_VIRTUAL_NODES}
-    if Node^.State and NS_VIRTUAL <> 0 then
+    if DestNode^.State and NS_VIRTUAL <> 0 then
     begin
       while AcdiSnipBufferPtr^.DataBufferSize < USER_VNODE_MAX_ACDI_MFG_ARRAY do
       begin
@@ -71,7 +92,18 @@ begin
       Inc(AcdiSnipBufferPtr^.DataBufferSize);
       Inc(j)
     end;
+
+    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, AMessage);
   end;
+end;
+
+//
+// Called when the reply to a request by us is received and needs to be handled
+//
+procedure SimpleNodeInfoRequestReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+begin
+  AppCallback_SimpleNodeInfoReply(DestNode, AMessage);
+  UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
 end.

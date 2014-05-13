@@ -340,36 +340,6 @@ type
   PNMRAnetCanBuffer = ^TNMRAnetCanBuffer;
 
 const
-  TRACTION_FLAGS_ALIAS_INCLUDED       = $01;
-
-  TRACTION_SPEED_DIR                  = $00;
-  TRACTION_FUNCTION                   = $01;
-  TRACTION_E_STOP                     = $02;
-
-  TRACTION_QUERY_SPEED                = $10;
-  TRACTION_QUERY_FUNCTION             = $11;
-
-  TRACTION_CONTROLLER_CONFIG          = $20;
-  TRACTION_CONTROLLER_CONFIG_ASSIGN   = $01;
-  TRACTION_CONTROLLER_CONFIG_RELEASE  = $02;
-  TRACTION_CONTROLLER_CONFIG_QUERY    = $03;
-  TRACTION_CONTROLLER_CONFIG_NOTIFY   = $04;
-
-  TRACTION_CONSIST                    = $30;
-  TRACTION_CONSIST_ATTACH             = $01;
-  TRACTION_CONSIST_DETACH             = $02;
-  TRACTION_CONSIST_QUERY              = $03;
-
-  TRACTION_MANAGE                     = $40;
-  TRACTION_MANAGE_RESERVE             = $01;
-  TRACTION_MANAGE_RELEASE             = $02;
-
-  TRACTION_MANAGE_RESERVE_REPLY_OK   = $00;    // Failed is not 0
-  TRACTION_MANAGE_RESERVE_REPLY_FAIL = $FF;    // Failed
-  TRACTION_MANAGE_QUERY_REPLY        = $03;
-
-  TRACTION_CONTROLLER_ASSIGN_REPLY_OK   = $00;    // Failed is not 0
-  TRACTION_CONTROLLER_ASSIGN_REPLY_FAIL = $FF;    // Failed is not 0
 
   DEFAULT_SPEED_STEPS = 28;
 

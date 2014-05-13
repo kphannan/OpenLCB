@@ -1123,7 +1123,7 @@ begin
                 case MultiFrame.DataArray[1] of
                   TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config Reply - Assign - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2);
                   TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config Reply - Query - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
-                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Reply - Notify - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2)
+                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config Reply - Notify - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' New Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']'
                 end
               end;
             TRACTION_CONSIST :
@@ -1180,7 +1180,7 @@ begin
       if Assigned(MultiFrame) then
       begin
          case MultiFrame.DataArray[0] of
-            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3)) + ' Speed Steps = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 4));
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Flags = ' + IntToStr(MultiFrame.DataArray[1]) + ', Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[2]) + ', Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(3, 4)) + ', Train Node ID ' + MultiFrame.ExtractDataBytesAsHex(5, 10) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(11, 12) + ']';
             TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
             TRACTION_PROXY_MANAGE   :
               begin

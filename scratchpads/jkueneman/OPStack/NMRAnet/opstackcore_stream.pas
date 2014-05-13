@@ -24,10 +24,10 @@ uses
 procedure OPStackCoreStream_Initialize;
 
 // Calls from received messages
-procedure StreamInitRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure StreamInitReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure StreamProceed(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-procedure StreamComplete(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure StreamInitRequest(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure StreamInitReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure StreamProceed(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure StreamComplete(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 // Calls from message replies
 procedure StreamInitRequestReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; StreamMessage: POPStackMessage);
@@ -173,7 +173,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure StreamInitRequest(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure StreamInitRequest(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
@@ -182,7 +182,7 @@ begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
     OPStackNode_IncomingMessageLink(DestNode, NewMessage);
   end else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
 end;
 
 // *****************************************************************************
@@ -191,7 +191,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure StreamInitReply(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure StreamInitReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
@@ -200,7 +200,7 @@ begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
     OPStackNode_IncomingMessageLink(DestNode, NewMessage);
   end else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
 
   (*
   StreamMessage := nil;
@@ -243,7 +243,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure StreamProceed(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure StreamProceed(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
@@ -252,10 +252,10 @@ begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
     OPStackNode_IncomingMessageLink(DestNode, NewMessage);
   end else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
 end;
 
-procedure StreamComplete(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
+procedure StreamComplete(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
@@ -264,7 +264,7 @@ begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
     OPStackNode_IncomingMessageLink(DestNode, NewMessage);
   end else
-    OptionalInteractionRejected(AMessage, DestNode, False);                            // Try again if you wish
+    OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
 end;
 
 // *****************************************************************************

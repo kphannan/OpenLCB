@@ -1144,8 +1144,8 @@ procedure TFormThrottle.UpdateUI;
 begin
   ActionAllocationByList.Enabled :=  TrainAlias = 0;
   ActionAllocationByAddress.Enabled := TrainAlias = 0;
-  ActionAllocationFree.Enabled := TrainAlias <> 0; ;
-  ActionAllocationRelease.Enabled := TrainAlias <> 0; ;
+//  ActionAllocationFree.Enabled := TrainAlias <> 0; ;
+//  ActionAllocationRelease.Enabled := TrainAlias <> 0; ;
   GroupBoxFunctions.Enabled := TrainAlias <> 0; ;
   GroupBoxControl.Enabled := TrainAlias <> 0; ;
   GroupBoxConfiguration.Enabled := TrainAlias <> 0; ;

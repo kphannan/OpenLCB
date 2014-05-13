@@ -10,7 +10,7 @@ interface
 
 uses
   Float16,
-  opstacktypes,
+  opstacktypes,           
   nmranetdefines,
   opstackdefines,
   template_node,
@@ -48,8 +48,24 @@ procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
-
 implementation
+
+{$IFDEF FPC}
+  {$IFDEF SUPPORT_TRACTION and SUPPORT_TRACTION_PROXY}
+  uses
+    opstacknode,
+    opstackcore_traction,
+    opstackcore_traction_proxy;
+  {$ELSE}
+    {$IFDEF SUPPORT_TRACTION}
+    uses
+      opstackcore_traction;
+    {$ELSE}
+    uses
+      opstackcore_traction_proxy;
+    {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
 
 const
   STATE_USER_START = 0;
@@ -78,6 +94,16 @@ type
 var
   UserDataArray: TSampleUserDataArray;
 
+  ProxyNode: TNodeInfo;
+  GlobalTimer: Word;
+
+
+procedure ClearProxyNode;
+begin
+  ProxyNode.AliasID := 0;
+  ProxyNode.ID[0] := 0;
+  ProxyNode.ID[1] := 0;
+end;
 
 // *****************************************************************************
 //  procedure ExtractUserData
@@ -119,61 +145,208 @@ end;
 //     Description : Called as often as possible to run the user statemachine
 // *****************************************************************************
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
-begin
+var
+  TempNode: PNMRAnetNode;
+  i, j: Integer;
+  //Link: PLinkRec;
+begin     {
   if Node = GetPhysicalNode then
   begin
     case Node^.iUserStateMachine of
         STATE_USER_START :
-            begin
-
+            begin              // Find a Proxy
+              if Node^.State and NS_INITIALIZED <> 0 then
+               begin
+                 GlobalTimer := 0;
+                 if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+                   Node^.iUserStateMachine := STATE_USER_1;
+               end;
             end;
         STATE_USER_1 :
             begin
-
+              // Find the Proxy node (Command Station) on the network before progressing
+              if (ProxyNode.AliasID > 0) or (ProxyNode.ID[0] > 0) or (ProxyNode.ID[1] > 0) then
+                Node^.iUserStateMachine := STATE_USER_2
+              else begin
+                if GlobalTimer > 10 then
+                  Node^.iUserStateMachine := STATE_USER_START            // Try again
+              end;
             end;
         STATE_USER_2 :
             begin
-
+              // Now the Physical node can be a Throttle Node Server
+              EnterCriticalSection(OPStackCriticalSection);
+              // Only do something if the number of links has changed
+              if Sync.DatabaseChanged then
+              begin
+                for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
+                begin
+                  if Sync.Link[i].SyncState <> SYNC_NONE then
+                  begin
+                    if Sync.Link[i].SyncState and SYNC_THROTTLE_OBJPTR <> 0 then
+                    begin
+                      if Sync.Link[i].Node.Info.AliasID = 0 then
+                      begin // Logging in
+                        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_THROTTLE_OBJPTR;
+                        TempNode := OPStackNode_Allocate;
+                        Sync.Link[i].Node.Index := TempNode^.iIndex;
+                        // Now need to wait for it to log in
+                      end else
+                      begin // Logging out
+                        if Sync.Link[i].Node.Index > 0 then   // Don't deallocate the physical node if we messed up!
+                        begin
+                          Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_THROTTLE_OBJPTR;
+                          OPStackNode_MarkForRelease(@NodePool.Pool[Sync.Link[i].Node.Index]);
+                          for j := i to (Sync.NextLink - 1) do
+                            Sync.Link[j] := Sync.Link[j+1];
+                          Dec(Sync.NextLink);
+                          ZeroLinkRec(@Sync.Link[Sync.NextLink]);
+                        end;
+                      end
+                    end;
+                  end;
+                end;
+                Sync.DatabaseChanged := False;
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
             end
     end;
   end else
   begin
+    // Throttle Node (Virtual Node)
     case Node^.iUserStateMachine of
         STATE_USER_START :
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              // Don't do anything until it is initialized
+              if Node^.State and NS_PERMITTED <> 0 then
+              begin
+                Link := FindLinkByPoolIndex(Node^.iIndex);     // iIndex 0 is physcial node
+                Link^.SyncState := SYNC_NODE_INFO;
+                Link^.Node.Info := Node^.Info;
+                Node^.iUserStateMachine := STATE_USER_1;
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_1 :
+        STATE_USER_1 :    // Send message to Reserve the PROXY
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then                     // May not be found if the node is being freed
+              begin
+                if Link^.SyncState <> SYNC_NONE then
+                begin
+                  if Link^.SyncState and (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS) = (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS) then
+                  begin
+                    // This means the throttle want to create a new train node
+                    if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
+                    begin
+                      Link^.SyncState := Link^.SyncState and not (SYNC_STATE_ADDRESS or SYNC_SPEED_STEPS);
+                      Node^.iUserStateMachine := STATE_USER_10;                 // Wait for the Reserve callback
+                    end;
+                  end;
+                end;
+                LeaveCriticalSection(OPStackCriticalSection);
+              end;
+              Exit;
             end;
-        STATE_USER_2 :
+        STATE_USER_2 :  // Proxy is Reserved, allocate the Train Node
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Link^.ThrottleState.Address, Link^.ThrottleState.SpeedSteps, 0) then
+                  Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Allocate Callback
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_3  :
+        STATE_USER_3  :     // Train has been created, Lock the Train
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, True) then
+                  Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_4  :
+        STATE_USER_4  :   //  Assign the Throttle to the Train
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionControllerConfig(Node^.Info, Link^.AllocatedNode, Node^.Info, True) then
+                  Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
-        STATE_USER_5  :
+        STATE_USER_5  :   // Throttle assigned, unlock it
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, False) then
+                  Node^.iUserStateMachine := STATE_USER_6;  // No callback, just start looping
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
         STATE_USER_6  :
             begin
-
+              // Running with Train
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if Link^.SyncState and SYNC_CLOSING <> 0 then
+                begin
+                  if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, True) then
+                    Node^.iUserStateMachine := STATE_USER_10;  // Wait for the Throttle allocate callback
+                end;
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
         STATE_USER_7  :
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionControllerConfig(Node^.Info, Link^.AllocatedNode, Node^.Info, False) then
+                begin
+                  Link^.AllocatedNode.AliasID := 0;
+                  Link^.AllocatedNode.ID[0] := 0;
+                  Link^.AllocatedNode.ID[1] := 0;
+                  Link^.TrainAllocated := False;
+                  Node^.iUserStateMachine := STATE_USER_8;  // There is no reply for deall
+                end
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
         STATE_USER_8  :
             begin
-
+              EnterCriticalSection(OPStackCriticalSection);
+              Link := FindLinkByNodeAlias(Node);
+              if Link <> nil then
+              begin
+                if TrySendTractionManage(Node^.Info, Link^.AllocatedNode, False) then
+                begin
+                  Link^.SyncState := Link^.SyncState and not SYNC_CLOSING or SYNC_CLOSED;
+                  Node^.iUserStateMachine := STATE_USER_9;  // No callback, just start looping
+                end
+              end;
+              LeaveCriticalSection(OPStackCriticalSection);
+              Exit;
             end;
         STATE_USER_9   :
             begin
@@ -181,10 +354,11 @@ begin
             end;
         STATE_USER_10  :
             begin
-
+                // Wait for a callback to be called, this can be for many things
+              Exit;
             end
     end
-  end
+  end     }
 end;
 
 // *****************************************************************************
@@ -220,8 +394,33 @@ end;
 //     Description : Called when a Traction Protocol request comes in
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+ //Link: PLinkRec;
+ MultiFrameBuffer: PMultiFrameBuffer;
 begin
-
+ // EnterCriticalsection(OPStackCriticalSection);
+  //Link := FindLinkByNodeAlias(Node);
+  //if Link <> nil then
+  begin
+    MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
+    case MultiFrameBuffer^.DataArray[0] of
+      TRACTION_CONTROLLER_CONFIG :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_CONTROLLER_CONFIG_NOTIFY :
+                  begin
+  //                  Link^.TrainAllocated := False;
+  //                  Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
+  //                  Link^.AllocatedNode.AliasID := 0;
+  //                  Link^.AllocatedNode.ID[0] := 0;
+  //                  Link^.AllocatedNode.ID[1] := 0;
+                    Node^.iUserStateMachine := STATE_USER_1;   // Reset statemachine to log in
+                  end;
+            end;
+          end;
+    end;
+  end;
+ // LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 // *****************************************************************************
@@ -234,8 +433,69 @@ end;
 //     Description : Called in response to a Traction Protcool request
 // *****************************************************************************
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+// Link: PLinkRec;
+ MultiFrameBuffer: PMultiFrameBuffer;
 begin
-
+ // EnterCriticalsection(OPStackCriticalSection);
+ // Link := FindLinkByNodeAlias(Node);
+ // if Link <> nil then
+  begin
+    MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
+    case MultiFrameBuffer^.DataArray[0] of
+      TRACTION_CONTROLLER_CONFIG :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_CONTROLLER_CONFIG_ASSIGN :
+                  begin
+                    if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
+                    begin
+ //                     Link^.TrainAllocated := True;
+  //                    Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
+                      Node^.iUserStateMachine := STATE_USER_5
+                    end else
+                      Node^.iUserStateMachine := STATE_USER_5 // Release the Train, error try again??????
+                  end;
+            end;
+          end;
+      TRACTION_CONSIST :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_CONSIST_ATTACH :
+                  begin
+                  end;
+              TRACTION_CONSIST_DETACH :
+                  begin
+                  end;
+              TRACTION_CONSIST_QUERY :
+                  begin
+                  end;
+            end // case
+          end;
+      TRACTION_MANAGE :
+          begin
+            case MultiFrameBuffer^.DataArray[1] of
+              TRACTION_MANAGE_RESERVE :
+                  begin
+ //                   if Link^.SyncState and SYNC_CLOSING <> 0 then       // Run the closing statemachine
+                    begin
+                      if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                        Node^.iUserStateMachine := STATE_USER_7
+                      else
+                        Node^.iUserStateMachine := STATE_USER_6  // Keep trying to lock it for now
+                    end //else
+  //                  begin
+  //                    if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+  //                      Node^.iUserStateMachine := STATE_USER_4
+  //                    else
+   //                     Node^.iUserStateMachine := STATE_USER_3 // Keep trying to lock it for now
+  //                  end
+                  end;
+            end
+          end;
+      end;
+  end;
+ // LeaveCriticalsection(OPStackCriticalSection);
 end;
 {$ENDIF}
 
@@ -263,8 +523,35 @@ end;
 //     Description : Called in response to a Traction Proxy request
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+ // Link: PLinkRec;
+  MultiFrameBuffer: PMultiFrameBuffer;
 begin
-
+ // EnterCriticalsection(OPStackCriticalSection);
+ // Link := FindLinkByNodeAlias(Node);
+ // if Link <> nil then
+  begin
+    case AMessage^.Buffer^.DataArray[0] of
+      TRACTION_PROXY_MANAGE :
+          begin
+            if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
+            begin
+               if AMessage^.Buffer^.DataArray[2] = 0 then
+                 Node^.iUserStateMachine := STATE_USER_2         // Move to next state after reserving
+               else
+                 Node^.iUserStateMachine := STATE_USER_1         // Can't reserve now go back to normal polling
+            end;
+          end;
+      TRACTION_PROXY_ALLOCATE :
+          begin
+            MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
+  //          Link^.AllocatedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
+            NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Link^.AllocatedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+            Node^.iUserStateMachine := STATE_USER_3;    // Now need to allocate the Throttle to the Train Node
+          end
+    end; // case
+  end;
+ // LeaveCriticalsection(OPStackCriticalSection);
 end;
 {$ENDIF}
 
@@ -316,7 +603,14 @@ end;
 // *****************************************************************************
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 begin
-
+  if GetPhysicalNode^.State and NS_INITIALIZED > 0 then
+  begin
+    // Looking for the Proxy
+    if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
+    begin
+      ProxyNode := Source;
+    end;
+  end;
 end;
 
 // *****************************************************************************
@@ -440,7 +734,4 @@ begin
 
 end;
 
-
 end.
-
-

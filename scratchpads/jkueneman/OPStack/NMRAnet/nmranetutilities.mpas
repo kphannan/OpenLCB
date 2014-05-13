@@ -20,6 +20,7 @@ procedure NMRAnetUtilities_LoadSimpleDataWithEventID(EventID: PEventID; DataArra
 procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PSimpleDataArray; var NodeID: TNodeID);
 function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
 function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNodeInfo): Boolean;
+function NMRAnetUtilities_NullNodeIDInfo(var Info1: TNodeInfo): Boolean;
 function NMRAnetUtilities_EqualNodeID(var NodeID1: TNodeID; var NodeID2: TNodeID): Boolean;
 
 
@@ -185,6 +186,15 @@ begin
         Result := True;
 end;
 
+function NMRAnetUtilities_NullNodeIDInfo(var Info1: TNodeInfo): Boolean;
+begin
+  Result := False;
+  if Info1.AliasID = 0 then
+    if Info1.ID[0] = 0 then
+      if Info1.ID[1] = 0 then
+        Result := True;
+end;
+
 // *****************************************************************************
 //  procedure NMRAnetUtilities_EqualNodeID
 //     Parameters:
@@ -200,6 +210,7 @@ begin
     if NodeID1[1] = NodeID2[1] then
       Result := True;
 end;
+
 
 
 end.

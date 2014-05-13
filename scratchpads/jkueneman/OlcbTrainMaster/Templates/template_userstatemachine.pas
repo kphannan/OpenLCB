@@ -15,15 +15,16 @@ uses
   FileUtil,
   olcb_transport_layer,
   template_hardware,
+  olcb_defines,
  // LCLIntf,
  // LCLType,
   {$ENDIF}
   Float16,
   opstacktypes,
+  nmranetdefines,
   opstackdefines,
   template_node,
   opstack_api,
-  olcb_defines,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -348,7 +349,7 @@ begin
               // Don't do anything until it is initialized
               if Node^.State and NS_PERMITTED <> 0 then
               begin
-                Link := FindLinkByPoolIndex(Node^.iIndex);
+                Link := FindLinkByPoolIndex(Node^.iIndex);     // iIndex 0 is physcial node
                 Link^.SyncState := SYNC_NODE_INFO;
                 Link^.Node.Info := Node^.Info;
                 Node^.iUserStateMachine := STATE_USER_1;
@@ -537,10 +538,11 @@ begin
               TRACTION_CONTROLLER_CONFIG_NOTIFY :
                   begin
                     Link^.TrainAllocated := False;
-                    Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
+                    Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
                     Link^.AllocatedNode.AliasID := 0;
                     Link^.AllocatedNode.ID[0] := 0;
                     Link^.AllocatedNode.ID[1] := 0;
+                    Node^.iUserStateMachine := STATE_USER_1;   // Reset statemachine to log in
                   end
             end;
           end;
@@ -582,17 +584,6 @@ begin
                     end else
                       Node^.iUserStateMachine := STATE_USER_5 // Release the Train, error try again??????
                   end;
-              TRACTION_CONTROLLER_CONFIG_QUERY :
-                  begin
-                  end;
-              TRACTION_CONTROLLER_CONFIG_NOTIFY :
-                  begin
-                    Link^.TrainAllocated := False;
-                    Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
-                    Link^.AllocatedNode.AliasID := 0;
-                    Link^.AllocatedNode.ID[0] := 0;
-                    Link^.AllocatedNode.ID[1] := 0;
-                  end
             end;
           end;
       TRACTION_CONSIST :

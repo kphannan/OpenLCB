@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="50">
+    <Units Count="51">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -23,9 +23,10 @@
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="45" Y="3"/>
+        <CursorPos X="50" Y="4"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="Forms/form_throttle_multiple_trains.pas"/>
@@ -66,12 +67,13 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="691"/>
-        <CursorPos X="32" Y="704"/>
+        <TopLine Value="1136"/>
+        <CursorPos X="40" Y="1152"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
       </Unit5>
       <Unit6>
         <Filename Value="../OPStack/NMRAnet/opstack_api.pas"/>
@@ -125,10 +127,12 @@
       <Unit12>
         <Filename Value="../Library/olcb_utilities.pas"/>
         <UnitName Value="olcb_utilities"/>
+        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="641"/>
-        <CursorPos X="65" Y="662"/>
+        <TopLine Value="1166"/>
+        <CursorPos X="379" Y="1183"/>
         <UsageCount Value="419"/>
+        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="Templates/template_buffers.pas"/>
@@ -187,10 +191,12 @@
       <Unit20>
         <Filename Value="../OPStack/NMRAnet/opstackcore.pas"/>
         <UnitName Value="opstackcore"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="148"/>
-        <CursorPos X="69" Y="160"/>
+        <TopLine Value="365"/>
+        <CursorPos X="1" Y="379"/>
         <UsageCount Value="100"/>
+        <Loaded Value="True"/>
       </Unit20>
       <Unit21>
         <Filename Value="../OPStack/Common/Float16.pas"/>
@@ -326,13 +332,10 @@
       <Unit37>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="526"/>
-        <CursorPos X="26" Y="537"/>
+        <TopLine Value="875"/>
+        <CursorPos X="24" Y="891"/>
         <UsageCount Value="100"/>
-        <Loaded Value="True"/>
       </Unit37>
       <Unit38>
         <Filename Value="../OPStack/NMRAnet/CAN_Statemachines/opstackcore_button.pas"/>
@@ -345,10 +348,13 @@
       <Unit39>
         <Filename Value="../OPStack/NMRAnet/nmranetutilities.pas"/>
         <UnitName Value="nmranetutilities"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="4"/>
-        <CursorPos X="11" Y="17"/>
+        <TopLine Value="3"/>
+        <CursorPos X="36" Y="15"/>
         <UsageCount Value="100"/>
+        <Loaded Value="True"/>
       </Unit39>
       <Unit40>
         <Filename Value="../OPStack/NMRAnet/opstackcore_stnip.pas"/>
@@ -393,11 +399,11 @@
       <Unit45>
         <Filename Value="../OPStack/NMRAnet/opstackcore_traction.pas"/>
         <UnitName Value="opstackcore_traction"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="98"/>
-        <CursorPos X="20" Y="111"/>
-        <UsageCount Value="71"/>
+        <TopLine Value="468"/>
+        <CursorPos X="1" Y="482"/>
+        <UsageCount Value="73"/>
         <Loaded Value="True"/>
       </Unit45>
       <Unit46>
@@ -431,135 +437,119 @@
         <CursorPos X="3" Y="2149"/>
         <UsageCount Value="11"/>
       </Unit49>
+      <Unit50>
+        <Filename Value="../OPStack/AppLayerTemplates/template_userstatemachine.pas"/>
+        <UnitName Value="template_userstatemachine"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit50>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="24" HistoryIndex="23">
       <Position1>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="539" Column="1" TopLine="522"/>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="325" Column="21" TopLine="312"/>
       </Position1>
       <Position2>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="540" Column="1" TopLine="522"/>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="326" Column="36" TopLine="312"/>
       </Position2>
       <Position3>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="710" Column="1" TopLine="691"/>
+        <Caret Line="708" Column="51" TopLine="696"/>
       </Position3>
       <Position4>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="540" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="710" Column="1" TopLine="696"/>
       </Position4>
       <Position5>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="710" Column="1" TopLine="692"/>
+        <Caret Line="711" Column="1" TopLine="696"/>
       </Position5>
       <Position6>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="528" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="714" Column="1" TopLine="696"/>
       </Position6>
       <Position7>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="529" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="715" Column="1" TopLine="696"/>
       </Position7>
       <Position8>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="530" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="1144" Column="1" TopLine="1129"/>
       </Position8>
       <Position9>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="532" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="1145" Column="1" TopLine="1129"/>
       </Position9>
       <Position10>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="533" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="1146" Column="1" TopLine="1129"/>
       </Position10>
       <Position11>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="536" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="1147" Column="1" TopLine="1129"/>
       </Position11>
       <Position12>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="539" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="1148" Column="1" TopLine="1129"/>
       </Position12>
       <Position13>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="540" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="712" Column="15" TopLine="697"/>
       </Position13>
       <Position14>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="541" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="408" Column="1" TopLine="403"/>
       </Position14>
       <Position15>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="542" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="409" Column="1" TopLine="403"/>
       </Position15>
       <Position16>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="543" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="410" Column="1" TopLine="403"/>
       </Position16>
       <Position17>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="549" Column="1" TopLine="527"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="411" Column="1" TopLine="403"/>
       </Position17>
       <Position18>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="710" Column="1" TopLine="691"/>
+        <Caret Line="413" Column="1" TopLine="403"/>
       </Position18>
       <Position19>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="528" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="414" Column="1" TopLine="403"/>
       </Position19>
       <Position20>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="529" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="415" Column="1" TopLine="403"/>
       </Position20>
       <Position21>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="530" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="417" Column="1" TopLine="403"/>
       </Position21>
       <Position22>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="532" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="419" Column="1" TopLine="403"/>
       </Position22>
       <Position23>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="533" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="422" Column="1" TopLine="403"/>
       </Position23>
       <Position24>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="536" Column="1" TopLine="522"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="423" Column="1" TopLine="403"/>
       </Position24>
-      <Position25>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="539" Column="1" TopLine="522"/>
-      </Position25>
-      <Position26>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="540" Column="1" TopLine="522"/>
-      </Position26>
-      <Position27>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="541" Column="1" TopLine="522"/>
-      </Position27>
-      <Position28>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="542" Column="1" TopLine="522"/>
-      </Position28>
-      <Position29>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="543" Column="1" TopLine="522"/>
-      </Position29>
-      <Position30>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="529" Column="26" TopLine="526"/>
-      </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="4">
+    <BreakPoints Count="2">
       <Item1>
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsLocal"/>
@@ -574,20 +564,6 @@
         <Source Value="../OPStack/ConfigurationLayerImplementations/Lazarus_File/template_configuration.pas"/>
         <Line Value="174"/>
       </Item2>
-      <Item3>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="Templates/template_userstatemachine.pas"/>
-        <Line Value="528"/>
-      </Item3>
-      <Item4>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="Forms/form_throttle.pas"/>
-        <Line Value="710"/>
-      </Item4>
     </BreakPoints>
     <Watches Count="2">
       <Item1>
