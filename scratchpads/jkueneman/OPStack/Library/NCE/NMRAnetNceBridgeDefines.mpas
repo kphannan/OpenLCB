@@ -18,10 +18,7 @@
 unit NMRAnetNceBridgeDefines;
 
 uses
-  opstacknode,
-  opstackdefines,
-  template_node,
-  NMRAnetDefines;
+  template_node;
 
 const
   NCEBUS_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a NCE message
@@ -94,59 +91,31 @@ const
   NCE_CMD_CURSOR_OFF        = $CE;  // 206
 
 type
-  TNceBusDataArray = array[0..NCEBUS_MAX_DATA_BYTE-1] of Byte;
-  PNceBusDataArray = ^TNceBusDataArray;
+  TNceMessage = record
+    DataBytes: array[0..NCEBUS_MAX_DATA_BYTE] of Byte;
+    Count: Byte;                                      // Number of valid bytes in the array
+    Full: Boolean;                                    // True if the message is ready to be process
+    iRxStateMachine: Byte;                            // Statemachine for the UART RX input
+  end;
 
-  TNceBusMessage = record
-    Bytes: TNceBusDataArray;             // [RX, TX] The NceBus data that was recieved
-    DataCount: Byte;                     // [RX, TX] Number of Valid Data Bytes
-    MessageReadResult: Word;             // [RX] Error Message Result, see the E_SUCCESS, E_BUS_HUNG, E_WINDOW_TIMEOUT, etc constants
-    CabID,                               // [TX] The CabID is the address of the Device to communicate with, sent with the 9th bit address UART protocol, Call Byte = 0 then it is not sent (for sending to the PC)
-    StateMachineIndex,                   // [RX] The current state of the RX state machine that is run in UART RX interrupt
-    StateMachineIndexDataByte: Byte;     // [RX] The current TNceBusDataArray index the RX state machine is operating on that is run in UART RX interrupt
+  TNceCab = record
+    IncomingMsg: TNceMessage;
+    MissedPingCount: Byte;
   end;
-  PNceBusMessage = ^TNceBusMessage;
+  PNceCab = ^TNceCab;
 
- // Information about the Devices found on the NceBus bus
-  TDevice = record
-    State: Byte;                     // See XDS_NceBus_xxxxx Flags
-    MissedPingCount: Byte;           // Number of times the Device did not respond to a ping, determine if it is taken off line
-    Node: PNMRAnetNode;
+  // Array of User Data for all Nodes
+  TNceCabArray = array[0..USER_MAX_NODE_COUNT-1] of TNceCab;
+  
+  TNceBridge = record
+    Discovering: Boolean;
+    DiscoveryCount: Byte;
+    Watchdog: Byte;
   end;
-  PDevice = ^TDevice;
-  TDeviceList = array[ID_MIN_DEVICE..ID_MAX_DEVICE] of TDevice;  // Don't reserve a slot for device 0
-  
-type
-  TNceBusDeviceVolatileData = record
-    DeviceID: Word;
-  end;
-  PNceBusDeviceVolatileData = ^TNceBusDeviceVolatileData;
-  
-  TNceBusDeviceVolatileDataArray = array[0..USER_MAX_NODE_COUNT] of TNceBusDeviceVolatileData;
-  
 
-  // Buffer to hold the data as it comes in on the RS485 bus
-  TUARTReception = record
-    NceBusData: TNceBusMessage;           // Syncronous message recieved from the command station pinging the NceBus bus begin dispatched
-    ReplyCount: Byte;                     // Number of bytes returned after a ping
-  end;
-  
-type
-  TNceBusStateMachineInfo = record
-    DeviceList: TDeviceList;              // List of NceBus Devices (TDevice)
-    iState: Short;                        // Current State the StateMachine that the NCE bus is in
-    iStateUserCommand: Short;             // Current State of the Statemachine that processes the OLCB messages
-    Discovering: Boolean;                 // Discovering new Devices on the NceBus Bus
-    iActiveDevice: Byte;                  // The Device currently being communicated with
-    DiscoveryCount: Byte;                 // Counts (~525ms steps) between rediscovery intervals
-    WatchdogCount: Byte;                  // Counts (~525ms steps) before the NceBus Bus is declared hung, see NceBus_BUS_HUNG_COUNT
-    RS485: TUARTReception;                // Hold information about the UART reception on the NceBusBus
-  end;
-  PNceBusStateMachineInfo = ^TNceBusStateMachineInfo;
-  
 var
-  NceBusStateMachineInfo: TNceBusStateMachineInfo;
-  NceBusDeviceVolatileDataArray: TNceBusDeviceVolatileDataArray;
+  NceCabArray: TNceCabArray;
+  NceBridge: TNceBridge;
 
 implementation
 

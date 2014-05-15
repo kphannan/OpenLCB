@@ -15,7 +15,8 @@ uses
   opstackdefines,
   template_node,
   opstack_api,
-  nmranetutilities;
+  nmranetutilities,
+  NMRAnetNceBridgeDefines;
 
 procedure UserStateMachine_Initialize;
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
@@ -48,24 +49,9 @@ procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
-implementation
+function ExtractNceCab(Node: PNMRAnetNode): PNceCab;
 
-{$IFDEF FPC}
-  {$IFDEF SUPPORT_TRACTION and SUPPORT_TRACTION_PROXY}
-  uses
-    opstacknode,
-    opstackcore_traction,
-    opstackcore_traction_proxy;
-  {$ELSE}
-    {$IFDEF SUPPORT_TRACTION}
-    uses
-      opstackcore_traction;
-    {$ELSE}
-    uses
-      opstackcore_traction_proxy;
-    {$ENDIF}
-  {$ENDIF}
-{$ENDIF}
+implementation
 
 const
   STATE_USER_START = 0;
@@ -79,31 +65,10 @@ const
   STATE_USER_8     = 8;
   STATE_USER_9     = 9;
   STATE_USER_10    = 10;
-
-type
-  // User Data for a single node
-  TSampleUserNodeData = record
-    UserData1 : Word;
-    UserData2 : Byte;
-  end;
-  PSampleUserNodeData = ^TSampleUserNodeData;
-
-  // Array of User Data for all Nodes
-  TSampleUserDataArray = array[0..USER_MAX_NODE_COUNT-1] of TSampleUserNodeData;
-
+  
 var
-  UserDataArray: TSampleUserDataArray;
-
   ProxyNode: TNodeInfo;
   GlobalTimer: Word;
-
-
-procedure ClearProxyNode;
-begin
-  ProxyNode.AliasID := 0;
-  ProxyNode.ID[0] := 0;
-  ProxyNode.ID[1] := 0;
-end;
 
 // *****************************************************************************
 //  procedure ExtractUserData
@@ -112,9 +77,21 @@ end;
 //     Description : Nice helper function to type cast the user data generic pointer
 //                   to a pointer to the actual data type
 // *****************************************************************************
-function ExtractUserData(Node: PNMRAnetNode): PSampleUserNodeData;
+function ExtractNceCab(Node: PNMRAnetNode): PNceCab;
 begin
-  Result := PSampleUserNodeData( Node^.UserData)
+  Result := PNceCab( Node^.UserData)
+end;
+
+procedure ZeroizeNceCabData(CabData: PNceCab);
+var
+  i, j: Integer;
+begin
+  CabData^.MissedPingCount := 0;
+  CabData^.IncomingMsg.Count := 0;
+  CabData^.IncomingMsg.Full := False;
+  CabData^.IncomingMsg.iRxStateMachine := 0;
+  for j := 0 to NCEBUS_MAX_DATA_BYTE - 1 do
+    CabData^.IncomingMsg.DataBytes[j] := 0;
 end;
 
 // *****************************************************************************
@@ -126,16 +103,15 @@ end;
 // *****************************************************************************
 procedure UserStateMachine_Initialize;
 var
-  i: Integer;
+  i, j: Integer;
 begin
   // Initialize the example data!
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
-  begin
-    UserDataArray[i].UserData1 := 0;
-    UserDataArray[i].UserData2 := 0;
-  end;
-   // Initialize the example statemachine
-  ClearProxyNode;
+    ZeroizeNceCabData( @NceCabArray[i]);
+  ProxyNode.ID[0] := 0;
+  ProxyNode.ID[1] := 0;
+  ProxyNode.AliasID := 0;
+  GlobalTimer := 0;
 end;
 
 // *****************************************************************************
@@ -371,17 +347,13 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
-var
-  NodeData: PSampleUserNodeData;
 begin
   // Assign the user data record to the Node for future use
-  Node^.UserData := @UserDataArray[Node^.iIndex];
+  Node^.UserData := @NceCabArray[Node^.iIndex];
   Node^.iUserStateMachine := STATE_USER_START;
 
   // Initialize the example data, evertime the node is reused!
-  NodeData := ExtractUserData(Node);
-  NodeData^.UserData1 := 0;
-  NodeData^.UserData2 := 0;
+  ZeroizeNceCabData(ExtractNceCab(Node))
 end;
 
 {$IFDEF SUPPORT_TRACTION}

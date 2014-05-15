@@ -58,17 +58,20 @@ end;
 procedure INTERRUPT_NceBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
 var
   a: word;
+  NceCab: PNceCab;
 begin
   U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
   
- // UART1_Write_Text('RX');
-  
-  while (URXDA_U2STA_bit = 1) and (NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex < STATE_RS485_FULL)  do
+  if ActiveNode <> nil then
   begin
-    a := U2RXREG;
-    WordToStr(a, s1);
-    UART1_Write_Text(s1 + #13);
-    NceBusStateMachine_UART_RX_StateMachine(@NceBusStateMachineInfo, a);
+    NceCab := ExtractNceCab(ActiveNode);
+    while (URXDA_U2STA_bit = 1) and (not NceCab^.IncomingMsg.Full) do
+    begin
+      a := U2RXREG;
+      WordToStr(a, s1);
+      UART1_Write_Text(s1 + #13);
+      NceBusStateMachine_UART_RX_StateMachine(NceCab, a);
+    end
   end
 end;
 

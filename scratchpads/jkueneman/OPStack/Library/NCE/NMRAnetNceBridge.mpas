@@ -31,10 +31,8 @@ uses
 procedure NceBusStateMachine_Process(NodeBuffer: PNMRAnetNode);
 procedure NceBusStateMachine_ProcessNextUserCommand(Node: PNMRAnetNode);
 procedure NceBusStateMachine_Initialize;
-procedure NceBusStateMachine_UART_RX_StateMachine(NceBusBuffer: PNceBusStateMachineInfo; ReceivedByte: Byte);
+procedure NceBusStateMachine_UART_RX_StateMachine(NceCab: PNceCab; ReceivedByte: Byte);
 procedure NceBusStateMachine_525ms_TimeTick;
-
-function NceBusStateMachine_GetDeviceData(Node: PNMRAnetNode): PNceBusDeviceVolatileData;
 
 function NceKeyPressToString(KeyPress: Byte): string[$FFFF];
 
@@ -56,25 +54,9 @@ var
 begin
   NceBus_RS485_Select := 0;                // Default in Receive
   NceBus_RS485_Select_Direction := 0;      // Output
-  NceBusStateMachineInfo.iState := STATE_BUILD_INITIAL_CABS;
-  NceBusStateMachineInfo.iStateUserCommand := STATE_WAIT_FOR_USER_MESSAGE;
-  NceBusStateMachineInfo.Discovering := False;
-  NceBusStateMachineInfo.iActiveDevice := 0;
-  NceBusStateMachineInfo.DiscoveryCount := 0;
-  NceBusStateMachineInfo.WatchdogCount := 0;
-
-  // Device ID Initialization
-  for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
-  begin
-    NceBusStateMachineInfo.DeviceList[i].State := DS_NceBus_DEVICE_INACTIVE;
-    NceBusStateMachineInfo.DeviceList[i].Node := nil;
-    NceBusStateMachineInfo.DeviceList[i].MissedPingCount := 0;
-  end;
-  
-  for i := 0 to USER_MAX_NODE_COUNT - 1 do
-  begin
-    NceBusDeviceVolatileDataArray[i].DeviceID := 0;
-  end
+  NceBridge.Discovering := False;
+  NceBridge.DiscoveryCount := 0;
+  NceBridge.Watchdog := 0;
 end;
 
 function NceKeyPressToString(KeyPress: Byte): string[$FFFF];
@@ -107,11 +89,6 @@ begin
   else
     Result := 'Unknown Command';
   end;
-end;
-
-function NceBusStateMachine_GetDeviceData(Node: PNMRAnetNode): PNceBusDeviceVolatileData;
-begin
-  Result := @NceBusDeviceVolatileDataArray[Node^.iIndex]
 end;
 
 // ****************************************************************************
@@ -418,7 +395,7 @@ end;
 //            NceBus_UART_RX_Interrupt so make sure anything done is "ThreadSafe"
 //
 // *****************************************************************************
-procedure NceBusStateMachine_UART_RX_StateMachine(NceBusBuffer: PNceBusStateMachineInfo; ReceivedByte: Byte);
+procedure NceBusStateMachine_UART_RX_StateMachine(NceCab: PNceCab; ReceivedByte: Byte);
 var
   Error: Byte;
   i: Integer;
