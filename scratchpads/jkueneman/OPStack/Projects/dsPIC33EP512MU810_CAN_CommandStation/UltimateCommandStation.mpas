@@ -146,8 +146,10 @@ begin
   MCU_EnableDCCTimer;
   OPStackCore_Enable(True);
   
+  UART1_Write_Text('Booting');
+  
   delay_ms(100);
-  OPStackNode_Allocate;        // Allocate the first Train Node
+//  OPStackNode_Allocate;        // Allocate the first Train Node
   
   while True do
   begin

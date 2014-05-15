@@ -529,21 +529,35 @@ end;
 
 procedure TFormOlcbTrainMaster.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  SynMemoLog.BeginUpdate;
-  try
-    SynMemoLog.Lines.Add(MessageStr);
-  finally
-    SynMemoLog.EndUpdate;
+  if not Paused then
+  begin
+    SynMemoLog.BeginUpdate();
+     try
+       if ActionDetailedLogging.Checked then
+         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
+       else
+         SynMemoLog.Lines.Add(MessageStr);
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
   end;
 end;
 
 procedure TFormOlcbTrainMaster.ComPortSendLogging(Sender: TObject; MessageStr: String);
 begin
-  SynMemoLog.BeginUpdate;
-  try
-    SynMemoLog.Lines.Add(MessageStr);
-  finally
-    SynMemoLog.EndUpdate;
+  if not Paused then
+  begin
+    SynMemoLog.BeginUpdate();
+     try
+       if ActionDetailedLogging.Checked then
+         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
+       else
+         SynMemoLog.Lines.Add(MessageStr);
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
   end;
 end;
 

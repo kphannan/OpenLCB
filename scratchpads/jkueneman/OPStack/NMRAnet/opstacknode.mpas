@@ -8,12 +8,12 @@ interface
 
 uses
   template_hardware,
-  template_node,
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
   {$ENDIF}
   nmranetutilities,
   opstackdefines,
+  template_node,
   template_userstatemachine;
 
 {$I NodeID.inc}

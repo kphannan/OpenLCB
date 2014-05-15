@@ -62,10 +62,6 @@ begin
   NceBusStateMachineInfo.iActiveDevice := 0;
   NceBusStateMachineInfo.DiscoveryCount := 0;
   NceBusStateMachineInfo.WatchdogCount := 0;
-  NceBusStateMachineInfo.PingPong.iProcessing := -1;
-  NceBusStateMachineInfo.PingPong.BufferArray[0].Full := False;
-  NceBusStateMachineInfo.PingPong.BufferArray[0].Full := False;
-  NceBusStateMachineInfo.PingPong.BufferArray[1].Full := False;
 
   // Device ID Initialization
   for i := ID_MIN_DEVICE to ID_MAX_DEVICE do
@@ -200,7 +196,7 @@ begin
   while (URXDA_U2STA_bit = 1) do Temp := U2RXREG;                                                         // Flush the RX Buffer
   U2RXIF_Bit := 0;                                                                                        // Clear the interrupt flag to receive the next byte
   NceBusStateMachineInfo.RS485.NceBusData.StateMachineIndex := STATE_RS485_READ_CAB_KEY_PRESS;        // Reset the RS485 RX statemachine
-  NceBusStateMachineInfo.RS485.Done := False;
+  NceBusStateMachineInfo.RS485.ReplyCount := 0;
 end;
 
 procedure SendInquiryMessage(Device: Byte);
@@ -234,9 +230,7 @@ begin
   // device ID is queried and it is reset
   if NceBusStateMachineInfo.WatchdogCount < NCEBUS_BUS_HUNG_COUNT then
     Inc(NceBusStateMachineInfo.WatchdogCount);
-  
-  if NceBusStateMachineInfo.PingPong.WatchdogCount < NCEBUS_OLCB_BUS_TIMEOUT then
-    Inc(NceBusStateMachineInfo.PingPong.WatchdogCount)
+
 end;
 
 // *****************************************************************************
@@ -372,7 +366,7 @@ var
   NodeData: PNceBusDeviceVolatileData;
   Node: PNMRAnetNode;
 begin
-  if (U2STA.RIDLE = 0) or (U2STA.URXDA = 1) or (NceBusStateMachineInfo.RS485.Done)  then  // Did we detect a Device starting to transmit on the UART?
+  if (U2STA.RIDLE = 0) or (U2STA.URXDA = 1) or (NceBusStateMachineInfo.RS485.ReplyCount > 0)  then  // Did we detect a Device starting to transmit on the UART?
   begin
     if Device^.Node = nil then                                                  // Does the Device have a Node assigned to it?
     begin
@@ -429,6 +423,11 @@ var
   Error: Byte;
   i: Integer;
 begin
+  Inc(NceBusBuffer^.RS485.ReplyCount);  // Should only have 2
+  
+  if NceBusBuffer^.RS485.NceBusData.Bytes[0] = NCE_NO_KEY_TO_REPORT then Exit;
+  if NceBusBuffer^.RS485.NceBusData.Bytes[0] = NCE_NO_SPEED_TO_REPORT then Exit;
+
   case NceBusBuffer^.RS485.NceBusData.StateMachineIndex of
     STATE_RS485_READ_CAB_KEY_PRESS :
       begin
@@ -499,9 +498,7 @@ begin
     case NceBusStateMachineInfo.iStateUserCommand of
       STATE_WAIT_FOR_USER_MESSAGE :
         begin
-          if NceBusStateMachineInfo.PingPong.iProcessing > -1 then
-          begin
-          end;
+
         end;
     end;
   end
@@ -529,7 +526,7 @@ var
   NodeData: PNceBusDeviceVolatileData;
 begin
   if Node = nil then Exit;
-  
+
   if OPStackNode_TestState(Node, NS_PERMITTED) then
   begin
     case NceBusStateMachineInfo.iState of
@@ -592,7 +589,7 @@ begin
           {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_WAITFORDEVICEMESSAGE'+LF);{$ENDIF}
           if NceBusStateMachineInfo.RS485.Done then
             NceBusStateMachineInfo.iState := STATE_HANDLEMESSAGE;
-          if NceBusStateMachineInfo.WatchdogCount > NCEBUS_BUS_HUNG_COUNT then
+          if NceBusStateMachineInfo.WatchdogCount >= NCEBUS_BUS_HUNG_COUNT then
             NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE;
         end;
       STATE_HANDLEMESSAGE :
@@ -600,7 +597,7 @@ begin
           {$IFDEF DEBUG_MAIN_STATEMACHINE} UART1_Write_Text('STATE_HANDLEMESSAGE'+LF);{$ENDIF}
           Device := @NceBusStateMachineInfo.DeviceList[NceBusStateMachineInfo.iActiveDevice];
           NceBus_HandleDeviceInstruction( @NceBusStateMachineInfo.RS485.NceBusData, NceBusStateMachineInfo.iActiveDevice);
-          NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE
+          NceBusStateMachineInfo.iState := STATE_TESTFORDISCOVERYMODE;
         end;
       STATE_TESTFORDISCOVERYMODE :
         begin
@@ -647,23 +644,6 @@ var
   i: Integer;
   Node: PNMRAnetNode;
 begin
-
-    {      case NceBusStateMachineInfo.PingPong.Index of
-            -1 : begin
-                   NceBusStateMachineInfo.PingPong.Buffer[0] := NceBusStateMachineInfo.RS485.NceBusData;
-                   NceBusStateMachineInfo.PingPong.ActiveDevice[0] := NceBusStateMachineInfo.iActiveDevice;
-                   NceBusStateMachineInfo.PingPong.Index := 0;
-                 end;
-             0 : begin  // if working on index 1 then keep index 2 up to date with the latest changes the user entered
-                   NceBusStateMachineInfo.PingPong.Buffer[1] := NceBusStateMachineInfo.RS485.NceBusData;
-                   NceBusStateMachineInfo.PingPong.ActiveDevice[1] := NceBusStateMachineInfo.iActiveDevice;
-                 end;
-             1 : begin  // if working on index 1 then keep index 2 up to date with the latest changes the user entered
-                   NceBusStateMachineInfo.PingPong.Buffer[0] := NceBusStateMachineInfo.RS485.NceBusData;
-                   NceBusStateMachineInfo.PingPong.ActiveDevice[0] := NceBusStateMachineInfo.iActiveDevice;
-                 end;
-          end;
- }
   Node := NceBusStateMachineInfo.DeviceList[iDevice].Node;
   if Node <> nil then
   begin

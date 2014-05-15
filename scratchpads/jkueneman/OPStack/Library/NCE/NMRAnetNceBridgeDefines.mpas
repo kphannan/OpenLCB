@@ -53,7 +53,7 @@ const
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
   NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
 
-  NCEBUS_BUS_HUNG_COUNT = 2;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
+  NCEBUS_BUS_HUNG_COUNT = 3;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
   REDISCOVERY_TIME         = 4;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
   NCEBUS_OLCB_BUS_TIMEOUT = 6;   // how long to count before giving up on a OLCB reply (~525ms steps)
   
@@ -128,19 +128,7 @@ type
   // Buffer to hold the data as it comes in on the RS485 bus
   TUARTReception = record
     NceBusData: TNceBusMessage;           // Syncronous message recieved from the command station pinging the NceBus bus begin dispatched
-    Done: Boolean;                        // True when the reception is complete
-  end;
-  
-  TNceBusMessagePingPongBufferRec = record
-    Msg: TNceBusMessage;
-    Device: Word;
-    Full: Boolean;
-  end;
-  
-  TNceBusMessagePingPongBuffer = record
-    BufferArray: array[0..1] of TNceBusMessagePingPongBufferRec;
-    iProcessing: Integer;                                                       // points to the buffer index that is being serviced by the OLCB bus (-1 of the buffer is empty)
-    WatchdogCount: Byte;                                                        // Counts (~525ms steps) before the Olcb reply is declared timed out, see NceBus_OLCB_BUS_TIMEOUT
+    ReplyCount: Byte;                     // Number of bytes returned after a ping
   end;
   
 type
@@ -152,7 +140,6 @@ type
     iActiveDevice: Byte;                  // The Device currently being communicated with
     DiscoveryCount: Byte;                 // Counts (~525ms steps) between rediscovery intervals
     WatchdogCount: Byte;                  // Counts (~525ms steps) before the NceBus Bus is declared hung, see NceBus_BUS_HUNG_COUNT
-    PingPong: TNceBusMessagePingPongBuffer; // Info for messages that require querying information from the OLCB bus
     RS485: TUARTReception;                // Hold information about the UART reception on the NceBusBus
   end;
   PNceBusStateMachineInfo = ^TNceBusStateMachineInfo;

@@ -9,21 +9,11 @@ interface
 {$I Options.inc}
 
 uses
-  {$IFDEF FPC}
-  Classes,
-  SysUtils,
-  FileUtil,
-  ethernet_hub,
-  olcb_transport_layer,
-  template_hardware,
-  olcb_defines,
- // LCLIntf,
- // LCLType,
-  {$ENDIF}
   Float16,
   opstacktypes,
   opstackdefines,
   template_node,
+  nmranetdefines,
   opstack_api,
   nmranetutilities;
 
@@ -66,6 +56,7 @@ procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
   function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode; external;
   procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
   procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
+  function OPStackNode_FindByTrainID(TrainID: Word): PNMRANetNode; external;
 {$ENDIF}
 
 implementation
@@ -88,45 +79,18 @@ implementation
 {$ENDIF}
 
 const
-  STATE_USER_START = 0;
-  STATE_USER_1     = 1;
-  STATE_USER_2     = 2;
-  STATE_USER_3     = 3;
-  STATE_USER_4     = 4;
-  STATE_USER_5     = 5;
-  STATE_USER_6     = 6;
-  STATE_USER_7     = 7;
-  STATE_USER_8     = 8;
-  STATE_USER_9     = 9;
-  STATE_USER_10    = 10;
+// Physical Proxy Node User StateMachine
+  STATE_PROXY_USER_START           = 0;
+  STATE_PROXY_IDLE                 = 1;
 
-type
-  // User Data for a single node
-  TSampleUserNodeData = record
-    UserData1 : Word;
-    UserData2 : Byte;
-  end;
-  PSampleUserNodeData = ^TSampleUserNodeData;
+// Virtual Train Node User StateMachine
+  STATE_TRAIN_USER_START           = 0;
+  STATE_TRAIN_ALLOCATE_PROXY_REPLY = 1;
+  STATE_TRAIN_IDLE                 = 2;
 
-  // Array of User Data for all Nodes
-  TSampleUserDataArray = array[0..USER_MAX_NODE_COUNT-1] of TSampleUserNodeData;
 
 var
-  UserDataArray: TSampleUserDataArray;
-
-  GlobalTimer: Word;
-
-// *****************************************************************************
-//  procedure ExtractUserData
-//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
-//     Returns     : Pointer to the defined User Data type
-//     Description : Nice helper function to type cast the user data generic pointer
-//                   to a pointer to the actual data type
-// *****************************************************************************
-function ExtractUserData(Node: PNMRAnetNode): PSampleUserNodeData;
-begin
-  Result := PSampleUserNodeData( Node^.UserData)
-end;
+ GlobalTimer: Word;
 
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize
@@ -136,17 +100,8 @@ end;
 //                   variables, etc
 // *****************************************************************************
 procedure UserStateMachine_Initialize;
-var
-  i: Integer;
 begin
-  // Initialize the example data!
-  for i := 0 to USER_MAX_NODE_COUNT - 1 do
-  begin
-    UserDataArray[i].UserData1 := 0;
-    UserDataArray[i].UserData2 := 0;
-  end;
-   // Initialize the example statemachine
-
+  // Initialize the example statemachine
 end;
 
 // *****************************************************************************
@@ -156,127 +111,41 @@ end;
 //     Description : Called as often as possible to run the user statemachine
 // *****************************************************************************
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
-var
-  TempNode: PNMRAnetNode;
-  i, j: Integer;
-begin  {
+begin
   if Node = GetPhysicalNode then
   begin
+    // Proxy Node User StateMachine
     case Node^.iUserStateMachine of
-        STATE_USER_START :
+      STATE_PROXY_USER_START :
             begin
-              // Now the Physical node can be a Throttle Node Server
-              EnterCriticalSection(OPStackCriticalSection);
-              // Only do something if the number of links has changed
-              if Sync.DatabaseChanged then
-              begin
-                for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
-                begin
-                  if Sync.Link[i].SyncState and SYNC_REPLY_ALLOC_NODE <> 0 then
-                  begin
-                    if Sync.Link[i].Node.Info.AliasID = 0 then
-                    begin // Logging in
-                      Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_REPLY_ALLOC_NODE;
-                      TempNode := OPStackNode_Allocate;
-                      Sync.Link[i].Node.Index := TempNode^.iIndex;
-                      // Now need to wait for it to log in from with in the virtual nodes statemachine, we are done here
-                    end else
-                    if Sync.Link[i].SyncState and SYNC_REPLY_DEALLOC_NODE <> 0 then
-                    begin
-                      if Sync.Link[i].Node.Index > 0 then   // Don't deallocate the physical node if we messed up!
-                      begin
-                        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_REPLY_DEALLOC_NODE;
-                        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_OBJPTR;
-                        OPStackNode_MarkForRelease(@NodePool.Pool[Sync.Link[i].Node.Index]);
-                        for j := i to (Sync.NextLink - 1) do
-                          Sync.Link[j] := Sync.Link[j+1];
-                        Dec(Sync.NextLink);
-                        ZeroLinkRec(@Sync.Link[Sync.NextLink]);
-                      end;
-                    end
-                  end;
-                end;
-                Sync.DatabaseChanged := False;
-              end;
-              LeaveCriticalSection(OPStackCriticalSection);
+              if Node^.State and NS_PERMITTED then
+                Node^.iUserStateMachine := STATE_PROXY_IDLE
             end;
-        STATE_USER_1 :
-            begin
-
-            end;
-        STATE_USER_2 :
-            begin
-
-            end
+      STATE_PROXY_IDLE :
+          begin
+            // Waiting for something to do
+          end;
     end;
   end else
   begin
-    // Throttle Node (Virtaul Node)
+    // Train Node User StateMachine
     case Node^.iUserStateMachine of
-        STATE_USER_START :
+      STATE_TRAIN_USER_START :
             begin
-              EnterCriticalSection(OPStackCriticalSection);
-              // Don't do anything until it is initialized
-              if Node^.State and NS_PERMITTED <> 0 then
-              begin
-                Link := FindLinkByPoolIndex(Node^.iIndex);
-                Link^.SyncState := SYNC_NODE_INFO;
-                Link^.Node.Info := Node^.Info;
-                Node^.iUserStateMachine := STATE_USER_1;
-                Node^.TrainData.Address := Link^.TrainState.Address;
-                Node^.TrainData.SpeedSteps := Link^.TrainState.SpeedSteps;
-              end;
-              LeaveCriticalSection(OPStackCriticalSection);
+              if Node^.State and NS_PERMITTED then
+                Node^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY
             end;
-        STATE_USER_1 :
-            begin
-              EnterCriticalSection(OPStackCriticalSection);
-              Link := FindLinkByNodeAlias(Node);
-              if Link <> nil then                     // May not be found if the node is being freed
-              begin
-                if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Link^.ReplyNode, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Link^.TrainState.Address) then
-                  Node^.iUserStateMachine := STATE_USER_2;
-              end;
-              LeaveCriticalSection(OPStackCriticalSection);
-            end;
-        STATE_USER_2 :
-            begin
-
-            end;
-        STATE_USER_3  :
-        begin
-
-        end;
-        STATE_USER_4  :
-            begin
-
-            end;
-        STATE_USER_5  :
-            begin
-
-            end;
-        STATE_USER_6  :
-            begin
-
-            end;
-        STATE_USER_7  :
-            begin
-
-            end;
-        STATE_USER_8  :
-            begin
-
-            end;
-        STATE_USER_9   :
-            begin
-
-            end;
-        STATE_USER_10  :
-            begin
-
-            end
-    end
-  end       }
+      STATE_TRAIN_ALLOCATE_PROXY_REPLY :
+          begin
+            if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Node^.TrainData.NotifyController, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Node^.TrainData.Address) then
+              Node^.iUserStateMachine := STATE_TRAIN_IDLE;
+          end;
+      STATE_TRAIN_IDLE :
+          begin
+            // Waiting for something to do
+          end;
+     end
+  end
 end;
 
 // *****************************************************************************
@@ -289,17 +158,8 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
-var
-  NodeData: PSampleUserNodeData;
 begin
-  // Assign the user data record to the Node for future use
-  Node^.UserData := @UserDataArray[Node^.iIndex];
-  Node^.iUserStateMachine := STATE_USER_START;
-
-  // Initialize the example data, evertime the node is reused!
-  NodeData := ExtractUserData(Node);
-  NodeData^.UserData1 := 0;
-  NodeData^.UserData2 := 0;
+  Node^.iUserStateMachine := STATE_PROXY_USER_START;
 end;
 
 {$IFDEF SUPPORT_TRACTION}
@@ -334,52 +194,21 @@ end;
 //                   release the Requesting message then send the reply to this message at a later time
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
-begin        {
-  EnterCriticalsection(OPStackCriticalSection);
-  Link := FindLinkByNodeAlias(Node);
-  if Link <> nil then
-  begin
-    case AMessage^.Buffer^.DataArray[0] of
-        TRACTION_CONTROLLER_CONFIG :
-            begin
-              case AMessage^.Buffer^.DataArray[1] of
-                  TRACTION_CONTROLLER_CONFIG_ASSIGN :
-                      begin
-                        Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
-                        Link^.Controller := Node^.TrainData.Controller;
-                      end;
-                  TRACTION_CONSIST_DETACH :
-                      begin
-                        Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
-                        Link^.Controller.AliasID := 0;
-                        Link^.Controller.ID[0] := 0;
-                        Link^.Controller.ID[1] := 0;
-                        Link^.ReplyNode.AliasID := 0;
-                        Link^.ReplyNode.ID[0] := 0;
-                        LInk^.ReplyNode.ID[1] := 0;
-                      end;
-              end
-            end;
-        TRACTION_SPEED_DIR :
-            begin
-              Link^.SyncState := Link^.SyncState or SYNC_STATE_SPEED_DIR;
-              Link^.TrainState.SpeedDir := Node^.TrainData.SpeedDir;
-            end;
-        TRACTION_FUNCTION :
-            begin
-              Link^.SyncState := Link^.SyncState or SYNC_STATE_FUNCTIONS;
-              Link^.TrainState.Functions := Node^.TrainData.Functions;
-            end;
-        TRACTION_E_STOP :
-            begin
-              Link^.SyncState := Link^.SyncState or SYNC_STATE_SPEED_DIR;
-              Link^.TrainState.SpeedDir := Node^.TrainData.SpeedDir;
+begin
+  case AMessage^.Buffer^.DataArray[0] of
+      TRACTION_CONTROLLER_CONFIG :
+          begin
+            case AMessage^.Buffer^.DataArray[1] of
+                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin Exit; end;
+                TRACTION_CONSIST_DETACH           : begin Exit; end;
             end
-    else begin
-      end;
+          end;
+      TRACTION_SPEED_DIR : begin Exit; end;
+      TRACTION_FUNCTION  : begin Exit; end;
+      TRACTION_E_STOP    : begin Exit; end
+  else begin
     end;
   end;
-  LeaveCriticalSection(OPStackCriticalSection);  }
 end;
 
 // *****************************************************************************
@@ -412,43 +241,33 @@ var
   i: Integer;
 //  Link: PLinkRec;
   TrainID: Word;
-  ANode: PNMRAnetNode;
+  TrainNode: PNMRAnetNode;
 begin
- { EnterCriticalsection(OPStackCriticalSection);
-  // Only the top node is the Proxy that replies to this
+  // Only the main physical node is the proxy and can reply to these messages
   if Node = GetPhysicalNode then
   begin
-    if AMessage^.Buffer^.DataArray[0] = TRACTION_PROXY_ALLOCATE then
-    begin
-      TrainID := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
-      ANode := OPStackNode_FindByTrainID(TrainID);           // this is how to do it in the micro...
-
-      if Assigned(ANode) then
-      begin
-        Link := FindLinkByTrainID(TrainID);
-        if Assigned(Link) then
-        begin
-          ANode^.iUserStateMachine := STATE_USER_START;
-        end;
-      end else
-      begin
-        Link := @Sync.Link[Sync.NextLink];
-        Link^.SyncState := SYNC_REPLY_ALLOC_NODE;
-        Inc(Sync.NextLink);
-      end;
-      if Assigned(Link) then
-      begin
-        Link^.ReplyNode.AliasID := AMessage^.Source.AliasID;
-        Link^.ReplyNode.ID[0] := AMessage^.Source.ID[0];
-        Link^.ReplyNode.ID[1] := AMessage^.Source.ID[1];
-        Link^.TrainState.Address := TrainID;
-        Link^.TrainState.SpeedSteps := AMessage^.Buffer^.DataArray[4];
-        Sync.DatabaseChanged := True;
-      end;
-      // Run the reply statemachine on the physical node will create a new Train Node eventually
-    end;
+    case AMessage^.Buffer^.DataArray[0] of
+        TRACTION_PROXY_ALLOCATE :
+          begin
+            TrainID := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
+            TrainNode := OPStackNode_FindByTrainID(TrainID);
+            if TrainNode <> nil then
+              TrainNode^.iUserStateMachine := STATE_TRAIN_USER_START                  // Node with this address exists, use it
+            else
+              TrainNode := OPStackNode_Allocate;
+            if TrainNode <> nil then
+            begin 
+              // This node will now start and log in, then we need to reply to the Allocate Message
+              TrainNode^.TrainData.Address := TrainID;
+              if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_TECH_ID_DCC then
+                TrainNode^.TrainData.SpeedSteps := AMessage^.Buffer^.DataArray[4];
+              TrainNode^.TrainData.NotifyController.ID[0] := AMessage^.Source.ID[0];
+              TrainNode^.TrainData.NotifyController.ID[1] := AMessage^.Source.ID[1];
+              TrainNode^.TrainData.NotifyController.AliasID := AMessage^.Source.AliasID;
+            end;
+          end;
+    end
   end;
-  LeaveCriticalSection(OPStackCriticalSection);     }
 end;
 
 // *****************************************************************************

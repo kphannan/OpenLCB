@@ -53,7 +53,9 @@
       <Unit2>
         <Filename Value="Forms\form_throttle_multiple_trains.pas"/>
         <IsPartOfProject Value="True"/>
+        <ComponentName Value="FormMulitipleTrains"/>
         <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle_multiple_trains"/>
       </Unit2>
       <Unit3>
