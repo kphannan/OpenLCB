@@ -50,21 +50,32 @@ procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
 function ExtractNceCab(Node: PNMRAnetNode): PNceCab;
+procedure CabBus_Timeout;
+
+
+function OPStackNode_Allocate: PNMRAnetNode; external;
+
+var
+  CabBus_RS485_Select              : sbit; sfr; external;
+  CabBus_RS485_Select_Direction    : sbit; sfr; external;
 
 implementation
 
 const
-  STATE_USER_START = 0;
-  STATE_USER_1     = 1;
-  STATE_USER_2     = 2;
-  STATE_USER_3     = 3;
-  STATE_USER_4     = 4;
-  STATE_USER_5     = 5;
-  STATE_USER_6     = 6;
-  STATE_USER_7     = 7;
-  STATE_USER_8     = 8;
-  STATE_USER_9     = 9;
-  STATE_USER_10    = 10;
+  STATE_USER_START              = 0;
+  STATE_FIND_PROXY              = 1;
+  STATE_CREATE_REQUIRED_CABS    = 2;
+  STATE_DISCOVERDEVICES         = 3;
+  STATE_KNOWNDEVICES            = 4;
+  
+  STATE_DISCOVER_INITIALIZE           = 0;
+  STATE_DISCOVER_SEND_SYNC            = 1;
+  STATE_DISCOVER_WAIT_SYNC_DELAY      = 2;
+  STATE_DISCOVER_SEND_PING            = 3;
+  STATE_DISCOVER_WAIT_FOR_RESPONSE    = 4;
+  STATE_DISCOVER_TIMEOUT              = 5;
+  STATE_DISCOVER_CAB_REPLIED          = 6;
+  STATE_DISCOVER_NEXT_CAB             = 7;
   
 var
   ProxyNode: TNodeInfo;
@@ -82,17 +93,124 @@ begin
   Result := PNceCab( Node^.UserData)
 end;
 
+// ****************************************************************************
+// *****************************************************************************
+procedure WriteUARTByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word; Wait: Boolean);
+begin
+  TxReg^ := DataByte;
+  StatusReg^.UTXEN := 1;          // Force the Register in to the TSR so the Idle check is not "too fast" to start
+  if Wait then
+  begin
+    while StatusReg^.TRMT = 1 do;   // Wait for the UART to start transmitting
+    while StatusReg^.TRMT = 0 do;   // Wait for the UART to finsh transmitting to make sure the ENceBus timing is met
+  end
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure WriteByte(DataByte: Byte; Wait: Boolean);
+begin
+  CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
+  WriteUARTByte(DataByte, @U2TXREG, @U2STA, Wait);
+  CabBus_RS485_Select := 0;      // Select the 485 chip to receive mode
+end;
+
+// ****************************************************************************
+// *****************************************************************************
 procedure ZeroizeNceCabData(CabData: PNceCab);
 var
   i, j: Integer;
 begin
+  CabData^.State := 0;
   CabData^.MissedPingCount := 0;
   CabData^.IncomingMsg.Count := 0;
   CabData^.IncomingMsg.Full := False;
-  CabData^.IncomingMsg.iRxStateMachine := 0;
+  CabData^.ID := 0;
   for j := 0 to NCEBUS_MAX_DATA_BYTE - 1 do
     CabData^.IncomingMsg.DataBytes[j] := 0;
 end;
+
+// *****************************************************************************
+// *****************************************************************************
+function Cab_Allocate: PNceCab;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := 0;
+  while i < USER_MAX_NODE_COUNT do
+  begin
+    if NceCabArray[i].State and CS_ALLOCATED = 0 then
+    begin
+      Result := @NceCabArray[i];
+      ZeroizeNceCabData(Result);
+      NceCabArray[i].State := NceCabArray[i].State or CS_ALLOCATED;
+      Exit;
+    end;
+    Inc(i)
+  end
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+procedure Cab_Free(CabData: PNceCab);
+begin
+  if CabData <> nil then
+    CabData^.State := CabData^.State and not CS_ALLOCATED
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+function CreateCab(AnID: Word): PNMRAnetNode;
+var
+  CabData: PNceCab;
+begin
+  Result := nil;
+  CabData := Cab_Allocate;
+  if CabData <> nil then
+  begin
+    Result := OPStackNode_Allocate;
+    if Result <> nil then
+    begin
+      Result^.UserData := CabData;
+      CabData^.ID := AnID;
+      if AnID > 1 then
+        CabData^.State := CabData^.State or CS_DEVICE_ACTIVE and not CS_DEVICE_INACTIVE  // Set the Device Active
+      else
+        CabData^.State := CabData^.State or CS_DEVICE_INACTIVE and not CS_DEVICE_ACTIVE;  // Set the Device Active
+    end else
+      Cab_Free(CabData)
+  end
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure FlushUartReceiver;
+var
+  Temp: Word;
+begin
+  while (URXDA_U2STA_bit = 1) do Temp := U2RXREG;             // Flush the RX Buffer
+  U2RXIF_Bit := 0;                                            // Reset the hardware RX statemachine
+end;
+
+procedure EnableCabBusTimer(Time: Word);
+begin       
+  TON_T4CON_bit := 0;      // Turn off
+  T4IE_bit := 0;           // Disable the Interrupt
+  T4IF_bit := 0;           // Clear T1IF
+  T4IE_bit := 1;           // Enable the Interrupt
+  PR4 := Time;             //
+  TMR4 := 0;
+  TON_T4CON_bit := 1;      // Turn on
+end;
+
+procedure DisableCabBusTimer;
+begin
+  TON_T4CON_bit := 0;      // Turn off
+  T4IE_bit := 0;           // Disable the Interrupt
+  TON_T4CON_bit := 0;      // Turn on
+end;
+
 
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize
@@ -105,13 +223,102 @@ procedure UserStateMachine_Initialize;
 var
   i, j: Integer;
 begin
-  // Initialize the example data!
+  CabBus_RS485_Select := 0;                // Default in Receive
+  CabBus_RS485_Select_Direction := 0;      // Output
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
     ZeroizeNceCabData( @NceCabArray[i]);
+  NceBridge.Discovering := False;
+  NceBridge.iDiscoveryCabID := ID_MIN_DEVICE;
+  NceBridge.iStateMachine := STATE_USER_START;
+  NceBridge.DiscoverTimer := 0;
   ProxyNode.ID[0] := 0;
   ProxyNode.ID[1] := 0;
   ProxyNode.AliasID := 0;
   GlobalTimer := 0;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+procedure CabBus_Timeout;
+begin
+  // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
+  DisableCabBusTimer;
+  case NceBridge.iStateMachine of
+    STATE_DISCOVER_WAIT_SYNC_DELAY   : NceBridge.iStateMachine := STATE_DISCOVER_SEND_PING;
+    STATE_DISCOVER_WAIT_FOR_RESPONSE : NceBridge.iStateMachine := STATE_DISCOVER_TIMEOUT;
+  end;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+procedure DiscoverDevices_Process(Node: PNMRAnetNode);
+var
+  Cab: PNceCab;
+begin
+  case NceBridge.iStateMachine of
+    STATE_DISCOVER_INITIALIZE :
+        begin
+          NceBridge.iDiscoveryCabID := ID_MIN_DEVICE;
+          NceBridge.iStateMachine := STATE_DISCOVER_SEND_SYNC;
+        end;
+    STATE_DISCOVER_SEND_SYNC :
+        begin
+          FlushUartReceiver;
+          WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
+          EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors                                      //
+          NceBridge.iStateMachine := STATE_DISCOVER_WAIT_SYNC_DELAY;
+        end;
+    STATE_DISCOVER_WAIT_SYNC_DELAY :
+        begin  // Waiting for the Timer to Expire and jump us to the next state
+        end;
+    STATE_DISCOVER_SEND_PING :
+        begin  // The node replied and
+          FlushUartReceiver;
+          WriteByte(NCEBUS_PING or NceBridge.iDiscoveryCabID, True);        // Ping the Cab ID
+          EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us
+          NceBridge.iStateMachine := STATE_DISCOVER_WAIT_FOR_RESPONSE;
+        end;
+    STATE_DISCOVER_WAIT_FOR_RESPONSE :
+        begin   // Waiting for the Timer to expire or we detect a reply....
+          // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
+        end;
+    STATE_DISCOVER_TIMEOUT :
+        begin
+          Cab := PNceCab( Node^.UserData);
+          Inc( Cab^.MissedPingCount);
+          if Cab^.MissedPingCount > 5 then
+          begin
+            // Take this cab off line? Likely no since the cab is not required to reply for NCE
+          end;
+          NceBridge.iStateMachine := STATE_DISCOVER_NEXT_CAB
+        end;
+    STATE_DISCOVER_CAB_REPLIED :
+        begin
+        end;
+    STATE_DISCOVER_NEXT_CAB :
+        begin
+          Inc(NceBridge.iDiscoveryCabID);
+          if NceBridge.iDiscoveryCabID > ID_MAX_DEVICE then
+          begin
+            NceBridge.Discovering := False;
+            NceBridge.DiscoverTimer := 0;
+            NceBridge.iStateMachine := STATE_DISCOVER_INITIALIZE;     // Get ready for the next Discovery Mode
+            Node^.iStateMachine := STATE_KNOWNDEVICES                 // Go back to pinging only known Cabs
+          end else
+            NceBridge.iStateMachine := STATE_DISCOVER_SEND_PING;
+        end;
+  end;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+procedure KnownDevices_Process(Node: PNMRAnetNode);
+begin
+  if NceBridge.DiscoverTimer >= REDISCOVERY_TIME then
+    Node^.iStateMachine := STATE_DISCOVERDEVICES
+  else begin
+    // Run the Known Devices only
+  end
 end;
 
 // *****************************************************************************
@@ -124,8 +331,54 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 var
   TempNode: PNMRAnetNode;
   i, j: Integer;
-  //Link: PLinkRec;
-begin     {
+begin 
+   if Node = GetPhysicalNode then
+  begin
+    case Node^.iUserStateMachine of
+      STATE_USER_START :  // Create the minimum number of Pings to put on the NCE bus to make it happy
+          begin
+            if Node^.State and NS_PERMITTED <> 0 then
+            begin
+              GlobalTimer := 0;
+              if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+                Node^.iUserStateMachine := STATE_FIND_PROXY;
+            end
+          end;
+      STATE_FIND_PROXY :   // Find the Proxy node (Command Station) on the network before progressing
+          begin
+            if (ProxyNode.AliasID > 0) or (ProxyNode.ID[0] > 0) or (ProxyNode.ID[1] > 0) then
+              Node^.iUserStateMachine := STATE_CREATE_REQUIRED_CABS
+            else begin
+              if GlobalTimer > 10 then
+                Node^.iUserStateMachine := STATE_USER_START                     // Try again
+            end;
+          end;
+      STATE_CREATE_REQUIRED_CABS :
+          begin
+            for i := ID_MIN_DEVICE to ID_MIN_DEVICE + NCE_CAB_BUS_PADDING - 1 do
+              CreateCab(0);                                                     // Create the Nodes but don't activate the Cabs
+            Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
+          end;
+      STATE_DISCOVERDEVICES : DiscoverDevices_Process(Node);
+      STATE_KNOWNDEVICES    : KnownDevices_Process(Node);
+    end;
+  end else
+  begin
+    // Cab Nodes
+    case Node^.iUserStateMachine of
+      STATE_USER_START :
+          begin
+            if Node^.State and NS_PERMITTED <> 0 then
+            begin
+       //       case PNceCab( Node^.UserData)^.IncomingMsg.iRxStateMachine of
+
+      //        end;
+            end;
+          end;
+    end;
+  end;
+
+    {
   if Node = GetPhysicalNode then
   begin
     case Node^.iUserStateMachine of
@@ -386,7 +639,7 @@ begin
   //                  Link^.AllocatedNode.AliasID := 0;
   //                  Link^.AllocatedNode.ID[0] := 0;
   //                  Link^.AllocatedNode.ID[1] := 0;
-                    Node^.iUserStateMachine := STATE_USER_1;   // Reset statemachine to log in
+               //     Node^.iUserStateMachine := STATE_USER_1;   // Reset statemachine to log in
                   end;
             end;
           end;
@@ -421,12 +674,12 @@ begin
               TRACTION_CONTROLLER_CONFIG_ASSIGN :
                   begin
                     if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
-                    begin
+            //        begin
  //                     Link^.TrainAllocated := True;
   //                    Link^.SyncState := Link^.SyncState or SYNC_CONTROLLER;
-                      Node^.iUserStateMachine := STATE_USER_5
-                    end else
-                      Node^.iUserStateMachine := STATE_USER_5 // Release the Train, error try again??????
+            //          Node^.iUserStateMachine := STATE_USER_5
+             //       end else
+             //         Node^.iUserStateMachine := STATE_USER_5 // Release the Train, error try again??????
                   end;
             end;
           end;
@@ -451,10 +704,10 @@ begin
                   begin
  //                   if Link^.SyncState and SYNC_CLOSING <> 0 then       // Run the closing statemachine
                     begin
-                      if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-                        Node^.iUserStateMachine := STATE_USER_7
-                      else
-                        Node^.iUserStateMachine := STATE_USER_6  // Keep trying to lock it for now
+            //          if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+           //            Node^.iUserStateMachine := STATE_USER_7
+            //          else
+             //           Node^.iUserStateMachine := STATE_USER_6  // Keep trying to lock it for now
                     end //else
   //                  begin
   //                    if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
@@ -575,14 +828,8 @@ end;
 // *****************************************************************************
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 begin
-  if GetPhysicalNode^.State and NS_INITIALIZED > 0 then
-  begin
-    // Looking for the Proxy
-    if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
-    begin
-      ProxyNode := Source;
-    end;
-  end;
+  if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
+    ProxyNode := Source;
 end;
 
 // *****************************************************************************
@@ -657,6 +904,12 @@ end;
 procedure AppCallback_Timer_100ms;
 begin
   Inc(GlobalTimer);
+  
+   // Count up to the time out then freeze.  The Timer Count will be reset after the
+  // main loop is done rediscovering
+  if NceBridge.DiscoverTimer < REDISCOVERY_TIME then
+    Inc(NceBridge.DiscoverTimer);
+
 end;
 
 // *****************************************************************************

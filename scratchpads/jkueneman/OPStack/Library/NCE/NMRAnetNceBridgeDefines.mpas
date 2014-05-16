@@ -24,17 +24,6 @@ uses
 const
   NCEBUS_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a NCE message
   
-  //  NCE bus statemachine
-  STATE_BUILD_INITIAL_CABS        = 0;
-  STATE_DISCOVERDEVICES           = 1;
-  STATE_DISCOVERNEXTDEVICE        = 2;
-  STATE_SENDDEVICEINQUIRY         = 3;
-  STATE_SENDDEVICESYNC            = 4;
-  STATE_HANDLEMESSAGE             = 5;
-  STATE_TESTFORDISCOVERYMODE      = 6;
-  STATE_ENUMERATEACTIVEDEVICES    = 7;
-  STATE_WAITFORDEVICEMESSAGE      = 8;
-  
   // Olcb bus statemachine
   STATE_WAIT_FOR_USER_MESSAGE     = 0;
 
@@ -46,17 +35,15 @@ const
   ID_NO_DEVICE                         = $FE;
   ID_MIN_DEVICE                        = 2;
   ID_MAX_DEVICE                        = 63;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
-  ID_PC_DEVICE                         = $FF;  // PC Device = $FF
   NCEBUS_PING                          = %10000000;   // P10A AAAA
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
   NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
 
-  NCEBUS_BUS_HUNG_COUNT = 3;      // ~525ms counts and the bus is declared hung. (added 1 since we can't be sure when in the timer we started this covers if the timer interrupts right after we set the flag to 0) See: StartNceBusHungWatchdog for analysis of the max time of a device transaction
-  REDISCOVERY_TIME         = 4;    // = Slow timer count (~525ms * REDISCOVERY_TIME = time to rescan for new Devices)
-  NCEBUS_OLCB_BUS_TIMEOUT = 6;   // how long to count before giving up on a OLCB reply (~525ms steps)
+  REDISCOVERY_TIME         = 10;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
   
-  DS_NCEBUS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
-  DS_NCEBUS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
+  CS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
+  CS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
+  CS_ALLOCATED                                  = $02;  // The Cab is allocated from the RAM buffer
   
   NCE_NO_SPEED_TO_REPORT    = %01111111;              // $7F
   NCE_NO_KEY_TO_REPORT      = %01111101;              // $7D
@@ -96,25 +83,25 @@ type
     DataBytes: array[0..NCEBUS_MAX_DATA_BYTE] of Byte;
     Count: Byte;                                      // Number of valid bytes in the array
     Full: Boolean;                                    // True if the message is ready to be process
-    iRxStateMachine: Byte;                            // Statemachine for the UART RX input
   end;
 
   TNceCab = record
+    State: Byte;                                     // See CS_xxxx constants
+    ID: Byte;                                        // Cab Address (ID/Index)
     IncomingMsg: TNceMessage;                        // Structure to hold the info for an incoming message from the CAb
     MissedPingCount: Byte;                           // Number of times we tried to Ping the Cab and it did not reply, used to decide to remove cab from NCE bus
   end;
   PNceCab = ^TNceCab;
-
-  // Array of User Data for all Nodes
-  TNceCabArray = array[0..USER_MAX_NODE_COUNT-1] of TNceCab;
   
   TNceBridge = record
-    NodePinged: PNMRAnetNode;                    // Pointer to the Cab Node that is currently Pinging the NCE bus
-    iNodePinged: Word;                           // Index in the Allocated Node Array of the NodePinged
     Discovering: Boolean;                        // The bridge is pinging all Cab IDs looking for newly added Cabs
-    DiscoveryCount: Byte;                        // The index of the Cab while discovering
-    Watchdog: Byte;                              // Watches for a hang while pinging the cabs
+    iDiscoveryCabID: Byte;                       // The index of the Cab while discovering
+    iStateMachine: Byte;                         // Main Statemachine index
+    DiscoverTimer: Byte;                         // Counter to detect when to start a Discovery cycle
   end;
+  
+  // Array of User Data for all Nodes ( there will be one extra since the Root Node is differnet and not a CAB
+  TNceCabArray = array[0..USER_MAX_NODE_COUNT-1] of TNceCab;
 
 var
   NceCabArray: TNceCabArray;
