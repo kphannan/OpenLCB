@@ -39,12 +39,12 @@ const
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
   NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
 
-  REDISCOVERY_TIME         = 10;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
+  REDISCOVERY_TIME         = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
   
-  CS_DEVICE_INACTIVE                            = $00;  // not Active, not Acknowledging
-  CS_DEVICE_ACTIVE                              = $01;  // Indicates the Device is active on the bus
-  CS_ALLOCATED                                  = $02;  // The Cab is allocated from the RAM buffer
-  
+  CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
+  CS_DEVICE_INACTIVE                            = $02;  // not Active, not Acknowledging
+  CS_DEVICE_ACTIVE                              = $04;  // Indicates the Device is active on the bus
+
   NCE_NO_SPEED_TO_REPORT    = %01111111;              // $7F
   NCE_NO_KEY_TO_REPORT      = %01111101;              // $7D
   NCE_SPEED_MASK            = %01111111;              // $7F
@@ -79,6 +79,8 @@ const
   NCE_CMD_CURSOR_OFF        = $CE;  // 206
 
 type
+  TIncomingBuffer = array[0..1] of Byte;
+  
   TNceMessage = record
     DataBytes: array[0..NCEBUS_MAX_DATA_BYTE] of Byte;
     Count: Byte;                                      // Number of valid bytes in the array
@@ -93,11 +95,19 @@ type
   end;
   PNceCab = ^TNceCab;
   
+  TAssignedCabArray = array[0..USER_MAX_NODE_COUNT-2] of PNMRAnetNode;          // Only Virtual Nodes make sense, skip the physical server node
+  
   TNceBridge = record
     Discovering: Boolean;                        // The bridge is pinging all Cab IDs looking for newly added Cabs
-    iDiscoveryCabID: Byte;                       // The index of the Cab while discovering
+    iDiscoveryCabID: Word;                       // The index of the Cab while discovering
     iStateMachine: Byte;                         // Main Statemachine index
     DiscoverTimer: Byte;                         // Counter to detect when to start a Discovery cycle
+    IncomingBuffer: TIncomingBuffer;             //
+    iIncomingCount: Byte;
+    LastPortRead: Word;                          // Pin Change testing
+    AssignedCabs: TAssignedCabArray;
+    iAssignedCabCount: Integer;                       // Number of valid Cabs in the AssignedCabs array
+    iActiveCab: Integer;
   end;
   
   // Array of User Data for all Nodes ( there will be one extra since the Root Node is differnet and not a CAB
