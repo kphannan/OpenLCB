@@ -399,6 +399,7 @@ const
   
 var
   s1: string[128];
+  NodePool: TNodePool;
 
 
 implementation

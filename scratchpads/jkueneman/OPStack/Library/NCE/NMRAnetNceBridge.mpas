@@ -45,18 +45,18 @@ implementation
 
 //function InsertHiBitParity(DataByte: Byte): Byte; forward;
 procedure WriteNceBusByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word); forward;
-procedure NceBus_HandleDeviceInstruction(NceBusMessage: PNceBusMessage; iDevice: Byte); forward;
-procedure SendNceBusMessage(NceBusMessage: PNceBusMessage; Command: Byte; iDevice: Byte); forward;
+procedure NceBus_HandleDeviceInstruction; forward;
+procedure SendNceBusMessage; forward;
 
 procedure NceBusStateMachine_Initialize;
-var
-  i: Integer;
 begin
   NceBus_RS485_Select := 0;                // Default in Receive
   NceBus_RS485_Select_Direction := 0;      // Output
   NceBridge.Discovering := False;
   NceBridge.DiscoveryCount := 0;
   NceBridge.Watchdog := 0;
+  NceBridge.NodePinged := nil;
+  NceBridge.NodePinged := 0;
 end;
 
 function NceKeyPressToString(KeyPress: Byte): string[$FFFF];
@@ -107,30 +107,26 @@ end;
 //           If there are no Devices installed it returns ID_NO_DEVICE
 //
 // *****************************************************************************
-function NextAvailableDevice(iDevice: Byte): Byte;
+function NextAvailableDevice(Node: PNMRAnetNode): PNMRAnetNode;
 var
   i: Integer;
-  Device: pDevice;
 begin
-  Result := ID_NO_DEVICE;
-  
-  if iDevice = ID_NO_DEVICE then
-    iDevice := ID_MIN_DEVICE;
+  Result := nil;
+  if NodePool.AllocatedCount < 2 then Exit;         // No Cab Nodes created
 
-  i := iDevice;
-  repeat
-    Inc(i);
-    if i > ID_MAX_DEVICE then
-      i := ID_MIN_DEVICE;
-      
-    Device := @NceBusStateMachineInfo.DeviceList[i];
-    if Device^.State and DS_NCEBUS_DEVICE_ACTIVE = DS_NCEBUS_DEVICE_ACTIVE then
-      if Device^.Node^.State and NS_PERMITTED = NS_PERMITTED then     // If it is active then the Node MUST be valid//     if not Device_InServiceMode(i) then
-      begin
-        Result := i;
-        Exit
-      end;
-  until i = iDevice;
+  i := 1;
+  while i < NodePool.AllocatedCount do
+  begin
+    if Node = NodePool.AllocatedList[i] then
+    begin
+      Inc(i);
+      if i >= NodePool.AllocatedCount then
+        i := 1;                 
+
+      if NodePool.AllocatedList[i]^.State and NS_PERMITTED then
+        Result := NodePool.AllocatedList[i];
+    end;
+  end;
 end;
 
 // ****************************************************************************

@@ -18,6 +18,7 @@
 unit NMRAnetNceBridgeDefines;
 
 uses
+  opstackdefines,
   template_node;
 
 const
@@ -99,8 +100,8 @@ type
   end;
 
   TNceCab = record
-    IncomingMsg: TNceMessage;
-    MissedPingCount: Byte;
+    IncomingMsg: TNceMessage;                        // Structure to hold the info for an incoming message from the CAb
+    MissedPingCount: Byte;                           // Number of times we tried to Ping the Cab and it did not reply, used to decide to remove cab from NCE bus
   end;
   PNceCab = ^TNceCab;
 
@@ -108,9 +109,11 @@ type
   TNceCabArray = array[0..USER_MAX_NODE_COUNT-1] of TNceCab;
   
   TNceBridge = record
-    Discovering: Boolean;
-    DiscoveryCount: Byte;
-    Watchdog: Byte;
+    NodePinged: PNMRAnetNode;                    // Pointer to the Cab Node that is currently Pinging the NCE bus
+    iNodePinged: Word;                           // Index in the Allocated Node Array of the NodePinged
+    Discovering: Boolean;                        // The bridge is pinging all Cab IDs looking for newly added Cabs
+    DiscoveryCount: Byte;                        // The index of the Cab while discovering
+    Watchdog: Byte;                              // Watches for a hang while pinging the cabs
   end;
 
 var

@@ -80,9 +80,6 @@ function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 procedure OPStackNode_PrintPool;
 {$ENDIF}
 
-var
-  NodePool: TNodePool;
-
 implementation
 
 {$IFNDEF FPC}
