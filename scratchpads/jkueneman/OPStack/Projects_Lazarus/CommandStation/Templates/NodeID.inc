@@ -7,4 +7,4 @@ const
 //
 // Note that this number + the number of Virtual Node MUST not roll past $00FFFFFF
 
-NodeID_LO = $00010700;
+NodeID_LO = $00011700;

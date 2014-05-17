@@ -485,7 +485,7 @@ begin
     MenuItemHelp.Add(AppAboutCmd);
     {$ENDIF}
     {$IFDEF Linux}
-    FormSettings.SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
+    SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
     {$ELSE}
     SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;

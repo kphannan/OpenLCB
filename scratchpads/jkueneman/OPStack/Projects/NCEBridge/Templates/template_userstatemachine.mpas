@@ -715,8 +715,7 @@ begin
       STATE_CREATE_REQUIRED_CABS :
           begin
             for i := ID_MIN_DEVICE to ID_MIN_DEVICE + NCE_CAB_BUS_PADDING - 1 do
-              AssignCabToBus(i);
-        //      CreateCabNode;                                                        // Create the Nodes but don't activate the Cabs
+              AssignCabToBus(i);                                                // Build and assign cabs 2 - N so make the throttle hardware happy
             Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
           end;
       STATE_DISCOVERDEVICES : DiscoverDevices_Process(Node);
