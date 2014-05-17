@@ -79,7 +79,8 @@ const
   STATE_WAIT_FOR_RESPONSE    = 4;
   STATE_TIMEOUT              = 5;
   STATE_CAB_REPLIED          = 6;
-  STATE_NEXT_CAB             = 7;
+  STATE_DISPATCH_MESSAGE     = 7;
+  STATE_NEXT_CAB             = 8;
   
 var
   ProxyNode: TNodeInfo;
@@ -290,22 +291,23 @@ end;
 
 // *****************************************************************************
 // *****************************************************************************
-procedure AssignCabToBus(CabID: Word);
+function AssignCabToBus(CabID: Word): PNMRAnetNode;
 var
-  CabNode, LastAccessedNode: PNMRAnetNode;
+  LastAccessedNode: PNMRAnetNode;
   OldestAccessCount: Word;
   Cab: PNceCab;
   i: Integer;
 begin
   LastAccessedNode := nil;
-  CabNode := nil;
+  Result := nil;
   Cab := nil;
   
   // Look for it in the Allocated Cab list
   i := 0;
   while i < NceBridge.iAssignedCabCount do
   begin
-    Cab := PNceCab( NceBridge.AssignedCabs[i]^.UserData);
+    Result := NceBridge.AssignedCabs[i];
+    Cab := PNceCab( Result^.UserData);
     if Cab^.ID = CabID then
     begin
       Cab^.MissedPingCount := 0;
@@ -332,7 +334,8 @@ begin
       Cab^.State := Cab^.State or CS_DEVICE_ACTIVE and not CS_DEVICE_INACTIVE;
       Cab^.ID := CabID;
       Cab^.MissedPingCount := 0;
-      NceBridge.AssignedCabs[NceBridge.iAssignedCabCount] := NodePool.AllocatedList[i];
+      Result := NodePool.AllocatedList[i];
+      NceBridge.AssignedCabs[NceBridge.iAssignedCabCount] := Result;
       Inc(NceBridge.iAssignedCabCount);
       Exit;
     end;
@@ -340,12 +343,12 @@ begin
   end;
   
   // Did not find an allocated unassigned Node, create a new node
-  CabNode := CreateCabNode(CabID);
-  if CabNode <> nil then
+  Result := CreateCabNode(CabID);
+  if Result <> nil then
   begin
-    Cab := PNceCab( CabNode^.UserData);
+    Cab := PNceCab( Result^.UserData);
     Cab^.MissedPingCount := 0;
-    NceBridge.AssignedCabs[NceBridge.iAssignedCabCount] := NodePool.AllocatedList[i];
+    NceBridge.AssignedCabs[NceBridge.iAssignedCabCount] := Result;
     Inc(NceBridge.iAssignedCabCount);
     Exit;
   end;
@@ -353,7 +356,8 @@ begin
   // Could not create a new node so use the one that was used last (it is already allocated and we are highjacking it
   if LastAccessedNode <> nil then
   begin
-    Cab := PNceCab( CabNode^.UserData);
+    Result := LastAccessedNode;
+    Cab := PNceCab( Result^.UserData);
     Cab^.ID := CabID;
   end;
 end;
@@ -364,6 +368,93 @@ procedure PinChangeInterrupt;
 begin
   CNIE_bit := 0;                                                                // Pin Change Interrupt disabled
   DisableCabBusTimer;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+function HandleCabBusReply(Node: PNMRAnetNode): Boolean;
+var
+  CabData: PNceCab;
+  i: Integer;
+begin
+  Result := False;
+  if Node <> nil then
+  begin
+    CabData := PNceCab( Node^.UserData);
+    if not CabData^.IncomingMsg.Full then
+    begin
+      for i := 0 to NceBridge.iIncomingCount - 1 do
+      begin
+        case NceBridge.IncomingBuffer[i] of
+          NCE_NO_KEY_TO_REPORT : begin end;
+          NCE_NO_SPEED_TO_REPORT : begin end;
+          NCE_CAB_SELECT_MACRO :
+              begin
+                WriteByte(NCE_CMD_CURSOR_ON, True);
+                CabData^.State := CabData^.State or CS_MACRO_MESSAGE;
+                CabData^.IncomingMsg.Count := 0;
+                CabData^.IncomingMsg.Full := False;
+              end;
+          NCE_CAB_SELECT_LOCO :
+              begin
+                WriteByte(NCE_CMD_CURSOR_ON, True);
+                CabData^.State := CabData^.State or CS_LOCO_SELECT;
+                CabData^.IncomingMsg.Count := 0;
+                CabData^.IncomingMsg.Full := False;
+              end;
+          NCE_CAB_ENTER :
+              begin
+                if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) <> 0 then
+                begin
+                  WriteByte(NCE_CMD_CURSOR_OFF, True);
+                  CabData^.IncomingMsg.Full := True;
+                end;
+              end
+          else begin
+              if CabData^.IncomingMsg.Count < NCEBUS_MAX_DATA_BYTE then
+              begin
+                CabData^.IncomingMsg.DataBytes[CabData^.IncomingMsg.Count] := NceBridge.IncomingBuffer[i];
+                Inc(CabData^.IncomingMsg.Count);
+                if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) = 0 then
+                  CabData^.IncomingMsg.Full := True;
+              end;
+            end;
+          end; {case}
+      end; {if}
+    end;
+    Result := CabData^.IncomingMsg.Full
+  end;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+function DispatchMessage(Node: PNMRAnetNode): Boolean;
+var
+ Cab: PNceCab;
+begin
+  Result := False;
+  if Node <> nil then
+  begin
+    Cab := PNceCab( Node^.UserData);
+    
+    Cab^.IncomingMsg.Full := False;
+
+    if Cab^.State and CS_LOCO_SELECT <> 0 then
+    begin
+
+    end else
+    if Cab^.State and CS_MACRO_MESSAGE <> 0 then
+    begin
+
+    end else
+    begin
+
+
+    end;
+  end;
+  
+  Result := True;
+  Exit;
 end;
 
 // *****************************************************************************
@@ -418,8 +509,16 @@ begin
     STATE_CAB_REPLIED :
         begin
           {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_CAB_REPLIED'+LF); {$ENDIF}
-          AssignCabToBus(NceBridge.iDiscoveryCabID);
-          NceBridge.iStateMachine := STATE_NEXT_CAB
+          if HandleCabBusReply(AssignCabToBus(NceBridge.iDiscoveryCabID)) then
+            NceBridge.iStateMachine := STATE_DISPATCH_MESSAGE
+          else
+            NceBridge.iStateMachine := STATE_NEXT_CAB
+        end;
+    STATE_DISPATCH_MESSAGE :
+        begin 
+          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISPATCH_MESSAGE'+LF); {$ENDIF}
+          if DispatchMessage(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
+            NceBridge.iStateMachine := STATE_NEXT_CAB
         end;
     STATE_NEXT_CAB :
         begin
@@ -448,7 +547,7 @@ begin
     STATE_INITIALIZE :
         begin
           if NceBridge.iAssignedCabCount = 0 then
-          begin  // Nothing to do jump back to Discover
+          begin  // Nothing to do jump back to Discover, when ready
             if NceBridge.DiscoverTimer >= REDISCOVERY_TIME then
             begin
               Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
@@ -502,8 +601,16 @@ begin
     STATE_CAB_REPLIED :
         begin
           {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_CAB_REPLIED'+LF); {$ENDIF}
-          // Handle the Message Here
-          NceBridge.iStateMachine := STATE_NEXT_CAB
+          if HandleCabBusReply(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
+            NceBridge.iStateMachine := STATE_DISPATCH_MESSAGE
+          else
+            NceBridge.iStateMachine := STATE_NEXT_CAB
+        end;
+    STATE_DISPATCH_MESSAGE :
+        begin
+          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISPATCH_MESSAGE'+LF); {$ENDIF}
+          if DispatchMessage(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
+            NceBridge.iStateMachine := STATE_NEXT_CAB
         end;
     STATE_NEXT_CAB :
         begin

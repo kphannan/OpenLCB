@@ -44,6 +44,8 @@ const
   CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
   CS_DEVICE_INACTIVE                            = $02;  // not Active, not Acknowledging
   CS_DEVICE_ACTIVE                              = $04;  // Indicates the Device is active on the bus
+  CS_MACRO_MESSAGE                              = $08;
+  CS_LOCO_SELECT                                = $10;
 
   NCE_NO_SPEED_TO_REPORT    = %01111111;              // $7F
   NCE_NO_KEY_TO_REPORT      = %01111101;              // $7D
