@@ -48,6 +48,9 @@ function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeI
 function TrySendTractionControllerQuery(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function TrySendTractionManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
+function TrySendTractionQuerySpeed(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: Word): Boolean;
+function TrySendTractionEmergencyStop(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 
 // Traction Proxy
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
@@ -390,6 +393,59 @@ begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_MANAGE;
       NewMessage^.Buffer^.DataArray[1] := TRACTION_MANAGE_RESERVE;
       NewMessage^.Buffer^.DataArray[2] := ResultFlag;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end;
+  end;
+end;
+
+function TrySendTractionQuerySpeed(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 1;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end;
+  end;
+end;
+
+function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: Word): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 3;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_FUNCTION;
+      NewMessage^.Buffer^.DataArray[1] := Hi(FunctionAddress);
+      NewMessage^.Buffer^.DataArray[2] := Lo(FunctionAddress);
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end;
+  end;
+end;
+
+function TrySendTractionEmergencyStop(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 1;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_E_STOP;
       OutgoingMessage(NewMessage);
       Result := True;
     end;

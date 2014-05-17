@@ -82,9 +82,10 @@ const
 
 type
   TIncomingBuffer = array[0..1] of Byte;
+  TCabMessage = array[0..NCEBUS_MAX_DATA_BYTE] of Byte;
   
   TNceMessage = record
-    DataBytes: array[0..NCEBUS_MAX_DATA_BYTE] of Byte;
+    DataBytes: TCabMessage;
     Count: Byte;                                      // Number of valid bytes in the array
     Full: Boolean;                                    // True if the message is ready to be process
   end;
@@ -94,6 +95,8 @@ type
     ID: Byte;                                        // Cab Address (ID/Index)
     IncomingMsg: TNceMessage;                        // Structure to hold the info for an incoming message from the CAb
     MissedPingCount: Byte;                           // Number of times we tried to Ping the Cab and it did not reply, used to decide to remove cab from NCE bus
+    iStateMachine: Byte;                             // SubStatemachine index
+    WatchDog: Word;
   end;
   PNceCab = ^TNceCab;
   

@@ -41,8 +41,6 @@ end;
 
 procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
 // Called once every 100m
-var
-  i: Integer;
 begin
   T2IF_bit := 0;                                                                // Clear the Flag
   OPStackCore_Timer
@@ -55,8 +53,6 @@ begin
 end;
 
 procedure INTERRUPT_CabBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
-var
-  a: word;
 begin
   U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
   UART_RX_StateMachine;
