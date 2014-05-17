@@ -85,6 +85,38 @@ const
 var
   ProxyNode: TNodeInfo;
   GlobalTimer: Word;
+  
+function NceKeyPressToString(KeyPress: Byte): string[64];
+begin
+  case KeyPress of
+    NCE_CAB_SELECT_LOCO       : Result := 'Select Loco';
+    NCE_CAB_ENTER             : Result := 'Enter';
+    NCE_CAB_DIR_TOGGLE        : Result := 'Direction Toggle';
+    NCE_HORN_KEY_DOWN         : Result := 'Horn Key Down';
+    NCE_CAB_ONE_STEP_FASTER   : Result := 'One Step Faster';
+    NCE_CAB_ONE_STEP_SLOWER   : Result := 'One Step Slower';
+    NCE_CAB_EMERGENCY_STOP    : Result := 'Emergency Stop';
+    NCE_CAB_BELL              : Result := 'Cab Bell';
+    NCE_CAB_TOGGLE_F0_0       : Result := '0/Toggle F0';
+    NCE_CAB_TOGGLE_F1_1       : Result := '1/Toggle F1';
+    NCE_CAB_TOGGLE_F2_2       : Result := '2/Toggle F2';
+    NCE_CAB_TOGGLE_F3_3       : Result := '3/Toggle F3';
+    NCE_CAB_TOGGLE_F4_4       : Result := '4/Toggle F4';
+    NCE_CAB_TOGGLE_F5_5       : Result := '5/Toggle F5';
+    NCE_CAB_TOGGLE_F6_6       : Result := '6/Toggle F6';
+    NCE_CAB_TOGGLE_F7_7       : Result := '7/Toggle F7';
+    NCE_CAB_TOGGLE_F8_8       : Result := '8/Toggle F8';
+    NCE_CAB_9                 : Result := '9';
+    NCE_HORN_KEY_UP           : Result := 'Horn Key Up';
+    NCE_CAB_FIVE_STEPS_FASTER : Result := '5 Speed Steps Faster';
+    NCE_CAB_FIVE_STEPS_SLOWER : Result := '5 Speed Steps Slower';
+    NCE_CAB_SELECT_MACRO      : Result := 'Macro';
+    NCE_CAB_DIR_FORWARD       : Result := 'Forward Direction';
+    NCE_CAB_DIR_REVERSE       : Result := 'Reverse Direction'
+  else
+    Result := 'Unknown Command';
+  end;
+end;
 
 // *****************************************************************************
 //  procedure ExtractUserData
@@ -275,14 +307,8 @@ begin
     NceBridge.IncomingBuffer[NceBridge.iIncomingCount] := U2RXREG;
     Inc(NceBridge.iIncomingCount);
     if NceBridge.iIncomingCount = 2 then
-    begin
-   //   WordToStr(NceBridge.IncomingBuffer[0], s1);
-  //    UART1_Write_Text(s1 + ', ');
-  //    WordToStr(NceBridge.IncomingBuffer[1], s1);
-  //    UART1_Write_Text(s1 + #13);
-      NceBridge.iStateMachine := STATE_CAB_REPLIED;                    // Received both Bytes process them
-    end else
-    begin
+      NceBridge.iStateMachine := STATE_CAB_REPLIED                   // Received both Bytes process them
+    else begin
       if NceBridge.iIncomingCount > 2 then
         NceBridge.iStateMachine := STATE_TIMEOUT;                    // Something is wrong
     end
@@ -431,6 +457,8 @@ end;
 function DispatchMessage(Node: PNMRAnetNode): Boolean;
 var
  Cab: PNceCab;
+ i: Integer;
+ sss: array[0..128] of char;
 begin
   Result := False;
   if Node <> nil then
@@ -441,16 +469,37 @@ begin
 
     if Cab^.State and CS_LOCO_SELECT <> 0 then
     begin
-
+      UART1_Write_Text('Loco Select: ');
+      for i := 0 to Cab^.IncomingMsg.Count - 1 do
+      begin
+        IntToHex(Cab^.IncomingMsg.DataBytes[i], s1);
+        if i < Cab^.IncomingMsg.Count - 1 then
+          UART1_Write_Text('0x' + s1 + ', ')
+        else
+          UART1_Write_Text('0x' + s1 + LF);
+      end;
     end else
     if Cab^.State and CS_MACRO_MESSAGE <> 0 then
     begin
-
+      UART1_Write_Text('Macro: ');
+      for i := 0 to Cab^.IncomingMsg.Count - 1 do
+      begin
+        IntToHex(Cab^.IncomingMsg.DataBytes[i], s1);
+        if i < Cab^.IncomingMsg.Count - 1 then
+          UART1_Write_Text('0x' + s1 + ', ')
+        else
+          UART1_Write_Text('0x' + s1 + LF);
+      end;
     end else
     begin
-
-
+      for i := 0 to Cab^.IncomingMsg.Count - 1 do
+      begin
+        sss := NceKeyPressToString(Cab^.IncomingMsg.DataBytes[i]);
+        UART1_Write_Text( sss + LF);
+      end;
     end;
+    Cab^.State := Cab^.State and not (CS_MACRO_MESSAGE or CS_LOCO_SELECT);
+    Cab^.IncomingMsg.Count := 0;
   end;
   
   Result := True;

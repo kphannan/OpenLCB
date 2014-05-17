@@ -33,8 +33,6 @@ procedure NceBusStateMachine_Process(NodeBuffer: PNMRAnetNode);
 procedure NceBusStateMachine_Initialize;
 procedure NceBusStateMachine_UART_RX_StateMachine(NceCab: PNceCab; ReceivedByte: Byte);
 
-function NceKeyPressToString(KeyPress: Byte): string[$FFFF];
-
 
 implementation
 
@@ -55,38 +53,6 @@ begin
   NceBridge.Discovering := False;
   NceBridge.iDiscoveryCabID := 0;
   NceBridge.iStateMachine := 0;
-end;
-
-function NceKeyPressToString(KeyPress: Byte): string[$FFFF];
-begin
-  case KeyPress of
-    NCE_CAB_SELECT_LOCO       : Result := 'Select Loco';
-    NCE_CAB_ENTER             : Result := 'Enter';
-    NCE_CAB_DIR_TOGGLE        : Result := 'Direction Toggle';
-    NCE_HORN_KEY_DOWN         : Result := 'Horn Key Down';
-    NCE_CAB_ONE_STEP_FASTER   : Result := 'One Step Faster';
-    NCE_CAB_ONE_STEP_SLOWER   : Result := 'One Step Slower';
-    NCE_CAB_EMERGENCY_STOP    : Result := 'Emergency Stop';
-    NCE_CAB_BELL              : Result := 'Cab Bell';
-    NCE_CAB_TOGGLE_F0_0       : Result := '0/Toggle F0';
-    NCE_CAB_TOGGLE_F1_1       : Result := '1/Toggle F1';
-    NCE_CAB_TOGGLE_F2_2       : Result := '2/Toggle F2';
-    NCE_CAB_TOGGLE_F3_3       : Result := '3/Toggle F3';
-    NCE_CAB_TOGGLE_F4_4       : Result := '4/Toggle F4';
-    NCE_CAB_TOGGLE_F5_5       : Result := '5/Toggle F5';
-    NCE_CAB_TOGGLE_F6_6       : Result := '6/Toggle F6';
-    NCE_CAB_TOGGLE_F7_7       : Result := '7/Toggle F7';
-    NCE_CAB_TOGGLE_F8_8       : Result := '8/Toggle F8';
-    NCE_CAB_9                 : Result := '9';
-    NCE_HORN_KEY_UP           : Result := 'Horn Key Up';
-    NCE_CAB_FIVE_STEPS_FASTER : Result := '5 Speed Steps Faster';
-    NCE_CAB_FIVE_STEPS_SLOWER : Result := '5 Speed Steps Slower';
-    NCE_CAB_SELECT_MACRO      : Result := 'Macro';
-    NCE_CAB_DIR_FORWARD       : Result := 'Forward Direction';
-    NCE_CAB_DIR_REVERSE       : Result := 'Reverse Direction'
-  else
-    Result := 'Unknown Command';
-  end;
 end;
 
 // ****************************************************************************
