@@ -42,8 +42,6 @@ const
   REDISCOVERY_TIME         = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
   
   CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
-  CS_DEVICE_INACTIVE                            = $02;  // not Active, not Acknowledging
-  CS_DEVICE_ACTIVE                              = $04;  // Indicates the Device is active on the bus
   CS_MACRO_MESSAGE                              = $08;
   CS_LOCO_SELECT                                = $10;
 
@@ -89,12 +87,12 @@ type
     Count: Byte;                                      // Number of valid bytes in the array
     Full: Boolean;                                    // True if the message is ready to be process
   end;
+  PNceMessage = ^TNceMessage;
 
   TNceCab = record
     State: Byte;                                     // See CS_xxxx constants
     ID: Byte;                                        // Cab Address (ID/Index)
     IncomingMsg: TNceMessage;                        // Structure to hold the info for an incoming message from the CAb
-    MissedPingCount: Byte;                           // Number of times we tried to Ping the Cab and it did not reply, used to decide to remove cab from NCE bus
     iStateMachine: Byte;                             // SubStatemachine index
     WatchDog: Word;
   end;
@@ -113,15 +111,31 @@ type
     AssignedCabs: TAssignedCabArray;
     iAssignedCabCount: Integer;                       // Number of valid Cabs in the AssignedCabs array
     iActiveCab: Integer;
+    ExistingCab: PNMRAnetNode;
   end;
   
   // Array of User Data for all Nodes ( there will be one extra since the Root Node is differnet and not a CAB
   TNceCabArray = array[0..USER_MAX_NODE_COUNT-1] of TNceCab;
+  
+procedure CabBridge_Initialize;
 
 var
   NceCabArray: TNceCabArray;
   NceBridge: TNceBridge;
 
 implementation
+
+procedure CabBridge_Initialize;
+begin
+  NceBridge.Discovering := False;
+  NceBridge.iDiscoveryCabID := 0;
+  NceBridge.iStateMachine := 0;
+  NceBridge.DiscoverTimer := 0;
+  NceBridge.iIncomingCount := 0;
+  NceBridge.LastPortRead := 0;
+  NceBridge.iAssignedCabCount := 0;
+  NceBridge.iActiveCab := 0;
+  NceBridge.ExistingCab := nil;
+end;
 
 end.

@@ -137,7 +137,7 @@ begin
             end;
       STATE_TRAIN_ALLOCATE_PROXY_REPLY :
           begin
-            if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Node^.TrainData.NotifyController, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Node^.TrainData.Address) then
+            if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Node^.TrainData.LinkedNode, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Node^.TrainData.Address) then
               Node^.iUserStateMachine := STATE_TRAIN_IDLE;
           end;
       STATE_TRAIN_IDLE :
@@ -261,9 +261,9 @@ begin
               TrainNode^.TrainData.Address := TrainID;
               if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_TECH_ID_DCC then
                 TrainNode^.TrainData.SpeedSteps := AMessage^.Buffer^.DataArray[4];
-              TrainNode^.TrainData.NotifyController.ID[0] := AMessage^.Source.ID[0];
-              TrainNode^.TrainData.NotifyController.ID[1] := AMessage^.Source.ID[1];
-              TrainNode^.TrainData.NotifyController.AliasID := AMessage^.Source.AliasID;
+              TrainNode^.TrainData.LinkedNode.ID[0] := AMessage^.Source.ID[0];
+              TrainNode^.TrainData.LinkedNode.ID[1] := AMessage^.Source.ID[1];
+              TrainNode^.TrainData.LinkedNode.AliasID := AMessage^.Source.AliasID;
             end;
           end;
     end

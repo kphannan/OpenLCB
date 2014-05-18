@@ -70,7 +70,7 @@ begin
   { Main program }   
   MCU_Setup_Initialize;
   OPStackCore_Initialize;
-  NceBusStateMachine_Initialize;
+  CabBridge_Initialize;
   MCU_Enable_100msTimer;
   MCU_Enable_500msTimer;
   MCU_Enable_CabBusTimer;

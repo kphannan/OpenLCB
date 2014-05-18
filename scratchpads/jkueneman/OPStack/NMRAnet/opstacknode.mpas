@@ -390,9 +390,9 @@ begin
   Node^.TrainData.Controller.AliasID := 0;
   Node^.TrainData.Controller.ID[0] := 0;
   Node^.TrainData.Controller.ID[1] := 0;
-  Node^.TrainData.NotifyController.AliasID := 0;
-  Node^.TrainData.NotifyController.ID[0] := 0;
-  Node^.TrainData.NotifyController.ID[1] := 0;
+  Node^.TrainData.LinkedNode.AliasID := 0;
+  Node^.TrainData.LinkedNode.ID[0] := 0;
+  Node^.TrainData.LinkedNode.ID[1] := 0;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
   Node^.TrainProxyData.Lock.AliasID := 0;

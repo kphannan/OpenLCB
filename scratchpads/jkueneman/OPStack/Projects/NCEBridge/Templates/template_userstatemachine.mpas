@@ -95,6 +95,7 @@ const
   STATE_CAB_SELECT_LOCO      = 2;
   STATE_CAB_RUN_MACRO        = 3;
   STATE_CAB_RUN_CMD          = 4;
+  STATE_CAB_CLEAR_MSG        = 5;
   
   
   STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK               = 1;
@@ -145,6 +146,29 @@ begin
   end;
 end;
 
+procedure PrintIncomingMsg(var IncomingMsg: TNceMessage);
+var
+  i: Integer;
+begin
+  UART1_Write_Text('Incoming Message' +LF);
+  ByteToStr(IncomingMsg.Count, s1);
+  UART1_Write_Text('Count: ' + s1 + LF);
+  if IncomingMsg.Full then
+    UART1_Write_Text('Full = True'+ LF)
+  else
+    UART1_Write_Text('Full = False'+ LF);
+  UART1_Write_Text('Data = ');
+  for i := 0 to IncomingMsg.Count - 1 do
+  begin
+    ByteToHex(IncomingMsg.Count, s1);
+    if i <  IncomingMsg.Count - 1 then
+      UART1_Write_Text('0x' + s1 + ', ')
+    else
+      UART1_Write_Text('0x' + s1);
+  end;
+  UART1_Write_Text(LF+LF);
+end;
+
 // ****************************************************************************
 // *****************************************************************************
 function ChangeSpeed(Speed, Delta: real): real;
@@ -179,7 +203,7 @@ begin
   Mask := Mask shl FunctionAddress;
   if (Functions and Mask) <> 0 then
   begin             
-    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.NotifyController, 0, 0) then
+    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, 0, 0) then
     begin
       Mask := not Mask;
       Functions := Functions and Mask;
@@ -187,7 +211,7 @@ begin
     end;
   end else
   begin
-    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.NotifyController, 0, 1) then
+    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, 0, 1) then
     begin
       Functions := Functions or Mask;
       Result := True
@@ -197,19 +221,15 @@ end;
 
 // ****************************************************************************
 // *****************************************************************************
-function CabMessageToTrainAddress(var CabMessage: TNceMessage): Word;
+function CabMessageToTrainAddress(CabMessage: PNceMessage): Word;
 var
   i: Integer;
   AddressStr: string[5];
 begin
   Result := 0;
-  for i := 0 to CabMessage.Count - 1 do
-    CabMessage.DataBytes[i] := CabMessage.DataBytes[i] and $0F or $30;      // Make them ASCII
-
   AddressStr := '';
-  for i := 0 to CabMessage.Count - 1 do
-    AddressStr := AddressStr + Char( CabMessage.DataBytes[i]);
-
+  for i := 0 to CabMessage^.Count - 1 do
+    AddressStr := AddressStr + Char( CabMessage^.DataBytes[i] and $0F or $30);   // Make them ASCII
   Result := StrToWord(AddressStr)
 end;
 
@@ -242,7 +262,6 @@ var
   i, j: Integer;
 begin
   CabData^.State := 0;
-  CabData^.MissedPingCount := 0;
   CabData^.IncomingMsg.Count := 0;
   CabData^.IncomingMsg.Full := False;
   CabData^.iStateMachine := 0;
@@ -295,7 +314,6 @@ begin
     begin
       Result^.UserData := CabData;
       CabData^.ID := CabID;
-      CabData^.State := CabData^.State or CS_DEVICE_ACTIVE and not CS_DEVICE_INACTIVE;  // Set the Device Active
     end else
     begin
       Cab_Free(CabData)
@@ -401,76 +419,17 @@ end;
 
 // *****************************************************************************
 // *****************************************************************************
-function AssignCabToBus(CabID: Word; var IsNew: Boolean): PNMRAnetNode;
+function CreateCab(CabID: Word): PNMRAnetNode;
 var
-  LastAccessedNode: PNMRAnetNode;
-  OldestAccessCount: Word;
-  Cab: PNceCab;
-  i: Integer;
+  CabData: PNceCab;
 begin
-  LastAccessedNode := nil;
-  Result := nil;
-  Cab := nil;
-  IsNew := True;
-  
-  // Look for it in the Allocated Cab list
-  i := 0;
-  while i < NceBridge.iAssignedCabCount do
-  begin
-    Result := NceBridge.AssignedCabs[i];
-    Cab := PNceCab( Result^.UserData);
-    if Cab^.ID = CabID then
-    begin
-      Cab^.MissedPingCount := 0;
-      IsNew := False;
-      Exit;
-    end;
-    Inc(i);
-  end;
-
-  // Did not find it in the list of Allocated Cabs so find a new node to use
-  i := 1;
-  while i < NodePool.AllocatedCount do
-  begin
-    Cab := PNceCab( NodePool.AllocatedList[i]^.UserData);
-    
-    // Find the node with the longest time when last accessed
-    if Cab^.MissedPingCount < OldestAccessCount then
-    begin
-      OldestAccessCount := Cab^.MissedPingCount;
-      LastAccessedNode := NodePool.AllocatedList[i];
-    end;
-
-    if Cab^.State and CS_DEVICE_INACTIVE <> 0 then
-    begin
-      Cab^.State := Cab^.State or CS_DEVICE_ACTIVE and not CS_DEVICE_INACTIVE;
-      Cab^.ID := CabID;
-      Cab^.MissedPingCount := 0;
-      Result := NodePool.AllocatedList[i];
-      NceBridge.AssignedCabs[NceBridge.iAssignedCabCount] := Result;
-      Inc(NceBridge.iAssignedCabCount);
-      Exit;
-    end;
-    Inc(i);
-  end;
-  
-  // Did not find an allocated unassigned Node, create a new node
   Result := CreateCabNode(CabID);
   if Result <> nil then
   begin
-    Cab := PNceCab( Result^.UserData);
-    Cab^.MissedPingCount := 0;
+    CabData := PNceCab( Result^.UserData);
     NceBridge.AssignedCabs[NceBridge.iAssignedCabCount] := Result;
     Inc(NceBridge.iAssignedCabCount);
     Exit;
-  end;
-  
-  // Could not create a new node so use the one that was used last (it is already allocated and we are highjacking it
-  if LastAccessedNode <> nil then
-  begin
-    Result := LastAccessedNode;
-    Cab := PNceCab( Result^.UserData);
-    Cab^.ID := CabID;
   end;
 end;
 
@@ -490,62 +449,60 @@ var
   i: Integer;
 begin
   Result := False;
-  if CabNode <> nil then
+
+  CabData := PNceCab( CabNode^.UserData);
+
+  // Ignore user input if the cab node is working a statemachine......
+  if CabData^.IncomingMsg.Full then
+    Exit;
+  
+  for i := 0 to NceBridge.iIncomingCount - 1 do
   begin
-    CabData := PNceCab( CabNode^.UserData);
-    // Ignore user input if the cab node is working a statemachine......
-    if CabData^.iStateMachine <> STATE_CAB_IDLE then 
-      Exit;
-    if not CabData^.IncomingMsg.Full then
-    begin
-      for i := 0 to NceBridge.iIncomingCount - 1 do
-      begin
-        case NceBridge.IncomingBuffer[i] of
-          NCE_NO_KEY_TO_REPORT : begin end;
-          NCE_NO_SPEED_TO_REPORT : begin end;
-          NCE_CAB_SELECT_MACRO :
-              begin
-                WriteByte(NCE_CMD_CURSOR_ON, True);
-                CabData^.State := CabData^.State or CS_MACRO_MESSAGE;
-                CabData^.IncomingMsg.Count := 0;
-                CabData^.IncomingMsg.Full := False;
-              end;
-          NCE_CAB_SELECT_LOCO :
-              begin
-                WriteByte(NCE_CMD_CURSOR_ON, True);
-                CabData^.State := CabData^.State or CS_LOCO_SELECT;
-                CabData^.IncomingMsg.Count := 0;
-                CabData^.IncomingMsg.Full := False;
-              end;
-          NCE_CAB_ENTER :
-              begin
-                if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) <> 0 then
-                begin
-                  WriteByte(NCE_CMD_CURSOR_OFF, True);
-                  CabData^.IncomingMsg.Full := True;
-                end;
-              end
-          else begin
-              if CabData^.IncomingMsg.Count < NCEBUS_MAX_DATA_BYTE then
-              begin
-                CabData^.IncomingMsg.DataBytes[CabData^.IncomingMsg.Count] := NceBridge.IncomingBuffer[i];
-                Inc(CabData^.IncomingMsg.Count);
-                if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) = 0 then
-                  CabData^.IncomingMsg.Full := True;
-              end;
+    case NceBridge.IncomingBuffer[i] of
+      NCE_NO_KEY_TO_REPORT : begin end;
+      NCE_NO_SPEED_TO_REPORT : begin end;
+      NCE_CAB_SELECT_MACRO :
+          begin
+            WriteByte(NCE_CMD_CURSOR_ON, True);
+            CabData^.State := CabData^.State or CS_MACRO_MESSAGE;
+            CabData^.IncomingMsg.Count := 0;
+          end;
+      NCE_CAB_SELECT_LOCO :
+          begin
+            WriteByte(NCE_CMD_CURSOR_ON, True);
+            CabData^.State := CabData^.State or CS_LOCO_SELECT;
+            CabData^.IncomingMsg.Count := 0;
+          end;
+      NCE_CAB_ENTER :
+          begin
+            if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) <> 0 then
+            begin
+              WriteByte(NCE_CMD_CURSOR_OFF, True);
+              CabData^.IncomingMsg.Full := True;
+              Result := True;
             end;
-          end; {case}
-      end; {if}
-    end;
-    Result := CabData^.IncomingMsg.Full
-  end;
+          end
+      else begin
+          if CabData^.IncomingMsg.Count < NCEBUS_MAX_DATA_BYTE then
+          begin
+            CabData^.IncomingMsg.DataBytes[CabData^.IncomingMsg.Count] := NceBridge.IncomingBuffer[i];
+            Inc(CabData^.IncomingMsg.Count);
+            if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) = 0 then
+            begin
+              CabData^.IncomingMsg.Full := True;
+              Result := True;
+            end;
+          end;
+        end;
+      end; {case}
+  end; {if}
 end;
 
 // *****************************************************************************
 // *****************************************************************************
 function DispatchMessage(CabNode: PNMRAnetNode): Boolean;
 var
- Cab: PNceCab;
+ CabData: PNceCab;
  i: Integer;
  sss: array[0..128] of char;
 
@@ -553,54 +510,39 @@ begin
   Result := False;
   if CabNode <> nil then
   begin
-    Cab := PNceCab( CabNode^.UserData);
-    
-    Cab^.IncomingMsg.Full := False;
+    CabData := PNceCab( CabNode^.UserData);
 
-    if Cab^.State and CS_LOCO_SELECT <> 0 then
+    if CabData^.State and CS_LOCO_SELECT <> 0 then
     begin
       // Kick off the statemachine to do this....
       CabNode^.iUserStateMachine := STATE_CAB_SELECT_LOCO;
-      Cab^.iStateMachine := STATE_INITIALIZE;
+      CabData^.iStateMachine := STATE_INITIALIZE;
       
       UART1_Write_Text('Loco Select: ');
-      for i := 0 to Cab^.IncomingMsg.Count - 1 do
-      begin
-        IntToHex(Cab^.IncomingMsg.DataBytes[i], s1);
-        if i < Cab^.IncomingMsg.Count - 1 then
-          UART1_Write_Text('0x' + s1 + ', ')
-        else
-          UART1_Write_Text('0x' + s1 + LF);
-      end;
+      PrintIncomingMsg(CabData^.IncomingMsg);
     end else
-    if Cab^.State and CS_MACRO_MESSAGE <> 0 then
+    if CabData^.State and CS_MACRO_MESSAGE <> 0 then
     begin
       // Kick off the statemachine to do this....
       CabNode^.iUserStateMachine := STATE_CAB_RUN_MACRO;
-      Cab^.iStateMachine := STATE_INITIALIZE;
+      CabData^.iStateMachine := STATE_INITIALIZE;
     
       UART1_Write_Text('Macro: ');
-      for i := 0 to Cab^.IncomingMsg.Count - 1 do
-      begin
-        IntToHex(Cab^.IncomingMsg.DataBytes[i], s1);
-        if i < Cab^.IncomingMsg.Count - 1 then
-          UART1_Write_Text('0x' + s1 + ', ')
-        else
-          UART1_Write_Text('0x' + s1 + LF);
-      end;
+      PrintIncomingMsg(CabData^.IncomingMsg);
     end else
     begin
       CabNode^.iUserStateMachine := STATE_CAB_RUN_CMD;
-      Cab^.iStateMachine := STATE_INITIALIZE;
-    
-      for i := 0 to Cab^.IncomingMsg.Count - 1 do
+      CabData^.iStateMachine := STATE_INITIALIZE;
+      
+      UART1_Write_Text('Command: ');
+      PrintIncomingMsg(CabData^.IncomingMsg);
+      for i := 0 to CabData^.IncomingMsg.Count - 1 do
       begin
-        sss := NceKeyPressToString(Cab^.IncomingMsg.DataBytes[i]);
+        sss := NceKeyPressToString(CabData^.IncomingMsg.DataBytes[i]);
         UART1_Write_Text( sss + LF);
       end;
+
     end;
-    Cab^.State := Cab^.State and not (CS_MACRO_MESSAGE or CS_LOCO_SELECT);
-    Cab^.IncomingMsg.Count := 0;
   end;
   
   Result := True;
@@ -609,184 +551,21 @@ end;
 
 // *****************************************************************************
 // *****************************************************************************
-procedure DiscoverDevices_Process(Node: PNMRAnetNode);
+function FindCab(CabID: Word): PNMRAnetNode;
 var
-  Cab: PNceCab;
-  IsNewCab: Boolean;
-  CabNode: PNMRAnetNode;
+  i: Integer;
 begin
-  case NceBridge.iStateMachine of
-    STATE_INITIALIZE :
-        begin
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_INITIALIZE'+LF); {$ENDIF}
-          NceBridge.iDiscoveryCabID := ID_MIN_DEVICE;
-          NceBridge.iStateMachine := STATE_SEND_SYNC;
-        end;
-    STATE_SEND_SYNC :
-        begin
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_SEND_SYNC..............'+LF); {$ENDIF}
-          FlushUartReceiver;
-          WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
-          EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors                                      //
-          NceBridge.iStateMachine := STATE_WAIT_SYNC_DELAY;
-        end;
-    STATE_WAIT_SYNC_DELAY :
-        begin  // Waiting for the Timer to Expire and jump us to the next state
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_WAIT_SYNC_DELAY'+LF); {$ENDIF}
-        end;
-    STATE_SEND_PING :
-        begin  // The node replied and
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} IntToStr(NceBridge.iDiscoveryCabID, s1); UART1_Write_Text('STATE_DISCOVER_SEND_PING: ' + s1+LF); {$ENDIF}
-          FlushUartReceiver;
-          NceBridge.iIncomingCount := 0;
-          NceBridge.LastPortRead := PortB;
-          CNIE_bit := 1;                                                        // Pin Change Interrupt enable
-          WriteByte(NCEBUS_PING or NceBridge.iDiscoveryCabID, True);            // Ping the Cab ID
-          EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us
-          NceBridge.iStateMachine := STATE_WAIT_FOR_RESPONSE;
-        end;
-    STATE_WAIT_FOR_RESPONSE :
-        begin   // Waiting for the Timer to expire or we detect a reply....
-          // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
-        end;
-    STATE_TIMEOUT :
-        begin
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_TIMEOUT'+LF); {$ENDIF}
-          Cab := PNceCab( Node^.UserData);
-          if (Cab^.MissedPingCount < $FFFF) and (Cab^.State and CS_DEVICE_ACTIVE <> 0) then
-            Inc( Cab^.MissedPingCount);
-          NceBridge.iStateMachine := STATE_NEXT_CAB
-        end;
-    STATE_CAB_REPLIED :
-        begin
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_CAB_REPLIED'+LF); {$ENDIF}
-          IsNewCab := False;
-          CabNode := AssignCabToBus(NceBridge.iDiscoveryCabID, IsNewCab);
-          if IsNewCab then                         // Throw away any input from a new cab, it is typically corrupted
-            NceBridge.iStateMachine := STATE_NEXT_CAB
-          else begin
-            if HandleCabBusReply(CabNode) then
-              NceBridge.iStateMachine := STATE_DISPATCH_MESSAGE
-            else
-              NceBridge.iStateMachine := STATE_NEXT_CAB
-          end;
-        end;
-    STATE_DISPATCH_MESSAGE :
-        begin 
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISPATCH_MESSAGE'+LF); {$ENDIF}
-          if DispatchMessage(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
-            NceBridge.iStateMachine := STATE_NEXT_CAB
-        end;
-    STATE_NEXT_CAB :
-        begin
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_NEXT_CAB'+LF); {$ENDIF}
-          Inc(NceBridge.iDiscoveryCabID);
-          if NceBridge.iDiscoveryCabID > ID_MAX_DEVICE then
-          begin
-            NceBridge.Discovering := False;
-            NceBridge.DiscoverTimer := 0;
-            NceBridge.iStateMachine := STATE_INITIALIZE;                        // Get ready for the next Discovery Mode
-            Node^.iUserStateMachine := STATE_KNOWNDEVICES;                      // Go back to pinging only known Cabs
-          end else
-            NceBridge.iStateMachine := STATE_SEND_PING;
-        end;
-  end;
-end;
-
-// *****************************************************************************
-// *****************************************************************************
-procedure KnownDevices_Process(Node: PNMRAnetNode);
-var
-  CabNode: PNMRAnetNode;
-begin
-  // Run the Known Devices only
-  case NceBridge.iStateMachine of
-    STATE_INITIALIZE :
-        begin
-          if NceBridge.iAssignedCabCount = 0 then
-          begin  // Nothing to do jump back to Discover, when ready
-            if NceBridge.DiscoverTimer >= REDISCOVERY_TIME then
-            begin
-              Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
-              NceBridge.iStateMachine := STATE_INITIALIZE;
-            end;
-          end else
-          begin
-           {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_INITIALIZE'+LF); {$ENDIF}
-           NceBridge.iStateMachine := STATE_SEND_SYNC;
-          end;
-        end;
-    STATE_SEND_SYNC :
-        begin
-          LATB4_bit := 1;
-        
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_SEND_SYNC..............'+LF); {$ENDIF}
-          FlushUartReceiver;
-          WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
-          EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors                                      //
-          NceBridge.iStateMachine := STATE_WAIT_SYNC_DELAY;
-          
-          LATB4_bit := 0;
-          
-        end;
-    STATE_WAIT_SYNC_DELAY :
-        begin  // Waiting for the Timer to Expire and jump us to the next state
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_WAIT_SYNC_DELAY'+LF); {$ENDIF}
-        end;
-    STATE_SEND_PING :
-        begin  // The node replied and
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_SEND_PING: ' + s1+LF); {$ENDIF}
-          FlushUartReceiver;
-          NceBridge.iIncomingCount := 0;
-          NceBridge.LastPortRead := PortB;
-          CNIE_bit := 1;                                                        // Pin Change Interrupt enable
-          WriteByte(NCEBUS_PING or PNceCab( NceBridge.AssignedCabs[NceBridge.iActiveCab]^.UserData)^.ID, True);            // Ping the Cab ID
-          EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us
-          NceBridge.iStateMachine := STATE_WAIT_FOR_RESPONSE;
-        end;
-    STATE_WAIT_FOR_RESPONSE :
-        begin   // Waiting for the Timer to expire or we detect a reply....
-          // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
-        end;
-    STATE_TIMEOUT :
-        begin
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_TIMEOUT'+LF); {$ENDIF}
-          // This should only happen if the throttle was unplugged
-          NceBridge.iStateMachine := STATE_NEXT_CAB
-        end;
-    STATE_CAB_REPLIED :
-        begin
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_CAB_REPLIED'+LF); {$ENDIF}
-          if HandleCabBusReply(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
-            NceBridge.iStateMachine := STATE_DISPATCH_MESSAGE
-          else
-            NceBridge.iStateMachine := STATE_NEXT_CAB
-        end;
-    STATE_DISPATCH_MESSAGE :
-        begin
-          {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISPATCH_MESSAGE'+LF); {$ENDIF}
-          if DispatchMessage(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
-            NceBridge.iStateMachine := STATE_NEXT_CAB
-        end;
-    STATE_NEXT_CAB :
-        begin
-          {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_NEXT_CAB'+LF); {$ENDIF}
-          Inc(NceBridge.iActiveCab);
-          if NceBridge.iActiveCab >= NceBridge.iAssignedCabCount then
-          begin
-            // Only test and change this after a complete cab interaction has ended
-            if NceBridge.DiscoverTimer >= REDISCOVERY_TIME then
-              Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
-            NceBridge.iStateMachine := STATE_INITIALIZE;
-            NceBridge.iActiveCab := 0;
-          end else
-          begin
-            NceBridge.iStateMachine := STATE_SEND_PING;
-          end
-        end;
-  end;
+  Result := nil;
+  i := 0;
+  while i < NceBridge.iAssignedCabCount do
+  begin
+    if PNceCab( NceBridge.AssignedCabs[i]^.UserData)^.ID = CabID then
+    begin
+      Result := NceBridge.AssignedCabs[i];
+      Exit;
+    end;
+    Inc(i);
+  end
 end;
 
 // *****************************************************************************
@@ -805,15 +584,13 @@ end;
 // *****************************************************************************
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 var
-  TempNode: PNMRAnetNode;
-  i, j: Integer;
-  IsNewCab: Boolean;
-  Cab: PNceCab;
+  i: Integer;
+  CabData: PNceCab;
   Address: Word;
   SpeedStep, AddressType: Byte;
   Speed: real;
-begin 
-   if Node = GetPhysicalNode then
+begin      
+  if Node = GetPhysicalNode then
   begin
     case Node^.iUserStateMachine of
       STATE_USER_START :  // Create the minimum number of Pings to put on the NCE bus to make it happy
@@ -823,7 +600,8 @@ begin
               GlobalTimer := 0;
               if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
                 Node^.iUserStateMachine := STATE_FIND_PROXY;
-            end
+            end;
+            Exit;
           end;
       STATE_FIND_PROXY :   // Find the Proxy node (Command Station) on the network before progressing
           begin
@@ -833,53 +611,242 @@ begin
               if GlobalTimer > 10 then
                 Node^.iUserStateMachine := STATE_USER_START                     // Try again
             end;
+            Exit;
           end;
       STATE_CREATE_REQUIRED_CABS :
           begin
-            IsNewCab := True;
             for i := ID_MIN_DEVICE to ID_MIN_DEVICE + NCE_CAB_BUS_PADDING - 1 do
-              AssignCabToBus(i, IsNewCab);                                      // Build and assign cabs 2 - N so make the throttle hardware happy
+              CreateCab(i);                                                     // Build and assign cabs 2 - N so make the throttle hardware happy
             Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
+            Exit;
           end;
-      STATE_DISCOVERDEVICES : DiscoverDevices_Process(Node);                    // Run the sub-statemachine for discovering cabs
-      STATE_KNOWNDEVICES    : KnownDevices_Process(Node);                       // Run the sub-statemachine for polling cabs
+      STATE_DISCOVERDEVICES : 
+          begin
+            case NceBridge.iStateMachine of
+              STATE_INITIALIZE :
+                  begin
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_INITIALIZE'+LF); {$ENDIF}
+                    NceBridge.iDiscoveryCabID := ID_MIN_DEVICE;
+                    NceBridge.iStateMachine := STATE_SEND_SYNC;
+                    Exit;
+                  end;
+              STATE_SEND_SYNC :
+                  begin
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_SEND_SYNC..............'+LF); {$ENDIF}
+                    FlushUartReceiver;
+                    WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
+                    EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors                                      //
+                    NceBridge.iStateMachine := STATE_WAIT_SYNC_DELAY;
+                    Exit;
+                  end;
+              STATE_WAIT_SYNC_DELAY :
+                  begin  // Waiting for the Timer to Expire and jump us to the next state
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_WAIT_SYNC_DELAY'+LF); {$ENDIF}
+                    Exit;
+                  end;
+              STATE_SEND_PING :
+                  begin  // The node replied and
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} IntToStr(NceBridge.iDiscoveryCabID, s1); UART1_Write_Text('STATE_DISCOVER_SEND_PING: ' + s1+LF); {$ENDIF}
+                    NceBridge.ExistingCab := FindCab(NceBridge.iDiscoveryCabID);
+                    FlushUartReceiver;
+                    NceBridge.iIncomingCount := 0;
+                    NceBridge.LastPortRead := PortB;
+                    CNIE_bit := 1;                                                        // Pin Change Interrupt enable
+                    WriteByte(NCEBUS_PING or NceBridge.iDiscoveryCabID, True);            // Ping the Cab ID
+                    EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us
+                    NceBridge.iStateMachine := STATE_WAIT_FOR_RESPONSE;
+                    Exit;
+                  end;
+              STATE_WAIT_FOR_RESPONSE :
+                  begin   // Waiting for the Timer to expire or we detect a reply....
+                    // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
+                    Exit;
+                  end;
+              STATE_TIMEOUT :
+                  begin
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_TIMEOUT'+LF); {$ENDIF}
+                    // Need to search the Allocated Cab List to find the NceBridge.iDiscoveryCabID matching Node to pull this
+                    NceBridge.iStateMachine := STATE_NEXT_CAB;
+                    Exit;
+                  end;
+              STATE_CAB_REPLIED :
+                  begin
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_CAB_REPLIED'+LF); {$ENDIF}
+                    if NceBridge.ExistingCab = nil then
+                    begin                 
+                      CreateCab(NceBridge.iDiscoveryCabID);
+                      NceBridge.iStateMachine := STATE_NEXT_CAB
+                    end else
+                    begin
+                      if HandleCabBusReply(NceBridge.ExistingCab) then
+                        NceBridge.iStateMachine := STATE_DISPATCH_MESSAGE
+                      else
+                        NceBridge.iStateMachine := STATE_NEXT_CAB
+                    end;
+                    Exit;
+                  end;
+              STATE_DISPATCH_MESSAGE :
+                  begin
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISPATCH_MESSAGE'+LF); {$ENDIF}
+                    if DispatchMessage(NceBridge.ExistingCab) then
+                      NceBridge.iStateMachine := STATE_NEXT_CAB;
+                    Exit;
+                  end;
+              STATE_NEXT_CAB :
+                  begin
+                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_NEXT_CAB'+LF); {$ENDIF}
+                    Inc(NceBridge.iDiscoveryCabID);
+                    if NceBridge.iDiscoveryCabID > ID_MAX_DEVICE then
+                    begin
+                      NceBridge.Discovering := False;
+                      NceBridge.DiscoverTimer := 0;
+                      NceBridge.iStateMachine := STATE_INITIALIZE;                        // Get ready for the next Discovery Mode
+                      Node^.iUserStateMachine := STATE_KNOWNDEVICES;                      // Go back to pinging only known Cabs
+                    end else
+                      NceBridge.iStateMachine := STATE_SEND_PING;
+                    Exit;
+                  end;
+            end;
+            Exit;
+          end;
+      STATE_KNOWNDEVICES    : 
+          begin
+             case NceBridge.iStateMachine of
+                STATE_INITIALIZE :
+                    begin
+                      if NceBridge.iAssignedCabCount = 0 then
+                      begin  // Nothing to do jump back to Discover, when ready
+                        if NceBridge.DiscoverTimer >= REDISCOVERY_TIME then
+                        begin
+                          Node^.iUserStateMachine := STATE_DISCOVERDEVICES;
+                          NceBridge.iStateMachine := STATE_INITIALIZE;
+                        end;
+                      end else
+                      begin
+                       {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_INITIALIZE'+LF); {$ENDIF}
+                       NceBridge.iStateMachine := STATE_SEND_SYNC;
+                      end;
+                      Exit;
+                    end;
+                STATE_SEND_SYNC :
+                    begin
+                      LATB4_bit := 1;
+
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_SEND_SYNC..............'+LF); {$ENDIF}
+                      FlushUartReceiver;
+                      WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
+                      EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors                                      //
+                      NceBridge.iStateMachine := STATE_WAIT_SYNC_DELAY;
+
+                      LATB4_bit := 0;
+                      Exit;
+                    end;
+                STATE_WAIT_SYNC_DELAY :
+                    begin  // Waiting for the Timer to Expire and jump us to the next state
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_WAIT_SYNC_DELAY'+LF); {$ENDIF}
+                      Exit;
+                    end;
+                STATE_SEND_PING :
+                    begin  // The node replied and
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_SEND_PING: ' + s1+LF); {$ENDIF}
+                      FlushUartReceiver;
+                      NceBridge.iIncomingCount := 0;
+                      NceBridge.LastPortRead := PortB;
+                      CNIE_bit := 1;                                                        // Pin Change Interrupt enable
+                      WriteByte(NCEBUS_PING or PNceCab( NceBridge.AssignedCabs[NceBridge.iActiveCab]^.UserData)^.ID, True);            // Ping the Cab ID
+                      EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us
+                      NceBridge.iStateMachine := STATE_WAIT_FOR_RESPONSE;
+                      Exit;
+                    end;
+                STATE_WAIT_FOR_RESPONSE :
+                    begin   // Waiting for the Timer to expire or we detect a reply....
+                      // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
+                    end;
+                STATE_TIMEOUT :
+                    begin
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_TIMEOUT'+LF); {$ENDIF}
+                      // This should only happen if the throttle was unplugged
+                      NceBridge.iStateMachine := STATE_NEXT_CAB;
+                      Exit;
+                    end;
+                STATE_CAB_REPLIED :
+                    begin
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_CAB_REPLIED'+LF); {$ENDIF}
+                      if HandleCabBusReply(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
+                        NceBridge.iStateMachine := STATE_DISPATCH_MESSAGE
+                      else
+                        NceBridge.iStateMachine := STATE_NEXT_CAB;
+                      Exit;
+                    end;
+                STATE_DISPATCH_MESSAGE :
+                    begin
+                      {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISPATCH_MESSAGE'+LF); {$ENDIF}
+                      if DispatchMessage(NceBridge.AssignedCabs[NceBridge.iActiveCab]) then
+                        NceBridge.iStateMachine := STATE_NEXT_CAB;
+                      Exit;
+                    end;
+                STATE_NEXT_CAB :
+                    begin
+                      {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_NEXT_CAB'+LF); {$ENDIF}
+                      Inc(NceBridge.iActiveCab);
+                      if NceBridge.iActiveCab >= NceBridge.iAssignedCabCount then
+                      begin
+                        NceBridge.iStateMachine := STATE_INITIALIZE;
+                        NceBridge.iActiveCab := 0;
+                      end else
+                        NceBridge.iStateMachine := STATE_SEND_PING;
+                      Exit;
+                    end;
+              end;
+            Exit
+          end;
     end;
   end else
   begin
     // Cab Nodes, These states are entered by key presses and set by the Physical
     // node's interaction with the Cab Bus
-    Cab := PNceCab( Node^.UserData);
+    CabData := PNceCab( Node^.UserData);
     case Node^.iUserStateMachine of
       STATE_USER_START :
           begin
             if Node^.State and NS_PERMITTED <> 0 then
               Node^.iUserStateMachine := STATE_CAB_IDLE;
+            Exit;
           end;
       STATE_CAB_IDLE :
           begin
             // Nothing going on....
+            Exit;
           end;
       STATE_CAB_SELECT_LOCO :
           begin
-            case Cab^.iStateMachine of
+            case CabData^.iStateMachine of
               STATE_INITIALIZE :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_INITIALIZE'+LF); {$ENDIF}
-                     WordToStr( CabMessageToTrainAddress(Cab^.IncomingMsg), s1);
-                     UART1_Write_Text('Address: ' + s1 + LF);
-                     Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK;
+                     CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK;
+                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE'+LF); {$ENDIF}
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT; // Wait for the Manage Reply Callback
-                    Cab^.WatchDog := 0;
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT; // Wait for the Manage Reply Callback
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE'+LF); {$ENDIF}
-                    Address := CabMessageToTrainAddress(Cab^.IncomingMsg);
-                    AppCallback_ReadConfiguration(CONFIG_OFFSET_SPEED_STEP, 1, @SpeedStep);    // These offsets are into the Physical Nodes configuration address space
-                    AppCallback_ReadConfiguration(CONFIG_OFFSET_ADDRESS_TYPE, 1, @AddressType);
                     
+                    Address := CabMessageToTrainAddress(@CabData^.IncomingMsg);
+                    
+                    WordToStr(Address, s1);
+                    UART1_Write_Text('Address = ' + s1 + LF);
+                    SpeedStep := 28;
+                    
+              {      AppCallback_ReadConfiguration(CONFIG_OFFSET_SPEED_STEP, 1, @SpeedStep);    // These offsets are into the Physical Nodes configuration address space
+                    AppCallback_ReadConfiguration(CONFIG_OFFSET_ADDRESS_TYPE, 1, @AddressType);
+
                     if AddressType = 1 then
                       Address := Address or $C000;
                     case SpeedStep of
@@ -887,182 +854,229 @@ begin
                       1 : SpeedStep := 28;
                       2 : SpeedStep := 128;
                     end;
-                    
+                   }
                     if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Address, SpeedStep, 0) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
-                    Cab^.WatchDog := 0;
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK :
                   begin
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK; // No Reply for Unlock
-                    Cab^.WatchDog := 0;
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK; // No Reply for Unlock
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK :
                   begin
-                    if TrySendTractionManage(Node^.Info, Node^.TrainData.NotifyController, True) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                    Cab^.WatchDog := 0;
+                    if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
                   begin
-                    if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.NotifyController, Node^.Info, True) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                    Cab^.WatchDog := 0;
+                    if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
                   begin
-                    if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.NotifyController) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                    Cab^.WatchDog := 0;
+                    if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
                   begin
-                    if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.NotifyController, 0) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                    Cab^.WatchDog := 0;
+                    if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, 0) then
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
                   begin
-                    if TrySendTractionManage(Node^.Info, Node^.TrainData.NotifyController, False) then
-                    begin
-                      Cab^.iStateMachine := STATE_INITIALIZE;  // No reply for unlock
-                      Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                    end;
-                    Cab^.WatchDog := 0;
+                    if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, False) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG;   // We are done....
+                    CabData^.WatchDog := 0;
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_REPLY_WAIT'+LF); {$ENDIF}
                     // Waiting for the Reply to come into a callback
-                    if Cab^.WatchDog > 20 then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
+                    if CabData^.WatchDog > 20 then
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
+                    Exit;
                   end;
               STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK :
                   begin
                     // Unsure if we are locked or not, just release just in case
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
-                      Cab^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK; // No Reply for Unlock, just unlock the Traction Protcol and end
+                      CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK; // No Reply for Unlock, just unlock the Traction Protcol and end
+                    Exit;
                   end;
             end;
           end;
       STATE_CAB_RUN_MACRO :
           begin
-            Cab^.iStateMachine := STATE_INITIALIZE;  // Reset
-            Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
+            if NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+              Exit;
+            end else
+            begin
+              Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+              Exit;
+            end;
           end;
       STATE_CAB_RUN_CMD :
           begin
-            case Cab^.IncomingMsg.DataBytes[0] of
-              NCE_CAB_DIR_TOGGLE                  :
-                begin
-                  if Node^.TrainData.SpeedDir and $8000 <> 0 then
-                    Node^.TrainData.SpeedDir := Node^.TrainData.SpeedDir and not $8000
-                  else
-                    Node^.TrainData.SpeedDir := Node^.TrainData.SpeedDir or $8000;
-                  if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.NotifyController, Node^.TrainData.SpeedDir) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_HORN_KEY_DOWN                   :
-                begin
-                  if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.NotifyController, FUNCTION_HORN, 1) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_ONE_STEP_FASTER             :
-                begin
-                  if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.NotifyController, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), 1))) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_ONE_STEP_SLOWER             :
-                begin
-                  if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.NotifyController, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), -1))) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_EMERGENCY_STOP              :
-                begin
-                  if TrySendTractionEmergencyStop(Node^.Info, Node^.TrainData.NotifyController) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_BELL                        :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, FUNCTION_BELL) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F0_0                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 0) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F1_1                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 1) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F2_2                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 2) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F3_3                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 3) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F4_4                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 4) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F5_5                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 5) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F6_6                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 6) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F7_7                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 7) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_TOGGLE_F8_8                 :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 8) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_9                           :
-                begin
-                  if ToggleFunction(Node, Node^.TrainData.Functions, 19) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_HORN_KEY_UP                     :
-                begin
-                  if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.NotifyController, FUNCTION_HORN, 0) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_FIVE_STEPS_FASTER           :
-                begin
-                  if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.NotifyController, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), 5))) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_FIVE_STEPS_SLOWER           :
-                begin
-                  if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.NotifyController, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), -5))) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_DIR_FORWARD                 :
-                begin
-                  if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.NotifyController, True) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
-              NCE_CAB_DIR_REVERSE                 :
-                begin
-                  if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.NotifyController, False) then
-                    Node^.iUserStateMachine := STATE_CAB_IDLE // We are done....
-                end;
+            if NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+              Exit;
+            end else
+            begin
+              case CabData^.IncomingMsg.DataBytes[0] of
+                NCE_CAB_DIR_TOGGLE                  :
+                  begin
+                    if Node^.TrainData.SpeedDir and $8000 <> 0 then
+                      Node^.TrainData.SpeedDir := Node^.TrainData.SpeedDir and not $8000
+                    else
+                      Node^.TrainData.SpeedDir := Node^.TrainData.SpeedDir or $8000;
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, Node^.TrainData.SpeedDir) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_HORN_KEY_DOWN                   :
+                  begin
+                    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FUNCTION_HORN, 1) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_ONE_STEP_FASTER             :
+                  begin
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), 1))) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_ONE_STEP_SLOWER             :
+                  begin
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), -1))) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_EMERGENCY_STOP              :
+                  begin
+                    if TrySendTractionEmergencyStop(Node^.Info, Node^.TrainData.LinkedNode) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_BELL                        :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, FUNCTION_BELL) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F0_0                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 0) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                  end;
+                NCE_CAB_TOGGLE_F1_1                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 1) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F2_2                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 2) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F3_3                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 3) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F4_4                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 4) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F5_5                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 5) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F6_6                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 6) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done...
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F7_7                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 7) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_TOGGLE_F8_8                 :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 8) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_9                           :
+                  begin
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 9) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_HORN_KEY_UP                     :
+                  begin
+                    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FUNCTION_HORN, 0) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_FIVE_STEPS_FASTER           :
+                  begin
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), 5))) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_FIVE_STEPS_SLOWER           :
+                  begin
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), -5))) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_DIR_FORWARD                 :
+                  begin
+                    if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, True) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+                NCE_CAB_DIR_REVERSE                 :
+                  begin
+                    if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, False) then
+                      Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    Exit;
+                  end;
+              end;
             end;
+          end;
+      STATE_CAB_CLEAR_MSG :
+          begin
+            CabData^.IncomingMsg.Full := False;
+            CabData^.State := CabData^.State and not (CS_MACRO_MESSAGE or CS_LOCO_SELECT);
+            Node^.iUserStateMachine := STATE_CAB_IDLE; // We are done....
+            CabData^.iStateMachine := STATE_INITIALIZE;  // Reset
           end;
     end;
   end;
@@ -1212,11 +1226,18 @@ var
   MultiFrameBuffer: PMultiFrameBuffer;
   CabData: PNceCab;
 begin
+
+UART1_Write_Text('TRACTION_PROXY_REPLY' +LF);
+
+
   MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
   CabData := PNceCab( Node^.UserData);
   case AMessage^.Buffer^.DataArray[0] of
     TRACTION_PROXY_MANAGE :
         begin
+        
+        UART1_Write_Text('TRACTION_PROXY_MANAGE' +LF);
+        
           if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
           begin
              if AMessage^.Buffer^.DataArray[2] = 0 then
@@ -1227,8 +1248,12 @@ begin
         end;
     TRACTION_PROXY_ALLOCATE :
         begin
-          Node^.TrainData.NotifyController.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
-          NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.NotifyController.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+        
+        UART1_Write_Text('TRACTION_PROXY_ALLOCATE' +LF);
+        
+        
+          Node^.TrainData.LinkedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
+          NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.LinkedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
           CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK;    // Now need to unlock the Proxy
         end;
   end; // case
