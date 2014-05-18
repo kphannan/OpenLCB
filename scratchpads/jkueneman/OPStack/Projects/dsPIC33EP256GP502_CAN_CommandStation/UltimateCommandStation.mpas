@@ -3,28 +3,12 @@ program UltimateCommandStation;
 { Declarations section }
 
 // Serial Flash Chip Select connection
-var 
-  CS_Serial_Flash_bit: sbit at LATD14_bit;
-  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
+//var
+//  CS_Serial_Flash_bit: sbit at LATD14_bit;
+//  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
   
-// TFT module connections
-var
-  TFT_DataPort : char  at LATE;
-  TFT_RST : sbit  at LATD7_bit;
-  TFT_BLED : sbit at LATD2_bit;
-  TFT_RS : sbit  at LATD9_bit;
-  TFT_CS : sbit  at LATD10_bit;
-  TFT_RD : sbit  at LATD5_bit;
-  TFT_WR : sbit  at LATD4_bit;
-  TFT_DataPort_Direction : char  at TRISE;
-  TFT_RST_Direction : sbit  at TRISD7_bit;
-  TFT_BLED_Direction : sbit at TRISD2_bit;
-  TFT_RS_Direction : sbit  at TRISD9_bit;
-  TFT_CS_Direction : sbit  at TRISD10_bit;
-  TFT_RD_Direction : sbit  at TRISD5_bit;
-  TFT_WR_Direction : sbit  at TRISD4_bit;
 
-// End TFT module connections
+var
 
 // DCC Connection Pins
   H_Bridge_A_Lo                     : sbit at LATB4_bit;
@@ -44,21 +28,6 @@ var
 
   Dcc_Timer_PR                      : Word at PR1;                              // DCC Interrupt Rollover
 // End DCC Connection Pins
-
-procedure DrawFrame();
-begin
-  TFT_Fill_Screen(CL_WHITE);
-  TFT_Set_Pen(CL_BLACK, 1);
-  TFT_Line(20, 220, 300, 220);
-  TFT_LIne(20,  46, 300,  46);
-  TFT_Set_Font(@HandelGothic_BT21x22_Regular, CL_RED, FO_HORIZONTAL);
-  TFT_Write_Text('Ultimate DCC CommandStation', 15, 14);
-  TFT_Set_Font(@Verdana12x13_Regular, CL_BLACK, FO_HORIZONTAL);
-  TFT_Write_Text('OpenLCB', 19, 223);
-  TFT_Set_Font(@Verdana12x13_Regular, CL_RED, FO_HORIZONTAL);
-  TFT_Write_Text('www.openlcb.org', 200, 223);
-  TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
-end;
 
 procedure ToggleBridge;
 begin
@@ -131,25 +100,22 @@ begin
   H_Bridge_B_Lo_Direction          := 0;
   H_Bridge_B_Hi_Direction          := 0;
   { Main program }
-  NMRA_DCC_Initialize(4060);        // DCC_TIMER_58US = 4060;    // Clock ticks every 1/140Mhz * 2 * 4060 = 58us interrupts
+  NMRA_DCC_Initialize(1850);     // Clock ticks every 31.25ns * 1856 = 58us interrupts  
+
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
-  MCU_EnableUARTA;
-  MCU_EnableTFT;
-  TFT_BLED_Direction := 0;                  // Set TFT backlight pin as output
-  TFT_BLED := 1;                            // Turn on TFT backlight
-  DrawFrame();
+  MCU_EnableUART;
 
   OPStackCore_Initialize;
+
   MCU_EnableCAN;
   MCU_Enable100msTimer;
-  MCU_EnableDCCTimer(4060);       // DCC_TIMER_58US = 4060;    // Clock ticks every 1/140Mhz * 2 * 4060 = 58us interrupts
+  MCU_EnableDCCTimer(1850);
+  MCU_Enable5msServiceModeTimer;
+  MCU_Enable10msTimer;
+  MCU_Enable10msTimer;
+  MCU_EnableADC;
   OPStackCore_Enable(True);
-  
-  UART1_Write_Text('Booting');
-  
-  delay_ms(100);
-//  OPStackNode_Allocate;        // Allocate the first Train Node
   
   while True do
   begin

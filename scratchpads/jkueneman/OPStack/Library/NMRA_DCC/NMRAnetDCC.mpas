@@ -20,12 +20,7 @@ unit NMRAnetDCC;
 // ******************************************************************************
 
 {$I Options.inc}
-  
-// Need to find a better way to make this definable in the applications
-const
-  DCC_TIMER_58US = 4060;    // Clock ticks every 1/140Mhz * 2 * 4060 = 58us interrupts
-  DCC_TIMER_29US = 2030;    // Clock ticks every 1/140Mhz * 2 * 2030 = 29us interrupts
-  
+
 const
   _5ms_PERIOD   = 90;        // 5ms/56us = 89.3 (number of 56us ticks)
   _20ms_PERIOD = 360;        // 20ms/56us = 357.1 (number of 56us ticks)
@@ -167,7 +162,7 @@ var
   PreambleSyncPinDirection: sbit; sfr; external;
 
 // Call once on start up
-procedure NMRA_DCC_Initialize; forward;
+procedure NMRA_DCC_Initialize(TimerCountsFor58us: Word); forward;
 // Places a message in the queue to be transmitted
 function NMRA_DCC_QueuePacket(ABuffer: PDCCBufferInfo; NewMessage: PDCCPacket; HighPriority: Boolean): Boolean; forward;
 // Loads the passed message with the raw passed data information
@@ -216,6 +211,9 @@ type
 var
   TrackQueue: TTrackMessageQueue;
   TrackQueuePriority: TTrackMessageQueuePriority;
+  
+  DCC_TIMER_58US: Word;
+  DCC_TIMER_29US: Word;
 
 
 procedure InitializeBuffer(ABuffer: PDCCBufferInfo; SlotQueue, PrioritySlotQueue: PDCCPacketArray; QueueSize, QueuePrioritySize: Byte); forward;
@@ -235,11 +233,13 @@ procedure NMRA_DCC_ResetTransmitter(ABuffer: PDCCBufferInfo); forward;
 //  BufferInfo records.  Called once at program initialization
 //
 // ****************************************************************************
-procedure NMRA_DCC_Initialize;
+procedure NMRA_DCC_Initialize(TimerCountsFor58us: Word);
 begin
   PreambleSyncPinDirection := 0; // output
   InitializeBuffer(@Track, @TrackQueue, @TrackQueuePriority, MAX_TRACK_BUFFER_DEPTH, MAX_TRACK_PRIORITY_BUFFER_DEPTH);
   InitializeBuffer(@Programming, nil, nil, 0, 0);
+  DCC_TIMER_58US := TimerCountsFor58us;
+  DCC_TIMER_29US := DCC_TIMER_29US div 2;
 end;
 
 // ****************************************************************************
