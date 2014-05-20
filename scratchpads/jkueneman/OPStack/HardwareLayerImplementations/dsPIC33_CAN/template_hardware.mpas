@@ -169,8 +169,6 @@ begin
       MT_SIMPLE :
           begin
             OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
-       //     CopyNMRAnetCanBuffers(@NMRAnetCanBuffer, @Hardware.OutgoingTxBuffer);
-       //     dsPIC33_StartTransmission(@Hardware.OutgoingTxBuffer, True);
             dsPIC33_StartTransmission(@NMRAnetCanBuffer, True);
             Hardware.OutgoingTxBufferEmpty := True;
             OPStackBuffers_DeAllocateMessage(AMessage);

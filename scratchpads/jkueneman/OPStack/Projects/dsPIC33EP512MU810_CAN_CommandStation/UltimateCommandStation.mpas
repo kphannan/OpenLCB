@@ -146,7 +146,7 @@ begin
   MCU_EnableDCCTimer(4060);       // DCC_TIMER_58US = 4060;    // Clock ticks every 1/140Mhz * 2 * 4060 = 58us interrupts
   OPStackCore_Enable(True);
   
-  UART1_Write_Text('Booting');
+  UART1_Write_Text('Booted'+LF);
   
   delay_ms(100);
 //  OPStackNode_Allocate;        // Allocate the first Train Node

@@ -251,8 +251,14 @@ function TractionProtocolReplyQuerySpeed(DestNode: PNMRAnetNode; var MessageToSe
 begin
   Result := False;
   MessageToSend := nil;
+  
+  UART1_Write_Text('1');
+  
   if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
+  
+  UART1_Write_Text('2');
+  
     MessageToSend^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
     MessageToSend^.Buffer^.DataArray[1] := Hi( DestNode^.TrainData.SpeedDir);
     MessageToSend^.Buffer^.DataArray[2] := Lo( DestNode^.TrainData.SpeedDir);
@@ -262,8 +268,16 @@ begin
     MessageToSend^.Buffer^.DataArray[6] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataArray[7] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataBufferSize := 8;
+    
+    UART1_Write_Text('3');
+    
     AppCallback_TractionProtocol(DestNode, NextMessage);
+    
+    UART1_Write_Text('4');
+    
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+    
+    UART1_Write_Text('5');
   end;
 end;
 

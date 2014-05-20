@@ -2,6 +2,11 @@ unit template_userstatemachine;
 
 {$I Options.inc}
 
+{.$DEFINE DEBUG_TRAINSERVER_STATEMACHINE}
+{.$DEFINE DEBUG_TRAINOBJECT_STATEMACHINE}
+{.$DEFINE DEBUG_TRACTION_PROTOCOL}
+{.$DEFINE DEBUG_TRACTION_PROXY_PROTOCOL}
+
 uses
   Float16,
   opstacktypes,
@@ -96,7 +101,9 @@ begin
       STATE_PROXY_USER_START :
             begin
               if Node^.State and NS_PERMITTED then
+              begin   {$IFDEF DEBUG_TRAINSERVER_STATEMACHINE} UART1_Write_Text('STATE_PROXY_USER_START'+LF); {$ENDIF}
                 Node^.iUserStateMachine := STATE_PROXY_IDLE
+              end;
             end;
       STATE_PROXY_IDLE :
           begin
@@ -110,10 +117,12 @@ begin
       STATE_TRAIN_USER_START :
             begin
               if Node^.State and NS_PERMITTED then
+              begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_USER_START'+LF); {$ENDIF}
                 Node^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY
+              end
             end;
       STATE_TRAIN_ALLOCATE_PROXY_REPLY :
-          begin
+          begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_ALLOCATE_PROXY_REPLY'+LF); {$ENDIF}
             if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Node^.TrainData.LinkedNode, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Node^.TrainData.Address) then
               Node^.iUserStateMachine := STATE_TRAIN_IDLE;
           end;
@@ -172,17 +181,18 @@ end;
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
+  {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('AppCallback_TractionProtocol'+LF); {$ENDIF}
   case AMessage^.Buffer^.DataArray[0] of
       TRACTION_CONTROLLER_CONFIG :
           begin
             case AMessage^.Buffer^.DataArray[1] of
-                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin Exit; end;
-                TRACTION_CONSIST_DETACH           : begin Exit; end;
+                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('TRACTION_CONTROLLER_CONFIG_ASSIGN'+LF); {$ENDIF} Exit; end;
+                TRACTION_CONSIST_DETACH           : begin {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('TRACTION_CONSIST_DETACH'+LF); {$ENDIF} Exit; end;
             end
           end;
-      TRACTION_SPEED_DIR : begin Exit; end;
-      TRACTION_FUNCTION  : begin Exit; end;
-      TRACTION_E_STOP    : begin Exit; end
+      TRACTION_SPEED_DIR : begin {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('TRACTION_SPEED_DIR'+LF); {$ENDIF} Exit; end;
+      TRACTION_FUNCTION  : begin {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('TRACTION_FUNCTION'+LF); {$ENDIF} Exit; end;
+      TRACTION_E_STOP    : begin {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('TRACTION_E_STOP'+LF); {$ENDIF} Exit; end
   else begin
     end;
   end;
@@ -220,12 +230,13 @@ var
   TrainID: Word;
   TrainNode: PNMRAnetNode;
 begin
+  {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('AppCallback_TractionProxyProtocol'+LF); {$ENDIF}
   // Only the main physical node is the proxy and can reply to these messages
   if Node = GetPhysicalNode then
   begin
     case AMessage^.Buffer^.DataArray[0] of
         TRACTION_PROXY_ALLOCATE :
-          begin
+          begin {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('TRACTION_PROXY_ALLOCATE'+LF); {$ENDIF}
             TrainID := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
             TrainNode := OPStackNode_FindByTrainID(TrainID);
             if TrainNode <> nil then

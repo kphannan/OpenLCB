@@ -11,11 +11,11 @@ object Form1: TForm1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  LCLVersion = '1.2.2.0'
+  LCLVersion = '1.2.0.3'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 21
-    Top = 373
+    Height = 15
+    Top = 379
     Width = 672
     Panels = <    
       item
@@ -52,17 +52,17 @@ object Form1: TForm1
       Style = tbsCheck
     end
     object ToolButtonNewThrottle: TToolButton
-      Left = 288
+      Left = 273
       Top = 2
       Action = ActionStartNode
     end
     object ToolButtonDeleteThrottle: TToolButton
-      Left = 385
+      Left = 362
       Top = 2
       Action = ActionLogging
     end
     object ToolButtonSeparator: TToolButton
-      Left = 612
+      Left = 581
       Top = 2
       Width = 10
       Caption = 'ToolButtonSeparator'
@@ -74,36 +74,36 @@ object Form1: TForm1
       Action = ActionCOMConnection
     end
     object ToolButton1: TToolButton
-      Left = 170
+      Left = 161
       Top = 2
       Action = ActionEthernetClientConnection
     end
     object ToolButton2: TToolButton
-      Left = 446
+      Left = 421
       Top = 2
       Action = ActionDetailedLogging
     end
     object ToolButton3: TToolButton
-      Left = 567
+      Left = 536
       Top = 2
       Action = ActionLogClear
     end
     object ToolButton4: TToolButton
-      Left = 278
+      Left = 263
       Top = 2
       Width = 10
       Caption = 'ToolButton4'
       Style = tbsSeparator
     end
     object ToolButton5: TToolButton
-      Left = 370
+      Left = 347
       Top = 2
       Width = 10
       Caption = 'ToolButton5'
       Style = tbsSeparator
     end
     object ToolButton6: TToolButton
-      Left = 380
+      Left = 357
       Top = 2
       Width = 5
       Caption = 'ToolButton6'
@@ -112,7 +112,7 @@ object Form1: TForm1
   end
   object PageControlMain: TPageControl
     Left = 0
-    Height = 329
+    Height = 335
     Top = 44
     Width = 672
     ActivePage = TabSheetCommandStation
@@ -121,24 +121,24 @@ object Form1: TForm1
     TabOrder = 2
     object TabSheetCommandStation: TTabSheet
       Caption = 'Command Station'
-      ClientHeight = 298
-      ClientWidth = 668
+      ClientHeight = 296
+      ClientWidth = 666
       object GroupBoxLogging: TGroupBox
         Left = 233
-        Height = 226
+        Height = 224
         Top = 64
-        Width = 425
+        Width = 423
         Anchors = [akTop, akLeft, akRight, akBottom]
         Caption = 'Logging'
-        ClientHeight = 207
-        ClientWidth = 421
+        ClientHeight = 202
+        ClientWidth = 415
         TabOrder = 0
         inline SynMemoLog: TSynMemo
           Cursor = crIBeam
           Left = 0
-          Height = 194
+          Height = 189
           Top = 9
-          Width = 415
+          Width = 409
           Anchors = [akTop, akLeft, akRight, akBottom]
           Font.Height = 12
           Font.Name = 'Monaco'
@@ -148,7 +148,7 @@ object Form1: TForm1
           ParentFont = False
           PopupMenu = PopupMenuSynEditLog
           TabOrder = 0
-          Gutter.Width = 65
+          Gutter.Width = 55
           Gutter.MouseActions = <>
           Keystrokes = <          
             item
@@ -587,7 +587,7 @@ object Form1: TForm1
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 25
+              Width = 15
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -625,11 +625,11 @@ object Form1: TForm1
         Left = 233
         Height = 64
         Top = 0
-        Width = 425
+        Width = 423
         Anchors = [akTop, akLeft, akRight]
         Caption = 'Trains'
-        ClientHeight = 45
-        ClientWidth = 421
+        ClientHeight = 42
+        ClientWidth = 415
         TabOrder = 1
         object ButtonShowAllThrottles: TButton
           Left = 4
@@ -650,10 +650,11 @@ object Form1: TForm1
       end
       object TreeViewTrains: TTreeView
         Left = 0
-        Height = 298
+        Height = 296
         Top = 0
         Width = 221
         Align = alLeft
+        DefaultItemHeight = 18
         TabOrder = 2
         OnCreateNodeClass = TreeViewTrainsCreateNodeClass
       end

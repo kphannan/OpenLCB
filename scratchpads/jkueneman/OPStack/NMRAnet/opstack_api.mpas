@@ -501,6 +501,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
+  begin   
     if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
     begin
       MultiFrameBuffer := PMultiFrameBuffer( PByte( NewMessage^.Buffer));
@@ -516,6 +517,7 @@ begin
       OutgoingMessage(NewMessage);
       Result := True;
     end
+  end
 end;
 
 function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;

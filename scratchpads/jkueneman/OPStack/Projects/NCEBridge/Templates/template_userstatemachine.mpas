@@ -10,6 +10,7 @@ interface
 {.$DEFINE DEBUG_DISCOVER_STATEMACHINE}
 {.$DEFINE DEBUG_KNOWNDEVICES_STATEMACHINE}
 {.$DEFINE DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE}
+{$DEFINE DEBUG_STATE_CAB_STATEMACHINE}
 
 uses
   Float16,
@@ -144,6 +145,14 @@ begin
   else
     Result := 'Unknown Command';
   end;
+end;
+
+procedure PrintNodeInfo(var NodeInfo: TNodeInfo);
+begin
+  WordToHex(NodeInfo.AliasID, s1);
+  UART1_Write_Text('Alias: 0x' + s1);
+  LongWordToHex( (NodeInfo.ID[0] shr 24) or NodeInfo.ID[1], s1);
+  UART1_Write_Text('Node ID: 0x' + s1);
 end;
 
 procedure PrintIncomingMsg(var IncomingMsg: TNceMessage);
@@ -829,7 +838,7 @@ begin
                      Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK :
-                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE'+LF); {$ENDIF}
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK'+LF); {$ENDIF}
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT; // Wait for the Manage Reply Callback
                     CabData^.WatchDog := 0;
@@ -861,56 +870,59 @@ begin
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK'+LF); {$ENDIF}
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK; // No Reply for Unlock
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK'+LF); {$ENDIF}
                     if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER'+LF); {$ENDIF}
                     if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED'+LF); {$ENDIF}
                     if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS'+LF); {$ENDIF}
                     if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, 0) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK'+LF); {$ENDIF}
                     if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, False) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG;   // We are done....
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
-                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_REPLY_WAIT'+LF); {$ENDIF}
+                  begin
                     // Waiting for the Reply to come into a callback
-                    if CabData^.WatchDog > 20 then
+                    if CabData^.WatchDog > 200 then
+                    begin
+                      {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_REPLY_WAIT'+LF); {$ENDIF}
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
+                    end;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK :
-                  begin
+                  begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK'+LF); {$ENDIF}
                     // Unsure if we are locked or not, just release just in case
                     if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK; // No Reply for Unlock, just unlock the Traction Protcol and end
@@ -1072,9 +1084,10 @@ begin
             end;
           end;
       STATE_CAB_CLEAR_MSG :
-          begin
+          begin {$IFDEF DEBUG_STATE_CAB_STATEMACHINE} UART1_Write_Text('STATE_CAB_CLEAR_MSG'+LF); {$ENDIF}
             CabData^.IncomingMsg.Full := False;
             CabData^.State := CabData^.State and not (CS_MACRO_MESSAGE or CS_LOCO_SELECT);
+            CabData^.IncomingMsg.Count := 0;
             Node^.iUserStateMachine := STATE_CAB_IDLE; // We are done....
             CabData^.iStateMachine := STATE_INITIALIZE;  // Reset
           end;
@@ -1226,18 +1239,11 @@ var
   MultiFrameBuffer: PMultiFrameBuffer;
   CabData: PNceCab;
 begin
-
-UART1_Write_Text('TRACTION_PROXY_REPLY' +LF);
-
-
   MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
   CabData := PNceCab( Node^.UserData);
   case AMessage^.Buffer^.DataArray[0] of
     TRACTION_PROXY_MANAGE :
         begin
-        
-        UART1_Write_Text('TRACTION_PROXY_MANAGE' +LF);
-        
           if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
           begin
              if AMessage^.Buffer^.DataArray[2] = 0 then
@@ -1245,16 +1251,17 @@ UART1_Write_Text('TRACTION_PROXY_REPLY' +LF);
              else
                CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
           end;
+          Exit;
         end;
     TRACTION_PROXY_ALLOCATE :
         begin
-        
-        UART1_Write_Text('TRACTION_PROXY_ALLOCATE' +LF);
-        
-        
           Node^.TrainData.LinkedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
           NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.LinkedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+          
+          PrintNodeInfo(Node^.TrainData.LinkedNode);
+          
           CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK;    // Now need to unlock the Proxy
+          Exit;
         end;
   end; // case
 end;

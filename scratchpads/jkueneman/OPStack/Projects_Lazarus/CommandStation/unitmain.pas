@@ -19,6 +19,8 @@ const
   PATH_SETTINGS_FILE     = 'settings.ini';
   PATH_CONFIGURATION_FILE = 'configuration.dat';
 
+  WM_CLOSE_CONNECTIONS = WM_USER + 234;
+
 type
 
   TLoadSettingType = (
@@ -211,6 +213,7 @@ type
     procedure TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
+    FComConnectionState: TConnectionState;
     FConfigurationFile: WideString;
     FEthernetConnectionState: TConnectionState;
     {$IFDEF DARWIN}
@@ -229,12 +232,18 @@ type
     procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
     procedure EthernetError(Sender: TObject; ErrorMessage: string);
     procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
+    procedure ComPortError(Sender: TObject; MessageStr: String);
+    procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
+    procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
+    procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
     procedure DestroyTask(Sender: TTaskOlcbBase);
     procedure LoadSettings(SettingType: TLoadSettingType);
     procedure ScanComPorts;
     procedure StoreSettings(SettingType: TLoadSettingType);
+    procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
 
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
+    property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
     property ConfigurationFile: WideString read FConfigurationFile write FConfigurationFile;
     property EthernetConnectionState: TConnectionState read FEthernetConnectionState write FEthernetConnectionState;
     {$IFDEF DARWIN}
@@ -429,9 +438,16 @@ begin
   EthernetHub.OnConnectionStateChange := @EthernetConnectState;
   EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.EnableSendMessages := ActionLogging.Checked;
+
+  ComPortHub.OnReceiveMessage := @ComPortReceiveLogging;
+  ComPortHub.OnSendMessage := @ComPortSendLogging;
+  ComPortHub.OnErrorMessage := @ComPortError;
+  ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
+
   FShownOnce := False;
   OPStackCore_Initialize;
   EthernetConnectionState := csDisconnected;
+  ComConnectionState := csDisconnected;
   FSettingsLocked := False;
   FPaused := False;
 
@@ -568,6 +584,52 @@ begin
   if (ActionEthernetClientConnection.Checked) or (Sender is TEthernetListenDameonThread) then
     EthernetConnectionState := ConnectionState;
   UpdateUI
+end;
+
+procedure TForm1.ComPortError(Sender: TObject; MessageStr: String);
+begin
+  ShowMessage(MessageStr);
+  PostMessage(Handle, WM_CLOSE_CONNECTIONS, 0, 0);
+end;
+
+procedure TForm1.ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
+begin
+  ComConnectionState := NewConnectionState;
+  UpdateUI;
+end;
+
+procedure TForm1.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
+begin
+  if not Paused then
+  begin
+    SynMemoLog.BeginUpdate();
+     try
+       if ActionDetailedLogging.Checked then
+         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
+       else
+         SynMemoLog.Lines.Add(MessageStr);
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
+  end;
+end;
+
+procedure TForm1.ComPortSendLogging(Sender: TObject; MessageStr: String);
+begin
+  if not Paused then
+  begin
+    SynMemoLog.BeginUpdate();
+     try
+       if ActionDetailedLogging.Checked then
+         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
+       else
+         SynMemoLog.Lines.Add(MessageStr);
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
+  end;
 end;
 
 
@@ -721,6 +783,17 @@ begin
     end;
     GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
   end;
+end;
+
+procedure TForm1.WMCloseConnections(var Message: TMessage);
+begin
+  if ActionEthernetListenerConnection.Checked then
+    ActionEthernetListenerConnection.Execute;
+  if ActionEthernetClientConnection.Checked then
+    ActionEthernetClientConnection.Execute;
+  if ActionCOMConnection.Checked then
+    ActionCOMConnection.Execute;
+  UpdateUI
 end;
 
 procedure TForm1.TabSheetComPortHide(Sender: TObject);
