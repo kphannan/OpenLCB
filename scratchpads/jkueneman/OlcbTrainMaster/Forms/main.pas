@@ -42,6 +42,7 @@ type
   { TFormOlcbTrainMaster }
 
   TFormOlcbTrainMaster = class(TForm)
+    ActionLogInJMRI: TAction;
     ActionZeroizeConfigMemory: TAction;
     ActionStartNode: TAction;
     ActionLogCopy: TAction;
@@ -74,25 +75,22 @@ type
     ButtonHideAllThrottles: TButton;
     ButtonRediscoverProxies: TButton;
     ButtonShowAllThrottles: TButton;
+    CheckBoxJMRILogging: TCheckBox;
     ComboBoxBaud: TComboBox;
     ComboBoxComPort: TComboBox;
     ComboBoxDataBits: TComboBox;
     ComboBoxFlowControl: TComboBox;
     ComboBoxParity: TComboBox;
     ComboBoxStopBits: TComboBox;
-    EditAliasID: TEdit;
     EditEthernetLocalIP: TEdit;
     EditEthernetRemoteIP: TEdit;
-    EditNodeID: TEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     GroupBoxThrottles: TGroupBox;
     Image1: TImage;
     ImageList16x16: TImageList;
     Label1: TLabel;
-    Label2: TLabel;
     Label3: TLabel;
-    Label4: TLabel;
     Label5: TLabel;
     Label6: TLabel;
     Label7: TLabel;
@@ -199,6 +197,7 @@ type
     procedure ActionLogCopyExecute(Sender: TObject);
     procedure ActionLogCutExecute(Sender: TObject);
     procedure ActionLoggingExecute(Sender: TObject);
+    procedure ActionLogInJMRIExecute(Sender: TObject);
     procedure ActionLogPasteExecute(Sender: TObject);
     procedure ActionLogPauseExecute(Sender: TObject);
     procedure ActionLogSelectAllExecute(Sender: TObject);
@@ -363,7 +362,7 @@ end;
 
 procedure TFormOlcbTrainMaster.ActionDetailedLoggingExecute(Sender: TObject);
 begin
-  ;
+  StoreSettings(lstGeneral);
 end;
 
 procedure TFormOlcbTrainMaster.ActionEthernetClientConnectionExecute(Sender: TObject);
@@ -418,6 +417,12 @@ begin
   ComPortHub.EnableSendMessages := ActionLogging.Checked;
   EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.EnableSendMessages := ActionLogging.Checked;
+  StoreSettings(lstGeneral);
+end;
+
+procedure TFormOlcbTrainMaster.ActionLogInJMRIExecute(Sender: TObject);
+begin
+  StoreSettings(lstGeneral);
 end;
 
 procedure TFormOlcbTrainMaster.ActionLogPasteExecute(Sender: TObject);
@@ -529,36 +534,12 @@ end;
 
 procedure TFormOlcbTrainMaster.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TFormOlcbTrainMaster.ComPortSendLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TFormOlcbTrainMaster.LoadSettings(SettingType: TLoadSettingType);
@@ -590,8 +571,9 @@ begin
         lstGeneral:
           begin
             SpinEditSendPacketDelay.Value := GlobalSettings.General.SendPacketDelay;
-            EditAliasID.Caption := ValidateHex( GlobalSettings.General.AliasID);
-            EditNodeID.Caption := ValidateHex(GlobalSettings.General.NodeID);
+            ActionLogInJMRI.Checked := GlobalSettings.General.JMRILogFormat;
+            ActionLogging.Checked := GlobalSettings.General.Logging;
+            ActionDetailedLogging.Checked := GlobalSettings.General.DetailedLogging;
           end;
       end;
     finally
@@ -642,8 +624,9 @@ begin
       lstGeneral:
         begin
           GlobalSettings.General.SendPacketDelay := SpinEditSendPacketDelay.Value;
-          GlobalSettings.General.AliasID := ValidateHex(EditAliasID.Caption);
-          GlobalSettings.General.NodeID := ValidateHex(EditNodeID.Caption);
+          GlobalSettings.General.JMRILogFormat := ActionLogInJMRI.Checked;
+          GlobalSettings.General.Logging := ActionLogging.Checked;
+          GlobalSettings.General.DetailedLogging := ActionDetailedLogging.Checked;
         end;
     end;
     GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
@@ -789,7 +772,9 @@ begin
     LabelTargetOS.Caption := {$I %FPCTARGETOS%};
     LabelTargetCPU.Caption := {$I %FPCTARGETCPU%};
 
-    ActionLogging.Execute;       // Set Logging by default
+    LoadSettings(lstCom);
+    LoadSettings(lstEthernet);
+    LoadSettings(lstGeneral);
     ShownOnce := True;
   end;
   UpdateUI
@@ -984,36 +969,14 @@ end;
 
 procedure TFormOlcbTrainMaster.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
+
+
 
 procedure TFormOlcbTrainMaster.EthernetSendLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-     SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, True))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TFormOlcbTrainMaster.UpdateUI;

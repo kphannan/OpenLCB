@@ -914,67 +914,39 @@ object Form1: TForm1
     end
     object TabSheetGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 298
-      ClientWidth = 668
+      ClientHeight = 296
+      ClientWidth = 666
       OnHide = TabSheetGeneralHide
       OnShow = TabSheetGeneralShow
-      TabVisible = False
-      object Label1: TLabel
-        Left = 11
-        Height = 16
-        Top = 8
-        Width = 190
-        Caption = 'OpenLCB Commander Alias ID'
-        ParentColor = False
-      end
-      object EditAliasID: TEdit
-        Left = 34
-        Height = 22
-        Top = 24
-        Width = 126
-        OnChange = EditAliasIDChange
-        TabOrder = 0
-        Text = '0xBBB'
-      end
-      object Label4: TLabel
-        Left = 11
-        Height = 16
-        Top = 48
-        Width = 193
-        Caption = 'OpenLCB Commande rNode ID'
-        ParentColor = False
-      end
-      object EditNodeID: TEdit
-        Left = 34
-        Height = 22
-        Top = 65
-        Width = 128
-        OnChange = EditNodeIDChange
-        TabOrder = 1
-        Text = '0x060504030201'
-      end
-      object Label9: TLabel
+      object CheckBoxJMRILogging: TCheckBox
         Left = 14
-        Height = 16
-        Top = 95
-        Width = 271
-        Caption = 'Packet Send Delay (for older TCH adapters)'
-        ParentColor = False
+        Height = 18
+        Top = 76
+        Width = 139
+        Action = ActionLogInJMRI
+        TabOrder = 0
       end
       object SpinEditSendPacketDelay: TSpinEdit
         Left = 34
         Height = 16
-        Top = 120
+        Top = 43
         Width = 70
         MaxValue = 1000
-        OnChange = SpinEditSendPacketDelayChange
         ParentShowHint = False
-        TabOrder = 2
+        TabOrder = 1
       end
-      object Label10: TLabel
-        Left = 112
+      object Label3: TLabel
+        Left = 14
         Height = 16
-        Top = 120
+        Top = 20
+        Width = 271
+        Caption = 'Packet Send Delay (for older TCH adapters)'
+        ParentColor = False
+      end
+      object Label1: TLabel
+        Left = 117
+        Height = 16
+        Top = 43
         Width = 79
         Caption = 'milliseconds'
         ParentColor = False
@@ -40424,6 +40396,12 @@ object Form1: TForm1
       Caption = 'Zeroize Config Mem'
       ImageIndex = 318
       OnExecute = ActionZeroizeConfigMemoryExecute
+    end
+    object ActionLogInJMRI: TAction
+      Category = 'Tools'
+      AutoCheck = True
+      Caption = 'Log in JMRI Format'
+      OnExecute = ActionLogInJMRIExecute
     end
   end
   object MainMenu: TMainMenu

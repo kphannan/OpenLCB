@@ -25,6 +25,9 @@ const
   STR_INI_NODEID = 'NodeID';
   STR_INI_SENDPACKETDELAY = 'SendDelay';
   STR_INI_AUTOSCAN = 'AutoScan';
+  STR_INI_JMRI_FORMAT = 'JMRI_Format';
+  STR_INI_LOGGING     = 'Logging';
+  STR_INI_DETAILED_LOGGING = 'DetailedLogging';
 
   STR_INI_THROTTLE_SECTION = 'Throttle';
   STR_INI_THROTTLE_AUTOLOADFDI = 'AutoLoadFDI';
@@ -97,6 +100,9 @@ type
     FAliasID: string;
     FAutoScanNetworkAtBoot: Boolean;
     FDatagramWaitTime: DWord;
+    FDetailedLogging: Boolean;
+    FJMRILogFormat: Boolean;
+    FLogging: Boolean;
     FMessageWaitTime: DWord;
     FNodeID: string;
     FSendPacketDelay: Word;
@@ -115,6 +121,9 @@ type
     property SendPacketDelay: Word read FSendPacketDelay write FSendPacketDelay;
     property StreamWaitTime: DWord read FStreamWaitTime write FStreamWaitTime;
     property MessageWaitTime: DWord read FMessageWaitTime write FMessageWaitTime;
+    property JMRILogFormat: Boolean read FJMRILogFormat write FJMRILogFormat;
+    property Logging: Boolean read FLogging write FLogging;
+    property DetailedLogging: Boolean read FDetailedLogging write FDetailedLogging;
   end;
 
   { TThrottleSettings }
@@ -234,7 +243,10 @@ begin
   FSendPacketDelay := 0;
   FMessageWaitTime := MAX_MESSAGE_WAIT_TIME_DEFAULT;
   FDatagramWaitTime := MAX_DATAGRAM_WAIT_TIME_DEFAULT;
-  FStreamWaitTime := MAX_STREAM_WAIT_TIME_DEFAULT
+  FStreamWaitTime := MAX_STREAM_WAIT_TIME_DEFAULT;
+  FJMRILogFormat := False;
+  FLogging := False;
+  FDetailedLogging := False;
 end;
 
 procedure TGeneralSettings.LoadFromFile(IniFile: TIniFile);
@@ -243,6 +255,9 @@ begin
   NodeID := IniFile.ReadString(STR_INT_GENERAL_SECTION, STR_INI_NODEID, '0x102030405006');
   SendPacketDelay := IniFile.ReadInteger(STR_INT_GENERAL_SECTION, STR_INI_SENDPACKETDELAY, 0);
   AutoScanNetworkAtBoot := IniFile.ReadBool(STR_INT_GENERAL_SECTION, STR_INI_AUTOSCAN, True);
+  FJMRILogFormat := IniFile.ReadBool(STR_INT_GENERAL_SECTION, STR_INI_JMRI_FORMAT, False);
+  FLogging := IniFile.ReadBool(STR_INT_GENERAL_SECTION, STR_INI_LOGGING, False);
+  FDetailedLogging := IniFile.ReadBool(STR_INT_GENERAL_SECTION, STR_INI_DETAILED_LOGGING, False);
 end;
 
 procedure TGeneralSettings.SaveToFile(IniFile: TIniFile);
@@ -251,6 +266,9 @@ begin
   IniFile.WriteString(STR_INT_GENERAL_SECTION, STR_INI_NODEID, FNodeID);
   IniFile.WriteInteger(STR_INT_GENERAL_SECTION, STR_INI_SENDPACKETDELAY, FSendPacketDelay);
   IniFile.WriteBool(STR_INT_GENERAL_SECTION, STR_INI_AUTOSCAN, FAutoScanNetworkAtBoot);
+  IniFile.WriteBool(STR_INT_GENERAL_SECTION, STR_INI_JMRI_FORMAT, FJMRILogFormat);
+  IniFile.WriteBool(STR_INT_GENERAL_SECTION, STR_INI_LOGGING, FLogging);
+  IniFile.WriteBool(STR_INT_GENERAL_SECTION, STR_INI_DETAILED_LOGGING, FDetailedLogging);
 end;
 
 function TGeneralSettings.AliasIDAsVal: Word;

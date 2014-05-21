@@ -251,8 +251,14 @@ function TractionProtocolReplyQuerySpeed(DestNode: PNMRAnetNode; var MessageToSe
 begin
   Result := False;
   MessageToSend := nil;
+
+  {$IFNDEF FPC} UART1_Write_Text('1');{$ENDIF}
+  
   if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
+  
+  {$IFNDEF FPC} UART1_Write_Text('2');{$ENDIF}
+  
     MessageToSend^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
     MessageToSend^.Buffer^.DataArray[1] := Hi( DestNode^.TrainData.SpeedDir);
     MessageToSend^.Buffer^.DataArray[2] := Lo( DestNode^.TrainData.SpeedDir);
@@ -262,8 +268,16 @@ begin
     MessageToSend^.Buffer^.DataArray[6] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataArray[7] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataBufferSize := 8;
+    
+     {$IFNDEF FPC} UART1_Write_Text('3');{$ENDIF}
+    
     AppCallback_TractionProtocol(DestNode, NextMessage);
+    
+     {$IFNDEF FPC} UART1_Write_Text('4');{$ENDIF}
+    
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+    
+     {$IFNDEF FPC} UART1_Write_Text('5');{$ENDIF}
   end;
 end;
 
@@ -379,7 +393,7 @@ begin
                   MessageToSend^.Buffer^.DataArray[i] := NextMessage^.Buffer^.DataArray[i];
                 DestNode^.TrainData.State := DestNode^.TrainData.State or TS_WAITING_FOR_CONTROLLER_NOTIFY;
                 DestNode^.TrainData.Timer := 0;
-                DestNode^.TrainData.NotifyController := NextMessage^.Source;    // Store the Controller who is asking for control
+                DestNode^.TrainData.LinkedNode := NextMessage^.Source;    // Store the Controller who is asking for control
                 AppCallback_TractionProtocol(DestNode, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
                 // Timer started, either the current controller replies or it times out and the new controller is assigned
@@ -523,16 +537,16 @@ begin
     begin
       // The last controller did not reply so just take it
       if IsOutgoingBufferAvailable then
-        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, Node^.Info.AliasID, Node^.Info.ID, Node^.TrainData.NotifyController.AliasID, Node^.TrainData.NotifyController.ID) then
+        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, Node^.Info.AliasID, Node^.Info.ID, Node^.TrainData.LinkedNode.AliasID, Node^.TrainData.LinkedNode.ID) then
         begin
           Node^.TrainData.State := Node^.TrainData.State and not TS_WAITING_FOR_CONTROLLER_NOTIFY;
           MessageToSend^.Buffer^.DataBufferSize := 3;
           MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
           MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
           MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
-          Node^.TrainData.Controller.AliasID := Node^.TrainData.NotifyController.AliasID;
-          Node^.TrainData.Controller.ID[0] := Node^.TrainData.NotifyController.ID[0];
-          Node^.TrainData.Controller.ID[1] := Node^.TrainData.NotifyController.ID[1];
+          Node^.TrainData.Controller.AliasID := Node^.TrainData.LinkedNode.AliasID;
+          Node^.TrainData.Controller.ID[0] := Node^.TrainData.LinkedNode.ID[0];
+          Node^.TrainData.Controller.ID[1] := Node^.TrainData.LinkedNode.ID[1];
           AppCallback_TractionProtocol(Node, MessageToSend);
           OutgoingMessage(MessageToSend);
         end

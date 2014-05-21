@@ -14,7 +14,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
   OnDestroy = FormDestroy
   OnShow = FormShow
   ShowHint = True
-  LCLVersion = '1.2.2.0'
+  LCLVersion = '1.2.0.3'
   object PageControlMain: TPageControl
     Left = 0
     Height = 482
@@ -26,35 +26,36 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     TabOrder = 0
     object TabSheetMain: TTabSheet
       Caption = 'Trains'
-      ClientHeight = 451
-      ClientWidth = 816
+      ClientHeight = 443
+      ClientWidth = 814
       object TreeViewThrottles: TTreeView
         Left = 0
-        Height = 344
-        Top = 86
+        Height = 384
+        Top = 44
         Width = 248
         Align = alLeft
+        DefaultItemHeight = 18
         TabOrder = 0
         OnCreateNodeClass = TreeViewThrottlesCreateNodeClass
       end
       object PanelBkGnd: TPanel
         Left = 253
-        Height = 344
-        Top = 86
-        Width = 563
+        Height = 384
+        Top = 44
+        Width = 561
         Align = alClient
-        ClientHeight = 344
-        ClientWidth = 563
+        ClientHeight = 384
+        ClientWidth = 561
         TabOrder = 1
         object GroupBoxThrottles: TGroupBox
           Left = 16
           Height = 88
           Top = 8
-          Width = 530
+          Width = 528
           Anchors = [akTop, akLeft, akRight]
           Caption = 'Throttles'
-          ClientHeight = 69
-          ClientWidth = 526
+          ClientHeight = 66
+          ClientWidth = 520
           TabOrder = 0
           object ButtonShowAllThrottles: TButton
             Left = 4
@@ -101,16 +102,16 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           Left = 15
           Height = 125
           Top = 104
-          Width = 531
+          Width = 529
           Anchors = [akTop, akLeft, akRight]
           Caption = 'Proxies (Command Stations)'
-          ClientHeight = 106
-          ClientWidth = 527
+          ClientHeight = 103
+          ClientWidth = 521
           TabOrder = 1
           object ButtonRediscoverProxies: TButton
-            Left = 347
+            Left = 341
             Height = 22
-            Top = 78
+            Top = 75
             Width = 176
             Action = ActionRediscoverProxies
             Anchors = [akRight, akBottom]
@@ -118,29 +119,30 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           end
           object TreeViewProxies: TTreeView
             Left = 4
-            Height = 69
+            Height = 66
             Top = 1
-            Width = 519
+            Width = 513
             Anchors = [akTop, akLeft, akRight, akBottom]
+            DefaultItemHeight = 18
             TabOrder = 1
           end
         end
         object GroupBox2: TGroupBox
           Left = 16
-          Height = 102
+          Height = 142
           Top = 232
-          Width = 531
+          Width = 529
           Anchors = [akTop, akLeft, akRight, akBottom]
           Caption = 'Logging'
-          ClientHeight = 83
-          ClientWidth = 527
+          ClientHeight = 120
+          ClientWidth = 521
           TabOrder = 2
           inline SynMemoLog: TSynMemo
             Cursor = crIBeam
             Left = 4
-            Height = 75
+            Height = 112
             Top = 6
-            Width = 515
+            Width = 509
             Anchors = [akTop, akLeft, akRight, akBottom]
             Font.Height = 12
             Font.Name = 'Monaco'
@@ -151,7 +153,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
             PopupMenu = PopupMenuSynEditLog
             TabOrder = 0
             OnKeyDown = SynMemoLogKeyDown
-            Gutter.Width = 65
+            Gutter.Width = 55
             Gutter.MouseActions = <>
             Keystrokes = <            
               item
@@ -590,7 +592,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
                 MouseActions = <>
               end
               object SynGutterLineNumber1: TSynGutterLineNumber
-                Width = 25
+                Width = 15
                 MouseActions = <>
                 MarkupInfo.Background = clBtnFace
                 MarkupInfo.Foreground = clNone
@@ -627,15 +629,15 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object Splitter1: TSplitter
         Left = 248
-        Height = 344
-        Top = 86
+        Height = 384
+        Top = 44
         Width = 5
       end
       object StatusBar: TStatusBar
         Left = 0
-        Height = 21
-        Top = 430
-        Width = 816
+        Height = 15
+        Top = 428
+        Width = 814
         Panels = <        
           item
             Text = 'COM: Disconnected'
@@ -653,9 +655,9 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ToolBarMain: TToolBar
         Left = 0
-        Height = 86
+        Height = 44
         Top = 0
-        Width = 816
+        Width = 814
         AutoSize = True
         ButtonHeight = 42
         ButtonWidth = 45
@@ -671,17 +673,17 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           Style = tbsCheck
         end
         object ToolButtonNewThrottle: TToolButton
-          Left = 380
+          Left = 357
           Top = 2
           Action = ActionAddNewThrottle
         end
         object ToolButtonDeleteThrottle: TToolButton
-          Left = 474
+          Left = 445
           Top = 2
           Action = ActionCloseSelectedThrottles
         end
         object ToolButtonSeparator: TToolButton
-          Left = 370
+          Left = 347
           Top = 2
           Width = 10
           Caption = 'ToolButtonSeparator'
@@ -693,46 +695,46 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           Action = ActionCOMConnection
         end
         object ToolButton1: TToolButton
-          Left = 170
+          Left = 161
           Top = 2
           Action = ActionEthernetClientConnection
         end
         object ToolButtonLog: TToolButton
-          Left = 599
+          Left = 564
           Top = 2
           Action = ActionLogging
         end
         object ToolButton3: TToolButton
-          Left = 594
+          Left = 559
           Top = 2
           Width = 5
           Caption = 'ToolButton3'
           Style = tbsDivider
         end
         object ToolButton2: TToolButton
-          Left = 660
+          Left = 623
           Top = 2
           Action = ActionDetailedLogging
         end
         object ToolButton4: TToolButton
-          Left = 1
-          Top = 44
+          Left = 738
+          Top = 2
           Action = ActionLogClear
         end
         object ToolButton5: TToolButton
-          Left = 288
+          Left = 273
           Top = 2
           Action = ActionStartNode
         end
         object ToolButton6: TToolButton
-          Left = 278
+          Left = 263
           Top = 2
           Width = 10
           Caption = 'ToolButton6'
           Style = tbsSeparator
         end
         object ToolButton7: TToolButton
-          Left = 584
+          Left = 549
           Top = 2
           Width = 10
           Caption = 'ToolButton7'
@@ -742,8 +744,8 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     end
     object TabSheetCom: TTabSheet
       Caption = 'ComPort'
-      ClientHeight = 451
-      ClientWidth = 816
+      ClientHeight = 443
+      ClientWidth = 814
       OnHide = TabSheetComHide
       OnShow = TabSheetComShow
       object ComboBoxComPort: TComboBox
@@ -909,8 +911,8 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     end
     object TabSheetEthernet: TTabSheet
       Caption = 'Ethernet'
-      ClientHeight = 451
-      ClientWidth = 816
+      ClientHeight = 443
+      ClientWidth = 814
       OnHide = TabSheetEthernetHide
       OnShow = TabSheetEthernetShow
       object EditEthernetLocalIP: TEdit
@@ -1002,49 +1004,14 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     end
     object TabSheetGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 451
-      ClientWidth = 816
+      ClientHeight = 443
+      ClientWidth = 814
       OnHide = TabSheetGeneralHide
       OnShow = TabSheetGeneralShow
-      TabVisible = False
-      object Label1: TLabel
-        Left = 11
-        Height = 16
-        Top = 8
-        Width = 190
-        Caption = 'OpenLCB Commander Alias ID'
-        ParentColor = False
-      end
-      object Label2: TLabel
-        Left = 11
-        Height = 16
-        Top = 48
-        Width = 193
-        Caption = 'OpenLCB Commande rNode ID'
-        ParentColor = False
-      end
-      object EditAliasID: TEdit
-        Left = 36
-        Height = 22
-        Top = 24
-        Width = 126
-        OnChange = EditAliasIDChange
-        TabOrder = 0
-        Text = '0xAAA'
-      end
-      object EditNodeID: TEdit
-        Left = 34
-        Height = 22
-        Top = 65
-        Width = 128
-        OnChange = EditNodeIDChange
-        TabOrder = 1
-        Text = '0x010203040506'
-      end
       object Label3: TLabel
         Left = 14
         Height = 16
-        Top = 95
+        Top = 20
         Width = 271
         Caption = 'Packet Send Delay (for older TCH adapters)'
         ParentColor = False
@@ -1052,17 +1019,25 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       object SpinEditSendPacketDelay: TSpinEdit
         Left = 34
         Height = 16
-        Top = 120
+        Top = 43
         Width = 70
         MaxValue = 1000
         OnChange = SpinEditSendPacketDelayChange
         ParentShowHint = False
-        TabOrder = 2
+        TabOrder = 0
       end
-      object Label4: TLabel
-        Left = 112
+      object CheckBoxJMRILogging: TCheckBox
+        Left = 14
+        Height = 18
+        Top = 76
+        Width = 139
+        Action = ActionLogInJMRI
+        TabOrder = 1
+      end
+      object Label1: TLabel
+        Left = 117
         Height = 16
-        Top = 120
+        Top = 43
         Width = 79
         Caption = 'milliseconds'
         ParentColor = False
@@ -8497,6 +8472,12 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       Caption = 'Zeroize Config Mem'
       ImageIndex = 318
       OnExecute = ActionZeroizeConfigMemoryExecute
+    end
+    object ActionLogInJMRI: TAction
+      Category = 'Tools'
+      AutoCheck = True
+      Caption = 'Log in JMRI Format'
+      OnExecute = ActionLogInJMRIExecute
     end
   end
   object ImageList16x16: TImageList

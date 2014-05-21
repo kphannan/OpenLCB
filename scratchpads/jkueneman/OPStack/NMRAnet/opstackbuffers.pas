@@ -43,13 +43,13 @@ type
   PAcdiSnipBufferPool = ^TAcdiSnipBufferPool;
 
   TMultiFramePool = record
-    Pool: array[0..USER_MAX_MULTI_FRAME_BYTES-1] of TMultiFrameBuffer;
+    Pool: array[0..USER_MAX_MULTIFRAME_ARRAY_BUFFERS-1] of TMultiFrameBuffer;
     Count: Word;
   end;
   PMultiFramePool = ^TMultiFramePool;
 
   TOPStackMessagePool = record
-    Pool: array[0..USER_MAX_SIMPLE_MESSAGE_BUFFERS-1] of TOPStackMessage;
+    Pool: array[0..USER_MAX_MESSAGE_BUFFERS-1] of TOPStackMessage;
     Count: Word;
   end;
 
@@ -142,10 +142,15 @@ begin
   StreamSourceID := 0;
   StreamDestID := 0;
   {$ENDIF}
-
-  for j := 0 to USER_MAX_SIMPLE_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
+  
+  for j := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS do                               // Extra Byte at end for state flags
+    OPStackBuffers_ZeroMultiFrameBuffer(@MultiFramePool.Pool[j], True);
+  MultiFramePool.Count := 0;
+  
+  for j := 0 to USER_MAX_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
+
 end;
 
 procedure OPStackBuffers_Timer;
@@ -153,7 +158,7 @@ var
   i: Integer;
 begin
   i := 0;
-  while i < USER_MAX_SIMPLE_MESSAGE_BUFFERS do
+  while i < USER_MAX_MESSAGE_BUFFERS do
   begin
     Inc(OPStackMessagePool.Pool[i].WatchDog);
     Inc(i)
@@ -255,9 +260,9 @@ var
   i: Integer;
 begin
   Result := False;
-  if MultiFramePool.Count < USER_MAX_MULTI_FRAME_BYTES then
+  if MultiFramePool.Count < USER_MAX_MULTIFRAME_ARRAY_BUFFERS then
   begin
-    for i := 0 to USER_MAX_MULTI_FRAME_BYTES - 1 do
+    for i := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS - 1 do
     begin
       if MultiFramePool.Pool[i].State and ABS_ALLOCATED = 0 then
       begin
@@ -325,7 +330,7 @@ var
 begin
   Result := False;
   OPStackMessage := nil;
-  for i := 0 to USER_MAX_SIMPLE_MESSAGE_BUFFERS - 1 do
+  for i := 0 to USER_MAX_MESSAGE_BUFFERS - 1 do
   begin
     if OPStackMessagePool.Pool[i].MessageType and MT_ALLOCATED = 0 then
     begin

@@ -233,6 +233,10 @@ begin
       OutgoingCriticalMessage(OPStackMessagePtr)
     else
       IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
+    // For Multiframe type messages the handler may have allocated a buffer to gather up
+    // all the frames before dispatching them.  If so it needs to be deallocated.
+    // Calling this on the local instance is harmless because we did not set the MT_ALLOCATED flag
+    OPStackBuffers_DeAllocateMessage(OPStackMessagePtr)
   end;
 end;
 

@@ -28,7 +28,7 @@ uses
   {$ELSE}
   LclIntf,
   {$ENDIF}
-  Math, DOM, XMLRead, math_float16, opstackdefines;
+  Math, DOM, XMLRead, math_float16, opstackdefines, SynMemo;
 
 const
   LF = #13+#10;
@@ -130,6 +130,7 @@ type
   function IsDatagramMTI(MTI: DWord; IncludeReplies: Boolean): Boolean;
   function IsStreamMTI(MTI: DWord; IncludeSetupTeardowns: Boolean): Boolean;
   function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
+  function GridConnectToJMRI(GridStr: AnsiString): AnsiString;
   function ProtocolSupportReplyToString(Mask: QWord): string;
   function AddressSpaceToString(AddressSpace: Byte): string;
   function NodeIDToDotHex(NodeID: QWord): string;
@@ -139,6 +140,7 @@ type
   function IntToHexArray(Value: Integer): THexArray;
   function StrToHexArray(Value: string): THexArray;
   function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper; ASCII: Boolean): string;
+  procedure PrintToSynMemo(MessageStr: AnsiString; SynMemoLog: TSynMemo; Paused: Boolean; Detailed: Boolean; JMRIFormat: Boolean);
 
 
   function GetTickCount : DWORD;
@@ -928,6 +930,34 @@ begin
     Result := (MTI = MTI_FRAME_TYPE_CAN_STREAM_SEND)
 end;
 
+function GridConnectToJMRI(GridStr: AnsiString): AnsiString;
+var
+  NPos: integer;
+  Header: PChar;
+  i: Integer;
+begin
+  Result := GridStr;
+  NPos := Pos('N', GridStr);
+  GridStr[NPos] := #0;
+  Header := @GridStr[3];
+  Result := '[' + Header + ']';
+  Header := @GridStr[NPos] + 1;
+  if Header^ <> ';' then
+    Result := Result + ' ';
+  while Header^ <> ';' do
+  begin
+    Result := Result + Header^;
+    Inc(Header);
+    if Header^ = ';' then
+      Break;
+    Result := Result + Header^ + ' ';
+    Inc(Header);
+  end;
+  Result := Trim(Result);
+  for i := 0 to (40 - Length(Result)) do
+    Result := Result + ' ';  // Pad them all to the same length
+end;
+
 function MessageToDetailedMessage(MessageString: string; Sending: Boolean): string;
 var
   j, S_Len: Integer;
@@ -1354,6 +1384,39 @@ begin
     end;
   end;
   Result := Result + ']';
+end;
+
+procedure PrintToSynMemo(MessageStr: AnsiString; SynMemoLog: TSynMemo; Paused: Boolean; Detailed: Boolean; JMRIFormat: Boolean);
+var
+  SemiColonPos: Integer;
+  Header: PChar;
+begin
+  if not Paused then
+  begin
+     SynMemoLog.BeginUpdate();
+     try
+       if JMRIFormat then
+       begin
+         if Detailed then
+         begin
+            MessageStr := MessageToDetailedMessage(MessageStr, True);
+            SemiColonPos := Pos(';',  MessageStr);
+            Header := @MessageStr[SemiColonPos] + 1;
+            SynMemoLog.Lines.Add( GridConnectToJMRI(MessageStr) + Header);
+         end else
+           SynMemoLog.Lines.Add( GridConnectToJMRI(MessageStr));
+       end else
+       begin
+         if Detailed then
+           SynMemoLog.Lines.Add(MessageToDetailedMessage(MessageStr, True))
+         else
+           SynMemoLog.Lines.Add(MessageStr);
+       end;
+     finally
+       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
+       SynMemoLog.EndUpdate;
+     end;
+  end;
 end;
 
 

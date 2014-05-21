@@ -90,7 +90,9 @@ begin
     if OPStackMessage^.FramingBits = $10 then
     begin
       if OPStackBuffers_AllocateMultiFrameMessage(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
-        OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(InProcessMessage);
+        OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(InProcessMessage)
+      else
+        Exit;     // Out of buffers, exit and wait until the last frame is sent to send OIR
     end else
     begin
       if OPStackMessage^.FramingBits = $20 then                                 // If the last frame and there is no inprocess message we are dropping the message

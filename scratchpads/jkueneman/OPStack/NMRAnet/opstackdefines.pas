@@ -279,7 +279,7 @@ type
     SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
     Lock: TNodeInfo;                                                            // For the nodes lock managements
     Controller,
-    NotifyController: TNodeInfo;                                                // Controller (throttle) running the train
+    LinkedNode: TNodeInfo;                                                      // Controller (throttle) running the train or other linking needs
     Timer: Byte;
   end;
   {$ENDIF}
@@ -399,6 +399,7 @@ const
   
 var
   s1: string[128];
+  NodePool: TNodePool;
 
 
 implementation

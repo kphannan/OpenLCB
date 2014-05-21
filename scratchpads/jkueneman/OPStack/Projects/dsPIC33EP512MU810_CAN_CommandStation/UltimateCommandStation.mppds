@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_userstatemachine.mpas
+Value=Templates\template_node.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -72,7 +72,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=10
 File0=UltimateCommandStation.mpas
 File1=..\..\NMRAnet\opstack_api.mpas
 File2=Templates\MCU_Setup_dsPIC33EPxxxGP8xx.mpas
@@ -82,6 +82,7 @@ File5=Templates\template_buffers.mpas
 File6=..\..\NMRAnet\opstackdefines.mpas
 File7=Templates\template_vnode.mpas
 File8=Templates\template_node.mpas
+File9=..\..\NMRAnet\opstackbuffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -90,20 +91,19 @@ Count=0
 Count=1
 File0=Templates\Options.inc
 [SEARCH_PATH]
-Count=13
+Count=12
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
 Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
-Path5=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\FAT32 Library\Uses\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path10=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path11=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path12=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path11=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
 [HEADER_PATH]
 Count=0
 [HEADERS]

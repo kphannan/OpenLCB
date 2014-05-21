@@ -8,12 +8,12 @@ interface
 
 uses
   template_hardware,
-  template_node,
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
   {$ENDIF}
   nmranetutilities,
   opstackdefines,
+  template_node,
   template_userstatemachine;
 
 {$I NodeID.inc}
@@ -79,9 +79,6 @@ function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 {$IFNDEF FPC}
 procedure OPStackNode_PrintPool;
 {$ENDIF}
-
-var
-  NodePool: TNodePool;
 
 implementation
 
@@ -393,9 +390,9 @@ begin
   Node^.TrainData.Controller.AliasID := 0;
   Node^.TrainData.Controller.ID[0] := 0;
   Node^.TrainData.Controller.ID[1] := 0;
-  Node^.TrainData.NotifyController.AliasID := 0;
-  Node^.TrainData.NotifyController.ID[0] := 0;
-  Node^.TrainData.NotifyController.ID[1] := 0;
+  Node^.TrainData.LinkedNode.AliasID := 0;
+  Node^.TrainData.LinkedNode.ID[0] := 0;
+  Node^.TrainData.LinkedNode.ID[1] := 0;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
   Node^.TrainProxyData.Lock.AliasID := 0;

@@ -40,6 +40,7 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    ActionLogInJMRI: TAction;
     ActionZeroizeConfigMemory: TAction;
     ActionAddNewTrain: TAction;
     ActionCloseAllTrains: TAction;
@@ -68,28 +69,25 @@ type
     ButtonLocalHost: TButton;
     ButtonRemoteLocalHost: TButton;
     ButtonShowAllThrottles: TButton;
+    CheckBoxJMRILogging: TCheckBox;
     ComboBoxBaud: TComboBox;
     ComboBoxComPort: TComboBox;
     ComboBoxDataBits: TComboBox;
     ComboBoxFlowControl: TComboBox;
     ComboBoxParity: TComboBox;
     ComboBoxStopBits: TComboBox;
-    EditAliasID: TEdit;
     EditEthernetLocalIP: TEdit;
     EditEthernetRemoteIP: TEdit;
-    EditNodeID: TEdit;
     GroupBoxLogging: TGroupBox;
     GroupBoxThrottles: TGroupBox;
     Image1: TImage;
     ImageList16x16: TImageList;
     Label1: TLabel;
-    Label10: TLabel;
-    Label4: TLabel;
+    Label3: TLabel;
     Label5: TLabel;
     Label6: TLabel;
     Label7: TLabel;
     Label8: TLabel;
-    Label9: TLabel;
     LabelBaud: TLabel;
     LabelBuild1: TLabel;
     LabelBuildDate: TLabel;
@@ -171,6 +169,7 @@ type
     procedure ActionLogCopyExecute(Sender: TObject);
     procedure ActionLogCutExecute(Sender: TObject);
     procedure ActionLoggingExecute(Sender: TObject);
+    procedure ActionLogInJMRIExecute(Sender: TObject);
     procedure ActionLogPasteExecute(Sender: TObject);
     procedure ActionLogPauseExecute(Sender: TObject);
     procedure ActionLogSelectAllExecute(Sender: TObject);
@@ -295,7 +294,7 @@ end;
 
 procedure TForm1.ActionDetailedLoggingExecute(Sender: TObject);
 begin
-  ;
+  StoreSettings(lstGeneral); ;
 end;
 
 procedure TForm1.ActionEthernetClientConnectionExecute(Sender: TObject);
@@ -341,8 +340,16 @@ end;
 
 procedure TForm1.ActionLoggingExecute(Sender: TObject);
 begin
+  ComPortHub.EnableReceiveMessages := ActionLogging.Checked;
+  ComPortHub.EnableSendMessages := ActionLogging.Checked;
   EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.EnableSendMessages := ActionLogging.Checked;
+  StoreSettings(lstGeneral);
+end;
+
+procedure TForm1.ActionLogInJMRIExecute(Sender: TObject);
+begin
+  StoreSettings(lstGeneral);
 end;
 
 procedure TForm1.ActionLogPasteExecute(Sender: TObject);
@@ -522,8 +529,9 @@ begin
     LabelTargetOS.Caption := {$I %FPCTARGETOS%};
     LabelTargetCPU.Caption := {$I %FPCTARGETCPU%};
 
-    ActionLogging.Execute;       // Set Logging by default
-
+    LoadSettings(lstCom);
+    LoadSettings(lstEthernet);
+    LoadSettings(lstGeneral);
     ShownOnce := True;
   end;
   UpdateUI
@@ -600,38 +608,13 @@ end;
 
 procedure TForm1.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TForm1.ComPortSendLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage(MessageStr, False))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
-
 
 procedure TForm1.DestroyTask(Sender: TTaskOlcbBase);
 begin
@@ -645,36 +628,12 @@ end;
 
 procedure TForm1.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-     try
-       if ActionDetailedLogging.Checked then
-         SynMemoLog.Lines.Add( MessageToDetailedMessage( MessageStr, False))
-       else
-         SynMemoLog.Lines.Add(MessageStr);
-     finally
-       SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-       SynMemoLog.EndUpdate;
-     end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TForm1.EthernetSendLogging(Sender: TObject; MessageStr: String);
 begin
-  if not Paused then
-  begin
-    SynMemoLog.BeginUpdate();
-    try
-      if ActionDetailedLogging.Checked then
-        SynMemoLog.Lines.Add( MessageToDetailedMessage( MessageStr, True))
-      else
-        SynMemoLog.Lines.Add(MessageStr);
-    finally
-      SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
-      SynMemoLog.EndUpdate;
-    end;
-  end;
+  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -720,8 +679,9 @@ begin
         lstGeneral:
           begin
             SpinEditSendPacketDelay.Value := GlobalSettings.General.SendPacketDelay;
-            EditAliasID.Caption := ValidateHex( GlobalSettings.General.AliasID);
-            EditNodeID.Caption := ValidateHex(GlobalSettings.General.NodeID);
+            ActionLogInJMRI.Checked := GlobalSettings.General.JMRILogFormat;
+            ActionLogging.Checked := GlobalSettings.General.Logging;
+            ActionDetailedLogging.Checked := GlobalSettings.General.DetailedLogging;
           end;
       end;
     finally
@@ -777,8 +737,9 @@ begin
       lstGeneral:
         begin
           GlobalSettings.General.SendPacketDelay := SpinEditSendPacketDelay.Value;
-          GlobalSettings.General.AliasID := ValidateHex(EditAliasID.Caption);
-          GlobalSettings.General.NodeID := ValidateHex(EditNodeID.Caption);
+          GlobalSettings.General.JMRILogFormat := ActionLogInJMRI.Checked;
+          GlobalSettings.General.Logging := ActionLogging.Checked;
+          GlobalSettings.General.DetailedLogging := ActionDetailedLogging.Checked;
         end;
     end;
     GlobalSettings.SaveToFile(UTF8ToSys( SettingsFilePath));
