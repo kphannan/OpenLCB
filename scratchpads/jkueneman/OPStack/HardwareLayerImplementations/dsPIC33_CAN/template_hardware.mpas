@@ -33,7 +33,7 @@ procedure ReceivedOnFilter6(NMRAnetCanBuffer: PNMRAnetCanBuffer);
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
-function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var NMRAnetCanBuffer: TNMRAnetCanBuffer; var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean; external;
+function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer: PNMRAnetCanBuffer; var OPStackMessageX: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean;  external;
 procedure OPStackCANStatemachine_ProcessMessages; external;
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
@@ -139,8 +139,6 @@ begin
     if AMessage^.MessageType and MT_MASK = MT_SIMPLE then
     begin
       OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
-   //   CopyNMRAnetCanBuffers(@NMRAnetCanBuffer, @Hardware.OutgoingTxBuffer);
-   //   dsPIC33_StartCANHighPriorityMessageEngine(@Hardware.OutgoingHighPriortyTxBuffer, True);
       dsPIC33_StartCANHighPriorityMessageEngine(@NMRAnetCanBuffer, True);
       Hardware.OutgoingHighPriortyTxBufferEmpty := True;
       OPStackBuffers_DeAllocateMessage(AMessage);
@@ -218,26 +216,14 @@ end;
 // *****************************************************************************
 procedure ReceivedOnFilter0(NMRAnetCanBuffer: PNMRAnetCanBuffer);
 var
-  OPStackMessage: TOPStackMessage;
   OPStackMessagePtr: POPStackMessage;
-  Buffer: TSimpleBuffer;
   SourceNode, DestNode: PNMRAnetNode;
 begin
-  OPStackBuffers_ZeroMessage(@OPStackMessage);
-  OPStackBuffers_ZeroSimpleBuffer(@Buffer, False);
-  OPStackMessage.Buffer := @Buffer;
-  OPStackMessagePtr := @OPStackMessage;                                         // The message object may change on us if it is a datagram, stream or SNIP/ACDI
-  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer^, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
-  begin
-    if OPStackMessagePtr^.MessageType and MT_HIGH_PRIORITY_SEND  <> 0 then      // The incoming message may not be able to be handled and we need to reply with a fast answer to a buffer that can never be full
-      OutgoingCriticalMessage(OPStackMessagePtr)
-    else
-      IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
-    // For Multiframe type messages the handler may have allocated a buffer to gather up
-    // all the frames before dispatching them.  If so it needs to be deallocated.
-    // Calling this on the local instance is harmless because we did not set the MT_ALLOCATED flag
-    OPStackBuffers_DeAllocateMessage(OPStackMessagePtr)
-  end;
+  SourceNode := nil;
+  DestNode := nil;
+  OpStackMessagePtr := nil;
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+    IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
 end;
 
 // *****************************************************************************

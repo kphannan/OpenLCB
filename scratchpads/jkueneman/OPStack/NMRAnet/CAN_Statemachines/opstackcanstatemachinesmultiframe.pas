@@ -103,7 +103,7 @@ begin
 
   MultiFrameBuffer := PMultiFrameBuffer( PByte( InProcessMessage^.Buffer));
   // middle Frame, or last Frame
-  for i := 0 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
+  for i := 2 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
   begin
     MultiFrameBuffer^.DataArray[MultiFrameBuffer^.DataBufferSize] := OPStackMessage^.Buffer^.DataArray[i];
     Inc(MultiFrameBuffer^.DataBufferSize);

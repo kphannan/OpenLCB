@@ -89,11 +89,8 @@ end;
 
 // *****************************************************************************
 //  procedure IncomingMessageDispatch
-//     Parameters:  AMessage: Pointer to a OPStackMessage object, may not be allocated
-//                            from the pool and may be gone after the function returns
-//                            Look at the AMessage^.MessageType for MT_ALLOCATED, if it
-//                            exists then then message was allocated from the pool and
-//                            can be used as such
+//     Parameters:  AMessage: Pointer to a OPStackMessage object that has been allocated
+//                            from the pool
 //                  DestNode: Pointer to a NMRAnet Node if the message contained a
 //                            destination ID (Alias or NodeID). If message is unaddressed
 //                            contains nil
@@ -137,85 +134,85 @@ begin
 
   // It is a OLCB message
   case (AMessage^.MessageType) and MT_MASK of
-      MT_SIMPLE,                                        //  HOW CAN I PUT DATAGRAMS AND STREAMS INTO THIS SAME FORMAT, THEY ARE ODD BALLS NOW
-      MT_MULTIFRAME,
-      MT_ACDISNIP :
+    MT_SIMPLE,                                        //  HOW CAN I PUT DATAGRAMS AND STREAMS INTO THIS SAME FORMAT, THEY ARE ODD BALLS NOW
+    MT_MULTIFRAME,
+    MT_ACDISNIP :
+        begin
+          if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then   // Handle Simple Messages that may be addressed to one of our nodes
           begin
-            if AMessage^.MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then   // Handle Simple Messages that may be addressed to one of our nodes
-            begin
-              if DestNode <> nil then                                           // If it is addressed and the DestNode = nil then it is not for us
-              begin                                                             // We send all messages in to test for Releasing so this test is necessary
-                case AMessage^.MTI of
-                  MTI_SIMPLE_NODE_INFO_REQUEST       : begin SimpleNodeInfoMessage(DestNode, AMessage, False); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_SIMPLE_NODE_INFO_REPLY         : begin SimpleNodeInfoMessage(DestNode, AMessage, True); Exit; end;
-                  MTI_VERIFY_NODE_ID_NUMBER_DEST     : begin VerifyNodeIdByDestination(DestNode, AMessage); Exit; end;     // Sets Flag(s) to be processed in main loop
-                  MTI_EVENTS_IDENTIFY_DEST           : begin IdentifyEvents(DestNode, AMessage); Exit; end;                // Sets Flag(s) to be processed in main loop
-                  MTI_PROTOCOL_SUPPORT_INQUIRY       : begin ProtocolSupportMessage(DestNode, AMessage, False); Exit; end;        // Allocates Buffer to be processed in main loop
-                  MTI_PROTOCOL_SUPPORT_REPLY         : begin ProtocolSupportMessage(DestNode, AMessage, True);  Exit; end;
-                  MTI_DATAGRAM_OK_REPLY              : begin DatagramOkReply(DestNode, AMessage); Exit; end;               // Updates internal states
-                  MTI_DATAGRAM_REJECTED_REPLY        : begin DatagramRejectedReply(DestNode, AMessage); Exit; end;         // Updates internal states
-                  {$IFDEF SUPPORT_TRACTION}
-                  MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST : begin SimpleTrainNodeInfoMessage(AMessage, DestNode, False); Exit; end;
-                  MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin SimpleTrainNodeInfoMessage(AMessage, DestNode, True); Exit; end;
-                  MTI_TRACTION_PROTOCOL              : begin TractionProtocolMessage(AMessage, DestNode, False); Exit; end;              // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_REPLY                 : begin TractionProtocolMessage(AMessage, DestNode, True); Exit; end;
-                  {$ENDIF}
-                  {$IFDEF SUPPORT_TRACTION_PROXY}
-                  MTI_TRACTION_PROXY_PROTOCOL        : begin TractionProxyProtocolMessage(DestNode ,AMessage, False); Exit; end;         // Allocates Buffer to be processed in main loop
-                  MTI_TRACTION_PROXY_REPLY           : begin TractionProxyProtocolMessage(DestNode ,AMessage, True); Exit; end;
-                  {$ENDIF}
-                  MTI_REMOTE_BUTTON_REQUEST          : begin RemoteButtonMessage(DestNode, AMessage, False); Exit; end;
-                  MTI_REMOTE_BUTTON_REPLY            : begin RemoteButtonMessage(DestNode, AMessage, True); Exit; end;
-                  {$IFDEF SUPPORT_STREAMS}
-                  MTI_STREAM_INIT_REQUEST            : begin StreamInitRequest(DestNode, AMessage); Exit; end;            // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_INIT_REPLY              : begin StreamInitReply(DestNode, AMessage); Exit; end;              // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_PROCEED                 : begin StreamProceed(DestNode, AMessage); Exit; end;                // Allocates Buffer to be processed in main loop
-                  MTI_STREAM_COMPLETE                : begin StreamComplete(DestNode, AMessage); Exit; end;               // Allocates Buffer to be processed in main loop
-                  {$ENDIF}
-                  MTI_OPTIONAL_INTERACTION_REJECTED  : begin {TODO: What to do if one of the messages is Rejected!} end
-                else
-                  OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
-                end; {case}
-              end else
-                Exit;                                                           // It is not for of or our nodes
-            end else
-            begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
+            if DestNode <> nil then                                           // If it is addressed and the DestNode = nil then it is not for us
+            begin                                                             // We send all messages in to test for Releasing so this test is necessary
               case AMessage^.MTI of
-                  MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(DestNode, AMessage); Exit; end;              // Sets Flag(s) to be processed in main loop
-                  MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_PRODUCER_IDENTIFY           : begin IdentifyProducers(AMessage); Exit; end;         // Sets Flag(s) to be processed in main loop
-                  MTI_EVENT_LEARN                 : begin LearnEvent(AMessage); Exit; end;                           // Sets Flag(s) to be processed in main loop
-                  MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(nil, AMessage); Exit; end;                 // Sets Flag(s) to be processed in main loop
-
-                  MTI_CONSUMER_IDENTIFIED_RANGE,
-                  MTI_CONSUMER_IDENTIFIED_CLEAR,
-                  MTI_CONSUMER_IDENTIFIED_RESERVED,
-                  MTI_CONSUMER_IDENTIFIED_SET,
-                  MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
-                  MTI_PRODUCER_IDENTIFIED_RANGE,
-                  MTI_PRODUCER_IDENTIFIED_CLEAR,
-                  MTI_PRODUCER_IDENTIFIED_RESERVED,
-                  MTI_PRODUCER_IDENTIFIED_SET,
-                  MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
-                  MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(AMessage^.Source, NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
-                  MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(AMessage^.Source,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); Exit; end;
-                  MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); Exit; end;
+                MTI_SIMPLE_NODE_INFO_REQUEST,
+                MTI_SIMPLE_NODE_INFO_REPLY         : begin SimpleNodeInfoMessage(DestNode, AMessage); Exit; end;   // Exit and Don't free the Message
+                MTI_VERIFY_NODE_ID_NUMBER_DEST     : begin VerifyNodeIdByDestination(DestNode, AMessage); end;     // Sets Flag(s) to be processed in main loop
+                MTI_EVENTS_IDENTIFY_DEST           : begin IdentifyEvents(DestNode, AMessage); end;                // Sets Flag(s) to be processed in main loop
+                MTI_PROTOCOL_SUPPORT_INQUIRY,
+                MTI_PROTOCOL_SUPPORT_REPLY         : begin ProtocolSupportMessage(DestNode, AMessage); Exit; end;   // Don't free the Message
+                MTI_DATAGRAM_OK_REPLY              : begin DatagramOkReply(DestNode, AMessage); end;               // Updates internal states
+                MTI_DATAGRAM_REJECTED_REPLY        : begin DatagramRejectedReply(DestNode, AMessage); end;         // Updates internal states
+                {$IFDEF SUPPORT_TRACTION}
+                MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST,
+                MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin SimpleTrainNodeInfoMessage(AMessage, DestNode);  Exit; end;   // Don't free the Message
+                MTI_TRACTION_PROTOCOL,
+                MTI_TRACTION_REPLY                 : begin TractionProtocolMessage(AMessage, DestNode); Exit; end;   // Don't free the Message
+                {$ENDIF}
+                {$IFDEF SUPPORT_TRACTION_PROXY}
+                MTI_TRACTION_PROXY_PROTOCOL,
+                MTI_TRACTION_PROXY_REPLY           : begin TractionProxyProtocolMessage(DestNode ,AMessage); Exit; end;   // Don't free the Message
+                {$ENDIF}
+                MTI_REMOTE_BUTTON_REQUEST,
+                MTI_REMOTE_BUTTON_REPLY            : begin RemoteButtonMessage(DestNode, AMessage); Exit; end;   // Don't free the Message
+                {$IFDEF SUPPORT_STREAMS}
+                MTI_STREAM_INIT_REQUEST            : begin StreamInitRequest(DestNode, AMessage); end;            // Allocates Buffer to be processed in main loop
+                MTI_STREAM_INIT_REPLY              : begin StreamInitReply(DestNode, AMessage); end;              // Allocates Buffer to be processed in main loop
+                MTI_STREAM_PROCEED                 : begin StreamProceed(DestNode, AMessage); end;                // Allocates Buffer to be processed in main loop
+                MTI_STREAM_COMPLETE                : begin StreamComplete(DestNode, AMessage); end;               // Allocates Buffer to be processed in main loop
+                {$ENDIF}
+                MTI_OPTIONAL_INTERACTION_REJECTED  : begin {TODO: What to do if one of the messages is Rejected!} end
+              else
+                  OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
               end; {case}
-            end;
-            CheckAndDeallocateMessage(AMessage);                                // We always free the message
-          end;
-      {$IFDEF SUPPORT_STREAMS}
-      MT_STREAM,
-      {$ENDIF}
-      MT_DATAGRAM :
-          begin
-            if DestNode <> nil then
-              OPStackNode_IncomingMessageLink(DestNode, AMessage)
-            else
-              CheckAndDeallocateMessage(AMessage);
-          end;
-    end
+            end                                                      // It is not for of or our nodes
+          end else
+          begin                                                               // Is not an Addressed message so handle it, the handler must decide what to do with DestNode = nil
+            case AMessage^.MTI of
+                MTI_VERIFY_NODE_ID_NUMBER       : begin VerifyNodeId(DestNode, AMessage); end;              // Sets Flag(s) to be processed in main loop
+                MTI_CONSUMER_IDENTIFY           : begin IdentifyConsumers(AMessage); end;         // Sets Flag(s) to be processed in main loop
+                MTI_PRODUCER_IDENTIFY           : begin IdentifyProducers(AMessage); end;         // Sets Flag(s) to be processed in main loop
+                MTI_EVENT_LEARN                 : begin LearnEvent(AMessage); end;                           // Sets Flag(s) to be processed in main loop
+                MTI_EVENTS_IDENTIFY             : begin IdentifyEvents(nil, AMessage); end;                 // Sets Flag(s) to be processed in main loop
 
+                MTI_CONSUMER_IDENTIFIED_RANGE,
+                MTI_CONSUMER_IDENTIFIED_CLEAR,
+                MTI_CONSUMER_IDENTIFIED_RESERVED,
+                MTI_CONSUMER_IDENTIFIED_SET,
+                MTI_CONSUMER_IDENTIFIED_UNKNOWN : begin AppCallback_ConsumerIdentified(AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end;
+                MTI_PRODUCER_IDENTIFIED_RANGE,
+                MTI_PRODUCER_IDENTIFIED_CLEAR,
+                MTI_PRODUCER_IDENTIFIED_RESERVED,
+                MTI_PRODUCER_IDENTIFIED_SET,
+                MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified(AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end;
+                MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(AMessage^.Source, NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); end;
+                MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(AMessage^.Source,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); end;
+                MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end
+             else {case}
+               OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
+             end
+          end
+        end;
+    {$IFDEF SUPPORT_STREAMS}
+    MT_STREAM,
+    {$ENDIF}
+    MT_DATAGRAM :
+        begin
+          if DestNode <> nil then
+            OPStackNode_IncomingMessageLink(DestNode, AMessage)
+          else
+            CheckAndDeallocateMessage(AMessage);
+        end;
+    end;
+  CheckAndDeallocateMessage(AMessage);
 end;
 
 // *****************************************************************************
@@ -553,7 +550,6 @@ begin
 
           Node^.iStateMachine := STATE_NODE_PERMITTED;
           IncomingMessageDispatch(OPStackMessage, Node, nil);
-          OPStackBuffers_DeAllocateMessage(OPStackMessage);
         end
       end;
     STATE_NODE_PERMITTED :

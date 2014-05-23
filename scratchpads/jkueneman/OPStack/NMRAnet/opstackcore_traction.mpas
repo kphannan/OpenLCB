@@ -26,7 +26,7 @@ uses
 const
   MAX_CONTROLLER_NOTIFY_TIME = 10;  // 10 * 100ms = 1 second to wait for controller that is being stolen from to reply if it allows the steal
 
-procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
+procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 function TractionProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure TractionProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
@@ -456,27 +456,9 @@ begin
   Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
+procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 begin
-  NewMessage := nil;
-  if IsReply then
-  begin
-    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end
-  end else
-  begin
-    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end else
-      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
-  end;
+  OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
 function TractionProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;

@@ -89,7 +89,7 @@ begin
 
   AcdiSnipBuffer := PAcdiSnipBuffer( PByte( InProcessMessage^.Buffer));
 
-  for i := 0 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
+  for i := 2 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
   begin
     AcdiSnipBuffer^.DataArray[AcdiSnipBuffer^.DataBufferSize] := OPStackMessage^.Buffer^.DataArray[i];
     Inc(AcdiSnipBuffer^.DataBufferSize);
@@ -97,7 +97,7 @@ begin
       Inc(AcdiSnipBuffer^.CurrentCount);
   end;
 
-  if AcdiSnipBuffer^.CurrentCount = 5 then            // Found the 5 nulls?
+  if AcdiSnipBuffer^.CurrentCount >= 5 then            // Found the 5 nulls?
   begin
     // Done
     OPStackCANStatemachineBuffers_RemoveIncomingAcdiSnipMessage(InProcessMessage);

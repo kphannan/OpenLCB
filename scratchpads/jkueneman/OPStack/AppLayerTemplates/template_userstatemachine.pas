@@ -108,8 +108,6 @@ begin
     UserDataArray[i].UserData1 := 0;
     UserDataArray[i].UserData2 := 0;
   end;
-   // Initialize the example statemachine
-  ClearProxyNode;
 end;
 
 // *****************************************************************************
@@ -390,7 +388,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_Timer_100ms;
 begin
-  Inc(GlobalTimer);
+
 end;
 
 // *****************************************************************************

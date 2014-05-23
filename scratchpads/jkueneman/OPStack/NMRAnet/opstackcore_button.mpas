@@ -20,7 +20,7 @@ uses
   opstackbuffers,
   opstacktypes;
 
-procedure RemoteButtonMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+procedure RemoteButtonMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function RemoteButtonReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure RemoteButtonReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
@@ -36,26 +36,9 @@ implementation
 //    Takes incoming Traction Protocol and posts it to be disected and handled
 //    later in the Reply
 //******************************************************************************
-procedure RemoteButtonMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
-  MTI: Word;
+procedure RemoteButtonMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  NewMessage := nil;
-  if IsReply then
-    MTI := MTI_REMOTE_BUTTON_REPLY
-  else
-    MTI := MTI_REMOTE_BUTTON_REQUEST;
-
-  if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
-  begin
-    OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-    OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-  end else
-  begin
-    if not IsReply then
-      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
-  end;
+  OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
 function RemoteButtonReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;

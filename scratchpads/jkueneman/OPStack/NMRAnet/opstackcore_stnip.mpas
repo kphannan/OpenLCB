@@ -17,33 +17,15 @@ uses
   template_userstatemachine,
   opstacktypes;
 
-procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
+procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
 implementation
 
-procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
+procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 begin
-  NewMessage := nil;
-  if IsReply then
-  begin
-    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end;
-  end else
-  begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end else
-      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
-  end;
+  OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
 function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;

@@ -104,7 +104,6 @@ const
   MT_ACDISNIP           = $0008;
   MT_MULTIFRAME         = $0010;
 
-  MT_HIGH_PRIORITY_SEND = $1000;
   MT_SEND               = $2000;                                                     // Set if the message should just be sent as is
   MT_CAN_TYPE           = $4000;                                                     // It is a CAN MTI
   MT_ALLOCATED          = $8000;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!

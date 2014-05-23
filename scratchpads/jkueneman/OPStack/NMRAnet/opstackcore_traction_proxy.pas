@@ -21,7 +21,7 @@ uses
   opstackbuffers,
   opstacktypes;
 
-procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
@@ -69,30 +69,9 @@ end;
 //    Takes incoming Traction Protocol and posts it to be disected and handled
 //    later in the Reply
 //******************************************************************************
-procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
-  MTI: Word;
+procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  NewMessage := nil;
-  if IsReply then
-  begin
-    MTI := MTI_TRACTION_PROXY_REPLY;
-    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end;
-  end else
-  begin
-    MTI := MTI_TRACTION_PROXY_PROTOCOL;
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end else
-      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
-  end;
+  OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
 function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;

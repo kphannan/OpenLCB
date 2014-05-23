@@ -195,7 +195,6 @@ begin
   begin
     OPStackNode_SetEventFlags(DestNode^.Events.Consumed);
     OPStackNode_SetEventFlags(DestNode^.Events.Produced);
-    Exit;
   end else
   begin
     for i := 0 to NodePool.AllocatedCount - 1 do
@@ -204,7 +203,6 @@ begin
       OPStackNode_SetEventFlags(DestNode^.Events.Consumed);
       OPStackNode_SetEventFlags(DestNode^.Events.Produced);
     end;
-    Exit;
   end;
 end;
 

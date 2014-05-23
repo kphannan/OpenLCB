@@ -19,12 +19,14 @@ type
   TSimpleBufferPool = record
     Pool: array[0..USER_MAX_SIMPLE_ARRAY_BUFFERS-1] of TSimpleBuffer;
     Count: Word;
+    MaxCount: Word;
   end;
   PSimpleBufferPool = ^TSimpleBufferPool;
 
   TDatagramBufferPool = record
     Pool: array[0..USER_MAX_DATAGRAM_ARRAY_BUFFERS-1] of TDatagramBuffer;
     Count: Word;
+    MaxCount: Word;
   end;
   PDatagramBufferPool = ^TDatagramBufferPool;
 
@@ -32,6 +34,7 @@ type
   TStreamBufferPool = record
     Pool: array[0..USER_MAX_STREAM_ARRAY_BUFFERS-1] of TStreamBuffer;
     Count: Word;
+    MaxCount: Word;
   end;
   PStreamBufferPool = ^TStreamBufferPool;
   {$ENDIF}
@@ -39,18 +42,21 @@ type
   TAcdiSnipBufferPool = record
     Pool: array[0..USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1] of TAcdiSnipBuffer;
     Count: Word;
+    MaxCount: Word;
   end;
   PAcdiSnipBufferPool = ^TAcdiSnipBufferPool;
 
   TMultiFramePool = record
     Pool: array[0..USER_MAX_MULTIFRAME_ARRAY_BUFFERS-1] of TMultiFrameBuffer;
     Count: Word;
+    MaxCount: Word;
   end;
   PMultiFramePool = ^TMultiFramePool;
 
   TOPStackMessagePool = record
     Pool: array[0..USER_MAX_MESSAGE_BUFFERS-1] of TOPStackMessage;
     Count: Word;
+    MaxCount: Word;
   end;
 
 
@@ -126,19 +132,23 @@ begin
   for j := 0 to USER_MAX_SIMPLE_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroSimpleBuffer(@SimpleBufferPool.Pool[j], True);
   SimpleBufferPool.Count := 0;
+  SimpleBufferPool.MaxCount := 0;
 
   for j := 0 to USER_MAX_DATAGRAM_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroDatagramBuffer(@DatagramBufferPool.Pool[j], True);
   DatagramBufferPool.Count := 0;
+  DatagramBufferPool.MaxCount := 0;
 
   for j := 0 to USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroAcdiSnipBuffer(@AcdiSnipBufferPool.Pool[j], True);
   AcdiSnipBufferPool.Count := 0;
+  AcdiSnipBufferPool.MaxCount := 0;
 
   {$IFDEF SUPPORT_STREAMS}
   for j := 0 to USER_MAX_STREAM_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroStreamBuffer(@StreamBufferPool.Pool[j], True);
   StreamBufferPool.Count := 0;
+  StreamBufferPool.MaxCount := 0;
   StreamSourceID := 0;
   StreamDestID := 0;
   {$ENDIF}
@@ -146,11 +156,12 @@ begin
   for j := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMultiFrameBuffer(@MultiFramePool.Pool[j], True);
   MultiFramePool.Count := 0;
+  MultiFramePool.MaxCount := 0;
   
   for j := 0 to USER_MAX_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
-
+  OPStackMessagePool.MaxCount := 0;
 end;
 
 procedure OPStackBuffers_Timer;
@@ -180,6 +191,8 @@ begin
         OPStackBuffers_ZeroSimpleBuffer(Buffer, False);
         SimpleBufferPool.Pool[i].State := ABS_ALLOCATED;
         Inc(SimpleBufferPool.Count);
+        if SimpleBufferPool.Count > SimpleBufferPool.MaxCount then
+          SimpleBufferPool.MaxCount := SimpleBufferPool.Count;
         Result := True;
         Exit;
       end;
@@ -202,6 +215,8 @@ begin
         OPStackBuffers_ZeroDatagramBuffer(Buffer, False);
         DatagramBufferPool.Pool[i].State := ABS_ALLOCATED;
         Inc(DatagramBufferPool.Count);
+        if DatagramBufferPool.Count > DatagramBufferPool.MaxCount then
+          DatagramBufferPool.MaxCount := DatagramBufferPool.Count;
         Result := True;
         Exit;
       end;
@@ -225,6 +240,8 @@ begin
         OPStackBuffers_ZeroStreamBuffer(Buffer, False);
         StreamBufferPool.Pool[i].State := ABS_ALLOCATED;
         Inc(StreamBufferPool.Count);
+        if StreamBufferPool.Count > StreamBufferPool.MaxCount then
+          StreamBufferPool.MaxCount := StreamBufferPool.Count;
         Result := True;
         Exit;
       end;
@@ -248,6 +265,8 @@ begin
         OPStackBuffers_ZeroAcdiSnipBuffer(Buffer, False);
         AcdiSnipBufferPool.Pool[i].State := ABS_ALLOCATED;
         Inc(AcdiSnipBufferPool.Count);
+        if AcdiSnipBufferPool.Count > AcdiSnipBufferPool.MaxCount then
+          AcdiSnipBufferPool.MaxCount := AcdiSnipBufferPool.Count;
         Result := True;
         Exit;
       end;
@@ -270,6 +289,8 @@ begin
         OPStackBuffers_ZeroMultiFrameBuffer(Buffer, False);
         MultiFramePool.Pool[i].State := ABS_ALLOCATED;
         Inc(MultiFramePool.Count);
+        if MultiFramePool.Count > MultiFramePool.MaxCount then
+          MultiFramePool.MaxCount := MultiFramePool.Count;
         Result := True;
         Exit;
       end;
@@ -338,6 +359,8 @@ begin
       OPStackMessage^.MessageType := MT_ALLOCATED;
       OPStackBuffers_ZeroMessage(OPStackMessage);
       Inc(OPStackMessagePool.Count);
+      if OPStackMessagePool.Count > OPStackMessagePool.MaxCount then
+        OPStackMessagePool.MaxCount := OPStackMessagePool.Count;
       Result := True;
       Break
     end;

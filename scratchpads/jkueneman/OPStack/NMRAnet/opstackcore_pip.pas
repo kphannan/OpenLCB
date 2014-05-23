@@ -18,7 +18,7 @@ uses
   template_userstatemachine,
   opstackdefines;
 
-procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function ProtocolSupportInquiryReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure ProtocolSupportReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
@@ -27,28 +27,9 @@ implementation
 //
 // When a message is received this function queues it up for later processing by the main statemachine
 //
-procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
+procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  // If the reply message does not support Framing Bits then this will be called
-  if IsReply then
-  begin
-    if AMessage^.MessageType and MT_MULTIFRAME = 0 then
-    begin
-      if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-        OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end else
-      OPStackNode_IncomingMessageLink(DestNode, AMessage)                       // If it was sent as a multi Frame then just link it
-  end else
-  begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    else begin
-      if not IsReply then
-        OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
-    end;
-  end;
+  OPStackNode_IncomingMessageLink(DestNode, AMessage)                       // If it was sent as a multi Frame then just link it
 end;
 
 //

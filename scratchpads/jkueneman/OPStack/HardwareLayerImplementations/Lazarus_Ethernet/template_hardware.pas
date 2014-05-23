@@ -170,28 +170,15 @@ end;
 procedure DispatchGridConnectStr(GridConnectStrPtr: PGridConnectString);
 var
   GridConnectBuffer: TNMRAnetCanBuffer;
-  OPStackMessage: TOPStackMessage;
   OPStackMessagePtr: POPStackMessage;
-  Buffer: TSimpleBuffer;
   SourceNode, DestNode: PNMRAnetNode;
 begin
-  GridConnectBuffer.MTI := 0;                                                   // Quite the compiler
-  OPStackBuffers_ZeroMessage(@OPStackMessage);
-  OPStackBuffers_ZeroSimpleBuffer(@Buffer, False);
-  OPStackMessage.Buffer := @Buffer;
-  GridConnect_ToGridConnectBuffer(GridConnectStrPtr, GridConnectBuffer);        // Parse the string into a Grid Connect Data structure
-  OPStackMessagePtr := @OPStackMessage;                                         // The message object may change on us if it is a datagram, stream or SNIP/ACDI
-  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(GridConnectBuffer, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
-  begin
-    if OPStackMessagePtr^.MessageType and MT_HIGH_PRIORITY_SEND  <> 0 then      // The incoming message may not be able to be handled and we need to reply with a fast answer to a buffer that can never be full
-      OutgoingCriticalMessage(OPStackMessagePtr)
-    else
-      IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
-    // For Multiframe type messages the handler may have allocated a buffer to gather up
-    // all the frames before dispatching them.  If so it needs to be deallocated.
-    // Calling this on the local instance is harmless because we did not set the MT_ALLOCATED flag
-    OPStackBuffers_DeAllocateMessage(OPStackMessagePtr)
-  end;
+  SourceNode := nil;
+  DestNode := nil;
+  OpStackMessagePtr := nil;
+  GridConnect_ToGridConnectBuffer(GridConnectStrPtr, @GridConnectBuffer);        // Parse the string into a Grid Connect Data structure
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(@GridConnectBuffer, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+    IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
 end;
 
 {$IFDEF FPC}

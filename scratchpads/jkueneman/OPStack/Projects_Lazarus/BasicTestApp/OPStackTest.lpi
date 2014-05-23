@@ -38,7 +38,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="33">
+    <Units Count="34">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -209,6 +209,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="opstackcanstatemachinessnip"/>
       </Unit32>
+      <Unit33>
+        <Filename Value="..\..\HardwareLayerImplementations\Lazarus_Ethernet\template_hardware.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_hardware"/>
+      </Unit33>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -219,7 +224,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);..\..\AppLayerTemplates"/>
-      <OtherUnitFiles Value="..\..\NMRAnet;..\..\AppLayerTemplates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus;..\..\..\Components\synapse40\source\lib;..\..\..\Library"/>
+      <OtherUnitFiles Value="..\..\NMRAnet;..\..\AppLayerTemplates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus;..\..\..\Components\synapse40\source\lib;..\..\..\Library;..\..\HardwareLayerImplementations\Lazarus_Ethernet"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

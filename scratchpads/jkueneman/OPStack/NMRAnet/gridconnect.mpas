@@ -14,7 +14,7 @@ uses
 procedure GridConnect_Initialize;
 
 function GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
-procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TNMRAnetCanBuffer);
+procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; GridConnectBuffer: PNMRAnetCanBuffer);
 function GridConnect_BufferToGridConnect(var GridConnectBuffer: TNMRAnetCanBuffer; var GridConnectStr: TGridConnectString): Integer;
 
 
@@ -157,7 +157,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; var GridConnectBuffer: TNMRAnetCanBuffer);
+procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; GridConnectBuffer: PNMRAnetCanBuffer);
 var
   ConvertStr: array[0..8] of char;
   {$IFDEF FPC}
@@ -171,11 +171,11 @@ begin
   ConvertStr[8] := #0;
   {$IFDEF FPC}
   ConvertPasStr := ConvertStr;
-  GridConnectBuffer.MTI := StrToInt('0x' + ConvertPasStr);
+  GridConnectBuffer^.MTI := StrToInt('0x' + ConvertPasStr);
   {$ELSE}
-  GridConnectBuffer.MTI := HexToLongWord(ConvertStr);
+  GridConnectBuffer^.MTI := HexToLongWord(ConvertStr);
   {$ENDIF}
-  GridConnectBuffer.PayloadCount := 0;
+  GridConnectBuffer^.PayloadCount := 0;
   if GridConnectStr^[GRID_CONNECT_DATA_OFFSET] <> ';' then
   begin
     i := 0;
@@ -186,11 +186,11 @@ begin
       ConvertStr[2] := #0;
       {$IFDEF FPC}
       ConvertPasStr := ConvertStr;
-      GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := StrToInt('0x' + ConvertPasStr);
+      GridConnectBuffer^.Payload[GridConnectBuffer^.PayloadCount] := StrToInt('0x' + ConvertPasStr);
       {$ELSE}
-      GridConnectBuffer.Payload[GridConnectBuffer.PayloadCount] := HexToWord(ConvertStr);
+      GridConnectBuffer^.Payload[GridConnectBuffer^.PayloadCount] := HexToWord(ConvertStr);
       {$ENDIF}
-      Inc(GridConnectBuffer.PayloadCount);
+      Inc(GridConnectBuffer^.PayloadCount);
       i := i + 2;
     end;
   end

@@ -10,12 +10,14 @@ uses
   template_hardware,
   opstackbuffers,
   opstacknode,
+  nmranetdefines,
   nmranetutilities,
   opstackdefines;
 
 procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
+procedure DatagramRejected(AMessage: POPStackMessage; ErrorCode: Word);
 function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 
 implementation
@@ -23,7 +25,7 @@ implementation
 procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
   if DestNode <> nil then
-    OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID)      // All messages addressed to node get replies even if the payload is wrong!
+    OPStackNode_SetFlag(DestNode, MF_VERIFY_NODE_ID);      // All messages addressed to node get replies even if the payload is wrong!
 end;
 
 procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
@@ -47,6 +49,27 @@ begin
   OPStackBuffers_ZeroMessage(@OptionalInteractionMessage);
   OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
   OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI, IsPermenent);    // Unknown MTI sent to addressed node
+  OutgoingCriticalMessage(@OptionalInteractionMessage);
+end;
+
+procedure DatagramRejected(AMessage: POPStackMessage; ErrorCode: Word);
+var
+  OptionalInteractionMessage: TOPStackMessage;
+  OptionalnteractionBuffer: TSimpleBuffer;
+  DatagramError: PSimpleDataArray;
+begin
+  OPStackBuffers_ZeroSimpleBuffer(@OptionalnteractionBuffer, False);
+  OPStackBuffers_ZeroMessage(@OptionalInteractionMessage);
+  OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
+
+  case ErrorCode of
+    DATAGRAM_PROCESS_ERROR_BUFFER_FULL         : DatagramError := PSimpleDataArray( @DATAGRAM_RESULT_REJECTED_BUFFER_FULL);
+    DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER);
+    DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED);
+  end;
+  OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM_REJECTED_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, 0);
+  AMessage^.MessageType := MT_SIMPLE;
+  OPStackBuffers_CopyDataArray(OptionalInteractionMessage.Buffer, DatagramError, 2, True);
   OutgoingCriticalMessage(@OptionalInteractionMessage);
 end;
 

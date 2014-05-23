@@ -10,10 +10,13 @@ uses
   Classes, SysUtils, FileUtil, SynEdit, SynMemo, Forms, Controls, Graphics,
   Dialogs, StdCtrls, ComCtrls, ExtCtrls, Menus, opstackcore, opstacknode, SynEditKeyCmds,
   LCLType,
-  hardware_template,
+  template_hardware,
   opstackbuffers,
   olcb_utilities,
   opstacktypes,
+  opstackdefines,
+  olcb_transport_layer,
+  ethernet_hub,
   template_node;
 
 type
@@ -43,33 +46,29 @@ type
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
     procedure ButtonStartStackClick(Sender: TObject);
-    procedure CheckBoxDisableLoggingChange(Sender: TObject);
-    procedure CheckBoxLogMessagesChange(Sender: TObject);
-    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupEthernetClick(Sender: TObject);
-    procedure SynMemoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState
-      );
+    procedure SynMemoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure TimerCoreTimer(Sender: TObject);
     procedure TimerStatemachineTimer(Sender: TObject);
   private
-    FHalfConnected: Boolean;
-  private
-    FClient: TOPstackTestClient;
-    FConnected: Boolean;
-    FDisableLogging: Boolean;
-    FListener: TOPStackTestListener;
-    property HalfConnected: Boolean read FHalfConnected write FHalfConnected;
+    FComConnectionState: TConnectionState;
+    FEthernetConnectionState: TConnectionState;
   public
     { public declarations }
-    procedure ListenerCallback(ReceiveStr: ansistring);
-    procedure ConnectedCallback(EthernetThreadType: TEthernetThreadType);
+    procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
+    procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
+    procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
+    procedure EthernetError(Sender: TObject; MessageStr: string);
+    procedure ComPortError(Sender: TObject; MessageStr: String);
+    procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
+    procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
+    procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
+
     procedure UpdateUI;
-    property Client: TOPstackTestClient read FClient write FClient;
-    property Connected: Boolean read FConnected;
-    property Listener: TOPStackTestListener read FListener write FListener;
-    property DisableLogging: Boolean read FDisableLogging write FDisableLogging;
+    property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
+    property EthernetConnectionState: TConnectionState read FEthernetConnectionState write FEthernetConnectionState;
   end;
 
 
@@ -85,18 +84,24 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  FHalfConnected := False;
-  FConnected := False;
+  ComPortHub.OnReceiveMessage := @ComPortReceiveLogging;
+  ComPortHub.OnSendMessage := @ComPortSendLogging;
+  ComPortHub.OnErrorMessage := @ComPortError;
+  ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
+
+  EthernetHub.OnReceiveMessage := @EthernetReceiveLogging;
+  EthernetHub.OnSendMessage := @EthernetSendLogging;
+  EthernetHub.OnErrorMessage := @EthernetError;
+  EthernetHub.OnConnectionStateChange := @EthernetConnectState;
+
+  FComConnectionState := csDisconnected;
+  FEthernetConnectionState := csDisconnected;
+
   OPStackCore_Initialize;
-  Client := nil;
-  Listener := nil;
-  ClientThread := nil;
-  ListenerThread := nil;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
-  DisableLogging := False;
   UpdateUI;
 end;
 
@@ -104,71 +109,21 @@ procedure TForm1.RadioGroupEthernetClick(Sender: TObject);
 begin
   case RadioGroupEthernet.ItemIndex of
     0 : begin
-          if Assigned(FClient) then
-          begin
-            ClientThread := nil;
-            Client.Terminate;
-            RTLeventSetEvent(Client.Event);
-            while not Client.HasTerminated do
-              ThreadSwitch;
-            FreeAndNIl(FClient);
-          end;
-          if Assigned(FListener) then
-          begin
-            ListenerThread := nil;
-            if Assigned(Listener.ConnectionOutput) then
-              Listener.ConnectionOutput.Callback := nil;
-            if Assigned(Listener.ConnectionInput) then
-              Listener.ConnectionInput.Callback := nil;
-            Listener.Terminate;
-            Listener.Abort;
-            while not Listener.HasTerminated do;
-              ThreadSwitch;
-            FreeAndNil(FListener);
-          end;
-          FConnected := False;
-          UpdateUI
+          EthernetHub.Enabled := True;
         end;
     1 : begin
-          if Assigned(FClient) then
-          begin
-            ClientThread := nil;
-            Client.Terminate;
-            RTLeventSetEvent(Client.Event);
-            while not Client.HasTerminated do
-              ThreadSwitch;
-            FreeAndNIl(FClient);
-          end;
-
-          Listener := TOPStackTestListener.Create(False);
-          ListenerThread := Listener;
-          Listener.Callback := @ListenerCallback;
-          Listener.RunningCallback := @ConnectedCallback;
-          Statusbar.Panels[0].Text := 'Listening'
+          EthernetHub.Listener := True;
+          EthernetHub.EnableSendMessages := not CheckBoxDisableLogging.Checked;
+          EthernetHub.EnableReceiveMessages := not CheckBoxDisableLogging.Checked;
+          EthernetHub.Enabled := True;
         end;
     2 : begin
-          if Assigned(FListener) then
-          begin
-            ListenerThread := nil;
-            if Assigned(Listener.ConnectionOutput) then
-              Listener.ConnectionOutput.Callback := nil;
-            if Assigned(Listener.ConnectionInput) then
-              Listener.ConnectionInput.Callback := nil;
-            Listener.Terminate;
-            Listener.Abort;
-            while not Listener.HasTerminated do;
-              ThreadSwitch;
-            FreeAndNil(FListener);
-          end;
-
-          Client := TOPstackTestClient.Create(True);
-          Client.Callback := @ListenerCallback;
-          Client.RunningCallback := @ConnectedCallback;
-          Client.Start;
-          ClientThread := Client;
-          Statusbar.Panels[0].Text := 'Connecting...'
+          EthernetHub.Listener := False;
+          EthernetHub.EnableSendMessages := not CheckBoxDisableLogging.Checked;
+          EthernetHub.EnableReceiveMessages := not CheckBoxDisableLogging.Checked;
+          EthernetHub.Enabled := True;
         end;
-    end;
+  end;
 end;
 
 procedure TForm1.SynMemoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -196,43 +151,34 @@ begin
   OPStackCore_Process;
 end;
 
-procedure TForm1.ListenerCallback(ReceiveStr: ansistring);
-begin
-  if not DisableLogging then
-  begin
-    ReceiveStr := Trim(ReceiveStr);
-    while (ReceiveStr[Length(ReceiveStr)] = #10) or (ReceiveStr[Length(ReceiveStr)] = #13) do
-      SetLength(ReceiveStr, Length(ReceiveStr) - 1);
-    SynMemo.Lines.BeginUpdate;
-    SynMemo.Text := SynMemo.Text + MessageToDetailedMessage(ReceiveStr, True) + #13;
-    SynMemo.CaretY := SynMemo.LineHeight * SynMemo.Lines.Count;
-    SynMemo.Lines.EndUpdate;
-  end;
-end;
-
-procedure TForm1.ConnectedCallback(EthernetThreadType: TEthernetThreadType);
-begin
-  if HalfConnected then
-  begin
-    FConnected := True;
-    if CheckBoxAutoConnect.Checked then
-      ButtonStartStack.Click;
-    UpdateUI;
-  end
-  else
-    HalfConnected := True;
-end;
-
 procedure TForm1.UpdateUI;
 begin
+  case EthernetConnectionState of
+    csDisconnected :
+      begin
+        Statusbar.Panels[0].Text := 'Ethernet: Disconnected';
+      end;
+    csConnecting :
+      begin
+       Statusbar.Panels[0].Text := 'Ethernet: Connecting';
+      end;
+    csDisconnecting :
+      begin
+        Statusbar.Panels[0].Text := 'Ethernet: Disconnecting';
+      end;
+    csConnected :
+      begin
+        if EthernetHub.Listener then
+          Statusbar.Panels[0].Text := 'Connected - Listening on: ' //+ GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort)
+        else
+          Statusbar.Panels[0].Text := 'Connected - Client: ' //+ GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ClientPort)
+      end;
+   end;
+
   ButtonAllocateNode.Enabled := NodePool.AllocatedCount < USER_MAX_NODE_COUNT;
   ButtonDeallocateNode.Enabled := NodePool.AllocatedCount > 1;
   Statusbar.Panels[1].Text := 'Allocated Nodes: ' + IntToStr(NodePool.AllocatedCount);
-  if Connected then
-    Statusbar.Panels[0].Text := 'Connected'
-  else
-    Statusbar.Panels[0].Text := 'Not Connected';
-  ButtonStartStack.Enabled := Connected;
+  ButtonStartStack.Enabled := EthernetHub.Enabled;
   Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(OPStackMessagePool.Count);
   Statusbar.Panels[3].Text := 'CAN Buffers: ' + IntToStr(SimpleBufferPool.Count);
   Statusbar.Panels[4].Text := 'Datagram Buffers: ' + IntToStr(DatagramBufferPool.Count);
@@ -243,8 +189,8 @@ end;
 
 procedure TForm1.ButtonSendGlobalNotifyClick(Sender: TObject);
 begin
-  if Assigned(Listener) then
-    Listener.Send(':X19490F37N;');
+ // if Assigned(Listener) then
+ //   Listener.Send(':X19490F37N;');
   UpdateUI
 end;
 
@@ -277,52 +223,48 @@ begin
   OPStack.State := OPStack.State or OPS_PROCESSING;
 end;
 
-procedure TForm1.CheckBoxDisableLoggingChange(Sender: TObject);
+procedure TForm1.ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
 begin
-  DisableLogging := CheckBoxDisableLogging.Checked;
+  ComConnectionState := NewConnectionState;
+  UpdateUI;
 end;
 
-procedure TForm1.CheckBoxLogMessagesChange(Sender: TObject);
+procedure TForm1.ComPortError(Sender: TObject; MessageStr: String);
 begin
-  if CheckBoxLogMessages.Checked and Assigned(FListener) then
-  begin
-    if Assigned(Listener.ConnectionOutput) then
-      Listener.ConnectionOutput.Callback := Listener.Callback;
-    if Assigned(Listener.ConnectionInput.Callback) then
-      Listener.ConnectionInput.Callback := Listener.Callback;
-  end else
-  begin
-    if Assigned(Listener.ConnectionOutput) then
-      Listener.ConnectionOutput.Callback := nil;
-    if Assigned(Listener.ConnectionInput.Callback) then
-      Listener.ConnectionInput.Callback := nil;
-  end;
+
 end;
 
-procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+procedure TForm1.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
 begin
-  ClientThread := nil;
-  ListenerThread := nil;
+  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
+end;
 
-  if Assigned(FListener) then
-  begin
-    Listener.Callback := nil;
-    Listener.RunningCallback := nil;
-    Listener.Terminate;
-    Listener.Abort;
-    while not Listener.HasTerminated do;
-      ThreadSwitch;
-    FreeAndNil(FListener);
-  end;
+procedure TForm1.ComPortSendLogging(Sender: TObject; MessageStr: String);
+begin
+  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
+end;
 
-  if Assigned(FClient) then
-  begin
-    Client.Terminate;
-    RTLeventSetEvent(Client.Event);
-    while not Client.HasTerminated do
-      ThreadSwitch;
-    FreeAndNIl(FClient);
-  end;
+procedure TForm1.EthernetConnectState(Sender: TObject;
+  ConnectionState: TConnectionState);
+begin
+  if (Sender is TEthernetListenDameonThread) or (not EthernetHub.Listener) then
+    EthernetConnectionState := ConnectionState;
+  UpdateUI
+end;
+
+procedure TForm1.EthernetError(Sender: TObject; MessageStr: string);
+begin
+
+end;
+
+procedure TForm1.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
+begin
+  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
+end;
+
+procedure TForm1.EthernetSendLogging(Sender: TObject; MessageStr: String);
+begin
+  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
 end;
 
 end.

@@ -749,25 +749,28 @@ var
   Done: Boolean;
 begin
   Done := False;
-  List := ClientThreadList.LockList;
-  try
-    if NewTask.DestinationAlias = 0 then
-    begin
-      for i := 0 to List.Count - 1 do
-        TClientSocketThread( List[i]).AddTask(NewTask, True);   // Broadcast, Task will be cloned in thread
-      Done := True;
-    end else
-    begin
-      i := 0;
-      while (i < List.Count) and not Done do
+  if Enabled then
+  begin
+    List := ClientThreadList.LockList;
+    try
+      if NewTask.DestinationAlias = 0 then
       begin
-        Done := TClientSocketThread( List[i]).AddTask(NewTask, True); // Task will be cloned in thread
-        Inc(i);
+        for i := 0 to List.Count - 1 do
+          TClientSocketThread( List[i]).AddTask(NewTask, True);   // Broadcast, Task will be cloned in thread
+        Done := True;
+      end else
+      begin
+        i := 0;
+        while (i < List.Count) and not Done do
+        begin
+          Done := TClientSocketThread( List[i]).AddTask(NewTask, True); // Task will be cloned in thread
+          Inc(i);
+        end;
       end;
+    finally
+      ClientThreadList.UnlockList;
+      Result := Done;
     end;
-  finally
-    ClientThreadList.UnlockList;
-    Result := Done;
   end;
 end;
 

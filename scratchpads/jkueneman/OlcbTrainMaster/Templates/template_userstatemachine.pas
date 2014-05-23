@@ -741,6 +741,9 @@ begin
     if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
     begin
       ProxyNode := Source;
+
+ //     DO THIS AT THE OPSTACK LEVEL BY SENDING A SNIP MESSAGE AND RECEIVING THE REPLY>>>>>>>>>>>
+
       {$IFDEF FPC}
       if Assigned(Template_UserStateMachine_OnTaskDestroy) then
       begin

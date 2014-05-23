@@ -17,7 +17,7 @@ uses
   template_userstatemachine,
   opstacktypes;
 
-procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
+procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function SimpleNodeInfoRequestReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
 procedure SimpleNodeInfoRequestReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
@@ -26,27 +26,10 @@ implementation
 //
 // When a message is received this function queues it up for later processing by the main statemachine
 //
-procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
+procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  NewMessage := nil;
-  if IsReply then
-  begin
-    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(NewMessage, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end;
-  end else
-  begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
-    begin
-      OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
-      OPStackNode_IncomingMessageLink(DestNode, NewMessage)
-    end else
-      OptionalInteractionRejected(AMessage, False);                            // Try again if you wish
-  end;
+  // Link it in
+  OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
 //

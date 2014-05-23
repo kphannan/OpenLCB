@@ -11,7 +11,8 @@ uses
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
-  template_hardware, opstackcore, template_configuration, template_node;
+  template_hardware, opstackcore, template_configuration, template_node,
+  opstackbuffers;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';
@@ -67,6 +68,7 @@ type
     ActionCOMConnection: TAction;
     ActionList: TActionList;
     BitBtnRescanPorts: TBitBtn;
+    ButtonRefreshBufferCount: TButton;
     ButtonLocalHost: TButton;
     ButtonRemoteLocalHost: TButton;
     ButtonAddThrottles: TButton;
@@ -90,6 +92,23 @@ type
     Image1: TImage;
     ImageList16x16: TImageList;
     Label1: TLabel;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label12: TLabel;
+    Label13: TLabel;
+    Label14: TLabel;
+    Label15: TLabel;
+    Label16: TLabel;
+    Label2: TLabel;
+    Label4: TLabel;
+    Label9: TLabel;
+    LabelDatagramCount: TLabel;
+    LabelDatagramCountMax: TLabel;
+    LabelMessageCount: TLabel;
+    LabelMessageCountMax: TLabel;
+    LabelMultiFrameCount: TLabel;
+    LabelMultiFrameCountMax: TLabel;
+    LabelSimpleCount: TLabel;
     Label3: TLabel;
     Label5: TLabel;
     Label6: TLabel;
@@ -106,6 +125,9 @@ type
     LabelMyName: TLabel;
     LabelNodeExplorer: TLabel;
     LabelParity: TLabel;
+    LabelSimpleCountMax: TLabel;
+    LabelSnipCount: TLabel;
+    LabelSnipCountMax: TLabel;
     LabelStopBits: TLabel;
     LabelTargetCPU: TLabel;
     LabelTargetOperatingSystem: TLabel;
@@ -207,6 +229,7 @@ type
     procedure ActionZeroizeConfigMemoryExecute(Sender: TObject);
     procedure BitBtnRescanPortsClick(Sender: TObject);
     procedure ButtonLocalHostClick(Sender: TObject);
+    procedure ButtonRefreshBufferCountClick(Sender: TObject);
     procedure ButtonRemoteLocalHostClick(Sender: TObject);
     procedure ComboBoxBaudChange(Sender: TObject);
     procedure ComboBoxComPortChange(Sender: TObject);
@@ -271,6 +294,7 @@ type
     procedure ThrottleHiding(Throttle: TFormThrottle);
     function DispatchTask(Task: TTaskOlcbBase): Boolean;
     procedure TaskDestroy(Sender: TTaskOlcbBase);
+    procedure UpdateMessageCountUI;
     procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
 
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
@@ -489,6 +513,11 @@ end;
 procedure TFormOlcbTrainMaster.ButtonLocalHostClick(Sender: TObject);
 begin
   EditEthernetLocalIP.Text := '127.0.0.1';
+end;
+
+procedure TFormOlcbTrainMaster.ButtonRefreshBufferCountClick(Sender: TObject);
+begin
+  UpdateMessageCountUI
 end;
 
 procedure TFormOlcbTrainMaster.ButtonRemoteLocalHostClick(Sender: TObject);
@@ -967,6 +996,21 @@ begin
   NodeClass := TOlcbThrottleTreeNode
 end;
 
+procedure TFormOlcbTrainMaster.UpdateMessageCountUI;
+begin
+  LabelSimpleCount.Caption := IntToSTr(SimpleBufferPool.Count);
+  LabelSnipCount.Caption := IntToStr(AcdiSnipBufferPool.Count);
+  LabelDatagramCount.Caption := IntToStr(DatagramBufferPool.Count);
+  LabelMultiFrameCount.Caption := IntToStr(MultiFramePool.Count);
+  LabelMessageCount.Caption := IntToStr(OPStackMessagePool.Count);
+
+  LabelSimpleCountMax.Caption := IntToSTr(SimpleBufferPool.MaxCount);
+  LabelSnipCountMax.Caption := IntToStr(AcdiSnipBufferPool.MaxCount);
+  LabelDatagramCountMax.Caption := IntToStr(DatagramBufferPool.MaxCount);
+  LabelMultiFrameCountMax.Caption := IntToStr(MultiFramePool.MaxCount);
+  LabelMessageCountMax.Caption := IntToStr(OPStackMessagePool.MaxCount);
+end;
+
 procedure TFormOlcbTrainMaster.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
 begin
   PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
@@ -1034,6 +1078,8 @@ begin
 
     if Assigned(EthernetHub) then
       Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetHub.ClientThreadList.Count);
+
+    UpdateMessageCountUI;
   end;
 end;
 
