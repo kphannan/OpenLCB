@@ -207,8 +207,10 @@ begin
     MT_DATAGRAM :
         begin
           if DestNode <> nil then
-            OPStackNode_IncomingMessageLink(DestNode, AMessage)
-          else
+          begin
+            OPStackNode_IncomingMessageLink(DestNode, AMessage);
+            Exit;   // Jump out, Don't Deallocate
+          end else
             CheckAndDeallocateMessage(AMessage);
         end;
     end;
