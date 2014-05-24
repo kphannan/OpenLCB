@@ -766,15 +766,15 @@ var
 
 initialization
   Template_UserStateMachine_OnTaskDestroy := nil;
-  InitCriticalSection(OPStackCriticalSection);
+  System.InitCriticalSection(OPStackCriticalSection);
 
 
-  EnterCriticalSection(OPStackCriticalSection);
+  System.EnterCriticalSection(OPStackCriticalSection);
   Sync.NextLink := 0;
   Sync.DatabaseChanged := False;
   for i := 0 to USER_MAX_NODE_COUNT - 2 do
     ZeroLinkRec(@Sync.Link[i]);
-  LeaveCriticalsection(OPStackCriticalSection);
+  System.LeaveCriticalsection(OPStackCriticalSection);
 
 
 Finalization

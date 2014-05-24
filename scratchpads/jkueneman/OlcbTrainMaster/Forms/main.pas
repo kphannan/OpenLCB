@@ -804,6 +804,10 @@ begin
     LoadSettings(lstCom);
     LoadSettings(lstEthernet);
     LoadSettings(lstGeneral);
+
+    TimerOpStackTimer.Enabled := True;
+    TimerOpStackProcess.Enabled := True;
+
     ShownOnce := True;
   end;
   UpdateUI

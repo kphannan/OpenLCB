@@ -23,8 +23,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="405"/>
-        <CursorPos X="33" Y="410"/>
+        <TopLine Value="905"/>
+        <CursorPos X="3" Y="941"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -499,123 +499,123 @@
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="675" Column="1" TopLine="662"/>
+        <Caret Line="397" Column="1" TopLine="382"/>
       </Position1>
       <Position2>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="396" Column="1" TopLine="382"/>
+        <Caret Line="398" Column="1" TopLine="382"/>
       </Position2>
       <Position3>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="397" Column="1" TopLine="382"/>
+        <Caret Line="400" Column="1" TopLine="382"/>
       </Position3>
       <Position4>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="398" Column="1" TopLine="382"/>
+        <Caret Line="568" Column="1" TopLine="553"/>
       </Position4>
       <Position5>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="400" Column="1" TopLine="382"/>
+        <Caret Line="569" Column="1" TopLine="553"/>
       </Position5>
       <Position6>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="568" Column="1" TopLine="553"/>
+        <Caret Line="570" Column="1" TopLine="553"/>
       </Position6>
       <Position7>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="569" Column="1" TopLine="553"/>
+        <Caret Line="572" Column="1" TopLine="553"/>
       </Position7>
       <Position8>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="570" Column="1" TopLine="553"/>
+        <Caret Line="573" Column="1" TopLine="553"/>
       </Position8>
       <Position9>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="572" Column="1" TopLine="553"/>
+        <Caret Line="605" Column="1" TopLine="592"/>
       </Position9>
       <Position10>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="573" Column="1" TopLine="553"/>
+        <Caret Line="608" Column="1" TopLine="592"/>
       </Position10>
       <Position11>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="605" Column="1" TopLine="592"/>
+        <Caret Line="616" Column="1" TopLine="593"/>
       </Position11>
       <Position12>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="608" Column="1" TopLine="592"/>
+        <Caret Line="617" Column="1" TopLine="594"/>
       </Position12>
       <Position13>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="616" Column="1" TopLine="593"/>
+        <Caret Line="626" Column="1" TopLine="612"/>
       </Position13>
       <Position14>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="617" Column="1" TopLine="594"/>
+        <Caret Line="568" Column="1" TopLine="553"/>
       </Position14>
       <Position15>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="626" Column="1" TopLine="612"/>
+        <Caret Line="569" Column="1" TopLine="553"/>
       </Position15>
       <Position16>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="568" Column="1" TopLine="553"/>
+        <Caret Line="570" Column="1" TopLine="553"/>
       </Position16>
       <Position17>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="569" Column="1" TopLine="553"/>
+        <Caret Line="572" Column="1" TopLine="553"/>
       </Position17>
       <Position18>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="570" Column="1" TopLine="553"/>
+        <Caret Line="573" Column="1" TopLine="553"/>
       </Position18>
       <Position19>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="572" Column="1" TopLine="553"/>
+        <Caret Line="576" Column="1" TopLine="553"/>
       </Position19>
       <Position20>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="573" Column="1" TopLine="553"/>
+        <Caret Line="579" Column="1" TopLine="555"/>
       </Position20>
       <Position21>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="576" Column="1" TopLine="553"/>
+        <Caret Line="581" Column="1" TopLine="557"/>
       </Position21>
       <Position22>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="579" Column="1" TopLine="555"/>
+        <Caret Line="582" Column="1" TopLine="558"/>
       </Position22>
       <Position23>
         <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="581" Column="1" TopLine="557"/>
+        <Caret Line="583" Column="1" TopLine="559"/>
       </Position23>
       <Position24>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="582" Column="1" TopLine="558"/>
-      </Position24>
-      <Position25>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="583" Column="1" TopLine="559"/>
-      </Position25>
-      <Position26>
         <Filename Value="../OPStack/NMRAnet/opstackcore.pas"/>
         <Caret Line="200" Column="16" TopLine="187"/>
-      </Position26>
-      <Position27>
+      </Position24>
+      <Position25>
         <Filename Value="../OPStack/NMRAnet/opstackcore.pas"/>
         <Caret Line="204" Column="35" TopLine="134"/>
+      </Position25>
+      <Position26>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="1002" Column="53" TopLine="536"/>
+      </Position26>
+      <Position27>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="722" Column="46" TopLine="707"/>
       </Position27>
       <Position28>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="1002" Column="53" TopLine="536"/>
+        <Caret Line="982" Column="23" TopLine="979"/>
       </Position28>
       <Position29>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="722" Column="46" TopLine="707"/>
+        <Caret Line="410" Column="33" TopLine="405"/>
       </Position29>
       <Position30>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="982" Column="23" TopLine="979"/>
+        <Caret Line="793" Column="17" TopLine="786"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

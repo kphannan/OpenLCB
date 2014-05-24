@@ -951,6 +951,175 @@ object Form1: TForm1
         Caption = 'milliseconds'
         ParentColor = False
       end
+      object LabelMessageCountMax: TLabel
+        Left = 604
+        Height = 16
+        Top = 224
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelMessageCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 208
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelMultiFrameCountMax: TLabel
+        Left = 604
+        Height = 16
+        Top = 188
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelMultiFrameCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 172
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelDatagramCountMax: TLabel
+        Left = 604
+        Height = 16
+        Top = 148
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelDatagramCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 132
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelSnipCountMax: TLabel
+        Left = 604
+        Height = 16
+        Top = 108
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelSnipCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 92
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelSimpleCountMax: TLabel
+        Left = 604
+        Height = 16
+        Top = 68
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelSimpleCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 52
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object ButtonRefreshBufferCount: TButton
+        Left = 423
+        Height = 22
+        Top = 20
+        Width = 189
+        Caption = 'Refresh'
+        OnClick = ButtonRefreshBufferCountClick
+        TabOrder = 2
+      end
+      object Label2: TLabel
+        Left = 423
+        Height = 16
+        Top = 52
+        Width = 130
+        Caption = 'Simple Buffer Count:'
+        ParentColor = False
+      end
+      object Label4: TLabel
+        Left = 423
+        Height = 16
+        Top = 92
+        Width = 115
+        Caption = 'SNIP Buffer Count:'
+        ParentColor = False
+      end
+      object Label9: TLabel
+        Left = 423
+        Height = 16
+        Top = 132
+        Width = 145
+        Caption = 'Datagram Buffer Count'
+        ParentColor = False
+      end
+      object Label10: TLabel
+        Left = 423
+        Height = 16
+        Top = 172
+        Width = 154
+        Caption = 'MultiFrame Buffer Count'
+        ParentColor = False
+      end
+      object Label11: TLabel
+        Left = 423
+        Height = 16
+        Top = 208
+        Width = 138
+        Caption = 'Message Buffer Count'
+        ParentColor = False
+      end
+      object Label16: TLabel
+        Left = 440
+        Height = 16
+        Top = 224
+        Width = 29
+        Caption = 'Peak'
+        ParentColor = False
+      end
+      object Label15: TLabel
+        Left = 440
+        Height = 16
+        Top = 188
+        Width = 29
+        Caption = 'Peak'
+        ParentColor = False
+      end
+      object Label14: TLabel
+        Left = 440
+        Height = 16
+        Top = 148
+        Width = 29
+        Caption = 'Peak'
+        ParentColor = False
+      end
+      object Label13: TLabel
+        Left = 440
+        Height = 16
+        Top = 108
+        Width = 29
+        Caption = 'Peak'
+        ParentColor = False
+      end
+      object Label12: TLabel
+        Left = 440
+        Height = 16
+        Top = 68
+        Width = 29
+        Caption = 'Peak'
+        ParentColor = False
+      end
     end
     object TabSheetAbout: TTabSheet
       Caption = 'About'
@@ -8252,12 +8421,14 @@ object Form1: TForm1
     end
   end
   object TimerOpStackTimer: TTimer
+    Enabled = False
     Interval = 100
     OnTimer = TimerOpStackTimerTimer
     left = 56
     top = 192
   end
   object TimerOpStackProcess: TTimer
+    Enabled = False
     Interval = 10
     OnTimer = TimerOpStackProcessTimer
     left = 136
@@ -40491,6 +40662,7 @@ object Form1: TForm1
     end
   end
   object TimerGeneral: TTimer
+    Enabled = False
     Interval = 300
     OnTimer = TimerGeneralTimer
     left = 142

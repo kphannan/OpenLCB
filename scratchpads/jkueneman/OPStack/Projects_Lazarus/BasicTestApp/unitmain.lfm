@@ -212,7 +212,7 @@ object Form1: TForm1
       object LabelMessageCountMax: TLabel
         Left = 201
         Height = 16
-        Top = 195
+        Top = 211
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -220,7 +220,7 @@ object Form1: TForm1
       object LabelMessageCount: TLabel
         Left = 201
         Height = 16
-        Top = 210
+        Top = 195
         Width = 8
         Caption = '0'
         ParentColor = False

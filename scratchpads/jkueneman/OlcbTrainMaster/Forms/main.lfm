@@ -40835,12 +40835,14 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     end
   end
   object TimerOpStackProcess: TTimer
+    Enabled = False
     Interval = 10
     OnTimer = TimerOpStackProcessTimer
     left = 168
     top = 120
   end
   object TimerOpStackTimer: TTimer
+    Enabled = False
     Interval = 100
     OnTimer = TimerOpStackTimerTimer
     left = 72
