@@ -224,7 +224,7 @@ begin
                 end;
             end
           end else
-            Result := True
+            Result := False
         end;
       MTI_FRAME_TYPE_CAN_STREAM_SEND :
             begin

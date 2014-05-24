@@ -25,6 +25,7 @@ type
 
   TForm1 = class(TForm)
     ButtonClear: TButton;
+    ButtonRefreshBufferCount: TButton;
     ButtonRefreshBufferTracking: TButton;
     ButtonSendGlobalNotify: TButton;
     ButtonStartStack: TButton;
@@ -33,14 +34,38 @@ type
     CheckBoxDisableLogging: TCheckBox;
     CheckBoxLogMessages: TCheckBox;
     CheckBoxAutoConnect: TCheckBox;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label12: TLabel;
+    Label13: TLabel;
+    Label14: TLabel;
+    Label15: TLabel;
+    Label16: TLabel;
+    Label2: TLabel;
+    Label4: TLabel;
+    Label9: TLabel;
+    LabelDatagramCount: TLabel;
+    LabelDatagramCountMax: TLabel;
+    LabelMessageCount: TLabel;
+    LabelMessageCountMax: TLabel;
+    LabelMultiFrameCount: TLabel;
+    LabelMultiFrameCountMax: TLabel;
+    LabelSimpleCount: TLabel;
+    LabelSimpleCountMax: TLabel;
+    LabelSnipCount: TLabel;
+    LabelSnipCountMax: TLabel;
     MainMenu1: TMainMenu;
     MenuItemTrackBuffer: TMenuItem;
+    Panel1: TPanel;
+    Panel2: TPanel;
     RadioGroupEthernet: TRadioGroup;
+    Splitter1: TSplitter;
     StatusBar: TStatusBar;
     SynMemo: TSynMemo;
     TimerStatemachine: TTimer;
     TimerCore: TTimer;
     procedure ButtonClearClick(Sender: TObject);
+    procedure ButtonRefreshBufferCountClick(Sender: TObject);
     procedure ButtonRefreshBufferTrackingClick(Sender: TObject);
     procedure ButtonSendGlobalNotifyClick(Sender: TObject);
     procedure ButtonAllocateNodeClick(Sender: TObject);
@@ -65,6 +90,7 @@ type
     procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
     procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
     procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
+    procedure UpdateMessageCountUI;
 
     procedure UpdateUI;
     property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
@@ -151,6 +177,21 @@ begin
   OPStackCore_Process;
 end;
 
+procedure TForm1.UpdateMessageCountUI;
+begin
+  LabelSimpleCount.Caption := IntToSTr(SimpleBufferPool.Count);
+  LabelSnipCount.Caption := IntToStr(AcdiSnipBufferPool.Count);
+  LabelDatagramCount.Caption := IntToStr(DatagramBufferPool.Count);
+  LabelMultiFrameCount.Caption := IntToStr(MultiFramePool.Count);
+  LabelMessageCount.Caption := IntToStr(OPStackMessagePool.Count);
+
+  LabelSimpleCountMax.Caption := IntToSTr(SimpleBufferPool.MaxCount);
+  LabelSnipCountMax.Caption := IntToStr(AcdiSnipBufferPool.MaxCount);
+  LabelDatagramCountMax.Caption := IntToStr(DatagramBufferPool.MaxCount);
+  LabelMultiFrameCountMax.Caption := IntToStr(MultiFramePool.MaxCount);
+  LabelMessageCountMax.Caption := IntToStr(OPStackMessagePool.MaxCount);
+end;
+
 procedure TForm1.UpdateUI;
 begin
   case EthernetConnectionState of
@@ -182,6 +223,7 @@ begin
   Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(OPStackMessagePool.Count);
   Statusbar.Panels[3].Text := 'CAN Buffers: ' + IntToStr(SimpleBufferPool.Count);
   Statusbar.Panels[4].Text := 'Datagram Buffers: ' + IntToStr(DatagramBufferPool.Count);
+  UpdateMessageCountUI;
   {$IFDEF SUPPORT_STREAMS}
   Statusbar.Panels[5].Text := 'Steam Buffers: ' + IntToStr(StreamBufferPool.Count);
   {$ENDIF}
@@ -216,6 +258,11 @@ procedure TForm1.ButtonDeallocateNodeClick(Sender: TObject);
 begin
   OPStackNode_MarkForRelease(OPStackNode_FindLastVirtualNode);
   UpdateUI;
+end;
+
+procedure TForm1.ButtonRefreshBufferCountClick(Sender: TObject);
+begin
+  UpdateMessageCountUI
 end;
 
 procedure TForm1.ButtonStartStackClick(Sender: TObject);

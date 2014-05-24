@@ -130,9 +130,9 @@ begin
           OPStackBuffers_DeAllocateMessage(AMessage);
           {$IFDEF FPC}
           if EthernetHub.Enabled then
-            EthernetHub.AddGridConnectStr(GridConnectStr);
+            EthernetHub.AddGridConnectStr(GridConnectStr + LF);
           if ComPortHub.Connected then
-            ComPortHub.AddGridConnectStr(GridConnectStr);
+            ComPortHub.AddGridConnectStr(GridConnectStr + LF);
           {$ENDIF}
         end;
     MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames

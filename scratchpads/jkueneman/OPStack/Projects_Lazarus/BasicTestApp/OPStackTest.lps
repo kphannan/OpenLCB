@@ -20,10 +20,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitMain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="243"/>
-        <CursorPos X="12" Y="262"/>
+        <TopLine Value="214"/>
+        <CursorPos X="24" Y="226"/>
         <UsageCount Value="204"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -452,7 +453,6 @@
       <Unit50>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
         <UnitName Value="opstackcore"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="188"/>
@@ -637,124 +637,124 @@
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="88" Column="1" TopLine="71"/>
+        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
+        <Caret Line="194" Column="1" TopLine="180"/>
       </Position1>
       <Position2>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="216" Column="1" TopLine="203"/>
+        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
+        <Caret Line="196" Column="1" TopLine="180"/>
       </Position2>
       <Position3>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="553" Column="43" TopLine="538"/>
+        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
+        <Caret Line="197" Column="1" TopLine="180"/>
       </Position3>
       <Position4>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="87" Column="37" TopLine="73"/>
+        <Caret Line="149" Column="1" TopLine="113"/>
       </Position4>
       <Position5>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="366" Column="43" TopLine="343"/>
+        <Caret Line="126" Column="1" TopLine="113"/>
       </Position5>
       <Position6>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="553" Column="43" TopLine="530"/>
+        <Caret Line="127" Column="1" TopLine="113"/>
       </Position6>
       <Position7>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="87" Column="37" TopLine="73"/>
-      </Position7>
-      <Position8>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="366" Column="43" TopLine="348"/>
-      </Position8>
-      <Position9>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="552" Column="62" TopLine="532"/>
-      </Position9>
-      <Position10>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="149" Column="65" TopLine="140"/>
-      </Position10>
-      <Position11>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="562" Column="25" TopLine="554"/>
-      </Position11>
-      <Position12>
-        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
-        <Caret Line="324" Column="28" TopLine="309"/>
-      </Position12>
-      <Position13>
-        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
-        <Caret Line="311" Column="1" TopLine="305"/>
-      </Position13>
-      <Position14>
-        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
-        <Caret Line="312" Column="1" TopLine="305"/>
-      </Position14>
-      <Position15>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="180" Column="57" TopLine="128"/>
-      </Position15>
-      <Position16>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="136" Column="1" TopLine="128"/>
-      </Position16>
-      <Position17>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="141" Column="1" TopLine="128"/>
-      </Position17>
-      <Position18>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="143" Column="1" TopLine="128"/>
-      </Position18>
-      <Position19>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="145" Column="1" TopLine="128"/>
-      </Position19>
-      <Position20>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="149" Column="1" TopLine="128"/>
-      </Position20>
-      <Position21>
-        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
-        <Caret Line="194" Column="1" TopLine="180"/>
-      </Position21>
-      <Position22>
-        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
-        <Caret Line="196" Column="1" TopLine="180"/>
-      </Position22>
-      <Position23>
-        <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
-        <Caret Line="197" Column="1" TopLine="180"/>
-      </Position23>
-      <Position24>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="149" Column="1" TopLine="113"/>
-      </Position24>
-      <Position25>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="126" Column="1" TopLine="113"/>
-      </Position25>
-      <Position26>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="127" Column="1" TopLine="113"/>
-      </Position26>
-      <Position27>
         <Filename Value="../../NMRAnet/opstackcore_can.pas"/>
         <Caret Line="40" Column="1" TopLine="26"/>
-      </Position27>
-      <Position28>
+      </Position7>
+      <Position8>
         <Filename Value="../../NMRAnet/opstackcore_can.pas"/>
         <Caret Line="43" Column="1" TopLine="26"/>
-      </Position28>
-      <Position29>
+      </Position8>
+      <Position9>
         <Filename Value="../../NMRAnet/opstackcore_can.pas"/>
         <Caret Line="44" Column="1" TopLine="26"/>
-      </Position29>
-      <Position30>
+      </Position9>
+      <Position10>
         <Filename Value="../../NMRAnet/opstackcore_can.pas"/>
         <Caret Line="45" Column="1" TopLine="26"/>
+      </Position10>
+      <Position11>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="262" Column="12" TopLine="243"/>
+      </Position11>
+      <Position12>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="263" Column="12" TopLine="244"/>
+      </Position12>
+      <Position13>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="264" Column="12" TopLine="245"/>
+      </Position13>
+      <Position14>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="265" Column="12" TopLine="246"/>
+      </Position14>
+      <Position15>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="264" Column="12" TopLine="245"/>
+      </Position15>
+      <Position16>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="263" Column="12" TopLine="244"/>
+      </Position16>
+      <Position17>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="262" Column="12" TopLine="243"/>
+      </Position17>
+      <Position18>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="261" Column="12" TopLine="242"/>
+      </Position18>
+      <Position19>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="262" Column="12" TopLine="243"/>
+      </Position19>
+      <Position20>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="263" Column="12" TopLine="244"/>
+      </Position20>
+      <Position21>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="264" Column="12" TopLine="245"/>
+      </Position21>
+      <Position22>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="263" Column="12" TopLine="244"/>
+      </Position22>
+      <Position23>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="264" Column="12" TopLine="245"/>
+      </Position23>
+      <Position24>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="265" Column="12" TopLine="246"/>
+      </Position24>
+      <Position25>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="281" Column="12" TopLine="262"/>
+      </Position25>
+      <Position26>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="286" Column="12" TopLine="267"/>
+      </Position26>
+      <Position27>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="292" Column="12" TopLine="273"/>
+      </Position27>
+      <Position28>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="254" Column="3" TopLine="253"/>
+      </Position28>
+      <Position29>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="93" Column="36" TopLine="74"/>
+      </Position29>
+      <Position30>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="226" Column="23" TopLine="208"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>
