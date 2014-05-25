@@ -43,7 +43,7 @@ const
 // Enter the size of the buffer to hold Messages, this should be at LEAST equal to the number
 // of Nodes, 2x is recommended
 const
-  USER_MAX_MESSAGE_BUFFERS = 20;
+  USER_MAX_MESSAGE_ARRAY_BUFFERS = 20;
 
 
 implementation

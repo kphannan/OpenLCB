@@ -12,7 +12,6 @@ uses
   {$ENDIF}
   opstackdefines,
   template_hardware,
-  nmranetdefines,
   opstackcanstatemachinesbuffers;
 
 {$IFDEF SUPPORT_STREAMS}

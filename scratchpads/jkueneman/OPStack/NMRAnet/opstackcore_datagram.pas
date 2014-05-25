@@ -197,7 +197,7 @@ begin
   Result := False;
   DatagramMsg^.WatchDog := 0;
   DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMsg^.Buffer));
-  OPStackNode_IncomingMessageUnLink(Node, DatagramMsg);                     // Recycle the Datagram Message, but BE CAREFUL not to clear needed incoming information that is needed!
+  OPStackNode_IncomingMessageUnLink(Node, DatagramMsg);                         // Recycle the Datagram Message, but BE CAREFUL not to clear needed incoming information that is needed!
   OPStackBuffers_SwapDestAndSourceIDs(DatagramMsg);
   DatagramMsg^.FramingBits := 0;
   DatagramBufferPtr^.CurrentCount := 0;

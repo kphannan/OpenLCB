@@ -33,7 +33,7 @@ procedure ReceivedOnFilter6(NMRAnetCanBuffer: PNMRAnetCanBuffer);
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
-function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer: PNMRAnetCanBuffer; var OPStackMessageX: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode): Boolean;  external;
+function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode; NMRAnetCanBuffer: PNMRAnetCanBuffer; ): Boolean;  external;
 procedure OPStackCANStatemachine_ProcessMessages; external;
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
@@ -222,7 +222,7 @@ begin
   SourceNode := nil;
   DestNode := nil;
   OpStackMessagePtr := nil;
-  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(OPStackMessagePtr, DestNode, SourceNode, NMRAnetCanBuffer) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
     IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
 end;
 

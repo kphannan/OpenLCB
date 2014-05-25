@@ -11,14 +11,9 @@ uses
   {$IFNDEF FPC}
   NMRAnetDCC,
   {$ENDIF}
-  template_hardware,
-  Float16,
   opstacknode,
   opstackcore_basic,
-  nmranetdefines,
-  opstackdefines,
-  opstackbuffers,
-  opstacktypes;
+  opstackdefines;
 
 procedure RemoteButtonMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function RemoteButtonReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
@@ -42,14 +37,6 @@ begin
 end;
 
 function RemoteButtonReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
-var
-  IsForward: Boolean;
-  AbsoluteSpeed: Real;
-  SpeedStep: Word;
-  AddressHi, AddressLo: Byte;
-  {$IFNDEF FPC}
-  DCCPacket: TDCCPacket;
-  {$ENDIF}
 begin
   Result := False;
   MessageToSend := nil;

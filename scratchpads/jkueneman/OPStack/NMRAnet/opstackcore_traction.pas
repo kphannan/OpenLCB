@@ -19,7 +19,6 @@ uses
   opstackdefines,
   opstackbuffers,
   nmranetutilities,
-  opstack_api,
   template_userstatemachine,
   opstacktypes;
 
@@ -38,14 +37,16 @@ var
   IsForward: Boolean;
   AbsoluteSpeed: Real;
   SpeedStep: Word;
-  AddressHi, AddressLo: Byte;
   {$IFNDEF FPC}
+  AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
   {$ENDIF}
 begin
   MessageToSend := nil;
+  {$IFNDEF FPC}
   AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;                                                        // Split the address to make clear when loading bytes
   AddressLo := DestNode^.TrainData.Address and $00FF;
+  {$ENDIF}
   DestNode^.TrainData.SpeedDir := (NextMessage^.Buffer^.DataArray[1] shl 8) or (NextMessage^.Buffer^.DataArray[2]);  // Update with the new Speed
   IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;                                                      // Split the Speed and Direction
   AbsoluteSpeed := HalfToFloat(DestNode^.TrainData.SpeedDir and not $8000);
@@ -91,7 +92,9 @@ begin
             {$ENDIF}
           end;
     128 : begin
+            {$IFNDEF FPC}
             AddressHi := AddressHi or NMRA_LONGADDRESS_MASK_BYTE;               // Allow a mistaken short address to work here by adding the $C0  Per Tim
+            {$ENDIF}
             AbsoluteSpeed := (127/100) * AbsoluteSpeed;
             {$IFDEF FPC}
             SpeedStep := Trunc(AbsoluteSpeed);
@@ -118,15 +121,18 @@ var
   FunctionValue: Word;
   WideFunctionMask: DWord;
   FunctionMask, FunctionExtendedCode: Byte;
-  AddressHi, AddressLo: Byte;
   {$IFNDEF FPC}
+  AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
   {$ENDIF}
 begin
   MessageToSend := nil;
+
+  {$IFNDEF FPC}
   // Split the address to make clear when loading bytes
   AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
   AddressLo := DestNode^.TrainData.Address and $00FF;
+  {$ENDIF}
 
   // Get the new values
   FunctionAddress := (DWord( NextMessage^.Buffer^.DataArray[1]) shl 16) or (DWord( NextMessage^.Buffer^.DataArray[2]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[3]);
@@ -198,15 +204,18 @@ procedure TractionProtocolReplyEmergencyStop(DestNode: PNMRAnetNode; var Message
 var
   IsForward: Boolean;
   SpeedStep: Byte;
-  AddressHi, AddressLo: Byte;
   {$IFNDEF FPC}
+  AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
   {$ENDIF}
 begin
   MessageToSend := nil;
+
+  {$IFNDEF FPC}
   // Split the address to make clear when loading bytes
   AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
   AddressLo := DestNode^.TrainData.Address and $00FF;
+  {$ENDIF}
 
   // Update the Speed to 0
   IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;
@@ -487,6 +496,7 @@ begin
     if AMessage^.Buffer^.DataArray[0] = TRACTION_CONTROLLER_CONFIG then
       if AMessage^.Buffer^.DataArray[1] = TRACTION_CONTROLLER_CONFIG_NOTIFY then
       begin
+        MessageToSend := nil;
         if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
         begin
           MessageToSend^.Buffer^.DataBufferSize := 3;
@@ -517,6 +527,7 @@ begin
     Inc(Node^.TrainData.Timer);
     if Node^.TrainData.Timer > MAX_CONTROLLER_NOTIFY_TIME then
     begin
+      MessageToSend := nil;
       // The last controller did not reply so just take it
       if IsOutgoingBufferAvailable then
         if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, Node^.Info.AliasID, Node^.Info.ID, Node^.TrainData.LinkedNode.AliasID, Node^.TrainData.LinkedNode.ID) then

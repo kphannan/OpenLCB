@@ -91,7 +91,7 @@ type
     property OwnerHub: TEthernetHub read FOwnerHub write FOwnerHub;
     property ListeningSocket: TTCPBlockSocket read FListeningSocket write FListeningSocket;     // Caution, created in context of thread
   public
-    constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
+    constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize); reintroduce;
     destructor Destroy; override;
   end;
 
@@ -151,13 +151,6 @@ type
 
 
 implementation
-
-const
-  TCP_STATE_SYNC_START = 0;
-  TCP_STATE_SYNC_FIND_X = 1;
-  TCP_STATE_SYNC_FIND_HEADER = 2;
-  TCP_STATE_SYNC_FIND_N = 3;
-  TCP_STATE_SYNC_FIND_DATA = 4;
 
   const
   // :X19170640N0501010107015555;   Example.....
@@ -227,12 +220,10 @@ end;
 procedure TClientSocketThread.Execute;
 var
   i: Integer;
-  iSplit: Integer;
   List: TList;
  { SendStr,} RcvStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
   SyncSendMessageList: TStringList;
-  StrLen: Integer;
   ConnectedSocket: TTCPBlockSocket;
   DoClose: Boolean;
   GridConnectStrPtr: PGridConnectString;
@@ -339,6 +330,7 @@ begin
           RcvStr := ConnectedSocket.RecvPacket(1);
           case ConnectedSocket.LastError of
             S_OK         : begin
+                             GridConnectStrPtr := nil;
                              for i := 1 to Length(RcvStr) do
                              begin
                                if GridConnect_DecodeMachine(RcvStr[i], GridConnectStrPtr) then

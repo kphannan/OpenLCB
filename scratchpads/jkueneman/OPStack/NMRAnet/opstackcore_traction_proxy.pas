@@ -10,16 +10,13 @@ uses
   {$IFNDEF FPC}
   NMRAnetDCC,
   {$ENDIF}
-  opstack_api,
-  template_hardware,
   opstacknode,
   opstackcore_basic,
   nmranetdefines,
   opstackdefines,
   template_userstatemachine,
   nmranetutilities,
-  opstackbuffers,
-  opstacktypes;
+  opstackbuffers;
 
 procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;

@@ -35,7 +35,6 @@ uses
   {$IFDEF SUPPORT_TRACTION}opstackcore_traction, opstackcore_stnip,{$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}opstackcore_traction_proxy,{$ENDIF}
   opstackcore_snip,
-  opstackcore_learn,
   opstackcore_datagram,
   template_userstatemachine;
 

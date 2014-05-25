@@ -1099,9 +1099,6 @@ end;
 { TCANFrameParserStreamReceive }
 
 function TCANFrameParserStreamReceive.ProcessReceive(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread): Boolean;
-var
-  LocalFlags: Byte;
-  LocalAdditionalFlags: Byte;
 begin
   Result := False;
   case AHelper.MTI of
@@ -1344,7 +1341,7 @@ end;
 
 function TCANFrameParserStreamReceiveManager.ProcessSend(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
 begin
-
+  Result := nil;
 end;
 
 { TCANFrameParserStreamBase }
@@ -1652,10 +1649,7 @@ var
   PIP: TOlcbStructureProtocolIdentification;
   Space: TOlcbStructureMemAddressSpace;
   Options: TOlcbStructureMemOptions;
-  DatagramResultStart: DWord;
-  i: Integer;
-  Terminated: Boolean;
-  Flags, AdditionalFlags: Byte;
+  Flags, AdditionalFlags, DatagramResultStart: Byte;
 begin
   inherited Process(MessageInfo);
   case iState of
@@ -1831,6 +1825,7 @@ begin
         end;
     13: begin
           // Get ready for Data
+          StreamReceive := nil;
           if IsStreamSendFromDestination(MessageInfo, StreamReceive) then
           begin
 
@@ -2250,6 +2245,7 @@ end;
 
 procedure TTransportLayerThread.InternalAdd(Msg: AnsiString);
 var
+  P: Integer;
   List: TList;
   StringList: TStringList;
 begin
@@ -3208,6 +3204,9 @@ end;
 
 procedure TCANFrameParserDatagramReceive.SendACK(TransportLayerThread: TTransportLayerThread);
 begin
+
+ Exit;
+
   LocalHelper.Load(ol_OpenLCB, MTI_DATAGRAM_OK_REPLY, SourceAlias, DestinationAlias, 2, 0, 0, 0, 0, 0, 0, 0, 0);
   TransportLayerThread.InternalAdd(LocalHelper.Encode);
 end;

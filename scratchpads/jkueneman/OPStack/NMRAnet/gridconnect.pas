@@ -14,7 +14,7 @@ uses
 procedure GridConnect_Initialize;
 
 function GridConnect_DecodeMachine(NextChar: Char; var GridConnectStrPtr: PGridConnectString): Boolean;
-procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; GridConnectBuffer: PNMRAnetCanBuffer);
+procedure GridConnectStr_ToCanBuffer(GridConnectStr: PGridConnectString; GridConnectBuffer: PNMRAnetCanBuffer);
 function GridConnect_BufferToGridConnect(var GridConnectBuffer: TNMRAnetCanBuffer; var GridConnectStr: TGridConnectString): Integer;
 
 
@@ -157,7 +157,7 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure GridConnect_ToGridConnectBuffer(GridConnectStr: PGridConnectString; GridConnectBuffer: PNMRAnetCanBuffer);
+procedure GridConnectStr_ToCanBuffer(GridConnectStr: PGridConnectString; GridConnectBuffer: PNMRAnetCanBuffer);
 var
   ConvertStr: array[0..8] of char;
   {$IFDEF FPC}

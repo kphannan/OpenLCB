@@ -193,7 +193,7 @@ begin
       if Result^.iIndex > 0 then
         OPStackNode_SetState(Result, NS_VIRTUAL);                               // Mark as Virtual
       {$ENDIF}
-      Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Login.Seed, False); // Pregenerate it so it can be sorted
+      Result^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Result^.Login.Seed, False);
       NodePool.AllocatedList[NodePool.AllocatedCount] := Result;                // Add it to the end if the Allocated List
       Inc(NodePool.AllocatedCount);                                             // One more Allocated
     end;

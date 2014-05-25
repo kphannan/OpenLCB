@@ -120,6 +120,8 @@ procedure OutgoingMessage(AMessage: POPStackMessage);
 var
   GridConnectStr: TGridConnectString;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
+
+  P: Integer;
 begin
   GridConnectStr[0] := #0;                                                       // Quiet the compiler
   case AMessage^.MessageType and MT_MASK of
@@ -169,15 +171,15 @@ end;
 // *****************************************************************************
 procedure DispatchGridConnectStr(GridConnectStrPtr: PGridConnectString);
 var
-  GridConnectBuffer: TNMRAnetCanBuffer;
+  CanBuffer: TNMRAnetCanBuffer;
   OPStackMessagePtr: POPStackMessage;
   SourceNode, DestNode: PNMRAnetNode;
 begin
   SourceNode := nil;
   DestNode := nil;
   OpStackMessagePtr := nil;
-  GridConnect_ToGridConnectBuffer(GridConnectStrPtr, @GridConnectBuffer);        // Parse the string into a Grid Connect Data structure
-  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(@GridConnectBuffer, OPStackMessagePtr, DestNode, SourceNode) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+  GridConnectStr_ToCanBuffer(GridConnectStrPtr, @CanBuffer);                     // Parse the string into a Grid Connect Data structure
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(OPStackMessagePtr, DestNode, SourceNode, @CanBuffer) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
     IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
 end;
 

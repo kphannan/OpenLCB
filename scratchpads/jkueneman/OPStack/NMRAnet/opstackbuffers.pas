@@ -54,7 +54,7 @@ type
   PMultiFramePool = ^TMultiFramePool;
 
   TOPStackMessagePool = record
-    Pool: array[0..USER_MAX_MESSAGE_BUFFERS-1] of TOPStackMessage;
+    Pool: array[0..USER_MAX_MESSAGE_ARRAY_BUFFERS-1] of TOPStackMessage;
     Count: Word;
     MaxCount: Word;
   end;
@@ -67,9 +67,7 @@ procedure OPStackBuffers_Timer;
 function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
-{$IFDEF SUPPORT_STREAMS}
-function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;
-{$ENDIF}
+{$IFDEF SUPPORT_STREAMS}function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;{$ENDIF}
 function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
@@ -79,20 +77,11 @@ procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; Sourc
 procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 
-// Load Buffer helpers
-procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-{$IFDEF SUPPORT_STREAMS}
-procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-{$ENDIF}
-
 // Zero buffer helpers
 procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
 procedure OPStackBuffers_ZeroSimpleBuffer(ABuffer: PSimpleBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray: Boolean);
-{$IFDEF SUPPORT_STREAMS}
-procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
-{$ENDIF}
+{$IFDEF SUPPORT_STREAMS}procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);{$ENDIF}
 procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroMultiFrameBuffer(ABuffer: PMultiFrameBuffer; ZeroArray: Boolean);
 
@@ -104,7 +93,6 @@ function AllocateStreamDestID: Byte;
 // Copy buffer helpers
 procedure OPStackBuffers_CopyData(DestData, SourceData: PSimpleBuffer);
 procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
-procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
 procedure OPStackBuffers_CopyDataArrayWithSourceOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; SourceOffset: Word);
 
 // Message Node ID helpers
@@ -153,12 +141,12 @@ begin
   StreamDestID := 0;
   {$ENDIF}
   
-  for j := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS-1 do                               // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS-1 do
     OPStackBuffers_ZeroMultiFrameBuffer(@MultiFramePool.Pool[j], True);
   MultiFramePool.Count := 0;
   MultiFramePool.MaxCount := 0;
   
-  for j := 0 to USER_MAX_MESSAGE_BUFFERS-1  do                               // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_MESSAGE_ARRAY_BUFFERS-1  do
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
   OPStackMessagePool.MaxCount := 0;
@@ -169,7 +157,7 @@ var
   i: Integer;
 begin
   i := 0;
-  while i < USER_MAX_MESSAGE_BUFFERS do
+  while i < USER_MAX_MESSAGE_ARRAY_BUFFERS do
   begin
     Inc(OPStackMessagePool.Pool[i].WatchDog);
     Inc(i)
@@ -351,7 +339,7 @@ var
 begin
   Result := False;
   OPStackMessage := nil;
-  for i := 0 to USER_MAX_MESSAGE_BUFFERS - 1 do
+  for i := 0 to USER_MAX_MESSAGE_ARRAY_BUFFERS - 1 do
   begin
     if OPStackMessagePool.Pool[i].MessageType and MT_ALLOCATED = 0 then
     begin
@@ -534,59 +522,45 @@ begin
   AMessage^.Buffer^.DataArray[3] := Lo( RejectedMTI);
 end;
 
-procedure LoadBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; BufferSize: Word; ArrayOffset: Integer);
+procedure ZeroBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word);
 var
   i: Integer;
+  BufferPtr: PByte;
 begin
-  ABuffer^.DataBufferSize := DataBufferSize;
-  if DataArray <> nil then
+  ABuffer^.State := 0;
+  ABuffer^.DataBufferSize := 0;
+  BufferPtr := @ABuffer^.DataArray[0];
+  for i := 0 to DataBufferSize - 1 do
   begin
-    for i := 0 to DataBufferSize - 1 do
-      ABuffer^.DataArray[i] := DataArray^[i + ArrayOffset];
-  end
+    BufferPtr^ := 0;
+    Inc(BufferPtr);
+  end;
 end;
 
-procedure OPStackBuffers_LoadSimpleBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-begin
-  LoadBuffer(ABuffer, DataBufferSize, DataArray, MAX_SIMPLE_BYTES, ArrayOffset);
-end;
-
-procedure OPStackBuffers_LoadDatagramBuffer(ABuffer: PDatagramBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-begin
-  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), DataBufferSize, DataArray, MAX_DATAGRAM_BYTES, ArrayOffset);
-end;
-
-{$IFDEF SUPPORT_STREAMS}
-procedure OPStackBuffers_LoadStreamBuffer(ABuffer: PStreamBuffer; DataBufferSize: Word; DataArray: PSimpleDataArray; ArrayOffset: Integer);
-begin
-  LoadBuffer(PSimpleBuffer( PByte( ABuffer)), DataBufferSize, DataArray, USER_MAX_STREAM_BYTES, ArrayOffset);
-end;
-{$ENDIF}
-
-procedure ZeroBuffer(ABuffer: PSimpleBuffer; DataBufferSize: Word);
+procedure OPStackBuffers_ZeroSimpleBuffer(ABuffer: PSimpleBuffer; ZeroArray: Boolean);
 var
   i: Integer;
 begin
   ABuffer^.State := 0;
   ABuffer^.DataBufferSize := 0;
-  for i := 0 to DataBufferSize - 1 do
-    ABuffer^.DataArray[i] := 0;
-end;
-
-procedure OPStackBuffers_ZeroSimpleBuffer(ABuffer: PSimpleBuffer; ZeroArray: Boolean);
-begin
   if ZeroArray then
-    ZeroBuffer(ABuffer, MAX_SIMPLE_BYTES)
-  else
-    ZeroBuffer(ABuffer, 0);
+  begin
+    for i := 0 to MAX_SIMPLE_BYTES - 1 do
+      ABuffer^.DataArray[i] := 0;
+  end;
 end;
 
 procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray: Boolean);
+var
+  i: Integer;
 begin
   if ZeroArray then
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), MAX_DATAGRAM_BYTES)
-  else
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  begin
+    for i := 0 to MAX_DATAGRAM_BYTES - 1 do
+      ABuffer^.DataArray[i] := 0;
+  end;
+  ABuffer^.State := 0;
+  ABuffer^.DataBufferSize := 0;
   ABuffer^.CurrentCount := 0;
   ABuffer^.ResendCount := 0;
   ABuffer^.NextWaitingForAck := nil;
@@ -598,9 +572,12 @@ var
   i: Integer;
 begin
   if ZeroArray then
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_STREAM_BYTES)
-  else
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  begin
+    for i := 0 to USER_MAX_STREAM_BYTES - 1 do
+      ABuffer^.DataArray[i] := 0;
+  end;
+  ABuffer^.State := 0;
+  ABuffer^.DataBufferSize := 0;
   ABuffer^.CurrentCount := 0;
   ABuffer^.SourceStreamID := 0;
   ABuffer^.DestStreamID := 0;
@@ -613,20 +590,30 @@ end;
 {$ENDIF}
 
 procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
+var
+  i: Integer;
 begin
   if ZeroArray then
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_ACDI_SNIP_BYTES)
-  else
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  begin
+    for i := 0 to USER_MAX_ACDI_SNIP_BYTES - 1 do
+      ABuffer^.DataArray[i] := 0;
+  end;
+  ABuffer^.State := 0;
+  ABuffer^.DataBufferSize := 0;
   ABuffer^.CurrentCount := 0;
 end;
 
 procedure OPStackBuffers_ZeroMultiFrameBuffer(ABuffer: PMultiFrameBuffer; ZeroArray: Boolean);
+var
+  i: Integer;
 begin
   if ZeroArray then
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), USER_MAX_MULTI_FRAME_BYTES)
-  else
-    ZeroBuffer(PSimpleBuffer( PByte( ABuffer)), 0);
+  begin
+    for i := 0 to USER_MAX_MULTI_FRAME_BYTES - 1 do
+      ABuffer^.DataArray[i] := 0;
+  end;
+  ABuffer^.State := 0;
+  ABuffer^.DataBufferSize := 0;
   ABuffer^.CurrentCount := 0;
 end;
 
@@ -686,11 +673,6 @@ begin
 end;
 
 procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
-begin
-  OPStackBuffers_CopyDataArrayWithDestOffset(DestData, SourceDataArray, Count, ClearDestSize);
-end;
-
-procedure OPStackBuffers_CopyDataArrayWithDestOffset(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
 var
   i: Integer;
 begin
@@ -708,7 +690,7 @@ end;
 procedure OPStackBuffers_CopyDataArrayWithSourceOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; SourceOffset: Word);
 begin
   DestData^.DataBufferSize := 0;
-  while DestData^.DataBufferSize < Count do
+  while DestData^.DataBufferSize < (Count - SourceOffset) do
   begin
     DestData^.DataArray[DestData^.DataBufferSize] := SourceDataArray^[DestData^.DataBufferSize+SourceOffset];
     Inc(DestData^.DataBufferSize);

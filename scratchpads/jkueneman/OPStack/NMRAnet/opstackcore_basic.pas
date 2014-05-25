@@ -17,7 +17,7 @@ uses
 procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
-procedure DatagramRejected(AMessage: POPStackMessage; ErrorCode: Word);
+procedure DatagramRejected(Dest, Source: PNodeInfo; ErrorCode: Word);
 function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 
 implementation
@@ -52,7 +52,7 @@ begin
   OutgoingCriticalMessage(@OptionalInteractionMessage);
 end;
 
-procedure DatagramRejected(AMessage: POPStackMessage; ErrorCode: Word);
+procedure DatagramRejected(Dest, Source: PNodeInfo; ErrorCode: Word);
 var
   OptionalInteractionMessage: TOPStackMessage;
   OptionalnteractionBuffer: TSimpleBuffer;
@@ -67,8 +67,8 @@ begin
     DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER);
     DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED);
   end;
-  OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM_REJECTED_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, 0);
-  AMessage^.MessageType := MT_SIMPLE;
+  OPStackBuffers_LoadMessage(@OptionalInteractionMessage, MTI_DATAGRAM_REJECTED_REPLY, Dest^.AliasID, Dest^.ID, Source^.AliasID, Source^.ID, 0);
+  OptionalInteractionMessage.MessageType := MT_SIMPLE;
   OPStackBuffers_CopyDataArray(OptionalInteractionMessage.Buffer, DatagramError, 2, True);
   OutgoingCriticalMessage(@OptionalInteractionMessage);
 end;

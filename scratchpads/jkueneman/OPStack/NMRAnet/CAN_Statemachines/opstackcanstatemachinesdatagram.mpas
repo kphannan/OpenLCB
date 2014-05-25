@@ -78,7 +78,7 @@ begin
         begin
           if InProcessMessage <> nil then
           begin
-            OPStackBuffers_CopyDataArrayWithDestOffset(InProcessMessage^.Buffer, @OPStackMessage^.Buffer^.DataArray, OPStackMessage^.Buffer^.DataBufferSize, False);
+            OPStackBuffers_CopyDataArray(InProcessMessage^.Buffer, @OPStackMessage^.Buffer^.DataArray, OPStackMessage^.Buffer^.DataBufferSize, False);
             PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount + OPStackMessage^.Buffer^.DataBufferSize;
             Exit;
           end
@@ -87,7 +87,7 @@ begin
         begin
           if InProcessMessage <> nil then
           begin
-            OPStackBuffers_CopyDataArrayWithDestOffset(InProcessMessage^.Buffer, @OPStackMessage^.Buffer^.DataArray, OPStackMessage^.Buffer^.DataBufferSize, False);
+            OPStackBuffers_CopyDataArray(InProcessMessage^.Buffer, @OPStackMessage^.Buffer^.DataArray, OPStackMessage^.Buffer^.DataBufferSize, False);
             PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := 0;      // Wooh Hoo, we are done
             OPStackCANStatemachineBuffers_RemoveIncomingDatagramMessage(InProcessMessage);   // Pull it out of the working stack
             DatagramMessage := InProcessMessage;                                        // Return the completed message

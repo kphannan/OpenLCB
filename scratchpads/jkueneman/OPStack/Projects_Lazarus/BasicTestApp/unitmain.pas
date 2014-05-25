@@ -71,6 +71,7 @@ type
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
     procedure ButtonStartStackClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupEthernetClick(Sender: TObject);
@@ -312,6 +313,21 @@ end;
 procedure TForm1.EthernetSendLogging(Sender: TObject; MessageStr: String);
 begin
   PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+  ComPortHub.OnReceiveMessage := nil;
+  ComPortHub.OnSendMessage := nil;
+  ComPortHub.OnErrorMessage := nil;
+  ComPortHub.OnConnectionStateChange := nil;
+  ComPortHub.RemoveComPort(nil);
+
+  EthernetHub.OnReceiveMessage := nil;
+  EthernetHub.OnSendMessage := nil;
+  EthernetHub.OnErrorMessage := nil;
+  EthernetHub.OnConnectionStateChange := nil;
+  EthernetHub.Enabled := False;
 end;
 
 end.

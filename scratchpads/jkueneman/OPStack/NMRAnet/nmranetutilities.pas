@@ -108,12 +108,12 @@ begin
 
       }
   
-  DataArray^[0] := NodeID^[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
-  DataArray^[1] := NodeID^[1] shr 8;
-  DataArray^[2] := NodeID^[1];
-  DataArray^[3] := NodeID^[0] shr 16;
-  DataArray^[4] := NodeID^[0] shr 8;
-  DataArray^[5] := NodeID^[0];
+  DataArray^[0] := Byte( NodeID^[1] shr 16);  // But these all need the 48 Bit Full ID in the Byte Fields
+  DataArray^[1] := Byte( NodeID^[1] shr 8);
+  DataArray^[2] := Byte( NodeID^[1]);
+  DataArray^[3] := Byte( NodeID^[0] shr 16);
+  DataArray^[4] := Byte( NodeID^[0] shr 8);
+  DataArray^[5] := Byte( NodeID^[0]);
 end;
 
 

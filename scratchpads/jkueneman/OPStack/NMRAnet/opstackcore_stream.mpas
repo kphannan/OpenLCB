@@ -177,6 +177,7 @@ procedure StreamInitRequest(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
+  NewMessage := nil;
   if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_STREAM_INIT_REQUEST, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
   begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
@@ -195,6 +196,7 @@ procedure StreamInitReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
+  NewMessage := nil;
   if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_STREAM_INIT_REPLY, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
   begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
@@ -247,6 +249,7 @@ procedure StreamProceed(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
+  NewMessage := nil;
   if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_STREAM_PROCEED, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
   begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
@@ -259,6 +262,7 @@ procedure StreamComplete(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   NewMessage: POPStackMessage;
 begin
+  NewMessage := nil;
   if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_STREAM_COMPLETE, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.Dest.AliasID, AMessage^.Dest.ID) then
   begin
     OPStackBuffers_CopyData(NewMessage^.Buffer, AMessage^.Buffer);
@@ -280,6 +284,7 @@ var
   NewStreamMessage: POPStackMessage;
 begin
   MessageToSend := nil;
+  NewStreamMessage := nil;
   if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_STREAM_INIT_REPLY, StreamMessage^.Dest.AliasID, StreamMessage^.Dest.ID, StreamMessage^.Source.AliasID, StreamMessage^.Source.ID) then
     if OPStackBuffers_AllcoateStreamMessage(NewStreamMessage, MTI_STEAM_SEND, StreamMessage^.Dest.AliasID, StreamMessage^.Dest.ID, StreamMessage^.Source.AliasID, StreamMessage^.Source.ID, False) then
     begin
