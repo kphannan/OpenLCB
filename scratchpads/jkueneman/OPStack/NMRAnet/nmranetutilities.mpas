@@ -14,7 +14,7 @@ uses
 function NMRAnetUtilities_CreateAliasID(var Seed: TNodeID; Regenerate: Boolean): Word;
 function NMRAnetUtilities_GenerateID_Alias_From_Seed(var Seed: TNodeID): Word;
 procedure NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(var Seed: TNodeID);
-procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NodeID: PNodeID; DataArray: PSimpleDataArray);
 function NMRAnetUtilities_Load48BitNodeIDWithSimpleData(var NodeID: TNodeID; var DataArray: TSimpleDataArray): PNodeID;
 procedure NMRAnetUtilities_LoadSimpleDataWithEventID(EventID: PEventID; DataArray: PSimpleDataArray);
 procedure NMRAnetUtilities_SimpleDataToNodeID(DataArray: PSimpleDataArray; var NodeID: TNodeID);
@@ -86,14 +86,34 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(var NodeID: TNodeID; var DataArray: TSimpleDataArray);
+procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NodeID: PNodeID; DataArray: PSimpleDataArray);
+//var
+//  i: Integer;
+//  TempHi, TempLo: Word;
 begin
-  DataArray[0] := NodeID[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
-  DataArray[1] := NodeID[1] shr 8;
-  DataArray[2] := NodeID[1];
-  DataArray[3] := NodeID[0] shr 16;
-  DataArray[4] := NodeID[0] shr 8;
-  DataArray[5] := NodeID[0];
+
+{
+  LongWordToHex(NodeID^[1], s1);
+  UART1_Write_Text('0x' + s1);
+  LongWordToHex(NodeID^[1], s1);
+  UART1_Write_Text(s1 + LF);
+
+  WordToHex(NodeID^[1] shr 24, s1);
+  UART1_Write_Text('Hi 0x' + s1 + LF);
+  WordToHex(NodeID^[1], s1);
+  UART1_Write_Text('Lo 0x' + s1 + LF);
+
+  //ByteToHex(DataArray^[0], s1);
+ // UART1_Write_Text('Byte 0: ' + s1 + LF);
+
+      }
+  
+  DataArray^[0] := NodeID^[1] shr 16;  // But these all need the 48 Bit Full ID in the Byte Fields
+  DataArray^[1] := NodeID^[1] shr 8;
+  DataArray^[2] := NodeID^[1];
+  DataArray^[3] := NodeID^[0] shr 16;
+  DataArray^[4] := NodeID^[0] shr 8;
+  DataArray^[5] := NodeID^[0];
 end;
 
 
@@ -106,8 +126,8 @@ end;
 function NMRAnetUtilities_Load48BitNodeIDWithSimpleData(var NodeID: TNodeID; var DataArray: TSimpleDataArray): PNodeID;
 begin
   Result := @NodeID;
-  NodeID[1] := (DataArray[0] shl 16) or (DataArray[1] shl 16) or DataArray[2];
-  NodeID[0] := (DataArray[3] shl 16) or (DataArray[4] shl 16) or DataArray[5];
+  NodeID[1] := (DataArray[0] shl 16) or (DataArray[1] shl 8) or DataArray[2];
+  NodeID[0] := (DataArray[3] shl 16) or (DataArray[4] shl 8) or DataArray[5];
 end;
 
 // *****************************************************************************

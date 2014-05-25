@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_node.mpas
+Value=..\..\NMRAnet\nmranetutilities.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -72,46 +72,38 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=10
+Count=9
 File0=UltimateCommandStation.mpas
-File1=..\..\NMRAnet\opstack_api.mpas
-File2=Templates\MCU_Setup_dsPIC33EPxxxGP8xx.mpas
-File3=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
-File4=Templates\template_userstatemachine.mpas
-File5=Templates\template_buffers.mpas
+File1=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
+File2=Templates\template_userstatemachine.mpas
+File3=Templates\template_buffers.mpas
+File4=..\..\NMRAnet\nmranetutilities.mpas
+File5=..\..\NMRAnet\nmranetdefines.mpas
 File6=..\..\NMRAnet\opstackdefines.mpas
-File7=Templates\template_vnode.mpas
-File8=Templates\template_node.mpas
-File9=..\..\NMRAnet\opstackbuffers.mpas
+File7=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\__Lib_TFT_Defs.mpas
+File8=Templates\MCU_Setup_dsPIC33EPxxxGP8xx.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
 Count=0
 [OTHER_FILES]
-Count=1
+Count=2
 File0=Templates\Options.inc
+File1=Templates\NodeID.inc
 [SEARCH_PATH]
-Count=20
+Count=12
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path5=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
-Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
-Path7=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path8=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path9=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path11=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path12=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path13=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
-Path14=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path15=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path16=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path17=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path18=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path19=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
+Path5=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
+Path6=E:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path8=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path9=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path10=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path11=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -119,17 +111,14 @@ Count=0
 [PLDS]
 Count=0
 [Useses]
-Count=10
+Count=7
 File0=ECAN
 File1=UART
-File2=TFT
-File3=TFT_Defs
-File4=TFT_TouchPanel
-File5=ADC
-File6=Peripheral_Pin_Select
-File7=Conversions
-File8=String
-File9=SPI
+File2=ADC
+File3=Peripheral_Pin_Select
+File4=Conversions
+File5=String
+File6=SPI
 [EXPANDED NODES]
 Node1=Sources
 Node2=Other Files

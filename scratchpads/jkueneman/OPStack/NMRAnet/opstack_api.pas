@@ -334,7 +334,7 @@ begin
       else
         MultiFrameBuffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_RELEASE;
       MultiFrameBuffer^.DataArray[2] := TRACTION_FLAGS_ALIAS_INCLUDED;
-      NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NodeID.ID, PSimpleDataArray( PByte( @NewMessage^.Buffer^.DataArray[3]))^);
+      NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@NodeID.ID, PSimpleDataArray( PByte( @NewMessage^.Buffer^.DataArray[3])));
       MultiFrameBuffer^.DataArray[9] := Hi( NodeID.AliasID);
       MultiFrameBuffer^.DataArray[10] := Lo( NodeID.AliasID);
       MultiFrameBuffer^.DataBufferSize := 11;
@@ -511,7 +511,7 @@ begin
       MultiFrameBuffer^.DataArray[2] := TRACTION_PROXY_TECH_ID_DCC;
       MultiFrameBuffer^.DataArray[3] := Hi(TrainID);
       MultiFrameBuffer^.DataArray[4] := Lo(TrainID);
-      NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(AllocatedNodeID.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+      NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@AllocatedNodeID.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5])));
       MultiFrameBuffer^.DataArray[11] := Hi(AllocatedNodeID.AliasID);
       MultiFrameBuffer^.DataArray[12] := Lo(AllocatedNodeID.AliasID);
       OutgoingMessage(NewMessage);

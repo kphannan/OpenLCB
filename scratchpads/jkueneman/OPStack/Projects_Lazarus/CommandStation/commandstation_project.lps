@@ -20,10 +20,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitmain"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="872"/>
-        <CursorPos X="2" Y="885"/>
+        <TopLine Value="481"/>
+        <CursorPos X="50" Y="497"/>
         <UsageCount Value="290"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -43,11 +44,10 @@
       <Unit3>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="28"/>
-        <CursorPos X="19" Y="707"/>
+        <TopLine Value="540"/>
+        <CursorPos X="1" Y="557"/>
         <UsageCount Value="105"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -56,8 +56,8 @@
         <UnitName Value="opstackcore"/>
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="380"/>
-        <CursorPos X="1" Y="404"/>
+        <TopLine Value="57"/>
+        <CursorPos X="1" Y="75"/>
         <UsageCount Value="136"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -74,8 +74,8 @@
         <UnitName Value="template_hardware"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="30"/>
-        <CursorPos X="3" Y="44"/>
+        <TopLine Value="166"/>
+        <CursorPos X="1" Y="186"/>
         <UsageCount Value="102"/>
         <Loaded Value="True"/>
       </Unit6>
@@ -178,7 +178,7 @@
       <Unit19>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="760"/>
         <CursorPos X="79" Y="760"/>
@@ -188,10 +188,12 @@
       <Unit20>
         <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
         <UnitName Value="opstackbuffers"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="29" Y="16"/>
+        <TopLine Value="134"/>
+        <CursorPos X="34" Y="162"/>
         <UsageCount Value="48"/>
+        <Loaded Value="True"/>
       </Unit20>
       <Unit21>
         <Filename Value="../../NMRAnet/opstack_api.pas"/>
@@ -352,127 +354,131 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="29" HistoryIndex="28">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="514" Column="1" TopLine="496"/>
+        <Caret Line="471" Column="1" TopLine="450"/>
       </Position1>
       <Position2>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="515" Column="1" TopLine="496"/>
+        <Caret Line="472" Column="1" TopLine="450"/>
       </Position2>
       <Position3>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="517" Column="1" TopLine="496"/>
+        <Caret Line="473" Column="1" TopLine="450"/>
       </Position3>
       <Position4>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="518" Column="1" TopLine="496"/>
+        <Caret Line="474" Column="1" TopLine="450"/>
       </Position4>
       <Position5>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="519" Column="1" TopLine="496"/>
+        <Caret Line="475" Column="1" TopLine="450"/>
       </Position5>
       <Position6>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="520" Column="1" TopLine="496"/>
+        <Caret Line="478" Column="1" TopLine="450"/>
       </Position6>
       <Position7>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="522" Column="1" TopLine="498"/>
+        <Caret Line="479" Column="1" TopLine="451"/>
       </Position7>
       <Position8>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="523" Column="1" TopLine="499"/>
+        <Caret Line="480" Column="29" TopLine="454"/>
       </Position8>
       <Position9>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="524" Column="1" TopLine="500"/>
+        <Caret Line="483" Column="17" TopLine="456"/>
       </Position9>
       <Position10>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="526" Column="1" TopLine="502"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="65" Column="3" TopLine="57"/>
       </Position10>
       <Position11>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="527" Column="1" TopLine="503"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="186" Column="1" TopLine="166"/>
       </Position11>
       <Position12>
         <Filename Value="unitmain.pas"/>
-        <Caret Line="528" Column="1" TopLine="504"/>
+        <Caret Line="469" Column="1" TopLine="456"/>
       </Position12>
       <Position13>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="529" Column="1" TopLine="505"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="67" Column="33" TopLine="57"/>
       </Position13>
       <Position14>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="530" Column="1" TopLine="507"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="66" Column="1" TopLine="57"/>
       </Position14>
       <Position15>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="542" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="67" Column="14" TopLine="57"/>
       </Position15>
       <Position16>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="543" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="68" Column="1" TopLine="57"/>
       </Position16>
       <Position17>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="544" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="69" Column="8" TopLine="57"/>
       </Position17>
       <Position18>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="545" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="70" Column="16" TopLine="57"/>
       </Position18>
       <Position19>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="548" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
+        <Caret Line="134" Column="13" TopLine="127"/>
       </Position19>
       <Position20>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="549" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
+        <Caret Line="114" Column="34" TopLine="97"/>
       </Position20>
       <Position21>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="551" Column="1" TopLine="528"/>
+        <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
+        <Caret Line="57" Column="44" TopLine="32"/>
       </Position21>
       <Position22>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="552" Column="1" TopLine="529"/>
+        <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
+        <Caret Line="162" Column="34" TopLine="134"/>
       </Position22>
       <Position23>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="553" Column="1" TopLine="530"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="72" Column="72" TopLine="57"/>
       </Position23>
       <Position24>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="549" Column="1" TopLine="530"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="66" Column="1" TopLine="57"/>
       </Position24>
       <Position25>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="551" Column="1" TopLine="530"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="67" Column="1" TopLine="57"/>
       </Position25>
       <Position26>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="552" Column="1" TopLine="530"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="68" Column="1" TopLine="57"/>
       </Position26>
       <Position27>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="553" Column="1" TopLine="530"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="69" Column="1" TopLine="57"/>
       </Position27>
       <Position28>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="559" Column="4" TopLine="550"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="70" Column="1" TopLine="57"/>
       </Position28>
       <Position29>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="937" Column="16" TopLine="920"/>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="71" Column="1" TopLine="57"/>
       </Position29>
+      <Position30>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="75" Column="1" TopLine="57"/>
+      </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="5">
+    <BreakPoints Count="4">
       <Item1>
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsLocal"/>
@@ -498,16 +504,9 @@
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsLocal"/>
         <WatchKind Value="wpkWrite"/>
-        <Source Value="unitmain.pas"/>
-        <Line Value="510"/>
+        <Source Value="../../NMRAnet/opstackcore.pas"/>
+        <Line Value="65"/>
       </Item4>
-      <Item5>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="unitmain.pas"/>
-        <Line Value="469"/>
-      </Item5>
     </BreakPoints>
   </Debugging>
   <EditorMacros Count="0"/>

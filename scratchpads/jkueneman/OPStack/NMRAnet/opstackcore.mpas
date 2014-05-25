@@ -260,7 +260,7 @@ begin
                    if Node^.StateMachineMessages = nil then
                      if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
                      begin
-                       NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+                       NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                        OPStackMessage^.Buffer^.DataBufferSize := 6;
                        OutgoingMessage(OPStackMessage); // Tell the network we are leaving
                        DoDeallocate := True;
@@ -492,7 +492,7 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
               OutgoingMessage(OPStackMessage);
               OPStackNode_SetState(Node, NS_PERMITTED);
@@ -510,7 +510,7 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
             begin
-              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
               OutgoingMessage(OPStackMessage);
               OPStackNode_SetState(Node, NS_INITIALIZED);
@@ -579,7 +579,7 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
-            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
             OutgoingMessage(OPStackMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);
@@ -593,7 +593,7 @@ begin
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
           begin
-            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
             OutgoingMessage(OPStackMessage);
             OPStackNode_ClearState(Node, NS_PERMITTED);

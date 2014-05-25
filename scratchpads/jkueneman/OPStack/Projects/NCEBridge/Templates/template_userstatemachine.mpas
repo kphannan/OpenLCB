@@ -147,12 +147,12 @@ begin
   end;
 end;
 
-procedure PrintNodeInfo(var NodeInfo: TNodeInfo);
+procedure PrintNodeInfo(NodeInfo: PNodeInfo);
 begin
-  WordToHex(NodeInfo.AliasID, s1);
-  UART1_Write_Text('Alias: 0x' + s1);
-  LongWordToHex( (NodeInfo.ID[0] shr 24) or NodeInfo.ID[1], s1);
-  UART1_Write_Text('Node ID: 0x' + s1);
+  WordToHex(NodeInfo^.AliasID, s1 + LF);
+  UART1_Write_Text('Alias: 0x' + s1 + LF);
+  LongWordToHex( (NodeInfo^.ID[1] shl 16) or NodeInfo^.ID[0], s1);
+  UART1_Write_Text('Node ID: 0x' + s1 + LF);
 end;
 
 procedure PrintIncomingMsg(var IncomingMsg: TNceMessage);
@@ -886,14 +886,22 @@ begin
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER'+LF); {$ENDIF}
                     if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
+                    begin
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      UART1_Write_Text('Controller Assign: Linked Node' + LF);
+                      PrintNodeInfo(@Node^.TrainData.LinkedNode);
+                    end;
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED'+LF); {$ENDIF}
                     if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
+                    begin
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      UART1_Write_Text('Query Assign: Linked Node' +LF);
+                      PrintNodeInfo(@Node^.TrainData.LinkedNode);
+                    end;
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
@@ -1238,6 +1246,7 @@ procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: P
 var
   MultiFrameBuffer: PMultiFrameBuffer;
   CabData: PNceCab;
+  i: Integer;
 begin
   MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
   CabData := PNceCab( Node^.UserData);
@@ -1257,8 +1266,19 @@ begin
         begin
           Node^.TrainData.LinkedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
           NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.LinkedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+         
+         UART1_Write_Text(LF);
+          for i := 0 to 12 do
+          begin
+            ByteToHex(MultiFrameBuffer^.DataArray[i], s1);
+            UART1_Write_Text(s1 + '.');
+          end;
+          UART1_Write_Text(LF);
           
-          PrintNodeInfo(Node^.TrainData.LinkedNode);
+          UART1_Write_Text('Proxy Allocate: Linked Node' +LF);
+          PrintNodeInfo(@Node^.TrainData.LinkedNode);
+          UART1_Write_Text('Proxy Allocate: Node' +LF);
+          PrintNodeInfo(@Node^.Info);
           
           CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK;    // Now need to unlock the Proxy
           Exit;

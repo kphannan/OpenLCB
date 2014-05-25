@@ -153,12 +153,12 @@ begin
   StreamDestID := 0;
   {$ENDIF}
   
-  for j := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS do                               // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_MULTIFRAME_ARRAY_BUFFERS-1 do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMultiFrameBuffer(@MultiFramePool.Pool[j], True);
   MultiFramePool.Count := 0;
   MultiFramePool.MaxCount := 0;
   
-  for j := 0 to USER_MAX_MESSAGE_BUFFERS  do                               // Extra Byte at end for state flags
+  for j := 0 to USER_MAX_MESSAGE_BUFFERS-1  do                               // Extra Byte at end for state flags
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
   OPStackMessagePool.MaxCount := 0;

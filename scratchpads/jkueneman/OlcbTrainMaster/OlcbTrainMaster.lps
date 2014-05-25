@@ -20,7 +20,6 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="main"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="905"/>
@@ -192,10 +191,11 @@
       <Unit20>
         <Filename Value="../OPStack/HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
         <UnitName Value="template_hardware"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="167"/>
-        <CursorPos X="56" Y="177"/>
+        <TopLine Value="161"/>
+        <CursorPos X="43" Y="187"/>
         <UsageCount Value="109"/>
         <Loaded Value="True"/>
       </Unit20>
@@ -620,22 +620,6 @@
     </JumpHistory>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="2">
-      <Item1>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="/usr/local/share/fpcsrc/rtl/objpas/classes/lists.inc"/>
-        <Line Value="0"/>
-      </Item1>
-      <Item2>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../OPStack/ConfigurationLayerImplementations/Lazarus_File/template_configuration.pas"/>
-        <Line Value="174"/>
-      </Item2>
-    </BreakPoints>
     <Watches Count="2">
       <Item1>
         <Expression Value="FComPort"/>

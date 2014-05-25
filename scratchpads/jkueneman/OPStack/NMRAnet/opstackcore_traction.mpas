@@ -420,7 +420,7 @@ begin
               MultiFrameBuffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
               MultiFrameBuffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
               MultiFrameBuffer^.DataArray[2] := $01;  // Alias included
-              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(DestNode^.TrainData.Controller.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3]))^);
+              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@DestNode^.TrainData.Controller.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3])));
               MultiFrameBuffer^.DataArray[9] := Hi( DestNode^.TrainData.Controller.AliasID);
               MultiFrameBuffer^.DataArray[10] := Lo( DestNode^.TrainData.Controller.AliasID);
               AppCallback_TractionProtocol(DestNode, NextMessage);

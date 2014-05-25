@@ -337,7 +337,7 @@ begin
      begin
        if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
        begin
-         NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+         NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
          Node^.Flags := Node^.Flags and not MF_ALIAS_MAP_ENQUIRY;             // Clear the Flag
          OPStackMessage^.Buffer^.DataBufferSize := 6;
          Result := True;
@@ -347,7 +347,7 @@ begin
      begin
        if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_VERIFIED_NODE_ID_NUMBER, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
        begin
-         NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)^);
+         NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
          Node^.Flags := Node^.Flags and not MF_VERIFY_NODE_ID;                // Clear the Flag
          OPStackMessage^.Buffer^.DataBufferSize := 6;
          Result := True;
