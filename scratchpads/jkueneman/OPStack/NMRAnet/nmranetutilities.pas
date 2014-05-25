@@ -87,27 +87,7 @@ end;
 //     Description:
 // *****************************************************************************
 procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NodeID: PNodeID; DataArray: PSimpleDataArray);
-//var
-//  i: Integer;
-//  TempHi, TempLo: Word;
 begin
-
-{
-  LongWordToHex(NodeID^[1], s1);
-  UART1_Write_Text('0x' + s1);
-  LongWordToHex(NodeID^[1], s1);
-  UART1_Write_Text(s1 + LF);
-
-  WordToHex(NodeID^[1] shr 24, s1);
-  UART1_Write_Text('Hi 0x' + s1 + LF);
-  WordToHex(NodeID^[1], s1);
-  UART1_Write_Text('Lo 0x' + s1 + LF);
-
-  //ByteToHex(DataArray^[0], s1);
- // UART1_Write_Text('Byte 0: ' + s1 + LF);
-
-      }
-  
   DataArray^[0] := Byte( NodeID^[1] shr 16);  // But these all need the 48 Bit Full ID in the Byte Fields
   DataArray^[1] := Byte( NodeID^[1] shr 8);
   DataArray^[2] := Byte( NodeID^[1]);

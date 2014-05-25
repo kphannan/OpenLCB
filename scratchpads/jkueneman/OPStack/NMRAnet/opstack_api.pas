@@ -12,6 +12,7 @@ uses
   SysUtils,
   FileUtil,
   {$ENDIF}
+  float16,
   nmranetdefines,
   opstackbuffers,
   template_hardware,
@@ -42,14 +43,15 @@ function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnip
 // Traction
 function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
 function TrySendTractionFunctionSet(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord; Value: Word): Boolean;
-function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: Byte): Boolean;
-function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; IsForward: Boolean): Boolean;
+function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: THalfFloat): Boolean;
+function TrySendTractionDirectionToggle(var Source: TNodeInfo; var Dest: TNodeInfo; var Speed: THalfFloat): Boolean;
+function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; var Speed: THalfFloat; IsForward: Boolean): Boolean;
 function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeInfo; var NodeID: TNodeInfo; Assign: Boolean): Boolean;
 function TrySendTractionControllerQuery(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function TrySendTractionManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
 function TrySendTractionQuerySpeed(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
-function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: Word): Boolean;
+function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord): Boolean;
 function TrySendTractionEmergencyStop(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 
 // Traction Proxy
@@ -284,12 +286,19 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
     begin
+      NewMessage^.Buffer^.DataBufferSize := 6;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_FUNCTION;
+      NewMessage^.Buffer^.DataArray[1] := FunctionAddress shr 16;
+      NewMessage^.Buffer^.DataArray[2] := FunctionAddress shr 8;
+      NewMessage^.Buffer^.DataArray[3] := FunctionAddress;
+      NewMessage^.Buffer^.DataArray[4] := Hi( Value);
+      NewMessage^.Buffer^.DataArray[5] := Lo( Value);
       OutgoingMessage(NewMessage);
       Result := True;
     end
 end;
 
-function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: Byte): Boolean;
+function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: THalfFloat): Boolean;
 var
   NewMessage: POPStackMessage;
 begin
@@ -298,23 +307,45 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
     begin
+      NewMessage^.Buffer^.DataBufferSize := 3;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_SPEED_DIR;
+      NewMessage^.Buffer^.DataArray[1] := Hi( Speed);
+      NewMessage^.Buffer^.DataArray[2] := Lo( Speed);
       OutgoingMessage(NewMessage);
       Result := True;
     end
 end;
 
-function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; IsForward: Boolean): Boolean;
+function TrySendTractionDirectionToggle(var Source: TNodeInfo; var Dest: TNodeInfo; var Speed: THalfFloat): Boolean;
 var
-  NewMessage: POPStackMessage;
+  TempSpeed: THalfFloat;
 begin
   Result := False;
-  NewMessage := nil;
-  if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
-    begin
-      OutgoingMessage(NewMessage);
-      Result := True;
-    end
+  if Speed and $8000 <> 0 then
+    TempSpeed := Speed and not $8000
+  else
+    TempSpeed := Speed or $8000;
+  if TrySendTractionSpeedSet(Source, Dest, TempSpeed) then
+  begin
+    Speed := TempSpeed;
+    Result := True
+  end;
+end;
+
+function TrySendTractionDirectionSet(var Source: TNodeInfo; var Dest: TNodeInfo; var Speed: THalfFloat; IsForward: Boolean): Boolean;
+var
+  TempSpeed: THalfFloat;
+begin
+  Result := False;
+  if IsForward then
+    TempSpeed := Speed and not $8000
+  else
+    TempSpeed := Speed or $8000;
+  if TrySendTractionSpeedSet(Source, Dest, TempSpeed) then
+  begin
+    Speed := TempSpeed;
+    Result := True
+  end;
 end;
 
 function TrySendTractionControllerConfig(var Source: TNodeInfo; var Dest: TNodeInfo; var NodeID: TNodeInfo; Assign: Boolean): Boolean;
@@ -406,7 +437,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 1;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
@@ -416,19 +447,20 @@ begin
   end;
 end;
 
-function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: Word): Boolean;
+function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord): Boolean;
 var
   NewMessage: POPStackMessage;
 begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
     begin
-      NewMessage^.Buffer^.DataBufferSize := 3;
+      NewMessage^.Buffer^.DataBufferSize := 4;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_FUNCTION;
-      NewMessage^.Buffer^.DataArray[1] := Hi(FunctionAddress);
-      NewMessage^.Buffer^.DataArray[2] := Lo(FunctionAddress);
+      NewMessage^.Buffer^.DataArray[1] := FunctionAddress shr 16;
+      NewMessage^.Buffer^.DataArray[2] := FunctionAddress shr 8;
+      NewMessage^.Buffer^.DataArray[3] := FunctionAddress;
       OutgoingMessage(NewMessage);
       Result := True;
     end;

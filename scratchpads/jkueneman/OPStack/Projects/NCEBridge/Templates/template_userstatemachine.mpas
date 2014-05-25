@@ -10,7 +10,7 @@ interface
 {.$DEFINE DEBUG_DISCOVER_STATEMACHINE}
 {.$DEFINE DEBUG_KNOWNDEVICES_STATEMACHINE}
 {.$DEFINE DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE}
-{$DEFINE DEBUG_STATE_CAB_STATEMACHINE}
+{.$DEFINE DEBUG_STATE_CAB_STATEMACHINE}
 
 uses
   Float16,
@@ -180,27 +180,24 @@ end;
 
 // ****************************************************************************
 // *****************************************************************************
-function ChangeSpeed(Speed, Delta: real): real;
+function ChangeSpeed(Speed: THalfFloat; Delta: Integer): Word;
 var
-  Reverse: Boolean;
+  IsReverse: Boolean;
+  SpeedReal: real;
 begin
-  Result := Speed;
-  if Result < 0.0 then
-  begin
-    Reverse := True;
-    Result := -Speed;
-  end else
-    Reverse := False;
-  
-  Result := Result + Delta;
-  if Result > 100.0 then
-    Result := 100.0
+  IsReverse := Speed and $8000 <> 0;
+  SpeedReal := HalfToFloat( Speed and not $8000);
+
+  SpeedReal := SpeedReal + Delta;
+  if SpeedReal > 100.0 then
+    SpeedReal := 100.0
   else
-  if Result < 0.0 then
-    Result := 0.0;
+  if SpeedReal < 0.0 then
+    SpeedReal := 0.0;
     
-  if Reverse then
-    Result := -Result;
+  Result := FloatToHalf(SpeedReal);
+  if IsReverse then
+    Result := Result or $8000;
 end;
 
 function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
@@ -212,7 +209,7 @@ begin
   Mask := Mask shl FunctionAddress;
   if (Functions and Mask) <> 0 then
   begin             
-    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, 0, 0) then
+    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FunctionAddress, 0) then
     begin
       Mask := not Mask;
       Functions := Functions and Mask;
@@ -220,7 +217,7 @@ begin
     end;
   end else
   begin
-    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, 0, 1) then
+    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FunctionAddress, 1) then
     begin
       Functions := Functions or Mask;
       Result := True
@@ -527,8 +524,8 @@ begin
       CabNode^.iUserStateMachine := STATE_CAB_SELECT_LOCO;
       CabData^.iStateMachine := STATE_INITIALIZE;
       
-      UART1_Write_Text('Loco Select: ');
-      PrintIncomingMsg(CabData^.IncomingMsg);
+  //    UART1_Write_Text('Loco Select: ');
+  //    PrintIncomingMsg(CabData^.IncomingMsg);
     end else
     if CabData^.State and CS_MACRO_MESSAGE <> 0 then
     begin
@@ -536,19 +533,19 @@ begin
       CabNode^.iUserStateMachine := STATE_CAB_RUN_MACRO;
       CabData^.iStateMachine := STATE_INITIALIZE;
     
-      UART1_Write_Text('Macro: ');
-      PrintIncomingMsg(CabData^.IncomingMsg);
+   //   UART1_Write_Text('Macro: ');
+   //   PrintIncomingMsg(CabData^.IncomingMsg);
     end else
     begin
       CabNode^.iUserStateMachine := STATE_CAB_RUN_CMD;
       CabData^.iStateMachine := STATE_INITIALIZE;
       
-      UART1_Write_Text('Command: ');
-      PrintIncomingMsg(CabData^.IncomingMsg);
+  //    UART1_Write_Text('Command: ');
+  //    PrintIncomingMsg(CabData^.IncomingMsg);
       for i := 0 to CabData^.IncomingMsg.Count - 1 do
       begin
         sss := NceKeyPressToString(CabData^.IncomingMsg.DataBytes[i]);
-        UART1_Write_Text( sss + LF);
+    //    UART1_Write_Text( sss + LF);
       end;
 
     end;
@@ -597,7 +594,7 @@ var
   CabData: PNceCab;
   Address: Word;
   SpeedStep, AddressType: Byte;
-  Speed: real;
+  NewSpeed: THalfFloat;
 begin      
   if Node = GetPhysicalNode then
   begin
@@ -849,8 +846,12 @@ begin
                     
                     Address := CabMessageToTrainAddress(@CabData^.IncomingMsg);
                     
+                    Address := Address or $C000;
+                    
                     WordToStr(Address, s1);
                     UART1_Write_Text('Address = ' + s1 + LF);
+                    
+                    
                     SpeedStep := 28;
                     
               {      AppCallback_ReadConfiguration(CONFIG_OFFSET_SPEED_STEP, 1, @SpeedStep);    // These offsets are into the Physical Nodes configuration address space
@@ -886,22 +887,14 @@ begin
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER'+LF); {$ENDIF}
                     if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
-                    begin
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      UART1_Write_Text('Controller Assign: Linked Node' + LF);
-                      PrintNodeInfo(@Node^.TrainData.LinkedNode);
-                    end;
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED'+LF); {$ENDIF}
                     if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
-                    begin
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      UART1_Write_Text('Query Assign: Linked Node' +LF);
-                      PrintNodeInfo(@Node^.TrainData.LinkedNode);
-                    end;
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
@@ -977,14 +970,22 @@ begin
                   end;
                 NCE_CAB_ONE_STEP_FASTER             :
                   begin
-                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), 1))) then
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, +1);
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
+                    begin
+                      Node^.TrainData.SpeedDir := NewSpeed;
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    end;
                     Exit;
                   end;
                 NCE_CAB_ONE_STEP_SLOWER             :
                   begin
-                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), -1))) then
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, -1);
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
+                    begin
+                      Node^.TrainData.SpeedDir := NewSpeed;
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    end;
                     Exit;
                   end;
                 NCE_CAB_EMERGENCY_STOP              :
@@ -1066,25 +1067,33 @@ begin
                   end;
                 NCE_CAB_FIVE_STEPS_FASTER           :
                   begin
-                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), 5))) then
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, +5);
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
+                    begin
+                      Node^.TrainData.SpeedDir := NewSpeed;
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    end;
                     Exit;
                   end;
                 NCE_CAB_FIVE_STEPS_SLOWER           :
                   begin
-                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, FloatToHalf(ChangeSpeed(HalfToFloat(Node^.TrainData.SpeedDir), -5))) then
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, -5);
+                    if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
+                    begin
+                      Node^.TrainData.SpeedDir := NewSpeed;
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
+                    end;
                     Exit;
                   end;
                 NCE_CAB_DIR_FORWARD                 :
                   begin
-                    if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, True) then
+                    if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, Node^.TrainData.SpeedDir, True) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_DIR_REVERSE                 :
                   begin
-                    if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, False) then
+                    if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, Node^.TrainData.SpeedDir, False) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
@@ -1267,18 +1276,10 @@ begin
           Node^.TrainData.LinkedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
           NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.LinkedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
          
-         UART1_Write_Text(LF);
-          for i := 0 to 12 do
-          begin
-            ByteToHex(MultiFrameBuffer^.DataArray[i], s1);
-            UART1_Write_Text(s1 + '.');
-          end;
-          UART1_Write_Text(LF);
-          
-          UART1_Write_Text('Proxy Allocate: Linked Node' +LF);
-          PrintNodeInfo(@Node^.TrainData.LinkedNode);
-          UART1_Write_Text('Proxy Allocate: Node' +LF);
-          PrintNodeInfo(@Node^.Info);
+      //    UART1_Write_Text('Proxy Allocate: Linked Node' +LF);
+      //    PrintNodeInfo(@Node^.TrainData.LinkedNode);
+      //    UART1_Write_Text('Proxy Allocate: Node' +LF);
+       //   PrintNodeInfo(@Node^.Info);
           
           CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK;    // Now need to unlock the Proxy
           Exit;

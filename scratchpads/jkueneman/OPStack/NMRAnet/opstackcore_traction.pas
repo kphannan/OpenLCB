@@ -261,12 +261,12 @@ begin
   Result := False;
   MessageToSend := nil;
 
-  {$IFNDEF FPC} UART1_Write_Text('1');{$ENDIF}
-  
+ // {$IFNDEF FPC} UART1_Write_Text('1');{$ENDIF}
+
   if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
   
-  {$IFNDEF FPC} UART1_Write_Text('2');{$ENDIF}
+ // {$IFNDEF FPC} UART1_Write_Text('2');{$ENDIF}
   
     MessageToSend^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
     MessageToSend^.Buffer^.DataArray[1] := Hi( DestNode^.TrainData.SpeedDir);
@@ -278,15 +278,15 @@ begin
     MessageToSend^.Buffer^.DataArray[7] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataBufferSize := 8;
     
-     {$IFNDEF FPC} UART1_Write_Text('3');{$ENDIF}
+  //   {$IFNDEF FPC} UART1_Write_Text('3');{$ENDIF}
     
     AppCallback_TractionProtocol(DestNode, NextMessage);
     
-     {$IFNDEF FPC} UART1_Write_Text('4');{$ENDIF}
+  //   {$IFNDEF FPC} UART1_Write_Text('4');{$ENDIF}
     
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
     
-     {$IFNDEF FPC} UART1_Write_Text('5');{$ENDIF}
+  //   {$IFNDEF FPC} UART1_Write_Text('5');{$ENDIF}
   end;
 end;
 

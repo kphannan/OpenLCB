@@ -63,7 +63,7 @@ type
   TCANFrameParserStreamReceiveManager   = class;
 
   TOlcbTaskBeforeDestroy = procedure(Sender: TTaskOlcbBase) of object;
-  TDispatchTaskFunc = function(Task: TTaskOlcbBase): Boolean of object;
+  TDispatchTaskFunc = procedure(Task: TTaskOlcbBase) of object;
   TStreamDataArray = array of byte;
 
   { TAliasTaskContainer }

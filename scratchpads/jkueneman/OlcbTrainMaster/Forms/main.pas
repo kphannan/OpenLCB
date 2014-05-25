@@ -292,7 +292,7 @@ type
     procedure StoreSettings(SettingType: TLoadSettingType);
     procedure ThrottleClosing(Throttle: TFormThrottle);
     procedure ThrottleHiding(Throttle: TFormThrottle);
-    function DispatchTask(Task: TTaskOlcbBase): Boolean;
+    procedure DispatchTask(Task: TTaskOlcbBase);
     procedure TaskDestroy(Sender: TTaskOlcbBase);
     procedure UpdateMessageCountUI;
     procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
@@ -946,23 +946,10 @@ begin
   OPStackCore_Timer;
 end;
 
-function TFormOlcbTrainMaster.DispatchTask(Task: TTaskOlcbBase): Boolean;
+procedure TFormOlcbTrainMaster.DispatchTask(Task: TTaskOlcbBase);
 begin
-  Result := False;
-  if Task.DestinationAlias = 0 then
-  begin
-    Result := EthernetHub.AddTask(Task);
-    if not Result then
-      Result := ComPortHub.AddTask(Task)
-    else ComPortHub.AddTask(Task)
-  end else
-  begin
-    if EthernetHub.AddTask(Task) then
-      Result := True
-    else
-    if ComPortHub.AddTask(Task) then
-      Result := True
-  end;
+  EthernetHub.AddTask(Task);
+  ComPortHub.AddTask(Task);
   Task.Free;  // Task is Cloned
 end;
 

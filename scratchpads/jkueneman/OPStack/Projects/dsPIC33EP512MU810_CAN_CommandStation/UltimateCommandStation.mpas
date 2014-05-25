@@ -137,8 +137,6 @@ begin
   MCU_EnableSerialFlash;
   MCU_EnableUARTA;
   
-  UART1_Write_Text('Booted 1'+LF);
-  
  // MCU_EnableTFT;
  // TFT_BLED_Direction := 0;                  // Set TFT backlight pin as output
 //  TFT_BLED := 1;                            // Turn on TFT backlight
@@ -150,7 +148,7 @@ begin
   MCU_EnableDCCTimer(4060);       // DCC_TIMER_58US = 4060;    // Clock ticks every 1/140Mhz * 2 * 4060 = 58us interrupts
   OPStackCore_Enable(True);
   
-  UART1_Write_Text('Booted'+LF);
+  UART1_Write_Text('Mustangpeak DCC Command Station v0.1 Booted'+LF);
   
   delay_ms(100);
 

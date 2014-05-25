@@ -85,21 +85,8 @@ begin
   OPStackCore_Enable(True);
   
   TRISB4_bit := 0;
-  {
-  TRISA4_bit := 0;
-  TRISA0_bit := 0;
-  TRISB4_bit := 0;
-  TRISB0_bit := 0;
-  TRISB4_bit := 0;
-  RB4_bit := 0;   
-  
-  while True do
-  begin
-    LATB := not LATB;
-    LATA := not LATA;
-  end;
-   }
-  UART1_Write_Text('Starting'+LF);
+
+  UART1_Write_Text('NCE Bridge Starting'+LF);
   
   while True do
   begin   
