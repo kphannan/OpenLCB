@@ -1,0 +1,95 @@
+program XpressnetBridge;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2014.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-02-01:   Created
+//     2012-12-16    updated
+//
+// * Description:
+
+//
+// *****************************************************************************
+
+var
+  // EEPROM SPI PINS
+  CS_Bank_0                         : sbit at LATB6_bit;
+  CS_Bank_0_Direction               : sbit at TRISB6_bit;
+  EE_PROM_Hold                      : sbit at LATB5_bit;
+  EEPROM_Hold_Direction             : sbit at TRISB5_bit;
+
+var
+  CabBus_RS485_Select            : sbit at LATA0_bit;
+  CabBus_RS485_Select_Direction  : sbit at TRISA0_bit;
+  
+  
+// *****************************************************************************
+//  INTERRUPTS
+// *****************************************************************************
+
+procedure INTERRUPT_Timer_525ms(); iv IVT_ADDR_T1INTERRUPT;
+begin
+  T1IF_bit := 0;
+end;
+
+procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
+// Called once every 100m
+begin
+  T2IF_bit := 0;                                                                // Clear the Flag
+  OPStackCore_Timer
+end;
+
+procedure INTERRUPT_Timer_CabBus(); iv IVT_ADDR_T4INTERRUPT;
+begin
+  T4IF_bit := 0;
+  CabBus_Timeout;
+end;
+
+procedure INTERRUPT_CabBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
+begin
+  U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
+  UART_RX_StateMachine;
+end;
+
+procedure INTERRUPT_CabBus_UART_RX_PIN_CHANGE; iv IVT_ADDR_CNINTERRUPT;
+begin
+  CNIF_bit := 0;
+  PinChangeInterrupt;
+end;
+
+var
+  ActiveNode: PNMRAnetnode;
+begin
+  { Main program }   
+  MCU_Setup_Initialize;
+  OPStackCore_Initialize;
+  CabBridge_Initialize;
+  MCU_Enable_100msTimer;
+  MCU_Enable_500msTimer;
+  MCU_Enable_CabBusTimer;
+  MCU_Enable_NCE_RS485;
+  MCU_Enable_UART;
+  MCU_Enable_SPI;
+  MCU_Enable_UART_RX_PinChange;
+
+  TON_T1CON_bit := 1;       // Turn on 500ms timer
+  TON_T2CON_bit := 1;       // Turn on 100ms timer
+  MCU_Enable_CAN;
+  OPStackCore_Enable(True);
+  
+  TRISB4_bit := 0;
+
+  UART1_Write_Text('NCE Bridge Starting'+LF);
+  
+  while True do
+  begin   
+    ActiveNode := OPStackCore_Process;
+  end;
+end.
