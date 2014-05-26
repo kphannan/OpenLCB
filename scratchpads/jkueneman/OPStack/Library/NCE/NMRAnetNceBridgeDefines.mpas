@@ -109,7 +109,7 @@ type
     iIncomingCount: Byte;
     LastPortRead: Word;                          // Pin Change testing
     AssignedCabs: TAssignedCabArray;
-    iAssignedCabCount: Integer;                       // Number of valid Cabs in the AssignedCabs array
+    iAssignedCabCount: Integer;                  // Number of valid Cabs in the AssignedCabs array
     iActiveCab: Integer;
     ExistingCab: PNMRAnetNode;
   end;

@@ -98,6 +98,10 @@ procedure OPStackBuffers_CopyDataArrayWithSourceOffset(DestData: PSimpleBuffer; 
 // Message Node ID helpers
 procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
 
+{$IFNDEF FPC}
+procedure OPStackBuffers_PrintBuffers;
+{$ENDIF}
+
 var
   SimpleBufferPool: TSimpleBufferPool;
   DatagramBufferPool: TDatagramBufferPool;
@@ -111,6 +115,51 @@ var
   OPStackMessagePool: TOPStackMessagePool;
 
 implementation
+
+{$IFNDEF FPC}
+procedure OPStackBuffers_PrintBuffers;
+begin
+  UART1_Write_Text('Buffer State...'+LF);  
+  
+  UART1_Write_Text('Simple Buffers: '+LF);
+  WordToStr(SimpleBufferPool.Count, s1);
+  UART1_Write_Text('  Count: '+s1+LF);
+  WordToStr(SimpleBufferPool.MaxCount, s1);
+  UART1_Write_Text('  Max  : '+s1+LF);
+  
+  UART1_Write_Text('Datagram Buffers: '+LF);
+  WordToStr(DatagramBufferPool.Count, s1);
+  UART1_Write_Text('  Count: '+s1+LF);
+  WordToStr(DatagramBufferPool.MaxCount, s1);
+  UART1_Write_Text('  Max  : '+s1+LF);
+  
+  {$IFDEF SUPPORT_STREAMS}
+  UART1_Write_Text('Stream Buffers: '+LF);
+  WordToStr(StreamBufferPool.Count, s1);
+  UART1_Write_Text('  Count: '+s1+LF);
+  WordToStr(StreamBufferPool.MaxCount, s1);
+  UART1_Write_Text('  Max  : '+s1+LF);
+  {$ENDIF}
+  
+  UART1_Write_Text('ADCI/SNIP Buffers: '+LF);
+  WordToStr(AcdiSnipBufferPool.Count, s1);
+  UART1_Write_Text('  Count: '+s1+LF);
+  WordToStr(AcdiSnipBufferPool.MaxCount, s1);
+  UART1_Write_Text('  Max  : '+s1+LF);
+  
+  UART1_Write_Text('MultiFrame Buffers: '+LF);
+  WordToStr(MultiFramePool.Count, s1);
+  UART1_Write_Text('  Count: '+s1+LF);
+  WordToStr(MultiFramePool.MaxCount, s1);
+  UART1_Write_Text('  Max  : '+s1+LF);
+  
+  UART1_Write_Text('Message Pool Buffers: '+LF);
+  WordToStr(OPStackMessagePool.Count, s1);
+  UART1_Write_Text('  Count: '+s1+LF);
+  WordToStr(OPStackMessagePool.MaxCount, s1);
+  UART1_Write_Text('  Max  : '+s1+LF);
+end;
+{$ENDIF}
 
 
 procedure OPStackBuffers_Initialize;

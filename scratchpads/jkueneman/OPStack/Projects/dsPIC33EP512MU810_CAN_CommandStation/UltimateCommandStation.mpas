@@ -155,5 +155,13 @@ begin
   while True do
   begin
     OPStackCore_Process;
+    
+    if UART1_Data_Ready then
+    begin
+      case UART1_Read of
+        'D','d'  : OPStackBuffers_PrintBuffers;
+        'A', 'a' : OPStackNode_PrintAliases;
+      end;
+    end;
   end;
 end.

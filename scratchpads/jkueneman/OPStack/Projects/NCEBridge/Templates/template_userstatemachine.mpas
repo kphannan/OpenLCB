@@ -9,7 +9,7 @@ interface
 {$I Options.inc}
 {.$DEFINE DEBUG_DISCOVER_STATEMACHINE}
 {.$DEFINE DEBUG_KNOWNDEVICES_STATEMACHINE}
-{.$DEFINE DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE}
+{$DEFINE DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE}
 {.$DEFINE DEBUG_STATE_CAB_STATEMACHINE}
 
 uses
@@ -169,7 +169,7 @@ begin
   UART1_Write_Text('Data = ');
   for i := 0 to IncomingMsg.Count - 1 do
   begin
-    ByteToHex(IncomingMsg.Count, s1);
+    ByteToStr(IncomingMsg.DataBytes[i], s1);
     if i <  IncomingMsg.Count - 1 then
       UART1_Write_Text('0x' + s1 + ', ')
     else
@@ -230,13 +230,15 @@ end;
 function CabMessageToTrainAddress(CabMessage: PNceMessage): Word;
 var
   i: Integer;
-  AddressStr: string[5];
+  AddressStr: string[NCEBUS_MAX_DATA_BYTE];
 begin
   Result := 0;
   AddressStr := '';
   for i := 0 to CabMessage^.Count - 1 do
     AddressStr := AddressStr + Char( CabMessage^.DataBytes[i] and $0F or $30);   // Make them ASCII
-  Result := StrToWord(AddressStr)
+  Result := StrToWord(AddressStr);
+  if (AddressStr[0] = '0') or (Result > 127) then
+    Result := Result or $C000;
 end;
 
 // ****************************************************************************
@@ -524,8 +526,8 @@ begin
       CabNode^.iUserStateMachine := STATE_CAB_SELECT_LOCO;
       CabData^.iStateMachine := STATE_INITIALIZE;
       
-  //    UART1_Write_Text('Loco Select: ');
-  //    PrintIncomingMsg(CabData^.IncomingMsg);
+   //   UART1_Write_Text('Loco Select: ');
+   //   PrintIncomingMsg(CabData^.IncomingMsg);
     end else
     if CabData^.State and CS_MACRO_MESSAGE <> 0 then
     begin
@@ -533,8 +535,8 @@ begin
       CabNode^.iUserStateMachine := STATE_CAB_RUN_MACRO;
       CabData^.iStateMachine := STATE_INITIALIZE;
     
-   //   UART1_Write_Text('Macro: ');
-   //   PrintIncomingMsg(CabData^.IncomingMsg);
+    //  UART1_Write_Text('Macro: ');
+    //  PrintIncomingMsg(CabData^.IncomingMsg);
     end else
     begin
       CabNode^.iUserStateMachine := STATE_CAB_RUN_CMD;
@@ -845,9 +847,7 @@ begin
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE'+LF); {$ENDIF}
                     
                     Address := CabMessageToTrainAddress(@CabData^.IncomingMsg);
-                    
-                    Address := Address or $C000;
-                    
+                 
                     WordToStr(Address, s1);
                     UART1_Write_Text('Address = ' + s1 + LF);
                     

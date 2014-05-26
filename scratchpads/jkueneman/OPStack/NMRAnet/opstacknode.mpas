@@ -78,6 +78,7 @@ function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 
 {$IFNDEF FPC}
 procedure OPStackNode_PrintPool;
+procedure OPStackNode_PrintAliases;
 {$ENDIF}
 
 implementation
@@ -117,6 +118,17 @@ begin
   begin
     WordToHex(NodePool.AllocatedList[i], s1);
     UART1_Write_Text('AllocatedList: 0x' + s1 + LF);
+  end;
+end;
+
+procedure OPStackNode_PrintAliases;
+var
+  i: Integer;
+begin
+  for i := 0 to NodePool.AllocatedCount - 1 do
+  begin
+    WordToHex(NodePool.AllocatedList[i]^.Info.AliasID, s1);
+    UART1_Write_Text('Alias: ' +s1+LF);
   end;
 end;
 {$ENDIF}
