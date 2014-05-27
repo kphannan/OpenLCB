@@ -260,14 +260,8 @@ function TractionProtocolReplyQuerySpeed(DestNode: PNMRAnetNode; var MessageToSe
 begin
   Result := False;
   MessageToSend := nil;
-
- // {$IFNDEF FPC} UART1_Write_Text('1');{$ENDIF}
-
   if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
   begin
-  
- // {$IFNDEF FPC} UART1_Write_Text('2');{$ENDIF}
-  
     MessageToSend^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
     MessageToSend^.Buffer^.DataArray[1] := Hi( DestNode^.TrainData.SpeedDir);
     MessageToSend^.Buffer^.DataArray[2] := Lo( DestNode^.TrainData.SpeedDir);
@@ -277,16 +271,8 @@ begin
     MessageToSend^.Buffer^.DataArray[6] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataArray[7] := $FF;                                 // Not a Number (NaN) for Actual Speed (not supported in DCC)
     MessageToSend^.Buffer^.DataBufferSize := 8;
-    
-  //   {$IFNDEF FPC} UART1_Write_Text('3');{$ENDIF}
-    
     AppCallback_TractionProtocol(DestNode, NextMessage);
-    
-  //   {$IFNDEF FPC} UART1_Write_Text('4');{$ENDIF}
-    
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-    
-  //   {$IFNDEF FPC} UART1_Write_Text('5');{$ENDIF}
   end;
 end;
 
@@ -381,9 +367,7 @@ begin
                 MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
                 MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
                 MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
-                DestNode^.TrainData.Controller.AliasID := NextMessage^.Source.AliasID;
-                DestNode^.TrainData.Controller.ID[0] := NextMessage^.Source.ID[0];
-                DestNode^.TrainData.Controller.ID[1] := NextMessage^.Source.ID[1];
+                DestNode^.TrainData.Controller := NextMessage^.Source;
                 AppCallback_TractionProtocol(DestNode, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
               end
@@ -503,15 +487,14 @@ begin
           MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
           MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
           MessageToSend^.Buffer^.DataArray[2] := AMessage^.Buffer^.DataArray[2];
-          if MessageToSend^.Buffer^.DataArray[2] = $00 then
-          begin
-            DestNode^.TrainData.Controller.AliasID := AMessage^.Source.AliasID;
-            DestNode^.TrainData.Controller.ID[0] := AMessage^.Source.ID[0];           // IS THIS THE RIGHT NODE ID ????????
-            DestNode^.TrainData.Controller.ID[1] := AMessage^.Source.ID[1];
-          end;
+          if MessageToSend^.Buffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
+            DestNode^.TrainData.Controller := DestNode^.TrainData.LinkedNode;
+          DestNode^.TrainData.LinkedNode.ID := NULL_NODE_ID;
+          DestNode^.TrainData.LinkedNode.AliasID := 0;
+          DestNode^.TrainData.State := DestNode^.TrainData.State and not TS_WAITING_FOR_CONTROLLER_NOTIFY;
+          AppCallback_TractionProtocolReply(DestNode, AMessage);
+          UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
         end;
-        DestNode^.TrainData.State := DestNode^.TrainData.State and not TS_WAITING_FOR_CONTROLLER_NOTIFY;
-        UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
         Exit;
       end;
   AppCallback_TractionProtocolReply(DestNode, AMessage);
@@ -537,9 +520,9 @@ begin
           MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
           MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
           MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
-          Node^.TrainData.Controller.AliasID := Node^.TrainData.LinkedNode.AliasID;
-          Node^.TrainData.Controller.ID[0] := Node^.TrainData.LinkedNode.ID[0];
-          Node^.TrainData.Controller.ID[1] := Node^.TrainData.LinkedNode.ID[1];
+          Node^.TrainData.Controller := Node^.TrainData.LinkedNode;
+          Node^.TrainData.LinkedNode.AliasID := 0;
+          Node^.TrainData.LinkedNode.ID := NULL_NODE_ID;
           AppCallback_TractionProtocol(Node, MessageToSend);
           OutgoingMessage(MessageToSend);
         end

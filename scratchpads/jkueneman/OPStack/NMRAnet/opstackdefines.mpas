@@ -298,7 +298,11 @@ type
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
     StateMachineMessages: POPStackMessage;                                      // Linked List of Messages that need to run statemachine to operate allocated for this node
+    {$IFDEF FPC}
+    UserData: Pointer;
+    {$ELSE}
     UserData: ^Byte;                                                            // Pointer to User Data
+    {$ENDIF}
     iUserStateMachine: Byte;                                                    // For user (application level) statemachine
     {$IFDEF SUPPORT_TRACTION}TrainData: TTrainData;{$ENDIF}                     // Realtime information about the Train Node
     {$IFDEF SUPPORT_TRACTION_PROXY}TrainProxyData: TTrainProxyData;{$ENDIF}               // Realtime information about the Proxy Node

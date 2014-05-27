@@ -1,0 +1,48 @@
+object FormCabChooser: TFormCabChooser
+  Left = 417
+  Height = 239
+  Top = 259
+  Width = 480
+  Caption = 'Cab ID Chooser'
+  ClientHeight = 239
+  ClientWidth = 480
+  OnCloseQuery = FormCloseQuery
+  OnShow = FormShow
+  LCLVersion = '1.2.0.3'
+  object Label1: TLabel
+    Left = 15
+    Height = 16
+    Top = 21
+    Width = 194
+    Caption = 'Select a CabID for this Throttle'
+    ParentColor = False
+  end
+  object ListViewCabID: TListView
+    Left = 15
+    Height = 152
+    Top = 40
+    Width = 441
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Checkboxes = True
+    Columns = <>
+    TabOrder = 0
+  end
+  object ButtonCancel: TButton
+    Left = 317
+    Height = 22
+    Top = 200
+    Width = 139
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 1
+  end
+  object ButtonOk: TButton
+    Left = 168
+    Height = 22
+    Top = 200
+    Width = 139
+    Caption = 'Ok'
+    ModalResult = 1
+    TabOrder = 2
+  end
+end

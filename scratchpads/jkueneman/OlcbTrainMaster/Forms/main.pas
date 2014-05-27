@@ -12,7 +12,7 @@ uses
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
   template_hardware, opstackcore, template_configuration, template_node,
-  opstackbuffers;
+  opstackbuffers, NMRAnetNceBridgeDefines, cabIDchooser, opstackdefines;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';
@@ -292,10 +292,10 @@ type
     procedure StoreSettings(SettingType: TLoadSettingType);
     procedure ThrottleClosing(Throttle: TFormThrottle);
     procedure ThrottleHiding(Throttle: TFormThrottle);
-    procedure DispatchTask(Task: TTaskOlcbBase);
-    procedure TaskDestroy(Sender: TTaskOlcbBase);
     procedure UpdateMessageCountUI;
     procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
+
+    function CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
 
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
     property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
@@ -331,30 +331,31 @@ uses
 procedure TFormOlcbTrainMaster.ActionAddNewThrottleExecute(Sender: TObject);
 var
   Throttle: TFormThrottle;
+  CabChooser: TFormCabChooser;
   Node: TOlcbThrottleTreeNode;
+  CabID: Word;
 begin
-  if  Throttles.Count < USER_MAX_NODE_COUNT - 1 then
+  if  Throttles.Count <= (ID_MAX_DEVICE - ID_MIN_DEVICE) then
   begin
-    Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, @DispatchTask, ImageList16x16);
-    Throttle.PanelMain.Enabled := False;  // Not until the Node is created
-    Throttle.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
-    if Assigned(Throttle) then
+    CabChooser := TFormCabChooser.Create(Self);
+    CabChooser.Throttles := Self.Throttles;
+    if CabChooser.ShowModal = mrOK then
     begin
-      Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
-      Node.Throttle := Throttle;
-      UpdateUI;
-
-      System.EnterCriticalsection(OPStackCriticalSection);
-      Sync.Link[Sync.NextLink].Throttle.ObjPtr := Throttle;
-      Sync.Link[Sync.NextLink].SyncState := SYNC_THROTTLE_OBJPTR;
-      Inc(Sync.NextLink);
-      Sync.DatabaseChanged := True;
-      System.LeaveCriticalsection(OPStackCriticalSection);
-      Throttle.TimerGeneralTimeout.Interval := 1000;
-      Throttle.TimerGeneralTimeout.Enabled := True;
+      Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, nil, ImageList16x16, CabChooser.CabID);
+      if Assigned(Throttle) then
+      begin
+        Throttle.PanelMain.Enabled := False;                                        // Not until the Node is created
+        Throttle.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
+        Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
+        Node.Throttle := Throttle;
+        UpdateUI;
+        Throttle.TimerGeneralTimeout.Interval := 1000;
+        Throttle.TimerGeneralTimeout.Enabled := True;
+      end;
     end;
+    CabChooser.Close;
   end else
-    ShowMessage('OpenLCB node stack exhausted, can not create any more throttles');
+    ShowMessage('OpenLCB stack exhausted, can not create any more throttles');
 end;
 
 procedure TFormOlcbTrainMaster.ActionCloseAllThrottlesExecute(Sender: TObject);
@@ -465,10 +466,10 @@ begin
 end;
 
 procedure TFormOlcbTrainMaster.ActionRediscoverProxiesExecute(Sender: TObject);
-var
-  Task: TTaskIdentifyProducer;
+//var
+ // Task: TTaskIdentifyProducer;
 begin
-  TreeViewProxies.Items.Clear;
+{  TreeViewProxies.Items.Clear;
   Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_IS_PROXY);
   try
     ComPortHub.AddTask(Task);
@@ -476,7 +477,7 @@ begin
     Task.Free;
   finally
     Task.Free;
-  end;
+  end; }
 end;
 
 procedure TFormOlcbTrainMaster.ActionShowAllThrottlesExecute(Sender: TObject);
@@ -523,6 +524,70 @@ end;
 procedure TFormOlcbTrainMaster.ButtonRemoteLocalHostClick(Sender: TObject);
 begin
   EditEthernetRemoteIP.Text := '127.0.0.1';
+end;
+
+function TFormOlcbTrainMaster.CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to Throttles.Count - 1 do
+  begin
+    if Throttles[i].CabID = CabAddress then
+    begin
+      if Assigned(Node) then
+      begin
+        if Throttles[i].TrainAlias <> Node^.Info.AliasID then
+        begin
+          Throttles[i].TrainAlias := Node^.Info.AliasID;
+          Throttles[i].StatusBar.Panels[1].Text := 'Alias ID: 0x' + IntTohex(Node^.Info.AliasID, 4);
+          Throttles[i].PanelMain.Enabled := True;
+        end;
+
+        if Throttles[i].AllocateByAddressFlagged then
+        begin
+          case Throttles[i].AllocateByAddresStateMachine of
+            0 : begin
+                  UART_RX_StateMachine(NCE_CAB_SELECT_LOCO);
+                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                  Throttles[i].AllocateByAddresStateMachine := Throttles[i].AllocateByAddresStateMachine + 1;
+                  Result := True;
+                end;
+            1 : begin
+                  UART_RX_StateMachine(NCE_CAB_TOGGLE_F1_1);
+                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                  Throttles[i].AllocateByAddresStateMachine := Throttles[i].AllocateByAddresStateMachine + 1;
+                  Result := True;
+                end;
+            2 : begin
+                  UART_RX_StateMachine(NCE_CAB_TOGGLE_F2_2);
+                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                  Throttles[i].AllocateByAddresStateMachine := Throttles[i].AllocateByAddresStateMachine + 1;
+                  Result := True;
+                end;
+            3 : begin
+                  UART_RX_StateMachine(NCE_CAB_ENTER);
+                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                  Throttles[i].AllocateByAddressFlagged := False;
+                  Result := True;
+                end;
+          end;
+        end else
+        begin
+          UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
+          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+          Result := True;
+        end;
+
+        Break
+      end else
+      begin
+        UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
+        UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+        Result := True;
+      end;
+    end;
+  end;
 end;
 
 procedure TFormOlcbTrainMaster.ComboBoxBaudChange(Sender: TObject);
@@ -736,11 +801,8 @@ begin
   Markup.IgnoreKeywords := False;
 
   FConfigurationFile := '';
-
-  Template_UserStateMachine_OnTaskDestroy := @TaskDestroy;
-
-//  EthernetHub.OnBeforeDestroyTask := @HubDestroyTask;
-
+  PingEnumlatorFunc := @CabPingEmulator;
+  UserStateMachine_Initialize;
 end;
 
 procedure TFormOlcbTrainMaster.FormDestroy(Sender: TObject);
@@ -893,38 +955,15 @@ begin
   LoadSettings(lstGeneral)
 end;
 
-procedure TFormOlcbTrainMaster.TaskDestroy(Sender: TTaskOlcbBase);
-var
-  Node: TTreeNode;
-begin
-  if Sender is TTaskSimpleNodeInformation then
-  begin
-    TreeViewProxies.Items.AddChild(nil, (Sender as TTaskSimpleNodeInformation).Snip.SniiMfgName);
-  end;
-end;
-
 procedure TFormOlcbTrainMaster.ThrottleClosing(Throttle: TFormThrottle);
 var
   i: Integer;
-  Link: PLinkRec;
 begin
   for i := 0 to TreeViewThrottles.Items.Count - 1 do
   begin
     if (TreeViewThrottles.Items[i] as TOlcbThrottleTreeNode).Throttle = Throttle then
     begin
       TreeViewThrottles.Items.Delete(TreeViewThrottles.Items[i]);
-      System.EnterCriticalsection(OPStackCriticalSection);
-      try
-        Link := Throttle.FindSyncLink(False);
-        if Assigned(Link) then
-        begin
-          Link^.SyncState := SYNC_THROTTLE_OBJPTR;
-          Link^.Throttle.ObjPtr := nil;              // Deallocate
-          Sync.DatabaseChanged := True;
-        end;
-      finally
-        System.LeaveCriticalsection(OPStackCriticalSection);
-      end;
       Break;
     end;
   end;
@@ -944,13 +983,6 @@ end;
 procedure TFormOlcbTrainMaster.TimerOpStackTimerTimer(Sender: TObject);
 begin
   OPStackCore_Timer;
-end;
-
-procedure TFormOlcbTrainMaster.DispatchTask(Task: TTaskOlcbBase);
-begin
-  EthernetHub.AddTask(Task);
-  ComPortHub.AddTask(Task);
-  Task.Free;  // Task is Cloned
 end;
 
 procedure TFormOlcbTrainMaster.EditAliasIDChange(Sender: TObject);

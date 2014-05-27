@@ -328,8 +328,8 @@ object FormThrottle: TFormThrottle
     Width = 588
     Panels = <    
       item
-        Text = 'Status:'
-        Width = 50
+        Text = 'Cab ID:'
+        Width = 100
       end    
       item
         Width = 500

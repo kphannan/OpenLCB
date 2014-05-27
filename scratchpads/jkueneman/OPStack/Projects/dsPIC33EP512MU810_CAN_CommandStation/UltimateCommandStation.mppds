@@ -72,7 +72,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=7
+Count=8
 File0=UltimateCommandStation.mpas
 File1=..\..\NMRAnet\opstackcore_traction.mpas
 File2=..\..\NMRAnet\opstacknode.mpas
@@ -80,6 +80,7 @@ File3=..\..\NMRAnet\opstackbuffers.mpas
 File4=Templates\template_userstatemachine.mpas
 File5=..\..\NMRAnet\opstackcore_traction_proxy.mpas
 File6=..\..\NMRAnet\opstackcore.mpas
+File7=..\..\NMRAnet\nmranetdefines.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -89,19 +90,27 @@ Count=2
 File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
-Count=12
+Count=20
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
-Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
-Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path10=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path11=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
+Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
+Path5=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
+Path6=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
+Path7=E:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path8=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path9=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path10=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path11=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path12=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path13=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\Templates\
+Path14=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path15=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path16=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path17=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path18=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path19=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
 [HEADER_PATH]
 Count=0
 [HEADERS]
