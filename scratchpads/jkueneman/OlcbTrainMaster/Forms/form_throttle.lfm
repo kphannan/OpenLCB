@@ -332,7 +332,10 @@ object FormThrottle: TFormThrottle
         Width = 100
       end    
       item
-        Width = 500
+        Width = 200
+      end    
+      item
+        Width = 200
       end>
     SimplePanel = False
   end

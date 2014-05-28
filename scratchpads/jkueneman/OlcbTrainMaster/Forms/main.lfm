@@ -97,6 +97,15 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
             Action = ActionAddNewThrottle
             TabOrder = 4
           end
+          object Button1: TButton
+            Left = 333
+            Height = 25
+            Top = 9
+            Width = 75
+            Caption = 'Button1'
+            OnClick = Button1Click
+            TabOrder = 5
+          end
         end
         object GroupBox1: TGroupBox
           Left = 15

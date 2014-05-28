@@ -177,10 +177,12 @@ type
     procedure TrackBarSpeedChange(Sender: TObject);
   private
     FAllocateByAddressFlagged: Boolean;
-    FAllocateByAddresStateMachine: Integer;
+    FCabSubStateMachine: Integer;
     FAllocated: Boolean;
     FCabID: Word;
+    FCabStateMachine: Integer;
     FClosing: Boolean;
+    FCurrentSpeed: THalfFloat;
     FThrottleAlias: Word;
     FTrainAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
@@ -192,7 +194,6 @@ type
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
-    FPotentialAlias: Word;
     procedure RunWriteFdiFile(AliasID: Word; FileName: string);
     procedure RunProtocolSupport(AliasID: Word);
     procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
@@ -217,7 +218,6 @@ type
     property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
     property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
     property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
-    property PotentialAlias: Word read FPotentialAlias write FPotentialAlias;
     property Closing: Boolean read FClosing write FClosing;
   public
     { public declarations }
@@ -229,8 +229,11 @@ type
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
 
+    property CabStateMachine: Integer read FCabStateMachine write FCabStateMachine;
     property AllocateByAddressFlagged: Boolean read FAllocateByAddressFlagged write FAllocateByAddressFlagged;
-    property AllocateByAddresStateMachine: Integer read FAllocateByAddresStateMachine write FAllocateByAddresStateMachine;
+    property CabSubStateMachine: Integer read FCabSubStateMachine write FCabSubStateMachine;
+
+    property CurrentSpeedDir: THalfFloat read FCurrentSpeed write FCurrentSpeed;
 
     procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
     procedure UpdateStatus(NewStatus: string);
@@ -403,6 +406,8 @@ begin
   FClosing := False;
   FCabID := 0;
   FAllocateByAddressFlagged := False;
+  FCabStateMachine := 0;
+  FCurrentSpeed := 0;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -414,7 +419,7 @@ end;
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
   AllocateByAddressFlagged := True;
-  AllocateByAddresStateMachine := 0;
+  CabSubStateMachine := 0;
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
@@ -854,18 +859,13 @@ begin
 end;
 
 procedure TFormThrottle.RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
-{var
-  Task: TTaskTractionSpeed;
+var
   Speed: single;
-  CalculatedSpeed: THalfFloat;   }
 begin
-{  Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
+  Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
   if not IsForward then
     Speed := -Speed;
-  CalculatedSpeed := FloatToHalf( Speed);
-  Task := TTaskTractionSpeed.Create(ThrottleAlias, AliasID, True, CalculatedSpeed, EmergencyStop);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);  }
+  CurrentSpeedDir := FloatToHalf( Speed);
 end;
 
 procedure TFormThrottle.RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
@@ -909,8 +909,8 @@ begin
    //     Include(FWaitingActions, wa_FDItoFunctions);
    //     RunProtocolSupport(FTrainAlias);         // Kick it off
       end;
-      PotentialAlias := 0;
     end;
+    UpdateUI;
   end;
 end;
 

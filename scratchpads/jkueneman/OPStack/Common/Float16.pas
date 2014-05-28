@@ -41,14 +41,16 @@ const
 //function FloatToFloat16(Float: Real): Word;
 function Float16ToInt(Half: Word): Integer;
 
-function FloatToHalf(Float: real): THalfFloat;
-function HalfToFloat(Half: THalfFloat): real;
+function FloatToHalf(Float: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): THalfFloat;
+function HalfToFloat(Half: THalfFloat): {$IFDEF FPC}single{$ELSE}real{$ENDIF};
 
 implementation
 
 
 type
   PReal = ^Real;
+  PDouble = ^double;
+  PSingle = ^single;
   PDWord = ^DWord;
 
 
@@ -66,7 +68,7 @@ begin
     Result := Fraction shr (-LeftShiftCount); // final shift into place
 end;
 
-function HalfToFloat(Half: THalfFloat): real;
+function HalfToFloat(Half: THalfFloat): {$IFDEF FPC}single{$ELSE}real{$ENDIF};
 var
   Dst, Sign, Mantissa: DWord;
   Exp: LongInt;
@@ -117,10 +119,15 @@ begin
   end;
 
   // Reinterpret LongWord as real
+  {$IFDEF FPC}
+  Result := PSingle(@Dst)^;
+  {$ELSE}
   Result := PReal(@Dst)^;
+  {$ENDIF}
+
 end;
 
-function FloatToHalf(Float: real): THalfFloat;
+function FloatToHalf(Float: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): THalfFloat;
 var
   Src: DWord;
   Sign, Exp, Mantissa: LongInt;

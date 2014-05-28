@@ -12,7 +12,8 @@ uses
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
   template_hardware, opstackcore, template_configuration, template_node,
-  opstackbuffers, NMRAnetNceBridgeDefines, cabIDchooser, opstackdefines;
+  opstackbuffers, NMRAnetNceBridgeDefines, cabIDchooser, opstackdefines,
+  Float16;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';
@@ -68,6 +69,7 @@ type
     ActionCOMConnection: TAction;
     ActionList: TActionList;
     BitBtnRescanPorts: TBitBtn;
+    Button1: TButton;
     ButtonRefreshBufferCount: TButton;
     ButtonLocalHost: TButton;
     ButtonRemoteLocalHost: TButton;
@@ -228,6 +230,7 @@ type
     procedure ActionStartNodeExecute(Sender: TObject);
     procedure ActionZeroizeConfigMemoryExecute(Sender: TObject);
     procedure BitBtnRescanPortsClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
     procedure ButtonLocalHostClick(Sender: TObject);
     procedure ButtonRefreshBufferCountClick(Sender: TObject);
     procedure ButtonRemoteLocalHostClick(Sender: TObject);
@@ -340,7 +343,7 @@ begin
     CabChooser := TFormCabChooser.Create(Self);
     CabChooser.Throttles := Self.Throttles;
     if CabChooser.ShowModal = mrOK then
-    begin
+    begin      // In the Ping callback it will see a Cab without a link and fire off the Traction Proxy, it uses the CabID to match Node with Throttle
       Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, nil, ImageList16x16, CabChooser.CabID);
       if Assigned(Throttle) then
       begin
@@ -511,6 +514,19 @@ begin
   ScanComPorts;
 end;
 
+procedure TFormOlcbTrainMaster.Button1Click(Sender: TObject);
+var
+  H: THalfFloat;
+  R: double;
+begin
+  H := FloatToHalf(100.0);
+  H := H + 1;
+  H := H - 1;
+  R := HalfToFloat(H);
+  R := R + 1;
+  R := R - 1;
+end;
+
 procedure TFormOlcbTrainMaster.ButtonLocalHostClick(Sender: TObject);
 begin
   EditEthernetLocalIP.Text := '127.0.0.1';
@@ -526,61 +542,151 @@ begin
   EditEthernetRemoteIP.Text := '127.0.0.1';
 end;
 
+const
+  STATE_CAB_IDLE = 0;
+  STATE_CAB_ALLOCATE_BY_ADDRESS = 1;
+  STATE_CAB_MACRO = 2;
+  STATE_CAB_UPDATE_SPEEDDIR = 3;
+
+
 function TFormOlcbTrainMaster.CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
 var
   i: Integer;
+  TrainSpeed, CabSpeed: single;
+  IsReverse: Boolean;
 begin
   Result := False;
   for i := 0 to Throttles.Count - 1 do
   begin
-    if Throttles[i].CabID = CabAddress then
+    if Assigned(Node) then
     begin
-      if Assigned(Node) then
+      if Throttles[i].CabID = CabAddress then
       begin
-        if Throttles[i].TrainAlias <> Node^.Info.AliasID then
+        // Sync the Node with the Cab UI
+        if Throttles[i].ThrottleAlias <> Node^.Info.AliasID then
+        begin
+          Throttles[i].ThrottleAlias := Node^.Info.AliasID;
+          Throttles[i].StatusBar.Panels[1].Text := 'Cab Alias ID: 0x' + IntTohex(Node^.Info.AliasID, 4);
+          Throttles[i].PanelMain.Enabled := True;
+        end;
+        // Sync the Node with the Cab UI
+        if Throttles[i].TrainAlias <> Node^.TrainData.LinkedNode.AliasID then
         begin
           Throttles[i].TrainAlias := Node^.Info.AliasID;
-          Throttles[i].StatusBar.Panels[1].Text := 'Alias ID: 0x' + IntTohex(Node^.Info.AliasID, 4);
+          Throttles[i].StatusBar.Panels[2].Text := 'Train Alias ID: 0x' + IntTohex(Node^.TrainData.LinkedNode.AliasID, 4);
           Throttles[i].PanelMain.Enabled := True;
         end;
 
-        if Throttles[i].AllocateByAddressFlagged then
+        // Test for Allocation by Address, and the statemachine is not busy
+        if (Throttles[i].CabStateMachine = STATE_CAB_IDLE) and (Throttles[i].AllocateByAddressFlagged) then
         begin
-          case Throttles[i].AllocateByAddresStateMachine of
-            0 : begin
-                  UART_RX_StateMachine(NCE_CAB_SELECT_LOCO);
-                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                  Throttles[i].AllocateByAddresStateMachine := Throttles[i].AllocateByAddresStateMachine + 1;
-                  Result := True;
-                end;
-            1 : begin
-                  UART_RX_StateMachine(NCE_CAB_TOGGLE_F1_1);
-                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                  Throttles[i].AllocateByAddresStateMachine := Throttles[i].AllocateByAddresStateMachine + 1;
-                  Result := True;
-                end;
-            2 : begin
-                  UART_RX_StateMachine(NCE_CAB_TOGGLE_F2_2);
-                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                  Throttles[i].AllocateByAddresStateMachine := Throttles[i].AllocateByAddresStateMachine + 1;
-                  Result := True;
-                end;
-            3 : begin
-                  UART_RX_StateMachine(NCE_CAB_ENTER);
-                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                  Throttles[i].AllocateByAddressFlagged := False;
-                  Result := True;
-                end;
-          end;
+          Throttles[i].CabStateMachine := STATE_CAB_ALLOCATE_BY_ADDRESS;
+          Throttles[i].CabSubStateMachine := 0;
+          Throttles[i].AllocateByAddressFlagged := False;
         end else
-        begin
-          UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
-          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-          Result := True;
-        end;
+        if Node^.TrainData.SpeedDir <> Throttles[i].CurrentSpeedDir then
+          Throttles[i].CabStateMachine := STATE_CAB_UPDATE_SPEEDDIR;
 
-        Break
-      end else
+        case Throttles[i].CabStateMachine of
+          STATE_CAB_IDLE :
+              begin
+                UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
+                UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                Result := True;
+              end;
+          STATE_CAB_ALLOCATE_BY_ADDRESS :
+              begin
+                case Throttles[i].CabSubStateMachine of
+                    0 : begin
+                          UART_RX_StateMachine(NCE_CAB_SELECT_LOCO);
+                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
+                          Result := True;
+                        end;
+                    1 : begin
+                          UART_RX_StateMachine(NCE_CAB_TOGGLE_F1_1);
+                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
+                          Result := True;
+                        end;
+                    2 : begin
+                          UART_RX_StateMachine(NCE_CAB_TOGGLE_F2_2);
+                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
+                          Result := True;
+                        end;
+                    3 : begin
+                          UART_RX_StateMachine(NCE_CAB_ENTER);
+                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                          Throttles[i].AllocateByAddressFlagged := False;
+                          Throttles[i].CabStateMachine := STATE_CAB_IDLE;
+                          Result := True;
+                        end;
+
+                end;  // Case
+              end;
+          STATE_CAB_MACRO :
+              begin
+                 case Throttles[i].CabSubStateMachine of
+                    0 : begin
+                          UART_RX_StateMachine(NCE_CAB_SELECT_MACRO);
+                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
+                          Result := True;
+                        end;
+                    // Add Macro code here....
+                    1 : begin
+                          UART_RX_StateMachine(NCE_CAB_ENTER);
+                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                          Throttles[i].AllocateByAddressFlagged := False;
+                          Throttles[i].CabStateMachine := STATE_CAB_IDLE;
+                          Result := True;
+                        end;
+
+                end;  // Case
+              end;
+          STATE_CAB_UPDATE_SPEEDDIR :
+              begin
+                IsReverse := Throttles[i].CurrentSpeedDir and $8000 <> 0;
+                CabSpeed := ( HalfToFloat(Throttles[i].CurrentSpeedDir and not $8000) * (Node^.TrainData.SpeedSteps/100)) ;
+                TrainSpeed := ( HalfToFloat(Node^.TrainData.SpeedDir and not $8000) * (Node^.TrainData.SpeedSteps/100)) ;
+                if CabSpeed <> TrainSpeed then
+                begin
+                  if CabSpeed - TrainSpeed > 0 then
+                  begin   // Slowing Down
+                     if Abs(CabSpeed - TrainSpeed) > 4 then
+                     begin
+                       UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_FASTER);
+                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                       Result := True;
+                     end else
+                     begin
+                       UART_RX_StateMachine(NCE_CAB_ONE_STEP_FASTER);
+                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                       Result := True;
+                     end;
+                  end else
+                  begin  // Speeding Up
+                     if Abs(CabSpeed - TrainSpeed) > 4 then
+                     begin
+                       UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_SLOWER);
+                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                       Result := True;
+                     end else
+                     begin
+                       UART_RX_StateMachine(NCE_CAB_ONE_STEP_SLOWER);
+                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                       Result := True;
+                     end;
+                  end;
+                end;
+                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
+              end;
+        end;
+      end;
+    end else
+    begin   // Cab is just logging on (no node yet) so just tell the caller we are here
+      if Throttles[i].CabID = CabAddress then
       begin
         UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
         UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);

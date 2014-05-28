@@ -398,15 +398,15 @@ end;
 
 // ****************************************************************************
 // *****************************************************************************
-function ChangeSpeed(Speed: THalfFloat; Delta: Integer): Word;
+function ChangeSpeed(Speed: THalfFloat; Delta: Integer; SpeedStep: Byte): Word;
 var
   IsReverse: Boolean;
-  SpeedReal: real;
+  SpeedReal:{$IFDEF FPC}single{$ELSE}real{$ENDIF};
 begin
   IsReverse := Speed and $8000 <> 0;
   SpeedReal := HalfToFloat( Speed and not $8000);
 
-  SpeedReal := SpeedReal + Delta;
+  SpeedReal := SpeedReal + (Delta * 100/SpeedStep);
   if SpeedReal > 100.0 then
     SpeedReal := 100.0
   else
@@ -1107,7 +1107,7 @@ begin
                   end;
                 NCE_CAB_ONE_STEP_FASTER             :
                   begin
-                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, +1);
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, +1, Node^.TrainData.SpeedSteps);
                     if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
                     begin
                       Node^.TrainData.SpeedDir := NewSpeed;
@@ -1117,7 +1117,7 @@ begin
                   end;
                 NCE_CAB_ONE_STEP_SLOWER             :
                   begin
-                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, -1);
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, -1, Node^.TrainData.SpeedSteps);
                     if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
                     begin
                       Node^.TrainData.SpeedDir := NewSpeed;
@@ -1204,7 +1204,7 @@ begin
                   end;
                 NCE_CAB_FIVE_STEPS_FASTER           :
                   begin
-                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, +5);
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, +5, Node^.TrainData.SpeedSteps);
                     if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
                     begin
                       Node^.TrainData.SpeedDir := NewSpeed;
@@ -1214,7 +1214,7 @@ begin
                   end;
                 NCE_CAB_FIVE_STEPS_SLOWER           :
                   begin
-                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, -5);
+                    NewSpeed := ChangeSpeed(Node^.TrainData.SpeedDir, -5, Node^.TrainData.SpeedSteps);
                     if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, NewSpeed) then
                     begin
                       Node^.TrainData.SpeedDir := NewSpeed;

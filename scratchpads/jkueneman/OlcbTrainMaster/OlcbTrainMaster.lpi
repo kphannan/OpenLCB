@@ -89,6 +89,7 @@
         <Filename Value="Forms\cabidchooser.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormCabChooser"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="cabIDchooser"/>
       </Unit7>
