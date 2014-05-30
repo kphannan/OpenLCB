@@ -549,6 +549,7 @@ begin
   EditEthernetRemoteIP.Text := '127.0.0.1';
 end;
 
+// State machine constants for the emulated NCE Throttle
 const
   STATE_CAB_IDLE                 = 0;
   STATE_CAB_ALLOCATE_BY_ADDRESS  = 1;
@@ -556,8 +557,15 @@ const
   STATE_CAB_UPDATE_SPEEDDIR      = 3;
   STATE_CAB_TOGGLE_DIR           = 4;
   STATE_CAB_FUNCTIONS            = 5;
+  STATE_CAB_FREE_TRAIN           = 6;
+  STATE_CAB_RELEASE_TRAIN        = 7;
 
 
+  // *****************************************************************************
+// Here is where we pretend to be a NCE throttle that receives a PING (we don't care about
+// the SYNC pulse here) and replies with a 2 byte response based on what the delta between
+// the TrainInfo data and the current state of the Throttle
+// *****************************************************************************
 function TFormOlcbTrainMaster.CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
 var
   i, j: Integer;
@@ -586,6 +594,14 @@ begin
           Throttles[i].PanelMain.Enabled := True;
         end;
 
+        // Test to Free the train
+        if Throttles[i].FreeTrain then
+          Throttles[i].CabStateMachine := STATE_CAB_FREE_TRAIN
+        else
+        // Test to Release the Train
+        if Throttles[i].ReleaseTrain then
+          Throttles[i].CabStateMachine := STATE_CAB_RELEASE_TRAIN
+        else
         // Test for Allocation by Address, and the statemachine is not busy
         if (Throttles[i].CabStateMachine = STATE_CAB_IDLE) and (Throttles[i].AllocateByAddressFlagged) then
         begin
@@ -593,15 +609,19 @@ begin
           Throttles[i].CabSubStateMachine := 0;
           Throttles[i].AllocateByAddressFlagged := False;
         end else
+        // Test for a Direction Toggle
         if Throttles[i].ToggleDir then
           Throttles[i].CabStateMachine := STATE_CAB_TOGGLE_DIR
         else
+        // Test for a Speed Change (or direction Change)
         if Node^.TrainData.SpeedDir <> Throttles[i].CurrentSpeedDir then
           Throttles[i].CabStateMachine := STATE_CAB_UPDATE_SPEEDDIR
         else
+        // Test for a Function change
         if Node^.TrainData.Functions <> Throttles[i].CurrentFunctions then
           Throttles[i].CabStateMachine := STATE_CAB_FUNCTIONS;
 
+        // Run the Cab Statemachine based on what changes between the throttle and train were detected
         case Throttles[i].CabStateMachine of
           STATE_CAB_IDLE :
               begin
@@ -725,6 +745,14 @@ begin
                   end;
                 end;
                 Throttles[i].CabStateMachine := STATE_CAB_IDLE;
+              end;
+          STATE_CAB_FREE_TRAIN :
+              begin
+                Throttles[i].CabStateMachine := STATE_CAB_IDLE;   // NCE does not have a command to do this....
+              end;
+          STATE_CAB_RELEASE_TRAIN :
+              begin
+                Throttles[i].CabStateMachine := STATE_CAB_IDLE;  // NCE does not have a command to do this....
               end;
         end;
       end;

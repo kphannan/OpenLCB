@@ -188,6 +188,8 @@ type
     FCurrentFunctions: DWord;
     FCurrentFuntions: DWord;
     FCurrentSpeed: THalfFloat;
+    FFreeTrain: Boolean;
+    FReleaseTrain: Boolean;
     FThrottleAlias: Word;
     FToggleDir: Boolean;
     FTrainAlias: Word;
@@ -240,6 +242,8 @@ type
     property AllocateByAddressFlagged: Boolean read FAllocateByAddressFlagged write FAllocateByAddressFlagged;
     property CabSubStateMachine: Integer read FCabSubStateMachine write FCabSubStateMachine;
     property ToggleDir: Boolean read FToggleDir write FToggleDir;
+    property ReleaseTrain: Boolean read FReleaseTrain write FReleaseTrain;
+    property FreeTrain: Boolean read FFreeTrain write FFreeTrain;
 
     property CurrentSpeedDir: THalfFloat read FCurrentSpeed write FCurrentSpeed;
     property CurrentFunctions: DWord read GetCurrentFuntions write FCurrentFunctions;
@@ -384,8 +388,6 @@ begin
 end;
 
 procedure TFormThrottle.FormCloseQuery(Sender: TObject; var CanClose: boolean);
-//var
- // Link: PLinkRec;
 begin
   if not Closing then
   begin
@@ -393,11 +395,7 @@ begin
     Closing := True;
     EnterCriticalsection(OPStackCriticalSection);
     try
-  //    Link := FindSyncLink(False);
-  //    if Assigned(Link) then
-  //    begin
-  //      Link^.SyncState := Link^.SyncState or SYNC_CLOSING;
-  //    end;
+
     finally
       LeaveCriticalsection(OPStackCriticalSection);
     end;
@@ -419,6 +417,8 @@ begin
   FCurrentSpeed := 0;
   FToggleDir := False;
   FCurrentFunctions := 0;
+  FReleaseTrain := False;
+  FFreeTrain := False;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -463,13 +463,13 @@ end;
 
 procedure TFormThrottle.ActionAllocationFreeExecute(Sender: TObject);
 begin
-  TrackBarSpeed.Position := 0;
-
+  FFreeTrain := True;
+  UpdateUI
 end;
 
 procedure TFormThrottle.ActionAllocationReleaseExecute(Sender: TObject);
 begin
-  TrainAlias := 0;
+  FReleaseTrain := True;
   UpdateUI;
 end;
 

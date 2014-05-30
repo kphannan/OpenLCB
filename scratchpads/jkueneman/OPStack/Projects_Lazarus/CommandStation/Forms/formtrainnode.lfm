@@ -136,6 +136,7 @@ object FormIsTrainNode: TFormIsTrainNode
     Caption = 'Disallow Throttle Change'
     Enabled = False
     TabOrder = 1
+    Visible = False
   end
   object Label7: TLabel
     Left = 10

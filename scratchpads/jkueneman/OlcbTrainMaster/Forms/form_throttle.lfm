@@ -1,11 +1,11 @@
 object FormThrottle: TFormThrottle
   Left = 613
-  Height = 482
+  Height = 481
   Top = 170
   Width = 588
   BorderStyle = bsToolWindow
   Caption = 'Open LCB Awesome Throttle - Initializing OpenLCB Node...'
-  ClientHeight = 482
+  ClientHeight = 481
   ClientWidth = 588
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
@@ -332,7 +332,7 @@ object FormThrottle: TFormThrottle
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
-    Top = 467
+    Top = 466
     Width = 588
     Panels = <    
       item
