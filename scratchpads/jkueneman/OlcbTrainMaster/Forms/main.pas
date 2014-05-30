@@ -518,7 +518,14 @@ procedure TFormOlcbTrainMaster.Button1Click(Sender: TObject);
 var
   H: THalfFloat;
   R: double;
+  Address, Mask: DWord;
+
 begin
+  Address := 1;
+  Mask := $00000001;
+  Mask := Mask shl Address;
+
+
   H := FloatToHalf(100.0);
   H := H + 1;
   H := H - 1;
@@ -543,15 +550,17 @@ begin
 end;
 
 const
-  STATE_CAB_IDLE = 0;
-  STATE_CAB_ALLOCATE_BY_ADDRESS = 1;
-  STATE_CAB_MACRO = 2;
-  STATE_CAB_UPDATE_SPEEDDIR = 3;
+  STATE_CAB_IDLE                 = 0;
+  STATE_CAB_ALLOCATE_BY_ADDRESS  = 1;
+  STATE_CAB_MACRO                = 2;
+  STATE_CAB_UPDATE_SPEEDDIR      = 3;
+  STATE_CAB_TOGGLE_DIR           = 4;
+  STATE_CAB_FUNCTIONS            = 5;
 
 
 function TFormOlcbTrainMaster.CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
 var
-  i: Integer;
+  i, j: Integer;
   TrainSpeed, CabSpeed: single;
   IsReverse: Boolean;
 begin
@@ -572,7 +581,7 @@ begin
         // Sync the Node with the Cab UI
         if Throttles[i].TrainAlias <> Node^.TrainData.LinkedNode.AliasID then
         begin
-          Throttles[i].TrainAlias := Node^.Info.AliasID;
+          Throttles[i].TrainAlias := Node^.TrainData.LinkedNode.AliasID;
           Throttles[i].StatusBar.Panels[2].Text := 'Train Alias ID: 0x' + IntTohex(Node^.TrainData.LinkedNode.AliasID, 4);
           Throttles[i].PanelMain.Enabled := True;
         end;
@@ -584,8 +593,14 @@ begin
           Throttles[i].CabSubStateMachine := 0;
           Throttles[i].AllocateByAddressFlagged := False;
         end else
+        if Throttles[i].ToggleDir then
+          Throttles[i].CabStateMachine := STATE_CAB_TOGGLE_DIR
+        else
         if Node^.TrainData.SpeedDir <> Throttles[i].CurrentSpeedDir then
-          Throttles[i].CabStateMachine := STATE_CAB_UPDATE_SPEEDDIR;
+          Throttles[i].CabStateMachine := STATE_CAB_UPDATE_SPEEDDIR
+        else
+        if Node^.TrainData.Functions <> Throttles[i].CurrentFunctions then
+          Throttles[i].CabStateMachine := STATE_CAB_FUNCTIONS;
 
         case Throttles[i].CabStateMachine of
           STATE_CAB_IDLE :
@@ -644,40 +659,69 @@ begin
                         end;
 
                 end;  // Case
+                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
               end;
           STATE_CAB_UPDATE_SPEEDDIR :
               begin
                 IsReverse := Throttles[i].CurrentSpeedDir and $8000 <> 0;
-                CabSpeed := ( HalfToFloat(Throttles[i].CurrentSpeedDir and not $8000) * (Node^.TrainData.SpeedSteps/100)) ;
-                TrainSpeed := ( HalfToFloat(Node^.TrainData.SpeedDir and not $8000) * (Node^.TrainData.SpeedSteps/100)) ;
-                if CabSpeed <> TrainSpeed then
+                CabSpeed := ( HalfToFloat(Throttles[i].CurrentSpeedDir and not $8000)) ;
+                TrainSpeed := ( HalfToFloat(Node^.TrainData.SpeedDir and not $8000)) ;
+                if CabSpeed - TrainSpeed = 0 then
+                begin  // Direction change (sign change)
+                  if IsReverse then
+                     UART_RX_StateMachine(NCE_CAB_DIR_REVERSE)
+                  else
+                    UART_RX_StateMachine(NCE_CAB_DIR_FORWARD);
+                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                  Result := True;
+                end else
+                if CabSpeed - TrainSpeed > 0 then
+                begin   // Slowing Down
+                   if Abs(CabSpeed - TrainSpeed) > 4 then
+                   begin
+                     UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_FASTER);
+                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                     Result := True;
+                   end else
+                   begin
+                     UART_RX_StateMachine(NCE_CAB_ONE_STEP_FASTER);
+                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                     Result := True;
+                   end;
+                end else
+                begin  // Speeding Up
+                   if Abs(CabSpeed - TrainSpeed) > 4 then
+                   begin
+                     UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_SLOWER);
+                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                     Result := True;
+                   end else
+                   begin
+                     UART_RX_StateMachine(NCE_CAB_ONE_STEP_SLOWER);
+                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                     Result := True;
+                   end;
+                end;
+                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
+              end;
+          STATE_CAB_TOGGLE_DIR :
+              begin
+                UART_RX_StateMachine(NCE_CAB_DIR_TOGGLE);
+                UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                Throttles[i].ToggleDir := False;
+                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
+                Result := True;
+              end;
+          STATE_CAB_FUNCTIONS :
+              begin
+                for j := 0 to 9 do
                 begin
-                  if CabSpeed - TrainSpeed > 0 then
-                  begin   // Slowing Down
-                     if Abs(CabSpeed - TrainSpeed) > 4 then
-                     begin
-                       UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_FASTER);
-                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                       Result := True;
-                     end else
-                     begin
-                       UART_RX_StateMachine(NCE_CAB_ONE_STEP_FASTER);
-                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                       Result := True;
-                     end;
-                  end else
-                  begin  // Speeding Up
-                     if Abs(CabSpeed - TrainSpeed) > 4 then
-                     begin
-                       UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_SLOWER);
-                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                       Result := True;
-                     end else
-                     begin
-                       UART_RX_StateMachine(NCE_CAB_ONE_STEP_SLOWER);
-                       UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                       Result := True;
-                     end;
+                  if ((Throttles[i].CurrentFunctions shr j) and $00000001) xor ((Node^.TrainData.Functions shr j) and $00000001) <> 0 then
+                  begin
+                    UART_RX_StateMachine(NCE_CAB_TOGGLE_F0_0 + j);
+                    UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
+                    Result := True;
+                    Break;
                   end;
                 end;
                 Throttles[i].CabStateMachine := STATE_CAB_IDLE;

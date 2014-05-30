@@ -52,6 +52,7 @@ type
   { TFormThrottle }
 
   TFormThrottle = class(TForm)
+    ActionToggleDir: TAction;
     ActionQuerySpeed: TAction;
     ActionQueryFunctions: TAction;
     ActionFunction13: TAction;
@@ -103,6 +104,7 @@ type
     ButtonSearchForTrain: TButton;
     ButtonShowHideAllocatePanel: TButton;
     ButtonStop: TButton;
+    ButtonStop1: TButton;
     GroupBoxAddress: TGroupBox;
     GroupBoxAllocation: TGroupBox;
     GroupBoxConfiguration: TGroupBox;
@@ -164,6 +166,7 @@ type
     procedure ActionQueryFunctionsExecute(Sender: TObject);
     procedure ActionQuerySpeedExecute(Sender: TObject);
     procedure ActionToggleAllocationPanelExecute(Sender: TObject);
+    procedure ActionToggleDirExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
@@ -182,8 +185,11 @@ type
     FCabID: Word;
     FCabStateMachine: Integer;
     FClosing: Boolean;
+    FCurrentFunctions: DWord;
+    FCurrentFuntions: DWord;
     FCurrentSpeed: THalfFloat;
     FThrottleAlias: Word;
+    FToggleDir: Boolean;
     FTrainAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
     FComPortHub: TComPortHub;
@@ -194,12 +200,13 @@ type
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
+    function GetCurrentFuntions: DWord;
     procedure RunWriteFdiFile(AliasID: Word; FileName: string);
     procedure RunProtocolSupport(AliasID: Word);
     procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
     procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
     procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
-    procedure RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
+    procedure RunTractionFunction(Address: DWord; Value: Word);
     procedure RunTractionQueryFunctions(AliasID: Word; Address: DWord);
     procedure RunTractionQuerySpeed(AliasID: Word);
     procedure SetAllocatedAlias(AValue: Word);
@@ -232,8 +239,10 @@ type
     property CabStateMachine: Integer read FCabStateMachine write FCabStateMachine;
     property AllocateByAddressFlagged: Boolean read FAllocateByAddressFlagged write FAllocateByAddressFlagged;
     property CabSubStateMachine: Integer read FCabSubStateMachine write FCabSubStateMachine;
+    property ToggleDir: Boolean read FToggleDir write FToggleDir;
 
     property CurrentSpeedDir: THalfFloat read FCurrentSpeed write FCurrentSpeed;
+    property CurrentFunctions: DWord read GetCurrentFuntions write FCurrentFunctions;
 
     procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
     procedure UpdateStatus(NewStatus: string);
@@ -408,12 +417,27 @@ begin
   FAllocateByAddressFlagged := False;
   FCabStateMachine := 0;
   FCurrentSpeed := 0;
+  FToggleDir := False;
+  FCurrentFunctions := 0;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
 begin
   AllocationPanelToggleExpand := Width = 392;
   TimerToggleAnimation.Enabled := True;
+end;
+
+procedure TFormThrottle.ActionToggleDirExecute(Sender: TObject);
+begin
+  ToggleDir := True;
+  if RadioGroupDirection.ItemIndex = 0 then
+    RadioGroupDirection.ItemIndex := 1
+  else
+    RadioGroupDirection.ItemIndex := 0;
+  if CurrentSpeedDir and $8000 <> 0 then
+    CurrentSpeedDir := CurrentSpeedDir and not $8000
+  else
+    CurrentSpeedDir := $8000;
 end;
 
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
@@ -467,175 +491,175 @@ end;
 procedure TFormThrottle.ActionFunction0Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 0, (Sender as TComponent).Tag)
+  RunTractionFunction(0, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction10Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 10, (Sender as TComponent).Tag)
+  RunTractionFunction(10, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction11Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 11, (Sender as TComponent).Tag)
+  RunTractionFunction(11, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction12Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 12, (Sender as TComponent).Tag)
+  RunTractionFunction(12, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction13Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 13, (Sender as TComponent).Tag)
+  RunTractionFunction(13, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction14Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 14, (Sender as TComponent).Tag)
+  RunTractionFunction(14, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction15Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 15, (Sender as TComponent).Tag)
+  RunTractionFunction(15, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction16Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 16, (Sender as TComponent).Tag)
+  RunTractionFunction(16, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction17Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 17, (Sender as TComponent).Tag)
+  RunTractionFunction(17, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction18Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 18, (Sender as TComponent).Tag)
+  RunTractionFunction(18, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction19Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 19, (Sender as TComponent).Tag)
+  RunTractionFunction(19, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction1Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 1, (Sender as TComponent).Tag)
+  RunTractionFunction(1, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction20Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 20, (Sender as TComponent).Tag)
+  RunTractionFunction(20, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction21Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 21, (Sender as TComponent).Tag)
+  RunTractionFunction(21, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction22Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 22, (Sender as TComponent).Tag)
+  RunTractionFunction(22, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction23Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 23, (Sender as TComponent).Tag)
+  RunTractionFunction(23, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction24Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 24, (Sender as TComponent).Tag)
+  RunTractionFunction(24, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction25Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 25, (Sender as TComponent).Tag)
+  RunTractionFunction(25, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction26Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 26, (Sender as TComponent).Tag)
+  RunTractionFunction(26, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction27Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 27, (Sender as TComponent).Tag)
+  RunTractionFunction(27, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction28Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 28, (Sender as TComponent).Tag)
+  RunTractionFunction(28, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction2Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 2, (Sender as TComponent).Tag)
+  RunTractionFunction(2, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction3Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 3, (Sender as TComponent).Tag)
+  RunTractionFunction(3, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction4Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 4, (Sender as TComponent).Tag)
+  RunTractionFunction(4, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction5Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 5, (Sender as TComponent).Tag)
+  RunTractionFunction(5, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction6Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 6, (Sender as TComponent).Tag)
+  RunTractionFunction(6, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction7Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 7, (Sender as TComponent).Tag)
+  RunTractionFunction(7, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction8Execute(Sender: TObject);
 begin
    ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 8, (Sender as TComponent).Tag)
+  RunTractionFunction(8, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction9Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(TrainAlias, 9, (Sender as TComponent).Tag)
+  RunTractionFunction(9, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionQueryFunctionsExecute(Sender: TObject);
@@ -664,9 +688,15 @@ begin
   StatusBar.Panels[0].Text := 'Cab ID: ' + IntToStr(CabID);
 end;
 
+function TFormThrottle.GetCurrentFuntions: DWord;
+begin
+  Result := FCurrentFunctions;
+end;
+
 procedure TFormThrottle.RadioGroupDirectionClick(Sender: TObject);
 begin
-  RunTractionSpeed(TrainAlias, False);
+  if not ToggleDir then
+    RunTractionSpeed(TrainAlias, False);
 end;
 
 procedure TFormThrottle.RadioGroupShortLongClick(Sender: TObject);
@@ -868,13 +898,16 @@ begin
   CurrentSpeedDir := FloatToHalf( Speed);
 end;
 
-procedure TFormThrottle.RunTractionFunction(AliasID: Word; Address: DWord; Value: Word);
-{var
-  Task: TTaskTractionFunction;   }
+procedure TFormThrottle.RunTractionFunction(Address: DWord; Value: Word);
+var
+  Mask: DWord;
 begin
- { Task := TTaskTractionFunction.Create(ThrottleAlias, AliasID, True, Address, Value);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);  }
+  Mask := $00000001;
+  Mask := Mask shl Address;
+  if Value = 0 then
+    FCurrentFunctions := CurrentFunctions and not Mask
+  else
+    FCurrentFunctions := CurrentFunctions or Mask
 end;
 
 procedure TFormThrottle.RunTractionQueryFunctions(AliasID: Word; Address: DWord);
@@ -949,7 +982,7 @@ end;
 
 function TFormThrottle.IsForward: Boolean;
 begin
-  REsult := RadioGroupDirection.ItemIndex = 0;
+  Result := RadioGroupDirection.ItemIndex = 0;
 end;
 
 function TFormThrottle.IsShortAddress: Boolean;
