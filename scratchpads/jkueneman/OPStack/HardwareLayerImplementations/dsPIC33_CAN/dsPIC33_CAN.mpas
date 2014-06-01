@@ -258,6 +258,8 @@ var
   Buffer: TNMRAnetCanBuffer;
   Extended: Boolean;
 begin
+  LATB4_bit := 1;
+  
   dsPIC33_CAN_GlobalInterruptFlagCAN_Event(True);                               // Reset the Global CAN Event Interrupt Flag
   IntCode := dsPIC33_CAN_InterruptCode;
   while IntCode <> ICODE_NO_INTERRUPT do                                        // Use the Interrupt Code to decode the Events that are both Enabled and Flags are set
@@ -301,7 +303,7 @@ begin
       end;
       ICODE_RX_OVERFLOW :
       begin
-        {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('RxOVR'+LF);{$ENDIF}
+   //     {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('RxOVR'+LF);{$ENDIF}
         dsPIC33_CAN_InterruptFlagRXBufferOverflow(True);
       end else
       begin
@@ -310,6 +312,8 @@ begin
     end;
     IntCode := dsPIC33_CAN_InterruptCode;                                       // Get the next code (or no code) flag
   end;
+  
+  LATB4_bit := 0;
 end;
 
 procedure dsPIC33_CAN_Initialize;
