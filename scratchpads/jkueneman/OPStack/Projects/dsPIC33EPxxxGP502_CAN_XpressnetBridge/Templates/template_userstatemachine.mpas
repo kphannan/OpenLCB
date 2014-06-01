@@ -26,7 +26,7 @@ uses
   template_node,
   opstack_api,
   nmranetdefines,
-  NMRAnetXpressnetBridgeDefines,
+  NMRAnetNceBridgeDefines,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -69,6 +69,8 @@ procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
   function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode; external;
   procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
   procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
+  procedure Hardware_EnableInterrupts; external;
+  procedure Hardware_DisableInterrupts; external;
 {$ELSE}
 type
   TPingCabEmulatorFunc = function(CabAddress: Word; Node: PNMRAnetNode): Boolean of object;
@@ -765,7 +767,9 @@ begin
                     NceBridge.iStateMachine := STATE_SEND_PING;           // No reason to wait if running on Lazarus
                     {$ELSE}
                     FlushUartReceiver;
+                    Hardware_EnableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                     WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
+                    Hardware_DisableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                     EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors
                     NceBridge.iStateMachine := STATE_WAIT_SYNC_DELAY;
                     {$ENDIF}
@@ -789,7 +793,9 @@ begin
                     NceBridge.iIncomingCount := 0;
                     NceBridge.LastPortRead := PortB;
                     CNIE_bit := 1;                                                        // Pin Change Interrupt enable
+                    Hardware_EnableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                     WriteByte(NCEBUS_PING or NceBridge.iDiscoveryCabID, True);            // Ping the Cab ID
+                    Hardware_DisableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                     EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us
                     NceBridge.iStateMachine := STATE_WAIT_FOR_RESPONSE;
                     {$ENDIF}
@@ -869,13 +875,15 @@ begin
                       {$IFDEF FPC}
                       NceBridge.iStateMachine := STATE_SEND_PING;           // No reason to wait if running on Lazarus
                       {$ELSE}
-                      LATB4_bit := 1;
+                  //    LATB4_bit := 1;
                       {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_SEND_SYNC..............'+LF); {$ENDIF}
                       FlushUartReceiver;
+                      Hardware_EnableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                       WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
+                      Hardware_DisableInterrupts;
                       EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors
                       NceBridge.iStateMachine := STATE_WAIT_SYNC_DELAY;
-                      LATB4_bit := 0;
+                  //    LATB4_bit := 0;
                       {$ENDIF}
                       Exit;
                     end;
@@ -896,7 +904,9 @@ begin
                       NceBridge.iIncomingCount := 0;
                       NceBridge.LastPortRead := PortB;
                       CNIE_bit := 1;                                            // Pin Change Interrupt enable
+                      Hardware_EnableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                       WriteByte(NCEBUS_PING or PNceCab( NceBridge.AssignedCabs[NceBridge.iActiveCab]^.UserData)^.ID, True);            // Ping the Cab ID
+                      Hardware_DisableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                       EnableCabBusTimer(57600);                                 // 31.25ns * 57600 = 1800us
                       NceBridge.iStateMachine := STATE_WAIT_FOR_RESPONSE;
                       {$ENDIF}

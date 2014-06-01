@@ -100,7 +100,7 @@ begin
         'B', 'b' : OPStackBuffers_PrintBuffers;
         'A', 'a' : begin
                      OPStackNode_PrintAliases;
-                     WordToHex(NceBridge.iStateMachine, s1);
+                     WordToHex(CabBridge.iStateMachine, s1);
                      UART1_Write_Text('Bridge machine: ' +s1+LF);
                    end;
       end;
