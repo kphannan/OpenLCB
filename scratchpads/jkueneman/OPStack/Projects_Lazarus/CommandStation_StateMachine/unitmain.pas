@@ -823,61 +823,64 @@ end;
 procedure TForm1.TimerGeneralTimer(Sender: TObject);
 var
   i: Integer;
-  Link: PLinkRec;
+  Train: PSyncRec;
   Node: TOlcbTrainTreeNode;
   TrainForm: TFormIsTrainNode;
 begin
   System.EnterCriticalsection(OPStackCriticalSection);
   try
-    for i := 0 to Sync.NextLink - 1 do
+    for i := 0 to Trains.Count - 1 do
     begin
-      Link := @Sync.Link[i];
-      if Link^.SyncState and SYNC_NODE_INFO <> 0 then
+      Train := TrainItem(i);
+      if Train^.State <> 0 then
       begin
-        Link^.SyncState := Link^.SyncState and not SYNC_NODE_INFO;
-        TrainForm :=  TFormIsTrainNode( Link^.Train.ObjPtr);
-        if not Assigned(TrainForm) then
-          TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
-        if Assigned(TrainForm) then
+        if Train^.State and SYNC_REPLY_ALLOC_NODE <> 0 then
         begin
-          TrainForm.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
-          TrainForm.LoadTrainState(Link);
-          Node := TreeViewTrains.Items.Add(nil, TrainForm.Caption) as TOlcbTrainTreeNode;
-          Node.Train := TrainForm;
-          UpdateUI;
-          TrainForm.Caption := 'Train Node [' + TrainForm.LabelAddress.Caption + ']';
-          TrainForm.UpdateStatus('Train Node Created');
-          Link^.Train.ObjPtr := TrainForm;
-        end;
-      end else
-      if Link^.SyncState and SYNC_CONTROLLER <> 0 then
-      begin
-        Link^.SyncState := Link^.SyncState and not SYNC_CONTROLLER;
-        TrainForm := TFormIsTrainNode( Link^.Train.ObjPtr );
-        if Assigned(TrainForm) then
+          Train^.State := Train^.State and not SYNC_REPLY_ALLOC_NODE;
+          TrainForm :=  TFormIsTrainNode( Train^.ObjPtr);
+          if not Assigned(TrainForm) then
+            TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
+          if Assigned(TrainForm) then
+          begin
+            TrainForm.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
+            TrainForm.LoadTrainState(Train);
+            Node := TreeViewTrains.Items.Add(nil, TrainForm.Caption) as TOlcbTrainTreeNode;
+            Node.Train := TrainForm;
+            UpdateUI;
+            TrainForm.Caption := 'Train Node [' + TrainForm.LabelAddress.Caption + ']';
+            TrainForm.UpdateStatus('Train Node Created');
+            Train^.ObjPtr := TrainForm;
+          end;
+        end else
+        if Train^.State and SYNC_CONTROLLER <> 0 then
         begin
-          TrainForm.LoadTrainState(Link);
-          TrainForm.UpdateStatus('Throttle assignment changed');
-        end;
-      end else
-      if Link^.SyncState and SYNC_STATE_SPEED_DIR <> 0 then
-      begin
-    //    Link^.SyncState := Link^.SyncState and not SYNC_STATE_SPEED_DIR;
-        TrainForm := TFormIsTrainNode( Link^.Train.ObjPtr );
-        if Assigned(TrainForm) then
+          Train^.State := Train^.State and not SYNC_CONTROLLER;
+          TrainForm := TFormIsTrainNode( Train^.ObjPtr );
+          if Assigned(TrainForm) then
+          begin
+            TrainForm.LoadTrainState(Train);
+            TrainForm.UpdateStatus('Throttle assignment changed');
+          end;
+        end else
+        if Train^.State and SYNC_STATE_SPEED_DIR <> 0 then
         begin
-          TrainForm.LoadTrainState(Link);
-          TrainForm.UpdateStatus('Speed/Direction changed');
-        end;
-      end else
-      if Link^.SyncState and SYNC_STATE_FUNCTIONS <> 0 then
-      begin
-    //    Link^.SyncState := Link^.SyncState and not SYNC_STATE_FUNCTIONS;
-        TrainForm := TFormIsTrainNode( Link^.Train.ObjPtr );
-        if Assigned(TrainForm) then
+          Train^.State := Train^.State and not SYNC_STATE_SPEED_DIR;
+          TrainForm := TFormIsTrainNode(Train^.ObjPtr );
+          if Assigned(TrainForm) then
+          begin
+            TrainForm.LoadTrainState(Train);
+            TrainForm.UpdateStatus('Speed/Direction changed');
+          end;
+        end else
+        if Train^.State and SYNC_STATE_FUNCTIONS <> 0 then
         begin
-          TrainForm.LoadTrainState(Link);
-          TrainForm.UpdateStatus('Functions changed');
+          Train^.State := Train^.State and not SYNC_STATE_FUNCTIONS;
+          TrainForm := TFormIsTrainNode( Train^.ObjPtr );
+          if Assigned(TrainForm) then
+          begin
+            TrainForm.LoadTrainState(Train);
+            TrainForm.UpdateStatus('Functions changed');
+          end;
         end;
       end;
     end;

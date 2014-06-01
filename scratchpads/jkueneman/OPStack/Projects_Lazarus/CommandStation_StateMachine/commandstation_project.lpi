@@ -6,7 +6,7 @@
     <General>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="OlcbTrainMaster"/>
+      <Title Value="CommandStationEmulator"/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
       <Icon Value="0"/>
@@ -36,66 +36,39 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="7">
+    <Units Count="3">
       <Unit0>
-        <Filename Value="OlcbTrainMaster.lpr"/>
+        <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="OlcbTrainMaster"/>
+        <UnitName Value="commandstation_project"/>
       </Unit0>
       <Unit1>
-        <Filename Value="Forms\main.pas"/>
+        <Filename Value="unitmain.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormOlcbTrainMaster"/>
+        <ComponentName Value="Form1"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="main"/>
+        <UnitName Value="unitmain"/>
       </Unit1>
       <Unit2>
-        <Filename Value="Forms\form_throttle_multiple_trains.pas"/>
+        <Filename Value="Forms\formtrainnode.pas"/>
         <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormMulitipleTrains"/>
+        <ComponentName Value="FormIsTrainNode"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <UnitName Value="form_throttle_multiple_trains"/>
+        <UnitName Value="formtrainnode"/>
       </Unit2>
-      <Unit3>
-        <Filename Value="Forms\form_config_mem_viewer.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormMemConfigViewer"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="form_config_mem_viewer"/>
-      </Unit3>
-      <Unit4>
-        <Filename Value="Forms\form_train_config_editor.pas"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="form_train_config_editor"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="Forms\form_throttle.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormThrottle"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="form_throttle"/>
-      </Unit5>
-      <Unit6>
-        <Filename Value="..\OPStack\NMRAnet\opstack_api.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstack_api"/>
-      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\OlcbTrainMaster.app\Contents\MacOS\OlcbTrainMaster"/>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\commandstationemulator.app\Contents\MacOS\CommandStationEmulator"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;..\OPStack\Common;..\OPStack\NMRAnet;..\OPStack\NMRAnet\CAN_Statemachines;..\OPStack\ConfigurationLayerImplementations\Lazarus_File;..\OPStack\HardwareLayerImplementations\Lazarus_Ethernet;Templates;Forms"/>
+      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File;Forms"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

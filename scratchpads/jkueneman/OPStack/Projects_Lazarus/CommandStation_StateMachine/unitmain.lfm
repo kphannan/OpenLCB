@@ -1,763 +1,670 @@
-object FormOlcbTrainMaster: TFormOlcbTrainMaster
-  Left = 403
-  Height = 482
-  Top = 279
-  Width = 820
-  Caption = 'OpenLCB TrainMaster'
-  ClientHeight = 462
-  ClientWidth = 820
-  Constraints.MinWidth = 700
+object Form1: TForm1
+  Left = 385
+  Height = 394
+  Top = 203
+  Width = 672
+  Caption = 'Mustangpeak OclbCommandStation Emulator'
+  ClientHeight = 394
+  ClientWidth = 672
   Menu = MainMenu
-  OnClose = FormClose
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  ShowHint = True
   LCLVersion = '1.2.0.3'
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 15
+    Top = 379
+    Width = 672
+    Panels = <    
+      item
+        Width = 250
+      end    
+      item
+        Width = 150
+      end    
+      item
+        Width = 150
+      end    
+      item
+        Width = 150
+      end>
+    SimplePanel = False
+  end
+  object ToolBarMain: TToolBar
+    Left = 0
+    Height = 44
+    Top = 0
+    Width = 672
+    AutoSize = True
+    ButtonHeight = 42
+    ButtonWidth = 45
+    Caption = 'ToolBarMain'
+    Images = ImageList16x16
+    ParentShowHint = False
+    ShowCaptions = True
+    TabOrder = 1
+    object ToolButtonEthernet: TToolButton
+      Left = 46
+      Top = 2
+      Action = ActionEthernetListenerConnection
+      Style = tbsCheck
+    end
+    object ToolButtonNewThrottle: TToolButton
+      Left = 273
+      Top = 2
+      Action = ActionStartNode
+    end
+    object ToolButtonDeleteThrottle: TToolButton
+      Left = 362
+      Top = 2
+      Action = ActionLogging
+    end
+    object ToolButtonSeparator: TToolButton
+      Left = 581
+      Top = 2
+      Width = 10
+      Caption = 'ToolButtonSeparator'
+      Style = tbsSeparator
+    end
+    object ToolButtonCOM: TToolButton
+      Left = 1
+      Top = 2
+      Action = ActionCOMConnection
+    end
+    object ToolButton1: TToolButton
+      Left = 161
+      Top = 2
+      Action = ActionEthernetClientConnection
+    end
+    object ToolButton2: TToolButton
+      Left = 421
+      Top = 2
+      Action = ActionDetailedLogging
+    end
+    object ToolButton3: TToolButton
+      Left = 536
+      Top = 2
+      Action = ActionLogClear
+    end
+    object ToolButton4: TToolButton
+      Left = 263
+      Top = 2
+      Width = 10
+      Caption = 'ToolButton4'
+      Style = tbsSeparator
+    end
+    object ToolButton5: TToolButton
+      Left = 347
+      Top = 2
+      Width = 10
+      Caption = 'ToolButton5'
+      Style = tbsSeparator
+    end
+    object ToolButton6: TToolButton
+      Left = 357
+      Top = 2
+      Width = 5
+      Caption = 'ToolButton6'
+      Style = tbsDivider
+    end
+  end
   object PageControlMain: TPageControl
     Left = 0
-    Height = 462
-    Top = 0
-    Width = 820
-    ActivePage = TabSheetMain
+    Height = 335
+    Top = 44
+    Width = 672
+    ActivePage = TabSheetCommandStation
     Align = alClient
     TabIndex = 0
-    TabOrder = 0
-    object TabSheetMain: TTabSheet
-      Caption = 'Trains'
-      ClientHeight = 436
-      ClientWidth = 812
-      object TreeViewThrottles: TTreeView
-        Left = 0
-        Height = 369
-        Top = 44
-        Width = 248
-        Align = alLeft
-        DefaultItemHeight = 16
+    TabOrder = 2
+    object TabSheetCommandStation: TTabSheet
+      Caption = 'Command Station'
+      ClientHeight = 296
+      ClientWidth = 666
+      object GroupBoxLogging: TGroupBox
+        Left = 233
+        Height = 224
+        Top = 64
+        Width = 423
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        Caption = 'Logging'
+        ClientHeight = 202
+        ClientWidth = 415
         TabOrder = 0
-        OnCreateNodeClass = TreeViewThrottlesCreateNodeClass
-      end
-      object PanelBkGnd: TPanel
-        Left = 253
-        Height = 369
-        Top = 44
-        Width = 559
-        Align = alClient
-        ClientHeight = 369
-        ClientWidth = 559
-        TabOrder = 1
-        object GroupBoxThrottles: TGroupBox
-          Left = 16
-          Height = 88
-          Top = 8
-          Width = 526
-          Anchors = [akTop, akLeft, akRight]
-          Caption = 'Throttles'
-          ClientHeight = 70
-          ClientWidth = 522
-          TabOrder = 0
-          object ButtonShowAllThrottles: TButton
-            Left = 4
-            Height = 22
-            Top = 38
-            Width = 152
-            Action = ActionShowAllThrottles
-            TabOrder = 0
-          end
-          object ButtonHideAllThrottles: TButton
-            Left = 324
-            Height = 22
-            Top = 38
-            Width = 153
-            Action = ActionHideAllThrottles
-            TabOrder = 1
-          end
-          object ButtonCloseAllThrottles: TButton
-            Left = 164
-            Height = 22
-            Top = 38
-            Width = 153
-            Action = ActionCloseAllThrottles
-            TabOrder = 2
-          end
-          object ButtonDeleteSelectedThrottles: TButton
-            Left = 164
-            Height = 22
-            Top = 6
-            Width = 153
-            Action = ActionCloseSelectedThrottles
-            TabOrder = 3
-          end
-          object ButtonAddThrottles: TButton
-            Left = 4
-            Height = 22
-            Top = 6
-            Width = 152
-            Action = ActionAddNewThrottle
-            TabOrder = 4
-          end
-        end
-        object GroupBox1: TGroupBox
-          Left = 15
-          Height = 125
-          Top = 104
-          Width = 527
-          Anchors = [akTop, akLeft, akRight]
-          Caption = 'Proxies (Command Stations)'
-          ClientHeight = 107
-          ClientWidth = 523
-          TabOrder = 1
-          object ButtonRediscoverProxies: TButton
-            Left = 343
-            Height = 22
-            Top = 79
-            Width = 176
-            Action = ActionRediscoverProxies
-            Anchors = [akRight, akBottom]
-            TabOrder = 0
-          end
-          object TreeViewProxies: TTreeView
-            Left = 4
-            Height = 70
-            Top = 1
-            Width = 515
-            Anchors = [akTop, akLeft, akRight, akBottom]
-            DefaultItemHeight = 16
-            TabOrder = 1
-          end
-        end
-        object GroupBox2: TGroupBox
-          Left = 16
-          Height = 127
-          Top = 232
-          Width = 527
+        inline SynMemoLog: TSynMemo
+          Cursor = crIBeam
+          Left = 0
+          Height = 189
+          Top = 9
+          Width = 409
           Anchors = [akTop, akLeft, akRight, akBottom]
-          Caption = 'Logging'
-          ClientHeight = 109
-          ClientWidth = 523
-          TabOrder = 2
-          inline SynMemoLog: TSynMemo
-            Cursor = crIBeam
-            Left = 4
-            Height = 101
-            Top = 6
-            Width = 511
-            Anchors = [akTop, akLeft, akRight, akBottom]
-            Font.Height = 12
-            Font.Name = 'Monaco'
-            Font.Pitch = fpFixed
-            Font.Quality = fqNonAntialiased
-            ParentColor = False
-            ParentFont = False
-            PopupMenu = PopupMenuSynEditLog
-            TabOrder = 0
-            OnKeyDown = SynMemoLogKeyDown
-            Gutter.Width = 51
-            Gutter.MouseActions = <>
-            Keystrokes = <            
-              item
-                Command = ecUp
-                ShortCut = 38
-              end            
-              item
-                Command = ecSelUp
-                ShortCut = 8230
-              end            
-              item
-                Command = ecScrollUp
-                ShortCut = 16422
-              end            
-              item
-                Command = ecDown
-                ShortCut = 40
-              end            
-              item
-                Command = ecSelDown
-                ShortCut = 8232
-              end            
-              item
-                Command = ecScrollDown
-                ShortCut = 16424
-              end            
-              item
-                Command = ecLeft
-                ShortCut = 37
-              end            
-              item
-                Command = ecSelLeft
-                ShortCut = 8229
-              end            
-              item
-                Command = ecWordLeft
-                ShortCut = 16421
-              end            
-              item
-                Command = ecSelWordLeft
-                ShortCut = 24613
-              end            
-              item
-                Command = ecRight
-                ShortCut = 39
-              end            
-              item
-                Command = ecSelRight
-                ShortCut = 8231
-              end            
-              item
-                Command = ecWordRight
-                ShortCut = 16423
-              end            
-              item
-                Command = ecSelWordRight
-                ShortCut = 24615
-              end            
-              item
-                Command = ecPageDown
-                ShortCut = 34
-              end            
-              item
-                Command = ecSelPageDown
-                ShortCut = 8226
-              end            
-              item
-                Command = ecPageBottom
-                ShortCut = 16418
-              end            
-              item
-                Command = ecSelPageBottom
-                ShortCut = 24610
-              end            
-              item
-                Command = ecPageUp
-                ShortCut = 33
-              end            
-              item
-                Command = ecSelPageUp
-                ShortCut = 8225
-              end            
-              item
-                Command = ecPageTop
-                ShortCut = 16417
-              end            
-              item
-                Command = ecSelPageTop
-                ShortCut = 24609
-              end            
-              item
-                Command = ecLineStart
-                ShortCut = 36
-              end            
-              item
-                Command = ecSelLineStart
-                ShortCut = 8228
-              end            
-              item
-                Command = ecEditorTop
-                ShortCut = 16420
-              end            
-              item
-                Command = ecSelEditorTop
-                ShortCut = 24612
-              end            
-              item
-                Command = ecLineEnd
-                ShortCut = 35
-              end            
-              item
-                Command = ecSelLineEnd
-                ShortCut = 8227
-              end            
-              item
-                Command = ecEditorBottom
-                ShortCut = 16419
-              end            
-              item
-                Command = ecSelEditorBottom
-                ShortCut = 24611
-              end            
-              item
-                Command = ecToggleMode
-                ShortCut = 45
-              end            
-              item
-                Command = ecCopy
-                ShortCut = 16429
-              end            
-              item
-                Command = ecPaste
-                ShortCut = 8237
-              end            
-              item
-                Command = ecDeleteChar
-                ShortCut = 46
-              end            
-              item
-                Command = ecCut
-                ShortCut = 8238
-              end            
-              item
-                Command = ecDeleteLastChar
-                ShortCut = 8
-              end            
-              item
-                Command = ecDeleteLastChar
-                ShortCut = 8200
-              end            
-              item
-                Command = ecDeleteLastWord
-                ShortCut = 16392
-              end            
-              item
-                Command = ecUndo
-                ShortCut = 32776
-              end            
-              item
-                Command = ecRedo
-                ShortCut = 40968
-              end            
-              item
-                Command = ecLineBreak
-                ShortCut = 13
-              end            
-              item
-                Command = ecSelectAll
-                ShortCut = 16449
-              end            
-              item
-                Command = ecCopy
-                ShortCut = 16451
-              end            
-              item
-                Command = ecBlockIndent
-                ShortCut = 24649
-              end            
-              item
-                Command = ecLineBreak
-                ShortCut = 16461
-              end            
-              item
-                Command = ecInsertLine
-                ShortCut = 16462
-              end            
-              item
-                Command = ecDeleteWord
-                ShortCut = 16468
-              end            
-              item
-                Command = ecBlockUnindent
-                ShortCut = 24661
-              end            
-              item
-                Command = ecPaste
-                ShortCut = 16470
-              end            
-              item
-                Command = ecCut
-                ShortCut = 16472
-              end            
-              item
-                Command = ecDeleteLine
-                ShortCut = 16473
-              end            
-              item
-                Command = ecDeleteEOL
-                ShortCut = 24665
-              end            
-              item
-                Command = ecUndo
-                ShortCut = 16474
-              end            
-              item
-                Command = ecRedo
-                ShortCut = 24666
-              end            
-              item
-                Command = ecGotoMarker0
-                ShortCut = 16432
-              end            
-              item
-                Command = ecGotoMarker1
-                ShortCut = 16433
-              end            
-              item
-                Command = ecGotoMarker2
-                ShortCut = 16434
-              end            
-              item
-                Command = ecGotoMarker3
-                ShortCut = 16435
-              end            
-              item
-                Command = ecGotoMarker4
-                ShortCut = 16436
-              end            
-              item
-                Command = ecGotoMarker5
-                ShortCut = 16437
-              end            
-              item
-                Command = ecGotoMarker6
-                ShortCut = 16438
-              end            
-              item
-                Command = ecGotoMarker7
-                ShortCut = 16439
-              end            
-              item
-                Command = ecGotoMarker8
-                ShortCut = 16440
-              end            
-              item
-                Command = ecGotoMarker9
-                ShortCut = 16441
-              end            
-              item
-                Command = ecSetMarker0
-                ShortCut = 24624
-              end            
-              item
-                Command = ecSetMarker1
-                ShortCut = 24625
-              end            
-              item
-                Command = ecSetMarker2
-                ShortCut = 24626
-              end            
-              item
-                Command = ecSetMarker3
-                ShortCut = 24627
-              end            
-              item
-                Command = ecSetMarker4
-                ShortCut = 24628
-              end            
-              item
-                Command = ecSetMarker5
-                ShortCut = 24629
-              end            
-              item
-                Command = ecSetMarker6
-                ShortCut = 24630
-              end            
-              item
-                Command = ecSetMarker7
-                ShortCut = 24631
-              end            
-              item
-                Command = ecSetMarker8
-                ShortCut = 24632
-              end            
-              item
-                Command = ecSetMarker9
-                ShortCut = 24633
-              end            
-              item
-                Command = EcFoldLevel1
-                ShortCut = 41009
-              end            
-              item
-                Command = EcFoldLevel2
-                ShortCut = 41010
-              end            
-              item
-                Command = EcFoldLevel1
-                ShortCut = 41011
-              end            
-              item
-                Command = EcFoldLevel1
-                ShortCut = 41012
-              end            
-              item
-                Command = EcFoldLevel1
-                ShortCut = 41013
-              end            
-              item
-                Command = EcFoldLevel6
-                ShortCut = 41014
-              end            
-              item
-                Command = EcFoldLevel7
-                ShortCut = 41015
-              end            
-              item
-                Command = EcFoldLevel8
-                ShortCut = 41016
-              end            
-              item
-                Command = EcFoldLevel9
-                ShortCut = 41017
-              end            
-              item
-                Command = EcFoldLevel0
-                ShortCut = 41008
-              end            
-              item
-                Command = EcFoldCurrent
-                ShortCut = 41005
-              end            
-              item
-                Command = EcUnFoldCurrent
-                ShortCut = 41003
-              end            
-              item
-                Command = EcToggleMarkupWord
-                ShortCut = 32845
-              end            
-              item
-                Command = ecNormalSelect
-                ShortCut = 24654
-              end            
-              item
-                Command = ecColumnSelect
-                ShortCut = 24643
-              end            
-              item
-                Command = ecLineSelect
-                ShortCut = 24652
-              end            
-              item
-                Command = ecTab
-                ShortCut = 9
-              end            
-              item
-                Command = ecShiftTab
-                ShortCut = 8201
-              end            
-              item
-                Command = ecMatchBracket
-                ShortCut = 24642
-              end            
-              item
-                Command = ecColSelUp
-                ShortCut = 40998
-              end            
-              item
-                Command = ecColSelDown
-                ShortCut = 41000
-              end            
-              item
-                Command = ecColSelLeft
-                ShortCut = 40997
-              end            
-              item
-                Command = ecColSelRight
-                ShortCut = 40999
-              end            
-              item
-                Command = ecColSelPageDown
-                ShortCut = 40994
-              end            
-              item
-                Command = ecColSelPageBottom
-                ShortCut = 57378
-              end            
-              item
-                Command = ecColSelPageUp
-                ShortCut = 40993
-              end            
-              item
-                Command = ecColSelPageTop
-                ShortCut = 57377
-              end            
-              item
-                Command = ecColSelLineStart
-                ShortCut = 40996
-              end            
-              item
-                Command = ecColSelLineEnd
-                ShortCut = 40995
-              end            
-              item
-                Command = ecColSelEditorTop
-                ShortCut = 57380
-              end            
-              item
-                Command = ecColSelEditorBottom
-                ShortCut = 57379
-              end>
-            MouseActions = <>
-            MouseSelActions = <>
-            SelectedColor.FrameEdges = sfeAround
-            SelectedColor.BackPriority = 50
-            SelectedColor.ForePriority = 50
-            SelectedColor.FramePriority = 50
-            SelectedColor.BoldPriority = 50
-            SelectedColor.ItalicPriority = 50
-            SelectedColor.UnderlinePriority = 50
-            SelectedColor.StrikeOutPriority = 50
-            inline SynLeftGutterPartList1: TSynGutterPartList
-              object SynGutterMarks1: TSynGutterMarks
-                Width = 24
-                MouseActions = <>
-              end
-              object SynGutterLineNumber1: TSynGutterLineNumber
-                Width = 11
-                MouseActions = <>
-                MarkupInfo.Background = clBtnFace
-                MarkupInfo.Foreground = clNone
-                MarkupInfo.FrameEdges = sfeAround
-                DigitCount = 2
-                ShowOnlyLineNumbersMultiplesOf = 1
-                ZeroStart = False
-                LeadingZeros = False
-              end
-              object SynGutterChanges1: TSynGutterChanges
-                Width = 4
-                MouseActions = <>
-                ModifiedColor = 59900
-                SavedColor = clGreen
-              end
-              object SynGutterSeparator1: TSynGutterSeparator
-                Width = 2
-                MouseActions = <>
-                MarkupInfo.Background = clWhite
-                MarkupInfo.Foreground = clGray
-                MarkupInfo.FrameEdges = sfeAround
-              end
-              object SynGutterCodeFolding1: TSynGutterCodeFolding
-                MouseActions = <>
-                MarkupInfo.Background = clNone
-                MarkupInfo.Foreground = clGray
-                MarkupInfo.FrameEdges = sfeAround
-                MouseActionsExpanded = <>
-                MouseActionsCollapsed = <>
-              end
+          Font.Height = 12
+          Font.Name = 'Monaco'
+          Font.Pitch = fpFixed
+          Font.Quality = fqNonAntialiased
+          ParentColor = False
+          ParentFont = False
+          PopupMenu = PopupMenuSynEditLog
+          TabOrder = 0
+          Gutter.Width = 55
+          Gutter.MouseActions = <>
+          Keystrokes = <          
+            item
+              Command = ecUp
+              ShortCut = 38
+            end          
+            item
+              Command = ecSelUp
+              ShortCut = 8230
+            end          
+            item
+              Command = ecScrollUp
+              ShortCut = 16422
+            end          
+            item
+              Command = ecDown
+              ShortCut = 40
+            end          
+            item
+              Command = ecSelDown
+              ShortCut = 8232
+            end          
+            item
+              Command = ecScrollDown
+              ShortCut = 16424
+            end          
+            item
+              Command = ecLeft
+              ShortCut = 37
+            end          
+            item
+              Command = ecSelLeft
+              ShortCut = 8229
+            end          
+            item
+              Command = ecWordLeft
+              ShortCut = 16421
+            end          
+            item
+              Command = ecSelWordLeft
+              ShortCut = 24613
+            end          
+            item
+              Command = ecRight
+              ShortCut = 39
+            end          
+            item
+              Command = ecSelRight
+              ShortCut = 8231
+            end          
+            item
+              Command = ecWordRight
+              ShortCut = 16423
+            end          
+            item
+              Command = ecSelWordRight
+              ShortCut = 24615
+            end          
+            item
+              Command = ecPageDown
+              ShortCut = 34
+            end          
+            item
+              Command = ecSelPageDown
+              ShortCut = 8226
+            end          
+            item
+              Command = ecPageBottom
+              ShortCut = 16418
+            end          
+            item
+              Command = ecSelPageBottom
+              ShortCut = 24610
+            end          
+            item
+              Command = ecPageUp
+              ShortCut = 33
+            end          
+            item
+              Command = ecSelPageUp
+              ShortCut = 8225
+            end          
+            item
+              Command = ecPageTop
+              ShortCut = 16417
+            end          
+            item
+              Command = ecSelPageTop
+              ShortCut = 24609
+            end          
+            item
+              Command = ecLineStart
+              ShortCut = 36
+            end          
+            item
+              Command = ecSelLineStart
+              ShortCut = 8228
+            end          
+            item
+              Command = ecEditorTop
+              ShortCut = 16420
+            end          
+            item
+              Command = ecSelEditorTop
+              ShortCut = 24612
+            end          
+            item
+              Command = ecLineEnd
+              ShortCut = 35
+            end          
+            item
+              Command = ecSelLineEnd
+              ShortCut = 8227
+            end          
+            item
+              Command = ecEditorBottom
+              ShortCut = 16419
+            end          
+            item
+              Command = ecSelEditorBottom
+              ShortCut = 24611
+            end          
+            item
+              Command = ecToggleMode
+              ShortCut = 45
+            end          
+            item
+              Command = ecCopy
+              ShortCut = 16429
+            end          
+            item
+              Command = ecPaste
+              ShortCut = 8237
+            end          
+            item
+              Command = ecDeleteChar
+              ShortCut = 46
+            end          
+            item
+              Command = ecCut
+              ShortCut = 8238
+            end          
+            item
+              Command = ecDeleteLastChar
+              ShortCut = 8
+            end          
+            item
+              Command = ecDeleteLastChar
+              ShortCut = 8200
+            end          
+            item
+              Command = ecDeleteLastWord
+              ShortCut = 16392
+            end          
+            item
+              Command = ecUndo
+              ShortCut = 32776
+            end          
+            item
+              Command = ecRedo
+              ShortCut = 40968
+            end          
+            item
+              Command = ecLineBreak
+              ShortCut = 13
+            end          
+            item
+              Command = ecSelectAll
+              ShortCut = 16449
+            end          
+            item
+              Command = ecCopy
+              ShortCut = 16451
+            end          
+            item
+              Command = ecBlockIndent
+              ShortCut = 24649
+            end          
+            item
+              Command = ecLineBreak
+              ShortCut = 16461
+            end          
+            item
+              Command = ecInsertLine
+              ShortCut = 16462
+            end          
+            item
+              Command = ecDeleteWord
+              ShortCut = 16468
+            end          
+            item
+              Command = ecBlockUnindent
+              ShortCut = 24661
+            end          
+            item
+              Command = ecPaste
+              ShortCut = 16470
+            end          
+            item
+              Command = ecCut
+              ShortCut = 16472
+            end          
+            item
+              Command = ecDeleteLine
+              ShortCut = 16473
+            end          
+            item
+              Command = ecDeleteEOL
+              ShortCut = 24665
+            end          
+            item
+              Command = ecUndo
+              ShortCut = 16474
+            end          
+            item
+              Command = ecRedo
+              ShortCut = 24666
+            end          
+            item
+              Command = ecGotoMarker0
+              ShortCut = 16432
+            end          
+            item
+              Command = ecGotoMarker1
+              ShortCut = 16433
+            end          
+            item
+              Command = ecGotoMarker2
+              ShortCut = 16434
+            end          
+            item
+              Command = ecGotoMarker3
+              ShortCut = 16435
+            end          
+            item
+              Command = ecGotoMarker4
+              ShortCut = 16436
+            end          
+            item
+              Command = ecGotoMarker5
+              ShortCut = 16437
+            end          
+            item
+              Command = ecGotoMarker6
+              ShortCut = 16438
+            end          
+            item
+              Command = ecGotoMarker7
+              ShortCut = 16439
+            end          
+            item
+              Command = ecGotoMarker8
+              ShortCut = 16440
+            end          
+            item
+              Command = ecGotoMarker9
+              ShortCut = 16441
+            end          
+            item
+              Command = ecSetMarker0
+              ShortCut = 24624
+            end          
+            item
+              Command = ecSetMarker1
+              ShortCut = 24625
+            end          
+            item
+              Command = ecSetMarker2
+              ShortCut = 24626
+            end          
+            item
+              Command = ecSetMarker3
+              ShortCut = 24627
+            end          
+            item
+              Command = ecSetMarker4
+              ShortCut = 24628
+            end          
+            item
+              Command = ecSetMarker5
+              ShortCut = 24629
+            end          
+            item
+              Command = ecSetMarker6
+              ShortCut = 24630
+            end          
+            item
+              Command = ecSetMarker7
+              ShortCut = 24631
+            end          
+            item
+              Command = ecSetMarker8
+              ShortCut = 24632
+            end          
+            item
+              Command = ecSetMarker9
+              ShortCut = 24633
+            end          
+            item
+              Command = EcFoldLevel1
+              ShortCut = 41009
+            end          
+            item
+              Command = EcFoldLevel2
+              ShortCut = 41010
+            end          
+            item
+              Command = EcFoldLevel1
+              ShortCut = 41011
+            end          
+            item
+              Command = EcFoldLevel1
+              ShortCut = 41012
+            end          
+            item
+              Command = EcFoldLevel1
+              ShortCut = 41013
+            end          
+            item
+              Command = EcFoldLevel6
+              ShortCut = 41014
+            end          
+            item
+              Command = EcFoldLevel7
+              ShortCut = 41015
+            end          
+            item
+              Command = EcFoldLevel8
+              ShortCut = 41016
+            end          
+            item
+              Command = EcFoldLevel9
+              ShortCut = 41017
+            end          
+            item
+              Command = EcFoldLevel0
+              ShortCut = 41008
+            end          
+            item
+              Command = EcFoldCurrent
+              ShortCut = 41005
+            end          
+            item
+              Command = EcUnFoldCurrent
+              ShortCut = 41003
+            end          
+            item
+              Command = EcToggleMarkupWord
+              ShortCut = 32845
+            end          
+            item
+              Command = ecNormalSelect
+              ShortCut = 24654
+            end          
+            item
+              Command = ecColumnSelect
+              ShortCut = 24643
+            end          
+            item
+              Command = ecLineSelect
+              ShortCut = 24652
+            end          
+            item
+              Command = ecTab
+              ShortCut = 9
+            end          
+            item
+              Command = ecShiftTab
+              ShortCut = 8201
+            end          
+            item
+              Command = ecMatchBracket
+              ShortCut = 24642
+            end          
+            item
+              Command = ecColSelUp
+              ShortCut = 40998
+            end          
+            item
+              Command = ecColSelDown
+              ShortCut = 41000
+            end          
+            item
+              Command = ecColSelLeft
+              ShortCut = 40997
+            end          
+            item
+              Command = ecColSelRight
+              ShortCut = 40999
+            end          
+            item
+              Command = ecColSelPageDown
+              ShortCut = 40994
+            end          
+            item
+              Command = ecColSelPageBottom
+              ShortCut = 57378
+            end          
+            item
+              Command = ecColSelPageUp
+              ShortCut = 40993
+            end          
+            item
+              Command = ecColSelPageTop
+              ShortCut = 57377
+            end          
+            item
+              Command = ecColSelLineStart
+              ShortCut = 40996
+            end          
+            item
+              Command = ecColSelLineEnd
+              ShortCut = 40995
+            end          
+            item
+              Command = ecColSelEditorTop
+              ShortCut = 57380
+            end          
+            item
+              Command = ecColSelEditorBottom
+              ShortCut = 57379
+            end>
+          MouseActions = <>
+          MouseSelActions = <>
+          SelectedColor.FrameEdges = sfeAround
+          SelectedColor.BackPriority = 50
+          SelectedColor.ForePriority = 50
+          SelectedColor.FramePriority = 50
+          SelectedColor.BoldPriority = 50
+          SelectedColor.ItalicPriority = 50
+          SelectedColor.UnderlinePriority = 50
+          SelectedColor.StrikeOutPriority = 50
+          inline SynLeftGutterPartList1: TSynGutterPartList
+            object SynGutterMarks1: TSynGutterMarks
+              Width = 24
+              MouseActions = <>
+            end
+            object SynGutterLineNumber1: TSynGutterLineNumber
+              Width = 15
+              MouseActions = <>
+              MarkupInfo.Background = clBtnFace
+              MarkupInfo.Foreground = clNone
+              MarkupInfo.FrameEdges = sfeAround
+              DigitCount = 2
+              ShowOnlyLineNumbersMultiplesOf = 1
+              ZeroStart = False
+              LeadingZeros = False
+            end
+            object SynGutterChanges1: TSynGutterChanges
+              Width = 4
+              MouseActions = <>
+              ModifiedColor = 59900
+              SavedColor = clGreen
+            end
+            object SynGutterSeparator1: TSynGutterSeparator
+              Width = 2
+              MouseActions = <>
+              MarkupInfo.Background = clWhite
+              MarkupInfo.Foreground = clGray
+              MarkupInfo.FrameEdges = sfeAround
+            end
+            object SynGutterCodeFolding1: TSynGutterCodeFolding
+              MouseActions = <>
+              MarkupInfo.Background = clNone
+              MarkupInfo.Foreground = clGray
+              MarkupInfo.FrameEdges = sfeAround
+              MouseActionsExpanded = <>
+              MouseActionsCollapsed = <>
             end
           end
         end
       end
-      object Splitter1: TSplitter
-        Left = 248
-        Height = 369
-        Top = 44
-        Width = 5
-      end
-      object StatusBar: TStatusBar
-        Left = 0
-        Height = 23
-        Top = 413
-        Width = 812
-        Panels = <        
-          item
-            Text = 'COM: Disconnected'
-            Width = 120
-          end        
-          item
-            Text = 'Ethernet: Disconnected'
-            Width = 300
-          end        
-          item
-            Text = 'Clients Connected:'
-            Width = 150
-          end>
-        SimplePanel = False
-      end
-      object ToolBarMain: TToolBar
-        Left = 0
-        Height = 44
+      object GroupBoxThrottles: TGroupBox
+        Left = 233
+        Height = 64
         Top = 0
-        Width = 812
-        AutoSize = True
-        ButtonHeight = 42
-        ButtonWidth = 45
-        Caption = 'ToolBarMain'
-        Images = ImageList16x16
-        ParentShowHint = False
-        ShowCaptions = True
-        TabOrder = 4
-        object ToolButtonEthernet: TToolButton
-          Left = 46
-          Top = 2
-          Action = ActionEthernetListenerConnection
-          Style = tbsCheck
+        Width = 423
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'Trains'
+        ClientHeight = 42
+        ClientWidth = 415
+        TabOrder = 1
+        object ButtonShowAllThrottles: TButton
+          Left = 4
+          Height = 22
+          Top = 6
+          Width = 152
+          Action = ActionShowAllTrains
+          TabOrder = 0
         end
-        object ToolButtonNewThrottle: TToolButton
-          Left = 297
-          Top = 2
-          Action = ActionAddNewThrottle
+        object ButtonHideAllThrottles: TButton
+          Left = 168
+          Height = 22
+          Top = 6
+          Width = 153
+          Action = ActionHideAllTrains
+          TabOrder = 1
         end
-        object ToolButtonDeleteThrottle: TToolButton
-          Left = 365
-          Top = 2
-          Action = ActionCloseSelectedThrottles
-        end
-        object ToolButtonSeparator: TToolButton
-          Left = 287
-          Top = 2
-          Width = 10
-          Caption = 'ToolButtonSeparator'
-          Style = tbsSeparator
-        end
-        object ToolButtonCOM: TToolButton
-          Left = 1
-          Top = 2
-          Action = ActionCOMConnection
-        end
-        object ToolButton1: TToolButton
-          Left = 137
-          Top = 2
-          Action = ActionEthernetClientConnection
-        end
-        object ToolButtonLog: TToolButton
-          Left = 460
-          Top = 2
-          Action = ActionLogging
-        end
-        object ToolButton3: TToolButton
-          Left = 455
-          Top = 2
-          Width = 5
-          Caption = 'ToolButton3'
-          Style = tbsDivider
-        end
-        object ToolButton2: TToolButton
-          Left = 505
-          Top = 2
-          Action = ActionDetailedLogging
-        end
-        object ToolButton4: TToolButton
-          Left = 592
-          Top = 2
-          Action = ActionLogClear
-        end
-        object ToolButton5: TToolButton
-          Left = 227
-          Top = 2
-          Action = ActionStartNode
-        end
-        object ToolButton6: TToolButton
-          Left = 217
-          Top = 2
-          Width = 10
-          Caption = 'ToolButton6'
-          Style = tbsSeparator
-        end
-        object ToolButton7: TToolButton
-          Left = 445
-          Top = 2
-          Width = 10
-          Caption = 'ToolButton7'
-          Style = tbsSeparator
-        end
+      end
+      object TreeViewTrains: TTreeView
+        Left = 0
+        Height = 296
+        Top = 0
+        Width = 221
+        Align = alLeft
+        DefaultItemHeight = 18
+        TabOrder = 2
+        OnCreateNodeClass = TreeViewTrainsCreateNodeClass
       end
     end
-    object TabSheetCom: TTabSheet
+    object TabSheetComPort: TTabSheet
       Caption = 'ComPort'
-      ClientHeight = 443
-      ClientWidth = 814
-      OnHide = TabSheetComHide
-      OnShow = TabSheetComShow
-      object ComboBoxComPort: TComboBox
-        Left = 22
-        Height = 21
-        Top = 32
-        Width = 226
-        ItemHeight = 13
-        OnChange = ComboBoxComPortChange
-        Style = csDropDownList
-        TabOrder = 0
-      end
+      ClientHeight = 298
+      ClientWidth = 668
+      OnHide = TabSheetComPortHide
+      OnShow = TabSheetComPortShow
       object LabelComPort: TLabel
         Left = 11
         Height = 16
@@ -766,20 +673,29 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = 'COM Port'
         ParentColor = False
       end
-      object LabelBaud: TLabel
-        Left = 11
-        Height = 16
-        Top = 64
-        Width = 63
-        Caption = 'Baud Rate'
-        ParentColor = False
+      object ComboBoxComPort: TComboBox
+        Left = 22
+        Height = 20
+        Top = 32
+        Width = 226
+        ItemHeight = 0
+        Style = csDropDownList
+        TabOrder = 0
+      end
+      object BitBtnRescanPorts: TBitBtn
+        Left = 264
+        Height = 22
+        Top = 32
+        Width = 144
+        Caption = 'Rescan Ports'
+        TabOrder = 1
       end
       object ComboBoxBaud: TComboBox
         Left = 22
         Height = 21
         Top = 80
         Width = 132
-        ItemHeight = 13
+        ItemHeight = 0
         ItemIndex = 0
         Items.Strings = (
           '19200'
@@ -790,28 +706,16 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           '333333'
           '500000'
         )
-        OnChange = ComboBoxBaudChange
-        TabOrder = 1
+        TabOrder = 2
         Text = '19200'
       end
-      object ComboBoxDataBits: TComboBox
-        Left = 22
-        Height = 21
-        Top = 128
-        Width = 132
-        ItemHeight = 13
-        ItemIndex = 3
-        Items.Strings = (
-          '5'
-          '6'
-          '7'
-          '8'
-          '9'
-        )
-        OnChange = ComboBoxDataBitsChange
-        Style = csDropDownList
-        TabOrder = 2
-        Text = '8'
+      object LabelBaud: TLabel
+        Left = 11
+        Height = 16
+        Top = 64
+        Width = 63
+        Caption = 'Baud Rate'
+        ParentColor = False
       end
       object LabelDataBits: TLabel
         Left = 11
@@ -820,6 +724,24 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Width = 56
         Caption = 'Data Bits'
         ParentColor = False
+      end
+      object ComboBoxDataBits: TComboBox
+        Left = 22
+        Height = 20
+        Top = 128
+        Width = 132
+        ItemHeight = 0
+        ItemIndex = 3
+        Items.Strings = (
+          '5'
+          '6'
+          '7'
+          '8'
+          '9'
+        )
+        Style = csDropDownList
+        TabOrder = 3
+        Text = '8'
       end
       object LabelStopBits: TLabel
         Left = 11
@@ -831,19 +753,18 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxStopBits: TComboBox
         Left = 22
-        Height = 21
+        Height = 20
         Top = 176
         Width = 132
-        ItemHeight = 13
+        ItemHeight = 0
         ItemIndex = 0
         Items.Strings = (
           '0'
           '1'
           '2'
         )
-        OnChange = ComboBoxStopBitsChange
         Style = csDropDownList
-        TabOrder = 3
+        TabOrder = 4
         Text = '0'
       end
       object LabelParity: TLabel
@@ -856,10 +777,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxParity: TComboBox
         Left = 22
-        Height = 21
+        Height = 20
         Top = 224
         Width = 132
-        ItemHeight = 13
+        ItemHeight = 0
         ItemIndex = 0
         Items.Strings = (
           'None'
@@ -868,9 +789,8 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           'Mark'
           'Space'
         )
-        OnChange = ComboBoxParityChange
         Style = csDropDownList
-        TabOrder = 4
+        TabOrder = 5
         Text = 'None'
       end
       object LabelFlowControl: TLabel
@@ -883,10 +803,10 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       end
       object ComboBoxFlowControl: TComboBox
         Left = 22
-        Height = 21
-        Top = 272
+        Height = 20
+        Top = 268
         Width = 132
-        ItemHeight = 13
+        ItemHeight = 0
         ItemIndex = 0
         Items.Strings = (
           'None'
@@ -894,25 +814,15 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           'DTR/DSR'
           'XON/XOFF'
         )
-        OnChange = ComboBoxFlowControlChange
         Style = csDropDownList
-        TabOrder = 5
-        Text = 'None'
-      end
-      object BitBtnRescanPorts: TBitBtn
-        Left = 264
-        Height = 22
-        Top = 32
-        Width = 144
-        Caption = 'Rescan Ports'
-        OnClick = BitBtnRescanPortsClick
         TabOrder = 6
+        Text = 'None'
       end
     end
     object TabSheetEthernet: TTabSheet
       Caption = 'Ethernet'
-      ClientHeight = 443
-      ClientWidth = 814
+      ClientHeight = 298
+      ClientWidth = 668
       OnHide = TabSheetEthernetHide
       OnShow = TabSheetEthernetShow
       object EditEthernetLocalIP: TEdit
@@ -931,6 +841,15 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = 'Local IP Address (0.0.0.0  is default machine IP)'
         ParentColor = False
       end
+      object ButtonLocalHost: TButton
+        Left = 317
+        Height = 22
+        Top = 40
+        Width = 104
+        Caption = 'Local Host'
+        OnClick = ButtonLocalHostClick
+        TabOrder = 1
+      end
       object Label6: TLabel
         Left = 16
         Height = 16
@@ -947,16 +866,24 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         MaxValue = 65535
         OnChange = SpinEditEthernetLocalPortChange
         ReadOnly = True
-        TabOrder = 1
+        TabOrder = 2
       end
-      object ButtonLocalHost: TButton
+      object EditEthernetRemoteIP: TEdit
+        Left = 37
+        Height = 22
+        Top = 172
+        Width = 256
+        OnChange = EditEthernetRemoteIPChange
+        TabOrder = 3
+      end
+      object ButtonRemoteLocalHost: TButton
         Left = 317
         Height = 22
-        Top = 40
+        Top = 172
         Width = 104
         Caption = 'Local Host'
-        OnClick = ButtonLocalHostClick
-        TabOrder = 2
+        OnClick = ButtonRemoteLocalHostClick
+        TabOrder = 4
       end
       object SpinEditEtherneRemotePort: TSpinEdit
         Left = 37
@@ -964,17 +891,9 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Top = 236
         Width = 122
         MaxValue = 65535
-        OnChange = SpinEditEthernetLocalPortChange
+        OnChange = SpinEditEtherneRemotePortChange
         ReadOnly = True
-        TabOrder = 3
-      end
-      object Label7: TLabel
-        Left = 16
-        Height = 16
-        Top = 212
-        Width = 118
-        Caption = 'Remote Client Port'
-        ParentColor = False
+        TabOrder = 5
       end
       object Label8: TLabel
         Left = 16
@@ -984,30 +903,38 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = 'Remote IP Address (0.0.0.0  is default machine IP)'
         ParentColor = False
       end
-      object EditEthernetRemoteIP: TEdit
-        Left = 37
-        Height = 22
-        Top = 172
-        Width = 256
-        OnChange = EditEthernetLocalIPChange
-        TabOrder = 4
-      end
-      object ButtonRemoteLocalHost: TButton
-        Left = 317
-        Height = 22
-        Top = 172
-        Width = 104
-        Caption = 'Local Host'
-        OnClick = ButtonRemoteLocalHostClick
-        TabOrder = 5
+      object Label7: TLabel
+        Left = 16
+        Height = 16
+        Top = 212
+        Width = 118
+        Caption = 'Remote Client Port'
+        ParentColor = False
       end
     end
     object TabSheetGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 443
-      ClientWidth = 814
+      ClientHeight = 296
+      ClientWidth = 666
       OnHide = TabSheetGeneralHide
       OnShow = TabSheetGeneralShow
+      object CheckBoxJMRILogging: TCheckBox
+        Left = 14
+        Height = 18
+        Top = 76
+        Width = 139
+        Action = ActionLogInJMRI
+        TabOrder = 0
+      end
+      object SpinEditSendPacketDelay: TSpinEdit
+        Left = 34
+        Height = 16
+        Top = 43
+        Width = 70
+        MaxValue = 1000
+        ParentShowHint = False
+        TabOrder = 1
+      end
       object Label3: TLabel
         Left = 14
         Height = 16
@@ -1016,24 +943,6 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = 'Packet Send Delay (for older TCH adapters)'
         ParentColor = False
       end
-      object SpinEditSendPacketDelay: TSpinEdit
-        Left = 34
-        Height = 16
-        Top = 43
-        Width = 70
-        MaxValue = 1000
-        OnChange = SpinEditSendPacketDelayChange
-        ParentShowHint = False
-        TabOrder = 0
-      end
-      object CheckBoxJMRILogging: TCheckBox
-        Left = 14
-        Height = 18
-        Top = 76
-        Width = 139
-        Action = ActionLogInJMRI
-        TabOrder = 1
-      end
       object Label1: TLabel
         Left = 117
         Height = 16
@@ -1041,15 +950,6 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Width = 79
         Caption = 'milliseconds'
         ParentColor = False
-      end
-      object ButtonRefreshBufferCount: TButton
-        Left = 423
-        Height = 22
-        Top = 20
-        Width = 189
-        Caption = 'Refresh'
-        OnClick = ButtonRefreshBufferCountClick
-        TabOrder = 2
       end
       object LabelMessageCountMax: TLabel
         Left = 604
@@ -1083,34 +983,18 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = '0'
         ParentColor = False
       end
-      object LabelDatagramCount: TLabel
-        Left = 604
-        Height = 16
-        Top = 132
-        Width = 8
-        Caption = '0'
-        ParentColor = False
-      end
-      object LabelSnipCount: TLabel
-        Left = 604
-        Height = 16
-        Top = 92
-        Width = 8
-        Caption = '0'
-        ParentColor = False
-      end
-      object LabelSimpleCount: TLabel
-        Left = 604
-        Height = 16
-        Top = 52
-        Width = 8
-        Caption = '0'
-        ParentColor = False
-      end
       object LabelDatagramCountMax: TLabel
         Left = 604
         Height = 16
         Top = 148
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelDatagramCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 132
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -1123,12 +1007,77 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = '0'
         ParentColor = False
       end
+      object LabelSnipCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 92
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
       object LabelSimpleCountMax: TLabel
         Left = 604
         Height = 16
         Top = 68
         Width = 8
         Caption = '0'
+        ParentColor = False
+      end
+      object LabelSimpleCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 52
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object ButtonRefreshBufferCount: TButton
+        Left = 423
+        Height = 22
+        Top = 20
+        Width = 189
+        Caption = 'Refresh'
+        OnClick = ButtonRefreshBufferCountClick
+        TabOrder = 2
+      end
+      object Label2: TLabel
+        Left = 423
+        Height = 16
+        Top = 52
+        Width = 130
+        Caption = 'Simple Buffer Count:'
+        ParentColor = False
+      end
+      object Label4: TLabel
+        Left = 423
+        Height = 16
+        Top = 92
+        Width = 115
+        Caption = 'SNIP Buffer Count:'
+        ParentColor = False
+      end
+      object Label9: TLabel
+        Left = 423
+        Height = 16
+        Top = 132
+        Width = 145
+        Caption = 'Datagram Buffer Count'
+        ParentColor = False
+      end
+      object Label10: TLabel
+        Left = 423
+        Height = 16
+        Top = 172
+        Width = 154
+        Caption = 'MultiFrame Buffer Count'
+        ParentColor = False
+      end
+      object Label11: TLabel
+        Left = 423
+        Height = 16
+        Top = 208
+        Width = 138
+        Caption = 'Message Buffer Count'
         ParentColor = False
       end
       object Label16: TLabel
@@ -1171,55 +1120,193 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Caption = 'Peak'
         ParentColor = False
       end
-      object Label2: TLabel
-        Left = 423
-        Height = 16
-        Top = 52
-        Width = 130
-        Caption = 'Simple Buffer Count:'
-        ParentColor = False
-      end
-      object Label4: TLabel
-        Left = 423
-        Height = 16
-        Top = 92
-        Width = 115
-        Caption = 'SNIP Buffer Count:'
-        ParentColor = False
-      end
-      object Label9: TLabel
-        Left = 423
-        Height = 16
-        Top = 132
-        Width = 145
-        Caption = 'Datagram Buffer Count'
-        ParentColor = False
-      end
-      object Label10: TLabel
-        Left = 423
-        Height = 16
-        Top = 172
-        Width = 154
-        Caption = 'MultiFrame Buffer Count'
-        ParentColor = False
-      end
-      object Label11: TLabel
-        Left = 423
-        Height = 16
-        Top = 208
-        Width = 138
-        Caption = 'Message Buffer Count'
-        ParentColor = False
-      end
     end
     object TabSheetAbout: TTabSheet
       Caption = 'About'
-      ClientHeight = 451
-      ClientWidth = 816
+      ClientHeight = 298
+      ClientWidth = 668
+      object LabelNodeExplorer: TLabel
+        Left = 0
+        Height = 28
+        Top = 0
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'OpenLCB Command Station Emulator v0.1'
+        Font.Height = -24
+        Font.Name = 'Lucida Grande'
+        Font.Style = [fsBold]
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelMyName: TLabel
+        Left = 0
+        Height = 17
+        Top = 28
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'written by Jim Kueneman'
+        Font.Height = -14
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelBuild1: TLabel
+        Left = 0
+        Height = 17
+        Top = 55
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        BorderSpacing.Top = 10
+        Caption = 'Build: '
+        Font.Height = -14
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelBuildDate: TLabel
+        Left = 0
+        Height = 17
+        Top = 72
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'LabelBuildDate'
+        Font.Height = -14
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelCPU: TLabel
+        Left = 0
+        Height = 15
+        Top = 99
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        BorderSpacing.Top = 10
+        Caption = 'Target CPU: '
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelTargetCPU: TLabel
+        Left = 0
+        Height = 15
+        Top = 114
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'LabelTargetCPU'
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelTargetOperatingSystem: TLabel
+        Left = 0
+        Height = 15
+        Top = 139
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        BorderSpacing.Top = 10
+        Caption = 'Target OS: '
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelTargetOS: TLabel
+        Left = 0
+        Height = 15
+        Top = 154
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'LabelTargetOS'
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelWrittenIn: TLabel
+        Left = 0
+        Height = 15
+        Top = 189
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        BorderSpacing.Top = 20
+        Caption = 'Written in Free Pascal and Lazarus'
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelURLFreePascal: TLabel
+        Cursor = crHandPoint
+        Left = 0
+        Height = 15
+        Top = 204
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'www.freepascal.org'
+        Font.Color = clBlue
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+        OnClick = LabelURLFreePascalClick
+        OnMouseEnter = LabelURLFreePascalMouseEnter
+        OnMouseLeave = LabelURLFreePascalMouseLeave
+      end
+      object LabelURLLazarus: TLabel
+        Cursor = crHandPoint
+        Left = 0
+        Height = 15
+        Top = 219
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'www.lazarus.freepascal.org'
+        Font.Color = clBlue
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+        OnClick = LabelURLLazarusClick
+        OnMouseEnter = LabelURLLazarusMouseEnter
+        OnMouseLeave = LabelURLLazarusMouseLeave
+      end
+      object LabelIcon: TLabel
+        Left = 0
+        Height = 15
+        Top = 254
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        BorderSpacing.Top = 20
+        Caption = 'Icons courtesy of Mark James'
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+      end
+      object LabelURLIcons: TLabel
+        Cursor = crHandPoint
+        Left = 0
+        Height = 15
+        Top = 269
+        Width = 666
+        Align = alTop
+        Alignment = taCenter
+        Caption = 'www.famfamfam.com/lab/icons/'
+        Font.Color = clBlue
+        Font.Height = -12
+        ParentColor = False
+        ParentFont = False
+        OnClick = LabelURLIconsClick
+        OnMouseEnter = LabelURLIconsMouseEnter
+        OnMouseLeave = LabelURLIconsMouseLeave
+      end
       object Image1: TImage
-        Left = 341
+        Left = 13
         Height = 114
-        Top = 300
+        Top = 40
         Width = 114
         AutoSize = True
         OnClick = Image1Click
@@ -8331,327 +8418,25 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
           06260000000049454E44AE426082
         }
       end
-      object LabelNodeExplorer: TLabel
-        Left = 0
-        Height = 28
-        Top = 0
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'OpenLCB Throttle Emulator v0.1'
-        Font.Height = -24
-        Font.Name = 'Lucida Grande'
-        Font.Style = [fsBold]
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelMyName: TLabel
-        Left = 0
-        Height = 17
-        Top = 28
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'written by Jim Kueneman'
-        Font.Height = -14
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelBuild: TLabel
-        Left = 0
-        Height = 17
-        Top = 55
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        BorderSpacing.Top = 10
-        Caption = 'Build: '
-        Font.Height = -14
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelBuildDate: TLabel
-        Left = 0
-        Height = 17
-        Top = 72
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'LabelBuildDate'
-        Font.Height = -14
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelTargetCPU: TLabel
-        Left = 0
-        Height = 15
-        Top = 114
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'LabelTargetCPU'
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelCPU: TLabel
-        Left = 0
-        Height = 15
-        Top = 99
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        BorderSpacing.Top = 10
-        Caption = 'Target CPU: '
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelTargetOperatingSystem: TLabel
-        Left = 0
-        Height = 15
-        Top = 139
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        BorderSpacing.Top = 10
-        Caption = 'Target OS: '
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelTargetOS: TLabel
-        Left = 0
-        Height = 15
-        Top = 154
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'LabelTargetOS'
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelWrittenIn: TLabel
-        Left = 0
-        Height = 15
-        Top = 189
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        BorderSpacing.Top = 20
-        Caption = 'Written in Free Pascal and Lazarus'
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-      end
-      object LabelURLFreePascal: TLabel
-        Cursor = crHandPoint
-        Left = 0
-        Height = 15
-        Top = 204
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'www.freepascal.org'
-        Font.Color = clBlue
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-        OnClick = LabelURLFreePascalClick
-        OnMouseEnter = LabelURLFreePascalMouseEnter
-        OnMouseLeave = LabelURLFreePascalMouseLeave
-      end
-      object LabelURLLazarus: TLabel
-        Cursor = crHandPoint
-        Left = 0
-        Height = 15
-        Top = 219
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'www.lazarus.freepascal.org'
-        Font.Color = clBlue
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-        OnClick = LabelURLLazarusClick
-        OnMouseEnter = LabelURLLazarusMouseEnter
-        OnMouseLeave = LabelURLLazarusMouseLeave
-      end
-      object LabelURLIcons: TLabel
-        Cursor = crHandPoint
-        Left = 0
-        Height = 15
-        Top = 269
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        Caption = 'www.famfamfam.com/lab/icons/'
-        Font.Color = clBlue
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-        OnClick = LabelURLIconsClick
-        OnMouseEnter = LabelURLIconsMouseEnter
-        OnMouseLeave = LabelURLIconsMouseLeave
-      end
-      object LabelIcon: TLabel
-        Left = 0
-        Height = 15
-        Top = 254
-        Width = 814
-        Align = alTop
-        Alignment = taCenter
-        BorderSpacing.Top = 20
-        Caption = 'Icons courtesy of Mark James'
-        Font.Height = -12
-        ParentColor = False
-        ParentFont = False
-      end
     end
   end
-  object ActionList: TActionList
-    Images = ImageList16x16
-    left = 152
-    top = 200
-    object ActionCOMConnection: TAction
-      Category = 'PhysicalLayer'
-      AutoCheck = True
-      Caption = 'COM'
-      GroupIndex = 100
-      ImageIndex = 892
-      OnExecute = ActionCOMConnectionExecute
-    end
-    object ActionEthernetListenerConnection: TAction
-      Category = 'PhysicalLayer'
-      AutoCheck = True
-      Caption = 'Ethernet Listener'
-      GroupIndex = 100
-      ImageIndex = 989
-      OnExecute = ActionEthernetListenerConnectionExecute
-    end
-    object ActionAddNewThrottle: TAction
-      Category = 'Throttle'
-      Caption = 'Add Throttle'
-      ImageIndex = 105
-      OnExecute = ActionAddNewThrottleExecute
-    end
-    object ActionCloseSelectedThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Close Throttles'
-      ImageIndex = 106
-      OnExecute = ActionCloseSelectedThrottlesExecute
-    end
-    object ActionHideAllThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Hide All Throttles'
-      OnExecute = ActionHideAllThrottlesExecute
-    end
-    object ActionCloseAllThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Close All Throttles'
-      OnExecute = ActionCloseAllThrottlesExecute
-    end
-    object ActionShowAllThrottles: TAction
-      Category = 'Throttle'
-      Caption = 'Show All Throttles'
-      OnExecute = ActionShowAllThrottlesExecute
-    end
-    object ActionHelpAboutShow: TAction
-      Caption = 'About'
-      OnExecute = ActionHelpAboutShowExecute
-    end
-    object ActionToolsPreferenceShowMac: TAction
-      Caption = 'Preferences...'
-      Enabled = False
-    end
-    object ActionToolsSettingsShowWin: TAction
-      Caption = 'Show Settings...'
-    end
-    object ActionRediscoverProxies: TAction
-      Category = 'Tools'
-      Caption = 'Rediscover Proxies'
-      ImageIndex = 999
-      OnExecute = ActionRediscoverProxiesExecute
-    end
-    object ActionLogging: TAction
-      Category = 'Tools'
-      AutoCheck = True
-      Caption = 'Logging'
-      ImageIndex = 173
-      OnExecute = ActionLoggingExecute
-    end
-    object ActionEthernetClientConnection: TAction
-      Category = 'PhysicalLayer'
-      AutoCheck = True
-      Caption = 'Ethernet Client'
-      GroupIndex = 100
-      ImageIndex = 984
-      OnExecute = ActionEthernetClientConnectionExecute
-    end
-    object ActionDetailedLogging: TAction
-      Category = 'Tools'
-      AutoCheck = True
-      Caption = 'Detailed Logging'
-      ImageIndex = 171
-      OnExecute = ActionDetailedLoggingExecute
-    end
-    object ActionLogClear: TAction
-      Category = 'Log'
-      Caption = 'Clear'
-      ImageIndex = 817
-      OnExecute = ActionLogClearExecute
-    end
-    object ActionLogCopy: TAction
-      Category = 'Log'
-      Caption = 'Copy'
-      OnExecute = ActionLogCopyExecute
-    end
-    object ActionLogCut: TAction
-      Category = 'Log'
-      Caption = 'Cut'
-      OnExecute = ActionLogCutExecute
-    end
-    object ActionLogPaste: TAction
-      Category = 'Log'
-      Caption = 'Paste'
-      OnExecute = ActionLogPasteExecute
-    end
-    object ActionLogSelectAll: TAction
-      Category = 'Log'
-      Caption = 'Select All'
-      OnExecute = ActionLogSelectAllExecute
-    end
-    object ActionLogPause: TAction
-      Category = 'Log'
-      AutoCheck = True
-      Caption = 'Pause'
-      OnExecute = ActionLogPauseExecute
-    end
-    object ActionStartNode: TAction
-      Category = 'Tools'
-      AutoCheck = True
-      Caption = 'Start Node'
-      ImageIndex = 240
-      OnExecute = ActionStartNodeExecute
-    end
-    object ActionZeroizeConfigMemory: TAction
-      Category = 'Tools'
-      Caption = 'Zeroize Config Mem'
-      ImageIndex = 318
-      OnExecute = ActionZeroizeConfigMemoryExecute
-    end
-    object ActionLogInJMRI: TAction
-      Category = 'Tools'
-      AutoCheck = True
-      Caption = 'Log in JMRI Format'
-      OnExecute = ActionLogInJMRIExecute
-    end
+  object TimerOpStackTimer: TTimer
+    Enabled = False
+    Interval = 100
+    OnTimer = TimerOpStackTimerTimer
+    left = 56
+    top = 192
+  end
+  object TimerOpStackProcess: TTimer
+    Enabled = False
+    Interval = 10
+    OnTimer = TimerOpStackProcessTimer
+    left = 136
+    top = 192
   end
   object ImageList16x16: TImageList
-    left = 176
-    top = 256
+    left = 192
+    top = 279
     Bitmap = {
       4C69E80300001000000010000000FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
       FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
@@ -40656,150 +40441,149 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       9B84315EA508FFFFFF00FFFFFF00
     }
   end
+  object ActionList: TActionList
+    Images = ImageList16x16
+    left = 200
+    top = 160
+    object ActionCOMConnection: TAction
+      Category = 'PhysicalLayer'
+      AutoCheck = True
+      Caption = 'COM'
+      GroupIndex = 100
+      ImageIndex = 892
+      OnExecute = ActionCOMConnectionExecute
+    end
+    object ActionEthernetListenerConnection: TAction
+      Category = 'PhysicalLayer'
+      AutoCheck = True
+      Caption = 'Ethernet Listener'
+      GroupIndex = 100
+      ImageIndex = 989
+      OnExecute = ActionEthernetListenerConnectionExecute
+    end
+    object ActionAddNewTrain: TAction
+      Category = 'Train'
+      Caption = 'Add Train'
+      ImageIndex = 105
+    end
+    object ActionCloseSelectedTrains: TAction
+      Category = 'Train'
+      Caption = 'Close Trains'
+      ImageIndex = 106
+    end
+    object ActionHideAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Hide All Trains'
+      OnExecute = ActionHideAllTrainsExecute
+    end
+    object ActionCloseAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Close All Trains'
+    end
+    object ActionShowAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Show All Trains'
+      OnExecute = ActionShowAllTrainsExecute
+    end
+    object ActionHelpAboutShow: TAction
+      Caption = 'About'
+      OnExecute = ActionHelpAboutShowExecute
+    end
+    object ActionToolsPreferenceShowMac: TAction
+      Caption = 'Preferences...'
+      Enabled = False
+    end
+    object ActionToolsSettingsShowWin: TAction
+      Caption = 'Show Settings...'
+    end
+    object ActionRediscoverProxies: TAction
+      Category = 'Tools'
+      Caption = 'Rediscover Proxies'
+      ImageIndex = 999
+    end
+    object ActionLogging: TAction
+      Category = 'Tools'
+      AutoCheck = True
+      Caption = 'Logging'
+      ImageIndex = 173
+      OnExecute = ActionLoggingExecute
+    end
+    object ActionEthernetClientConnection: TAction
+      Category = 'PhysicalLayer'
+      AutoCheck = True
+      Caption = 'Ethernet Client'
+      GroupIndex = 100
+      ImageIndex = 984
+      OnExecute = ActionEthernetClientConnectionExecute
+    end
+    object ActionDetailedLogging: TAction
+      Category = 'Tools'
+      AutoCheck = True
+      Caption = 'Detailed Logging'
+      ImageIndex = 171
+      OnExecute = ActionDetailedLoggingExecute
+    end
+    object ActionLogClear: TAction
+      Category = 'Log'
+      Caption = 'Clear'
+      ImageIndex = 817
+      OnExecute = ActionLogClearExecute
+    end
+    object ActionLogCopy: TAction
+      Category = 'Log'
+      Caption = 'Copy'
+      OnExecute = ActionLogCopyExecute
+    end
+    object ActionLogCut: TAction
+      Category = 'Log'
+      Caption = 'Cut'
+      OnExecute = ActionLogCutExecute
+    end
+    object ActionLogPaste: TAction
+      Category = 'Log'
+      Caption = 'Paste'
+      OnExecute = ActionLogPasteExecute
+    end
+    object ActionLogSelectAll: TAction
+      Category = 'Log'
+      Caption = 'Select All'
+      OnExecute = ActionLogSelectAllExecute
+    end
+    object ActionLogPause: TAction
+      Category = 'Log'
+      AutoCheck = True
+      Caption = 'Pause'
+      OnExecute = ActionLogPauseExecute
+    end
+    object ActionStartNode: TAction
+      Category = 'Tools'
+      AutoCheck = True
+      Caption = 'Start Node'
+      ImageIndex = 240
+      OnExecute = ActionStartNodeExecute
+    end
+    object ActionZeroizeConfigMemory: TAction
+      Category = 'Tools'
+      Caption = 'Zeroize Config Mem'
+      ImageIndex = 318
+      OnExecute = ActionZeroizeConfigMemoryExecute
+    end
+    object ActionLogInJMRI: TAction
+      Category = 'Tools'
+      AutoCheck = True
+      Caption = 'Log in JMRI Format'
+      OnExecute = ActionLogInJMRIExecute
+    end
+  end
   object MainMenu: TMainMenu
     Images = ImageList16x16
-    left = 72
-    top = 192
+    left = 56
+    top = 128
     object MenuItemFile: TMenuItem
       Caption = 'File'
     end
-    object MenuItemActions: TMenuItem
-      Caption = 'Throttles'
-      object MenuItemActionsNewThrottle: TMenuItem
-        Action = ActionAddNewThrottle
-        Bitmap.Data = {
-          36040000424D3604000000000000360000002800000010000000100000000100
-          2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF00196B3788196B37F2196B37FF196B37F2196B3788FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF0098989846979797BE969696C43474
-          4CA9288C53FF64BA8DFF95D2B2FF64BA8DFF288C53FF196B378CFFFFFF00FFFF
-          FF00FFFFFF00FFFFFF009C9C9C2B9B9B9BA59A9A9AFECDCDCDFFBDBDBDFF1F6E
-          3CFF62BA8BFF60BA87FFFFFFFFFF60B987FF67BC8FFF196B37F7FFFFFF00FFFF
-          FF009F9F9F169E9E9E859D9D9DEFC5C5C5FFEBEBEBFFE8E8E8FFCCCCCCFF317B
-          4CFF9CD4B6FFFFFFFFFFFFFFFFFFFFFFFFFF95D2B2FF196B37FFA3A3A306A2A2
-          A265A1A1A1DBC1C1C1FFE8E8E8FFEBEBEBFFDEDEDEFFD6D6D6FFBBBBBBFF4889
-          60FF90D3B1FF92D6B1FFFFFFFFFF65BC8CFF67BC8FFF196B37F7A5A5A5BBBEBE
-          BEFFE3E3E3FFF1F1F1FFE7E7E7FFDDDDDDFFDADADAFFD6D6D6FFBEBEBEFF89A8
-          94FF61AB81FF95D4B4FFBAE6D0FF6ABB8FFF2D8F57FF487B5BE3A6A6A6F9F5F5
-          F5FFF2F2F2FFE7E7E7FFE4E4E4FFDFDFDFFFDBDBDBFFD6D6D6FFC0C0C0FFC2C2
-          C2FF8FAC9AFF5D9672FF4F8E66FF46875EFF7EA28BFF959595F8A9A9A9F0F3F3
-          F3FFF0F0F0FFECECECFFEAEAEAFFE4E4E4FFDADADAFFD8D8D8FFC4C4C4FFBBBB
-          BBFFBEBEBEFFC2C2C2FFC3C3C3FFC0C0C0FFCBCBCBFF989898F0AAAAAAF0F3F3
-          F3FFF1F1F1FFEEEEEEFFE1E1E1FFC7C7C7FFCBCBCBFFD1D1D1FFD1D1D1FFCCCC
-          CCFFB1B1B1FFBBBBBBFFC0C0C0FFC0C0C0FFCECECEFF999999F0ABABABF0F3F3
-          F3FFE9E9E9FFDDDDDDFFDEDEDEFFC2C2C2FFDADADAFFFDFDFDFFFDFDFDFFDADA
-          DAFFC3C3C3FFD7D7D7FFBBBBBBFFBBBBBBFFCFCFCFFF9A9A9AF0ACACACFBD8D8
-          D8FFCDCDCDFFCECECEFFD1D1D1FFACACACFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-          FFFFACACACFFD1D1D1FFCCCCCCFFC1C1C1FFBEBEBEFF9B9B9BFBAEAEAE9FAEAE
-          AEFFD5D5D5FFFDFDFDFFFDFDFDFFC7C7C7FFB5B5B5FFA3A3A3FFA3A3A3FFB5B5
-          B5FFC7C7C7FFFCFCFCFFFBFBFBFFD2D2D2FFAEAEAEFF9D9D9DA6FFFFFF00A9A9
-          A9F8FFFFFFFFFFFFFFFFFFFFFFFFE0E0E0FFACACACFFD1D1D1FFD1D1D1FFABAB
-          ABFFE0E0E0FFFFFFFFFFFFFFFFFFFFFFFFFFA9A9A9F8FFFFFF00FFFFFF00C2C2
-          C286B3B3B3DFA2A2A2FDA2A2A2FFB1B1B1FFD6D6D6FFFDFDFDFFFCFCFCFFD3D3
-          D3FFB1B1B1FFA2A2A2FFA2A2A2FDB3B3B3DFC2C2C286FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00ADADAD16A9A9A9FAFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-          FFFFA9A9A9FAA6A6A61AFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00C2C2C286B3B3B3E4A2A2A2FEA2A2A2FEB3B3
-          B3E4C2C2C286FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
-        }
-      end
-      object MenuItemActionsSpace1: TMenuItem
-        Caption = '-'
-      end
-      object MenuItemActionsDeleteThrottles: TMenuItem
-        Action = ActionCloseSelectedThrottles
-        Bitmap.Data = {
-          36040000424D3604000000000000360000002800000010000000100000000100
-          2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF001D57C4780345B9DF0442BCFE0345B9E30345B87AFFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF0098989846979797BE969696C43665
-          B9A62564C9FB2177E6FF0579EAFF0164DDFF044DBDFC0345B87AFFFFFF00FFFF
-          FF00FFFFFF00FFFFFF009C9C9C2B9B9B9BA59A9A9AFECDCDCDFFBDBDBDFF144F
-          B6FF639DF4FF187FFFFF0076F8FF0076EEFF0368E1FF0345B9E4FFFFFF00FFFF
-          FF009F9F9F169E9E9E859D9D9DEFC5C5C5FFEBEBEBFFE8E8E8FFCCCCCCFF0543
-          BCFFAECDFEFFFFFFFFFFFFFFFFFFFFFFFFFF187FEFFF0442BCFEA3A3A306A2A2
-          A265A1A1A1DBC1C1C1FFE8E8E8FFEBEBEBFFDEDEDEFFD6D6D6FFBBBBBBFF1C54
-          B9FF8DB5F6FF4D92FFFF1177FFFF2186FFFF408AEBFF0444B9DFA5A5A5BBBEBE
-          BEFFE3E3E3FFF1F1F1FFE7E7E7FFDDDDDDFFDADADAFFD6D6D6FFBEBEBEFF7590
-          C2FF3B75D1FF8DB5F7FFB8D6FEFF72A8F5FF2E6CCBFF4D6CA7DCA6A6A6F9F5F5
-          F5FFF2F2F2FFE7E7E7FFE4E4E4FFDFDFDFFFDBDBDBFFD6D6D6FFC0C0C0FFC2C2
-          C2FF7590C3FF235BC0FF0542BCFF1853BAFF6C8BC1FF959595F8A9A9A9F0F3F3
-          F3FFF0F0F0FFECECECFFEAEAEAFFE4E4E4FFDADADAFFD8D8D8FFC4C4C4FFBBBB
-          BBFFBEBEBEFFC2C2C2FFC3C3C3FFC0C0C0FFCBCBCBFF989898F0AAAAAAF0F3F3
-          F3FFF1F1F1FFEEEEEEFFE1E1E1FFC7C7C7FFCBCBCBFFD1D1D1FFD1D1D1FFCCCC
-          CCFFB1B1B1FFBBBBBBFFC0C0C0FFC0C0C0FFCECECEFF999999F0ABABABF0F3F3
-          F3FFE9E9E9FFDDDDDDFFDEDEDEFFC2C2C2FFDADADAFFFDFDFDFFFDFDFDFFDADA
-          DAFFC3C3C3FFD7D7D7FFBBBBBBFFBBBBBBFFCFCFCFFF9A9A9AF0ACACACFBD8D8
-          D8FFCDCDCDFFCECECEFFD1D1D1FFACACACFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-          FFFFACACACFFD1D1D1FFCCCCCCFFC1C1C1FFBEBEBEFF9B9B9BFBAEAEAE9FAEAE
-          AEFFD5D5D5FFFDFDFDFFFDFDFDFFC7C7C7FFB5B5B5FFA3A3A3FFA3A3A3FFB5B5
-          B5FFC7C7C7FFFCFCFCFFFBFBFBFFD2D2D2FFAEAEAEFF9D9D9DA6FFFFFF00A9A9
-          A9F8FFFFFFFFFFFFFFFFFFFFFFFFE0E0E0FFACACACFFD1D1D1FFD1D1D1FFABAB
-          ABFFE0E0E0FFFFFFFFFFFFFFFFFFFFFFFFFFA9A9A9F8FFFFFF00FFFFFF00C2C2
-          C286B3B3B3DFA2A2A2FDA2A2A2FFB1B1B1FFD6D6D6FFFDFDFDFFFCFCFCFFD3D3
-          D3FFB1B1B1FFA2A2A2FFA2A2A2FDB3B3B3DFC2C2C286FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00ADADAD16A9A9A9FAFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-          FFFFA9A9A9FAA6A6A61AFFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00C2C2C286B3B3B3E4A2A2A2FEA2A2A2FEB3B3
-          B3E4C2C2C286FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
-        }
-      end
-      object MenuItemActionsCloseAllThrottles: TMenuItem
-        Action = ActionCloseAllThrottles
-      end
-      object MenuItemActionsSpace2: TMenuItem
-        Caption = '-'
-      end
-      object MenuItemActionsShowAllThrottles: TMenuItem
-        Action = ActionShowAllThrottles
-      end
-      object MenuItemActionsHideAllThrottles: TMenuItem
-        Action = ActionHideAllThrottles
-      end
-    end
     object MenuItemTools: TMenuItem
       Caption = 'Tools'
-      object MenuItemToolsRediscoverProxies: TMenuItem
-        Action = ActionRediscoverProxies
-        Bitmap.Data = {
-          36040000424D3604000000000000360000002800000010000000100000000100
-          2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF003460A71230589B84315EA508FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF003765AA5D335CA5FF4880B9FF3764ABE6325EA514FFFFFF00FFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF003B6A
-          AD5D5184BCFF7DB5D7FF7FB5D6FF5691C3FF3767ABED325EA50CFFFFFF00FFFF
-          FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF003E70B05D588E
-          C1FF8FC5DFFFA0D3E7FF93C7E0FF619BC9FF284887DC335FA60AFFFFFF00FFFF
-          FF004A85BC374A85BCAF4C86BCEB4C86BDFD4B84BCFD477EB7F04C81BBFF87BF
-          DBFFA3D5E8FFA5D7E9FF80BBDAFF3D64ABFD3662A817FFFFFF00FFFFFF004E8C
-          C065508FC2E74D8ABECE4984BC7C467FB928457DB728447AB77C528CC1FD79B4
-          D6FF99CCE3FF8DC4DEFF4F83BCFF3968AC17FFFFFF00FFFFFF005192C3375595
-          C4E74F8FC186F3E2CF1FF3E2CF41F3E2CF57F3E2CF55F3E2CF3CF3E2CF1C5592
-          C3FA6FABD2FF4073BEFF3C6FB059FFFFFF00FFFFFF00FFFFFF005699C6AF5596
-          C6CEF3E2CF20F3E2CF56F3E2CF65F3E2CF64F3E2CF61F3E2CF60F3E2CF4FF3E2
-          CF1C4981B9F74379B6C9FFFFFF00FFFFFF00FFFFFF00FFFFFF005B9FC9EB5497
-          C77CF3E2CF48F3E2CF6BF3E2CF6AF3E2CF68F3E2CF65F3E2CF63F3E2CF60F3E2
-          CF3E457BB77C477FB8EBFFFFFF00FFFFFF00FFFFFF00FFFFFF0061A5CDFD5599
-          C728F3E2CF67F3E2CF6FF3E2CF6EF3E2CF6BF3E2CF68F3E2CF67F3E2CF64F3E2
-          CF57457EB8284C86BDFDFFFFFF00FFFFFF00FFFFFF00FFFFFF0062A7CFFD579C
-          C928F3E2CF6BF3E2CF74F3E2CF71F3E2CF6FF3E2CF6CF3E2CF69F3E2CF67F3E2
-          CF5B4881BB284F8ABEFDFFFFFF00FFFFFF00FFFFFF00FFFFFF0060A6CEEB59A0
-          CC7CF3E2CF52F3E2CF78F3E2CF76F3E2CF73F3E2CF71F3E2CF6CF3E2CF6AF3E2
-          CF444B86BD7C4D89BEEBFFFFFF00FFFFFF00FFFFFF00FFFFFF005EA6CDAF5EA5
-          CDCEF3E2CF28F3E2CF69F3E2CF79F3E2CF76F3E2CF74F3E2CF71F3E2CF5BF3E2
-          CF204F8EC1CE4C89BDAFFFFFFF00FFFFFF00FFFFFF00FFFFFF005CA6CE3761A8
-          CFE75BA4CD86F3E2CF29F3E2CF54F3E2CF6FF3E2CF6CF3E2CF4DF3E2CF225091
-          C3865391C3E74C89BE37FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF005DA7
-          CE6561A8CFE75EA6CECE5AA1CC7C579DC928569BC828559AC87C579AC7CE5797
-          C7E75091C265FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
-          FF005CA6CE375EA7CEAF61A7CEEB64A8CFFD62A6CEFD5DA1CCEB579CC8AF5396
-          C637FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
-        }
-      end
     end
     object MenuItemHelp: TMenuItem
       Caption = 'Help'
@@ -40807,7 +40591,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
   end
   object PopupMenuSynEditLog: TPopupMenu
     left = 72
-    top = 280
+    top = 256
     object MenuItemSynMemoLogClear: TMenuItem
       Action = ActionLogClear
     end
@@ -40834,23 +40618,9 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       AutoCheck = True
     end
   end
-  object TimerOpStackProcess: TTimer
-    Enabled = False
-    Interval = 10
-    OnTimer = TimerOpStackProcessTimer
-    left = 168
-    top = 120
-  end
-  object TimerOpStackTimer: TTimer
-    Enabled = False
-    Interval = 100
-    OnTimer = TimerOpStackTimerTimer
-    left = 72
-    top = 128
-  end
   object PopupMenuCommonTools: TPopupMenu
-    left = 96
-    top = 352
+    left = 88
+    top = 320
     object MenuItemCommonToolsComPort: TMenuItem
       Action = ActionCOMConnection
       AutoCheck = True
@@ -40890,5 +40660,12 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     object MenuItemCommonToolsZeroizeConfigMem: TMenuItem
       Action = ActionZeroizeConfigMemory
     end
+  end
+  object TimerGeneral: TTimer
+    Enabled = False
+    Interval = 300
+    OnTimer = TimerGeneralTimer
+    left = 142
+    top = 110
   end
 end

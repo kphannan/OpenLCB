@@ -69,7 +69,7 @@ type
     property OnTrainHide: TOnTrainEvent read FOnTrainHide write FOnTrainHide;
     property OnTrainClose: TOnTrainEvent read FOnTrainClose write FOnTrainClose;
     procedure UpdateStatus(NewStatus: string);
-    procedure LoadTrainState(Link: PLinkRec);
+    procedure LoadTrainState(Train: PSyncRec);
   end;
 
 var
@@ -197,22 +197,22 @@ end;
 
 { TFormIsTrainNode }
 
-procedure TFormIsTrainNode.LoadTrainState(Link: PLinkRec);
+procedure TFormIsTrainNode.LoadTrainState(Train: PSyncRec);
 var
   i: Integer;
   Temp: DWORD;
 begin
-  LabelAlias.Caption := '0x' + IntToHex(Link^.Node.Info.AliasID, 2);
-  if Link^.TrainState.SpeedDir and $8000 = 0 then
+  LabelAlias.Caption := '0x' + IntToHex(Train^.Node^.Info.AliasID, 2);
+  if Train^.Node^.TrainData.SpeedDir and $8000 = 0 then
     LabelDirection.Caption := 'Forward'
   else
     LabelDirection.Caption := 'Reverse';
-  if Link^.TrainState.Address and $C000 = $C000 then
-    LabelAddress.Caption := IntToStr(Link^.TrainState.Address and not $C000) + ' - Long'
+  if Train^.Node^.TrainData.Address and $C000 = $C000 then
+    LabelAddress.Caption := IntToStr(Train^.Node^.TrainData.Address and not $C000) + ' - Long'
   else
-    LabelAddress.Caption := IntToStr(Link^.TrainState.Address) + ' - Short';
+    LabelAddress.Caption := IntToStr(Train^.Node^.TrainData.Address) + ' - Short';
 
-  Temp := Link^.TrainState.Functions;
+  Temp := Train^.Node^.TrainData.Functions;
   LabelFunctions1.Caption := '';
   for i := 0 to 13 do
   begin
@@ -233,9 +233,9 @@ begin
     Temp := Temp shr 1;
   end;
 
-  LabelSpeedSteps.Caption := IntToStr(Link^.TrainState.SpeedSteps);
-  LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(Link^.TrainState.SpeedDir)));
-  LabelThrottleAlias.Caption := '0x' + IntToHex(Link^.Controller.AliasID, 2);
+  LabelSpeedSteps.Caption := IntToStr(Train^.Node^.TrainData.SpeedSteps);
+  LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(Train^.Node^.TrainData.SpeedDir)));
+  LabelThrottleAlias.Caption := '0x' + IntToHex(Train^.Node^.TrainData.Controller.AliasID, 2);
 end;
 
 procedure TFormIsTrainNode.UpdateStatus(NewStatus: string);

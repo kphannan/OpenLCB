@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
+Value=Templates\template_userstatemachine.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -94,15 +94,15 @@ File1=Templates\NodeID.inc
 Count=11
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\NCEBridge\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
 Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
 Path4=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NCE\
 Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
 Path6=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
 Path7=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
 Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path9=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\NCEBridge\Templates\
-Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\Templates\
 [HEADER_PATH]
 Count=0
 [HEADERS]

@@ -1,4 +1,4 @@
-program OlcbTrainMaster;
+program commandstation_project;
 
 {$mode objfpc}{$H+}
 
@@ -7,15 +7,16 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, main, form_throttle_multiple_trains, form_train_config_editor,
-  form_throttle, opstack_api;
+  Forms, unitmain, formtrainnode;
 
 {$R *.res}
 
 begin
+  Application.Title:='CommandStationEmulator';
   RequireDerivedFormResource := True;
   Application.Initialize;
-  Application.CreateForm(TFormOlcbTrainMaster, FormOlcbTrainMaster);
+  Application.CreateForm(TForm1, Form1);
+  Application.CreateForm(TFormIsTrainNode, FormIsTrainNode);
   Application.Run;
 end.
 
