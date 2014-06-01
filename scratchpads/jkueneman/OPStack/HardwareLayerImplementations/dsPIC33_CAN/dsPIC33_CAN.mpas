@@ -22,6 +22,8 @@ unit dsPIC33_CAN;
 {$I Options.inc}
 
 {.$DEFINE TRACE_CAN}
+{.$DEFINE TRACE_INTERRUPTS}
+{$DEFINE TRACE_INTERRUPTS_OVERFLOW}
 
 
 uses
@@ -259,20 +261,23 @@ begin
   dsPIC33_CAN_GlobalInterruptFlagCAN_Event(True);                               // Reset the Global CAN Event Interrupt Flag
   IntCode := dsPIC33_CAN_InterruptCode;
   while IntCode <> ICODE_NO_INTERRUPT do                                        // Use the Interrupt Code to decode the Events that are both Enabled and Flags are set
-  begin
+  begin  
     case IntCode of
       ICODE_TRB0 :                                                              // Tx Rx Buffer 0
       begin
+        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('TX0' +LF);{$ENDIF}
         dsPIC33_CAN_InterruptFlagTXBuffer(True);                                // TX Interrupt Flag Reset
         dsPIC33_CAN_Transmitting := False;
       end;
       ICODE_TRB1 :                                                              // Tx Rx Buffer 0
       begin
+        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('TX1' +LF);{$ENDIF}
         dsPIC33_CAN_InterruptFlagTXBuffer(True);                                // TX Interrupt Flag Reset
         dsPIC33_CAN_HighPriorityTransmitting := False;
       end;
       ICODE_TRB2 :                                                              // Tx Rx Buffer 0
       begin
+        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('RX2' +LF); {$ENDIF}
         Extended := True;
         dsPIC33_DMA_Style_Buffer(Buffer, Extended, CAN_DIRECTION_READ, @RX_Main_RawBufferArray[0].Word0);      // Convert it into a version that matches the registers
         case Hi(RX_Main_RawBufferArray[0].Word7) of
@@ -288,7 +293,7 @@ begin
         
         if RBOVIF_bit = 1 then
         begin
-     //     UART1_Write_Text('CAN Overflow');
+          {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('CAN Overflow');{$ENDIF}
           RBOVIF_bit := 0;
         end;
         
@@ -296,11 +301,11 @@ begin
       end;
       ICODE_RX_OVERFLOW :
       begin
-     //   UART1_Write_Text('RxOVR'+LF);
+        {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('RxOVR'+LF);{$ENDIF}
         dsPIC33_CAN_InterruptFlagRXBufferOverflow(True);
       end else
       begin
-
+        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('9' +LF);{$ENDIF}
       end;
     end;
     IntCode := dsPIC33_CAN_InterruptCode;                                       // Get the next code (or no code) flag

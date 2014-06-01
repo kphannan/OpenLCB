@@ -41,7 +41,7 @@ implementation
 // *****************************************************************************
 function AppCallback_AddressSpacePresent(Node: PNMRAnetNode; AddressSpace: Byte): Boolean;
 begin
-  Result := True;
+  Result := True;     // All are contiguous are present
 end;
 
 // *****************************************************************************

@@ -109,9 +109,9 @@ end;
 procedure MCU_Enable_500msTimer;
 begin
   TCS_T1CON_bit := 0;       // internal cycle clock
-  T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 5   (1 means off)
-  T1IP_1_bit := 0;
-  T1IP_2_bit := 1;
+  T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 3   (1 means off)
+  T1IP_1_bit := 1;
+  T1IP_2_bit := 0;
   TCKPS_0_T1CON_bit := 1;   // 256 Prescaler
   TCKPS_1_T1CON_bit := 1;
   PR1 := $FFFF;            // Clock ticks every 31.25ns * 256 * 65535 = 524.28ms interrupts       (64Mhz = 15.625ns * 2 cycle/instruction = 31.25ns)
@@ -122,9 +122,9 @@ end;
 procedure MCU_Enable_100msTimer;
 begin
   TCS_T2CON_bit := 0;       // internal cycle clock
-  T2IP_0_bit := 1;          // Timer 2 Interrupt Priority = 5   (1 means off)
-  T2IP_1_bit := 0;
-  T2IP_2_bit := 1;
+  T2IP_0_bit := 1;          // Timer 2 Interrupt Priority = 3   (1 means off)
+  T2IP_1_bit := 1;
+  T2IP_2_bit := 0;
   TCKPS_0_T2CON_bit := 1;   // 256 Prescaler
   TCKPS_1_T2CON_bit := 1;
   PR2 := 12500;             // Clock ticks every 31.25ns * 256 * 12500 = 100ms interrupts
@@ -135,9 +135,9 @@ end;
 procedure MCU_Enable_CabBusTimer;
 begin
   TCS_T4CON_bit := 0;       // internal cycle clock
-  T4IP_0_bit := 1;          // Timer 4 Interrupt Priority = 5
-  T4IP_1_bit := 0;
-  T4IP_2_bit := 1;
+  T4IP_0_bit := 1;          // Timer 4 Interrupt Priority = 3
+  T4IP_1_bit := 1;
+  T4IP_2_bit := 0;
   TON_T4CON_bit := 0;       // Turn Off
 end;
 
@@ -151,8 +151,8 @@ begin
   STSEL_U2MODE_bit   := 1;   // 0 = 1 Stop Bit; 1 = 2 Stop Bits
   ADDEN_U2STA_bit    := 0;   // Address detect (9-bit mode) disabled
   UARTEN_U2MODE_bit  := 1;   // Enable the UART module, must be done before enabling the UTXEN
-  U2RXIP_0_Bit        := 0;   // Interrupt Priority  = 6
-  U2RXIP_1_Bit        := 1;
+  U2RXIP_0_Bit        := 1;   // Interrupt Priority  = 5
+  U2RXIP_1_Bit        := 0;
   U2RXIP_2_Bit        := 1;
   URXISEL_0_Bit      := 0;   // Interrupt with the buffer system has 1 bytes
   URXISEL_1_Bit      := 0;

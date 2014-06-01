@@ -750,7 +750,7 @@ begin
           end;
       STATE_DISCOVERDEVICES :
           begin
-            case NceBridge.iStateMachine of
+            case NceBridge.iStateMachine of   // I could use the Train Data machine for this if I wanted
               STATE_INITIALIZE :
                   begin
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_INITIALIZE'+LF); {$ENDIF}
