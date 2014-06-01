@@ -6,6 +6,8 @@ interface
 
 {$I Options.inc}
 
+{.$DEFINE TRACK_BUFFERS}
+
 uses
   {$IFDEF FPC}
   Classes, SysUtils,
@@ -64,8 +66,7 @@ procedure OPStackBuffers_Initialize;
 procedure OPStackBuffers_Timer;
 
 // Allocate Message helpers
-function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsCAN: Boolean): Boolean;
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
 {$IFDEF SUPPORT_STREAMS}function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;{$ENDIF}
 function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
@@ -231,6 +232,7 @@ begin
         if SimpleBufferPool.Count > SimpleBufferPool.MaxCount then
           SimpleBufferPool.MaxCount := SimpleBufferPool.Count;
         Result := True;
+        {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Alloc Simple'+LF);{$ENDIF}
         Exit;
       end;
     end;
@@ -255,6 +257,7 @@ begin
         if DatagramBufferPool.Count > DatagramBufferPool.MaxCount then
           DatagramBufferPool.MaxCount := DatagramBufferPool.Count;
         Result := True;
+        {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Alloc Datagram'+LF);{$ENDIF}
         Exit;
       end;
     end;
@@ -280,6 +283,7 @@ begin
         if StreamBufferPool.Count > StreamBufferPool.MaxCount then
           StreamBufferPool.MaxCount := StreamBufferPool.Count;
         Result := True;
+        {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Alloc Stream'+LF);{$ENDIF}
         Exit;
       end;
     end;
@@ -305,6 +309,7 @@ begin
         if AcdiSnipBufferPool.Count > AcdiSnipBufferPool.MaxCount then
           AcdiSnipBufferPool.MaxCount := AcdiSnipBufferPool.Count;
         Result := True;
+        {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Alloc Snip'+LF);{$ENDIF}
         Exit;
       end;
     end;
@@ -329,6 +334,7 @@ begin
         if MultiFramePool.Count > MultiFramePool.MaxCount then
           MultiFramePool.MaxCount := MultiFramePool.Count;
         Result := True;
+        {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Alloc Multiframe'+LF);{$ENDIF}
         Exit;
       end;
     end;
@@ -339,6 +345,7 @@ procedure DeAllocateSimpleBuffer(Buffer: PSimpleBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED  <> 0 then                                 // Only effect the pool if the buffer was allocated from the pool
   begin
+    {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Dealloc Simple'+LF);{$ENDIF}
     Dec(SimpleBufferPool.Count);
     Buffer^.State := 0
   end
@@ -348,6 +355,7 @@ procedure DeAllocateDatagramBuffer(Buffer: PDatagramBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
   begin
+    {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Dealloc Datagram'+LF);{$ENDIF}
     Dec(DatagramBufferPool.Count);
     Buffer^.State := 0
   end
@@ -358,6 +366,7 @@ procedure DeAllocateSteamBuffer(Buffer: PStreamBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
   begin
+    {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Dealloc Stream'+LF);{$ENDIF}
     Dec(StreamBufferPool.Count);
     Buffer^.State := 0
   end
@@ -368,6 +377,7 @@ procedure DeAllocateAcdiSnipBuffer(Buffer: PAcdiSnipBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
   begin
+    {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Dealloc Snip'+LF);{$ENDIF}
     Dec(AcdiSnipBufferPool.Count);
     Buffer^.State := 0
   end
@@ -377,6 +387,7 @@ procedure DeAllocateMultiFrameBuffer(Buffer: PMultiFrameBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
   begin
+    {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Dealloc MultiFrame'+LF);{$ENDIF}
     Dec(MultiFramePool.Count);
     Buffer^.State := 0
   end
@@ -404,7 +415,7 @@ begin
   end;
 end;
 
-function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsCAN: Boolean): Boolean;
 var
   SimpleBuffer: PSimpleBuffer;
 begin
@@ -412,6 +423,11 @@ begin
   if NextFreeOPStackMessage(AMessage) then
   begin
     AMessage^.MessageType := MT_SIMPLE or MT_ALLOCATED;
+    if IsCAN then
+    begin
+      {$IFDEF TRACK_BUFFERS}UART1_Write_Text('CAN: ');{$ENDIF}
+      AMessage^.MessageType := AMessage^.MessageType or MT_CAN_TYPE;
+    end;
     if AllocateSimpleBuffer(SimpleBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
@@ -423,13 +439,6 @@ begin
       AMessage := nil;
     end;
   end
-end;
-
-function OPStackBuffers_AllocateSimpleCANMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-begin
-  Result := OPStackBuffers_AllocateOPStackMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID);
-  if Result then
-    AMessage^.MessageType := AMessage^.MessageType or MT_CAN_TYPE;
 end;
 
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;

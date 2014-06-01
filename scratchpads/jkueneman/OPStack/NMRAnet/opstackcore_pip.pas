@@ -41,7 +41,7 @@ var
 begin
   Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_PROTOCOL_SUPPORT_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
+  if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_PROTOCOL_SUPPORT_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, False) then
   begin
     for i := 0 to 8 - 1 do                                            // Since we are OR'ing we need to start in a known state
       MessageToSend^.Buffer^.DataArray[i] := 0;
@@ -74,4 +74,3 @@ begin
 end;
 
 end.
-

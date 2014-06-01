@@ -129,6 +129,10 @@ begin
   begin
     WordToHex(NodePool.AllocatedList[i]^.Info.AliasID, s1);
     UART1_Write_Text('Alias: ' +s1+LF);
+    WordToHex(NodePool.AllocatedList[i]^.iStateMachine, s1);
+    UART1_Write_Text('Node machine: ' +s1+LF);
+    WordToHex(NodePool.AllocatedList[i]^.iUserStateMachine, s1);
+    UART1_Write_Text('Node usermachine: ' +s1+LF);
   end;
 end;
 {$ENDIF}

@@ -96,6 +96,9 @@ begin
     begin
       if OPStackMessage^.FramingBits = $20 then                                 // If the last frame and there is no inprocess message we are dropping the message
         OptionalInteractionRejected(OPStackMessage, False);
+      
+    //  UART1_Write_Text('Lost MultiFrame'+LF);
+      
       Exit;                                                                     // If a middle frame then just drop it if not in the stack
     end
   end;

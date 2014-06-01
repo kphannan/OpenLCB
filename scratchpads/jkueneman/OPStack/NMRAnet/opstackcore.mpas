@@ -257,7 +257,7 @@ begin
                if Node^.Flags = 0 then
                  if Node^.IncomingMessages = nil then
                    if Node^.StateMachineMessages = nil then
-                     if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+                     if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
                      begin
                        NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                        OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -442,7 +442,7 @@ begin
             2 : CAN_MTI := MTI_CAN_CID2;
             3 : CAN_MTI := MTI_CAN_CID3;
           end;
-          if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, CAN_MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, CAN_MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
           begin
             OutgoingMessage(OPStackMessage);
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
@@ -474,7 +474,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
             begin
               OutgoingMessage(OPStackMessage);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
@@ -489,7 +489,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -507,7 +507,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -520,38 +520,39 @@ begin
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
-        if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID) then  // Fake Source Node
-        begin
-          {$IFDEF SUPPORT_VIRTUAL_NODES}
-          if Node^.State and NS_VIRTUAL <> 0 then
+        if IsOutgoingBufferAvailable then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID, False) then  // Fake Source Node
           begin
-            for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
-              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);
-            for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
-              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_PRODUCED);
+            {$IFDEF SUPPORT_VIRTUAL_NODES}
+            if Node^.State and NS_VIRTUAL <> 0 then
+            begin
+              for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED - 1 do
+                AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);
+              for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
+                AppCallback_InitializeEvents(Node, i, EVENT_TYPE_PRODUCED);
 
-            for i := 0 to USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1 do
-              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_CONSUMED);
-            for i := 0 to USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
-              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
+              for i := 0 to USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1 do
+                AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_CONSUMED);
+              for i := 0 to USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
+                AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
 
-          end else
-          {$ENDIF}
-          begin
-            for i := 0 to USER_MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
-              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);
-            for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
-              AppCallback_InitializeEvents(Node, i, EVENT_TYPE_PRODUCED);
+            end else
+            {$ENDIF}
+            begin
+              for i := 0 to USER_MAX_SUPPORTED_EVENTS_CONSUMED - 1 do
+                AppCallback_InitializeEvents(Node, i, EVENT_TYPE_CONSUMED);
+              for i := 0 to USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED - 1 do
+                AppCallback_InitializeEvents(Node, i, EVENT_TYPE_PRODUCED);
 
-            for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1 do
-              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_CONSUMED);
-            for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
-              AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
-          end;
+              for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1 do
+                AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_CONSUMED);
+              for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
+                AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
+            end;
 
-          Node^.iStateMachine := STATE_NODE_PERMITTED;
-          IncomingMessageDispatch(OPStackMessage, Node, nil);
-        end
+            Node^.iStateMachine := STATE_NODE_PERMITTED;
+            IncomingMessageDispatch(OPStackMessage, Node, nil);
+          end
       end;
     STATE_NODE_PERMITTED :
       begin
@@ -576,7 +577,7 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then  // Fake Source Node
           begin
             NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -590,7 +591,7 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then  // Fake Source Node
           begin
             NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -603,7 +604,7 @@ begin
     STATE_NODE_TAKE_OFFLINE :
       begin
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then  // Fake Source Node
           begin
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             PEventID( @OPStackMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
@@ -632,11 +633,20 @@ begin
   begin
     Hardware_DisableInterrupts;
     Result := OPStackNode_NextNode;
+    Hardware_EnableInterrupts;
+    
     if Result <> nil then
     begin
+      Hardware_DisableInterrupts;
       NodeRunStateMachine(Result);
+      Hardware_EnableInterrupts;
+      
+      Hardware_DisableInterrupts;
       AppCallback_UserStateMachine_Process(Result);    // Do I want to let this run with nil?  Why should there be a nil?  There shouldn't
+      Hardware_EnableInterrupts;
     end;
+    
+    Hardware_DisableInterrupts;
     ProcessHardwareMessages;
     Hardware_EnableInterrupts;
   end;

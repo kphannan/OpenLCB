@@ -39,7 +39,7 @@ const
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
   NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
 
-  REDISCOVERY_TIME         = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
+  REDISCOVERY_TIME                     = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
   
   CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
   CS_MACRO_MESSAGE                              = $08;

@@ -287,7 +287,10 @@ begin
         dsPIC33_CAN_RX_Full(CAN_RX_0_BUFFER, True);                             // Reset the Full Flag
         
         if RBOVIF_bit = 1 then
+        begin
+     //     UART1_Write_Text('CAN Overflow');
           RBOVIF_bit := 0;
+        end;
         
         dsPIC33_CAN_InterruptFlagRXBuffer(True);                                // RX Interrupt Flag Reset
       end;

@@ -276,7 +276,7 @@ begin
     EventIndex := OPStackNode_NextPCER_Flag(Node);
     if EventIndex > -1 then
     begin
-      if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+      if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
       begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
         {$IFDEF SUPPORT_VIRTUAL_NODES}
@@ -326,7 +326,7 @@ begin
        end else
        if Node^.Flags and MF_DUPLICATE_ALIAS_RID <> 0 then                    // MsgFlag, a Duplicate Alias was Detected during a CID message, not a fault just need to respond to claim the Alias
        begin
-         if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+         if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
          begin
            Node^.Flags := Node^.Flags and not MF_DUPLICATE_ALIAS_RID;         // Clear the Flag
            Result := True;
@@ -335,7 +335,7 @@ begin
      end else
      if Node^.Flags and MF_ALIAS_MAP_ENQUIRY <> 0 then                        // MsgFlag, an AME message needs to be responded to with an AMD
      begin
-       if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+       if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
        begin
          NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
          Node^.Flags := Node^.Flags and not MF_ALIAS_MAP_ENQUIRY;             // Clear the Flag
@@ -345,7 +345,7 @@ begin
      end else
      if Node^.Flags and MF_VERIFY_NODE_ID <> 0 then                           // MsgFlag, a Verify Node ID message needs to be responded to
      begin
-       if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_VERIFIED_NODE_ID_NUMBER, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+       if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_VERIFIED_NODE_ID_NUMBER, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
        begin
          NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
          Node^.Flags := Node^.Flags and not MF_VERIFY_NODE_ID;                // Clear the Flag
@@ -398,7 +398,7 @@ begin
           begin
             // It is a Dynamic Index
             if AppCallback_DynamicVNodeConsumedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
-              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -408,7 +408,7 @@ begin
           end else
           begin
             // It is a Static Index
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
             begin
               NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -437,7 +437,7 @@ begin
           begin
             // It is a Dynamic Event
             if AppCallback_DynamicConsumedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_CONSUMED, DynamicEvent) then
-              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -447,7 +447,7 @@ begin
           end else
           begin
             // It is a Static Event
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
             begin
               NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -487,7 +487,7 @@ begin
           begin
             // It is a Dynamic Event
             if AppCallback_DynamicVNodeProducedEvent(Node, EventIndex - USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
-              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -497,7 +497,7 @@ begin
           end else
           begin
             // It is a Static Event
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
             begin
               NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -526,7 +526,7 @@ begin
           begin
             // It is a Dynamic Event
             if AppCallback_DynamicProducedEvent(Node, EventIndex - USER_MAX_SUPPORTED_EVENTS_PRODUCED, DynamicEvent) then
-              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
               begin
                 NMRAnetUtilities_LoadSimpleDataWithEventID(@DynamicEvent, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray)) ;
                 OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -536,7 +536,7 @@ begin
           end else
           begin
             // It is a Static Event
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
             begin
               NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;

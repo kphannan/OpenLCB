@@ -174,7 +174,7 @@ begin
   Result := True;
   if DatagramBufferPtr^.State and ABS_HASBEENACKED = 0 then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID) then
+    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID, False) then
     begin
       AckFlags := $00;        // May want to change this for slow configuration reads/writes
       OPStackBuffers_LoadDatagramOkMessage(MessageToSend, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID, AckFlags);

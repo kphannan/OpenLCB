@@ -139,7 +139,7 @@ begin
     MTI := (NMRAnetCanBuffer^.MTI shr 12) and $FFFF;
     if MTI and $F000 > 0 then
       MTI := MTI and $F000;                                                     // CID uses the upper nibble as the MTI, the rest use the lower 3 nibbles
-    if OPStackBuffers_AllocateSimpleCANMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID) then
+    if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, True) then
     begin
       OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);  // Never has a dest
       case MTI of
@@ -179,21 +179,27 @@ begin
               end else
               begin
                 // Addressed message but a single Frame
-                if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID) then
+                if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, False) then
                 begin
                   OPStackBuffers_CopyDataArrayWithSourceOffset(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, 2);
                   Result := True;
                 end else
-                  OptionalInteractionRejected(@ScratchMessage, False);
+                begin
+            //      UART1_Write_Text('Optional Rejected, Addressed Stack Msg'+LF);
+                  OptionalInteractionRejected(OPStackMessage, False);
+                end
               end;
             end else
             begin   // It is not an addressed message
-              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, False) then
               begin
                 OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);
                 Result := True;
               end else
-                OptionalInteractionRejected(@ScratchMessage, False);
+              begin
+         //       UART1_Write_Text('Optional Rejected, UnAddresssed Stack Msg'+LF);
+                OptionalInteractionRejected(OPStackMessage, False);
+              end
             end;
           end;
       MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME,

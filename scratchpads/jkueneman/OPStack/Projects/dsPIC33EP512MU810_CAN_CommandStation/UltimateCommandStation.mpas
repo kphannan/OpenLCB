@@ -159,7 +159,7 @@ begin
     if UART1_Data_Ready then
     begin
       case UART1_Read of
-        'D','d'  : OPStackBuffers_PrintBuffers;
+        'B','b'  : OPStackBuffers_PrintBuffers;
         'A', 'a' : OPStackNode_PrintAliases;
       end;
     end;

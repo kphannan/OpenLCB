@@ -82,6 +82,9 @@ begin
     if OPStackBuffers_Allcoate_ACDI_SNIP_Message(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
       OPStackCANStatemachineBuffers_AddIncomingAcdiSnipMessage(InProcessMessage)
     else begin
+
+    //  UART1_Write_Text('Optional Rejected, Lost SNIP'+LF);
+
       OptionalInteractionRejected(OPStackMessage, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
       Exit;
     end;

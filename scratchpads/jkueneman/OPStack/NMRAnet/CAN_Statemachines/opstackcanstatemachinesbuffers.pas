@@ -147,7 +147,7 @@ begin
   if MessageStackRoot^.Count > 0 then
   begin
     i := 0;
-    while i < USER_MAX_DATAGRAM_ARRAY_BUFFERS do
+    while i < MAX_PROCESS_STACK_ARRAY do
     begin
       if MessageStackRoot^.Stack[i] <> nil then
       begin
@@ -173,7 +173,7 @@ begin
   if MessageStackRoot^.Count > 0 then
   begin
     i := 0;
-    while i < USER_MAX_DATAGRAM_ARRAY_BUFFERS do
+    while i < MAX_PROCESS_STACK_ARRAY do
     begin
       if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Dest, OPStackMessage^.Dest) then
         if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Source, OPStackMessage^.Source) then
@@ -196,19 +196,16 @@ procedure AddInprocessMessage(OPStackMessage: POPStackMessage; MessageStackRoot:
 var
   i: Integer;
 begin
-  if MessageStackRoot^.Count < USER_MAX_DATAGRAM_ARRAY_BUFFERS then
+  i := 0;
+  while i < MAX_PROCESS_STACK_ARRAY do
   begin
-    i := 0;
-    while i < USER_MAX_DATAGRAM_ARRAY_BUFFERS do
+    if MessageStackRoot^.Stack[i] = nil then
     begin
-      if MessageStackRoot^.Stack[i] = nil then
-      begin
-        Inc(MessageStackRoot^.Count);
-        MessageStackRoot^.Stack[i] := OPStackMessage;
-        Exit;
-      end;
-      Inc(i);
+      Inc(MessageStackRoot^.Count);
+      MessageStackRoot^.Stack[i] := OPStackMessage;
+      Exit;
     end;
+    Inc(i);
   end;
 end;
 
@@ -225,7 +222,7 @@ begin
   if MessageStackRoot^.Count > 0 then
   begin
     i := 0;
-    while i < USER_MAX_DATAGRAM_ARRAY_BUFFERS do
+    while i < MAX_PROCESS_STACK_ARRAY do
     begin
       if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Dest, OPStackMessage^.Dest) then
         if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Source, OPStackMessage^.Source) then
@@ -253,7 +250,7 @@ begin
   if MessageStackRoot^.Count > 0 then
   begin
     i := 0;
-    while i < USER_MAX_DATAGRAM_ARRAY_BUFFERS do
+    while i < MAX_PROCESS_STACK_ARRAY do
     begin
       if (NodeAlias = MessageStackRoot^.Stack[i]^.Dest.AliasID) or (NodeAlias = MessageStackRoot^.Stack[i]^.Source.AliasID) then
       begin
