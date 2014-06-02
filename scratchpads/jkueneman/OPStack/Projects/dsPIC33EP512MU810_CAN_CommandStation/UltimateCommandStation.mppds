@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_userstatemachine.mpas
+Value=UltimateCommandStation.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -93,7 +93,7 @@ File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
 Count=12
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
@@ -112,7 +112,7 @@ Count=0
 [PLDS]
 Count=0
 [Useses]
-Count=7
+Count=10
 File0=ECAN
 File1=UART
 File2=ADC
@@ -120,6 +120,9 @@ File3=Peripheral_Pin_Select
 File4=Conversions
 File5=String
 File6=SPI
+File7=TFT
+File8=TFT_Defs
+File9=TFT_TouchPanel
 [EXPANDED NODES]
 Node1=Sources
 Node2=Other Files

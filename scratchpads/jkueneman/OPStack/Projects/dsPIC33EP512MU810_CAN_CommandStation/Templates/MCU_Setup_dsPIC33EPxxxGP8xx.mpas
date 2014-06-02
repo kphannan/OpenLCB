@@ -37,8 +37,8 @@ implementation
 
 procedure MCU_EnableTFT;
 begin
-  //TFT_Set_Default_Mode();                   // Set TFT in default mode
- // TFT_Init_ILI9341_8bit(320, 240);          // Initialize TFT display
+  TFT_Set_Default_Mode();                   // Set TFT in default mode
+  TFT_Init_ILI9341_8bit(320, 240);          // Initialize TFT display
   Delay_ms(10);
 end;
 

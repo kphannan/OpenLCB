@@ -45,7 +45,7 @@ var
   Dcc_Timer_PR                      : Word at PR1;                              // DCC Interrupt Rollover
 // End DCC Connection Pins
 
-    {
+
 procedure DrawFrame();
 begin
   TFT_Fill_Screen(CL_WHITE);
@@ -59,7 +59,7 @@ begin
   TFT_Set_Font(@Verdana12x13_Regular, CL_RED, FO_HORIZONTAL);
   TFT_Write_Text('www.openlcb.org', 200, 223);
   TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
-end;  }
+end;
 
 procedure ToggleBridge;
 begin
@@ -137,10 +137,10 @@ begin
   MCU_EnableSerialFlash;
   MCU_EnableUARTA;
   
- // MCU_EnableTFT;
- // TFT_BLED_Direction := 0;                  // Set TFT backlight pin as output
-//  TFT_BLED := 1;                            // Turn on TFT backlight
-//  DrawFrame();
+  MCU_EnableTFT;
+  TFT_BLED_Direction := 0;                  // Set TFT backlight pin as output
+  TFT_BLED := 1;                            // Turn on TFT backlight
+  DrawFrame();
 
   OPStackCore_Initialize;
   MCU_EnableCAN;
