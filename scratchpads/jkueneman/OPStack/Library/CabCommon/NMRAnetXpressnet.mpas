@@ -1,0 +1,202 @@
+unit NMRAnetXpressnet;
+
+{$I Options.inc}
+
+uses
+  Float16,
+  opstacktypes,
+  opstackdefines,
+  template_node,
+  opstack_api,
+  nmranetdefines,
+  NMRAnetCabBridgeDefines,
+  NMRAnetCabBridge,
+  nmranetutilities;
+
+
+function Send_InstructionNotSupported(iDevice: Byte): Boolean;
+
+function ResumeOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
+function StopOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
+function ServiceModeResultsRequest(iDevice: Byte): Boolean;
+function CommandStationSoftwareVersionRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+function CommandStationStatusRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+
+implementation
+
+// *****************************************************************************
+//
+// procedure Send_InstructionNotSupported(iDevice: Byte);
+//
+//  Parameters:
+//              iDevice:    ID of the XpressNet Device to send the message to
+//
+//  Description:
+//              Implements "2.1.10 Instruction not supported by command station" in the XpressNet spec
+//
+// *****************************************************************************
+function Send_InstructionNotSupported(iDevice: Byte): Boolean;
+//var
+//  XpressNetMessage: TXpressNetMessage;
+begin
+  Result := True;
+ { XpressNetMessage.HeaderByte := %01100001;            // $61
+  XpressNetMessage.Bytes[0] := %10000010;              // $82
+  XpressNetMessage.DataCount := 1;
+  SendXpressNetMessage(@XpressNetMessage, CALLBYTE_RESPONSE, iDevice); }
+end;
+
+// *****************************************************************************
+//
+// procedure ResumeOperationsRequest;
+//
+//  Parameters:
+//              XpressNetMessage: Global structure to hold the message information
+//
+//  Device Request           : Paragraph 2.2.2
+//  Command Station Response : Paragraph 2.1.4.1
+//  Status:
+//     Complete 1/29/2011
+// *****************************************************************************
+function ResumeOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
+begin
+
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('ResumeOperationsRequest'+LF);{$ENDIF}
+
+  Result := True;
+//TODO....
+
+//  ServiceMode_End;             // Any kind of Service Mode in process is finshed
+//  SPI_UpdateDCC_Outputs;
+
+//  NMRA_DCC_ResetTransmitter(@Track);                                      // Reset the transmitters so we are not in the middle of an unknown message
+ // NMRA_DCC_ResetTransmitter(@Accessory);
+//  NMRA_DCC_ResetTransmitter(@Programming);
+
+ // CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_SHUTDOWN_BIT := 0;  // Flag the Command Station is not in E-Shutdown or E-Stop
+ // CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_STOP_BIT := 0;
+
+ { XpressNetMessage^.HeaderByte := %01100001;  // $61;  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  XpressNetMessage^.Bytes[0]   := %00000001;  // $01
+  XpressNetMessage^.DataCount  := 1;
+  Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST);
+  Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST); }
+end;
+
+// *****************************************************************************
+//
+// procedure StopOperationsRequest(XpressNetMessage: PXpressNetMessage);
+//
+//  Parameters:
+//              XpressNetMessage: Global structure to hold the message information
+//
+//  Device Request           : Paragraph 2.2.3
+//  Command Station Response : Paragraph 2.1.4.2
+//  Status:
+//     Complete 1/29/2011
+// *****************************************************************************
+function StopOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
+begin
+
+ {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('StopOperationsRequest'+LF);{$ENDIF}
+
+  Result := True;
+  
+// TODO....
+
+//  CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_SHUTDOWN_BIT := 1;  // Flag the Command Station is in E-Shutdown
+ // ServiceMode_End;             // Any kind of Service Mode in process is finshed
+//  SPI_UpdateDCC_Outputs;
+  {
+  XpressNetMessage^.HeaderByte  := %01100001;  // $61
+  XpressNetMessage^.Bytes[0]    := %00000000;  // $00
+  XpressNetMessage^.DataCount   := 1;
+  Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST);
+  Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST); }
+end;
+
+// *****************************************************************************
+//
+// procedure ServiceModeResultsRequest(XpressNetMessage: PXpressNetMessage; iDevice: Byte);
+//
+//  Parameters:
+//              iDevice: The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
+//
+//  Device Request           : Paragraph 2.2.10
+//  Command Station Response : Paragraph 2.1.5
+//  Status:
+//     Complete:
+//
+// *****************************************************************************
+function ServiceModeResultsRequest(iDevice: Byte): Boolean;
+begin
+  Result := True;
+   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('ServiceModeResultsRequest'+LF);{$ENDIF}
+{  if ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IN_SERVICEMODE_BIT = 0 then
+  begin
+    Send_InstructionNotSupported(iDevice);                                      // Per 2.1.5 Service Mode information response
+    ServiceMode_End;                                                            // Something is wrong so just clear everything and start over
+    SPI_UpdateDCC_Outputs
+  end else
+  begin
+    Inc(ServiceModeInfo.Queue.ResultRequestCount);                              // Here we just collect how many times the Results are Requested which should ideally match the number of requests for service mode
+    if ServiceModeInfo.Buffer.iDevice = ID_PC_DEVICE then                       // JMRI always needs some sort of reply to move it to the next state
+      Send_EnterServiceMode(ServiceModeInfo.Buffer.iDevice, True)
+  end  }
+end;
+
+// *****************************************************************************
+//
+// procedure CommandStationSoftwareVersionRequest(XpressNetMessage: PXpressNetMessage; iDevice: Byte);
+//
+//  Parameters:
+//              XpressNetMessage: Global structure to hold the message information
+//              iDevice: The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
+//
+//
+//  Device Request           : Paragraph 2.2.14
+//  Command Station Response : Paragraph 2.1.6
+//  Status:
+//     Complete 1/29/2011
+//
+// *****************************************************************************
+function CommandStationSoftwareVersionRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+begin
+  Result := True;
+  // Fake V3 Software
+{  XpressNetMessage^.HeaderByte := %01100011;  // $63  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  XpressNetMessage^.Bytes[0]   := %00100001;  // $21
+  XpressNetMessage^.Bytes[1]   := VERSION_SOFTWARE_XPRESSNET;
+  XpressNetMessage^.Bytes[2]   := VERSION_COMMANDSTATION_LZ100;
+  XpressNetMessage^.DataCount  := 3;
+  SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);   }
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('CommandStationSoftwareVersionRequest'+LF);{$ENDIF}
+end;
+
+// *****************************************************************************
+//
+// procedure CommandStationStatusRequest(XpressNetMessage: PXpressNetMessage; iDevice: Byte);
+//
+//  Parameters:
+//              XpressNetMessage: Global structure to hold the message information
+//              iDevice: The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
+//
+//  Device Request           : Paragraph 2.2.15
+//  Command Station Response : Paragraph 2.1.7
+//  Status:
+//     Complete 1/29/2011
+//
+// *****************************************************************************
+function CommandStationStatusRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+begin
+  Result := True;
+ { XpressNetMessage^.HeaderByte := %01100010;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  XpressNetMessage^.Bytes[0]   := %00100010;
+  XpressNetMessage^.Bytes[1]   := $00;      //   TODO:  CommandStation.Flags and $00FF;  // CommandStation State bottom 8 bits are mapped as the Xpressnet Spec
+  XpressNetMessage^.DataCount  := 2;
+  SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);  }
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('CommandStationStatusRequest'+LF);{$ENDIF}
+end;
+
+
+end.

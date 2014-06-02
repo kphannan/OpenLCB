@@ -22,6 +22,23 @@ uses
   template_node;
 
 const
+  STATE_BRIDGE_USER_START              = 0;
+  STATE_BRIDGE_FIND_PROXY              = 1;
+  STATE_BRIDGE_CREATE_REQUIRED_CABS    = 2;
+  STATE_BRIDGE_DISCOVERDEVICES         = 3;
+  STATE_BRIDGE_KNOWNDEVICES            = 4;
+
+  STATE_SUB_BRIDGE_INITIALIZE              = 0;
+  STATE_SUB_BRIDGE_SEND_SYNC               = 1;
+  STATE_SUB_BRIDGE_WAIT_SYNC_DELAY         = 2;
+  STATE_SUB_BRIDGE_SEND_PING               = 3;
+  STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE       = 4;
+  STATE_SUB_BRIDGE_TIMEOUT                 = 5;
+  STATE_SUB_BRIDGE_CAB_REPLIED             = 6;
+  STATE_SUB_BRIDGE_DISPATCH_MESSAGE        = 7;
+  STATE_SUB_BRIDGE_NEXT_CAB                = 8;
+  
+const
   CAB_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a Cab message
   
   // Olcb bus statemachine
@@ -32,12 +49,18 @@ const
   STATE_RS485_CONTINUE_INPUT       = 2;
   STATE_RS485_FULL                 = 3;
 
-  ID_NO_DEVICE                         = $FE;
-  ID_MIN_DEVICE                        = 2;
-  ID_MAX_DEVICE                        = 63;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
+  ID_NO_DEVICE_NCE                     = $FE;
+  ID_MIN_DEVICE_NCE                    = 2;
+  ID_MAX_DEVICE_NCE                    = 63;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
   NCEBUS_PING                          = %10000000;   // P10A AAAA
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
   NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
+  
+  
+  ID_NO_DEVICE_XPRESSNET                     = $FE;
+  ID_MIN_DEVICE_XPRESSNET                    = 2;
+  ID_MAX_DEVICE_XPRESSNET                    = 63;   // 63 Devices on NceBus bus allowed not including ID = 0 or 1
+  XPRESSNET_CAB_BUS_PADDING                  = 0;          // How many fixed Cab objects to always have on the bus to Ping, Xpressnet Cabs can be on the bus alone
 
   REDISCOVERY_TIME                     = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
   
@@ -80,24 +103,29 @@ const
   NCE_CMD_CURSOR_OFF        = $CE;  // 206
   
   // Xpressnet specific messages for the throttles
+    // Call Byte Definitions
+  CALLBYTE_RESPONSE_XPRESSNET                = %01100000;   // P11A AAAA
+  CALLBYTE_INQUIRY_XPRESSNET                 = %01000000;   // P10A AAAA
+  CALLBYTE_REQUEST_ACK_FROM_DEVICE_XPRESSNET = %00000000;   // P00A AAAA
+  CALLBYTE_BROADCAST_XPRESSNET               = %01100000;   // P110 0000
+  CALLBYTE_TRANSFER_ERRORS_XPRESSNET         = %01100000;   // P11A AAAA
   
 
 type
-  TIncomingBuffer = array[0..1] of Byte;
   TCabMessageArray = array[0..CAB_MAX_DATA_BYTE] of Byte;
   
   TCabMessage = record
     DataBytes: TCabMessageArray;
-    Count: Byte;                                      // Number of valid bytes in the array
-    Full: Boolean;                                    // True if the message is ready to be process
+    Count: Byte;                                                                // Number of valid bytes in the array, for Xpressnet upper nibble is the Instruction, lower is the Count
+    Full: Boolean;                                                              // True if the message is ready to be process
   end;
   PCabMessage = ^TCabMessage;
 
   TCab = record
-    State: Byte;                                     // See CS_xxxx constants
-    ID: Byte;                                        // Cab Address (ID/Index)
-    IncomingMsg: TCabMessage;                        // Structure to hold the info for an incoming message from the CAb
-    iStateMachine: Byte;                             // SubStatemachine index
+    State: Byte;                                                                // See CS_xxxx constants
+    ID: Byte;                                                                   // Cab Address (ID/Index)
+    IncomingMsg: TCabMessage;                                                   // Structure to hold the info for an incoming message from the CAb
+    iStateMachine: Byte;                                                        // SubStatemachine index
     WatchDog: Word;
   end;
   PCab = ^TCab;
@@ -109,8 +137,10 @@ type
     iDiscoveryCabID: Word;                       // The index of the Cab while discovering
     iStateMachine: Byte;                         // Main Statemachine index
     DiscoverTimer: Byte;                         // Counter to detect when to start a Discovery cycle
-    IncomingBuffer: TIncomingBuffer;             //
-    iIncomingCount: Byte;
+    IncomingBuffer: TCabMessageArray;            //
+    iIncomingCount: Byte;                        // for Xpressnet upper nibble is the Instruction, lower is the Count
+    iIncomingByteIndex: Byte;                    // Indexes the next incoming byte for the IncomingBuffer
+    iIncomingStateMachine: Byte;                 //
     LastPortRead: Word;                          // Pin Change testing
     AssignedCabs: TAssignedCabArray;
     iAssignedCabCount: Integer;                  // Number of valid Cabs in the AssignedCabs array
@@ -136,6 +166,8 @@ begin
   CabBridge.iStateMachine := 0;
   CabBridge.DiscoverTimer := 0;
   CabBridge.iIncomingCount := 0;
+  CabBridge.iIncomingStateMachine := 0;
+  CabBridge.iIncomingByteIndex := 0;
   CabBridge.LastPortRead := 0;
   CabBridge.iAssignedCabCount := 0;
   CabBridge.iActiveCab := 0;

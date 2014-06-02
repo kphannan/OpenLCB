@@ -1,0 +1,438 @@
+unit NMRAnetCabBridge;
+
+{$I Options.inc}
+
+uses
+  Float16,
+  opstacktypes,
+  opstackdefines,
+  template_node,
+  opstack_api,
+  nmranetdefines,
+  NMRAnetCabBridgeDefines,
+  nmranetutilities;
+  
+procedure NMRAnetCabBridge_Initialize;
+procedure PrintNodeInfo(NodeInfo: PNodeInfo);
+procedure PrintIncomingMsg(var IncomingMsg: TCabMessage);
+procedure WriteUARTByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word; Wait: Boolean);
+procedure WriteByte(DataByte: Byte; Wait: Boolean);
+procedure FlushUartReceiver;
+procedure EnableCabBusTimer(Time: Word);
+procedure DisableCabBusTimer;
+procedure CabBus_Timeout;
+procedure PinChangeInterrupt;   
+function NceKeyPressToString(KeyPress: Byte): string[64];
+function ChangeSpeed(Speed: THalfFloat; DeltaInRealSpeed: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): Word;
+function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
+function CabMessageToTrainAddress(CabMessage: PCabMessage): Word;
+procedure ZeroizeNceCabData(CabData: PCab);
+function Cab_Allocate: PCab;
+procedure Cab_Free(CabData: PCab);
+function CreateCabNode(CabID: Word): PNMRAnetNode;
+function CreateCab(CabID: Word): PNMRAnetNode;
+function FindCab(CabID: Word): PNMRAnetNode;
+
+//procedure WriteXpressNetByte(DataByte: Word; SetAddressBit: Boolean; TxReg: ^Word; StatusReg: ^Word);
+procedure SendXpressnetInquiryMessage(Device: Byte);
+
+function OPStackNode_Allocate: PNMRAnetNode; external;
+
+var
+  CabBus_RS485_Select              : sbit; sfr; external;
+  CabBus_RS485_Select_Direction    : sbit; sfr; external;
+
+implementation
+
+procedure PrintNodeInfo(NodeInfo: PNodeInfo);
+begin
+  WordToHex(NodeInfo^.AliasID, s1 + LF);
+  UART1_Write_Text('Alias: 0x' + s1 + LF);
+  LongWordToHex( (NodeInfo^.ID[1] shl 16) or NodeInfo^.ID[0], s1);
+  UART1_Write_Text('Node ID: 0x' + s1 + LF);
+end;
+
+procedure PrintIncomingMsg(var IncomingMsg: TCabMessage);
+var
+  i: Integer;
+begin
+  UART1_Write_Text('Incoming Message' +LF);
+  ByteToStr(IncomingMsg.Count, s1);
+  UART1_Write_Text('Count: ' + s1 + LF);
+  if IncomingMsg.Full then
+    UART1_Write_Text('Full = True'+ LF)
+  else
+    UART1_Write_Text('Full = False'+ LF);
+  UART1_Write_Text('Data = ');
+  for i := 0 to IncomingMsg.Count - 1 do
+  begin
+    ByteToStr(IncomingMsg.DataBytes[i], s1);
+    if i <  IncomingMsg.Count - 1 then
+      UART1_Write_Text('0x' + s1 + ', ')
+    else
+      UART1_Write_Text('0x' + s1);
+  end;
+  UART1_Write_Text(LF+LF);
+end;
+
+procedure NMRAnetCabBridge_Initialize;
+var
+  i, j: Integer;
+begin
+  CabBus_RS485_Select := 0;                // Default in Receive
+  CabBus_RS485_Select_Direction := 0;      // Output
+  for i := 0 to USER_MAX_NODE_COUNT - 1 do
+    ZeroizeNceCabData( @CabArray[i]);
+  CabBridge.Discovering := False;
+  CabBridge.iDiscoveryCabID := ID_MIN_DEVICE_NCE;
+  CabBridge.iStateMachine := STATE_BRIDGE_USER_START;
+  CabBridge.DiscoverTimer := 0;
+  CabBridge.iAssignedCabCount := 0;
+  for i := 0 to USER_MAX_NODE_COUNT - 2 do   // no space for physical node
+    CabBridge.AssignedCabs[i] := nil;
+  CabBridge.iActiveCab := 0;
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure WriteUARTByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word; Wait: Boolean);
+begin
+  TxReg^ := DataByte;
+  StatusReg^.UTXEN := 1;          // Force the Register in to the TSR so the Idle check is not "too fast" to start
+  if Wait then
+  begin
+    while StatusReg^.TRMT = 1 do;   // Wait for the UART to start transmitting
+    while StatusReg^.TRMT = 0 do;   // Wait for the UART to finsh transmitting to make sure the ENceBus timing is met
+  end
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure WriteByte(DataByte: Byte; Wait: Boolean);
+begin
+  CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
+  WriteUARTByte(DataByte, @U2TXREG, @U2STA, Wait);
+  CabBus_RS485_Select := 0;      // Select the 485 chip to receive mode
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure FlushUartReceiver;
+var
+  Temp: Word;
+begin
+  while (URXDA_U2STA_bit = 1) do Temp := U2RXREG;             // Flush the RX Buffer
+  U2RXIF_Bit := 0;                                            // Reset the hardware RX statemachine
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure EnableCabBusTimer(Time: Word);
+begin
+  TON_T4CON_bit := 0;      // Turn off
+  T4IE_bit := 0;           // Disable the Interrupt
+  T4IF_bit := 0;           // Clear T1IF
+  T4IE_bit := 1;           // Enable the Interrupt
+  PR4 := Time;             //
+  TMR4 := 0;
+  TON_T4CON_bit := 1;      // Turn on
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure DisableCabBusTimer;
+begin
+  TON_T4CON_bit := 0;      // Turn off
+  T4IE_bit := 0;           // Disable the Interrupt
+  TON_T4CON_bit := 0;      // Turn off
+end;
+
+// *****************************************************************************
+// Called from Dynamically set Interrupt timer after 1800us
+// *****************************************************************************
+procedure CabBus_Timeout;
+begin
+  // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
+  DisableCabBusTimer;
+  case CabBridge.iStateMachine of
+    STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_SEND_PING;
+    STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
+  end;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+procedure PinChangeInterrupt;
+begin
+  CNIE_bit := 0;                                                                // Pin Change Interrupt disabled
+  DisableCabBusTimer;
+end;
+
+function NceKeyPressToString(KeyPress: Byte): string[64];
+begin
+  case KeyPress of
+    NCE_CAB_SELECT_LOCO       : Result := 'Select Loco';
+    NCE_CAB_ENTER             : Result := 'Enter';
+    NCE_CAB_DIR_TOGGLE        : Result := 'Direction Toggle';
+    NCE_HORN_KEY_DOWN         : Result := 'Horn Key Down';
+    NCE_CAB_ONE_STEP_FASTER   : Result := 'One Step Faster';
+    NCE_CAB_ONE_STEP_SLOWER   : Result := 'One Step Slower';
+    NCE_CAB_EMERGENCY_STOP    : Result := 'Emergency Stop';
+    NCE_CAB_BELL              : Result := 'Cab Bell';
+    NCE_CAB_TOGGLE_F0_0       : Result := '0/Toggle F0';
+    NCE_CAB_TOGGLE_F1_1       : Result := '1/Toggle F1';
+    NCE_CAB_TOGGLE_F2_2       : Result := '2/Toggle F2';
+    NCE_CAB_TOGGLE_F3_3       : Result := '3/Toggle F3';
+    NCE_CAB_TOGGLE_F4_4       : Result := '4/Toggle F4';
+    NCE_CAB_TOGGLE_F5_5       : Result := '5/Toggle F5';
+    NCE_CAB_TOGGLE_F6_6       : Result := '6/Toggle F6';
+    NCE_CAB_TOGGLE_F7_7       : Result := '7/Toggle F7';
+    NCE_CAB_TOGGLE_F8_8       : Result := '8/Toggle F8';
+    NCE_CAB_9                 : Result := '9';
+    NCE_HORN_KEY_UP           : Result := 'Horn Key Up';
+    NCE_CAB_FIVE_STEPS_FASTER : Result := '5 Speed Steps Faster';
+    NCE_CAB_FIVE_STEPS_SLOWER : Result := '5 Speed Steps Slower';
+    NCE_CAB_SELECT_MACRO      : Result := 'Macro';
+    NCE_CAB_DIR_FORWARD       : Result := 'Forward Direction';
+    NCE_CAB_DIR_REVERSE       : Result := 'Reverse Direction'
+  else
+    Result := 'Unknown Command';
+  end;
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+function ChangeSpeed(Speed: THalfFloat; DeltaInRealSpeed: real): Word;
+var
+  IsReverse: Boolean;
+  SpeedReal:real;
+begin
+  IsReverse := Speed and $8000 <> 0;
+  SpeedReal := HalfToFloat( Speed and not $8000);
+
+  SpeedReal := SpeedReal + (DeltaInRealSpeed);
+  if SpeedReal > 100.0 then
+    SpeedReal := 100.0
+  else
+  if SpeedReal < 0.0 then
+    SpeedReal := 0.0;
+
+  Result := FloatToHalf(SpeedReal);
+  if IsReverse then
+    Result := Result or $8000;
+end;
+
+function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
+var
+  Mask: DWord;
+begin
+  Result := False;
+  Mask := $00000001;
+  Mask := Mask shl FunctionAddress;
+  if (Functions and Mask) <> 0 then
+  begin
+    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FunctionAddress, 0) then
+    begin
+      Mask := not Mask;
+      Functions := Functions and Mask;
+      Result := True
+    end;
+  end else
+  begin
+    if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FunctionAddress, 1) then
+    begin
+      Functions := Functions or Mask;
+      Result := True
+    end;
+  end;
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+function CabMessageToTrainAddress(CabMessage: PCabMessage): Word;
+var
+  i: Integer;
+  AddressStr: string[CAB_MAX_DATA_BYTE];
+begin
+  Result := 0;
+  AddressStr := '';
+  for i := 0 to CabMessage^.Count - 1 do
+    AddressStr := AddressStr + Char( CabMessage^.DataBytes[i] and $0F or $30);   // Make them ASCII
+  Result := StrToWord(AddressStr);
+  if (AddressStr[0] = '0') or (Result > 127) then
+    Result := Result or $C000;
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+procedure ZeroizeNceCabData(CabData: PCab);
+var
+  i, j: Integer;
+begin
+  CabData^.State := 0;
+  CabData^.IncomingMsg.Count := 0;
+  CabData^.IncomingMsg.Full := False;
+  CabData^.iStateMachine := 0;
+  CabData^.ID := 0;
+  for j := 0 to CAB_MAX_DATA_BYTE - 1 do
+    CabData^.IncomingMsg.DataBytes[j] := 0;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+function Cab_Allocate: PCab;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := 0;
+  while i < USER_MAX_NODE_COUNT do
+  begin
+    if CabArray[i].State and CS_ALLOCATED = 0 then
+    begin
+      Result := @CabArray[i];
+      ZeroizeNceCabData(Result);
+      CabArray[i].State := CabArray[i].State or CS_ALLOCATED;
+      Exit;
+    end;
+    Inc(i)
+  end
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+procedure Cab_Free(CabData: PCab);
+begin
+if CabData <> nil then
+  CabData^.State := CabData^.State and not CS_ALLOCATED
+end;
+
+// ****************************************************************************
+// *****************************************************************************
+function CreateCabNode(CabID: Word): PNMRAnetNode;
+var
+  CabData: PCab;
+begin
+  Result := nil;
+  CabData := Cab_Allocate;
+  if CabData <> nil then
+  begin
+    Result := OPStackNode_Allocate;
+    if Result <> nil then
+    begin
+      Result^.UserData := CabData;
+      CabData^.ID := CabID;
+    end else
+    begin
+      Cab_Free(CabData)
+    end
+  end
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+function CreateCab(CabID: Word): PNMRAnetNode;
+var
+  CabData: PCab;
+begin
+  Result := CreateCabNode(CabID);
+  if Result <> nil then
+  begin
+    CabData := PCab( Result^.UserData);
+    CabBridge.AssignedCabs[CabBridge.iAssignedCabCount] := Result;
+    Inc(CabBridge.iAssignedCabCount);
+    Exit;
+  end;
+end;
+
+// *****************************************************************************
+// *****************************************************************************
+function FindCab(CabID: Word): PNMRAnetNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  i := 0;
+  while i < CabBridge.iAssignedCabCount do
+  begin
+    if PCab( CabBridge.AssignedCabs[i]^.UserData)^.ID = CabID then
+    begin
+      Result := CabBridge.AssignedCabs[i];
+      Exit;
+    end;
+    Inc(i);
+  end
+end;
+
+// *****************************************************************************
+//
+// function InsertHiBitParity(DataByte: Byte): Byte;
+//
+//  Parameters:
+//                DataByte:  Byte to count '1's in
+//
+//  Returns:
+//                DataByte with the parity bit (inclusive) in the MSB
+//
+//  Description:
+//              Adds the parity bit to B7.  It is an inclusive parity only on
+//  address bytes
+//
+// *****************************************************************************
+function InsertXpressnetHiBitParity(DataByte: Byte): Byte;
+begin
+  Result := 0;
+  if DataByte.B0 then Inc(Result);
+  if DataByte.B1 then Inc(Result);
+  if DataByte.B2 then Inc(Result);
+  if DataByte.B3 then Inc(Result);
+  if DataByte.B4 then Inc(Result);
+  if DataByte.B5 then Inc(Result);
+  if DataByte.B6 then Inc(Result);
+  // This is inclusive parity so if there are an even number of 1's (mod 2 = 0) then
+  // adding the parity bit will make the number of 1's odd
+  if Result mod 2 <> 0 then
+    Result := DataByte or %10000000
+  else
+    Result := DataByte
+end;
+
+// *****************************************************************************
+//
+// procedure WriteXpressNetByte(DataByte: Word; SetAddressBit: Boolean);
+//
+//   Parameters:
+//              DataByte:      The Byte to send
+//              SetAddressBit: True if the 9th bit should be set to signify it as an address
+//
+//   Returns:
+//      None
+//
+//  Description:
+//                The workhorse function that places the data onto the
+//    UART Xpressnet bus RS485 but in RS485 format
+//
+// *****************************************************************************
+procedure WriteXpressNetByte(DataByte: Word; SetAddressBit: Boolean; TxReg: ^Word; StatusReg: ^Word);
+begin
+  {$IFNDEF DISABLE_XPRESSNET_UART_WRITE}
+  if SetAddressBit then
+   DataByte := DataByte or $0100
+  else
+    DataByte := DataByte and $00FF;
+
+  TxReg^ := DataByte;
+  StatusReg^.UTXEN := 1;          // Force the Register in to the TSR so the Idle check is not "too fast" to start
+  while StatusReg^.TRMT = 1 do;   // Wait for the UART to start transmitting
+  while StatusReg^.TRMT = 0 do;   // Wait for the UART to finsh transmitting to make sure the ExpressNet timing is met
+  {$ENDIF}
+end;
+
+procedure SendXpressnetInquiryMessage(Device: Byte);
+begin
+  CabBus_RS485_Select := 1;                                                                              // Select the 485 chip to transmit mode
+  WriteXpressNetByte( InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or Device), True, @U2TXREG, @U2STA);  // Write to the Bus for a query
+  CabBus_RS485_Select := 0;                                                                              // Select the 485 chip to receive mode ASAP
+end;
+
+end.
