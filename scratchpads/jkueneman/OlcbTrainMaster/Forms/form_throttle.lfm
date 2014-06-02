@@ -34,7 +34,7 @@ object FormThrottle: TFormThrottle
       TabOrder = 0
       object TrackBarSpeed: TTrackBar
         Left = 12
-        Height = 178
+        Height = 155
         Top = 3
         Width = 34
         Max = 100
@@ -55,15 +55,15 @@ object FormThrottle: TFormThrottle
       object LabelMinSpeed: TLabel
         Left = 44
         Height = 16
-        Top = 164
+        Top = 142
         Width = 38
         Caption = '0 m/s'
         ParentColor = False
       end
       object RadioGroupDirection: TRadioGroup
         Left = 12
-        Height = 49
-        Top = 190
+        Height = 41
+        Top = 198
         Width = 155
         AutoFill = True
         Caption = 'Direction'
@@ -75,7 +75,7 @@ object FormThrottle: TFormThrottle
         ChildSizing.ShrinkVertical = crsScaleChilds
         ChildSizing.Layout = cclLeftToRightThenTopToBottom
         ChildSizing.ControlsPerLine = 2
-        ClientHeight = 27
+        ClientHeight = 19
         ClientWidth = 147
         Columns = 2
         ItemIndex = 0
@@ -103,17 +103,17 @@ object FormThrottle: TFormThrottle
         TabOrder = 3
       end
       object LabelSpeedPos: TLabel
-        Left = 100
+        Left = 98
         Height = 16
-        Top = 94
+        Top = 78
         Width = 26
         Caption = 'm/s'
         ParentColor = False
       end
       object LabelPosValue: TLabel
-        Left = 62
+        Left = 60
         Height = 16
-        Top = 94
+        Top = 78
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -133,6 +133,14 @@ object FormThrottle: TFormThrottle
         Width = 155
         Action = ActionQueryFunctions
         TabOrder = 5
+      end
+      object ButtonStop1: TButton
+        Left = 12
+        Height = 22
+        Top = 166
+        Width = 155
+        Action = ActionToggleDir
+        TabOrder = 6
       end
     end
     object GroupBoxConfiguration: TGroupBox
@@ -328,11 +336,14 @@ object FormThrottle: TFormThrottle
     Width = 588
     Panels = <    
       item
-        Text = 'Status:'
-        Width = 50
+        Text = 'Cab ID:'
+        Width = 100
       end    
       item
-        Width = 500
+        Width = 200
+      end    
+      item
+        Width = 200
       end>
     SimplePanel = False
   end
@@ -541,6 +552,11 @@ object FormThrottle: TFormThrottle
       Category = 'Query'
       Caption = 'Query Functions'
       OnExecute = ActionQueryFunctionsExecute
+    end
+    object ActionToggleDir: TAction
+      Category = 'Control'
+      Caption = 'Toggle Direction'
+      OnExecute = ActionToggleDirExecute
     end
   end
   object TimerToggleAnimation: TTimer

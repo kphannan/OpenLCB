@@ -8,7 +8,7 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, main, form_throttle_multiple_trains, form_train_config_editor,
-  form_throttle, opstack_api;
+  form_throttle;
 
 {$R *.res}
 

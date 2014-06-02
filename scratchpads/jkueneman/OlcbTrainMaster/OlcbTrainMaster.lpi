@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="7">
+    <Units Count="6">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -80,11 +80,6 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
       </Unit5>
-      <Unit6>
-        <Filename Value="..\OPStack\NMRAnet\opstack_api.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstack_api"/>
-      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -95,7 +90,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;..\OPStack\Common;..\OPStack\NMRAnet;..\OPStack\NMRAnet\CAN_Statemachines;..\OPStack\ConfigurationLayerImplementations\Lazarus_File;..\OPStack\HardwareLayerImplementations\Lazarus_Ethernet;Templates;Forms"/>
+      <OtherUnitFiles Value="..\Library;..\Components\synapse40\source\lib;..\Components\kHexEditor\source;..\Components\RackCtls;..\OPStack\Common;..\OPStack\NMRAnet;..\OPStack\NMRAnet\CAN_Statemachines;..\OPStack\ConfigurationLayerImplementations\Lazarus_File;..\OPStack\HardwareLayerImplementations\Lazarus_Ethernet;Templates;Forms;..\OPStack\Library\NCE"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then
