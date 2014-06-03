@@ -88,7 +88,7 @@ begin
               NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
             else
               NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
-            NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+            NMRA_DCC_QueuePacket(@Track, @DCCPacket, False)
             {$ENDIF}
           end;
     128 : begin

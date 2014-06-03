@@ -72,7 +72,7 @@ begin
     else
       UART1_Write_Text('0x' + s1);
   end;
-  UART1_Write_Text(LF+LF);
+  UART1_Write_Text(LF);
 end;
 
 procedure NMRAnetCabBridge_Initialize;

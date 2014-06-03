@@ -449,7 +449,7 @@ var
   iNextHead: Integer;
 begin
   Result := False;
-  QueueTarget := PDCCPacket( nil);
+  QueueTarget := PDCCPacket( nil);    BUG, IF BUFFERS FILL UP THEN THEY LATCH AND WON'T EMPTY
   if HighPriority then
   begin
     if ABuffer^.Priority.Count < ABuffer^.Priority.MaxCount then

@@ -174,36 +174,38 @@ begin
   begin
     CabData := PCab( CabNode^.UserData);
 
+    {$IFDEF LOG_CAB_REPLY}
+    UART1_Write_Text('--------'+LF);
+    {$ENDIF}
+    
     if CabData^.State and CS_LOCO_SELECT <> 0 then
     begin
       // Kick off the statemachine to do this....
       CabNode^.iUserStateMachine := STATE_CAB_SELECT_LOCO;
       CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;
-
-   //   UART1_Write_Text('Loco Select: ');
-   //   PrintIncomingMsg(CabData^.IncomingMsg);
+      {$IFDEF LOG_CAB_REPLY}
+      UART1_Write_Text('Loco Select: ');
+      PrintIncomingMsg(CabData^.IncomingMsg);
+      {$ENDIF}
     end else
     if CabData^.State and CS_MACRO_MESSAGE <> 0 then
     begin
       // Kick off the statemachine to do this....
       CabNode^.iUserStateMachine := STATE_CAB_RUN_MACRO;
       CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;
-
-    //  UART1_Write_Text('Macro: ');
-    //  PrintIncomingMsg(CabData^.IncomingMsg);
+      {$IFDEF LOG_CAB_REPLY}
+      UART1_Write_Text('Macro: ');
+      PrintIncomingMsg(CabData^.IncomingMsg);
+      {$ENDIF}
     end else
     begin
       CabNode^.iUserStateMachine := STATE_CAB_RUN_CMD;
       CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;
-
-  //    UART1_Write_Text('Command: ');
-  //    PrintIncomingMsg(CabData^.IncomingMsg);
-      for i := 0 to CabData^.IncomingMsg.Count - 1 do
-      begin
-        sss := NceKeyPressToString(CabData^.IncomingMsg.DataBytes[i]);
-    //    UART1_Write_Text( sss + LF);
-      end;
-
+      {$IFDEF LOG_CAB_REPLY}
+      UART1_Write_Text('Command: ');
+      PrintIncomingMsg(CabData^.IncomingMsg);
+      UART1_Write_Text('/--------'+LF);
+      {$ENDIF}
     end;
   end;
 
@@ -287,12 +289,14 @@ begin
                     {$IFDEF FPC}
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_SEND_PING;           // No reason to wait if running on Lazarus
                     {$ELSE}
+                    LATB4_bit := 1;
                     FlushUartReceiver;
                     Hardware_EnableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                     WriteByte(NCEBUS_PING or 0, True);                                    // Special Ping with a CabID of 0 to Sync the stream
                     Hardware_DisableInterrupts;    // It is safe to enable the CAN interrupts here... I think
                     EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_SYNC_DELAY;
+                    LATB4_bit := 0;
                     {$ENDIF}
                     Exit;
                   end;
@@ -396,7 +400,7 @@ begin
                       {$IFDEF FPC}
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_SEND_PING;           // No reason to wait if running on Lazarus
                       {$ELSE}
-                  //    LATB4_bit := 1;
+                      LATB4_bit := 1;
                       {$IFDEF DEBUG_KNOWNDEVICES_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SEND_SYNC..............'+LF); {$ENDIF}
                       FlushUartReceiver;
                       Hardware_EnableInterrupts;    // It is safe to enable the CAN interrupts here... I think
@@ -404,7 +408,7 @@ begin
                       Hardware_DisableInterrupts;
                       EnableCabBusTimer(28800);          // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_SYNC_DELAY;
-                  //    LATB4_bit := 0;
+                      LATB4_bit := 0;
                       {$ENDIF}
                       Exit;
                     end;
@@ -764,7 +768,9 @@ begin
                     if TrySendTractionDirectionSet(Node^.Info, Node^.TrainData.LinkedNode, Node^.TrainData.SpeedDir, False) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
-                  end;
+                  end
+              else
+                Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
               end;
             end;
           end;

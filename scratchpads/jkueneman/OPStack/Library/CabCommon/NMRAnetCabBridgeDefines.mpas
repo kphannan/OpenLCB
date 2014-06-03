@@ -69,9 +69,10 @@ const
   CS_LOCO_SELECT                                = $10;
 
   // NCE Specific Constants for the Throttle Messages
-  NCE_NO_SPEED_TO_REPORT    = %01111111;              // $7F
-  NCE_NO_KEY_TO_REPORT      = %01111101;              // $7D
-  NCE_SPEED_MASK            = %01111111;              // $7F
+  NCE_UNDOCUMENTED_CAB_CHANGE  =$7E;                     // Sent when the throttle is switched between the two possible CAB IDs.  Allows clearing of buffers, etc
+  NCE_NO_SPEED_TO_REPORT       = %01111111;              // $7F
+  NCE_NO_KEY_TO_REPORT         = %01111101;              // $7D
+  NCE_SPEED_MASK               = %01111111;              // $7F
   
   NCE_CAB_SELECT_LOCO       = $48;   // 72
   NCE_CAB_ENTER             = $40;   // 64   

@@ -161,6 +161,20 @@ begin
       case UART1_Read of
         'B','b'  : OPStackBuffers_PrintBuffers;
         'A', 'a' : OPStackNode_PrintAliases;
+        'D', 'd' : begin
+                     WordToStr(Track.Main.Count, s1);
+                     UART1_Write_Text('DCC Track Count: ' + s1 + LF);
+                     WordToStr(Track.Main.MaxCount, s1);
+                     UART1_Write_Text('DCC Track MaxCount: ' + s1 + LF);
+                     WordToStr(Track.Main.Peak, s1);
+                     UART1_Write_Text('DCC Track Peak: ' + s1 + LF);
+                     WordToStr(Track.Priority.Count, s1);
+                     UART1_Write_Text('DCC Track Priority Count: ' + s1 + LF);
+                     WordToStr(Track.Priority.MaxCount, s1);
+                     UART1_Write_Text('DCC Track Priority MaxCount: ' + s1 + LF);
+                     WordToStr(Track.Priority.Peak, s1);
+                     UART1_Write_Text('DCC Track Priority Peak: ' + s1 + LF);
+                   end;
       end;
     end;
   end;
