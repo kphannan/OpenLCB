@@ -17,6 +17,8 @@ unit NMRAnetDCC;
 //    Implements the DCC Signal that is to be placed on the track, sent to the
 //  accessory DCC bus, or the programming track
 //
+// TODO: CanTransmitMessage is broken to meet a coupld Recommened Practices for _old_ decoders.... Disabled so we don't meet those RPs in 9.2
+//
 // ******************************************************************************
 
 {$I Options.inc}
@@ -449,7 +451,7 @@ var
   iNextHead: Integer;
 begin
   Result := False;
-  QueueTarget := PDCCPacket( nil);    BUG, IF BUFFERS FILL UP THEN THEY LATCH AND WON'T EMPTY
+  QueueTarget := PDCCPacket( nil);
   if HighPriority then
   begin
     if ABuffer^.Priority.Count < ABuffer^.Priority.MaxCount then
@@ -574,6 +576,9 @@ end;
 // ****************************************************************************
 function CanTransmitMessage(ABuffer: PDCCBufferInfo; AMessage: PDCCPacket): Boolean;
 begin
+
+Result := True;
+(*
   // See if it is a short message that requires special attention per the S-9.2 spec
   if AMessage^.Flags and MASK_DCC_PACKET_SHORT_MULTI_FUNCTION_ADDRESS <> 0 then
   begin
@@ -582,6 +587,8 @@ begin
       if AMessage^.PacketBytes[0] >= 112 then
         if AMessage^.PacketBytes[0] <= 127 then
         begin
+                 THIS IS ALL WRONG AN DOES NOT WORK RIGHT
+        UART1_Write_Text('Dup Address');
           // Care must be taken to ensure that two packets with identical addresses are not are not transmitted within 5
           // milliseconds of each other for addresses in the range between 112-127 as older decoders may interpret these packets as
           // service mode packets (see RP-9.2.3).
@@ -602,8 +609,10 @@ begin
         if ABuffer^.TX_TimerCount < _20ms_PERIOD then      // 20ms/56us = 357.1
           ABuffer^.TX_TimerCount := _20ms_PERIOD;
       end;
-    end;
+  end;
   Result := ABuffer^.TX_TimerCount = 0
+  
+  *)
 end;
 
 

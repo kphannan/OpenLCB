@@ -29,14 +29,19 @@ const
   STATE_BRIDGE_KNOWNDEVICES            = 4;
 
   STATE_SUB_BRIDGE_INITIALIZE              = 0;
-  STATE_SUB_BRIDGE_SEND_SYNC               = 1;
-  STATE_SUB_BRIDGE_WAIT_SYNC_DELAY         = 2;
-  STATE_SUB_BRIDGE_SEND_PING               = 3;
-  STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE       = 4;
-  STATE_SUB_BRIDGE_TIMEOUT                 = 5;
-  STATE_SUB_BRIDGE_CAB_REPLIED             = 6;
-  STATE_SUB_BRIDGE_DISPATCH_MESSAGE        = 7;
-  STATE_SUB_BRIDGE_NEXT_CAB                = 8;
+  STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE  = 1;
+  STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE                  = 2;
+  STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY  = 3;
+  STATE_SUB_BRIDGE_WAIT_SYNC_DELAY                     = 4;
+  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE  = 5;
+  STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE                  = 6;
+  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY  = 7;
+  STATE_SUB_BRIDGE_SEND_PING                           = 8;
+  STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE                   = 9;
+  STATE_SUB_BRIDGE_TIMEOUT                             = 10;
+  STATE_SUB_BRIDGE_CAB_REPLIED                         = 11;
+  STATE_SUB_BRIDGE_DISPATCH_MESSAGE                    = 12;
+  STATE_SUB_BRIDGE_NEXT_CAB                            = 13;
   
 const
   CAB_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a Cab message

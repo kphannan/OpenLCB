@@ -283,6 +283,17 @@ begin
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_SEND_SYNC;
                     Exit;
                   end;
+                  
+              STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE :
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE..............'+LF); {$ENDIF}
+                  end;
+              STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE :
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+                  end;
+              STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY :
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
+                  end;
+                  
               STATE_SUB_BRIDGE_SEND_SYNC :
                   begin
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_SEND_SYNC..............'+LF); {$ENDIF}
