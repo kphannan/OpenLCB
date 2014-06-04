@@ -25,18 +25,17 @@ const
   STATE_BRIDGE_USER_START              = 0;
   STATE_BRIDGE_FIND_PROXY              = 1;
   STATE_BRIDGE_CREATE_REQUIRED_CABS    = 2;
-  STATE_BRIDGE_DISCOVERDEVICES         = 3;
-  STATE_BRIDGE_KNOWNDEVICES            = 4;
+  STATE_BRIDGE_POLL_CABS               = 3;
 
   STATE_SUB_BRIDGE_INITIALIZE              = 0;
   STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE  = 1;
   STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE                  = 2;
   STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY  = 3;
   STATE_SUB_BRIDGE_WAIT_SYNC_DELAY                     = 4;
-  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE  = 5;
-  STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE                  = 6;
-  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY  = 7;
-  STATE_SUB_BRIDGE_SEND_PING                           = 8;
+  STATE_SUB_BRIDGE_INITIAIZE_PING                      = 5;
+  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE  = 6;
+  STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE                  = 7;
+  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY  = 8;
   STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE                   = 9;
   STATE_SUB_BRIDGE_TIMEOUT                             = 10;
   STATE_SUB_BRIDGE_CAB_REPLIED                         = 11;
@@ -147,6 +146,9 @@ type
     iIncomingCount: Byte;                        // for Xpressnet upper nibble is the Instruction, lower is the Count
     iIncomingByteIndex: Byte;                    // Indexes the next incoming byte for the IncomingBuffer
     iIncomingStateMachine: Byte;                 //
+    OutGoingBuffer: TCabMessageArray;
+    iOutGoingCount: Byte;
+    iOutGoingByteIndex: Byte;
     LastPortRead: Word;                          // Pin Change testing
     AssignedCabs: TAssignedCabArray;
     iAssignedCabCount: Integer;                  // Number of valid Cabs in the AssignedCabs array

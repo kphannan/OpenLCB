@@ -83,11 +83,13 @@ begin
   CabBus_RS485_Select_Direction := 0;      // Output
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
     ZeroizeNceCabData( @CabArray[i]);
-  CabBridge.Discovering := False;
+  CabBridge.Discovering := True;             // Start out discovering
   CabBridge.iDiscoveryCabID := ID_MIN_DEVICE_NCE;
   CabBridge.iStateMachine := STATE_BRIDGE_USER_START;
   CabBridge.DiscoverTimer := 0;
   CabBridge.iAssignedCabCount := 0;
+  CabBridge.iOutGoingCount := 0;
+  CabBridge.iOutGoingByteIndex := 0;
   for i := 0 to USER_MAX_NODE_COUNT - 2 do   // no space for physical node
     CabBridge.AssignedCabs[i] := nil;
   CabBridge.iActiveCab := 0;
@@ -155,7 +157,7 @@ begin
   // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
   DisableCabBusTimer;
   case CabBridge.iStateMachine of
-    STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_SEND_PING;
+    STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;
     STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
   end;
 end;
