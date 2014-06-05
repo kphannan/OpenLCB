@@ -17,7 +17,7 @@ uses
 procedure UserStateMachine_Initialize;
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
-procedure UART_RX_StateMachine;
+procedure CabBus_UART_RX_StateMachine;
 
 // Called every 100ms typically from another thread so only use to update flags
 procedure AppCallback_Timer_100ms;
@@ -92,7 +92,7 @@ var
 // The Pin Change Interrupt stopped the Timeout Timer so we are free to handle
 // the UART RX at our leasure
 // *****************************************************************************
-procedure UART_RX_StateMachine;
+procedure CabBus_UART_RX_StateMachine;
 begin
   while (URXDA_U2STA_bit = 1) do
   begin
@@ -294,46 +294,50 @@ begin
                     end;
                     
                     if CabBridge.Discovering then
-                      CabBridge.iDiscoveryCabID := ID_MIN_DEVICE_NCE
-                    else
-                      CabBridge.iActiveCab := 0;
-                      
+                      CabBridge.CurrentCabID := ID_MIN_DEVICE_NCE
+                    else begin
+                      CabBridge.iAssignedCab := 0;
+                      CabBridge.CurrentCabID := PCab( CabBridge.AssignedCabs[0]^.UserData)^.ID;  // One must exist if we get to here, see above test
+                    end;
+                    
                     CabBridge.iIncomingCount := 0;
                     CabBridge.iIncomingByteIndex := 0;
                     CabBridge.iOutGoingCount := 1;
                     CabBridge.iOutGoingByteIndex := 0;
                     CabBridge.OutGoingBuffer[0] := NCEBUS_PING or 0;            // Setup outgoing message (Sync)
-                    CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE;
-                    Exit;
-                  end;
-              STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE :
-                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE..............'+LF); {$ENDIF}
-                    if U2STA.UTXBF = 0 then      // UARTx Transmit Buffer Full Status bit (read-only)  1 = Transmit buffer is full;  0 = Transmit buffer is not full, at least one more character can be written
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE;
+                    CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE; /// STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+                    // Start the transmission by setting the IC to Transmit
                     if CabBridge.iOutGoingByteIndex = 0 then
                     begin
                       CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
                       LATB4_bit := 1;
                     end;
-                    U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
-                    Inc(CabBridge.iOutGoingByteIndex);
-                    if CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount then
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE   // Stuff in the next byte when possible
-                    else
+                    
+                    // Pump in as many bytes to the hardware buffers as possible
+                    while (CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount) and (UTXBF_U2STA_bit = 0) do
+                    begin
+                      U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
+                      Inc(CabBridge.iOutGoingByteIndex);
+                    end;
+                    
+                    if CabBridge.iOutGoingByteIndex >= CabBridge.iOutGoingCount then
+                    begin
+                      // Special case if we are sending the last byte.  Need to setup the interrupt to catch the last byte out
+                      U2TXIF_bit := 0;
+                      U2TXIE_bit := 1;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
+                    end;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY :
                   begin //{$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
-                    if (TRMT_U2STA_bit = 1) then // Transmit Shift Register Empty bit (read-only) 1 = Transmit Shift Register is empty and transmit buffer is empty (the last transmission has completed) ; 0 = Transmit Shift Register is not empty, a transmission is in progress or queued
+                    if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin
-                      CabBus_RS485_Select := 0;      // Select the 485 chip to receive mode
-                      LATB4_bit := 0;
-                      EnableCabBusTimer(28800);      // 31.25ns * 28800 = 900us      Needs some delay, the cabs are slow microprocessors
+                      EnableCabBusTimer(28800);      // 31.25ns * 28800 = 900us      Need delay, the cabs are slow microprocessors
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_SYNC_DELAY;
                     end;
                     Exit;
@@ -349,55 +353,46 @@ begin
                     CabBridge.iIncomingByteIndex := 0;
                     CabBridge.iOutGoingCount := 1;
                     CabBridge.iOutGoingByteIndex := 0;
-                    if CabBridge.Discovering then
-                      CabBridge.OutGoingBuffer[0] := NCEBUS_PING or CabBridge.iDiscoveryCabID     // Setup outgoing message
-                    else
-                      CabBridge.OutGoingBuffer[0] := NCEBUS_PING or PCab( CabBridge.AssignedCabs[CabBridge.iActiveCab]^.UserData)^.ID;         // Setup outgoing message
+                    CabBridge.OutGoingBuffer[0] := NCEBUS_PING or CabBridge.CurrentCabID;    // Setup outgoing message
                     CabBridge.LastPortRead := PortB;
                     CNIE_bit := 1;                  // Pin Change Interrupt enable
                     CabBus_RS485_Select := 1;       // Select the 485 chip to transmit mode
                     
                     LATB4_bit := 1;
                     
-                    CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE;
-                    Exit;
-                  end;
-              STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE :
-                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE..............'+LF); {$ENDIF}
-                    if U2STA.UTXBF = 0 then      // UARTx Transmit Buffer Full Status bit (read-only)  1 = Transmit buffer is full;  0 = Transmit buffer is not full, at least one more character can be written
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
+                    CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+                    // Start the transmission by setting the IC to Transmit
                     if CabBridge.iOutGoingByteIndex = 0 then
                     begin
                       CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
-                      U2STA.UTXEN := 1;          // Force the Register in to the TSR so the Idle check is not "too fast" to start
                       LATB4_bit := 1;
                     end;
-                    
-            //        Need to loop here and fill the buffer stack as full as possible here before branching to ensure the TX end interrupt is not called because of a stall
-                    
-                    
-                    U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
-                    Inc(CabBridge.iOutGoingByteIndex);
-                    if CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount then
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE
-                    else
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY;
+
+                    // Pump in as many bytes to the hardware buffers as possible
+                    while (CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount) and (UTXBF_U2STA_bit = 0) do
+                    begin
+                      U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
+                      Inc(CabBridge.iOutGoingByteIndex);
+                    end;
+
+                    if CabBridge.iOutGoingByteIndex >= CabBridge.iOutGoingCount then
+                    begin
+                      // Special case if we are sending the last byte.  Need to setup the interrupt to catch the last byte out
+                      U2TXIF_bit := 0;
+                      U2TXIE_bit := 1;
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
+                    end;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
-
-                    if (TRMT_U2STA_bit = 1) then     // Transmit Shift Register Empty bit (read-only) 1 = Transmit Shift Register is empty and transmit buffer is empty (the last transmission has completed) ; 0 = Transmit Shift Register is not empty, a transmission is in progress or queued
+                    if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin
-                      CabBus_RS485_Select := 0;      // Select the 485 chip to receive mode
-                      
-                      LATB4_bit := 0;
-                      
-                      EnableCabBusTimer(57600);          // 31.25ns * 57600 = 1800us     Needs some delay, the cabs are slow microprocessors
+                      EnableCabBusTimer(38400);      // 31.25ns * 38400 = 1200us      Need delay, the cabs are slow microprocessors
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE;
                     end;
                     Exit;
@@ -418,14 +413,10 @@ begin
               STATE_SUB_BRIDGE_CAB_REPLIED :
                   begin
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_CAB_REPLIED'+LF); {$ENDIF}
-                    if CabBridge.Discovering then
-                      CabBridge.ExistingCab := FindCab(CabBridge.iDiscoveryCabID)  // this may return null when discovering!!!!
-                    else
-                      CabBridge.ExistingCab := CabBridge.AssignedCabs[CabBridge.iActiveCab];
-                      
+                    CabBridge.ExistingCab := FindCab(CabBridge.CurrentCabID);  // this may return null when discovering!!!!
                     if CabBridge.ExistingCab = nil then
                     begin
-                      CreateCab(CabBridge.iDiscoveryCabID);                     // Throw away this message as it could be corrupted depending on timing of when the cab was plugged in
+                      CreateCab(CabBridge.CurrentCabID);                     // Throw away this message as it could be corrupted depending on timing of when the cab was plugged in
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB
                     end else
                     begin
@@ -448,8 +439,8 @@ begin
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_NEXT_CAB'+LF); {$ENDIF}
                     if CabBridge.Discovering then
                     begin
-                      Inc(CabBridge.iDiscoveryCabID);
-                      if CabBridge.iDiscoveryCabID > ID_MAX_DEVICE_NCE then
+                      Inc(CabBridge.CurrentCabID);
+                      if CabBridge.CurrentCabID > ID_MAX_DEVICE_NCE then
                       begin
                         CabBridge.Discovering := False;
                         CabBridge.DiscoverTimer := 0;
@@ -458,11 +449,13 @@ begin
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;   // Ping the next one
                     end else
                     begin
-                      Inc(CabBridge.iActiveCab);
-                      if CabBridge.iActiveCab >= CabBridge.iAssignedCabCount then
+                      Inc(CabBridge.iAssignedCab);
+                      if CabBridge.iAssignedCab >= CabBridge.iAssignedCabCount then
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE      // Start over and send the Sync again
-                      else
+                      else begin
+                        CabBridge.CurrentCabID := PCab( CabBridge.AssignedCabs[CabBridge.iAssignedCab]^.UserData)^.ID;  // One must exist if we get to here, see above test
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;  // Ping the next known one
+                      end;
                     end;
                     Exit;
                   end;

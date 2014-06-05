@@ -151,18 +151,22 @@ begin
   STSEL_U2MODE_bit   := 1;   // 0 = 1 Stop Bit; 1 = 2 Stop Bits
   ADDEN_U2STA_bit    := 0;   // Address detect (9-bit mode) disabled
   UARTEN_U2MODE_bit  := 1;   // Enable the UART module, must be done before enabling the UTXEN
+  
   U2RXIP_0_Bit        := 1;   // Interrupt Priority  = 5
   U2RXIP_1_Bit        := 0;
   U2RXIP_2_Bit        := 1;
   URXISEL_0_Bit      := 0;   // Interrupt with the buffer system has 1 bytes
   URXISEL_1_Bit      := 0;
   U2RXIF_Bit         := 0;   // Clear the interrupt flag
-  U2TXIP_0_bit       := 1;   // Highest priorty
+  
+  U2TXIP_0_bit       := 1;   // Highest priorty 7
   U2TXIP_1_bit       := 1;
   U2TXIP_2_bit       := 1;
   UTXISEL0_U2STA_bit := 1;
   UTXISEL1_U2STA_bit := 0;   // IfUTXISEL<1:0>=01,theUxTXIFbitisset,whenthelastcharacterisshiftedoutofthe UxTSR register, or the transmit buffer is empty. This implies that all the transmit operations are completed.
   UTXEN_U2STA_bit    := 1;   // Enable Transmission
+  U2TXIF_bit         := 0;
+  
   CNPUB1_bit         := 1;   // Enable the internal pull up  on the Rx Pin
   while (URXDA_U2STA_bit = 1) do 
     Temp := U2RXREG;             // Flush the RX Buffer

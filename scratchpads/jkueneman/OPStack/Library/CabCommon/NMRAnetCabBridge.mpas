@@ -21,7 +21,8 @@ procedure FlushUartReceiver;
 procedure EnableCabBusTimer(Time: Word);
 procedure DisableCabBusTimer;
 procedure CabBus_Timeout;
-procedure PinChangeInterrupt;   
+procedure CabBus_PinChangeOnUartRXInterrupt;
+procedure CabBus_UART_TX_Interrupt;
 function NceKeyPressToString(KeyPress: Byte): string[64];
 function ChangeSpeed(Speed: THalfFloat; DeltaInRealSpeed: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): Word;
 function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
@@ -84,7 +85,7 @@ begin
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
     ZeroizeNceCabData( @CabArray[i]);
   CabBridge.Discovering := True;             // Start out discovering
-  CabBridge.iDiscoveryCabID := ID_MIN_DEVICE_NCE;
+  CabBridge.CurrentCabID := ID_MIN_DEVICE_NCE;
   CabBridge.iStateMachine := STATE_BRIDGE_USER_START;
   CabBridge.DiscoverTimer := 0;
   CabBridge.iAssignedCabCount := 0;
@@ -92,7 +93,7 @@ begin
   CabBridge.iOutGoingByteIndex := 0;
   for i := 0 to USER_MAX_NODE_COUNT - 2 do   // no space for physical node
     CabBridge.AssignedCabs[i] := nil;
-  CabBridge.iActiveCab := 0;
+  CabBridge.iAssignedCab := 0;
 end;
 
 // ****************************************************************************
@@ -164,10 +165,20 @@ end;
 
 // *****************************************************************************
 // *****************************************************************************
-procedure PinChangeInterrupt;
+procedure CabBus_PinChangeOnUartRXInterrupt;
 begin
   CNIE_bit := 0;                                                                // Pin Change Interrupt disabled
   DisableCabBusTimer;
+end;
+
+procedure CabBus_UART_TX_Interrupt;
+begin
+  while TRMT_U2STA_bit = 0 do;      // bug in module, may fire too early
+  
+  LATB4_bit := 0;
+  
+  CabBus_RS485_Select := 0;       // Get ready to receive
+  U2TXIE_bit := 0;                // Disable the Interrupt till the next time
 end;
 
 function NceKeyPressToString(KeyPress: Byte): string[64];

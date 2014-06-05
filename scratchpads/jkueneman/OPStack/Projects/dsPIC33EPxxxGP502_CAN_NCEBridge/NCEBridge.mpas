@@ -34,34 +34,40 @@ var
 //  INTERRUPTS
 // *****************************************************************************
 
-procedure INTERRUPT_Timer_525ms(); iv IVT_ADDR_T1INTERRUPT;
+procedure INTERRUPT_Timer_525ms(); iv IVT_ADDR_T1INTERRUPT; ics ICS_AUTO;
 begin
   T1IF_bit := 0;
 end;
 
-procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT;
+procedure INTERRUPT_Timer_100ms(); iv IVT_ADDR_T2INTERRUPT; ics ICS_AUTO;
 // Called once every 100m
 begin
   T2IF_bit := 0;                                                                // Clear the Flag
   OPStackCore_Timer
 end;
 
-procedure INTERRUPT_Timer_CabBus(); iv IVT_ADDR_T4INTERRUPT;
+procedure INTERRUPT_Timer_CabBus(); iv IVT_ADDR_T4INTERRUPT; ics ICS_AUTO;
 begin
   T4IF_bit := 0;
   CabBus_Timeout;
 end;
 
-procedure INTERRUPT_CabBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT;
+procedure INTERRUPT_CabBus_UART_RX(); iv IVT_ADDR_U2RXINTERRUPT; ics ICS_AUTO;
 begin
   U2RXIF_Bit := 0;              // Clear the interrupt flag to receive the next byte
-  UART_RX_StateMachine;
+  CabBus_UART_RX_StateMachine;
 end;
 
-procedure INTERRUPT_CabBus_UART_RX_PIN_CHANGE; iv IVT_ADDR_CNINTERRUPT;
+procedure INTERRUPT_CabBus_UART_TX(); iv IVT_ADDR_U2TXINTERRUPT; ics ICS_AUTO;
+begin
+  // Do not clear the flag on purpose, the state machine checks it for a trigger to move on
+  CabBus_UART_TX_Interrupt;
+end;
+
+procedure INTERRUPT_CabBus_UART_RX_PIN_CHANGE; iv IVT_ADDR_CNINTERRUPT; ics ICS_AUTO;
 begin
   CNIF_bit := 0;
-  PinChangeInterrupt;
+  CabBus_PinChangeOnUartRXInterrupt;
 end;
 
 var

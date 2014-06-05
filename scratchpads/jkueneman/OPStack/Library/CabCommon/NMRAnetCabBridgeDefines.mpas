@@ -28,19 +28,17 @@ const
   STATE_BRIDGE_POLL_CABS               = 3;
 
   STATE_SUB_BRIDGE_INITIALIZE                          = 0;
-  STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE  = 1;
-  STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE                  = 2;
-  STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY  = 3;
-  STATE_SUB_BRIDGE_WAIT_SYNC_DELAY                     = 4;
-  STATE_SUB_BRIDGE_INITIAIZE_PING                      = 5;
-  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_SPACE  = 6;
-  STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE                  = 7;
-  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY  = 8;
-  STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE                   = 9;
-  STATE_SUB_BRIDGE_TIMEOUT                             = 10;
-  STATE_SUB_BRIDGE_CAB_REPLIED                         = 11;
-  STATE_SUB_BRIDGE_DISPATCH_MESSAGE                    = 12;
-  STATE_SUB_BRIDGE_NEXT_CAB                            = 13;
+  STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE                  = 1;
+  STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY  = 2;
+  STATE_SUB_BRIDGE_WAIT_SYNC_DELAY                     = 3;
+  STATE_SUB_BRIDGE_INITIAIZE_PING                      = 4;
+  STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE                  = 5;
+  STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY  = 6;
+  STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE                   = 7;
+  STATE_SUB_BRIDGE_TIMEOUT                             = 8;
+  STATE_SUB_BRIDGE_CAB_REPLIED                         = 9;
+  STATE_SUB_BRIDGE_DISPATCH_MESSAGE                    = 10;
+  STATE_SUB_BRIDGE_NEXT_CAB                            = 11;
   
 const
   CAB_MAX_DATA_BYTE = 12;                                                    // Max number of databytes in a Cab message
@@ -139,7 +137,6 @@ type
   
   TCabBridge = record
     Discovering: Boolean;                        // The bridge is pinging all Cab IDs looking for newly added Cabs
-    iDiscoveryCabID: Word;                       // The index of the Cab while discovering
     iStateMachine: Byte;                         // Main Statemachine index
     DiscoverTimer: Byte;                         // Counter to detect when to start a Discovery cycle
     IncomingBuffer: TCabMessageArray;            //
@@ -152,8 +149,9 @@ type
     LastPortRead: Word;                          // Pin Change testing
     AssignedCabs: TAssignedCabArray;
     iAssignedCabCount: Integer;                  // Number of valid Cabs in the AssignedCabs array
-    iActiveCab: Integer;
+    iAssignedCab: Byte;
     ExistingCab: PNMRAnetNode;
+    CurrentCabID: Byte;
   end;
   
   // Array of User Data for all Nodes ( there will be one extra since the Root Node is differnet and not a CAB
@@ -170,7 +168,6 @@ implementation
 procedure CabBridge_Initialize;
 begin
   CabBridge.Discovering := False;
-  CabBridge.iDiscoveryCabID := 0;
   CabBridge.iStateMachine := 0;
   CabBridge.DiscoverTimer := 0;
   CabBridge.iIncomingCount := 0;
@@ -178,7 +175,8 @@ begin
   CabBridge.iIncomingByteIndex := 0;
   CabBridge.LastPortRead := 0;
   CabBridge.iAssignedCabCount := 0;
-  CabBridge.iActiveCab := 0;
+  CabBridge.iAssignedCab := 0;
+  CabBridge.CurrentCabID := 0;
   CabBridge.ExistingCab := nil;
 end;
 
