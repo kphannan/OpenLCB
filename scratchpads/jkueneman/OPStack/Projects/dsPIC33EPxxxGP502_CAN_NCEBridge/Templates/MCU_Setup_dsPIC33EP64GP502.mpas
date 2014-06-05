@@ -157,6 +157,11 @@ begin
   URXISEL_0_Bit      := 0;   // Interrupt with the buffer system has 1 bytes
   URXISEL_1_Bit      := 0;
   U2RXIF_Bit         := 0;   // Clear the interrupt flag
+  U2TXIP_0_bit       := 1;   // Highest priorty
+  U2TXIP_1_bit       := 1;
+  U2TXIP_2_bit       := 1;
+  UTXISEL0_U2STA_bit := 1;
+  UTXISEL1_U2STA_bit := 0;   // IfUTXISEL<1:0>=01,theUxTXIFbitisset,whenthelastcharacterisshiftedoutofthe UxTSR register, or the transmit buffer is empty. This implies that all the transmit operations are completed.
   UTXEN_U2STA_bit    := 1;   // Enable Transmission
   CNPUB1_bit         := 1;   // Enable the internal pull up  on the Rx Pin
   while (URXDA_U2STA_bit = 1) do 
