@@ -631,24 +631,13 @@ function OPStackCore_Process: PNMRAnetnode;
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
-    Hardware_DisableInterrupts;
     Result := OPStackNode_NextNode;
-    Hardware_EnableInterrupts;
-    
     if Result <> nil then
     begin
-      Hardware_DisableInterrupts;
       NodeRunStateMachine(Result);
-      Hardware_EnableInterrupts;
-      
-      Hardware_DisableInterrupts;
       AppCallback_UserStateMachine_Process(Result);    // Do I want to let this run with nil?  Why should there be a nil?  There shouldn't
-      Hardware_EnableInterrupts;
     end;
-    
-    Hardware_DisableInterrupts;
     ProcessHardwareMessages;
-    Hardware_EnableInterrupts;
   end;
 end;
 

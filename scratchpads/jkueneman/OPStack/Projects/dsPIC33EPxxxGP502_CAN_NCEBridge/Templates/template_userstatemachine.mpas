@@ -283,8 +283,7 @@ begin
           begin
             case CabBridge.iStateMachine of   // I could use the Train Data machine for this if I wanted
               STATE_SUB_BRIDGE_INITIALIZE :
-                  begin
-                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_INITIALIZE'+LF); {$ENDIF}
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_INITIALIZE'+LF); {$ENDIF}
                     FlushUartReceiver;
                     
                     if (CabBridge.iAssignedCabCount = 0) or (CabBridge.DiscoverTimer >= REDISCOVERY_TIME) then
@@ -312,11 +311,8 @@ begin
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
                     // Start the transmission by setting the IC to Transmit
                     if CabBridge.iOutGoingByteIndex = 0 then
-                    begin
                       CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
-                      LATB4_bit := 1;
-                    end;
-                    
+
                     // Pump in as many bytes to the hardware buffers as possible
                     while (CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount) and (UTXBF_U2STA_bit = 0) do
                     begin
@@ -334,9 +330,9 @@ begin
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY :
-                  begin //{$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
+                  begin
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
-                    begin
+                    begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
                       EnableCabBusTimer(28800);      // 31.25ns * 28800 = 900us      Need delay, the cabs are slow microprocessors
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_SYNC_DELAY;
                     end;
@@ -357,20 +353,14 @@ begin
                     CabBridge.LastPortRead := PortB;
                     CNIE_bit := 1;                  // Pin Change Interrupt enable
                     CabBus_RS485_Select := 1;       // Select the 485 chip to transmit mode
-                    
-                    LATB4_bit := 1;
-                    
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE :
-                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE..............'+LF); {$ENDIF}
                     // Start the transmission by setting the IC to Transmit
                     if CabBridge.iOutGoingByteIndex = 0 then
-                    begin
                       CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
-                      LATB4_bit := 1;
-                    end;
 
                     // Pump in as many bytes to the hardware buffers as possible
                     while (CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount) and (UTXBF_U2STA_bit = 0) do
@@ -389,7 +379,7 @@ begin
                     Exit;
                   end;
               STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY :
-                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin
                       EnableCabBusTimer(38400);      // 31.25ns * 38400 = 1200us      Need delay, the cabs are slow microprocessors

@@ -174,11 +174,8 @@ end;
 procedure CabBus_UART_TX_Interrupt;
 begin
   while TRMT_U2STA_bit = 0 do;      // bug in module, may fire too early
-  
-  LATB4_bit := 0;
-  
-  CabBus_RS485_Select := 0;       // Get ready to receive
-  U2TXIE_bit := 0;                // Disable the Interrupt till the next time
+  CabBus_RS485_Select := 0;         // Get ready to receive
+  U2TXIE_bit := 0;                  // Disable the Interrupt till the next time
 end;
 
 function NceKeyPressToString(KeyPress: Byte): string[64];

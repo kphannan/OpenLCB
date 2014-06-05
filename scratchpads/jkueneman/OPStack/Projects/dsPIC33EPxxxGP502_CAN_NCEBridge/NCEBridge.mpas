@@ -96,8 +96,10 @@ begin
   
   while True do
   begin   
-
+    LATB4_bit := 1;
     ActiveNode := OPStackCore_Process;
+    LATB4_bit := 0;
+
   //  LATB4_bit := 0;
   //  delay_us(10);
     if UART1_Data_Ready then
