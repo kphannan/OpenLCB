@@ -18,6 +18,7 @@ procedure UserStateMachine_Initialize;
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 procedure CabBus_UART_RX_StateMachine;
+procedure CabBus_Timeout;
 
 // Called every 100ms typically from another thread so only use to update flags
 procedure AppCallback_Timer_100ms;
@@ -100,6 +101,19 @@ begin
     Inc(CabBridge.iIncomingCount);
     if CabBridge.iIncomingCount = 2 then
       CabBridge.iStateMachine := STATE_SUB_BRIDGE_CAB_REPLIED                   // Received both Bytes process them
+  end;
+end;
+
+// *****************************************************************************
+// Called from Dynamically set Interrupt timer after 1800us
+// *****************************************************************************
+procedure CabBus_Timeout;
+begin
+  // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
+  DisableCabBusTimer;
+  case CabBridge.iStateMachine of
+    STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;
+    STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
   end;
 end;
 
@@ -374,6 +388,7 @@ begin
                       // Special case if we are sending the last byte.  Need to setup the interrupt to catch the last byte out
                       U2TXIF_bit := 0;
                       U2TXIE_bit := 1;
+                      CabBridge.iIncomingStateMachine := 0;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
                     end;
                     Exit;

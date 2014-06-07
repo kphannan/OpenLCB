@@ -14,64 +14,64 @@ uses
   nmranetutilities;
 
 
-function Send_InstructionNotSupported(iDevice: Byte): Boolean;
+procedure Send_InstructionNotSupported(CabNode: PNMRAnetNode);
 
-function ResumeOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
-function StopOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
-function ServiceModeResultsRequest(iDevice: Byte): Boolean;
-function CommandStationSoftwareVersionRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function CommandStationStatusRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure ResumeOperationsRequest(CabNode: PNMRAnetNode);
+procedure StopOperationsRequest(CabNode: PNMRAnetNode);
+procedure ServiceModeResultsRequest(CabNode: PNMRAnetNode);
+procedure CommandStationSoftwareVersionRequest(CabNode: PNMRAnetNode);
+procedure CommandStationStatusRequest(CabNode: PNMRAnetNode);
 
-function RegisterModeReadRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function DirectModeReadRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function PagedModeReadRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function SetCommandStationPowerUpMode(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure RegisterModeReadRequest(CabNode: PNMRAnetNode);
+procedure DirectModeReadRequest(CabNode: PNMRAnetNode);
+procedure PagedModeReadRequest(CabNode: PNMRAnetNode);
+procedure SetCommandStationPowerUpMode(CabNode: PNMRAnetNode);
 
-function RegisterModeWriteRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function DirectModeWriteRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function PagedModeWriteRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure RegisterModeWriteRequest(CabNode: PNMRAnetNode);
+procedure DirectModeWriteRequest(CabNode: PNMRAnetNode);
+procedure PagedModeWriteRequest(CabNode: PNMRAnetNode);
 
-function StopAllLocomotivesRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure StopAllLocomotivesRequest(CabNode: PNMRAnetNode);
 
-function EmergencyStopLocomotiveRequestV2_Down(iDevice: Byte): Boolean;
-function EmergencyStopLocomotiveRequestV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure EmergencyStopLocomotiveRequestV2_Down(CabNode: PNMRAnetNode);
+procedure EmergencyStopLocomotiveRequestV3(CabNode: PNMRAnetNode);
 
-function LocomotiveInformationRequestV1(iDevice: Byte): Boolean;
-function LocomotiveInformationRequestV2(iDevice: Byte): Boolean;
+procedure LocomotiveInformationRequestV1(CabNode: PNMRAnetNode);
+procedure LocomotiveInformationRequestV2(CabNode: PNMRAnetNode);
 
-function LocomotiveInformationRequestV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function FunctionStatusRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function FunctionStateRequestEx(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function FunctionOperationRequestEx(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function AddressInquiryLocoStack(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
-function AddressInquiryLocoDeleteFromStack(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure LocomotiveInformationRequestV3(CabNode: PNMRAnetNode);
+procedure FunctionStatusRequest(CabNode: PNMRAnetNode);
+procedure FunctionStateRequestEx(CabNode: PNMRAnetNode);
+procedure FunctionOperationRequestEx(CabNode: PNMRAnetNode);
+procedure AddressInquiryLocoStack(CabNode: PNMRAnetNode; Backward: Boolean);
+procedure AddressInquiryLocoDeleteFromStack(CabNode: PNMRAnetNode);
 
-function SetLocomotiveSpeedAndDirectionRequest(XpressNetMessage: PCabMessage; iDevice: Byte; Node: PNMRAnetNode): Boolean;
-function SetFunctionOperationRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function SetFunctionStateRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function AddLocomotiveToMU_Request(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
-function RemoveLocomotiveFromMU_Request(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function AddressInquiryOfMember_MU_Request(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
-function AddressInquiryOf_MU_Request(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
+procedure SetLocomotiveSpeedAndDirectionRequest(CabNode: PNMRAnetNode; Node: PNMRAnetNode);
+procedure SetFunctionOperationRequest(CabNode: PNMRAnetNode);
+procedure SetFunctionStateRequest(CabNode: PNMRAnetNode);
+procedure AddLocomotiveToMU_Request(CabNode: PNMRAnetNode; Backward: Boolean);
+procedure RemoveLocomotiveFromMU_Request(CabNode: PNMRAnetNode);
+procedure AddressInquiryOfMember_MU_Request(CabNode: PNMRAnetNode; Backward: Boolean);
+procedure AddressInquiryOf_MU_Request(CabNode: PNMRAnetNode; Backward: Boolean);
 
-function EstablishDoubleHeaderV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function DissolveDoubleHeaderV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function FunctionRefreshMode(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure EstablishDoubleHeaderV3(CabNode: PNMRAnetNode);
+procedure DissolveDoubleHeaderV3(CabNode: PNMRAnetNode);
+procedure FunctionRefreshMode(CabNode: PNMRAnetNode);
 
-function OperationsModeRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure OperationsModeRequest(CabNode: PNMRAnetNode);
 
-function LocomotiveOperationRequestV1(iDevice: Byte): Boolean;
-function LocomotiveOperationRequestV2(iDevice: Byte): Boolean;
+procedure LocomotiveOperationRequestV1(CabNode: PNMRAnetNode);
+procedure LocomotiveOperationRequestV2(CabNode: PNMRAnetNode);
 
-function AccessoryInformationRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function AccessoryOperationRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure AccessoryInformationRequest(CabNode: PNMRAnetNode);
+procedure AccessoryOperationRequest(CabNode: PNMRAnetNode);
 
-function EstablishDoubleHeaderV2(iDevice: Byte): Boolean;
-function DisolveDoubleHeaderV2(iDevice: Byte): Boolean;
+procedure EstablishDoubleHeaderV2(CabNode: PNMRAnetNode);
+procedure DisolveDoubleHeaderV2(CabNode: PNMRAnetNode);
 
-function PC_Interface_VersionNumber(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function PC_Interface_SetAddress(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
-function PC_Interface_SetBaudRate(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure PC_Interface_VersionNumber(CabNode: PNMRAnetNode);
+procedure PC_Interface_SetAddress(CabNode: PNMRAnetNode);
+procedure PC_Interface_SetBaudRate(CabNode: PNMRAnetNode);
 
 
 implementation
@@ -87,15 +87,12 @@ implementation
 //              Implements "2.1.10 Instruction not supported by command station" in the XpressNet spec
 //
 // *****************************************************************************
-function Send_InstructionNotSupported(iDevice: Byte): Boolean;
-//var
-//  XpressNetMessage: TXpressNetMessage;
+procedure Send_InstructionNotSupported(CabNode: PNMRAnetNode);
 begin
-  Result := True;
- { XpressNetMessage.HeaderByte := %01100001;            // $61
-  XpressNetMessage.Bytes[0] := %10000010;              // $82
-  XpressNetMessage.DataCount := 1;
-  SendXpressNetMessage(@XpressNetMessage, CALLBYTE_RESPONSE, iDevice); }
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0] := %01100001 or CALLBYTE_RESPONSE_XPRESSNET;    // $61
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1] := %10000010;                                   // $82
+  PCab( CabNode^.UserData)^.IncomingMsg.Count := 2;
+  PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
 end;
 
 // *****************************************************************************
@@ -110,12 +107,10 @@ end;
 //  Status:
 //     Complete 1/29/2011
 // *****************************************************************************
-function ResumeOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
+procedure ResumeOperationsRequest(CabNode: PNMRAnetNode);
 begin
 
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('ResumeOperationsRequest'+LF);{$ENDIF}
-
-  Result := True;
 //TODO....
 
 //  ServiceMode_End;             // Any kind of Service Mode in process is finshed
@@ -128,9 +123,9 @@ begin
  // CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_SHUTDOWN_BIT := 0;  // Flag the Command Station is not in E-Shutdown or E-Stop
  // CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_STOP_BIT := 0;
 
- { XpressNetMessage^.HeaderByte := %01100001;  // $61;  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  XpressNetMessage^.Bytes[0]   := %00000001;  // $01
-  XpressNetMessage^.DataCount  := 1;
+ { Cab^.IncomingMsg.HeaderByte := %01100001;  // $61;  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  Cab^.IncomingMsg.Bytes[0]   := %00000001;  // $01
+  Cab^.IncomingMsg.DataCount  := 1;
   Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST);
   Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST); }
 end;
@@ -147,12 +142,10 @@ end;
 //  Status:
 //     Complete 1/29/2011
 // *****************************************************************************
-function StopOperationsRequest(XpressNetMessage: PCabMessage): Boolean;
+procedure StopOperationsRequest(CabNode: PNMRAnetNode);
 begin
 
  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('StopOperationsRequest'+LF);{$ENDIF}
-
-  Result := True;
   
 // TODO....
 
@@ -160,9 +153,9 @@ begin
  // ServiceMode_End;             // Any kind of Service Mode in process is finshed
 //  SPI_UpdateDCC_Outputs;
   {
-  XpressNetMessage^.HeaderByte  := %01100001;  // $61
-  XpressNetMessage^.Bytes[0]    := %00000000;  // $00
-  XpressNetMessage^.DataCount   := 1;
+  Cab^.IncomingMsg.HeaderByte  := %01100001;  // $61
+  Cab^.IncomingMsg.Bytes[0]    := %00000000;  // $00
+  Cab^.IncomingMsg.DataCount   := 1;
   Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST);
   Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST); }
 end;
@@ -180,9 +173,8 @@ end;
 //     Complete:
 //
 // *****************************************************************************
-function ServiceModeResultsRequest(iDevice: Byte): Boolean;
+procedure ServiceModeResultsRequest(CabNode: PNMRAnetNode);
 begin
-  Result := True;
    {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('ServiceModeResultsRequest'+LF);{$ENDIF}
 {  if ServiceModeInfo.Flags.PROGRAMMING_ACK_STATE_IN_SERVICEMODE_BIT = 0 then
   begin
@@ -212,16 +204,15 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function CommandStationSoftwareVersionRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure CommandStationSoftwareVersionRequest(CabNode: PNMRAnetNode);
 begin
-  Result := True;
   // Fake V3 Software
-{  XpressNetMessage^.HeaderByte := %01100011;  // $63  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  XpressNetMessage^.Bytes[0]   := %00100001;  // $21
-  XpressNetMessage^.Bytes[1]   := VERSION_SOFTWARE_XPRESSNET;
-  XpressNetMessage^.Bytes[2]   := VERSION_COMMANDSTATION_LZ100;
-  XpressNetMessage^.DataCount  := 3;
-  SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);   }
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0]   := %01100011 or CALLBYTE_RESPONSE_XPRESSNET;  // $63  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1]   := %00100001;  // $21
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2]   := VERSION_SOFTWARE_XPRESSNET;
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3]   := VERSION_COMMANDSTATION_LZ100;
+  PCab( CabNode^.UserData)^.IncomingMsg.Count  := 4;
+  PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('CommandStationSoftwareVersionRequest'+LF);{$ENDIF}
 end;
 
@@ -239,14 +230,14 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function CommandStationStatusRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure CommandStationStatusRequest(CabNode: PNMRAnetNode);
 begin
-  Result := True;
- { XpressNetMessage^.HeaderByte := %01100010;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  XpressNetMessage^.Bytes[0]   := %00100010;
-  XpressNetMessage^.Bytes[1]   := $00;      //   TODO:  CommandStation.Flags and $00FF;  // CommandStation State bottom 8 bits are mapped as the Xpressnet Spec
-  XpressNetMessage^.DataCount  := 2;
-  SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);  }
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0]   := %01100010 or CALLBYTE_RESPONSE_XPRESSNET;
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1]   := %00100010;
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2]   := $00;      //   TODO:  CommandStation.Flags and $00FF;  // CommandStation State bottom 8 bits are mapped as the Xpressnet Spec;
+  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3]   := 2;
+  PCab( CabNode^.UserData)^.IncomingMsg.Count  := 4;
+  PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('CommandStationStatusRequest'+LF);{$ENDIF}
 end;
 
@@ -264,10 +255,9 @@ end;
 //     Complete: 2/19/2011
 //
 // *****************************************************************************
-function RegisterModeReadRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure RegisterModeReadRequest(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('RegisterModeReadRequest'+LF);{$ENDIF}
-  Result := True;
   // Register Mode only support 8 Registers so what is sent = the "register" only 8 are supported (0000 RRRR)
  { if not ServiceMode_QueueRequest(MessageData^[1]-1, 0, iDevice, SERVICE_MODE_REGISTER or SERVICE_MODE_COMMMAND_VERIFY_BYTE, STATE_SERVICEMODE_RESET_CYCLE) then
     if iDevice = ID_PC_DEVICE then
@@ -290,10 +280,9 @@ end;
 //     Complete: 2/19/2011
 //
 // *****************************************************************************
-function DirectModeReadRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure DirectModeReadRequest(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('DirectModeReadRequest'+LF);{$ENDIF}
-  Result := True;
 {  if not ServiceMode_QueueRequest(MapDirectModeCVToAddress(MessageData), 0, iDevice, SERVICE_MODE_DIRECT or SERVICE_MODE_COMMMAND_VERIFY_BYTE, STATE_SERVICEMODE_DIRECT_RESET_CYCLE) then
     if iDevice = ID_PC_DEVICE then
       Send_PCMessage(E_PC_LOSS_OF_TIMESLOT)   }
@@ -313,9 +302,8 @@ end;
 //     Complete: 2/19/2011
 //
 // *****************************************************************************
-function PagedModeReadRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure PagedModeReadRequest(CabNode: PNMRAnetNode);
 begin
-  Result := True
    {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('PagedModeReadRequest'+LF);{$ENDIF}
  { if not ServiceMode_QueueRequest(MessageData^[1]-1, 0, iDevice, SERVICE_MODE_PAGE or SERVICE_MODE_COMMMAND_VERIFY_BYTE, STATE_SERVICEMODE_RESET_CYCLE) then
     if iDevice = ID_PC_DEVICE then
@@ -336,11 +324,10 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function SetCommandStationPowerUpMode(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure SetCommandStationPowerUpMode(CabNode: PNMRAnetNode);
 begin
  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetCommandStationPowerUpMode'+LF);{$ENDIF}
-  Result := True;
-{  CommandStation.Flags.COMMANDSTATION_FLAGS_STARTUP_MODE_BIT := XpressNetMessage^.Bytes[1].2; // CommandStation.State bit 2 is mapped to this bit in the Xpressnet message
+{  CommandStation.Flags.COMMANDSTATION_FLAGS_STARTUP_MODE_BIT := Cab^.IncomingMsg.Bytes[1].2; // CommandStation.State bit 2 is mapped to this bit in the Xpressnet message
   // The PC needs a response
   if iDevice = ID_PC_DEVICE then
     Send_PCMessage(E_PC_SUCCESS);   }
@@ -360,10 +347,9 @@ end;
 //     Complete: 2/19/2011
 //
 // *****************************************************************************
-function RegisterModeWriteRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure RegisterModeWriteRequest(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('RegisterModeWriteRequest'+LF);{$ENDIF}
-  Result := True;
  { // Register Mode only support 8 Registers
   if not ServiceMode_QueueRequest(MessageData^[1]-1, MessageData^[2], iDevice, SERVICE_MODE_REGISTER or SERVICE_MODE_COMMMAND_WRITE_BYTE, STATE_SERVICEMODE_RESET_CYCLE) then
     if iDevice = ID_PC_DEVICE then
@@ -384,10 +370,9 @@ end;
 //     Complete: 2/19/2011
 //
 // *****************************************************************************
-function DirectModeWriteRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure DirectModeWriteRequest(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('DirectModeWriteRequest'+LF);{$ENDIF}
-  Result := True;
 {  if not ServiceMode_QueueRequest(MapDirectModeCVToAddress( MessageData), MessageData^[2], iDevice, SERVICE_MODE_DIRECT or SERVICE_MODE_COMMMAND_WRITE_BYTE, STATE_SERVICEMODE_DIRECT_RESET_CYCLE) then
     if iDevice = ID_PC_DEVICE then
       Send_PCMessage(E_PC_LOSS_OF_TIMESLOT);      }
@@ -407,10 +392,9 @@ end;
 //     Complete: 2/19/2011
 //
 // *****************************************************************************
-function PagedModeWriteRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure PagedModeWriteRequest(CabNode: PNMRAnetNode);
 begin
    {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('PagedModeWriteRequest'+LF);{$ENDIF}
-   Result := True;
  { if not ServiceMode_QueueRequest(MessageData^[1]-1, MessageData^[2], iDevice, SERVICE_MODE_PAGE or SERVICE_MODE_COMMMAND_WRITE_BYTE, STATE_SERVICEMODE_RESET_CYCLE) then
     if iDevice = ID_PC_DEVICE then
       Send_PCMessage(E_PC_LOSS_OF_TIMESLOT)   }
@@ -429,20 +413,19 @@ end;
 //  Status:
 //     Complete 1/29/2011
 // *****************************************************************************
-function StopAllLocomotivesRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure StopAllLocomotivesRequest(CabNode: PNMRAnetNode);
 //var
 //  NewMessage: TDCCQueueMessage;
 begin
 
  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('StopAllLocomotivesRequest'+LF);{$ENDIF}
- Result := True;
   // TODO...
 
 //  CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_STOP_BIT := 1;
 //  NMRA_DCC_LoadMessage(@NewMessage, %00000000, %01000001, 0, 0, 0, 2);   // NMRA Basic Emergency Stop All instruction
 //  NMRA_DCC_QueueMessage(@Track, @NewMessage, True);
-{  XpressNetMessage^.HeaderByte := %10000000;  // $80
-  XpressNetMessage^.DataCount  := 0;
+{  Cab^.IncomingMsg.HeaderByte := %10000000;  // $80
+  Cab^.IncomingMsg.DataCount  := 0;
   Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST);
   Broadcast_XpressNetMessage(XpressNetMessage, CALLBYTE_BROADCAST);
   SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);
@@ -462,10 +445,10 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function EmergencyStopLocomotiveRequestV2_Down(iDevice: Byte): Boolean;
+procedure EmergencyStopLocomotiveRequestV2_Down(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('EmergencyStopLocomotiveRequestV2_Down'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice);
+  Send_InstructionNotSupported(CabNode);
 end;
 
 // *****************************************************************************
@@ -485,13 +468,12 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function EmergencyStopLocomotiveRequestV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure EmergencyStopLocomotiveRequestV3(CabNode: PNMRAnetNode);
 {var
   Slot, Slot2: PAddressSlot;
   Error: Byte;  }
 begin
    {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('EmergencyStopLocomotiveRequestV3'+LF);{$ENDIF}
-   Result := True;
  { Error := E_PC_SUCCESS;
   Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 0, 1), False); // If not found no harm done as there is nothing to stop!
   if Slot <> nil then
@@ -532,10 +514,10 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function LocomotiveInformationRequestV1(iDevice: Byte): Boolean;
+procedure LocomotiveInformationRequestV1(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('LocomotiveInformationRequestV1'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice);
+  Send_InstructionNotSupported(CabNode);
 end;
 
 // *****************************************************************************
@@ -551,10 +533,10 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function LocomotiveInformationRequestV2(iDevice: Byte): Boolean;
+procedure LocomotiveInformationRequestV2(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('LocomotiveInformationRequestV2'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)
+  Send_InstructionNotSupported(CabNode)
 end;
 
 // *****************************************************************************
@@ -572,13 +554,12 @@ end;
 //     ToDo: MU/Consist/Double Header
 //
 // *****************************************************************************
-function LocomotiveInformationRequestV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure LocomotiveInformationRequestV3(CabNode: PNMRAnetNode);
 //var
 //  Slot, Slot2: PAddressSlot;
 begin
 // TODO...
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('LocomotiveInformationRequestV3'+LF);{$ENDIF}
-  Result := True;
   (*
 {  Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False);  // Don't allocate if it does not exist
   if Slot <> nil then
@@ -586,45 +567,45 @@ begin
     if Slot^.Flags.ADDRESS_SLOT_FLAGS_MU_BIT = 1 then
     begin
       // The Address Slot is one in group of Multiple Units
-      XpressNetMessage^.Bytes[0] := %00010000;  // Identification
-      XpressNetMessage^.HeaderByte := %11100101;
-      XpressNetMessage^.DataCount := 5;
+      Cab^.IncomingMsg.Bytes[0] := %00010000;  // Identification
+      Cab^.IncomingMsg.HeaderByte := %11100101;
+      Cab^.IncomingMsg.DataCount := 5;
       Slot2 := AddressSlot_WalkMU_ChainRoot(Slot);
       if Slot2 <> nil then
-        XpressNetMessage^.Bytes[4] := Slot2^.Address;
+        Cab^.IncomingMsg.Bytes[4] := Slot2^.Address;
     end else
     if Slot^.Flags.ADDRESS_SLOT_FLAGS_CONSIST_BIT = 1 then
     begin
       // The Address Slot is the Consist Address of a MU Consist
-      XpressNetMessage^.Bytes[0] := %00100000;  // Identification
-      XpressNetMessage^.HeaderByte := %11100010;
-      XpressNetMessage^.DataCount := 2;
+      Cab^.IncomingMsg.Bytes[0] := %00100000;  // Identification
+      Cab^.IncomingMsg.HeaderByte := %11100010;
+      Cab^.IncomingMsg.DataCount := 2;
     end else
     if Slot^.Flags.ADDRESS_SLOT_FLAGS_DOUBLEHEADER_BIT = 1 then
     begin
       // The Address Slot is in a double header
-      XpressNetMessage^.Bytes[0] := %01100000;  // Identification
-      XpressNetMessage^.HeaderByte := %11100110;
-      XpressNetMessage^.DataCount := 6;
+      Cab^.IncomingMsg.Bytes[0] := %01100000;  // Identification
+      Cab^.IncomingMsg.HeaderByte := %11100110;
+      Cab^.IncomingMsg.DataCount := 6;
       Slot2 := AddressSlot_ExtractDoubleHeaderSecondSlot(Slot);
       if Slot2 <> nil then
-        AddressSlot_EncodeAddressToNMRA_Format(Slot2, XpressNetMessage^.Bytes[4], XpressNetMessage^.Bytes[5], True);
+        AddressSlot_EncodeAddressToNMRA_Format(Slot2, Cab^.IncomingMsg.Bytes[4], Cab^.IncomingMsg.Bytes[5], True);
     end else
     begin
       // The Address Slot is a normal loco     }
-      XpressNetMessage^.Bytes[0] := %00000000;  // Identification
-      XpressNetMessage^.HeaderByte := %11100100;
-      XpressNetMessage^.DataCount := 4;         {
+      Cab^.IncomingMsg.Bytes[0] := %00000000;  // Identification
+      Cab^.IncomingMsg.HeaderByte := %11100100;
+      Cab^.IncomingMsg.DataCount := 4;         {
     end;
 
-    XpressNetMessage^.Bytes[0] := XpressNetMessage^.Bytes[0] or MapSlotToXpressNetSpeedStepID(Slot);  // Indentification Byte
+    Cab^.IncomingMsg.Bytes[0] := Cab^.IncomingMsg.Bytes[0] or MapSlotToXpressNetSpeedStepID(Slot);  // Indentification Byte
     if not ((Slot^.OwnerDevice = ID_NO_DEVICE) or (Slot^.OwnerDevice = iDevice)) then
-      XpressNetMessage^.Bytes[0].XPRESSNET_LOCO_CONTROLLED_BY_DEVICE_BIT := 1;
+      Cab^.IncomingMsg.Bytes[0].XPRESSNET_LOCO_CONTROLLED_BY_DEVICE_BIT := 1;
 
           }
-    XpressNetMessage^.Bytes[1]  := 0; //Slot^.SpeedDir;
-    XpressNetMessage^.Bytes[2]  := 0; // Slot^.Functions and $001F;          // Functions F0..F4;   Bottom 5 Bits F0-F4
-    XpressNetMessage^.Bytes[3]  := 0;  //(Slot^.Functions shr 5) and $00FF;  // Functions F5..F12;  Shift out the bottom 5 bits to get F5-F12
+    Cab^.IncomingMsg.Bytes[1]  := 0; //Slot^.SpeedDir;
+    Cab^.IncomingMsg.Bytes[2]  := 0; // Slot^.procedures and $001F;          // procedures F0..F4;   Bottom 5 Bits F0-F4
+    Cab^.IncomingMsg.Bytes[3]  := 0;  //(Slot^.procedures shr 5) and $00FF;  // procedures F5..F12;  Shift out the bottom 5 bits to get F5-F12
 
     SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);
       {
@@ -632,12 +613,12 @@ begin
   begin
     // If we can't find a slot then send back default values for the address, this is so we don't allocate a slot when a user is just typing in
     // addresses without sending them a command
-    XpressNetMessage^.HeaderByte := %11100100;
-    XpressNetMessage^.Bytes[0] := %00000010;  // Identification, Loco Free, 28 Speed Step Default
-    XpressNetMessage^.Bytes[1]  := 0;
-    XpressNetMessage^.Bytes[2]  := 0;         // Functions F0..F4;   Bottom 5 Bits F0-F4
-    XpressNetMessage^.Bytes[3]  := 0;         // Functions F5..F12;  Shift out the bottom 5 bits to get F5-F12
-    XpressNetMessage^.DataCount := 4;
+    Cab^.IncomingMsg.HeaderByte := %11100100;
+    Cab^.IncomingMsg.Bytes[0] := %00000010;  // Identification, Loco Free, 28 Speed Step Default
+    Cab^.IncomingMsg.Bytes[1]  := 0;
+    Cab^.IncomingMsg.Bytes[2]  := 0;         // procedures F0..F4;   Bottom 5 Bits F0-F4
+    Cab^.IncomingMsg.Bytes[3]  := 0;         // procedures F5..F12;  Shift out the bottom 5 bits to get F5-F12
+    Cab^.IncomingMsg.DataCount := 4;
   end  }                *)
 end;
 
@@ -658,31 +639,30 @@ end;
 //     ToDo: MU/Consist/Double Header  Not clear the meaning of this for these cases.......
 //
 // *****************************************************************************
-function FunctionStatusRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure FunctionStatusRequest(CabNode: PNMRAnetNode);
 {var
   Slot: PAddressSlot;  }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionStatusRequest'+LF);{$ENDIF}
-  Result := True;
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('procedureStatusRequest'+LF);{$ENDIF}
   (*
   // Extract the Address BEFORE changing the Message Data!!!!!
  { Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False); // Don't allocate if it does not exist
       }
-  XpressNetMessage^.HeaderByte := %11100011;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  XpressNetMessage^.Bytes[0]   := %01010000;  // Identification
-  XpressNetMessage^.Bytes[1]   := $00;        // Functions F0..F4 Status;   Bottom 5 Bits F0-F4
-  XpressNetMessage^.Bytes[2]   := $00;        // Functions F5..F12 Status;  Shift out the bottom 5 bits to get F5-F12
-  XpressNetMessage^.DataCount  := 3;
+  Cab^.IncomingMsg.HeaderByte := %11100011;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  Cab^.IncomingMsg.Bytes[0]   := %01010000;  // Identification
+  Cab^.IncomingMsg.Bytes[1]   := $00;        // procedures F0..F4 Status;   Bottom 5 Bits F0-F4
+  Cab^.IncomingMsg.Bytes[2]   := $00;        // procedures F5..F12 Status;  Shift out the bottom 5 bits to get F5-F12
+  Cab^.IncomingMsg.DataCount  := 3;
    {
   if Slot <> nil then
   begin
     // Valid for:
-    //     - Consist address can have momentary/continious states of functions (review this)
-    //     - MU can operate the functions of individual decoders
-    //     - Double Header can operate the functions of individual decoders
-    //     - Single decoder can operate its functions
-    XpressNetMessage^.Bytes[1]   := 0; //Slot^.FunctionType and $001F;            // Functions F0..F4 Status;   Bottom 5 Bits F0-F4
-    XpressNetMessage^.Bytes[2]   := 0; //(Slot^.FunctionType shr 5) and $00FF;    // Functions F5..F12 Status;  Shift out the bottom 5 bits to get F5-F12
+    //     - Consist address can have momentary/continious states of procedures (review this)
+    //     - MU can operate the procedures of individual decoders
+    //     - Double Header can operate the procedures of individual decoders
+    //     - Single decoder can operate its procedures
+    Cab^.IncomingMsg.Bytes[1]   := 0; //Slot^.procedureType and $001F;            // procedures F0..F4 Status;   Bottom 5 Bits F0-F4
+    Cab^.IncomingMsg.Bytes[2]   := 0; //(Slot^.procedureType shr 5) and $00FF;    // procedures F5..F12 Status;  Shift out the bottom 5 bits to get F5-F12
   end;                                                                  }
   SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);
   
@@ -705,33 +685,32 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function FunctionStateRequestEx(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure FunctionStateRequestEx(CabNode: PNMRAnetNode);
 {var
   Slot: PAddressSlot; }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionStateRequestEx'+LF);{$ENDIF}
-  Result := True;
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('procedureStateRequestEx'+LF);{$ENDIF}
   // Extract the Address BEFORE changing the Message Data!!!!!
 {  Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False); // Don't allocate if it does not exist
        }
        
  (*
-  XpressNetMessage^.HeaderByte := %11100100;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  XpressNetMessage^.Bytes[0]   := %01010001;  // Identification
-  XpressNetMessage^.Bytes[1]   := $00;        // Functions F13..F20 Momentary/Continious Status;  Bottom 8 Bits F20-F13
-  XpressNetMessage^.Bytes[2]   := $00;        // Functions F21..F28 Momentary/Continious Status;  Shift out the bottom 5 bits to get F21..F28
-  XpressNetMessage^.Bytes[3]   := $00;        // Mystery Byte that is not documented but needed
-  XpressNetMessage^.DataCount  := 4;
+  Cab^.IncomingMsg.HeaderByte := %11100100;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  Cab^.IncomingMsg.Bytes[0]   := %01010001;  // Identification
+  Cab^.IncomingMsg.Bytes[1]   := $00;        // procedures F13..F20 Momentary/Continious Status;  Bottom 8 Bits F20-F13
+  Cab^.IncomingMsg.Bytes[2]   := $00;        // procedures F21..F28 Momentary/Continious Status;  Shift out the bottom 5 bits to get F21..F28
+  Cab^.IncomingMsg.Bytes[3]   := $00;        // Mystery Byte that is not documented but needed
+  Cab^.IncomingMsg.DataCount  := 4;
  {
   if Slot <> nil then
   begin
     // Valid for:
-    //     - Consist address can have momentary/continious states of functions (review this)
-    //     - MU can operate the functions of individual decoders
-    //     - Double Header can operate the functions of individual decoders
-    //     - Single decoder can operate its functions
-    XpressNetMessage^.Bytes[1]   :=  Lo(Slot^.FunctionTypeEx);                  // Functions F13..F20 Momentary/Continious Status;  Bottom 8 Bits F20-F13
-    XpressNetMessage^.Bytes[2]   :=  Hi(Slot^.FunctionTypeEx);                  // Functions F21..F28 Momentary/Continious Status;  Shift out the bottom 5 bits to get F21..F28
+    //     - Consist address can have momentary/continious states of procedures (review this)
+    //     - MU can operate the procedures of individual decoders
+    //     - Double Header can operate the procedures of individual decoders
+    //     - Single decoder can operate its procedures
+    Cab^.IncomingMsg.Bytes[1]   :=  Lo(Slot^.procedureTypeEx);                  // procedures F13..F20 Momentary/Continious Status;  Bottom 8 Bits F20-F13
+    Cab^.IncomingMsg.Bytes[2]   :=  Hi(Slot^.procedureTypeEx);                  // procedures F21..F28 Momentary/Continious Status;  Shift out the bottom 5 bits to get F21..F28
   end;                                                                  }
   SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);    *)
 end;
@@ -752,31 +731,29 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function FunctionOperationRequestEx(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure FunctionOperationRequestEx(CabNode: PNMRAnetNode);
 {var
   Slot: PAddressSlot;  }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionOperationRequestEx'+LF);{$ENDIF}
-  Result := True;
-  
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('procedureOperationRequestEx'+LF);{$ENDIF}
   (*
  { // Extract the Address BEFORE changing the Message Data!!!!!
   Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False); // Don't allocate if it does not exist
  }
- { XpressNetMessage^.HeaderByte := %11100011;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  XpressNetMessage^.Bytes[0]   := %01010010;  // Identification
-  XpressNetMessage^.Bytes[1]   := $00;        // Functions F13..F20 On/Off Status;  Bottom 8 Bits F20-F13
-  XpressNetMessage^.Bytes[2]   := $00;        // Functions F21..F28 On/Off Status;  Shift out the bottom 5 bits to get F21..F28
-  XpressNetMessage^.DataCount  := 3;  }
+ { Cab^.IncomingMsg.HeaderByte := %11100011;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  Cab^.IncomingMsg.Bytes[0]   := %01010010;  // Identification
+  Cab^.IncomingMsg.Bytes[1]   := $00;        // procedures F13..F20 On/Off Status;  Bottom 8 Bits F20-F13
+  Cab^.IncomingMsg.Bytes[2]   := $00;        // procedures F21..F28 On/Off Status;  Shift out the bottom 5 bits to get F21..F28
+  Cab^.IncomingMsg.DataCount  := 3;  }
     {
   if Slot <> nil then
   begin
     // Valid for:
-    //     - MU can operation the functions of individual decoders
-    //     - Double Header can operate the functions of individual decoders
-    //     - Single decoder can operate its functions
-    XpressNetMessage^.Bytes[1]   := Lo(Slot^.FunctionsEx);                      // Functions F13..F20 On/Off Status;  Bottom 8 Bits F20-F13
-    XpressNetMessage^.Bytes[2]   := Hi(Slot^.FunctionsEx)                       // Functions F21..F28 On/Off Status;  Shift out the bottom 5 bits to get F21..F28
+    //     - MU can operation the procedures of individual decoders
+    //     - Double Header can operate the procedures of individual decoders
+    //     - Single decoder can operate its procedures
+    Cab^.IncomingMsg.Bytes[1]   := Lo(Slot^.proceduresEx);                      // procedures F13..F20 On/Off Status;  Bottom 8 Bits F20-F13
+    Cab^.IncomingMsg.Bytes[2]   := Hi(Slot^.proceduresEx)                       // procedures F21..F28 On/Off Status;  Shift out the bottom 5 bits to get F21..F28
   end;                                                                }
  // SendXpressNetMessage(XpressNetMessage, CALLBYTE_RESPONSE, iDevice);     *)
 end;
@@ -796,13 +773,12 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function AddressInquiryLocoStack(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
+procedure AddressInquiryLocoStack(CabNode: PNMRAnetNode; Backward: Boolean);
 {var
   LocoSlot: PAddressSlot;
   Address: Word;  }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AddressInquiryLocoStack'+LF);{$ENDIF}
-  Result := True;
 {  Address := ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2);
   if Address = 0 then
   begin
@@ -840,12 +816,11 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function AddressInquiryLocoDeleteFromStack(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure AddressInquiryLocoDeleteFromStack(CabNode: PNMRAnetNode);
  {var
   LocoSlot: PAddressSlot;    }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AddressInquiryLocoDeleteFromStack'+LF);{$ENDIF}
-  Result := True;
 { LocoSlot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False);
   if LocoSlot <> nil then
     AddressSlot_Free(LocoSlot);
@@ -868,14 +843,13 @@ end;
 //     Complete 1/30/2011
 //
 // *****************************************************************************
-function SetLocomotiveSpeedAndDirectionRequest(XpressNetMessage: PCabMessage; iDevice: Byte; Node: PNMRAnetNode): Boolean;
+procedure SetLocomotiveSpeedAndDirectionRequest(CabNode: PNMRAnetNode; Node: PNMRAnetNode);
 {var
   Slot, Slot2: PAddressSlot;
   ErrorCode, MappedSpeedDir: Byte;  }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetLocomotiveSpeedAndDirectionRequest'+LF);{$ENDIF}
-  Result := True;
- { if XpressNetMessage^.Bytes[0] = %00010001 then (*$11*)   // 27 Speed Step not supported
+ { if Cab^.IncomingMsg.Bytes[0] = %00010001 then (*$11*)   // 27 Speed Step not supported
     Send_InstructionNotSupported(iDevice)
   else begin
     ErrorCode := E_PC_UNKNOWN;
@@ -889,9 +863,9 @@ begin
         Slot2 := AddressSlot_ExtractDoubleHeaderSecondSlot(Slot);
         if (Slot2 <> nil) and (Track.Priority^.Count < MAX_TRACK_PRIORITY_BUFFER_DEPTH - 2) then
         begin
-          UpdateSlotSpeedAndDirectionAndQueue(Slot, XpressNetMessage^.Bytes[0], XpressNetMessage^.Bytes[3], iDevice);
+          UpdateSlotSpeedAndDirectionAndQueue(Slot, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice);
           MappedSpeedDir := MapSpeedDir(MapSlotToXpressNetSpeedStepID(Slot), MapSlotToXpressNetSpeedStepID(Slot2), Slot^.SpeedDir);
-          UpdateSlotSpeedAndDirectionAndQueue(Slot2, XpressNetMessage^.Bytes[0], MappedSpeedDir, iDevice);
+          UpdateSlotSpeedAndDirectionAndQueue(Slot2, Cab^.IncomingMsg.Bytes[0], MappedSpeedDir, iDevice);
           ErrorCode := E_PC_SUCCESS
         end
       end else
@@ -899,18 +873,18 @@ begin
       begin
         // Slot is in a MU
         Slot2 := AddressSlot_WalkMU_ChainRoot(Slot);  // Find the Consist Slot
-        if UpdateSlotSpeedAndDirectionAndQueue(Slot2, XpressNetMessage^.Bytes[0], XpressNetMessage^.Bytes[3], iDevice) then   // Update the Consist and not the Loco
+        if UpdateSlotSpeedAndDirectionAndQueue(Slot2, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice) then   // Update the Consist and not the Loco
           ErrorCode := E_PC_SUCCESS
       end else
       if Slot^.Flags.ADDRESS_SLOT_FLAGS_CONSIST_BIT = 1 then
       begin
         // Slot is a MU Consist Main Address
-        if UpdateSlotSpeedAndDirectionAndQueue(Slot, XpressNetMessage^.Bytes[0], XpressNetMessage^.Bytes[3], iDevice) then   // Update the Consist
+        if UpdateSlotSpeedAndDirectionAndQueue(Slot, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice) then   // Update the Consist
           ErrorCode := E_PC_SUCCESS
       end else
       begin
         // Slot is a normal loco
-        if UpdateSlotSpeedAndDirectionAndQueue(Slot, XpressNetMessage^.Bytes[0], XpressNetMessage^.Bytes[3], iDevice) then   // Update the Locomotive
+        if UpdateSlotSpeedAndDirectionAndQueue(Slot, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice) then   // Update the Locomotive
           ErrorCode := E_PC_SUCCESS
       end
     end;
@@ -932,11 +906,11 @@ end;
 //              Identification: Identifies the sub-instruction for the request
 //              iDevice: The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
 //
-//  Description:  Called by [$E4 $20 ....]   On/Off State of the Function for Group 1
-//                          [$E4 $21 ....]   On/Off State of the Function for Group 2
-//                          [$E4 $22 ....]   On/Off State of the Function for Group 3
-//                          [$E4 $23 ....]   On/Off State of the Function for Group 4
-//                          [$E4 $28 ....]   On/Off State of the Function for Group 5
+//  Description:  Called by [$E4 $20 ....]   On/Off State of the procedure for Group 1
+//                          [$E4 $21 ....]   On/Off State of the procedure for Group 2
+//                          [$E4 $22 ....]   On/Off State of the procedure for Group 3
+//                          [$E4 $23 ....]   On/Off State of the procedure for Group 4
+//                          [$E4 $28 ....]   On/Off State of the procedure for Group 5
 //
 //  Device Request           : Paragraph 2.2.20.4
 //  Command Station Response : None
@@ -944,57 +918,56 @@ end;
 //     Complete 1/28/2011
 //
 // *****************************************************************************
-function SetFunctionOperationRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure SetFunctionOperationRequest(CabNode: PNMRAnetNode);
 {var
   Slot: PAddressSlot;
   ErrorCode: Byte;   }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetFunctionOperationRequest'+LF);{$ENDIF}
-  Result := True;
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetprocedureOperationRequest'+LF);{$ENDIF}
 {  ErrorCode := E_PC_UNKNOWN;
   Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), True); // AutoAllocate
   if Slot <> nil then
   begin
     // Valid for:
-    //     - MU can operation the functions of individual decoders
-    //     - Double Header can operate the functions of individual decoders
-    //     - Single decoder can operate its functions
+    //     - MU can operation the procedures of individual decoders
+    //     - Double Header can operate the procedures of individual decoders
+    //     - Single decoder can operate its procedures
     //     - Consist Address
     AssignDeviceToSlot(Slot, iDevice);
-    case XpressNetMessage^.Bytes[0] of   // Identification
-      %00100000 : (*$20*)   // Set Function Operation on Group 1 ( on/off ) Functions F0..F4 Status   (Note the order is F0-F4-F3-F2-F1)
+    case Cab^.IncomingMsg.Bytes[0] of   // Identification
+      %00100000 : (*$20*)   // Set procedure Operation on Group 1 ( on/off ) procedures F0..F4 Status   (Note the order is F0-F4-F3-F2-F1)
         begin
-          Slot^.Functions := Slot^.Functions and $FFE0;                             // Clear bits 0, 1, 2, 3, 4
-          Slot^.Functions := Slot^.Functions or XpressNetMessage^.Bytes[3];         // Set the new bits 5, 6 ,7 8
-          if AddressSlot_QueueFunctionDCCMessage(Slot, 1, False) then
+          Slot^.procedures := Slot^.procedures and $FFE0;                             // Clear bits 0, 1, 2, 3, 4
+          Slot^.procedures := Slot^.procedures or Cab^.IncomingMsg.Bytes[3];         // Set the new bits 5, 6 ,7 8
+          if AddressSlot_QueueprocedureDCCMessage(Slot, 1, False) then
             ErrorCode := E_PC_SUCCESS
         end;
-      %00100001 : (*$21*)   // Set Function Operation on Group 2 ( on/off )  Functions F8..F5 Status
+      %00100001 : (*$21*)   // Set procedure Operation on Group 2 ( on/off )  procedures F8..F5 Status
         begin
-          Slot^.Functions := Slot^.Functions and $FE1F;                             // Clear bits 5, 6 ,7 8
-          Slot^.Functions := Slot^.Functions or (XpressNetMessage^.Bytes[3] shl 5); // Set the new bits 5, 6 ,7 8
-          if AddressSlot_QueueFunctionDCCMessage(Slot, 2, False) then
+          Slot^.procedures := Slot^.procedures and $FE1F;                             // Clear bits 5, 6 ,7 8
+          Slot^.procedures := Slot^.procedures or (Cab^.IncomingMsg.Bytes[3] shl 5); // Set the new bits 5, 6 ,7 8
+          if AddressSlot_QueueprocedureDCCMessage(Slot, 2, False) then
             ErrorCode := E_PC_SUCCESS
         end;
-      %00100010 : (*$22*)   // Set Function Operation on Group 3 ( on/off )  Functions F12..F9 Status
+      %00100010 : (*$22*)   // Set procedure Operation on Group 3 ( on/off )  procedures F12..F9 Status
         begin
-          Slot^.Functions := Slot^.Functions and $E1FF;                             // Clear bits 9, 10, 11, 12
-          Slot^.Functions := Slot^.Functions or (XpressNetMessage^.Bytes[3] shl 9); // Set the new bits 5, 6 ,7 8
-          if AddressSlot_QueueFunctionDCCMessage(Slot, 3, False) then
+          Slot^.procedures := Slot^.procedures and $E1FF;                             // Clear bits 9, 10, 11, 12
+          Slot^.procedures := Slot^.procedures or (Cab^.IncomingMsg.Bytes[3] shl 9); // Set the new bits 5, 6 ,7 8
+          if AddressSlot_QueueprocedureDCCMessage(Slot, 3, False) then
             ErrorCode := E_PC_SUCCESS
         end;
-      %00100011 : (*$23*)   // Set Function Operation on Group 4 ( on/off ) Functions F20..F13 Status
+      %00100011 : (*$23*)   // Set procedure Operation on Group 4 ( on/off ) procedures F20..F13 Status
         begin
-          Slot^.FunctionsEx := Slot^.FunctionsEx and $FF00;                         // Clear bits 0..7
-          Slot^.FunctionsEx := Slot^.FunctionsEx or XpressNetMessage^.Bytes[3];     // Set the new bits 0, 1, 2, 3
-          if AddressSlot_QueueFunctionDCCMessage(Slot, 4, False) then
+          Slot^.proceduresEx := Slot^.proceduresEx and $FF00;                         // Clear bits 0..7
+          Slot^.proceduresEx := Slot^.proceduresEx or Cab^.IncomingMsg.Bytes[3];     // Set the new bits 0, 1, 2, 3
+          if AddressSlot_QueueprocedureDCCMessage(Slot, 4, False) then
             ErrorCode := E_PC_SUCCESS
         end;
-      %00101000 : (*$28*)   // Set Function Operation on Group 5 ( on/off )  Functions F12..F9 Status
+      %00101000 : (*$28*)   // Set procedure Operation on Group 5 ( on/off )  procedures F12..F9 Status
         begin
-          Slot^.FunctionsEx := Slot^.FunctionsEx and $00FF;                               // Clear bits 8..15
-          Slot^.FunctionsEx := Slot^.FunctionsEx or (XpressNetMessage^.Bytes[3] shl 8);   // Set the new bits 4, 5, 6, 7
-          if AddressSlot_QueueFunctionDCCMessage(Slot, 5, False) then
+          Slot^.proceduresEx := Slot^.proceduresEx and $00FF;                               // Clear bits 8..15
+          Slot^.proceduresEx := Slot^.proceduresEx or (Cab^.IncomingMsg.Bytes[3] shl 8);   // Set the new bits 4, 5, 6, 7
+          if AddressSlot_QueueprocedureDCCMessage(Slot, 5, False) then
             ErrorCode := E_PC_SUCCESS
         end;
     end
@@ -1012,11 +985,11 @@ end;
 //              XpressNetMessage: Global structure to hold the message information
 //              iDevice: The device ID that has the open window to send an Inquiry, send ID_PC_DEVICE to send to the RS485 PC link
 //
-//  Description:  Called by [$E4 $24 ....]   Momentary/Continious State of the Function for Group 1
-//                          [$E4 $25 ....]   Momentary/Continious State of the Function for Group 2
-//                          [$E4 $26 ....]   Momentary/Continious State of the Function for Group 3
-//                          [$E4 $27 ....]   Momentary/Continious State of the Function for Group 4
-//                          [$E4 $2C ....]   Momentary/Continious State of the Function for Group 5
+//  Description:  Called by [$E4 $24 ....]   Momentary/Continious State of the procedure for Group 1
+//                          [$E4 $25 ....]   Momentary/Continious State of the procedure for Group 2
+//                          [$E4 $26 ....]   Momentary/Continious State of the procedure for Group 3
+//                          [$E4 $27 ....]   Momentary/Continious State of the procedure for Group 4
+//                          [$E4 $2C ....]   Momentary/Continious State of the procedure for Group 5
 //
 //  Device Request           : Paragraph 2.2.20.5
 //  Command Station Response : None
@@ -1024,53 +997,52 @@ end;
 //     Complete 1/30/2011
 //
 // *****************************************************************************
-function SetFunctionStateRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure SetFunctionStateRequest(CabNode: PNMRAnetNode);
 {var
   Slot: PAddressSlot;
   ErrorCode: Byte;  }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetFunctionStateRequest'+LF);{$ENDIF}
-  Result := True;
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetprocedureStateRequest'+LF);{$ENDIF}
 {  ErrorCode := E_PC_UNKNOWN;
   Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), True); // AutoAllocate
   if Slot <> nil then
   begin
     // Valid for:
-    //     - Consist address can have momentary/continious states of functions (review this)
-    //     - MU can operate the functions of individual decoders
-    //     - Double Header can operate the functions of individual decoders
-    //     - Single decoder can operate its functions
+    //     - Consist address can have momentary/continious states of procedures (review this)
+    //     - MU can operate the procedures of individual decoders
+    //     - Double Header can operate the procedures of individual decoders
+    //     - Single decoder can operate its procedures
     AssignDeviceToSlot(Slot, iDevice);
 
-    case XpressNetMessage^.Bytes[0] of   // Identification
-      %00100100 : (*$24*)   // Set Function Operation on Group 1 ( on/off )   Functions F0..F4 Status
+    case Cab^.IncomingMsg.Bytes[0] of   // Identification
+      %00100100 : (*$24*)   // Set procedure Operation on Group 1 ( on/off )   procedures F0..F4 Status
         begin
-          Slot^.FunctionType := Slot^.FunctionType and $FFE0;                             // Clear bits 0, 1, 2, 3, 4   (Note the order is F0-F4-F3-F2-F1)
-          Slot^.FunctionType := Slot^.FunctionType or XpressNetMessage^.Bytes[3];          // Set the new bits 5, 6 ,7 8
+          Slot^.procedureType := Slot^.procedureType and $FFE0;                             // Clear bits 0, 1, 2, 3, 4   (Note the order is F0-F4-F3-F2-F1)
+          Slot^.procedureType := Slot^.procedureType or Cab^.IncomingMsg.Bytes[3];          // Set the new bits 5, 6 ,7 8
           ErrorCode := E_PC_SUCCESS
         end;
-      %00100101 : (*$25*)   // Set Function Operation on Group 2 ( on/off ) Functions F8..F5 Status
+      %00100101 : (*$25*)   // Set procedure Operation on Group 2 ( on/off ) procedures F8..F5 Status
         begin
-          Slot^.FunctionType := Slot^.FunctionType and $FE1F;                             // Clear bits 5, 6 ,7 8
-          Slot^.FunctionType := Slot^.FunctionType or (XpressNetMessage^.Bytes[3] shl 5); // Set the new bits 5, 6 ,7 8
+          Slot^.procedureType := Slot^.procedureType and $FE1F;                             // Clear bits 5, 6 ,7 8
+          Slot^.procedureType := Slot^.procedureType or (Cab^.IncomingMsg.Bytes[3] shl 5); // Set the new bits 5, 6 ,7 8
           ErrorCode := E_PC_SUCCESS
         end;
-      %00100110 : (*$26*)   // Set Function Operation on Group 3 ( on/off ) Functions F12..F9 Status
+      %00100110 : (*$26*)   // Set procedure Operation on Group 3 ( on/off ) procedures F12..F9 Status
         begin
-          Slot^.FunctionType := Slot^.FunctionType and $E1FF;                             // Clear bits 9, 10, 11, 12
-          Slot^.FunctionType := Slot^.FunctionType or (XpressNetMessage^.Bytes[3] shl 9); // Set the new bits 5, 6 ,7 8
+          Slot^.procedureType := Slot^.procedureType and $E1FF;                             // Clear bits 9, 10, 11, 12
+          Slot^.procedureType := Slot^.procedureType or (Cab^.IncomingMsg.Bytes[3] shl 9); // Set the new bits 5, 6 ,7 8
           ErrorCode := E_PC_SUCCESS
         end;
-      %00100111 : (*$27*)   // Set Function Operation on Group 4 ( on/off )  Functions F20..F13 Status
+      %00100111 : (*$27*)   // Set procedure Operation on Group 4 ( on/off )  procedures F20..F13 Status
         begin
-          Slot^.FunctionTypeEx := Slot^.FunctionTypeEx and $FF00;                         // Clear bits 1..7
-          Slot^.FunctionTypeEx := Slot^.FunctionTypeEx or XpressNetMessage^.Bytes[3];     // Set the new bits 1-7
+          Slot^.procedureTypeEx := Slot^.procedureTypeEx and $FF00;                         // Clear bits 1..7
+          Slot^.procedureTypeEx := Slot^.procedureTypeEx or Cab^.IncomingMsg.Bytes[3];     // Set the new bits 1-7
           ErrorCode := E_PC_SUCCESS
         end;
-      %00101100 : (*$2C*)   // Set Function Operation on Group 5 ( on/off )               Functions F28..F21 Status
+      %00101100 : (*$2C*)   // Set procedure Operation on Group 5 ( on/off )               procedures F28..F21 Status
         begin
-          Slot^.FunctionTypeEx := Slot^.FunctionTypeEx and $00FF;                               // Clear bits 8..15
-          Slot^.FunctionTypeEx := Slot^.FunctionTypeEx or (XpressNetMessage^.Bytes[3] shl 8);   // Set the new bits 8-15
+          Slot^.procedureTypeEx := Slot^.procedureTypeEx and $00FF;                               // Clear bits 8..15
+          Slot^.procedureTypeEx := Slot^.procedureTypeEx or (Cab^.IncomingMsg.Bytes[3] shl 8);   // Set the new bits 8-15
           ErrorCode := E_PC_SUCCESS
         end;
       end
@@ -1094,7 +1066,7 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function AddLocomotiveToMU_Request(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
+procedure AddLocomotiveToMU_Request(CabNode: PNMRAnetNode; Backward: Boolean);
 {var
   LocoSlot, ConsistSlot: PAddressSlot;
   Address: Word;         // Loco Address
@@ -1103,9 +1075,8 @@ function AddLocomotiveToMU_Request(XpressNetMessage: PCabMessage; iDevice: Byte;
   i: Byte;       }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AddLocomotiveToMU_Request'+LF);{$ENDIF}
-  Result := True;
  { Address := ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2);
-  ConsistAddress := XpressNetMessage^.Bytes[3];
+  ConsistAddress := Cab^.IncomingMsg.Bytes[3];
 
   if Address <> ConsistAddress then        // Loco Address can't be the same as the Consist Address
   begin
@@ -1177,16 +1148,15 @@ end;
 //
 // *****************************************************************************
 
-function RemoveLocomotiveFromMU_Request(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure RemoveLocomotiveFromMU_Request(CabNode: PNMRAnetNode);
 {var
   LocoSlot, ConsistSlot: PAddressSlot;
   NewDCCMessage: TDCCQueueMessage;
   i: Byte;                }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('RemoveLocomotiveFromMU_Request'+LF);{$ENDIF}
-  Result := True;
 {  LocoSlot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False); // Should already exist
-  ConsistSlot := AddressSlot_FindSlot(XpressNetMessage^.Bytes[3], False);                              // Should already exist
+  ConsistSlot := AddressSlot_FindSlot(Cab^.IncomingMsg.Bytes[3], False);                              // Should already exist
 
   if (LocoSlot <> nil) and (ConsistSlot <> nil) then
   begin
@@ -1233,14 +1203,13 @@ end;
 //  Command Station Response : 2.1.17
 //
 // *****************************************************************************
-function AddressInquiryOfMember_MU_Request(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
+procedure AddressInquiryOfMember_MU_Request(CabNode: PNMRAnetNode; Backward: Boolean);
 {var
   LocoSlot, ConsistSlot: PAddressSlot;
   Address: Word;    }
 begin
  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AddressInquiryOfMember_MU_Request'+LF);{$ENDIF}
- Result := True;
-{  ConsistSlot := AddressSlot_FindSlot(XpressNetMessage^.Bytes[1], False);     // Should already exist
+{  ConsistSlot := AddressSlot_FindSlot(Cab^.IncomingMsg.Bytes[1], False);     // Should already exist
   Address := ExtractAddressFromXpressNetMessage(XpressNetMessage, 2, 3);
   if Address <> 0 then
   begin
@@ -1282,14 +1251,13 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function AddressInquiryOf_MU_Request(XpressNetMessage: PCabMessage; iDevice: Byte; Backward: Boolean): Boolean;
+procedure AddressInquiryOf_MU_Request(CabNode: PNMRAnetNode; Backward: Boolean);
 {var
   ConsistSlot: PAddressSlot;
   ConsistAddress: Byte;  }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AddressInquiryOf_MU_Request'+LF);{$ENDIF}
-  Result := True;
- { ConsistAddress := XpressNetMessage^.Bytes[1];
+ { ConsistAddress := Cab^.IncomingMsg.Bytes[1];
   if ConsistAddress <> 0 then
   begin
     ConsistSlot := AddressSlot_FindSlot(ConsistAddress, False);     // Should already exist
@@ -1325,13 +1293,12 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function EstablishDoubleHeaderV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure EstablishDoubleHeaderV3(CabNode: PNMRAnetNode);
 {var
   Slot1, Slot2: PAddressSlot;
   Address1, Address2: Word;   }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('EstablishDoubleHeaderV3'+LF);{$ENDIF}
-  Result := True;
  { Address1 := ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2);
   Address2 := ExtractAddressFromXpressNetMessage(XpressNetMessage, 3, 4);
 
@@ -1383,12 +1350,11 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function DissolveDoubleHeaderV3(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure DissolveDoubleHeaderV3(CabNode: PNMRAnetNode);
 {var
   Slot1, Slot2: PAddressSlot;    }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('DissolveDoubleHeaderV3'+LF);{$ENDIF}
-  Result := True;
 {  Slot1 := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2),  False); // Should already exist
   if (Slot1 <> nil) then
   begin
@@ -1424,10 +1390,10 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function FunctionRefreshMode(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure FunctionRefreshMode(CabNode: PNMRAnetNode);
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionRefreshMode'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)
+  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('procedureRefreshMode'+LF);{$ENDIF}
+  Send_InstructionNotSupported(CabNode)
 end;
 
 // *****************************************************************************
@@ -1446,31 +1412,30 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function OperationsModeRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure OperationsModeRequest(CabNode: PNMRAnetNode);
 {var
   Slot: PAddressSlot;
   AddressHi, AddressLo: Byte;
   CV: Word;       }
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('OperationsModeRequest'+LF);{$ENDIF}
-  Result := True;
 {  Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), True); // AutoAllocate
   if Slot <> nil then
   begin
     AddressHi := 0;
     AddressLo := 0;
     AddressSlot_EncodeAddressToNMRA_Format(Slot, AddressHi, AddressLo, False);
-    CV := (XpressNetMessage^.Bytes[3] and %00000011) shr 8;
-    CV := XpressNetMessage^.Bytes[4] or CV;
+    CV := (Cab^.IncomingMsg.Bytes[3] and %00000011) shr 8;
+    CV := Cab^.IncomingMsg.Bytes[4] or CV;
 
-    case (XpressNetMessage^.Bytes[3] and %11111100) of
+    case (Cab^.IncomingMsg.Bytes[3] and %11111100) of
       %11101100:  (*$EC*)   // 2.2.23.1  Operations Mode Programming byte mode write request
         begin
           if CommandStation.FlagsEx.COMMANDSTATION_FLAGSEX_POM_COMMAND_MODE = 1 then
           begin
             if CV = 7 then
             begin
-              case XpressNetMessage^.Bytes[5] of
+              case Cab^.IncomingMsg.Bytes[5] of
                 93: begin end;  // Turn RailCom ON
                 92: begin end;  // Turn RailCom OFF
                 94: begin end;  // 3 Byte Blanking Window
@@ -1484,7 +1449,7 @@ begin
             CommandStation.FlagsEx.COMMANDSTATION_FLAGSEX_POM_COMMAND_MODE := 0;  // Drop out of the mode
           end else
           begin
-            if (CV = 7) and (XpressNetMessage^.Bytes[5] = 50) then                  // Command Station Setup Special Instruction coming next
+            if (CV = 7) and (Cab^.IncomingMsg.Bytes[5] = 50) then                  // Command Station Setup Special Instruction coming next
             begin
               CommandStation.FlagsEx.COMMANDSTATION_FLAGSEX_POM_COMMAND_MODE := 1;  // Set the flag to enter this special mode
               CommandStation.PoMCommandTimeoutCount := 0;                           // Start the timer
@@ -1514,11 +1479,11 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function LocomotiveOperationRequestV1(iDevice: Byte): Boolean;
+procedure LocomotiveOperationRequestV1(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('LocomotiveOperationRequestV1'+LF);{$ENDIF}
   // Paragraph 2.2.20.1
-  Result := Send_InstructionNotSupported(iDevice);
+  Send_InstructionNotSupported(CabNode);
 end;
 
 // *****************************************************************************
@@ -1534,11 +1499,11 @@ end;
 //     Complete 1/29/2011
 //
 // *****************************************************************************
-function LocomotiveOperationRequestV2(iDevice: Byte): Boolean;
+procedure LocomotiveOperationRequestV2(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('LocomotiveOperationRequestV2'+LF);{$ENDIF}
   // Paragraph 2.2.20.2
-  Result := Send_InstructionNotSupported(iDevice);
+  Send_InstructionNotSupported(CabNode);
 end;
 
 // *****************************************************************************
@@ -1555,14 +1520,14 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function AccessoryInformationRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure AccessoryInformationRequest(CabNode: PNMRAnetNode);
 var
   Address: Word;
 begin
    {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AccessoryInformationRequest'+LF);{$ENDIF}
- // Address := XpressNetMessage^.Bytes[0] shl 2;  // Address is sent as the Group Address need to mulitpy by 4
+ // Address := Cab^.IncomingMsg.Bytes[0] shl 2;  // Address is sent as the Group Address need to mulitpy by 4
 //  AddressSlotInfo.AccessorySlot[Address div 8];
-  Result := Send_InstructionNotSupported(iDevice)
+  Send_InstructionNotSupported(CabNode)
 end;
 
 // *****************************************************************************
@@ -1579,10 +1544,10 @@ end;
 //     Complete TBD
 //
 // *****************************************************************************
-function AccessoryOperationRequest(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure AccessoryOperationRequest(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('AccessoryOperationRequest'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)
+  Send_InstructionNotSupported(CabNode)
 end;
 
 // *****************************************************************************
@@ -1599,10 +1564,10 @@ end;
 //     Complete 1/28/2011
 //
 // *****************************************************************************
-function EstablishDoubleHeaderV2(iDevice: Byte): Boolean;
+procedure EstablishDoubleHeaderV2(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('EstablishDoubleHeaderV2'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)
+  Send_InstructionNotSupported(CabNode)
 end;
 
 // *****************************************************************************
@@ -1619,10 +1584,10 @@ end;
 //     Complete 1/28/2011
 //
 // *****************************************************************************
-function DisolveDoubleHeaderV2(iDevice: Byte): Boolean;
+procedure DisolveDoubleHeaderV2(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('DisolveDoubleHeaderV2'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)
+  Send_InstructionNotSupported(CabNode)
 end;
 
 // *****************************************************************************
@@ -1640,10 +1605,10 @@ end;
 //     Complete 1/30/2011
 //
 // *****************************************************************************
-function PC_Interface_VersionNumber(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure PC_Interface_VersionNumber(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('PC_Interface_VersionNumber'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)   // No meaning in OLCB
+  Send_InstructionNotSupported(CabNode)   // No meaning in OLCB
 end;
 
 // *****************************************************************************
@@ -1661,10 +1626,10 @@ end;
 //     Complete 1/30/2011
 //
 // *****************************************************************************
-function PC_Interface_SetAddress(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure PC_Interface_SetAddress(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('PC_Interface_SetAddress'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)   // No meaning in OLCB
+  Send_InstructionNotSupported(CabNode)   // No meaning in OLCB
 end;
 
 // *****************************************************************************
@@ -1681,10 +1646,10 @@ end;
 //     Complete 1/30/2011
 //
 // *****************************************************************************
-function PC_Interface_SetBaudRate(XpressNetMessage: PCabMessage; iDevice: Byte): Boolean;
+procedure PC_Interface_SetBaudRate(CabNode: PNMRAnetNode);
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('PC_Interface_SetBaudRate'+LF);{$ENDIF}
-  Result := Send_InstructionNotSupported(iDevice)   // No meaning in OLCB
+  Send_InstructionNotSupported(CabNode)   // No meaning in OLCB
 end;
 
 

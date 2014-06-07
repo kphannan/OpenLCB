@@ -111,6 +111,11 @@ const
   CALLBYTE_BROADCAST_XPRESSNET               = %01100000;   // P110 0000
   CALLBYTE_TRANSFER_ERRORS_XPRESSNET         = %01100000;   // P11A AAAA
   
+  VERSION_SOFTWARE_XPRESSNET   = $36;        // Version 3.6 Compatible
+  VERSION_COMMANDSTATION_LZ100 = $00;        // LZ 100 - command station
+  VERSION_COMMANDSTATION_LH200 = $01;        // LH 200 - command station
+  VERSION_COMMANDSTATION_DPC   = $02;        // DPC - command station (Compact and COMM other)
+  
 type
   TCabMessageArray = array[0..CAB_MAX_DATA_BYTE] of Byte;
   
@@ -150,6 +155,7 @@ type
     ExistingCab: PNMRAnetNode;
     CurrentCabID: Byte;
   end;
+  PCabBridge = ^TCabBridge;
   
   // Array of User Data for all Nodes ( there will be one extra since the Root Node is differnet and not a CAB
   TCabArray = array[0..USER_MAX_NODE_COUNT-1] of TCab;

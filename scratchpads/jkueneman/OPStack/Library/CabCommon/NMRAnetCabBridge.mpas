@@ -20,7 +20,6 @@ procedure WriteByte(DataByte: Byte; Wait: Boolean);
 procedure FlushUartReceiver;
 procedure EnableCabBusTimer(Time: Word);
 procedure DisableCabBusTimer;
-procedure CabBus_Timeout;
 procedure CabBus_PinChangeOnUartRXInterrupt;
 procedure CabBus_UART_TX_Interrupt;
 function NceKeyPressToString(KeyPress: Byte): string[64];
@@ -152,24 +151,11 @@ begin
 end;
 
 // *****************************************************************************
-// Called from Dynamically set Interrupt timer after 1800us
-// *****************************************************************************
-procedure CabBus_Timeout;
-begin
-  // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
-  DisableCabBusTimer;
-  case CabBridge.iStateMachine of
-    STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;
-    STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
-  end;
-end;
-
-// *****************************************************************************
 // *****************************************************************************
 procedure CabBus_PinChangeOnUartRXInterrupt;
 begin
   CNIE_bit := 0;                                                                // Pin Change Interrupt disabled
-  DisableCabBusTimer;
+  DisableCabBusTimer;                                                           // Stop the watchdog timer, we are getting a reply
 end;
 
 procedure CabBus_UART_TX_Interrupt;
