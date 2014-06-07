@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="41">
+    <Units Count="42">
       <Unit0>
         <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -20,7 +20,6 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitmain"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
@@ -44,6 +43,7 @@
       <Unit3>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="540"/>
@@ -354,6 +354,13 @@
         <CursorPos X="11" Y="149"/>
         <UsageCount Value="8"/>
       </Unit40>
+      <Unit41>
+        <Filename Value="../../Projects/dsPIC33EPxxxGP502_CAN_XpressnetBridge/Templates/Options.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit41>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
