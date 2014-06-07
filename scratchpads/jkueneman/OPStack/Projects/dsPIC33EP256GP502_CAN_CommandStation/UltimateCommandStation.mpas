@@ -10,23 +10,41 @@ program UltimateCommandStation;
 
 var
 
-// DCC Connection Pins
-  H_Bridge_A_Lo                     : sbit at LATB4_bit;
-  H_Bridge_A_Hi                     : sbit at LATB5_bit;
-  H_Bridge_B_Lo                     : sbit at LATB6_bit;
-  H_Bridge_B_Hi                     : sbit at LATB7_bit;  
-  PreambleSyncPin                   : sbit at LATB1_bit;                         // Output at the end of the preamble
-  DCC_Programming_ACK_Pin           : sbit at RB0_bit;                          // Input so use the port and not the latch
-  
-  H_Bridge_A_Lo_Direction           : sbit at TRISB4_bit;
-  H_Bridge_A_Hi_Direction           : sbit at TRISB5_bit;
-  H_Bridge_B_Lo_Direction           : sbit at TRISB6_bit;
-  H_Bridge_B_Hi_Direction           : sbit at TRISB7_bit;     
-  PreambleSyncPinDirection          : sbit at TRISB1_bit;
-  DCC_Programming_ACK_Direction     : sbit at TRISB0_bit;
+// EEPROM SPI PINS
+  CS_Bank_0                         : sbit at LATB6_bit;
+  CS_Bank_0_Direction               : sbit at TRISB6_bit;
+  EE_PROM_Hold                      : sbit at LATB5_bit;
+  EEPROM_Hold_Direction             : sbit at TRISB5_bit;
 
+  // DCC SIGNAL PINS
+  H_Bridge_A_Lo                     : sbit at LATA1_bit;
+  H_Bridge_A_Hi                     : sbit at LATB0_bit;
+  H_Bridge_B_Lo                     : sbit at LATB1_bit;
+  H_Bridge_B_Hi                     : sbit at LATB4_bit;
+
+  H_Bridge_A_Lo_Direction           : sbit at TRISA1_bit;
+  H_Bridge_A_Hi_Direction           : sbit at TRISB0_bit;
+  H_Bridge_B_Lo_Direction           : sbit at TRISB1_bit;
+  H_Bridge_B_Hi_Direction           : sbit at TRISB4_bit;
+
+//  DCC_Programming_ACK_Pin           : sbit at RB2_bit;                          // Input so use the port and not the latch
+ // DCC_Programming_ACK_Direction     : sbit at TRISB2_bit;
+
+ // DCC_NMRA_Tranmitter_Lo            : sbit at LATB15_bit;                       // DCC Bus Transmitter
+ // DCC_NMRA_Tranmitter_Hi            : sbit at LATB14_bit;                       // DCC Bus Transmitter
+
+ // DCC_NMRA_Tranmitter_Lo_Direction  : sbit at TRISB15_bit;                      // DCC Bus Transmitter
+ // DCC_NMRA_Tranmitter_Hi_Direction  : sbit at TRISB14_bit;                      // DCC Bus Transmitter
+  
+  PreambleSyncPin                   : sbit at LATB15_bit;                      // DCC Bus Transmitter
+  PreambleSyncPinDirection          : sbit at TRISB15_bit;                      // DCC Bus Transmitter
+
+// Ack_TimerEnabled_Bit              : sbit at TON_T5CON_bit;                    // DCC Service Mode ACK Timer
 
   Dcc_Timer_PR                      : Word at PR1;                              // DCC Interrupt Rollover
+
+ // TrapFlagPin                       : sbit at LATB3_bit;                  // OVERLOADING THE NMRA DCC TRANSMITTER CURRENT SENSE
+
 // End DCC Connection Pins
 
 procedure ToggleBridge;
@@ -50,6 +68,10 @@ end;
 procedure OPStack_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT; ics ICS_AUTO;
 begin
   T1IF_bit := 0;                                                                // Clear the Flag
+  
+  LATA4_bit := not LATA4_bit;
+
+  
  // if CommandStationRamData.OverloadDetected then
  // begin
     // Toggle the Bridge off
@@ -88,20 +110,21 @@ begin
   end;
 end;
 
+
 procedure OPStack_100ms_Timer(); iv IVT_ADDR_T2INTERRUPT; ics ICS_AUTO;
 begin
-  T2IF_bit := 0;   
+  T2IF_bit := 0;  
   OPStackCore_Timer;
 end;
 
-begin
+begin         
+
   H_Bridge_A_Lo_Direction          := 0;
   H_Bridge_A_Hi_Direction          := 0;
   H_Bridge_B_Lo_Direction          := 0;
   H_Bridge_B_Hi_Direction          := 0;
   { Main program }
-  NMRA_DCC_Initialize(1850);     // Clock ticks every 31.25ns * 1856 = 58us interrupts  
-
+  NMRA_DCC_Initialize(1850);     // Clock ticks every 31.25ns * 1856 = 58us interrupts
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
   MCU_EnableUART;
@@ -110,12 +133,15 @@ begin
 
   MCU_EnableCAN;
   MCU_Enable100msTimer;
-  MCU_EnableDCCTimer(1850);
+  MCU_EnableDCCTimer;
   MCU_Enable5msServiceModeTimer;
-  MCU_Enable10msTimer;
   MCU_Enable10msTimer;
   MCU_EnableADC;
   OPStackCore_Enable(True);
+  
+  TRISA4_bit := 0; // Output
+  
+  UART1_Write_Text('Mustangpeak Command Station'+LF);
   
   while True do
   begin

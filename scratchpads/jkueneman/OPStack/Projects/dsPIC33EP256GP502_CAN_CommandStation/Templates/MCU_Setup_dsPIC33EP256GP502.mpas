@@ -18,7 +18,7 @@ const
   
 
   procedure MCU_Setup_Initialize;
-  procedure MCU_EnableDCCTimer(TimerCountsFor58us: Word);
+  procedure MCU_EnableDCCTimer;
   procedure MCU_Enable100msTimer;
   procedure MCU_EnableUART;
   procedure MCU_EnableCAN;
@@ -109,17 +109,16 @@ begin
   T5IE_bit := 1;            // Enable the Interrupt
 end;
 
-procedure MCU_EnableDCCTimer(TimerCountsFor58us: Word);
+procedure MCU_EnableDCCTimer;
 begin
-  {$IFNDEF DCCTIMER_DISABLE}
   TCS_T1CON_bit := 0;       // internal cycle clock
   T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 7   (1 means off)
   T1IP_1_bit := 1;
   T1IP_2_bit := 1;
-  PR1 := TimerCountsFor58us;
+  PR1 := DCC_TIMER_58US;
   T1IF_bit := 0;           // Clear T1IF
   T1IE_bit := 1;           // Enable the Interrupt
-  {$ENDIF}
+  TON_T1CON_bit := 1;       // Turn on
 end;
 
 procedure MCU_Enable100msTimer;
@@ -138,12 +137,10 @@ end;
 
 procedure MCU_EnableUART;
 begin
-  {$IFDEF UART_ENABLE}
   PPS_Mapping(44, _INPUT, _U1RX);                                      // Set RPI44 to the UART Receive
   PPS_Mapping(42, _OUTPUT, _U1TX);                                     // Set RP42 to the UART Transmit
   UART1_Init(230400);                       // Initialize UART module a
   Delay_ms(100);                            // Wait for UART module to stabilize
-  {$ENDIF}
 end;
 
 procedure MCU_EnableCAN;

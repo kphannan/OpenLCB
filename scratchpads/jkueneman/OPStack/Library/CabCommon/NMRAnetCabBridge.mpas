@@ -36,6 +36,7 @@ function FindCab(CabID: Word): PNMRAnetNode;
 
 //procedure WriteXpressNetByte(DataByte: Word; SetAddressBit: Boolean; TxReg: ^Word; StatusReg: ^Word);
 procedure SendXpressnetInquiryMessage(Device: Byte);
+function InsertXpressnetHiBitParity(DataByte: Byte): Byte;
 
 function OPStackNode_Allocate: PNMRAnetNode; external;
 

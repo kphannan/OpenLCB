@@ -127,6 +127,10 @@ var
 begin
   for i := 0 to NodePool.AllocatedCount - 1 do
   begin
+    if i = 0 then
+      UART1_Write_Text('Physical Node......'+LF)
+    else
+      UART1_Write_Text('Virtual Node......'+LF);
     WordToHex(NodePool.AllocatedList[i]^.Info.AliasID, s1);
     UART1_Write_Text('Alias: ' +s1+LF);
     WordToHex(NodePool.AllocatedList[i]^.iStateMachine, s1);

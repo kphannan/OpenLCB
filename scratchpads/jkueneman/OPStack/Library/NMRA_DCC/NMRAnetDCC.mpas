@@ -185,6 +185,9 @@ procedure NMRA_DCC_LoadResetPacketIntoTransmitter(Buffer: PDCCBufferInfo; Preamb
 procedure NMRA_DCC_LoadPagePresetPacketIntoTransmitter(Buffer: PDCCBufferInfo; PreambleCount: Byte);
 
 
+var
+  DCC_TIMER_58US: Word;
+  DCC_TIMER_29US: Word;
 
 implementation
 
@@ -214,10 +217,6 @@ var
   TrackQueue: TTrackMessageQueue;
   TrackQueuePriority: TTrackMessageQueuePriority;
   
-  DCC_TIMER_58US: Word;
-  DCC_TIMER_29US: Word;
-
-
 procedure InitializeBuffer(ABuffer: PDCCBufferInfo; SlotQueue, PrioritySlotQueue: PDCCPacketArray; QueueSize, QueuePrioritySize: Byte); forward;
 procedure NMRA_DCC_ResetTransmitter(ABuffer: PDCCBufferInfo); forward;
 

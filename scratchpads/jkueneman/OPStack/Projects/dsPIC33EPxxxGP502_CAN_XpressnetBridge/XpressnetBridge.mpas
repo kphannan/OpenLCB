@@ -58,23 +58,29 @@ begin
   UART_RX_StateMachine;
 end;
 
+procedure INTERRUPT_CabBus_UART_TX(); iv IVT_ADDR_U2TXINTERRUPT; ics ICS_AUTO;
+begin
+  // Do not clear the flag on purpose, the state machine checks it for a trigger to move on
+  CabBus_UART_TX_Interrupt;
+end;
+
 procedure INTERRUPT_CabBus_UART_RX_PIN_CHANGE; iv IVT_ADDR_CNINTERRUPT;
 begin
   CNIF_bit := 0;
-  PinChangeInterrupt;
+  CabBus_PinChangeOnUartRXInterrupt;
 end;
 
 var
   ActiveNode: PNMRAnetnode;
 begin
-  { Main program }   
+  { Main program }
   MCU_Setup_Initialize;
   OPStackCore_Initialize;
   CabBridge_Initialize;
   MCU_Enable_100msTimer;
   MCU_Enable_500msTimer;
   MCU_Enable_CabBusTimer;
-  MCU_Enable_NCE_RS485;
+  MCU_Enable_CabBus_RS485;
   MCU_Enable_UART;
   MCU_Enable_SPI;
   MCU_Enable_UART_RX_PinChange;
@@ -83,13 +89,29 @@ begin
   TON_T2CON_bit := 1;       // Turn on 100ms timer
   MCU_Enable_CAN;
   OPStackCore_Enable(True);
-  
+
   TRISB4_bit := 0;
 
-  UART1_Write_Text('NCE Bridge Starting'+LF);
-  
+  UART1_Write_Text('Xpressnet Bridge Starting'+LF);
+
   while True do
-  begin   
+  begin
+  // LATB4_bit := 1;
     ActiveNode := OPStackCore_Process;
+  //  LATB4_bit := 0;
+
+  //  LATB4_bit := 0;
+  //  delay_us(10);
+    if UART1_Data_Ready then
+    begin
+      case UART1_Read of
+        'B', 'b' : OPStackBuffers_PrintBuffers;
+        'A', 'a' : begin
+                     OPStackNode_PrintAliases;
+                     WordToHex(CabBridge.iStateMachine, s1);
+                     UART1_Write_Text(LF+'Bridge machine: ' +s1+LF);
+                   end;
+      end;
+    end
   end;
 end.
