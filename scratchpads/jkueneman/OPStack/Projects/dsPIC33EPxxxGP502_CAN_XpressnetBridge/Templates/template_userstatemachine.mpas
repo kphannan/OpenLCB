@@ -3,6 +3,8 @@ unit template_userstatemachine;
 
 {$I Options.inc}
 
+{.$DEFINE DEBUG_DISCOVER_STATEMACHINE}
+
 uses
   Float16,
   opstacktypes,
@@ -444,7 +446,7 @@ begin
           end;
       STATE_BRIDGE_CREATE_REQUIRED_CABS :
           begin
-            for i := ID_MIN_DEVICE_XPRESSNET to ID_MIN_DEVICE_NCE + XPRESSNET_CAB_BUS_PADDING - 1 do
+            for i := ID_MIN_DEVICE_XPRESSNET to ID_MIN_DEVICE_XPRESSNET + XPRESSNET_CAB_BUS_PADDING - 1 do
               CreateCab(i);                                                     // Build and assign cabs 2 - N so make the throttle hardware happy
             Node^.iUserStateMachine := STATE_BRIDGE_POLL_CABS;
             Exit;
@@ -467,15 +469,14 @@ begin
                       CabBridge.iAssignedCab := 0;
                       CabBridge.CurrentCabID := PCab( CabBridge.AssignedCabs[0]^.UserData)^.ID;  // One must exist if we get to here, see above test
                     end;
-
-                    CabBridge.iOutGoingCount := 1;
-                    CabBridge.iOutGoingByteIndex := 0;
-                    CabBridge.OutGoingBuffer[0] := InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or CabBridge.CurrentCabID);
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+                    // Select the 485 chip to transmit
+                    CabBus_RS485_Select := 1;
+LATB4_bit := 1;     
                     // Setup the Transmit End Interrupt
                     U2TXIF_bit := 0;
                     U2TXIE_bit := 1;
@@ -489,14 +490,16 @@ begin
                     // Enable the RX Interrupt
                     U2RXIF_Bit         := 0;
                     U2RXIE_bit         := 1;
-                    // Select the 485 chip to transmit
-                    CabBus_RS485_Select := 1;
-                    U2TXREG := CabBridge.OutGoingBuffer[0];
+                    U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or CabBridge.CurrentCabID);
+
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY :
                   begin
+                  
+           LATB4_bit := 0;
+                  
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
                       EnableCabBusTimer(2880);      // 31.25ns * 2880 = 90us      Need delay, the cabs are slow microprocessors
@@ -537,22 +540,21 @@ begin
               STATE_SUB_BRIDGE_DISPATCH_MESSAGE :
                   begin
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_DISPATCH_MESSAGE'+LF); {$ENDIF}
-                    
+
                     // mmmmm, there may have to be an OLCB exchange before we can return this dispatch......bit
-                    
-                    
+
                     DispatchMessage(CabBridge.ExistingCab);
-                    if PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Full then
-                    begin                                                      // Here we need to send a reply to the Throttle for Xpressnet..
-                      // No reason to setup the Rx Interrupt, nothing is expected
-                      // Setup the Transmit End Interrupt
-                      U2TXIF_bit := 0;
-                      U2TXIE_bit := 1;
-                      // Setup Pin Change Interrupt for the Receiver Pin
-                      CabBridge.LastPortRead := PortB;
-                      CNIE_bit := 1;
+                    
+                    if PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Full then   // Here we need to send a reply to the Throttle for Xpressnet..
+                    begin
+                      for i := 0 to PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Count - 1 do
+                        CabBridge.OutGoingBuffer[i] := PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.DataBytes[i];
+                     CabBridge.iOutGoingCount := PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Count;
+                     CabBridge.iOutGoingByteIndex := -1;
+
                       // Select the 485 chip to transmit mode
                       CabBus_RS485_Select := 1;
+                      
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
                     end else
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
@@ -560,16 +562,25 @@ begin
                   end;
               STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE..............'+LF); {$ENDIF}
-                    // Start the transmission by setting the IC to Transmit
-                    if CabBridge.iOutGoingByteIndex = 0 then
-                      CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
-
-                    // Pump in as many bytes to the hardware buffers as possible
-                    while (CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount) and (UTXBF_U2STA_bit = 0) do
+                  
+                    if TRMT_U2STA_bit = 1 then
                     begin
-                      U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
-                      Inc(CabBridge.iOutGoingByteIndex);
+                      if CabBridge.iOutGoingByteIndex < 0 then
+                          U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_RESPONSE_XPRESSNET or PCab( CabBridge.ExistingCab^.UserData)^.ID)  // Call Byte
+                        else
+                          U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
+                        Inc(CabBridge.iOutGoingByteIndex);
                     end;
+                    
+                    // Pump in as many bytes to the hardware buffers as possible
+                {    while (CabBridge.iOutGoingByteIndex < CabBridge.iOutGoingCount) and (UTXBF_U2STA_bit = 0) do
+                    begin
+                      if CabBridge.iOutGoingByteIndex < 0 then
+                        U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_RESPONSE_XPRESSNET or PCab( CabBridge.ExistingCab^.UserData)^.ID)  // Call Byte
+                      else
+                        U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
+                      Inc(CabBridge.iOutGoingByteIndex);
+                    end;  }
 
                     if CabBridge.iOutGoingByteIndex >= CabBridge.iOutGoingCount then
                     begin
@@ -584,6 +595,7 @@ begin
                   begin
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
+                      PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Full := False;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
                     end;
                     Exit;
@@ -594,13 +606,13 @@ begin
                     if CabBridge.Discovering then
                     begin
                       Inc(CabBridge.CurrentCabID);
-                      if CabBridge.CurrentCabID > ID_MAX_DEVICE_NCE then
+                      if CabBridge.CurrentCabID > ID_MAX_DEVICE_XPRESSNET then
                       begin
                         CabBridge.Discovering := False;
                         CabBridge.DiscoverTimer := 0;
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;       // Start over and send the Sync again
                       end else
-                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;   // Ping the next one
+                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE;   // Ping the next one
                     end else
                     begin
                       Inc(CabBridge.iAssignedCab);
@@ -608,7 +620,7 @@ begin
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE      // Start over and send the Sync again
                       else begin
                         CabBridge.CurrentCabID := PCab( CabBridge.AssignedCabs[CabBridge.iAssignedCab]^.UserData)^.ID;  // One must exist if we get to here, see above test
-                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;  // Ping the next known one
+                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE;  // Ping the next known one
                       end;
                     end;
                     Exit;

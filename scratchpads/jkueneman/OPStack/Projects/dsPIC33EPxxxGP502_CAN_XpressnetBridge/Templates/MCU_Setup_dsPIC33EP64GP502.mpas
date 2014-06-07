@@ -146,10 +146,11 @@ var
   Temp: Byte;
 begin
   U2BRG := BRG_EXPRESSNET_62500;
-  PDSEL_0_U2MODE_bit := 0;   // 11 = 9-Bit Data, no parity
-  PDSEL_1_U2MODE_bit := 0;   // 00 = 8-Bit Data, no parity
-  STSEL_U2MODE_bit   := 1;   // 0 = 1 Stop Bit; 1 = 2 Stop Bits
+  PDSEL_0_U2MODE_bit := 1;   // 11 = 9-Bit Data, no parity
+  PDSEL_1_U2MODE_bit := 1;   // 00 = 8-Bit Data, no parity
+  STSEL_U2MODE_bit   := 0;   // 0 = 1 Stop Bit
   ADDEN_U2STA_bit    := 0;   // Address detect (9-bit mode) disabled
+
   UARTEN_U2MODE_bit  := 1;   // Enable the UART module, must be done before enabling the UTXEN
 
   U2RXIP_0_Bit        := 1;   // Interrupt Priority  = 5
