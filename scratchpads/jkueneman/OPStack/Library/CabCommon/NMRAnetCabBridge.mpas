@@ -20,12 +20,11 @@ procedure WriteByte(DataByte: Byte; Wait: Boolean);
 procedure FlushUartReceiver;
 procedure EnableCabBusTimer(Time: Word);
 procedure DisableCabBusTimer;
-procedure CabBus_PinChangeOnUartRXInterrupt;
 procedure CabBus_UART_TX_Interrupt;
 function NceKeyPressToString(KeyPress: Byte): string[64];
 function ChangeSpeed(Speed: THalfFloat; DeltaInRealSpeed: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): Word;
 function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
-function CabMessageToTrainAddress(CabMessage: PCabMessage): Word;
+function CabMessageToTrainAddress(Count: Integer; var CabMessage: TCabMessageArray): Word;
 procedure ZeroizeNceCabData(CabData: PCab);
 function Cab_Allocate: PCab;
 procedure Cab_Free(CabData: PCab);
@@ -74,6 +73,8 @@ begin
   UART1_Write_Text(LF);
 end;
 
+// ****************************************************************************
+// *****************************************************************************
 procedure NMRAnetCabBridge_Initialize;
 var
   i, j: Integer;
@@ -90,7 +91,9 @@ begin
   CabBridge.iOutGoingCount := 0;
   CabBridge.iOutGoingByteIndex := 0;
   for i := 0 to USER_MAX_NODE_COUNT - 2 do   // no space for physical node
+  begin
     CabBridge.AssignedCabs[i] := nil;
+  end;
   CabBridge.iAssignedCab := 0;  
   CabBridge.ExistingCab := nil;  
   CabBridge.LastPortRead := 0;         
@@ -137,10 +140,10 @@ procedure EnableCabBusTimer(Time: Word);
 begin
   TON_T4CON_bit := 0;      // Turn off
   T4IE_bit := 0;           // Disable the Interrupt
+  PR4 := Time;             //
+  TMR4 := 0;                        
   T4IF_bit := 0;           // Clear T1IF
   T4IE_bit := 1;           // Enable the Interrupt
-  PR4 := Time;             //
-  TMR4 := 0;
   TON_T4CON_bit := 1;      // Turn on
 end;
 
@@ -150,17 +153,10 @@ procedure DisableCabBusTimer;
 begin
   TON_T4CON_bit := 0;      // Turn off
   T4IE_bit := 0;           // Disable the Interrupt
-  TON_T4CON_bit := 0;      // Turn off
 end;
 
+// ****************************************************************************
 // *****************************************************************************
-// *****************************************************************************
-procedure CabBus_PinChangeOnUartRXInterrupt;
-begin
-  CNIE_bit := 0;                                                                // Pin Change Interrupt disabled
-  DisableCabBusTimer;                                                           // Stop the watchdog timer, we are getting a reply
-end;
-
 procedure CabBus_UART_TX_Interrupt;
 begin
   while TRMT_U2STA_bit = 0 do;      // bug in module, may fire too early
@@ -168,6 +164,8 @@ begin
   U2TXIE_bit := 0;                  // Disable the Interrupt till the next time
 end;
 
+// ****************************************************************************
+// *****************************************************************************
 function NceKeyPressToString(KeyPress: Byte): string[64];
 begin
   case KeyPress of
@@ -249,15 +247,15 @@ end;
 
 // ****************************************************************************
 // *****************************************************************************
-function CabMessageToTrainAddress(CabMessage: PCabMessage): Word;
+function CabMessageToTrainAddress(Count: Integer; var CabMessage: TCabMessageArray): Word;
 var
   i: Integer;
   AddressStr: string[CAB_MAX_DATA_BYTE];
 begin
   Result := 0;
   AddressStr := '';
-  for i := 0 to CabMessage^.Count - 1 do
-    AddressStr := AddressStr + Char( CabMessage^.DataBytes[i] and $0F or $30);   // Make them ASCII
+  for i := 0 to Count - 1 do
+    AddressStr := AddressStr + Char( CabMessage[i] and $0F or $30);   // Make them ASCII
   Result := StrToWord(AddressStr);
   if (AddressStr[0] = '0') or (Result > 127) then
     Result := Result or $C000;
@@ -270,12 +268,12 @@ var
   i, j: Integer;
 begin
   CabData^.State := 0;
-  CabData^.IncomingMsg.Count := 0;
-  CabData^.IncomingMsg.Full := False;
+ // CabData^.IncomingMsg.Count := 0;
+ // CabData^.IncomingMsg.Full := False;
   CabData^.iStateMachine := 0;
   CabData^.ID := 0;
-  for j := 0 to CAB_MAX_DATA_BYTE - 1 do
-    CabData^.IncomingMsg.DataBytes[j] := 0;
+ // for j := 0 to CAB_MAX_DATA_BYTE - 1 do
+  //  CabData^.IncomingMsg.DataBytes[j] := 0;
 end;
 
 // *****************************************************************************

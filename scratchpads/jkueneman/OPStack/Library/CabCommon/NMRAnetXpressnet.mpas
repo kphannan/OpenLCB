@@ -2,6 +2,8 @@ unit NMRAnetXpressnet;
 
 {$I Options.inc}
 {.$DEFINE TRACE_XPRESSNET_MESSAGES}
+{.$DEFINE TRACE_XPRESSNET_MESSAGES_BASIC}
+{.$DEFINE DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE}
 
 uses
   Float16,
@@ -79,13 +81,13 @@ function XpressnetEncodeSpeedStep(XpressNetSpeed: Byte; SpeedByte: Byte; IsForwa
 
 implementation
 
-function CalculateError(var Msg: TCabMessage): Byte;
+function CalculateError(Count: Integer; var Msg: TCabMessageArray): Byte;
 var
   i: Integer;
 begin
   Result := 0;
-  for i := 0 to Msg.Count - 2 do
-    Result := Result xor Msg.DataBytes[i]
+  for i := 0 to Count - 1 do
+    Result := Result xor Msg[i]
 end;
 
 // *****************************************************************************
@@ -103,19 +105,16 @@ end;
 //                Extracts the address from the first two (or one if ShortAddress)
 //    bytes of the XpressNet Message
 // *****************************************************************************
-function ExtractAddressFromXpressNetMessage(CabNode: PNMRAnetNode; iByteAH, iByte2AL: Byte): Word;
-var
-  DataBytes: PCabMessageArray;
+function ExtractAddressFromXpressNetMessage(var DataBytes: TCabMessageArray; iByteAH, iByte2AL: Byte): Word;
 begin
   // Per 2.1.15 definition there is a break between 0-99 and 100-9999
-  DataBytes := @(PCab( CabNode^.UserData)^.IncomingMsg.DataBytes);
-  if (DataBytes^[iByteAH] = 0) and (DataBytes^[iByte2AL] <= MAX_XPRESSNET_SHORT_ADDRESS) then
-    Result := DataBytes^[iByte2AL]
+  if (DataBytes[iByteAH] = 0) and (DataBytes[iByte2AL] <= MAX_XPRESSNET_SHORT_ADDRESS) then
+    Result := DataBytes[iByte2AL]
   else  begin
-    Result := DataBytes^[iByteAH] and %00111111;
+    Result := DataBytes[iByteAH] and %00111111;
     Result := Result shl 8;
-    Result := Result or DataBytes^[iByte2AL];
-    Result := ((DataBytes^[iByteAH] and %00111111) shl 8) or DataBytes^[iByte2AL];
+    Result := Result or DataBytes[iByte2AL];
+    Result := ((DataBytes[iByteAH] and %00111111) shl 8) or DataBytes[iByte2AL];
   end;
 end;
 
@@ -185,11 +184,10 @@ end;
 function Send_InstructionNotSupported(CabNode: PNMRAnetNode): Boolean;
 begin       
   Result := True;
-  PCab( CabNode^.UserData)^.IncomingMsg.Count := 3;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0] := %01100001;    // $61
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1] := %10000010;    // $82
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2] := CalculateError(PCab( CabNode^.UserData)^.IncomingMsg);
-  PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
+  CabBridge.iOutGoingCount := 3;
+  CabBridge.OutGoingBuffer[0] := %01100001;    // $61
+  CabBridge.OutGoingBuffer[1] := %10000010;    // $82
+  CabBridge.OutGoingBuffer[2] := CalculateError(2, CabBridge.OutGoingBuffer);
 end;
 
 // *****************************************************************************
@@ -311,14 +309,13 @@ function CommandStationSoftwareVersionRequest(CabNode: PNMRAnetNode): Boolean;
 begin
   // Fake V3 Software    
   Result := True;
-  PCab( CabNode^.UserData)^.IncomingMsg.Count  := 5;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0] := %01100011;  // $63  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1] := %00100001;  // $21
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2] := VERSION_SOFTWARE_XPRESSNET;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3] := VERSION_COMMANDSTATION_LZ100;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[4] := CalculateError(PCab( CabNode^.UserData)^.IncomingMsg);
-  PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('CommandStationSoftwareVersionRequest'+LF);{$ENDIF}
+  CabBridge.iOutGoingCount  := 5;
+  CabBridge.OutGoingBuffer[0] := %01100011;  // $63  Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
+  CabBridge.OutGoingBuffer[1] := %00100001;  // $21
+  CabBridge.OutGoingBuffer[2] := VERSION_SOFTWARE_XPRESSNET;
+  CabBridge.OutGoingBuffer[3] := VERSION_COMMANDSTATION_LZ100;
+  CabBridge.OutGoingBuffer[4] := CalculateError(4, CabBridge.OutGoingBuffer);
+  {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('CommandStationSoftwareVersionRequest'+LF);{$ENDIF}
 end;
 
 // *****************************************************************************
@@ -338,13 +335,12 @@ end;
 function CommandStationStatusRequest(CabNode: PNMRAnetNode): Boolean;
 begin     
   Result := True;
-  PCab( CabNode^.UserData)^.IncomingMsg.Count  := 4;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0]   := %01100010;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1]   := %00100010;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2]   := $00;      //   TODO:  CommandStation.Flags and $00FF;  // CommandStation State bottom 8 bits are mapped as the Xpressnet Spec;
-  PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3] := CalculateError(PCab( CabNode^.UserData)^.IncomingMsg);
-  PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('CommandStationStatusRequest'+LF);{$ENDIF}
+  CabBridge.iOutGoingCount  := 4;
+  CabBridge.OutGoingBuffer[0]   := %01100010;
+  CabBridge.OutGoingBuffer[1]   := %00100010;
+  CabBridge.OutGoingBuffer[2]   := $00;      //   TODO:  CommandStation.Flags and $00FF;  // CommandStation State bottom 8 bits are mapped as the Xpressnet Spec;
+  CabBridge.OutGoingBuffer[3] := CalculateError(3, CabBridge.OutGoingBuffer);
+  {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('CommandStationStatusRequest'+LF);{$ENDIF}
 end;
 
 // *****************************************************************************
@@ -698,17 +694,36 @@ var
 //var
 //  Slot, Slot2: PAddressSlot;
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('LocomotiveInformationRequestV3'+LF);{$ENDIF}
-  
-  Address := ExtractAddressFromXpressNetMessage(CabNode, 2, 3);
-  
+  {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('LocomotiveInformationRequestV3'+LF);{$ENDIF}
+  Result := False;
+      {
+  CabBridge.iOutGoingCount := 6;
+  CabBridge.OutGoingBuffer[0] := %11100100;
+  CabBridge.OutGoingBuffer[1] := %00000010;              // Identification, Loco Free, 28 Speed Step Default
+  CabBridge.OutGoingBuffer[2] := 0;
+  CabBridge.OutGoingBuffer[3] := 0;
+  CabBridge.OutGoingBuffer[4] := 0;
+  CabBridge.OutGoingBuffer[5] := CalculateError(5, CabBridge.OutGoingBuffer);
+
+  Address := ExtractAddressFromXpressNetMessage(CabBridge.IncomingBuffer, 2, 3);
   CabData := PCab(CabNode^.UserData);
   TrainData := @CabNode^.TrainData;
   ProxyNode := @CabNode^.TrainData.Controller;  // We hold the Proxy in the Controller field since this is a controller
-  
+
+Result := True;
+Exit;     }
+
+
+  Address := ExtractAddressFromXpressNetMessage(CabBridge.IncomingBuffer, 2, 3);
+  CabData := PCab(CabNode^.UserData);
+  TrainData := @CabNode^.TrainData;
+  ProxyNode := @CabNode^.TrainData.Controller;  // We hold the Proxy in the Controller field since this is a controller
+
+   //  UART1_Write_Text('LocomotiveInformationRequestV3'+LF);
+
   case CabData^.iStateMachine of
     STATE_SUB_BRIDGE_INITIALIZE :
-        begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_INITIALIZE'+LF); {$ENDIF}
+        begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_INITIALIZE'+LF); {$ENDIF} 
            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK;
            Exit;
         end;
@@ -722,13 +737,12 @@ begin
     STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE'+LF); {$ENDIF}
 
-          Address := CabMessageToTrainAddress(@CabData^.IncomingMsg);
+          Address := CabMessageToTrainAddress(CabBridge.iIncomingCount and $0F, CabBridge.IncomingBuffer);
 
           {$IFNDEF FPC}
           WordToStr(Address, s1);
           UART1_Write_Text('Address = ' + s1 + LF);
           {$ENDIF}
-
 
           SpeedStep := 28;
 
@@ -743,6 +757,7 @@ begin
             2 : SpeedStep := 128;
           end;
          }
+         
           if TrySendTractionProxyAllocate(CabNode^.Info, ProxyNode^, TRACTION_PROXY_TECH_ID_DCC, Address, SpeedStep, 0) then
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
           CabData^.WatchDog := 0;
@@ -787,46 +802,45 @@ begin
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK'+LF); {$ENDIF}
           if TrySendTractionManage(CabNode^.Info, CabNode^.TrainData.LinkedNode, False) then
           begin
-            CabData^.IncomingMsg.Count := 6;
-            CabData^.IncomingMsg.DataBytes[0] := %11100100;
+            CabBridge.iOutGoingCount := 6;
+            CabBridge.OutGoingBuffer[0] := %11100100;
             
             // TODO: Full implementation would Query Controller on the Train to see if someone else owned it to fill in reply correctly
             
             case TrainData^.SpeedSteps of
               14  : begin
-                      CabData^.IncomingMsg.DataBytes[1] := %0000000;              // Identification, Loco Free, 14 Speed Step Default
-                      CabData^.IncomingMsg.DataBytes[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 14/100, 14, TrainData^.SpeedDir and $8000 = 0);
+                      CabBridge.OutGoingBuffer[1] := %0000000;              // Identification, Loco Free, 14 Speed Step Default
+                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 14/100, 14, TrainData^.SpeedDir and $8000 = 0);
                     end;
               28  : begin
-                      CabData^.IncomingMsg.DataBytes[1] := %0000010;              // Identification, Loco Free, 28 Speed Step Default
-                      CabData^.IncomingMsg.DataBytes[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 28/100, 28, TrainData^.SpeedDir and $8000 = 0);
+                      CabBridge.OutGoingBuffer[1] := %0000010;              // Identification, Loco Free, 28 Speed Step Default
+                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 28/100, 28, TrainData^.SpeedDir and $8000 = 0);
                     end;
               128 : begin
-                      CabData^.IncomingMsg.DataBytes[1] := %0000100;              // Identification, Loco Free, 128 Speed Step Default
-                      CabData^.IncomingMsg.DataBytes[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 128/100, 128, TrainData^.SpeedDir and $8000 = 0);
+                      CabBridge.OutGoingBuffer[1] := %0000100;              // Identification, Loco Free, 128 Speed Step Default
+                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 128/100, 128, TrainData^.SpeedDir and $8000 = 0);
                     end;
             end;
             
-            CabData^.IncomingMsg.DataBytes[3] := 0;
+            CabBridge.OutGoingBuffer[3] := 0;
             FunctionBits := TrainData^.Functions;        // procedures F0..F4;   Bottom 5 Bits F0-F4
             for i := 4 downto 0 do
             begin
               if FunctionBits and $00000001 = 1 then
-                CabData^.IncomingMsg.DataBytes[3].i := 1;
+                CabBridge.OutGoingBuffer[3].i := 1;
               FunctionBits := FunctionBits shr 1;
             end;
             
-            CabData^.IncomingMsg.DataBytes[4] := 0;
+            CabBridge.OutGoingBuffer[4] := 0;
             FunctionBits := TrainData^.Functions;        // procedures F5..F12;  Shift out the bottom 5 bits to get F5-F12
             for i := 7 downto 0 do
             begin
               if FunctionBits and $00000001 = 1 then
-                CabData^.IncomingMsg.DataBytes[4].i := 1;
+                CabBridge.OutGoingBuffer[4].i := 1;
               FunctionBits := FunctionBits shr 1;
             end;
 
-            CabData^.IncomingMsg.DataBytes[5] := CalculateError(CabData^.IncomingMsg);
-            CabData^.IncomingMsg.Full := True;
+            CabBridge.OutGoingBuffer[5] := CalculateError(5, CabBridge.OutGoingBuffer);
             CabData^.iStateMachine := 0;                                        // We are now done....
             Result := True;
           end;
@@ -925,18 +939,17 @@ function FunctionStatusRequest(CabNode: PNMRAnetNode): Boolean;
 {var
   Slot: PAddressSlot;  }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionStatusRequest'+LF);{$ENDIF}
+  {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('FunctionStatusRequest'+LF);{$ENDIF}
   
   Result := True;
   
-    PCab( CabNode^.UserData)^.IncomingMsg.Count := 5;
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0] := %11100011;
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1] := %01010000;  // Identification,
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2] := 0;         // procedures F0..F4;   Bottom 5 Bits F0-F4
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3] := 0;         // procedures F5..F12;  Shift out the bottom 5 bits to get F5-F12
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[4] := CalculateError(PCab( CabNode^.UserData)^.IncomingMsg);
-    PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
-    
+    CabBridge.iOutGoingCount := 5;
+    CabBridge.OutGoingBuffer[0] := %11100011;
+    CabBridge.OutGoingBuffer[1] := %01010000;  // Identification,
+    CabBridge.OutGoingBuffer[2] := 0;         // procedures F0..F4;   Bottom 5 Bits F0-F4
+    CabBridge.OutGoingBuffer[3] := 0;         // procedures F5..F12;  Shift out the bottom 5 bits to get F5-F12
+    CabBridge.OutGoingBuffer[4] := CalculateError(4, CabBridge.OutGoingBuffer);
+
   
   (*
   // Extract the Address BEFORE changing the Message Data!!!!!
@@ -983,21 +996,20 @@ function FunctionStateRequestEx(CabNode: PNMRAnetNode): Boolean;
 {var
   Slot: PAddressSlot; }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionStateRequestEx'+LF);{$ENDIF}
+  {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('FunctionStateRequestEx'+LF);{$ENDIF}
   // Extract the Address BEFORE changing the Message Data!!!!!
 {  Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False); // Don't allocate if it does not exist
        }
        
   Result := True;
   
-    PCab( CabNode^.UserData)^.IncomingMsg.Count := 6;
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0] := %11100100;
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1] := %01010001;  // Identification,
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2] := 0;         // procedures F13..F20 Momentary/Continious Status;  Bottom 8 Bits F20-F13
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3] := 0;         // procedures F21..F28 Momentary/Continious Status;  Shift out the bottom 5 bits to get F21..F28
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[4] := 0;         // Mystery Byte that is not documented but needed
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[5] := CalculateError(PCab( CabNode^.UserData)^.IncomingMsg);
-    PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
+    CabBridge.iOutGoingCount := 6;
+    CabBridge.OutGoingBuffer[0] := %11100100;
+    CabBridge.OutGoingBuffer[1] := %01010001;  // Identification,
+    CabBridge.OutGoingBuffer[2] := 0;         // procedures F13..F20 Momentary/Continious Status;  Bottom 8 Bits F20-F13
+    CabBridge.OutGoingBuffer[3] := 0;         // procedures F21..F28 Momentary/Continious Status;  Shift out the bottom 5 bits to get F21..F28
+    CabBridge.OutGoingBuffer[4] := 0;         // Mystery Byte that is not documented but needed
+    CabBridge.OutGoingBuffer[5] := CalculateError(5, CabBridge.OutGoingBuffer);
        
  (*
   Cab^.IncomingMsg.HeaderByte := %11100100;  // Reuse the passed XpressNet Message, enviromentally friendly save the bytes!
@@ -1040,18 +1052,16 @@ function FunctionOperationRequestEx(CabNode: PNMRAnetNode): Boolean;
 {var
   Slot: PAddressSlot;  }
 begin
-  {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('FunctionOperationRequestEx'+LF);{$ENDIF}
+  {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('FunctionOperationRequestEx'+LF);{$ENDIF}
   
   Result := True;
   
-  PCab( CabNode^.UserData)^.IncomingMsg.Count := 5;
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[0] := %11100011;
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[1] := %01010010;  // Identification,
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[2] := 0;         // procedures F13..F20 On/Off Status;  Bottom 8 Bits F20-F13
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[3] := 0;         // procedures F21..F28 On/Off Status;  Shift out the bottom 5 bits to get F21..F28
-    PCab( CabNode^.UserData)^.IncomingMsg.DataBytes[4] := CalculateError(PCab( CabNode^.UserData)^.IncomingMsg);
-    PCab( CabNode^.UserData)^.IncomingMsg.Full := True;
-    
+    CabBridge.iOutGoingCount := 5;
+    CabBridge.OutGoingBuffer[0] := %11100011;
+    CabBridge.OutGoingBuffer[1] := %01010010;  // Identification,
+    CabBridge.OutGoingBuffer[2] := 0;         // procedures F13..F20 On/Off Status;  Bottom 8 Bits F20-F13
+    CabBridge.OutGoingBuffer[3] := 0;         // procedures F21..F28 On/Off Status;  Shift out the bottom 5 bits to get F21..F28
+    CabBridge.OutGoingBuffer[4] := CalculateError(4, CabBridge.OutGoingBuffer);
   (*
  { // Extract the Address BEFORE changing the Message Data!!!!!
   Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), False); // Don't allocate if it does not exist

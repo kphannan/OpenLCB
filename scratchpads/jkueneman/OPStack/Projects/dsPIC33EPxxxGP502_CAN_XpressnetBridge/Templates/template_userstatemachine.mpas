@@ -4,6 +4,7 @@ unit template_userstatemachine;
 {$I Options.inc}
 
 {.$DEFINE DEBUG_DISCOVER_STATEMACHINE}
+{.$DEFINE TRACE_TRACTION_REPLIES}
 
 uses
   Float16,
@@ -66,6 +67,10 @@ var
   CabBus_RS485_Select              : sbit; sfr; external;
   CabBus_RS485_Select_Direction    : sbit; sfr; external;
 
+var
+  GlobalTimer: Word;
+  RS485_Watchdog: Byte;
+  
 implementation
 
 const
@@ -73,16 +78,13 @@ const
   STATE_RS485_READ_MESSAGE_BYTE = 1;
   STATE_RS485_READ_XOR_BYTE     = 2;
   STATE_RS485_FULL              = 3;
-  
+
 const
   STATE_CAB_IDLE             = 1;
   STATE_CAB_SELECT_LOCO      = 2;
   STATE_CAB_RUN_MACRO        = 3;
   STATE_CAB_RUN_CMD          = 4;
   STATE_CAB_CLEAR_MSG        = 5;
-
-var
-  GlobalTimer: Word;
 
 // *****************************************************************************
 // Called from the UART RX Interrupt
@@ -100,6 +102,7 @@ begin
     case CabBridge.iIncomingStateMachine of
       STATE_RS485_READ_HEADER_BYTE :
         begin
+          CabBridge.IncomingStarted := True;
           CabBridge.iIncomingCount := ReceivedByte;                             // Use only the lower nibble for the count, upper is instruction
           CabBridge.iIncomingByteIndex := 0;
           if CabBridge.iIncomingCount and $0F = 0 then                          // If the count is 0 then jump to the XOR byte state, only the lower nibble is the couny
@@ -111,8 +114,8 @@ begin
         begin
           CabBridge.IncomingBuffer[CabBridge.iIncomingByteIndex] := ReceivedByte;
           Inc(CabBridge.iIncomingByteIndex);
-          if CabBridge.iIncomingByteIndex >= CabBridge.iIncomingCount and $0F then
-            CabBridge.iIncomingStateMachine := STATE_RS485_READ_XOR_BYTE
+          if CabBridge.iIncomingByteIndex >= (CabBridge.iIncomingCount and $0F) then
+            CabBridge.iIncomingStateMachine := STATE_RS485_READ_XOR_BYTE;
         end;
       STATE_RS485_READ_XOR_BYTE :
         begin
@@ -136,27 +139,23 @@ procedure CabBus_Timeout;
 begin
   // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
   DisableCabBusTimer;
-  case CabBridge.iStateMachine of
-    STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
-  end;
-end;
+  // if
+  //   1) No Bits shifting in on the register (IDLE)
+  //   2) There are no bytes in the buffers (UART RX Data Available URXDA)
+  //   3) The Receive Interrupt flag is clear
+  //   4) The statemachine is not in the Replied state
+  // then we assume the cab did not reply
+  
+ // LATB4_bit := RIDLE_U2STA_bit;
+ 
+  if RIDLE_U2STA_bit = 0 then Exit;
+  if CabBridge.IncomingStarted then Exit;
+  if URXDA_U2STA_bit = 1 then Exit;
 
-// *****************************************************************************
-// *****************************************************************************
-function HandleCabBusReply(CabNode: PNMRAnetNode): Boolean;
-var
-  CabData: PCab;
-  i: Integer;
-begin
-  Result := True;
-  CabData := PCab( CabNode^.UserData);
-  CabData^.iStateMachine := 0;                                                  // Reset incase the reply needs to run a statemachine
-  for i := 0 to CabBridge.iIncomingCount - 1 do                                 // Move it into the Cab buffer to be processed when it is free
-  begin
-    CabData^.IncomingMsg.DataBytes[i] := CabBridge.IncomingBuffer[i];
-    CabData^.IncomingMsg.Count := CabBridge.iIncomingCount;
-    CabData^.IncomingMsg.Full := True;
+  case CabBridge.iStateMachine of
+    STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : begin {UART1_Write_Text('Timed out'+LF); }CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT; end;
   end;
+  
 end;
 
 // *****************************************************************************
@@ -168,19 +167,18 @@ var
   DataCount, Instruction: Byte;
 begin     
   Result := True;                                                               // Assume we are moving on   
-  Cab^.IncomingMsg.Full := False;                                               // with no data to reply with
   if CabNode <> nil then
   begin
     Cab := PCab( PByte( CabNode^.UserData));
-    DataCount := Cab^.IncomingMsg.Count and $0F;
-    Instruction := Cab^.IncomingMsg.Count and $F0;
+    DataCount := CabBridge.iIncomingCount and $0F;
+    Instruction := CabBridge.iIncomingCount and $F0;
     // Divide and Conquer
     case Instruction of       // Extract the Instruction
       %00100000:  // 0010 xxxx {$2x}
         begin
           case DataCount of    // Extract the Count
             1: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %10000001 (*$81*): Result := ResumeOperationsRequest(CabNode);                       // 2.2.2  Resume operations request
                    %10000000 (*$80*): Result := StopOperationsRequest(CabNode);                         // 2.2.3  Stop operations request (emergency off)
                    %00010000 (*$10*): Result := ServiceModeResultsRequest(CabNode);                              // 2.2.10 Request for Service Mode results;
@@ -191,7 +189,7 @@ begin
                  end;
                end;
             2: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %00010001 (*$11*): Result := RegisterModeReadRequest(CabNode);      // 2.2.7  Register Mode read request (Register Mode)
                    %00010101,(*$15*)                                                                   // 2.2.8  Direct Mode CV read request (CV mode)
                    %00011000,(*$18*)                                                                   // 4-Byte-Format (CV 1-255 und CV1024) (v3.6)
@@ -205,7 +203,7 @@ begin
                  end;
                end;
             3: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %00010010 (*$12*): Result := RegisterModeWriteRequest(CabNode);     // 2.2.11 Register Mode write request (Register Mode)
                    %00011100,(*$16*)                                                                   // 2.2.12 Direct Mode write request (CV Mode) (CV 1-255) and 256)
                    %00011111,(*$1C*)                                                                   // 4-Byte-Format (CV 1-255 and CV1024) (v3.6)
@@ -251,19 +249,19 @@ begin
         begin
           case DataCount of
             3: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %00000000 (*$00*): Result := LocomotiveInformationRequestV3(CabNode);       // 2.2.19.3 Locomotive information requests (XpressNet only) [QUERIES the Function on/off State state (F0-F12)]
                    %00000111 (*$07*): Result := FunctionStatusRequest(CabNode);                // 2.2.19.4 Function momentary/continious status request (XpressNet only)  [QUERIES the momentary or on/off state] [QUERIES the momentary or on/off state (F0-F12)]
                    %00001000 (*$08*): Result := FunctionStateRequestEx(CabNode);               // 2.2.19.5 Function momentary/continious status request (XpressNet only v3.6; 2.2.25.2 in the German document)    [QUERIES the momentary or on/off state (F13-F28)]
                    %00001001 (*$09*): Result := FunctionOperationRequestEx(CabNode);           // 2.2.19.6 Function on/off status request (XpressNet only v3.6; 2.2.25.3 in the German document)    [QUERIES the Function State state (F13-F28)]
-                   %00000101, %00000110 (*$05, $06*): Result := AddressInquiryLocoStack(CabNode, Cab^.IncomingMsg.DataBytes[0] = %00000110);  // 2.2.25.3 Address inquiry locomotive at command station stack request
+                   %00000101, %00000110 (*$05, $06*): Result := AddressInquiryLocoStack(CabNode, CabBridge.IncomingBuffer[0] = %00000110);  // 2.2.25.3 Address inquiry locomotive at command station stack request
                    %01000100 (*$68*): Result := AddressInquiryLocoDeleteFromStack(CabNode)     // 2.2.26 Delete locomotive from command station stack request
                  else
                    Result := Send_InstructionNotSupported(CabNode);
                  end;
                end;
             4: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %00010000, (*$10*) // 14 Step
                    %00010001, (*$11*) // 27 Step
                    %00010010, (*$12*) // 28 Step
@@ -281,19 +279,19 @@ begin
                    %00100111, (*$27*)  // Set Function State on Group 4 ( momentary/continious )
                    %00101100: (*$2C*)  // Set Function State on Group 5 ( momentary/continious )
                      Result := SetFunctionStateRequest(CabNode);                               // 2.2.20.5 Format - Set Function state group 5: (XpressNet only v3.6; 2.2.26.4 in the German document) [SETS the Function State]
-                   %01000000, %01000001 (*$40, $41*): AddLocomotiveToMU_Request(CabNode, Cab^.IncomingMsg.DataBytes[0] = %01000001);  // 2.2.24.1 Add a locomotive to a multi-unit request [SETS the Function State]
+                   %01000000, %01000001 (*$40, $41*): AddLocomotiveToMU_Request(CabNode, CabBridge.IncomingBuffer[0] = %01000001);  // 2.2.24.1 Add a locomotive to a multi-unit request [SETS the Function State]
                    %01000010 (*$42*): Result := RemoveLocomotiveFromMU_Request(CabNode);                    // 2.2.24.2 Remove a locomotive from a Multi-unit request
-                   %00000001, %00000010: Result := AddressInquiryOfMember_MU_Request(CabNode, Cab^.IncomingMsg.DataBytes[0] = %00000010);       // 2.2.25.1 Address inquiry member of a Multi-unit request
-                   %00000011, %00000100: Result := AddressInquiryOf_MU_Request(CabNode, Cab^.IncomingMsg.DataBytes[0] = %00000100)              // 2.2.25.2 Address inquiry Multi-unit request
+                   %00000001, %00000010: Result := AddressInquiryOfMember_MU_Request(CabNode, CabBridge.IncomingBuffer[0] = %00000010);       // 2.2.25.1 Address inquiry member of a Multi-unit request
+                   %00000011, %00000100: Result := AddressInquiryOf_MU_Request(CabNode, CabBridge.IncomingBuffer[0] = %00000100)              // 2.2.25.2 Address inquiry Multi-unit request
                  else
                    Result := Send_InstructionNotSupported(CabNode);
                  end;
                end;
             5: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %01000011 (*$43*):
                      begin
-                       if (Cab^.IncomingMsg.DataBytes[3] = 0) and (Cab^.IncomingMsg.DataBytes[4] = 0) then
+                       if (CabBridge.IncomingBuffer[3] = 0) and (CabBridge.IncomingBuffer[4] = 0) then
                          Result := DissolveDoubleHeaderV3(CabNode)            // 2.2.22.2 Dissolve Double Header
                        else
                          Result := EstablishDoubleHeaderV3(CabNode)           // 2.2.22.1 Establish Double Header
@@ -304,7 +302,7 @@ begin
                  end;
                end;
             6: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %00110000 (*$30*): Result := OperationsModeRequest(CabNode) // 2.2.23.1  Operations Mode Programming
                    else
                     Result :=  Send_InstructionNotSupported(CabNode);
@@ -338,7 +336,7 @@ begin
         begin
           case DataCount of
             3: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    %00000101: Result := EstablishDoubleHeaderV2(CabNode);  // 2.2.21.1 Establish Double Header
                    %00000100: Result := DisolveDoubleHeaderV2(CabNode)     // 2.2.21.2 Dissolve Double Header
                  else
@@ -354,7 +352,7 @@ begin
           case DataCount of
             0: PC_Interface_VersionNumber(CabNode);              // 1.5.4 Determining the Version number of the LI100F and LI101
             2: begin
-                 case Cab^.IncomingMsg.DataBytes[0] of
+                 case CabBridge.IncomingBuffer[0] of
                    1: Result := PC_Interface_SetAddress(CabNode);                 // 1.5.5 Determing and changing the XpressNet address for the LI101
                    2: Result := PC_Interface_SetBaudRate(CabNode)                 // 1.5.6 Determing and changing the Baud Rate for the LI101
                  else
@@ -434,12 +432,16 @@ begin
               STATE_SUB_BRIDGE_INITIALIZE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_INITIALIZE'+LF); {$ENDIF}
 
+     LATB0_bit := 1;    // NICE SYNC PIN
+                     
+                      CabBridge.Discovering := False;
+               {
                     if (CabBridge.iAssignedCabCount = 0) or (CabBridge.DiscoverTimer >= REDISCOVERY_TIME) then
                     begin
                       CabBridge.Discovering := True;
                       CabBridge.DiscoverTimer := 0;
                     end;
-
+              }
                     if CabBridge.Discovering then
                       CabBridge.CurrentCabID := ID_MIN_DEVICE_XPRESSNET
                     else begin
@@ -451,84 +453,89 @@ begin
                   end;
               STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+                  
+     LATB0_bit := 0;    // NICE SYNC PIN
                     // Select the 485 chip to transmit
                     CabBus_RS485_Select := 1;
-LATB4_bit := 1;     
-                    // Setup the Transmit End Interrupt
-                    U2TXIF_bit := 0;
-                    U2TXIE_bit := 1;
+                    Delay_us(10);
                     // Setup Pin Change Interrupt for the Receiver Pin
                     CabBridge.LastPortRead := PortB;
+                    CNIF_bit := 0;
                     CNIE_bit := 1;                                               // Pin Change Interrupt enable
                     // Setup the incoming message buffer
                     CabBridge.iIncomingStateMachine := 0;
                     CabBridge.iIncomingCount := 0;
-                    CabBridge.iIncomingByteIndex := 0;     
-                    // Enable the RX Interrupt
-                    U2RXIF_Bit         := 0;
-                    U2RXIE_bit         := 1;
-                    U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or CabBridge.CurrentCabID);
+                    CabBridge.iIncomingByteIndex := 0; 
+                    CabBridge.IncomingStarted := False;
 
+                    U2TXIE_bit := 0;                                            // Setup the Transmit End Interrupt
+                    U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or CabBridge.CurrentCabID);  
+                    UTXEN_bit := 1;
+                    U2TXIF_bit := 0;
+                    U2TXIE_bit := 1;
+
+                    U2RXIF_Bit         := 0;                                    // Enable the RX Interrupt
+                    U2RXIE_bit         := 1;
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY :
                   begin
-                  
-           LATB4_bit := 0;
-                  
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
                       EnableCabBusTimer(2880);      // 31.25ns * 2880 = 90us      Need delay, the cabs are slow microprocessors
+                      RS485_Watchdog := 0;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE;
                     end;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE :
-                  begin   // Waiting for the Timer to expire or we detect a reply....
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
+                    // Waiting for the Timer to expire or we detect a reply....
                     // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
-                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
+                    
+                    if RS485_Watchdog > 2 then                                  // Something is corrupted or hung
+                    begin
+                       CabBridge.iIncomingStateMachine :=  STATE_RS485_READ_HEADER_BYTE;
+                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
+                    end;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_TIMEOUT :
-                  begin
-                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_TIMEOUT'+LF); {$ENDIF}
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_TIMEOUT'+LF); {$ENDIF}
                     // Need to search the Allocated Cab List to find the CabBridge.iDiscoveryCabID matching Node to pull this
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_CAB_REPLIED :
-                  begin
-                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_CAB_REPLIED'+LF); {$ENDIF}
+                  begin   {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_CAB_REPLIED'+LF); {$ENDIF}
+                    CabBridge.iOutGoingCount := 0;
                     CabBridge.ExistingCab := FindCab(CabBridge.CurrentCabID);  // this may return null when discovering!!!!
                     if CabBridge.ExistingCab = nil then
-                    begin
-                      CreateCab(CabBridge.CurrentCabID);                     // Throw away this message as it could be corrupted depending on timing of when the cab was plugged in
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB
-                    end else
-                    begin
-                      if HandleCabBusReply(CabBridge.ExistingCab) then
-                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_DISPATCH_MESSAGE
-                      else
-                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB
-                    end;
+                      CabBridge.ExistingCab := CreateCab(CabBridge.CurrentCabID);
+                    PCab( CabBridge.ExistingCab^.UserData)^.iStateMachine := 0;
+                    
+                    // Wait until the Node is in the Permitted state before trying
+                    // to start a conversation with it and the Proxy/Train
+                    if CabBridge.ExistingCab^.State and NS_PERMITTED <> 0 then
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_DISPATCH_MESSAGE
+                    else
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
+                    
+     LATB4_bit := 1;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_DISPATCH_MESSAGE :
-                  begin
-                    {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_DISPATCH_MESSAGE'+LF); {$ENDIF}
+                  begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_DISPATCH_MESSAGE'+LF); {$ENDIF}
                     if DispatchMessage(CabBridge.ExistingCab) then              // Need to dispatch to succeed to move on, else spin here until done
                     begin
-                      if PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Full then   // Here we need to send a reply to the Throttle for Xpressnet..
+                    
+   LATB4_bit := 0;
+                    
+                      if CabBridge.iOutGoingCount > 0 then                      // See if there is anything to send
                       begin
-                        for i := 0 to PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Count - 1 do
-                          CabBridge.OutGoingBuffer[i] := PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.DataBytes[i];
-                       CabBridge.iOutGoingCount := PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Count;
-                       CabBridge.iOutGoingByteIndex := -1;
-
-                        // Select the 485 chip to transmit mode
+                        CabBridge.iOutGoingByteIndex := -1;
                         CabBus_RS485_Select := 1;
-
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
                       end else
                         CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
@@ -537,7 +544,6 @@ LATB4_bit := 1;
                   end;
               STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE..............'+LF); {$ENDIF}
-                  
                     if TRMT_U2STA_bit = 1 then
                     begin
                       if CabBridge.iOutGoingByteIndex < 0 then
@@ -547,7 +553,7 @@ LATB4_bit := 1;
                         Inc(CabBridge.iOutGoingByteIndex);
                     end;
 
-                    if CabBridge.iOutGoingByteIndex >= CabBridge.iOutGoingCount then
+                    if CabBridge.iOutGoingByteIndex >= (CabBridge.iOutGoingCount and $0F) then
                     begin
                       // Special case if we are sending the last byte.  Need to setup the interrupt to catch the last byte out
                       U2TXIF_bit := 0;
@@ -560,13 +566,15 @@ LATB4_bit := 1;
                   begin
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
-                      PCab( CabBridge.ExistingCab^.UserData)^.IncomingMsg.Full := False;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
                     end;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_NEXT_CAB :
                   begin
+                  
+                  LATB4_bit := 0;
+                  
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_NEXT_CAB'+LF); {$ENDIF}
                     if CabBridge.Discovering then
                     begin
@@ -695,17 +703,17 @@ begin
   CabData := PCab( Node^.UserData);
   case MultiFrameBuffer^.DataArray[0] of
     TRACTION_QUERY_SPEED :
-        begin
+        begin    {$IFDEF TRACE_TRACTION_REPLIES} UART1_Write_Text('TRACTION_QUERY_SPEED' + LF); {$ENDIF}
           Node^.TrainData.SpeedDir := (MultiFrameBuffer^.DataArray[1] shl 8) or MultiFrameBuffer^.DataArray[2];
           CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS
         end;
     TRACTION_QUERY_FUNCTION :
-        begin
+        begin  {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_QUERY_FUNCTION' + LF);{$ENDIF}
          // Node^.TrainData.Functions......
          CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
         end;
     TRACTION_CONTROLLER_CONFIG :
-        begin
+        begin {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_CONTROLLER_CONFIG' + LF);{$ENDIF}
           case MultiFrameBuffer^.DataArray[1] of
             TRACTION_CONTROLLER_CONFIG_ASSIGN :
                 begin
@@ -717,7 +725,7 @@ begin
           end;
         end;
     TRACTION_CONSIST :
-        begin
+        begin  {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_CONSIST' + LF);{$ENDIF}
           case MultiFrameBuffer^.DataArray[1] of
             TRACTION_CONSIST_ATTACH :
                 begin
@@ -731,7 +739,7 @@ begin
           end // case
         end;
     TRACTION_MANAGE :
-        begin
+        begin  {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_MANAGE' + LF); {$ENDIF}
           case MultiFrameBuffer^.DataArray[1] of
             TRACTION_MANAGE_RESERVE :
                 begin
@@ -779,7 +787,7 @@ begin
   CabData := PCab( Node^.UserData);
   case AMessage^.Buffer^.DataArray[0] of
     TRACTION_PROXY_MANAGE :
-        begin
+        begin {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_PROXY_MANAGE' + LF);{$ENDIF}
           if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
           begin
              if AMessage^.Buffer^.DataArray[2] = 0 then
@@ -790,7 +798,7 @@ begin
           Exit;
         end;
     TRACTION_PROXY_ALLOCATE :
-        begin
+        begin {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_PROXY_ALLOCATE' + LF);{$ENDIF}
           Node^.TrainData.LinkedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
           NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.LinkedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
           CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK;    // Now need to unlock the Proxy
@@ -935,6 +943,7 @@ var
   Cab: PCab;
 begin
   Inc(GlobalTimer);
+  Inc(RS485_Watchdog);
 
    // Count up to the time out then freeze.  The Timer Count will be reset after the
   // main loop is done rediscovering

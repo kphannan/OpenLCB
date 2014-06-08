@@ -25,7 +25,6 @@ const
   procedure MCU_Enable_CabBus_RS485;
   procedure MCU_Enable_UART;
   procedure MCU_Enable_SPI;
-  procedure MCU_Enable_UART_RX_PinChange;
 
 implementation
 
@@ -171,7 +170,7 @@ begin
   CNPUB1_bit         := 1;   // Enable the internal pull up  on the Rx Pin
   while (URXDA_U2STA_bit = 1) do
     Temp := U2RXREG;             // Flush the RX Buffer
-  U2RXIF_Bit         := 0;                                            // Reset the hardware RX statemachine
+  U2RXIF_Bit         := 0;   // Reset the hardware RX statemachine
   U2RXIE_bit         := 1;   // Enable the RX Interrupt, is enabled when needed
   Delay_ms(100);             // Wait for UART module to stabilize
 end;
@@ -190,16 +189,6 @@ begin
   SPI1CON := SPI1CON or $0003 or $0018;  // Setup for 5 Mhz (with the CAN plug in boards)     $10=5Mhz, $14=6.67Mhz, $18 = 10Mhz
   SPIEN_bit := 1;    // Enable the SPI
 end;
-
-procedure MCU_Enable_UART_RX_PinChange;
-begin
-  CNIP_0_bit := 1;          // Priority 7, highest
-  CNIP_1_bit := 1;
-  CNIP_2_bit := 1;
-  CNIEB1_bit := 1;  // Pin Change Interrupt on B1
-  CNIF_bit := 0;
-end;
-
 
 procedure MCU_Setup_Initialize;
 var
