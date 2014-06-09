@@ -474,7 +474,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 1;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_E_STOP;

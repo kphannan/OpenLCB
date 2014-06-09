@@ -66,7 +66,7 @@ const
 
 var
   GlobalTimer: Word;
-  PreLoadNode: PNMRAnetNode;
+
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize
 //     Parameters: : None
@@ -76,7 +76,7 @@ var
 // *****************************************************************************
 procedure UserStateMachine_Initialize;
 begin
-  PreLoadNode := nil;
+
 end;
 
 // *****************************************************************************
@@ -95,7 +95,6 @@ begin
             begin
               if Node^.State and NS_PERMITTED <> 0 then
               begin   {$IFDEF DEBUG_TRAINSERVER_STATEMACHINE} UART1_Write_Text('STATE_PROXY_USER_START'+LF); {$ENDIF}
-                PreLoadNode := OPStackNode_Allocate;
                 Node^.iUserStateMachine := STATE_PROXY_IDLE
               end;
             end;
@@ -240,11 +239,11 @@ begin
             if TrainNode <> nil then
               TrainNode^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY     // Node with this address exists, use it and set the state to send a Allocate Reply
             else begin
-              TrainNode := PreLoadNode;                      
+              TrainNode := OPStackNode_Allocate;
               TrainNode^.TrainData.State := TrainNode^.TrainData.State or TS_SEND_PROXY_ALLOCATE_REPLY;
-              PreLoadNode := OPStackNode_Allocate;
-            end;
-            if TrainNode <> nil then
+           end;
+           
+           if TrainNode <> nil then
             begin
               // This node will now start and log in, then it will reply to the Allocate Message
               TrainNode^.TrainData.Address := TrainID;

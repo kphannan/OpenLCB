@@ -89,9 +89,9 @@ begin
   
   while True do
   begin   
-    LATB4_bit := 1;
+   // LATB4_bit := 1;
     ActiveNode := OPStackCore_Process;
-    LATB4_bit := 0;
+  //  LATB4_bit := 0;
 
   //  LATB4_bit := 0;
   //  delay_us(10);
@@ -100,9 +100,13 @@ begin
       case UART1_Read of
         'B', 'b' : OPStackBuffers_PrintBuffers;
         'A', 'a' : begin
-                     OPStackNode_PrintAliases;
+                   //  OPStackNode_PrintAliases;
+                     WordToHex(NodePool.AllocatedList[0]^.iUserStateMachine, s1);
+                     UART1_Write_Text('Node usermachine: ' +s1+LF);
+                     WordToHex(NodePool.AllocatedList[0]^.iStateMachine, s1);
+                     UART1_Write_Text('Node machine: ' +s1+LF);
                      WordToHex(CabBridge.iStateMachine, s1);
-                     UART1_Write_Text('Bridge machine: ' +s1+LF);
+                     UART1_Write_Text('Bridge machine: ' +s1+LF+LF);
                    end;
       end;
     end

@@ -102,13 +102,15 @@ begin
   // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
   DisableCabBusTimer;
   
-  if RIDLE_U2STA_bit = 0 then Exit;
-  if CabBridge.IncomingStarted then Exit;
-  if URXDA_U2STA_bit = 1 then Exit;
-  
-  case CabBridge.iStateMachine of
-    STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;
-    STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
+  if CabBridge.iStateMachine = STATE_SUB_BRIDGE_WAIT_SYNC_DELAY then
+   CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING
+  else begin
+    if RIDLE_U2STA_bit = 0 then Exit;
+    if CabBridge.IncomingStarted then Exit;
+    if URXDA_U2STA_bit = 1 then Exit;
+
+    if CabBridge.iStateMachine = STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE then
+      CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
   end;
 end;
 
@@ -127,7 +129,7 @@ begin
   // If the current buffer in the Cab is not processed yet throw this one away as it may be in the middle of a statemachine
   if CabData^.UserInputBuffer.Full then
     Exit;
-
+    
   // NCE interleaves its incoming messages (in some cases) so we need a sub-statemachine to
   // gather them up and then set the Cab Statemachine to the correct task.  This is fast
   // from within the main Cab Ping loop.  The handlers are all local to each nodes
@@ -291,6 +293,9 @@ begin
             case CabBridge.iStateMachine of   // I could use the Train Data machine for this if I wanted
               STATE_SUB_BRIDGE_INITIALIZE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_INITIALIZE'+LF); {$ENDIF}
+                    
+LATB4_bit := 1;
+                    
                     FlushUartReceiver;
                     
                     if (CabBridge.iAssignedCabCount = 0) or (CabBridge.DiscoverTimer >= REDISCOVERY_TIME) then
@@ -310,12 +315,14 @@ begin
                     CabBridge.iIncomingByteIndex := 0;
                     CabBridge.iOutGoingCount := 1;
                     CabBridge.iOutGoingByteIndex := 0;
-                    CabBridge.OutGoingBuffer[0] := NCEBUS_PING or 0;            // Setup outgoing message (Sync)
+                    CabBridge.OutGoingBuffer[0] := NCEBUS_PING or 0;            // Setup outgoing message (Sync)      
                     CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE; /// STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_SPACE;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
+LATB4_bit := 0;
+                    
                     // Start the transmission by setting the IC to Transmit
                     if CabBridge.iOutGoingByteIndex = 0 then
                       CabBus_RS485_Select := 1;      // Select the 485 chip to transmit mode
@@ -326,7 +333,7 @@ begin
                       U2TXREG := CabBridge.OutGoingBuffer[CabBridge.iOutGoingByteIndex];
                       Inc(CabBridge.iOutGoingByteIndex);
                     end;
-                    
+
                     if CabBridge.iOutGoingByteIndex >= CabBridge.iOutGoingCount then
                     begin
                       // Special case if we are sending the last byte.  Need to setup the interrupt to catch the last byte out
@@ -340,7 +347,9 @@ begin
                   begin
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
-                      EnableCabBusTimer(28800);      // 31.25ns * 28800 = 900us      Need delay, the cabs are slow microprocessor
+                      FlushUartReceiver;                                        // Make sure the Timer isn't tricked into not ending the delay
+                      CabBridge.IncomingStarted := False;
+                      EnableCabBusTimer(28800);                                 // 31.25ns * 28800 = 900us      Need delay, the cabs are slow microprocessor
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_SYNC_DELAY;
                     end;
                     Exit;
@@ -351,16 +360,24 @@ begin
                   end;
               STATE_SUB_BRIDGE_INITIAIZE_PING :
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_INITIAIZE_PING'+LF); {$ENDIF}
-                    FlushUartReceiver;
-                    CabBridge.iIncomingCount := 0;
-                    CabBridge.iIncomingByteIndex := 0;
-                    CabBridge.iOutGoingCount := 1;
-                    CabBridge.iOutGoingByteIndex := 0;
-                    CabBridge.OutGoingBuffer[0] := NCEBUS_PING or CabBridge.CurrentCabID;    // Setup outgoing message
-                    CabBridge.LastPortRead := PortB;
-                    CNIE_bit := 1;                  // Pin Change Interrupt enable
-                    CabBus_RS485_Select := 1;       // Select the 485 chip to transmit mode
-                    CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
+                    // Need a final test to make sure any existing Cab Nodes have fully
+                    // booted or have been taken off line before pinging them
+                    // ExistingCab is used further down so don't modify it
+                    CabBridge.ExistingCab := FindCab(CabBridge.CurrentCabID);  // this may return null when discovering!!!!
+                    if CabNodeAssignedAndPermitted(CabBridge.ExistingCab) then
+                    begin
+                      FlushUartReceiver;
+                      CabBridge.iIncomingCount := 0;
+                      CabBridge.iIncomingByteIndex := 0;
+                      CabBridge.iOutGoingCount := 1;
+                      CabBridge.iOutGoingByteIndex := 0;
+                      CabBridge.OutGoingBuffer[0] := NCEBUS_PING or CabBridge.CurrentCabID;    // Setup outgoing message
+                      CabBridge.LastPortRead := PortB;
+                      CNIE_bit := 1;                  // Pin Change Interrupt enable
+                      CabBus_RS485_Select := 1;       // Select the 485 chip to transmit mode
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE;
+                    end else
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_PING_TRANSMIT_BYTE :
@@ -418,8 +435,7 @@ begin
               STATE_SUB_BRIDGE_CAB_REPLIED :
                   begin
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_CAB_REPLIED'+LF); {$ENDIF}
-                    CabBridge.ExistingCab := FindCab(CabBridge.CurrentCabID);  // this may return null when discovering!!!!
-                    if CabBridge.ExistingCab = nil then
+                    if CabBridge.ExistingCab = nil then                         // Loaded earlier to test if an existing node was Permited before pinging
                     begin
                       CreateCab(CabBridge.CurrentCabID);                     // Throw away this message as it could be corrupted depending on timing of when the cab was plugged in
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB

@@ -36,6 +36,7 @@ procedure Cab_Free(CabData: PCab);
 function CreateCabNode(CabID: Word): PNMRAnetNode;
 function CreateCab(CabID: Word): PNMRAnetNode;
 function FindCab(CabID: Word): PNMRAnetNode;
+function CabNodeAssignedAndPermitted(CabNode: PNMRAnetNode): Boolean;
 
 
 function InsertXpressnetHiBitParity(DataByte: Word): Word;
@@ -276,12 +277,15 @@ var
   i, j: Integer;
 begin
   CabData^.State := 0;
- // CabData^.IncomingMsg.Count := 0;
- // CabData^.IncomingMsg.Full := False;
+  {$IFDEF SUPPORT_CAB_INPUT_BUFFER}
+  CabData^.UserInputBuffer.Count := 0;
+  CabData^.UserInputBuffer.Full := False;
+  for j := 0 to CAB_MAX_DATA_BYTE - 1 do
+    CabData^.UserInputBuffer.DataBytes[j] := 0;
+  {$ENDIF}
   CabData^.iStateMachine := 0;
   CabData^.ID := 0;
- // for j := 0 to CAB_MAX_DATA_BYTE - 1 do
-  //  CabData^.IncomingMsg.DataBytes[j] := 0;
+
 end;
 
 // *****************************************************************************
@@ -493,6 +497,7 @@ end;
 // *****************************************************************************
 function NMRAExtractIsDirForward(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Boolean;
 begin
+  Result := False;
   case SpeedStep of
     14,
     28  : Result := NMRA_SpeedDirByte.5 = 1;
@@ -513,11 +518,21 @@ end;
 // *****************************************************************************
 function NMRAExtractIsDirReverse(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Boolean;
 begin
+  Result := False;
   case SpeedStep of
     14,
     28  : Result := NMRA_SpeedDirByte.5 = 0;
     128 : Result := NMRA_SpeedDirByte.7 = 0 ;
   end;
 end;
+
+function CabNodeAssignedAndPermitted(CabNode: PNMRAnetNode): Boolean;
+begin
+  Result := False;
+  if CabNode <> 0 then
+    if CabNode^.State and NS_PERMITTED <> 0 then
+      Result := True;
+end;
+
 
 end.

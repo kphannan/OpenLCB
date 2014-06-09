@@ -447,28 +447,38 @@ begin
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE..............'+LF); {$ENDIF}
                   
      LATB0_bit := 0;    // NICE SYNC PIN
-                    // Select the 485 chip to transmit
-                    CabBus_RS485_Select := 1;
-                    Delay_us(10);
-                    // Setup Pin Change Interrupt for the Receiver Pin
-                    CabBridge.LastPortRead := PortB;
-                    CNIF_bit := 0;
-                    CNIE_bit := 1;                                               // Pin Change Interrupt enable
-                    // Setup the incoming message buffer
-                    CabBridge.iIncomingStateMachine := 0;
-                    CabBridge.iIncomingCount := 0;
-                    CabBridge.iIncomingByteIndex := 0; 
-                    CabBridge.IncomingStarted := False;
+     
+                    // Need a final test to make sure any existing Cab Nodes have fully
+                    // booted or have been taken off line before pinging them
+                    // ExistingCab is used further down so don't modify it
+                    CabBridge.ExistingCab := FindCab(CabBridge.CurrentCabID);  // this may return null when discovering!!!!
+                    
+                    if CabNodeAssignedAndPermitted(CabBridge.ExistingCab) then
+                    begin
+                      // Select the 485 chip to transmit
+                      CabBus_RS485_Select := 1;
+                      Delay_us(10);
+                      // Setup Pin Change Interrupt for the Receiver Pin
+                      CabBridge.LastPortRead := PortB;
+                      CNIF_bit := 0;
+                      CNIE_bit := 1;                                               // Pin Change Interrupt enable
+                      // Setup the incoming message buffer
+                      CabBridge.iIncomingStateMachine := 0;
+                      CabBridge.iIncomingCount := 0;
+                      CabBridge.iIncomingByteIndex := 0;
+                      CabBridge.IncomingStarted := False;
 
-                    U2TXIE_bit := 0;                                            // Setup the Transmit End Interrupt
-                    U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or CabBridge.CurrentCabID);  
-                    UTXEN_bit := 1;
-                    U2TXIF_bit := 0;
-                    U2TXIE_bit := 1;
+                      U2TXIE_bit := 0;                                            // Setup the Transmit End Interrupt
+                      U2TXREG := $0100 or InsertXpressnetHiBitParity(CALLBYTE_INQUIRY_XPRESSNET or CabBridge.CurrentCabID);
+                      UTXEN_bit := 1;
+                      U2TXIF_bit := 0;
+                      U2TXIE_bit := 1;
 
-                    U2RXIF_Bit         := 0;                                    // Enable the RX Interrupt
-                    U2RXIE_bit         := 1;
-                    CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
+                      U2RXIF_Bit         := 0;                                    // Enable the RX Interrupt
+                      U2RXIE_bit         := 1;
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY;  // Wait until the last byte is transmitted
+                    end else
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY :
@@ -500,19 +510,16 @@ begin
                   end;
               STATE_SUB_BRIDGE_CAB_REPLIED :
                   begin   {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_CAB_REPLIED'+LF); {$ENDIF}
-                    CabBridge.iOutGoingCount := 0;
-                    CabBridge.ExistingCab := FindCab(CabBridge.CurrentCabID);  // this may return null when discovering!!!!
-                    if CabBridge.ExistingCab = nil then
-                      CabBridge.ExistingCab := CreateCab(CabBridge.CurrentCabID);
-                    PCab( CabBridge.ExistingCab^.UserData)^.iStateMachine := 0;
-                    
-                    // Wait until the Node is in the Permitted state before trying
-                    // to start a conversation with it and the Proxy/Train
-                    if CabBridge.ExistingCab^.State and NS_PERMITTED <> 0 then
+                    if CabBridge.ExistingCab = nil then                         // Loaded earlier to test if an existing node was Permited before pinging
+                    begin
+                      CreateCab(CabBridge.CurrentCabID);                        // Need to wait until it is in the Permitted state
+                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB
+                    end else
+                    begin
+                      CabBridge.iOutGoingCount := 0;
+                      PCab( CabBridge.ExistingCab^.UserData)^.iStateMachine := 0;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_DISPATCH_MESSAGE
-                    else
-                      CabBridge.iStateMachine := STATE_SUB_BRIDGE_NEXT_CAB;
-                    
+                    end;
      LATB4_bit := 1;
                     Exit;
                   end;

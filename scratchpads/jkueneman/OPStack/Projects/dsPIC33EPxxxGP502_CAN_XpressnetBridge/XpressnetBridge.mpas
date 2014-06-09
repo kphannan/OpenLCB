@@ -96,7 +96,7 @@ begin
 
   //  LATB4_bit := 0;
   //  delay_us(10);
-    if UART1_Data_Ready then
+ {   if UART1_Data_Ready then
     begin
       case UART1_Read of
    //     'B', 'b' : OPStackBuffers_PrintBuffers;
@@ -114,6 +114,6 @@ begin
                      UART1_Write_Text('RS485 Watchdog: 0x' +s1+LF+LF);
                    end;
       end;
-    end
+    end      }
   end;
 end.
