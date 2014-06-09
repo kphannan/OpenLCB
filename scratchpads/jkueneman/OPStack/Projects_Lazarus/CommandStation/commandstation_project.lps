@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="42">
+    <Units Count="43">
       <Unit0>
         <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -43,7 +43,6 @@
       <Unit3>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="540"/>
@@ -54,7 +53,7 @@
       <Unit4>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
         <UnitName Value="opstackcore"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="57"/>
         <CursorPos X="1" Y="75"/>
@@ -122,7 +121,7 @@
       <Unit12>
         <Filename Value="../../NMRAnet/opstackcore_traction_proxy.pas"/>
         <UnitName Value="opstackcore_traction_proxy"/>
-        <EditorIndex Value="5"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="17"/>
         <CursorPos X="1" Y="33"/>
@@ -180,7 +179,7 @@
       <Unit19>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="25" Y="305"/>
@@ -190,7 +189,7 @@
       <Unit20>
         <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
         <UnitName Value="opstackbuffers"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="43"/>
         <CursorPos X="40" Y="50"/>
@@ -261,7 +260,7 @@
       <Unit29>
         <Filename Value="Templates/template_buffers.pas"/>
         <UnitName Value="template_buffers"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
         <TopLine Value="12"/>
         <CursorPos X="138" Y="28"/>
@@ -361,6 +360,16 @@
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
       </Unit41>
+      <Unit42>
+        <Filename Value="../../Projects/dsPIC33EPxxxGP502_CAN_NCEBridge/Templates/Options.inc"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="34" Y="13"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit42>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>

@@ -14,7 +14,9 @@ uses
   
 procedure NMRAnetCabBridge_Initialize;
 procedure PrintNodeInfo(NodeInfo: PNodeInfo);
+{$IFDEF SUPPORT_CAB_INPUT_BUFFER}
 procedure PrintIncomingMsg(var IncomingMsg: TCabMessage);
+{$ENDIF}
 procedure WriteUARTByte(DataByte: Byte; TxReg: ^Word; StatusReg: ^Word; Wait: Boolean);
 procedure WriteByte(DataByte: Byte; Wait: Boolean);
 procedure FlushUartReceiver;
@@ -23,14 +25,18 @@ procedure DisableCabBusTimer;
 procedure CabBus_UART_TX_Interrupt;
 function NceKeyPressToString(KeyPress: Byte): string[64];
 function ChangeSpeed(Speed: THalfFloat; DeltaInRealSpeed: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): Word;
+function NMRAExtractSpeedStep(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Byte;
+function NMRAExtractIsDirForward(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Boolean;
+function NMRAExtractIsDirReverse(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Boolean;
 function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
-function CabMessageToTrainAddress(Count: Integer; var CabMessage: TCabMessageArray): Word;
+function NCE_CabMessageToTrainAddress(Count: Integer; var CabMessage: TCabMessageArray): Word;
 procedure ZeroizeNceCabData(CabData: PCab);
 function Cab_Allocate: PCab;
 procedure Cab_Free(CabData: PCab);
 function CreateCabNode(CabID: Word): PNMRAnetNode;
 function CreateCab(CabID: Word): PNMRAnetNode;
 function FindCab(CabID: Word): PNMRAnetNode;
+
 
 function InsertXpressnetHiBitParity(DataByte: Word): Word;
 
@@ -50,6 +56,7 @@ begin
   UART1_Write_Text('Node ID: 0x' + s1 + LF);
 end;
 
+{$IFDEF SUPPORT_CAB_INPUT_BUFFER}
 procedure PrintIncomingMsg(var IncomingMsg: TCabMessage);
 var
   i: Integer;
@@ -72,6 +79,7 @@ begin
   end;
   UART1_Write_Text(LF);
 end;
+{$ENDIF}
 
 // ****************************************************************************
 // *****************************************************************************
@@ -247,7 +255,7 @@ end;
 
 // ****************************************************************************
 // *****************************************************************************
-function CabMessageToTrainAddress(Count: Integer; var CabMessage: TCabMessageArray): Word;
+function NCE_CabMessageToTrainAddress(Count: Integer; var CabMessage: TCabMessageArray): Word;
 var
   i: Integer;
   AddressStr: string[CAB_MAX_DATA_BYTE];
@@ -424,6 +432,92 @@ begin
   while StatusReg^.TRMT = 1 do;   // Wait for the UART to start transmitting
   while StatusReg^.TRMT = 0 do;   // Wait for the UART to finsh transmitting to make sure the ExpressNet timing is met
   {$ENDIF}
+end;
+
+// *****************************************************************************
+//
+// function ExtractSpeedStep
+//
+//  Parameters
+//              SpeedStep   :  The speed step format of the byte
+//              NMRA_SpeedDirByte:  The NMRA coded speed type
+//  Result:
+//              The raw speed step 0-14, 0-28, 0-128
+//
+//  Description:
+//
+// *****************************************************************************
+function NMRAExtractSpeedStep(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Byte;
+begin
+  Result := NMRA_SpeedDirByte;
+  case SpeedStep of
+    14 :
+      begin
+        Result := Result and %00001111;
+        if Result < 2 then
+          Result := 0
+        else
+          Dec(Result)
+      end;
+    28 :
+      begin
+        Result := (Result and %00011111) shl 1;
+        Result.0 := Result.5;
+        Result.5 := 0;
+        if Result < 4 then
+          Result := 0
+        else
+          Result := Result - 3
+      end;
+    128 :
+      begin
+        Result := Result and %01111111;
+        if Result < 2 then
+          Result := 0
+        else
+          Dec(Result)
+      end;
+  end;
+end;
+
+// *****************************************************************************
+// function NMRAExtractIsDirForward
+//
+//  Parameters:
+//              XpressNetSpeed   :  The speed step format of the byte
+//              NMRA_SpeedDirByte:  The NMRA coded speed type
+//  Result:
+//              True if the direction is forward
+//
+//  Description:
+// *****************************************************************************
+function NMRAExtractIsDirForward(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Boolean;
+begin
+  case SpeedStep of
+    14,
+    28  : Result := NMRA_SpeedDirByte.5 = 1;
+    128 : Result := NMRA_SpeedDirByte.7 = 1 ;
+  end;
+end;
+
+// *****************************************************************************
+// function NMRAExtractIsDirReverse
+//
+//  Parameters:
+//              XpressNetSpeed   :  The speed step format of the byte
+//              NMRA_SpeedDirByte:  The NMRA coded speed type
+//  Result:
+//              True if the direction is forward
+//
+//  Description:
+// *****************************************************************************
+function NMRAExtractIsDirReverse(SpeedStep: Byte; NMRA_SpeedDirByte: Byte): Boolean;
+begin
+  case SpeedStep of
+    14,
+    28  : Result := NMRA_SpeedDirByte.5 = 0;
+    128 : Result := NMRA_SpeedDirByte.7 = 0 ;
+  end;
 end;
 
 end.

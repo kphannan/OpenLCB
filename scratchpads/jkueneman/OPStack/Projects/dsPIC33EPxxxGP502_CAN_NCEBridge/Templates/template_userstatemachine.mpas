@@ -68,12 +68,14 @@ const
 var
   CabBus_RS485_Select              : sbit; sfr; external;
   CabBus_RS485_Select_Direction    : sbit; sfr; external;
-
-implementation
-
+  
 var
+  RS485_Watchdog: Byte;
   ProxyNode: TNodeInfo;
   GlobalTimer: Word;
+  
+implementation
+
 
 // *****************************************************************************
 // Called from the UART RX Interrupt
@@ -84,6 +86,7 @@ procedure CabBus_UART_RX_StateMachine;
 begin
   while (URXDA_U2STA_bit = 1) do
   begin
+    CabBridge.IncomingStarted := True;
     CabBridge.IncomingBuffer[CabBridge.iIncomingCount] := U2RXREG;
     Inc(CabBridge.iIncomingCount);
     if CabBridge.iIncomingCount = 2 then
@@ -98,6 +101,11 @@ procedure CabBus_Timeout;
 begin
   // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
   DisableCabBusTimer;
+  
+  if RIDLE_U2STA_bit = 0 then Exit;
+  if CabBridge.IncomingStarted then Exit;
+  if URXDA_U2STA_bit = 1 then Exit;
+  
   case CabBridge.iStateMachine of
     STATE_SUB_BRIDGE_WAIT_SYNC_DELAY   : CabBridge.iStateMachine := STATE_SUB_BRIDGE_INITIAIZE_PING;
     STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE : CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
@@ -117,7 +125,7 @@ begin
   CabData := PCab( CabNode^.UserData);
 
   // If the current buffer in the Cab is not processed yet throw this one away as it may be in the middle of a statemachine
-  if CabData^.IncomingMsg.Full then
+  if CabData^.UserInputBuffer.Full then
     Exit;
 
   // NCE interleaves its incoming messages (in some cases) so we need a sub-statemachine to
@@ -127,40 +135,40 @@ begin
   for i := 0 to CabBridge.iIncomingCount - 1 do
   begin
     case CabBridge.IncomingBuffer[i] of
-      NCE_NO_KEY_TO_REPORT : begin end;
-      NCE_NO_SPEED_TO_REPORT : begin end;
+      NCE_NO_KEY_TO_REPORT : begin end;                                         // Throw it away
+      NCE_NO_SPEED_TO_REPORT : begin end;                                       // Throw it away
       NCE_CAB_SELECT_MACRO :
           begin
             {$IFNDEF FPC}WriteByte(NCE_CMD_CURSOR_ON, True);{$ENDIF}
-            CabData^.State := CabData^.State or CS_MACRO_MESSAGE;
-            CabData^.IncomingMsg.Count := 0;
+            CabData^.State := CabData^.State or CS_NCE_MACRO_MESSAGE;
+            CabData^.UserInputBuffer.Count := 0;                                // Need to piecemealing together the full message the user it inputing
           end;
       NCE_CAB_SELECT_LOCO :
           begin
             {$IFNDEF FPC}WriteByte(NCE_CMD_CURSOR_ON, True);{$ENDIF}
-            CabData^.State := CabData^.State or CS_LOCO_SELECT;
-            CabData^.IncomingMsg.Count := 0;
+            CabData^.State := CabData^.State or CS_NCE_LOCO_SELECT;
+            CabData^.UserInputBuffer.Count := 0;                                // Need to piecemealing together the full message the user it inputing
           end;
       NCE_CAB_ENTER :
           begin
-            if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) <> 0 then
+            if CabData^.State and (CS_NCE_MACRO_MESSAGE or CS_NCE_LOCO_SELECT) <> 0 then
             begin
               {$IFNDEF FPC}WriteByte(NCE_CMD_CURSOR_OFF, True);{$ENDIF}
-              CabData^.IncomingMsg.Full := True;
+              CabData^.UserInputBuffer.Full := True;
               Result := True;
             end;
           end
       else begin
-          if CabData^.IncomingMsg.Count < CAB_MAX_DATA_BYTE then
-          begin
-            CabData^.IncomingMsg.DataBytes[CabData^.IncomingMsg.Count] := CabBridge.IncomingBuffer[i];
-            Inc(CabData^.IncomingMsg.Count);
-            if CabData^.State and (CS_MACRO_MESSAGE or CS_LOCO_SELECT) = 0 then
-            begin
-              CabData^.IncomingMsg.Full := True;
-              Result := True;
-            end;
-          end;
+             if CabData^.UserInputBuffer.Count < CAB_MAX_DATA_BYTE then
+             begin
+               CabData^.UserInputBuffer.DataBytes[CabData^.UserInputBuffer.Count] := CabBridge.IncomingBuffer[i];
+               Inc(CabData^.UserInputBuffer.Count);
+               if CabData^.State and CS_NCE_MULTI_FRAME_MESSAGE = 0 then
+               begin
+                 CabData^.UserInputBuffer.Full := True;
+                 Result := True;
+               end;
+             end;
         end;
       end; {case}
   end; {if}
@@ -184,24 +192,22 @@ begin
     UART1_Write_Text('--------'+LF);
     {$ENDIF}
     
-    if CabData^.State and CS_LOCO_SELECT <> 0 then
+    if CabData^.State and CS_NCE_LOCO_SELECT <> 0 then
     begin
       // Kick off the statemachine to do this....
       CabNode^.iUserStateMachine := STATE_CAB_SELECT_LOCO;
       CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;
       {$IFDEF LOG_CAB_REPLY}
       UART1_Write_Text('Loco Select: ');
-      PrintIncomingMsg(CabData^.IncomingMsg);
       {$ENDIF}
     end else
-    if CabData^.State and CS_MACRO_MESSAGE <> 0 then
+    if CabData^.State and CS_NCE_MACRO_MESSAGE <> 0 then
     begin
       // Kick off the statemachine to do this....
       CabNode^.iUserStateMachine := STATE_CAB_RUN_MACRO;
       CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;
       {$IFDEF LOG_CAB_REPLY}
       UART1_Write_Text('Macro: ');
-      PrintIncomingMsg(CabData^.IncomingMsg);
       {$ENDIF}
     end else
     begin
@@ -334,7 +340,7 @@ begin
                   begin
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
-                      EnableCabBusTimer(28800);      // 31.25ns * 28800 = 900us      Need delay, the cabs are slow microprocessors
+                      EnableCabBusTimer(28800);      // 31.25ns * 28800 = 900us      Need delay, the cabs are slow microprocessor
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_SYNC_DELAY;
                     end;
                     Exit;
@@ -384,6 +390,8 @@ begin
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_PING_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin
+                      CabBridge.IncomingStarted := False;
+                      RS485_Watchdog := 0;
                       EnableCabBusTimer(38400);      // 31.25ns * 38400 = 1200us      Need delay, the cabs are slow microprocessors
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE;
                     end;
@@ -393,6 +401,11 @@ begin
                   begin   // Waiting for the Timer to expire or we detect a reply....
                     // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
                     {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_DISCOVER_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
+                    if RS485_Watchdog > 2 then                                  // Something is corrupted or hung
+                    begin
+                       CabBridge.iIncomingCount := 0;
+                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
+                    end;
                     Exit;
                   end;
               STATE_SUB_BRIDGE_TIMEOUT :
@@ -490,7 +503,7 @@ begin
               STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE'+LF); {$ENDIF}
 
-                    Address := CabMessageToTrainAddress(@CabData^.IncomingMsg);
+                    Address := NCE_CabMessageToTrainAddress(CabData^.UserInputBuffer.Count, @CabData^.UserInputBuffer.DataBytes);
 
                     {$IFNDEF FPC}
                     WordToStr(Address, s1);
@@ -597,7 +610,7 @@ begin
               Exit;
             end else
             begin
-              case CabData^.IncomingMsg.DataBytes[0] of
+              case CabData^.UserInputBuffer.DataBytes[0] of
                 NCE_CAB_DIR_TOGGLE                  :
                   begin
                     if Node^.TrainData.SpeedDir and $8000 <> 0 then
@@ -750,9 +763,9 @@ begin
           end;
       STATE_CAB_CLEAR_MSG :
           begin {$IFDEF DEBUG_STATE_CAB_STATEMACHINE} UART1_Write_Text('STATE_CAB_CLEAR_MSG'+LF); {$ENDIF}
-            CabData^.IncomingMsg.Full := False;
-            CabData^.State := CabData^.State and not (CS_MACRO_MESSAGE or CS_LOCO_SELECT);
-            CabData^.IncomingMsg.Count := 0;
+            CabData^.UserInputBuffer.Full := False;
+            CabData^.State := CabData^.State and not CS_NCE_MULTI_FRAME_MESSAGE;
+            CabData^.UserInputBuffer.Count := 0;
             Node^.iUserStateMachine := STATE_CAB_IDLE; // We are done....
             CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;  // Reset
           end;
@@ -1058,6 +1071,7 @@ var
   Cab: PCab;
 begin
   Inc(GlobalTimer);
+  Inc(RS485_Watchdog);
 
    // Count up to the time out then freeze.  The Timer Count will be reset after the
   // main loop is done rediscovering

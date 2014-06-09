@@ -17,6 +17,8 @@
 // ******************************************************************************
 unit NMRAnetCabBridgeDefines;
 
+{$I Options.inc}
+
 uses
   opstackdefines,
   template_node;
@@ -77,8 +79,10 @@ const
   REDISCOVERY_TIME                           = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
   
   CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
-  CS_MACRO_MESSAGE                              = $08;
-  CS_LOCO_SELECT                                = $10;
+  CS_NCE_MACRO_MESSAGE                          = $08;  // NCE specific
+  CS_NCE_LOCO_SELECT                            = $10;  // NCE specific
+  
+  CS_NCE_MULTI_FRAME_MESSAGE = CS_NCE_MACRO_MESSAGE or CS_NCE_LOCO_SELECT;
 
   // NCE Specific Constants for the Throttle Messages
   NCE_UNDOCUMENTED_CAB_CHANGE  =$7E;                     // Sent when the throttle is switched between the two possible CAB IDs.  Allows clearing of buffers, etc
@@ -133,19 +137,24 @@ const
 type
   TCabMessageArray = array[0..CAB_MAX_DATA_BYTE] of Byte;
   PCabMessageArray = ^TCabMessageArray;
-  
+
+  {$IFDEF SUPPORT_CAB_INPUT_BUFFER}
   TCabMessage = record
     DataBytes: TCabMessageArray;
     Count: Byte;                                                                // Number of valid bytes in the array, for Xpressnet upper nibble is the Instruction, lower is the Count
     Full: Boolean;                                                              // True if the message is ready to be process
   end;
   PCabMessage = ^TCabMessage;
-
+  {$ENDIF}
+ 
   TCab = record
     State: Byte;                                                                // See CS_xxxx constants
     ID: Byte;                                                                   // Cab Address (ID/Index)
     iStateMachine: Byte;                                                        // SubStatemachine index
     WatchDog: Word;
+    {$IFDEF SUPPORT_CAB_INPUT_BUFFER}                                           // NCE interleave user input button presses so we need per cab buffer
+    UserInputBuffer: TCabMessage;
+    {$ENDIF}
   end;
   PCab = ^TCab;
   

@@ -139,14 +139,6 @@ procedure CabBus_Timeout;
 begin
   // The Ping timed out without a reply from the Cab move to the next state (depends of which wait state we are in)
   DisableCabBusTimer;
-  // if
-  //   1) No Bits shifting in on the register (IDLE)
-  //   2) There are no bytes in the buffers (UART RX Data Available URXDA)
-  //   3) The Receive Interrupt flag is clear
-  //   4) The statemachine is not in the Replied state
-  // then we assume the cab did not reply
-  
- // LATB4_bit := RIDLE_U2STA_bit;
  
   if RIDLE_U2STA_bit = 0 then Exit;
   if CabBridge.IncomingStarted then Exit;
@@ -266,13 +258,13 @@ begin
                    %00010001, (*$11*) // 27 Step
                    %00010010, (*$12*) // 28 Step
                    %00010011: (*$13*) // 128 Step
-                     Result := SetLocomotiveSpeedAndDirectionRequest(CabNode, CabNode);                 // 2.2.20.3  Format - Speed and direction instruction
+                     Result := LocomotiveOperationsRequest(CabNode);                   // 2.2.20.3  Format - Speed and direction instruction
                    %00100000, (*$20*)   // Set Function Operation on Group 1 ( on/off )
                    %00100001, (*$21*)   // Set Function Operation on Group 1 ( on/off )
                    %00100010, (*$22*)   // Set Function Operation on Group 1 ( on/off )
                    %00100011, (*$23*)   // Set Function Operation on Group 1 ( on/off )
                    %00101000: (*$28*)   // Set Function Operation on Group 1 ( on/off )
-                      Result := SetFunctionOperationRequest(CabNode);                          // 2.2.20.4 Format - Function instruction group 1-5:  [SETS the momentary or on/off state]
+                      Result := FunctionOperationRequest(CabNode);                          // 2.2.20.4 Format - Function instruction group 1-5:  [SETS the momentary or on/off state]
                    %00100100, (*$24*)  // Set Function State on Group 1 ( momentary/continious )
                    %00100101, (*$25*)  // Set Function State on Group 2 ( momentary/continious )
                    %00100110, (*$26*)  // Set Function State on Group 3 ( momentary/continious )
@@ -493,7 +485,6 @@ begin
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
                     // Waiting for the Timer to expire or we detect a reply....
                     // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
-                    
                     if RS485_Watchdog > 2 then                                  // Something is corrupted or hung
                     begin
                        CabBridge.iIncomingStateMachine :=  STATE_RS485_READ_HEADER_BYTE;

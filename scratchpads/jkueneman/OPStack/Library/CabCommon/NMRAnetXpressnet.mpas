@@ -13,6 +13,7 @@ uses
   opstack_api,
   nmranetdefines,
   NMRAnetCabBridgeDefines,
+  template_hardware,
   NMRAnetCabBridge,
   nmranetutilities;
 
@@ -49,8 +50,8 @@ function FunctionOperationRequestEx(CabNode: PNMRAnetNode): Boolean;
 function AddressInquiryLocoStack(CabNode: PNMRAnetNode; Backward: Boolean): Boolean;
 function AddressInquiryLocoDeleteFromStack(CabNode: PNMRAnetNode): Boolean;
 
-function SetLocomotiveSpeedAndDirectionRequest(CabNode: PNMRAnetNode; Node: PNMRAnetNode): Boolean;
-function SetFunctionOperationRequest(CabNode: PNMRAnetNode): Boolean;
+function LocomotiveOperationsRequest(CabNode: PNMRAnetNode): Boolean;
+function FunctionOperationRequest(CabNode: PNMRAnetNode): Boolean;
 function SetFunctionStateRequest(CabNode: PNMRAnetNode): Boolean;
 function AddLocomotiveToMU_Request(CabNode: PNMRAnetNode; Backward: Boolean): Boolean;
 function RemoveLocomotiveFromMU_Request(CabNode: PNMRAnetNode): Boolean;
@@ -737,7 +738,7 @@ Exit;     }
     STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE'+LF); {$ENDIF}
 
-          Address := CabMessageToTrainAddress(CabBridge.iIncomingCount and $0F, CabBridge.IncomingBuffer);
+          Address := NCE_CabMessageToTrainAddress(CabBridge.iIncomingCount and $0F, CabBridge.IncomingBuffer);
 
           {$IFNDEF FPC}
           WordToStr(Address, s1);
@@ -1161,7 +1162,7 @@ end;
 
 // *****************************************************************************
 //
-// function SetLocomotiveSpeedAndDirectionRequest
+// function LocomotiveOperationsRequest
 //
 //  Parameters:
 //              XpressNetMessage: Global structure to hold the message information
@@ -1173,67 +1174,42 @@ end;
 //     Complete 1/30/2011
 //
 // *****************************************************************************
-function SetLocomotiveSpeedAndDirectionRequest(CabNode: PNMRAnetNode; Node: PNMRAnetNode): Boolean;
-{var
-  Slot, Slot2: PAddressSlot;
-  ErrorCode, MappedSpeedDir: Byte;  }
+function LocomotiveOperationsRequest(CabNode: PNMRAnetNode): Boolean;
+var
+  Cab: PCab;
+  Address: Word;
+  SpeedStep: Byte;
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetLocomotiveSpeedAndDirectionRequest'+LF);{$ENDIF}
   
-  Result := Send_InstructionNotSupported(CabNode);
-  
-  
- { if Cab^.IncomingMsg.Bytes[0] = %00010001 then (*$11*)   // 27 Speed Step not supported
-    Send_InstructionNotSupported(iDevice)
-  else begin
-    ErrorCode := E_PC_UNKNOWN;
-    CommandStation.Flags.COMMANDSTATION_FLAGS_EMERGENCY_STOP_BIT := 0;
-    Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2),  True); // AutoAllocate
-    if Slot <> nil then
-    begin
-      if Slot^.Flags.ADDRESS_SLOT_FLAGS_DOUBLEHEADER_BIT = 1 then
-      begin
-        // Slot is in a double header
-        Slot2 := AddressSlot_ExtractDoubleHeaderSecondSlot(Slot);
-        if (Slot2 <> nil) and (Track.Priority^.Count < MAX_TRACK_PRIORITY_BUFFER_DEPTH - 2) then
-        begin
-          UpdateSlotSpeedAndDirectionAndQueue(Slot, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice);
-          MappedSpeedDir := MapSpeedDir(MapSlotToXpressNetSpeedStepID(Slot), MapSlotToXpressNetSpeedStepID(Slot2), Slot^.SpeedDir);
-          UpdateSlotSpeedAndDirectionAndQueue(Slot2, Cab^.IncomingMsg.Bytes[0], MappedSpeedDir, iDevice);
-          ErrorCode := E_PC_SUCCESS
-        end
-      end else
-      if Slot^.Flags.ADDRESS_SLOT_FLAGS_MU_BIT = 1 then
-      begin
-        // Slot is in a MU
-        Slot2 := AddressSlot_WalkMU_ChainRoot(Slot);  // Find the Consist Slot
-        if UpdateSlotSpeedAndDirectionAndQueue(Slot2, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice) then   // Update the Consist and not the Loco
-          ErrorCode := E_PC_SUCCESS
-      end else
-      if Slot^.Flags.ADDRESS_SLOT_FLAGS_CONSIST_BIT = 1 then
-      begin
-        // Slot is a MU Consist Main Address
-        if UpdateSlotSpeedAndDirectionAndQueue(Slot, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice) then   // Update the Consist
-          ErrorCode := E_PC_SUCCESS
-      end else
-      begin
-        // Slot is a normal loco
-        if UpdateSlotSpeedAndDirectionAndQueue(Slot, Cab^.IncomingMsg.Bytes[0], Cab^.IncomingMsg.Bytes[3], iDevice) then   // Update the Locomotive
-          ErrorCode := E_PC_SUCCESS
-      end
-    end;
-    if iDevice = ID_PC_DEVICE then  // The PC needs a response
-      Send_PCMessage(ErrorCode);
-  end             }
+  if IsOutgoingBufferAvailable then
+  begin
+    Cab := PCab( CabNode^.UserData);
 
-  //LATD3_bit := not LATD3_bit;
-  //delay_ms(10000);
+    Address := (CabBridge.IncomingBuffer[2] shl 8) or CabBridge.IncomingBuffer[3];
+
+    case CabBridge.IncomingBuffer[1] of
+      $10 : SpeedStep := 14;
+      $11 : begin   // 27 Speed Step
+              Result := Send_InstructionNotSupported(CabNode);
+              Exit;
+            end;
+      $12 : SpeedStep := 28;
+      $13 : SpeedStep := 128;
+    end; // case
+    
+    CabNode^.TrainData.SpeedDir := FloatToHalf( NMRAExtractSpeedStep(SpeedStep, CabBridge.IncomingBuffer[4]) * SpeedStep/100);
+    if NMRAExtractIsDirReverse(SpeedStep, CabBridge.IncomingBuffer[4]) then
+      CabNode^.TrainData.SpeedDir := CabNode^.TrainData.SpeedDir and $8000;
+    if TrySendTractionSpeedSet(CabNode^.Info, CabNode^.TrainData.Controller, CabNode^.TrainData.SpeedDir) then
+      Result := True;
+  end;
 end;
 
 
 // *****************************************************************************
 //
-// function SetFunctionOperationRequest(XpressNetMessage: PXpressNetMessage; iDevice: Byte);
+// function FunctionOperationRequest(XpressNetMessage: PXpressNetMessage; iDevice: Byte);
 //
 //  Parameters:
 //              XpressNetMessage: Global structure to hold the message information
@@ -1252,66 +1228,135 @@ end;
 //     Complete 1/28/2011
 //
 // *****************************************************************************
-function SetFunctionOperationRequest(CabNode: PNMRAnetNode): Boolean;
-{var
-  Slot: PAddressSlot;
-  ErrorCode: Byte;   }
+function FunctionOperationRequest(CabNode: PNMRAnetNode): Boolean;
+ var
+  Cab: PCab;
+  Address: Word;
+  FunctionBits: DWord;
+  i: Integer;
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES} UART1_Write_Text('SetFunctionOperationRequest'+LF);{$ENDIF}
-  
-  Result := Send_InstructionNotSupported(CabNode);
-  
-  
-{  ErrorCode := E_PC_UNKNOWN;
-  Slot := AddressSlot_FindSlot(ExtractAddressFromXpressNetMessage(XpressNetMessage, 1, 2), True); // AutoAllocate
-  if Slot <> nil then
+  if IsOutgoingBufferAvailable then
   begin
-    // Valid for:
-    //     - MU can operation the procedures of individual decoders
-    //     - Double Header can operate the procedures of individual decoders
-    //     - Single decoder can operate its procedures
-    //     - Consist Address
-    AssignDeviceToSlot(Slot, iDevice);
-    case Cab^.IncomingMsg.Bytes[0] of   // Identification
-      %00100000 : (*$20*)   // Set function Operation on Group 1 ( on/off ) procedures F0..F4 Status   (Note the order is F0-F4-F3-F2-F1)
-        begin
-          Slot^.procedures := Slot^.procedures and $FFE0;                             // Clear bits 0, 1, 2, 3, 4
-          Slot^.procedures := Slot^.procedures or Cab^.IncomingMsg.Bytes[3];         // Set the new bits 5, 6 ,7 8
-          if AddressSlot_QueueprocedureDCCMessage(Slot, 1, False) then
-            ErrorCode := E_PC_SUCCESS
-        end;
-      %00100001 : (*$21*)   // Set function Operation on Group 2 ( on/off )  procedures F8..F5 Status
-        begin
-          Slot^.procedures := Slot^.procedures and $FE1F;                             // Clear bits 5, 6 ,7 8
-          Slot^.procedures := Slot^.procedures or (Cab^.IncomingMsg.Bytes[3] shl 5); // Set the new bits 5, 6 ,7 8
-          if AddressSlot_QueueprocedureDCCMessage(Slot, 2, False) then
-            ErrorCode := E_PC_SUCCESS
-        end;
-      %00100010 : (*$22*)   // Set function Operation on Group 3 ( on/off )  procedures F12..F9 Status
-        begin
-          Slot^.procedures := Slot^.procedures and $E1FF;                             // Clear bits 9, 10, 11, 12
-          Slot^.procedures := Slot^.procedures or (Cab^.IncomingMsg.Bytes[3] shl 9); // Set the new bits 5, 6 ,7 8
-          if AddressSlot_QueueprocedureDCCMessage(Slot, 3, False) then
-            ErrorCode := E_PC_SUCCESS
-        end;
-      %00100011 : (*$23*)   // Set function Operation on Group 4 ( on/off ) procedures F20..F13 Status
-        begin
-          Slot^.proceduresEx := Slot^.proceduresEx and $FF00;                         // Clear bits 0..7
-          Slot^.proceduresEx := Slot^.proceduresEx or Cab^.IncomingMsg.Bytes[3];     // Set the new bits 0, 1, 2, 3
-          if AddressSlot_QueueprocedureDCCMessage(Slot, 4, False) then
-            ErrorCode := E_PC_SUCCESS
-        end;
-      %00101000 : (*$28*)   // Set function Operation on Group 5 ( on/off )  procedures F12..F9 Status
-        begin
-          Slot^.proceduresEx := Slot^.proceduresEx and $00FF;                               // Clear bits 8..15
-          Slot^.proceduresEx := Slot^.proceduresEx or (Cab^.IncomingMsg.Bytes[3] shl 8);   // Set the new bits 4, 5, 6, 7
-          if AddressSlot_QueueprocedureDCCMessage(Slot, 5, False) then
-            ErrorCode := E_PC_SUCCESS
-        end;
-    end
+    Cab := PCab( CabNode^.UserData);
+
+    Address := (CabBridge.IncomingBuffer[2] shl 8) or CabBridge.IncomingBuffer[3];
+    FunctionBits := CabBridge.IncomingBuffer[4];
+
+    // There are better ways of doing this....
+    case CabBridge.IncomingBuffer[1] of
+      $20 : begin                    // Functions 0 0 0 F0 F4 F3 F2 F1
+               if FunctionBits.4 <> CabNode^.TrainData.Functions.0 then
+               begin
+                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 0, FunctionBits.4) then
+                 begin
+                   CabNode^.TrainData.Functions.0 := FunctionBits.4;
+                   Result := True;
+                 end;
+               end else
+               if FunctionBits.0 <> CabNode^.TrainData.Functions.1 then
+               begin
+                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 1, FunctionBits.0) then
+                 begin
+                   CabNode^.TrainData.Functions.1 := FunctionBits.0;
+                   Result := True;
+                 end;
+               end else
+               if FunctionBits.1 <> CabNode^.TrainData.Functions.2 then
+               begin
+                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 2, FunctionBits.1) then
+                 begin
+                   CabNode^.TrainData.Functions.2 := FunctionBits.1;
+                   Result := True;
+                 end;
+               end else
+               if FunctionBits.2 <> CabNode^.TrainData.Functions.3 then
+               begin
+                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 3, FunctionBits.2) then
+                 begin
+                   CabNode^.TrainData.Functions.3 := FunctionBits.2;
+                   Result := True;
+                 end;
+               end else
+               if FunctionBits.3 <> CabNode^.TrainData.Functions.4 then
+               begin
+                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 4, FunctionBits.3) then
+                 begin
+                   CabNode^.TrainData.Functions.4 := FunctionBits.3;
+                   Result := True;
+                 end;
+               end
+            end;
+      $21 : begin                  // Functions 0 0 0 0 F8 F7 F6 F5
+              if FunctionBits.0 <> CabNode^.TrainData.Functions.5 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 5, FunctionBits.0) then
+                   begin
+                     CabNode^.TrainData.Functions.5 := FunctionBits.0;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.1 <> CabNode^.TrainData.Functions.6 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 6, FunctionBits.1) then
+                   begin
+                     CabNode^.TrainData.Functions.6 := FunctionBits.1;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.2 <> CabNode^.TrainData.Functions.7 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 7, FunctionBits.2) then
+                   begin
+                     CabNode^.TrainData.Functions.7 := FunctionBits.2;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.3 <> CabNode^.TrainData.Functions.8 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 8, FunctionBits.3) then
+                   begin
+                     CabNode^.TrainData.Functions.8 := FunctionBits.3;
+                     Result := True;
+                   end;
+                 end
+            end;
+      $22 : begin                 // Function 0 0 0 0 F12 F11 F10 F9
+              if FunctionBits.0 <> CabNode^.TrainData.Functions.9 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 9, FunctionBits.0) then
+                   begin
+                     CabNode^.TrainData.Functions.9 := FunctionBits.0;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.1 <> CabNode^.TrainData.Functions.10 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 10, FunctionBits.1) then
+                   begin
+                     CabNode^.TrainData.Functions.10 := FunctionBits.1;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.2 <> CabNode^.TrainData.Functions.11 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 11, FunctionBits.2) then
+                   begin
+                     CabNode^.TrainData.Functions.11 := FunctionBits.2;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.3 <> CabNode^.TrainData.Functions.12 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.Controller, 12, FunctionBits.3) then
+                   begin
+                     CabNode^.TrainData.Functions.12 := FunctionBits.3;
+                     Result := True;
+                   end;
+                 end
+            end;
+    end; // case
   end;
-  if iDevice = ID_PC_DEVICE then // The PC needs a response
-    Send_PCMessage(ErrorCode);    }
 end;
 
 
