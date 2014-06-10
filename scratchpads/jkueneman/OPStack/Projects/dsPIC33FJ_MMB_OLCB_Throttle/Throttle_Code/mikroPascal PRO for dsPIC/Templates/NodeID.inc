@@ -11,5 +11,5 @@ NodeID_HI = $00050101;
 //
 // Note that this number + the number of Virtual Node MUST not roll past $00FFFFFF
 
-NodeID_LO = $000107E0;
+NodeID_LO = $000107A0;
 

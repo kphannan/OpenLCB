@@ -22,7 +22,7 @@ unit dsPIC33_DMA;
 
 {$I Options.inc}
 
-{$DEFINE PRINT_DMA_BUFFERS}
+{.$DEFINE PRINT_DMA_BUFFERS}
 
 
 // WARNING:  For the dsPIC33EP this library only supports memory access in the DMAxSTAL and DMAxSBL space (16 bit memory address only)  The upper 8 bits MUST be 0 in the allocated RAM

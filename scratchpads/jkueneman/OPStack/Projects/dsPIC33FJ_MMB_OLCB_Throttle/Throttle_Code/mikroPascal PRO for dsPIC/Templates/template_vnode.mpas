@@ -1,0 +1,156 @@
+// *****************************************************************************
+//
+// This file is the template for the application to define the Virtual Nodes
+// that can be implemented above and beyond the Physical Node.  They can have
+// completely different attributes than the Physical Node but they all must share
+// the these attributes.
+//
+// *****************************************************************************
+
+unit template_vnode;
+
+// This file contains application layer variabile the user can change to customize
+// features of OPStack including number of Nodes implemented by the library,
+// Hardcoded Events for physical node, etc
+
+{$IFDEF FPC}
+interface
+{$ENDIF}
+
+{$I Options.inc}
+
+uses
+  nmranetdefines,
+  opstacktypes;
+
+// Set the number of Events that are Consumed by this Node, if none then remove the SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT
+//  conditional define from the Options.inc file
+{$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
+const
+  USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 1;
+{$ELSE}
+const
+  USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED = 0;
+{$ENDIF}
+
+// Dynamic events are events whos IDs are not known at compile time. When enabled
+// the library will callback on the AppCallback_DynamicEvent_Produced with and index from
+// 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_CONSUMED - 1.
+const
+  USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_CONSUMED = 0;
+
+// Define the UIDs of Events that are Consumed by this Node, if none then remove the SUPPORT_AT_LEAST_ONE_CONSUMED_EVENT
+//  conditional define from the Options.inc file
+{$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_CONSUMED_EVENT}
+const
+  USER_VNODE_SUPPORTED_EVENTS_CONSUMED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED-1] of TEventID = (
+    ($01, $01, $00, $00, $00, $00, $FF, $FF)                                    // EVENT_EMERGENCY_STOP
+  );
+{$ENDIF}
+
+
+// Set the number of Events that are Produced by this Node, if none then remove the SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT
+//  conditional define from the Options.inc file
+{$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+const
+  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 1;
+{$ELSE}
+const
+  USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED = 0;
+{$ENDIF}
+
+// Dynamic events are events whos IDs are not known at compile time. When enabled
+// the library will callback on the AppCallback_DynamicEvent_Produced with and index from
+// 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1.
+const
+  USER_MAX_VNODE_SUPPORTED_DYNAMIC_EVENTS_PRODUCED = 0;
+
+// Define the UIDs of Events that are Produced by this Node
+  {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
+  const
+    USER_VNODE_SUPPORTED_EVENTS_PRODUCED: array[0..USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED-1] of TEventID = (
+      ($01, $01, $00, $00, $00, $00, $FF, $FF)                                  // EVENT_EMERGENCY_STOP
+    );
+  {$ENDIF}
+
+{$IFDEF SUPPORT_VIRTUAL_NODES}
+// Set Protocols that the node(s) will support and return in the Protocol Identification Protcol
+const
+  USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT = 1;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
+  USER_PIV_VNODE_SUPPORTED_PROTOCOLS: array[0..USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (     // Look at the PIV_xxxx constants for more Protocols
+    ($80, $00, $00, $00, $00, $00)                                              // Protocol
+  );
+{$ENDIF}
+
+
+{$IFDEF SUPPORT_VIRTUAL_NODES}
+  // Set options and configurations of the Configuration Memory Protocol.  Most depend on the
+  //   capabilities of the device/EEPROM/Flash being used and what the application wants to support
+const
+  USER_VNODE_CONFIGMEM_OPTIONS = MCO_UNALIGNED_READS or MCO_ACDI_MFG_READS or MCO_ACDI_USER_READS or MCO_ACDI_USER_WRITES or MCO_UNALIGNED_WRITES;  // The commands that are avialable to the system, see the MCO_xxx constants
+  USER_VNODE_CONFIGMEM_WRITE_LENGTH = MCWL_ONE_BYTE or MCWL_TWO_BYTE or MCWL_FOUR_BYTE or MCWL_64_BYTE or MCWL_ARBITRARY_BYTE;                      // The length of writes supported by the EEPROM, see the MCWL_xxx constants
+  USER_VNODE_CONFIGMEM_HIGHEST_SPACE = MSI_CDI;                                                                                                     // Highest space, see MSI_xxx constants
+  USER_VNODE_CONFIGMEM_LOWEST_SPACE = MSI_FDI;  
+ {$ENDIF}                                                                                                    // Lowest space, see MSI_xxx constants
+
+ // **************************************************************************************************************************************************************
+ // ACDI Manufacturer Memory ($FC) Space Implementation
+ // **************************************************************************************************************************************************************
+{$IFDEF SUPPORT_VIRTUAL_NODES}
+const
+  USER_VNODE_MAX_ACDI_MFG_ARRAY = 1;
+  USER_VNODE_ACDI_MFG_STRINGS: array[0..USER_VNODE_MAX_ACDI_MFG_ARRAY - 1] of byte = (
+      $00
+    );
+{$ENDIF}
+
+  // **************************************************************************************************************************************************************
+  // ACDI User Memory ($FB) Space Implementation
+  //   Defines the Configuration Memory size and offsets into the configuration memory
+  //   where the user definable string is found.  There are 2 user definable strings:
+  //     User Name:
+  //     User Description:
+  //   The spec defines a version number which is 1 byte so a datagram can carry
+  //   the version number + the Name Data (63 bytes) in the example.  The example
+  //   uses an offset of 0 into the memory for the Name as well.  The Description
+  //   will fill the next datagram (64 Bytes) and the offset is 63 since it will
+  //   occupy the memory immediately following the Name in this example.  This
+  //   all can be overridden in the template_configuration.mpas file
+  // **************************************************************************************************************************************************************
+{$IFDEF SUPPORT_VIRTUAL_NODES}
+const
+  USER_MAX_VNODE_ACDI_USER_NAME_CONFIG_DATA_OFFSET = 0;
+  USER_MAX_VNODE_ACDI_USER_NAME_CONFIG_DATA = 63;     // This MUST MATCH the value defined in the CDI segment for $FB
+  USER_MAX_VNODE_ACDI_USER_DESC_CONFIG_DATA = 64;     // This MUST MATCH the value defined in the CDI segment for $FB
+{$ENDIF}
+
+  // **************************************************************************************************************************************************************
+  // CDI Memory ($FF) Space Implementation
+  // **************************************************************************************************************************************************************
+{$IFDEF SUPPORT_VIRTUAL_NODES}
+const
+  USER_MAX_VNODE_CDI_ARRAY = 1;
+  USER_CDI_VNODE_ARRAY: array[0..USER_MAX_VNODE_CDI_ARRAY-1] of byte = (
+    $00
+    );
+{$ENDIF}
+
+// **************************************************************************************************************************************************************
+// Size of Configuration Memory block,
+//  This may need to be a multiple of some 2^n number depending on what the
+//  harware implementation of the Configuration Memory is.  This allows the library
+//  to linearly line up the configruation memory block for multiple nodes, i.e.
+//  defines the offsets to the start of the configuration memory for the next
+//  virtual node
+//  xxxxxxxxxxxxxxxxxxxx|yyyyyyyyy|yyyyyyyyy|yyyyyyyyy|yyyyyyyyy|
+//  |   Physical Node   | VNode 1 | Vnode 2 | Vnode 3 | Vnode 4 |
+//  | USER_NODE_SIZE    |     USER_VNODE_SIZE * 4               |
+// **************************************************************************************************************************************************************
+{$IFDEF SUPPORT_VIRTUAL_NODES}
+const
+  USER_VNODE_CONFIGURATION_MEMORY_SIZE = 0;
+{$ENDIF}
+
+implementation
+
+end.

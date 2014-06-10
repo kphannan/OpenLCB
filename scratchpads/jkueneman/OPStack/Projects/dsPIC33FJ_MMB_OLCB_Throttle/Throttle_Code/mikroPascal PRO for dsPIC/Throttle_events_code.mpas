@@ -1,0 +1,18 @@
+unit Throttle_events_code;
+
+uses Throttle_objects, Throttle_resources, Throttle_driver;
+
+//--------------------- Externals ---------------------//
+//----------------- End of Externals ------------------//
+
+//-------------- User code declarations ---------------//
+//-------------- End of User code declarations --------//
+
+implementation
+
+//--------------------- User code ---------------------//
+
+//----------------- End of User code ------------------//
+
+// Event Handlers
+end.
