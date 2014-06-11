@@ -2478,6 +2478,7 @@ procedure Init_MCU();
   begin
     TRISE := 0;
     TFT_DataPort_Direction := 0;
+
     CLKDIV := CLKDIV and 0xFFE0;    // PLLPRE<4:0> = 0  ->  N1 = 2    8MHz / 2 = 4MHz
                                     // (must be within 0.8 MHz to 8 MHz range)
     PLLFBD :=   30;                 // PLLDIV<8:0> = 30 ->  M = 32    4MHz * 32 = 128MHz

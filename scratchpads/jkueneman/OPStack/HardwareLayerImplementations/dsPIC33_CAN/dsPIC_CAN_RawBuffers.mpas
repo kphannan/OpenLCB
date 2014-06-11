@@ -48,8 +48,11 @@ type
   PCANRawBuffer = ^TCANRawBuffer;
   
 const
-  CAN_DMA_DATA_OFFSET = $1000;             // This is the start of the X-Data area.  Some of the dsPIC33s require DMA RAM to be
-                                          // located in this lower area.  Look at your chips datasheet to make sure this is acceptable
+  {$IFDEF P33FJ256GP710A}
+  CAN_DMA_DATA_OFFSET = $7800;
+  {$ELSE}
+  CAN_DMA_DATA_OFFSET = $1000;                  // This is the start of the X-Data area.  Some of the dsPIC33s require DMA RAM to be
+ {$ENDIF}                                       // located in this lower area.  Look at your chips datasheet to make sure this is acceptable
 
 type
   TCAN_RxRawBufferArray = array[0..MAX_ECAN_RX_BUFFER-1] of TCANRawBuffer;

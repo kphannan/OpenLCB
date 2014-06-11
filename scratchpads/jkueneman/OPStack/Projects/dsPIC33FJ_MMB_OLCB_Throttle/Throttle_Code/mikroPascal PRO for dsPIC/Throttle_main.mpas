@@ -24,21 +24,26 @@ begin
   OPStackCore_Timer;
 end;
 
-begin
-
+begin    
+  TRISB1_bit := 0;
+  TRISB2_bit := 0;
+  LATB1_bit := 1;
+  LATB2_bit := 1;
+  
+  Start_TP();
   MCU_Setup_Initialize;
   MCU_EnableUART;
   OPStackCore_Initialize;
   MCU_EnableCAN;
   MCU_Enable100msTimer;
+  MCU_InitializeSpi;
   OPStackCore_Enable(True);
 
-  Start_TP();
-  
   
   while (TRUE) do
-  begin
+  begin 
     Check_TP;
     OPStackCore_Process;
+
   end;
 end.

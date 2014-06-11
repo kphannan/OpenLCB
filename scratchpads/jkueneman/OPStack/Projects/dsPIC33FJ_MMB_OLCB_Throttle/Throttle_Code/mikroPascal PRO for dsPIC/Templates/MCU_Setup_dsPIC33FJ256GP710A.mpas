@@ -19,6 +19,7 @@ const
   procedure MCU_Enable100msTimer;
   procedure MCU_EnableUART;
   procedure MCU_EnableCAN;
+  procedure MCU_InitializeSpi;
 
 implementation
 
@@ -52,11 +53,9 @@ end;
 
 procedure MCU_EnableCAN;
 begin
-
-  // Are these for the CAN setup?
   LATG3_bit := 0;
   TRISG3_bit := 0;
-  
+
   dsPIC33_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode
   // Setup the CAN Baud Rate
   dsPIC33_CAN_SetBaud(CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz with a 64Mhz Clock
@@ -84,11 +83,10 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_TX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);   // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_TX_0_DMA_CHANNEL, 8);                           // 0...7
   dsPIC33_DMA_ManualDMATransfer(CAN_TX_0_DMA_CHANNEL, False);                   // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_TX_0_DMA_CHANNEL, Word( @C1TXD));                  // Assign the DMA Channel to the Transmit Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_TX_0_DMA_CHANNEL, @C1TXD);                  // Assign the DMA Channel to the Transmit Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_TX_0_DMA_CHANNEL, IRQ_ECAN1_TX_DATA_READY);   // Assign the DMA Channel to the ECAN 1 TX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_TX_0_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_0_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_0_DMA_CHANNEL, True);
-
 
   // Setup the CAN Transmitter
   dsPIC33_CAN_SetBufferAsTransmitter(CAN_TX_1_BUFFER, True);                    // Setup Buffer 0 as a Transmit Buffer
@@ -101,7 +99,7 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_TX_1_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);   // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_TX_1_DMA_CHANNEL, 8);                           // 0...7
   dsPIC33_DMA_ManualDMATransfer(CAN_TX_1_DMA_CHANNEL, False);                   // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_TX_1_DMA_CHANNEL, Word( @C1TXD));                  // Assign the DMA Channel to the Transmit Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_TX_1_DMA_CHANNEL, @C1TXD);                  // Assign the DMA Channel to the Transmit Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_TX_1_DMA_CHANNEL, IRQ_ECAN1_TX_DATA_READY);   // Assign the DMA Channel to the ECAN 1 TX to Trigger the Transfer
   dsPIC33_DMA_AddressOffsetA(CAN_TX_1_DMA_CHANNEL, Word( @TX_Main_RawBufferArray[CAN_TX_1_BUFFER]));  // Enable DMA Channel
   dsPIC33_DMA_Enable(CAN_TX_1_DMA_CHANNEL, True);
@@ -116,20 +114,25 @@ begin
   dsPIC33_DMA_OperatingMode(CAN_RX_0_DMA_CHANNEL, OPERATING_MODE_CONTINIOUS);                      // Continious Mode (as apposed to one shot)
   dsPIC33_DMA_TransferCount(CAN_RX_0_DMA_CHANNEL, 8);                                              // Transfers 8 Words (0 counts as 1)
   dsPIC33_DMA_ManualDMATransfer(CAN_RX_0_DMA_CHANNEL, False);                                      // Automatic DMA Transfers
-  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, Word( @C1RXD));                                     // Assign the DMA Channel to the Receive Register of the CAN module
+  dsPIC33_DMA_PeripheralAddress(CAN_RX_0_DMA_CHANNEL, @C1RXD);                                     // Assign the DMA Channel to the Receive Register of the CAN module
   dsPIC33_DMA_InterruptSelect(CAN_RX_0_DMA_CHANNEL, IRQ_ECAN1_RX_DATA_READY);                      // Assign the DMA Channel to the ECAN 1 RX to Trigger the Transfer
-  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, Word( @RX_Main_RawBufferArray[0]));                    // Point the Receive Buffer Offset into the CAN Layer Buffer
+  dsPIC33_DMA_AddressOffsetA(CAN_RX_0_DMA_CHANNEL, @RX_Main_RawBufferArray[0]);                    // Point the Receive Buffer Offset into the CAN Layer Buffer
   dsPIC33_DMA_Enable(CAN_RX_0_DMA_CHANNEL, True);                                                  // Enable DMA Channel 2
 
-  dsPIC33_CAN_InterruptFlagRXBufferOverflow(True);                              // Clear the flag
-  dsPIC33_CAN_InterruptFlagRXBuffer(True);                                      // RX Interrupt Flag Reset
-  dsPIC33_CAN_InterruptFlagTXBuffer(True);                                      // TX Interrupt Flag Reset
-  dsPIC33_CAN_RXBufferOverflowInterrupt(True);                                  // If we don't enable this and an interrupt occurs then it hangs the loop because you can't clear the Rx Interrupt until this is serviced
   dsPIC33_CAN_TXBufferInterrupt(True);                                          // Enable the TX Done Event Interrupt
   dsPIC33_CAN_RXBufferInterrupt(True);                                          // Enable the RX Done Event Interrupt
 
   dsPIC33_CAN_GlobalInterruptCAN_EventPriority(6);                              // CAN Event Interrupt has a priority of 6 out of 7
   dsPIC33_CAN_GlobalInterruptCAN_Event(True);                                   // Enable the CAN Event Interrupt
+end;
+
+procedure MCU_InitializeSpi;
+begin
+  SPI1_Init();       // Initialize SPI1 module
+  SPIEN_bit := 0;    // Disable SPI
+  SPI1CON := SPI1CON and $FFE0;  // Clear the prescaler bits
+  SPI1CON := SPI1CON or $0003 or $0018;  // Setup for 5 Mhz (with the CAN plug in boards)     $10=5Mhz, $14=6.67Mhz, $18 = 10Mhz
+  SPIEN_bit := 1;    // Enable the SPI
 end;
 
 
