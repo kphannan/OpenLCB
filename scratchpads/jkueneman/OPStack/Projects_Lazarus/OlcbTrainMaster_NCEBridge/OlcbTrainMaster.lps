@@ -22,10 +22,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="main"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="563"/>
-        <CursorPos X="66" Y="583"/>
+        <TopLine Value="1145"/>
+        <CursorPos X="3" Y="1158"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -275,7 +276,6 @@
       <Unit29>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="17"/>
@@ -404,123 +404,123 @@
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="55" Column="20" TopLine="43"/>
+        <Caret Line="169" Column="30" TopLine="150"/>
       </Position1>
       <Position2>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="169" Column="30" TopLine="150"/>
+        <Caret Line="192" Column="15" TopLine="173"/>
       </Position2>
       <Position3>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="192" Column="15" TopLine="173"/>
+        <Caret Line="242" Column="65" TopLine="223"/>
       </Position3>
       <Position4>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="242" Column="65" TopLine="223"/>
+        <Caret Line="420" Column="13" TopLine="400"/>
       </Position4>
       <Position5>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="420" Column="13" TopLine="400"/>
+        <Caret Line="440" Column="29" TopLine="417"/>
       </Position5>
       <Position6>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="440" Column="29" TopLine="417"/>
+        <Caret Line="438" Column="40" TopLine="426"/>
       </Position6>
       <Position7>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="438" Column="40" TopLine="426"/>
+        <Caret Line="245" Column="74" TopLine="236"/>
       </Position7>
       <Position8>
-        <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="245" Column="74" TopLine="236"/>
-      </Position8>
-      <Position9>
         <Filename Value="Forms/main.pas"/>
         <Caret Line="606" Column="55" TopLine="587"/>
-      </Position9>
-      <Position10>
+      </Position8>
+      <Position9>
         <Filename Value="Forms/form_throttle.pas"/>
         <Caret Line="471" Column="45" TopLine="460"/>
+      </Position9>
+      <Position10>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="5" Column="57" TopLine="1"/>
       </Position10>
       <Position11>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="5" Column="57" TopLine="1"/>
+        <Caret Line="131" Column="14" TopLine="104"/>
       </Position11>
       <Position12>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="131" Column="14" TopLine="104"/>
+        <Caret Line="132" Column="14" TopLine="105"/>
       </Position12>
       <Position13>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="132" Column="14" TopLine="105"/>
+        <Caret Line="1203" Column="46" TopLine="1175"/>
       </Position13>
       <Position14>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="1203" Column="46" TopLine="1175"/>
+        <Caret Line="1209" Column="49" TopLine="1181"/>
       </Position14>
       <Position15>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="1209" Column="49" TopLine="1181"/>
+        <Caret Line="131" Column="14" TopLine="115"/>
       </Position15>
       <Position16>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="131" Column="14" TopLine="115"/>
+        <Caret Line="132" Column="14" TopLine="115"/>
       </Position16>
       <Position17>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="132" Column="14" TopLine="115"/>
+        <Caret Line="1203" Column="46" TopLine="1175"/>
       </Position17>
       <Position18>
         <Filename Value="Forms/main.pas"/>
-        <Caret Line="1203" Column="46" TopLine="1175"/>
+        <Caret Line="1209" Column="49" TopLine="1181"/>
       </Position18>
       <Position19>
-        <Filename Value="Forms/main.pas"/>
-        <Caret Line="1209" Column="49" TopLine="1181"/>
+        <Filename Value="Forms/form_throttle.pas"/>
+        <Caret Line="403" Column="51" TopLine="390"/>
       </Position19>
       <Position20>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="403" Column="51" TopLine="390"/>
+        <Caret Line="14" Column="30" TopLine="1"/>
       </Position20>
       <Position21>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="14" Column="30" TopLine="1"/>
+        <Caret Line="12" Column="76" TopLine="1"/>
       </Position21>
       <Position22>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="12" Column="76" TopLine="1"/>
+        <Caret Line="14" Column="18" TopLine="1"/>
       </Position22>
       <Position23>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="14" Column="18" TopLine="1"/>
+        <Caret Line="10" Column="3" TopLine="1"/>
       </Position23>
       <Position24>
         <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="10" Column="3" TopLine="1"/>
+        <Caret Line="9" Column="48" TopLine="1"/>
       </Position24>
       <Position25>
-        <Filename Value="Forms/form_throttle.pas"/>
-        <Caret Line="9" Column="48" TopLine="1"/>
-      </Position25>
-      <Position26>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <Caret Line="22" Column="120" TopLine="1"/>
-      </Position26>
-      <Position27>
+      </Position25>
+      <Position26>
         <Filename Value="Forms/form_throttle.pas"/>
         <Caret Line="10" Column="3" TopLine="1"/>
+      </Position26>
+      <Position27>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position27>
       <Position28>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Caret Line="10" Column="26" TopLine="1"/>
       </Position28>
       <Position29>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="10" Column="26" TopLine="1"/>
-      </Position29>
-      <Position30>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <Caret Line="1" Column="1" TopLine="1"/>
+      </Position29>
+      <Position30>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="583" Column="66" TopLine="563"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

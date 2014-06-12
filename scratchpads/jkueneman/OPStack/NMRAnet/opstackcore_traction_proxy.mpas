@@ -8,7 +8,9 @@ interface
 
 uses
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   NMRAnetDCC,
+  {$ENDIF}
   {$ENDIF}
   opstacknode,
   opstackcore_basic,

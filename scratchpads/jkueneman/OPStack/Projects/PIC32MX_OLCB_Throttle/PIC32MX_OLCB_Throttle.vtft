@@ -1,0 +1,384 @@
+object TatDiagram
+  LastSelControl = 'ButtonRound1'
+  NettoExportOffset = 1
+  AutomaticNodes = False
+  AutoScroll = True
+  AutoPage = False
+  Background.Scroll = True
+  Background.Style = biTile
+  Background.Visible = False
+  Background.Gradient.Direction = grTopBottom
+  Background.Gradient.StartColor = clWhite
+  Background.Gradient.EndColor = clYellow
+  Background.Gradient.Visible = False
+  Background.PrintGradient = False
+  SnapGrid.Active = False
+  SnapGrid.Force = False
+  SnapGrid.Visible = False
+  SnapGrid.SizeX = 5.000000000000000000
+  SnapGrid.SizeY = 5.000000000000000000
+  SnapGrid.Style = gsLines
+  SnapGrid.SnapToRuler = True
+  ShowLinkPoints = False
+  LeftRuler.Visible = False
+  LeftRuler.Divisions = 10
+  LeftRuler.Font.Charset = DEFAULT_CHARSET
+  LeftRuler.Font.Color = clWindowText
+  LeftRuler.Font.Height = -9
+  LeftRuler.Font.Name = 'Arial'
+  LeftRuler.Font.Style = []
+  LeftRuler.Units = unPixel
+  LeftRuler.MinorTickLength = 4
+  LeftRuler.MajorTickLength = 6
+  LeftRuler.Color = clSilver
+  LeftRuler.TickColor = clBlack
+  LeftRuler.Size = 16
+  LeftRuler.AutoFactor = False
+  LeftRuler.GridColor = clBlack
+  TopRuler.Visible = False
+  TopRuler.Divisions = 10
+  TopRuler.Font.Charset = DEFAULT_CHARSET
+  TopRuler.Font.Color = clWindowText
+  TopRuler.Font.Height = -9
+  TopRuler.Font.Name = 'Arial'
+  TopRuler.Font.Style = []
+  TopRuler.Units = unPixel
+  TopRuler.MinorTickLength = 4
+  TopRuler.MajorTickLength = 6
+  TopRuler.Color = clSilver
+  TopRuler.TickColor = clBlack
+  TopRuler.Size = 16
+  TopRuler.AutoFactor = False
+  TopRuler.GridColor = clBlack
+  Zoom = 200
+  BorderColor = clGray
+  VertScrollBar.Smooth = True
+  MouseWheelMode = mwOff
+  ActiveLayers = 5
+  Layers = <
+    item
+      LayerName = 'Layer0'
+    end>
+  LinkCursor = crHandPoint
+  PanCursor = crHandPoint
+  ZoomCursor = crSizeNS
+  IgnoreScreenDPI = False
+  ShowCrossIndicators = True
+  PageLines.Visible = False
+  PageLines.Pen.Color = clMaroon
+  PageLines.Pen.Mode = pmBlack
+  PageLines.Pen.Style = psDot
+  KeyActions = [kaEscape, kaMove, kaPage, kaResize, kaSelect]
+  HandlesStyle = hsVisio
+  SmoothMode = smAntiAlias
+  TextRenderingMode = tmAntiAlias
+  SelectionMode = slmMultiple
+  CanMoveOutOfBounds = False
+  PageSettings.PaperName = '320x240'
+  PageSettings.PaperId = 1
+  PageSettings.PaperWidth = 84.931250000000000000
+  PageSettings.PaperHeight = 63.764583333333320000
+  PageSettings.Orientation = dpoPortrait
+  PageSettings.LeftMarginStr = '0'
+  PageSettings.TopMarginStr = '0'
+  PageSettings.RightMarginStr = '0'
+  PageSettings.BottomMarginStr = '0'
+  RulerAutoUnit = False
+  MeasUnit = duMili
+  WheelZoom = True
+  WheelZoomIncrement = 10
+  WheelZoomMin = 50
+  WheelZoomMax = 999
+  BorderStyle = bsSingle
+  Color = 6052956
+  ParentColor = False
+  ExplicitWidth = 200
+  ExplicitHeight = 200
+  object ButtonRound1: TDgrButtonRound
+    Tag = 255
+    Left = 50.000000000000000000
+    Top = 18.000000000000000000
+    Width = 91.500000000000000000
+    Height = 32.500000000000000000
+    Brush.Style = bsClear
+    SelBrush.Style = bsClear
+    Color = clSilver
+    SelColor = clSilver
+    ClipText = False
+    TextCells = <
+      item
+        DControlAngle = True
+        Width = 80.000000000000000000
+        Height = 40.000000000000000000
+        Text = 'Text'
+        Clip = False
+        WordWrap = False
+        DControlFont = True
+        Alignment = taCenter
+        VertAlign = vaCenter
+        RotateFont = True
+        CellFrame.Color = clWhite
+        CellFrame.Transparent = True
+        CellFrame.AutoFrame = False
+        CellFrame.AutoFrameMargin = 0
+        CellFrame.Visible = False
+        Visible = True
+        ReadOnly = False
+        Transparency = 0
+      end
+      item
+        DControlAngle = True
+        Clip = False
+        WordWrap = True
+        DControlFont = True
+        Alignment = taCenter
+        VertAlign = vaTop
+        RotateFont = True
+        CellFrame.Color = clWhite
+        CellFrame.Transparent = True
+        CellFrame.AutoFrame = False
+        CellFrame.AutoFrameMargin = 0
+        CellFrame.Visible = False
+        Visible = True
+        ReadOnly = False
+        Transparency = 0
+      end>
+    Restrictions = [crNoRotation]
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Tahoma'
+    Font.Style = []
+    DiagramFont = False
+    MinWidth = 26
+    MinHeight = 17
+    Shadow.Visible = False
+    Shadow.Color = 14869218
+    Shadow.HOffset = 0
+    Shadow.VOffset = 1
+    Shadow.Transparency = 0
+    Hint = 
+      'ButtonRound1'#13#10#13#10'Left   : 62'#13#10'Top    : 38'#13#10'Width  : 92'#13#10'Height : ' +
+      '32'
+    ParentShowHint = True
+    Gradient.Direction = grTopBottom
+    Gradient.StartColor = clWhite
+    Gradient.EndColor = clSilver
+    Gradient.Visible = True
+    BitmapMode = bmStretch
+    BitmapTransparent = False
+    MetaFile.Data = {04000000}
+    PictureMode = pmStretch
+    Transparent = False
+    Cursor = crDefault
+    Visible = True
+    Layer = 0
+    LayerName = 'Layer0'
+    Transparency = 0
+    GradientBackup = False
+    ColorTo = clBlack
+    PressColor = clBlack
+    PressColorTo = clBlack
+    PressColorEnabled = True
+    Static_ = False
+    StartChar = 32
+    EndChar = 127
+    TextAlign = _taCenter
+    CornerRadius = 3
+    SystemFont = True
+    VolumeUp = 0
+    VolumeDown = 0
+    VolumeClick = 0
+    VolumePress = 0
+    Collapsed = False
+  end
+end
+
+SCREEN_SECTION
+
+	ScreenName=Screen1
+		CurrentLayer=0
+		StartScreen=True
+		StaticScreen=False
+		ScreenColor=$005C5C5C
+		ScreenOrientation=0
+		Active=True
+		SniffObjectEvents=False
+
+	ScreenCount=1
+	ActiveScreen=Screen1
+
+SCREEN_SECTION_END
+
+PROJECT_INFO_START
+
+VERSION       = 5
+BOARD         = EasyPIC_Fusion_v7_for_PIC32
+COMPILER      = mikroPascal PRO for PIC32
+CONTROLLER    = HX8347-D
+TPCONTROLLER  = Default
+DIMENSIONS    = 320x240
+DEVICE        = P32MX795F512L
+CLOCK         = 80000000
+
+TP_CHECKED    = True
+READX_ADCHNO  = 3
+READY_ADCHNO  = 14
+THRESHOLD     = 900
+XMIN          = 75
+XMAX          = 907
+YMIN          = 77
+YMAX          = 915
+
+TFT_CONNECTION_START
+TFT_DataPort            = LATE
+TFT_RST                 = LATD7_bit
+TFT_DataPort_Direction  = TRISE
+TFT_RST_Direction       = TRISD7_bit
+TFT_BLED_Direction      = TRISD2_bit
+TFT_RS_Direction        = TRISD9_bit
+TFT_CS_Direction        = TRISD10_bit
+TFT_RD_Direction        = TRISD5_bit
+TFT_BLED                = LATD2_bit
+TFT_WR_Direction        = TRISD4_bit
+TFT_RS                  = LATD9_bit
+TFT_CS                  = LATD10_bit
+TFT_RD                  = LATD5_bit
+TFT_WR                  = LATD4_bit
+TFT_CONNECTION_END
+
+TP_CONNECTION_START
+DRIVEY_UP               = LATB14_bit
+DRIVEY_DOWN             = LATB2_bit
+DRIVEY_UP_DIRECTION     = TRISB14_bit
+DRIVEY_DOWN_DIRECTION   = TRISB2_bit
+DRIVEX_LEFT             = LATB15_bit
+DRIVEX_RIGHT            = LATB3_bit
+DRIVEX_LEFT_DIRECTION   = TRISB15_bit
+DRIVEX_RIGHT_DIRECTION  = TRISB3_bit
+TP_CONNECTION_END
+
+ADC_CODE_START
+procedure Init_ADC();
+  begin
+    AD1PCFG := 0x3FF3;
+    ADC1_Init();
+  end;
+ADC_CODE_END
+
+INIT_MCU_CODE_START
+procedure Init_MCU();
+  begin
+    AD1PCFG := 0x3FF3;
+    JTAGEN_bit := 0;
+    TFT_Set_Default_Mode();
+    TP_TFT_Set_Default_Mode();
+  end;
+INIT_MCU_CODE_END
+
+CUSTOM_TFT_ROUTINES = False
+AUXILIARY_CODE_START
+procedure Auxiliary_Code();
+  begin
+    // Place your code here
+  end;
+AUXILIARY_CODE_END
+
+SET_INDEX_CODE_START
+procedure Set_Index();
+  begin
+    // Place your code here
+  end;
+SET_INDEX_CODE_END
+
+WRITE_COMMAND_CODE_START
+procedure Write_Command();
+  begin
+    // Place your code here
+  end;
+WRITE_COMMAND_CODE_END
+
+WRITE_DATA_CODE_START
+procedure Write_Data();
+  begin
+    // Place your code here
+  end;
+WRITE_DATA_CODE_END
+
+EXT_MEM_TYPE=MMC
+EXT_MEM_DECL_CODE_START
+// MMC/SD Connections
+var Mmc_Chip_Select : sbit at LATD12_bit;
+var Mmc_Chip_Select_Direction : sbit at TRISD12_bit;
+// end of MMC/SD
+// TFT Get Data globals
+var Ext_Data_Buffer : array[512] of byte;
+var currentSector : longint;
+var res_file_size : dword;
+// end of TFT Get Data
+EXT_MEM_DECL_CODE_END
+
+INIT_EXT_MEM_CODE_START
+procedure Init_Ext_Mem();
+  begin
+    currentSector := -1;
+    // Initialize SPI
+    SPI3_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, 80, _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_HIGH, _SPI_ACTIVE_2_IDLE);
+    Delay_ms(10);
+
+    // Initialize MMC
+    if (Mmc_Fat_Init() = 0) then
+      begin
+        // Reinitialize SPI at higher speed
+        SPI3_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, 40, _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_HIGH, _SPI_ACTIVE_2_IDLE);
+
+        // Open resource file for read
+        Mmc_Fat_Assign('%FILE_NAME', 0);
+        Mmc_Fat_Reset(res_file_size);
+      end;
+  end;
+INIT_EXT_MEM_CODE_END
+
+GET_DATA_CODE_START
+function TFT_Get_Data(offset, count : dword; var num : dword) : ^byte;
+var start_sector: dword;
+fpos : dword;
+begin
+  start_sector := Mmc_Get_File_Write_Sector() + offset div 512;
+  fpos := dword(offset) mod 512;
+
+  if(start_sector = currentSector+1) then 
+    begin
+      Mmc_Multi_Read_Sector(Ext_Data_Buffer);
+      currentSector := start_sector;
+    end
+  else if(start_sector <> currentSector) then
+    begin
+      if(currentSector <> -1) then
+        Mmc_Multi_Read_Stop();
+      Mmc_Multi_Read_Start(start_sector);
+      Mmc_Multi_Read_Sector(Ext_Data_Buffer);
+      currentSector := start_sector;
+    end;
+
+  if(count>512-fpos) then 
+    num := 512-fpos
+  else
+    num := count;
+
+  result := @Ext_Data_Buffer+fpos;
+end;
+GET_DATA_CODE_END
+
+CALIBRATION   = Manual
+TP_ENABLE     = 1
+
+RSRC_FORMAT   = CODE
+RSRC_JPEG2BMP = True
+RSRC_FILESYS  = True
+EXT_RSRC = False
+
+//FONT SPACE OPTIONS
+ONE_PIXEL_SPACE_WIDTH = False
+
+PROJECT_INFO_END

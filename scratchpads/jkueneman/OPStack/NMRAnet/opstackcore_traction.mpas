@@ -9,7 +9,9 @@ interface
 
 uses
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   NMRAnetDCC,
+  {$ENDIF}
   {$ENDIF}
   template_hardware,
   Float16,
@@ -38,14 +40,18 @@ var
   AbsoluteSpeed: Real;
   SpeedStep: Word;
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
+  {$ENDIF}
   {$ENDIF}
 begin
   MessageToSend := nil;
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;                                                        // Split the address to make clear when loading bytes
   AddressLo := DestNode^.TrainData.Address and $00FF;
+  {$ENDIF}
   {$ENDIF}
   DestNode^.TrainData.SpeedDir := (NextMessage^.Buffer^.DataArray[1] shl 8) or (NextMessage^.Buffer^.DataArray[2]);  // Update with the new Speed
   IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;                                                      // Split the Speed and Direction
@@ -64,11 +70,13 @@ begin
             else
               SpeedStep := SpeedStep or $40;
             {$IFNDEF FPC}
+            {$IFDEF SUPPORTS_DCC}
             if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
               NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
             else
               NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
             NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+            {$ENDIF}
             {$ENDIF}
           end;
     28  : begin
@@ -84,16 +92,20 @@ begin
             else
               SpeedStep := SpeedStep or $40;
             {$IFNDEF FPC}
+            {$IFDEF SUPPORTS_DCC}
             if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
               NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
             else
               NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
             NMRA_DCC_QueuePacket(@Track, @DCCPacket, False)
             {$ENDIF}
+            {$ENDIF}
           end;
     128 : begin
             {$IFNDEF FPC}
+            {$IFDEF SUPPORTS_DCC}
             AddressHi := AddressHi or NMRA_LONGADDRESS_MASK_BYTE;               // Allow a mistaken short address to work here by adding the $C0  Per Tim
+            {$ENDIF}
             {$ENDIF}
             AbsoluteSpeed := (127/100) * AbsoluteSpeed;
             {$IFDEF FPC}
@@ -106,8 +118,10 @@ begin
             if IsForward then
               SpeedStep := SpeedStep or $80;
             {$IFNDEF FPC}
+            {$IFDEF SUPPORTS_DCC}
             NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
             NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+            {$ENDIF}
             {$ENDIF}
           end;
   end;
@@ -122,16 +136,20 @@ var
   WideFunctionMask: DWord;
   FunctionMask, FunctionExtendedCode: Byte;
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
+  {$ENDIF}
   {$ENDIF}
 begin
   MessageToSend := nil;
 
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   // Split the address to make clear when loading bytes
   AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
   AddressLo := DestNode^.TrainData.Address and $00FF;
+  {$ENDIF}
   {$ENDIF}
 
   // Get the new values
@@ -178,6 +196,7 @@ begin
   end;
 
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   // Now create the DCC Packet
   if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
   begin
@@ -196,6 +215,7 @@ begin
   // Queue the Packet
   NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
   {$ENDIF}
+  {$ENDIF}
   AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
@@ -205,16 +225,20 @@ var
   IsForward: Boolean;
   SpeedStep: Byte;
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
+  {$ENDIF}
   {$ENDIF}
 begin
   MessageToSend := nil;
 
   {$IFNDEF FPC}
+  {$IFDEF SUPPORTS_DCC}
   // Split the address to make clear when loading bytes
   AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
   AddressLo := DestNode^.TrainData.Address and $00FF;
+  {$ENDIF}
   {$ENDIF}
 
   // Update the Speed to 0
@@ -232,12 +256,14 @@ begin
         else
           SpeedStep := SpeedStep or $40;
         {$IFNDEF FPC}
+        {$IFDEF SUPPORTS_DCC}
         if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
           NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
         else
           NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
 
         NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+        {$ENDIF}
         {$ENDIF}
       end;
     128 :
@@ -246,9 +272,11 @@ begin
         if IsForward then
           SpeedStep := SpeedStep or $80;
         {$IFNDEF FPC}
+        {$IFDEF SUPPORTS_DCC}
         NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
 
         NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+        {$ENDIF}
         {$ENDIF}
       end;
   end;

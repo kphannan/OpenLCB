@@ -1,0 +1,65 @@
+unit PIC32MX_CAN_RawBuffers;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-04-01:   1.0.0.0 Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//    Implements a FIFO data structure for CAN Message Buffers
+//
+// ******************************************************************************
+
+{$I Options.inc}
+
+const
+
+  CAN_DIRECTION_READ = 1;
+  CAN_DIRECTION_WRITE = 0;
+  
+  MAX_ECAN_RX_BUFFER = 2;
+  MAX_ECAN_TX_BUFFER = 2;
+  
+type
+  // ***************************************************************************
+  // CAN Message Buffers in raw form that can be loaded into the CAN controller
+  // registers
+  // ***************************************************************************
+  TCANRawBuffer = record
+    Word0    : Word;   // if Standard Message then SID else EID upper Bits
+    Word1    : Word;   // if Standard Message then Data Length Code else low bits of EID and upper bits of SID
+    Word2    : Word;   // if Standard Message then Data 0 and Data 1 else low bits of SID and Data Length Code
+    Word3    : Word;   // if Standard Message then Data 2 and Data 3 else Data 0 and Data 1
+    Word4    : Word;   // if Standard Message then Data 4 and Data 5 else Data 2 and Data 3
+    Word5    : Word;   // if Standard Message then Data 6 and Data 7 else Data 4 and Data 5
+    Word6    : Word;   // if Standard Message then, not used, else Data 6 and Data 7
+    Word7    : Word;
+  end;
+  PCANRawBuffer = ^TCANRawBuffer;
+
+
+type
+  TCAN_RxRawBufferArray = array[0..MAX_ECAN_RX_BUFFER-1] of TCANRawBuffer;
+  TCAN_TxRawBufferArray = array[0..MAX_ECAN_TX_BUFFER-1] of TCANRawBuffer;
+  
+  
+ 
+
+var
+  TX_Main_RawBufferArray: TCAN_TxRawBufferArray;  // Transmit buffer for all filters.  The software pulls the data to the right list
+  RX_Main_RawBufferArray: TCAN_RxRawBufferArray;  // Recieve buffer for all filters.  The software moves the data to the right list
+
+var
+  Dummy: Word;
+
+implementation
+
+end.

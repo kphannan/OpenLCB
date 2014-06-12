@@ -1,0 +1,266 @@
+unit hardware_template;
+
+
+{$I Options.inc}
+
+uses
+  PIC32MX_CAN,
+  opstackbuffers,
+  opstackdefines,
+  opstackcanstatemachinesbuffers;
+
+
+procedure Hardware_Initialize;
+
+// The OPStack calls these functions to control and/or send messages through the hardware layer
+procedure Hardware_DisableInterrupts;
+procedure Hardware_EnableInterrupts;
+
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
+procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure ProcessHardwareMessages;
+function IsOutgoingBufferAvailable: Boolean;
+
+procedure ReceivedOnFilter0(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter1(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter2(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter3(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter4(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter5(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+procedure ReceivedOnFilter6(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+
+
+{$IFNDEF FPC}
+// Callback to push received messages into the OPStack
+procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
+function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var OPStackMessage: POPStackMessage; var DestNode: PNMRAnetNode; var SourceNode: PNMRAnetNode; NMRAnetCanBuffer: PNMRAnetCanBuffer; ): Boolean;  external;
+procedure OPStackCANStatemachine_ProcessMessages; external;
+procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
+function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
+{$ENDIF}
+
+implementation
+
+type
+  THardware = record
+    InterruptDisableCount: Integer;                                             // Allows stacked calls to Disable/Enable Interrupts (if used)
+    OutgoingTxBuffer: TNMRAnetCanBuffer;
+    OutgoingHighPriortyTxBuffer: TNMRAnetCanBuffer;
+    OutgoingTxBufferEmpty: Boolean;
+    OutgoingHighPriortyTxBufferEmpty: Boolean;
+    OutgoingBufferOverrun,
+    OutgoingHighPriorityBufferOverrun: Boolean;
+  end;
+
+var
+  Hardware: THardware;
+
+// *****************************************************************************
+//  procedure Hardware_Initialize
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure Hardware_Initialize;
+begin
+  PIC32MX_CAN_Initialize;
+  OPStackCANStatemachineBuffers_Initialize;
+  Hardware.InterruptDisableCount := 0;
+  Hardware.OutgoingTxBufferEmpty := True;
+  Hardware.OutgoingHighPriortyTxBufferEmpty := True;
+  Hardware.OutgoingBufferOverrun := False;
+  Hardware.OutgoingHighPriorityBufferOverrun := False;
+end;
+
+// *****************************************************************************
+//  procedure Hardware_Initialize
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure CopyNMRAnetCanBuffers(SourceBuffer, DestBuffer: PNMRAnetCanBuffer);
+begin
+  DestBuffer^.MTI := SourceBuffer^.MTI;
+  DestBuffer^.PayloadCount := SourceBuffer^.PayloadCount;
+  DestBuffer^.Payload := SourceBuffer^.Payload;
+end;
+
+// *****************************************************************************
+//  procedure Hardware_DisableInterrupts
+//    Parameters:
+//    Result:
+//    Description:   called when lists or similar are being maniuplated that
+//                   could be in an interterminate state if an interrupt driven
+//                   system is called in the middle of the manipulation. Use this
+//                   function to disable asyncronous access to library variable
+//                   during this call
+// *****************************************************************************
+procedure Hardware_DisableInterrupts;
+begin
+  // Disable Any interrupts here
+  Inc(Hardware.InterruptDisableCount);
+  if Hardware.InterruptDisableCount = 1 then
+    PIC32MX_CAN_GlobalInterruptCAN_Event(False);
+end;
+
+// *****************************************************************************
+//  procedure Hardware_EnableInterrupts
+//    Parameters:
+//    Result:
+//    Description:   called when lists or similar are being maniuplated that
+//                   could be in an interterminate state if an interrupt driven
+//                   system is called in the middle of the manipulation. Use this
+//                   function to re enable asyncronous access to library variable
+//                   during this call
+// *****************************************************************************
+procedure Hardware_EnableInterrupts;
+begin
+  Dec(Hardware.InterruptDisableCount);
+  if Hardware.InterruptDisableCount <= 0 then
+  begin
+    // Enable any Interrupts here
+    PIC32MX_CAN_GlobalInterruptCAN_Event(True);
+    Hardware.InterruptDisableCount := 0;
+  end;
+end;
+
+// *****************************************************************************
+//  procedure OutgoingCriticalMessage
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage);
+var
+  NMRAnetCanBuffer: TNMRAnetCanBuffer;
+begin
+  if not PIC32MX_CAN_HighPriorityTransmitting then
+  begin
+    if AMessage^.MessageType and MT_MASK = MT_SIMPLE then
+    begin
+      OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
+      PIC32MX_StartCANHighPriorityMessageEngine(@NMRAnetCanBuffer, True);
+      Hardware.OutgoingHighPriortyTxBufferEmpty := True;
+      OPStackBuffers_DeAllocateMessage(AMessage);
+    end;
+  end else
+  begin
+    Hardware.OutgoingHighPriorityBufferOverrun := True;
+  end
+end;
+
+// *****************************************************************************
+//  procedure OutgoingMessage
+//    Parameters:
+//    Result:
+//    Description:   called to send a message on the physical layer, must call
+//                   IsOutgoingBufferAvailable before to ensure a buffer is
+//                   available to use
+// *****************************************************************************
+procedure OutgoingMessage(AMessage: POPStackMessage);
+var
+  NMRAnetCanBuffer: TNMRAnetCanBuffer;
+begin
+  if IsOutgoingBufferAvailable then
+  begin
+    case AMessage^.MessageType and MT_MASK of
+      MT_SIMPLE :
+          begin
+            OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
+            PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
+            Hardware.OutgoingTxBufferEmpty := True;
+            OPStackBuffers_DeAllocateMessage(AMessage);
+          end;
+      {$IFDEF SUPPORT_STREAMS}
+      MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage);     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+      {$ENDIF}
+      MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+      MT_ACDISNIP : OPStackCANStatemachineBuffers_AddOutgoingAcdiSnipMessage(AMessage);   // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+      MT_MULTIFRAME : OPStackCANStateMachineBuffer_AddOutgoingMultiFrameMessage(AMessage)   // CAN can't handle a full Multi Message so we need to parse it up into MT_SIMPLE frames
+    else
+       OPStackBuffers_DeAllocateMessage(AMessage);
+    end;
+  end else
+  begin
+    Hardware.OutgoingBufferOverrun := True;
+  end;
+end;
+
+// *****************************************************************************
+//  procedure IsOutgoingBufferAvailable
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function IsOutgoingBufferAvailable: Boolean;
+begin
+  Result := not PIC32MX_CAN_Transmitting
+end;
+
+// *****************************************************************************
+//  procedure ProcessHardwareMessages
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure ProcessHardwareMessages;
+begin
+  OPStackCANStatemachine_ProcessMessages;
+end;
+
+// *****************************************************************************
+//  procedure ReceivedOnFilter0
+//    Parameters:
+//    Result:
+//    Description: CAN Layer message on Filter 0
+// *****************************************************************************
+procedure ReceivedOnFilter0(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+var
+  OPStackMessagePtr: POPStackMessage;
+  SourceNode, DestNode: PNMRAnetNode;
+begin
+  SourceNode := nil;
+  DestNode := nil;
+  OpStackMessagePtr := nil;
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(OPStackMessagePtr, DestNode, SourceNode, NMRAnetCanBuffer) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+    IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
+end;
+
+// *****************************************************************************
+//  procedure ReceivedOnFilter1
+//    Parameters:
+//    Result:
+//    Description: NMRAnet Layer message on Filter 1    
+//                 In the new library the split is handled internally to it
+// *****************************************************************************
+procedure ReceivedOnFilter1(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+  ReceivedOnFilter0(NMRAnetCanBuffer);
+end; 
+
+procedure ReceivedOnFilter2(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter3(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter4(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter5(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end; 
+
+procedure ReceivedOnFilter6(NMRAnetCanBuffer: PNMRAnetCanBuffer);
+begin
+// Unused
+end;
+
+end.

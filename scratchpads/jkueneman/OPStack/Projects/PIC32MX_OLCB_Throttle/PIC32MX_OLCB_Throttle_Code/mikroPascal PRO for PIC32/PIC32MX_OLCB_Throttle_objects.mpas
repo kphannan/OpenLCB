@@ -1,0 +1,52 @@
+unit PIC32MX_OLCB_Throttle_objects;
+
+type TOnEventPtr = procedure();
+
+type TBytePtr = ^byte;
+
+const  _taLeft   = 2;
+const  _taCenter = 3;
+const  _taRight = 4;
+
+type TButton_Round = record
+  OwnerScreenAddress   : ^byte;
+  Order                : byte;
+  Left                 : word;
+  Top                  : word;
+  Width                : word;
+  Height               : word;
+  Pen_Width            : byte;
+  Pen_Color            : word;
+  Visible              : byte;
+  Active               : byte;
+  Transparent          : byte;
+  Caption              : ^char;
+  TextAlign            : byte;
+  Fontname             : ^ const byte;
+  Font_Color           : word;
+  Gradient             : byte;
+  Gradient_Orientation : byte;
+  Gradient_Start_Color : word;
+  Gradient_End_Color   : word;
+  Color                : word;
+  Corner_Radius	    	: byte;
+  PressColEnabled      : byte;
+  Press_Color          : word;
+  OnUpPtr              : ^TOnEventPtr;
+  OnDownPtr            : ^TOnEventPtr;
+  OnClickPtr           : ^TOnEventPtr;
+  OnPressPtr           : ^TOnEventPtr;
+end;
+
+type TScreen = record
+  Color                      : word;
+  Width                      : word;
+  Height                     : word;
+  ObjectsCount               : word;
+  Buttons_RoundCount         : word;
+  Buttons_Round              : ^ const code ^TButton_Round;
+end;
+
+implementation
+
+end.

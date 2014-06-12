@@ -1,0 +1,18 @@
+unit PIC32MX_OLCB_Throttle_events_code;
+
+uses PIC32MX_OLCB_Throttle_objects, PIC32MX_OLCB_Throttle_resources, PIC32MX_OLCB_Throttle_driver;
+
+//--------------------- Externals ---------------------//
+//----------------- End of Externals ------------------//
+
+//-------------- User code declarations ---------------//
+//-------------- End of User code declarations --------//
+
+implementation
+
+//--------------------- User code ---------------------//
+
+//----------------- End of User code ------------------//
+
+// Event Handlers
+end.

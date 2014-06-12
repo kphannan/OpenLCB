@@ -1,0 +1,422 @@
+unit PIC32MX_OLCB_Throttle_driver;
+
+uses PIC32MX_OLCB_Throttle_objects, PIC32MX_OLCB_Throttle_resources;
+
+/////////////////////////
+// External Declarations
+/////////////////////////
+
+procedure DrawScreen(aScreen : ^TScreen);
+procedure Process_TP_Press( X : word; Y : word);
+procedure Check_TP();
+procedure Start_TP();
+procedure DrawRoundButton(Around_button : ^TButton_Round);
+
+
+// TFT module connections
+var TFT_DataPort : char  at LATE;
+    TFT_RST : sbit  at LATD7_bit;
+    TFT_BLED : sbit  at LATD2_bit;
+    TFT_RS : sbit  at LATD9_bit;
+    TFT_CS : sbit  at LATD10_bit;
+    TFT_RD : sbit  at LATD5_bit;
+    TFT_WR : sbit  at LATD4_bit;
+    TFT_DataPort_Direction : char  at TRISE;
+    TFT_RST_Direction : sbit  at TRISD7_bit;
+    TFT_BLED_Direction : sbit  at TRISD2_bit;
+    TFT_RS_Direction : sbit  at TRISD9_bit;
+    TFT_CS_Direction : sbit  at TRISD10_bit;
+    TFT_RD_Direction : sbit  at TRISD5_bit;
+    TFT_WR_Direction : sbit  at TRISD4_bit;
+// End TFT module connections
+
+// Touch Panel module connections
+var DriveX_Left : sbit at LATB15_bit;
+var DriveX_Right : sbit at LATB3_bit;
+var DriveY_Up : sbit at LATB14_bit;
+var DriveY_Down : sbit at LATB2_bit;
+var DriveX_Left_Direction : sbit at TRISB15_bit;
+var DriveX_Right_Direction : sbit at TRISB3_bit;
+var DriveY_Up_Direction : sbit at TRISB14_bit;
+var DriveY_Down_Direction : sbit at TRISB2_bit;
+// End Touch Panel module connections
+
+// Global variables
+var Xcoord, Ycoord : word;
+const ADC_THRESHOLD = 900;
+var PenDown : byte;
+var PressedObject : TBytePtr;
+var PressedObjectType : integer;
+var display_width, display_height : word;
+
+var
+    _object_count : integer;
+    object_pressed : byte;
+    local_round_button : ^TButton_Round;
+    exec_round_button : ^TButton_Round;
+    round_button_order : integer;
+
+
+
+/////////////////////////
+var CurrentScreen : ^ TScreen;
+
+const Screen1_Buttons_Round  : array[1] of ^TButton_Round; code; forward;
+
+var Screen1           : TScreen;
+var ButtonRound1 : TButton_Round;
+    ButtonRound1_Caption : string[4];
+
+      const Screen1_Buttons_Round  : array[1] of ^TButton_Round =
+         (
+         @ButtonRound1         
+         ); code;
+
+implementation
+
+
+
+procedure Init_ADC();
+  begin
+    AD1PCFG := 0x3FF3;
+    ADC1_Init();
+  end;
+procedure InitializeTouchPanel(); // static
+  begin
+    Init_ADC();
+    TFT_Init(320, 240);
+
+    TP_TFT_Init(320, 240, 3, 14);                                  // Initialize touch panel
+    TP_TFT_Set_ADC_Threshold(ADC_THRESHOLD);                            // Set touch panel ADC threshold
+
+    PenDown := 0;
+    PressedObject := 0;
+    PressedObjectType := -1;
+  end;
+
+
+procedure Calibrate();
+  begin
+    TFT_Set_Pen(CL_WHITE, 3);
+    TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+    TFT_Write_Text('Touch selected corners for calibration', 50, 80);
+    TFT_Line(315, 1, 319, 1);
+    TFT_Line(310, 10, 319, 1);
+    TFT_Line(319, 5, 319, 1);
+    TFT_Write_Text('first here', 230, 20);
+
+    TP_TFT_Calibrate_Min();                      // Calibration of TP minimum
+    Delay_ms(500);
+
+    TFT_Set_Pen(CL_BLACK, 3);
+    TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+    TFT_Line(315, 1, 319, 1);
+    TFT_Line(310, 10, 319, 1);
+    TFT_Line(319, 5, 319, 1);
+    TFT_Write_Text('first here', 230, 20);
+
+    TFT_Set_Pen(CL_WHITE, 3);
+    TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+    TFT_Line(0, 239, 0, 235);
+    TFT_Line(0, 239, 5, 239);
+    TFT_Line(0, 239, 10, 230);
+    TFT_Write_Text('now here ', 15, 200);
+
+    TP_TFT_Calibrate_Max();                       // Calibration of TP maximum
+    Delay_ms(500);
+  end;
+
+
+procedure InitializeObjects();    // static
+  begin
+    Screen1.Color                     := 0x5AEB;
+    Screen1.Width                     := 320;
+    Screen1.Height                    := 240;
+    Screen1.Buttons_RoundCount        := 1;
+    Screen1.Buttons_Round             := @Screen1_Buttons_Round;
+    Screen1.ObjectsCount              := 1;
+
+
+    ButtonRound1.OwnerScreenAddress  := @Screen1;
+    ButtonRound1.Order               := 0;
+    ButtonRound1.Left                := 50;
+    ButtonRound1.Top                 := 18;
+    ButtonRound1.Width               := 92;
+    ButtonRound1.Height              := 32;
+    ButtonRound1.Pen_Width           := 1;
+    ButtonRound1.Pen_Color           := 0x0000;
+    ButtonRound1.Visible             := 1;
+    ButtonRound1.Active              := 1;
+    ButtonRound1.Transparent         := 1;
+    ButtonRound1.Caption             := @ButtonRound1_Caption;
+    ButtonRound1_Caption             := 'Text';
+    ButtonRound1.TextAlign           := _taCenter;
+    ButtonRound1.FontName            := @Tahoma11x13_Regular;
+    ButtonRound1.PressColEnabled     := 1;
+    ButtonRound1.Font_Color          := 0x0000;
+    ButtonRound1.Gradient            := 1;
+    ButtonRound1.Gradient_Orientation := 0;
+    ButtonRound1.Gradient_Start_Color := 0xFFFF;
+    ButtonRound1.Gradient_End_Color  := 0xC618;
+    ButtonRound1.Color               := 0xC618;
+    ButtonRound1.Press_Color         := 0xE71C;
+    ButtonRound1.Corner_Radius       := 3;
+    ButtonRound1.OnUpPtr             := 0;
+    ButtonRound1.OnDownPtr           := 0;
+    ButtonRound1.OnClickPtr          := 0;
+    ButtonRound1.OnPressPtr          := 0;
+  end;
+
+function IsInsideObject (X, Y, Left, Top, Width, Height : word) : byte; // static
+begin
+  if ( (Left<= X) and (Left+ Width - 1 >= X) and
+       (Top <= Y)  and (Top + Height - 1 >= Y) ) then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function GetRoundButton (index : byte) : ^TButton_Round; // static
+var objPtr : ^ const code ^TButton_Round;
+  begin
+    objPtr := CurrentScreen^.Buttons_Round + index;
+    Result := objPtr^;
+  end;
+
+
+
+procedure DrawRoundButton(Around_button : ^TButton_Round);
+  begin
+      if (Around_button^.Visible = 1) then
+        begin
+          if (object_pressed = 1) then
+            begin
+              object_pressed := 0;
+              TFT_Set_Brush(Around_button^.Transparent, Around_button^.Press_Color, Around_button^.Gradient, Around_button^.Gradient_Orientation,
+                            Around_button^.Gradient_End_Color, Around_button^.Gradient_Start_Color);
+            end
+          else
+            TFT_Set_Brush(Around_button^.Transparent, Around_button^.Color, Around_button^.Gradient, Around_button^.Gradient_Orientation,
+                          Around_button^.Gradient_Start_Color, Around_button^.Gradient_End_Color);
+          TFT_Set_Pen(Around_button^.Pen_Color, Around_button^.Pen_Width);
+          TFT_Rectangle_Round_Edges(Around_button^.Left + 1, Around_button^.Top + 1,
+                                    Around_button^.Left + Around_button^.Width - 2,
+                                    Around_button^.Top + Around_button^.Height - 2, Around_button^.Corner_Radius);
+          TFT_Set_Font(Around_button^.FontName, Around_button^.Font_Color, FO_HORIZONTAL);
+          TFT_Write_Text_Return_Pos(Around_button^.Caption, Around_button^.Left, Around_button^.Top);
+          if (Around_button^.TextAlign = _taLeft) then
+            TFT_Write_Text(Around_button^.Caption, Around_button^.Left + 4, (Around_button^.Top + ((Around_button^.Height - caption_height) div 2)))
+          else if (Around_button^.TextAlign = _taCenter) then
+            TFT_Write_Text(Around_button^.Caption, (Around_button^.Left + (Around_button^.Width - caption_length) div 2), (Around_button^.Top + ((Around_button^.Height - caption_height) div 2)))
+          else if (Around_button^.TextAlign = _taRight) then
+            TFT_Write_Text(Around_button^.Caption, Around_button^.Left + (Around_button^.Width - caption_length - 4), (Around_button^.Top + (Around_button^.Height - caption_height) div 2));
+        end;
+  end;
+
+procedure DrawScreen(aScreen : ^TScreen);
+var order : word;
+var round_button_idx : byte;
+    local_round_button : ^TButton_Round;
+var save_bled, save_bled_direction : byte;
+
+  begin
+    object_pressed := 0;
+    order := 0;
+    round_button_idx := 0;
+    CurrentScreen := aScreen;
+
+    if (display_width <> CurrentScreen^.Width) or (display_height <> CurrentScreen^.Height) then
+      begin
+        save_bled := TFT_BLED;
+        save_bled_direction := TFT_BLED_Direction;
+        TFT_BLED_Direction := 0;
+        TFT_BLED           := 0;
+        TFT_Init(CurrentScreen^.Width, CurrentScreen^.Height);
+        TP_TFT_Init(CurrentScreen^.Width, CurrentScreen^.Height, 3, 14);                                  // Initialize touch panel
+        TP_TFT_Set_ADC_Threshold(ADC_THRESHOLD);                              // Set touch panel ADC threshold
+        TFT_Fill_Screen(CurrentScreen^.Color);
+        display_width := CurrentScreen^.Width;
+        display_height := CurrentScreen^.Height;
+        TFT_BLED           := save_bled;
+        TFT_BLED_Direction := save_bled_direction;
+    end
+    else
+      TFT_Fill_Screen(CurrentScreen^.Color);
+
+
+    while (order < CurrentScreen^.ObjectsCount) do
+      begin
+      if (round_button_idx < CurrentScreen^.Buttons_RoundCount) then
+        begin
+          local_round_button := GetRoundButton(round_button_idx);
+          if (order = local_round_button^.Order) then
+            begin
+              Inc(round_button_idx);
+              Inc(order);
+              DrawRoundButton(local_round_button);
+            end;
+        end;
+
+    end;
+end;
+
+procedure Get_Object( X : word; Y : word);
+var counter : integer;
+  begin
+    round_button_order  := -1;
+    //  Buttons with Round Edges
+    counter := CurrentScreen^.Buttons_RoundCount;
+    for _object_count := 0 to counter - 1 do
+      begin
+        local_round_button := GetRoundButton(_object_count);
+        if (local_round_button^.Active = 1) then
+          if (IsInsideObject(X, Y, local_round_button^.Left, local_round_button^.Top,
+                             local_round_button^.Width, local_round_button^.Height) = 1) then
+            begin
+              round_button_order := local_round_button^.Order;
+              exec_round_button := local_round_button;
+            end;
+      end;
+
+    _object_count := -1;
+    if (round_button_order >  _object_count ) then
+      _object_count := round_button_order;
+  end;
+
+
+procedure Process_TP_Press( X : word; Y : word); // static
+  begin
+    exec_round_button   := 0;
+
+    Get_Object(X, Y);
+
+    if (_object_count <> -1) then
+      begin
+        if (_object_count = round_button_order) then
+          if (exec_round_button^.Active = 1) then
+            if (exec_round_button^.OnPressPtr <> 0) then
+              begin
+                exec_round_button^.OnPressPtr^();
+                exit;
+              end;
+
+      end;
+  end;
+
+procedure Process_TP_Up( X : word; Y : word); // static
+  begin
+    case PressedObjectType of
+      // Round Button
+      1 : begin
+            if (PressedObject <> 0) then
+              begin
+                exec_round_button := ^TButton_Round(PressedObject);
+                if ((exec_round_button^.PressColEnabled = 1) and (exec_round_button^.OwnerScreenAddress = ^byte(CurrentScreen))) then
+                  DrawRoundButton(exec_round_button);
+              end;
+          end;
+    end;
+
+
+    Get_Object(X, Y);
+
+    if (_object_count <> -1) then
+      begin
+        // Buttons with Round Edges
+        if (_object_count = round_button_order) then
+          begin
+            if (exec_round_button^.Active = 1) then
+              begin
+                if (exec_round_button^.OnUpPtr <> 0) then
+                  exec_round_button^.OnUpPtr();
+                if PressedObject = TBytePtr(exec_round_button) then
+                  if (exec_round_button^.OnClickPtr <> 0) then
+                    exec_round_button^.OnClickPtr^();
+                PressedObject := 0;
+                PressedObjectType := -1;
+                exit;
+              end;
+          end;
+
+      end;
+    PressedObject := 0;
+    PressedObjectType := -1;
+  end;
+
+procedure Process_TP_Down( X : word; Y : word); // static
+  begin
+    object_pressed      := 0;
+    exec_round_button   := 0;
+
+    Get_Object(X, Y);
+
+    if (_object_count <> -1) then
+      begin
+        if (_object_count = round_button_order) then
+          if (exec_round_button^.Active = 1) then
+            begin
+              if (exec_round_button^.PressColEnabled = 1) then
+                begin
+                  object_pressed := 1;
+                  DrawRoundButton(exec_round_button);
+                end;
+              PressedObject := TBytePtr(exec_round_button);
+              PressedObjectType := 1;
+              if (exec_round_button^.OnDownPtr <> 0) then
+                begin
+                  exec_round_button^.OnDownPtr^();
+                  exit;
+                end;
+            end;
+
+      end;
+  end;
+
+procedure Check_TP();
+  begin
+    if (TP_TFT_Press_Detect()) then
+      begin
+        if (TP_TFT_Get_Coordinates(@Xcoord, @Ycoord) = 0) then
+            // After a PRESS is detected read X-Y and convert it to Display dimensions space
+          begin
+            Process_TP_Press(Xcoord, Ycoord);
+            if PenDown = 0 then
+              begin
+                PenDown := 1;
+                Process_TP_Down(Xcoord, Ycoord);
+              end;
+          end;
+      end
+    else if PenDown = 1 then
+      begin
+        PenDown := 0;
+        Process_TP_Up(Xcoord, Ycoord);
+      end;
+  end;
+
+procedure Init_MCU();
+  begin
+    AD1PCFG := 0x3FF3;
+    JTAGEN_bit := 0;
+    TFT_Set_Default_Mode();
+    TP_TFT_Set_Default_Mode();
+  end;
+
+procedure Start_TP();
+  begin
+    Init_MCU();
+
+    InitializeTouchPanel();
+
+    Delay_ms(1000);
+    TFT_Fill_Screen(0);
+    Calibrate();
+    TFT_Fill_Screen(0);
+
+    InitializeObjects();
+    display_width := Screen1.Width;
+    display_height := Screen1.Height;
+    DrawScreen(@Screen1);
+  end;
+
+end.
