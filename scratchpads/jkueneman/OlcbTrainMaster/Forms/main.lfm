@@ -40843,13 +40843,6 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       AutoCheck = True
     end
   end
-  object TimerOpStackProcess: TTimer
-    Enabled = False
-    Interval = 10
-    OnTimer = TimerOpStackProcessTimer
-    left = 152
-    top = 88
-  end
   object TimerOpStackTimer: TTimer
     Enabled = False
     Interval = 100

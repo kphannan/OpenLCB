@@ -37,7 +37,7 @@ type
     procedure DoThrottleHide(Throttle: TFormThrottle);
   public
     constructor Create; virtual;
-    function CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList; CabID: Word): TFormThrottle;
+    function CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList): TFormThrottle;
     procedure Clear; override;
     procedure CloseThrottle(Throttle: TFormThrottle);
     procedure HideAll;
@@ -182,7 +182,6 @@ type
     FAllocateByAddressFlagged: Boolean;
     FCabSubStateMachine: Integer;
     FAllocated: Boolean;
-    FCabID: Word;
     FCabStateMachine: Integer;
     FClosing: Boolean;
     FCurrentFunctions: DWord;
@@ -230,7 +229,6 @@ type
     property Closing: Boolean read FClosing write FClosing;
   public
     { public declarations }
-    property CabID: Word read FCabID write FCabID;
     property TrainAlias: Word read FTrainAlias write SetAllocatedAlias;
     property ThrottleAlias: Word read FThrottleAlias write FThrottleAlias;
     property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
@@ -301,13 +299,12 @@ begin
   Clear;
 end;
 
-function TThrottleList.CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList; CabID: Word): TFormThrottle;
+function TThrottleList.CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList): TFormThrottle;
 begin
   Result := TFormThrottle.Create(Application.MainForm);
   if Result <> nil then
   begin
     Self.Add(Result);
-    Result.CabID := CabID;
     Result.OnThrottleClose := @DoThrottleClose;
     Result.OnThrottleHide := @DoThrottleHide;
     Result.InitTransportLayers(AnEthernetHub, AComPortHub, ADispatchTaskFunc);
@@ -411,7 +408,6 @@ begin
   ThrottleAlias := 0;
   TrainAlias := 0;
   FClosing := False;
-  FCabID := 0;
   FAllocateByAddressFlagged := False;
   FCabStateMachine := 0;
   FCurrentSpeed := 0;
@@ -685,7 +681,6 @@ procedure TFormThrottle.FormShow(Sender: TObject);
 begin
   UpdateFunctionsWithDefault;
   UpdateUI;
-  StatusBar.Panels[0].Text := 'Cab ID: ' + IntToStr(CabID);
 end;
 
 function TFormThrottle.GetCurrentFuntions: DWord;
