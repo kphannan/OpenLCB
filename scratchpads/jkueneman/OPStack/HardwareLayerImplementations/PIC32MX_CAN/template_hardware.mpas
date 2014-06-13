@@ -11,6 +11,7 @@ uses
 
 
 procedure Hardware_Initialize;
+procedure Hardware_SetCAN_Channel(Channel: Byte);
 
 // The OPStack calls these functions to control and/or send messages through the hardware layer
 procedure Hardware_DisableInterrupts;
@@ -38,6 +39,9 @@ procedure OPStackCANStatemachine_ProcessMessages; external;
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 {$ENDIF}
+
+var
+  LocalCAN_Channel: Byte; external;
 
 implementation
 
@@ -70,6 +74,12 @@ begin
   Hardware.OutgoingHighPriortyTxBufferEmpty := True;
   Hardware.OutgoingBufferOverrun := False;
   Hardware.OutgoingHighPriorityBufferOverrun := False;
+  LocalCAN_Channel := 1;
+end;
+
+procedure Hardware_SetCAN_Channel(Channel: Byte);
+begin
+  LocalCAN_Channel := Channel;
 end;
 
 // *****************************************************************************
@@ -100,7 +110,7 @@ begin
   // Disable Any interrupts here
   Inc(Hardware.InterruptDisableCount);
   if Hardware.InterruptDisableCount = 1 then
-    PIC32MX_CAN_GlobalInterruptCAN_Event(False);
+  PIC32MX_CAN_GlobalInterrupt(LocalCAN_Channel, False);
 end;
 
 // *****************************************************************************
@@ -119,7 +129,7 @@ begin
   if Hardware.InterruptDisableCount <= 0 then
   begin
     // Enable any Interrupts here
-    PIC32MX_CAN_GlobalInterruptCAN_Event(True);
+    PIC32MX_CAN_GlobalInterrupt(LocalCAN_Channel, True);
     Hardware.InterruptDisableCount := 0;
   end;
 end;

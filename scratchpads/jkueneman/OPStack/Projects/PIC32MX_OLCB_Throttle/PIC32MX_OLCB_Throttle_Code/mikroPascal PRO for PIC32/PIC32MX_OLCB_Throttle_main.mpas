@@ -29,11 +29,14 @@ begin
   OPStackCore_Timer;
 end;
 
-var       // TOTALY MADE UP AND BOGUS CHECK CHECK CHEDK BEFORE LOADING INTO BOARD
-  CS_Serial_Flash_bit: sbit at LATB4_bit;
-  CS_Serial_Flash_Direction_bit: sbit at TRISB4_bit;
+var
+  CS_Serial_Flash_bit: sbit at LATD14_bit;
+  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
   
 begin
+
+MCU_EnableCAN;
+
   OPStackCore_Initialize;
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
@@ -47,5 +50,11 @@ begin
      begin
       Check_TP();
       OPStackCore_Process;
+      
+      if UART2_Data_Ready then
+        case UART2_Read of
+          '1' : PIC32MX_CAN_PrintRegisters(1);
+          '2' : PIC32MX_CAN_PrintRegisters(2);
+        end;
      end;
   end.

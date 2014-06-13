@@ -21,12 +21,17 @@ unit PIC32MX_CAN_RawBuffers;
 {$I Options.inc}
 
 const
-
-  CAN_DIRECTION_READ = 1;
   CAN_DIRECTION_WRITE = 0;
+  CAN_DIRECTION_READ  = 1;
   
-  MAX_ECAN_RX_BUFFER = 2;
-  MAX_ECAN_TX_BUFFER = 2;
+const
+  FIFO_LO_PRIORITY_TX_FIFO = 0;   // FIFO 0 is the Lo Priorty Tx
+  FIFO_HI_PRIORITY_TX_FIFO = 1;   // FIFO 1 is the Hi Priorty Tx
+  FIFO_RX_FIFO             = 2;   // FIFO 2 is the Rx
+  
+  FIFO_LO_PRIORITY_TX_BUFFERS = 1;   // Number of Buffers in the FIFO
+  FIFO_HI_PRIORITY_TX_BUFFERS = 1;   // Number of Buffers in the FIFO
+  FIFO_RX_BUFFERS             = 1;   // Number of Buffers in the FIFO
   
 type
   // ***************************************************************************
@@ -34,31 +39,32 @@ type
   // registers
   // ***************************************************************************
   TCANRawBuffer = record
-    Word0    : Word;   // if Standard Message then SID else EID upper Bits
-    Word1    : Word;   // if Standard Message then Data Length Code else low bits of EID and upper bits of SID
-    Word2    : Word;   // if Standard Message then Data 0 and Data 1 else low bits of SID and Data Length Code
-    Word3    : Word;   // if Standard Message then Data 2 and Data 3 else Data 0 and Data 1
-    Word4    : Word;   // if Standard Message then Data 4 and Data 5 else Data 2 and Data 3
-    Word5    : Word;   // if Standard Message then Data 6 and Data 7 else Data 4 and Data 5
-    Word6    : Word;   // if Standard Message then, not used, else Data 6 and Data 7
-    Word7    : Word;
+    Byte0    : Byte;
+    Byte1    : Byte;
+    Byte2    : Byte;
+    Byte3    : Byte;
+    Byte4    : Byte;
+    Byte5    : Byte;
+    Byte6    : Byte;
+    Byte7    : Byte;
+    Byte8    : Byte;
+    Byte9    : Byte;
+    Byte10   : Byte;
+    Byte11   : Byte;
+    Byte12   : Byte;
+    Byte13   : Byte;
+    Byte14   : Byte;
+    Byte15   : Byte;
   end;
   PCANRawBuffer = ^TCANRawBuffer;
 
 
 type
-  TCAN_RxRawBufferArray = array[0..MAX_ECAN_RX_BUFFER-1] of TCANRawBuffer;
-  TCAN_TxRawBufferArray = array[0..MAX_ECAN_TX_BUFFER-1] of TCANRawBuffer;
-  
-  
- 
+  TFIFOBufferArray = array[0..FIFO_LO_PRIORITY_TX_BUFFERS+FIFO_HI_PRIORITY_TX_BUFFERS+FIFO_RX_BUFFERS-1] of TCANRawBuffer;
 
 var
-  TX_Main_RawBufferArray: TCAN_TxRawBufferArray;  // Transmit buffer for all filters.  The software pulls the data to the right list
-  RX_Main_RawBufferArray: TCAN_RxRawBufferArray;  // Recieve buffer for all filters.  The software moves the data to the right list
+  FIFOBufferArray: TFIFOBufferArray;
 
-var
-  Dummy: Word;
 
 implementation
 

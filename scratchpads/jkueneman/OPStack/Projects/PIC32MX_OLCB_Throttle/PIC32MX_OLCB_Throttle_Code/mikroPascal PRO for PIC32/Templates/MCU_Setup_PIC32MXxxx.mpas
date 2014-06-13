@@ -3,9 +3,13 @@ unit MCU_Setup_dsPIC33EPxxxGP8xx;
 uses
   M25P80_Driver,
   PIC32MX_CAN_RawBuffers,
+  template_hardware,
   PIC32MX_CAN;
 
 {$I Options.inc}
+
+const
+  CAN_CHANNEL = 2;
 
 const
   CAN_SWJ        = 1;               // Set up for 125Khz Baud Rate with a 8Mhz Crystal at 140Mhz
@@ -19,21 +23,24 @@ const
   procedure MCU_EnableSerialFlash;
   procedure MCU_EnableUARTA;
   procedure MCU_Enable100msTimer;
+  
+var
+  LocalCAN_Channel: Byte;
 
 implementation
 
 procedure MCU_Enable100msTimer;
-begin   {
+begin
   TCS_T2CON_bit := 0;       // internal cycle clock
-  T2IP_0_bit := 1;          // Timer 2 Interrupt Priority = 5   (1 means off)
-  T2IP_1_bit := 0;
-  T2IP_2_bit := 1;
-  TCKPS_0_T2CON_bit := 1;   // 256 Prescaler
-  TCKPS_1_T2CON_bit := 1;
+  T2IP0_bit := 1;          // Timer 2 Interrupt Priority = 5   (1 means off)
+  T2IP1_bit := 0;
+  T2IP2_bit := 1;
+  TCKPS0_T2CON_bit := 1;   // 256 Prescaler
+  TCKPS1_T2CON_bit := 1;
   PR2 := 27344;             // Clock ticks every (1/140MHz * 2 * 256 * 27344 = 100.00091ms interrupts
   T2IF_bit := 0;            // Clear T2IF
   T2IE_bit := 1;            // Enable the Interrupt
-  TON_T2CON_bit := 1;       // Turn on 100ms Timer     }
+  ON__T2CON_bit := 1;       // Turn on 100ms Timer
 end;
 
 procedure MCU_EnableUARTA;
@@ -44,74 +51,61 @@ end;
 
 procedure MCU_EnableCAN;
 begin
+  LocalCAN_Channel := CAN_CHANNEL;
+  Hardware_SetCAN_Channel(CAN_CHANNEL);
   
-  PIC32MX_CAN_EnterConfigMode;                                                  // Place the module in Configuration Mode
+  TFT_Write_Text('Entering CAN Configuration ', 10, 10);
+  
+  PIC32MX_CAN_EnterConfigMode(CAN_CHANNEL);
+  
+  TFT_Write_Text('CAN Configuration ', 10, 20);
+                                                   // Place the module in Configuration Mode
   // Setup the CAN Baud Rate
-  PIC32MX_CAN_SetBaud(CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz with a 64Mhz Clock
+  PIC32MX_CAN_SetBaud(CAN_CHANNEL, CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz
 
   // Setup the CAN Receive Filters, AN1249 says this should be done in Config Mode
-  PIC32MX_CAN_SetMask(2, $08000000, True);                                      // Mask 2 looks only at bit 27 for the Filters
-  PIC32MX_CAN_SetFilter(0, $00000000, True);                                    // Look for a 0 in bit 27  (CAN Layer Messsage)
-  PIC32MX_CAN_SetFilter(1, $08000000, True);                                    // Look for a 1 in bit 27  (NMRABus Layer Message)
-  PIC32MX_CAN_AssociateFilterWithMask(0, 2);                                    // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
-  PIC32MX_CAN_AssociateFilterWithMask(1, 2);                                    // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
-  PIC32MX_CAN_EnableDisableRXFilters($0003);                                    // Enable Filters 0 and 1
-  PIC32MX_CAN_RegisterBufferWithFilter(0, CAN_RX_0_BUFFER);                     // Filter 0 to be sent to Buffer
-  PIC32MX_CAN_RegisterBufferWithFilter(1, CAN_RX_0_BUFFER);                     // Filter 1 to be sent to Buffer
-
-  PIC32MX_CAN_EnterNormalMode;                                                  // Place the module in Normal Mode
-
-  // Setup the CAN Transmitter 1
-  PIC32MX_CAN_SetBufferAsTransmitter(CAN_TX_0_BUFFER, True);                    // Setup Buffer 0 as a Transmit Buffer
-  // Setup the CAN Transmitter 2
-  PIC32MX_CAN_SetBufferAsTransmitter(CAN_TX_1_BUFFER, True);                    // Setup Buffer 1 as a Transmit Buffer
-  // Setup the CAN Receiver
-  PIC32MX_CAN_SetBufferAsTransmitter(CAN_RX_0_BUFFER, False);                     // Setup Buffer 0 as a Receive Buffer
-            
-  PIC32MX_CAN_InterruptFlagRXBufferOverflow(True);                              // Clear the flag
-  PIC32MX_CAN_InterruptFlagRXBuffer(True);                                      // RX Interrupt Flag Reset
-  PIC32MX_CAN_InterruptFlagTXBuffer(True);                                      // TX Interrupt Flag Reset
-  PIC32MX_CAN_RXBufferOverflowInterrupt(True);                                  // If we don't enable this and an interrupt occurs then it hangs the loop because you can't clear the Rx Interrupt until this is serviced
-  PIC32MX_CAN_TXBufferInterrupt(True);                                          // Enable the TX Done Event Interrupt
-  PIC32MX_CAN_RXBufferInterrupt(True);                                          // Enable the RX Done Event Interrupt
-  PIC32MX_CAN_GlobalInterruptCAN_EventPriority(6);                              // CAN Event Interrupt has a priority of 6 out of 7
-  PIC32MX_CAN_GlobalInterruptCAN_Event(True);                                   // Enable the CAN Event Interrupt
+  PIC32MX_CAN_SetMask(CAN_CHANNEL, 2, $08000000, True);    // Only look at the 28th CAN header bit (bit 27)
+  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 0, $00000000, True);  // Look for a 0 in bit 27  (CAN Layer Messsage)
+  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 1, $08000000, True);  // Look for a 1 in bit 27  (NMRABus Layer Message)
+  PIC32MX_CAN_AssociateFilterWithMask(CAN_CHANNEL, 0, 2);  // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
+  PIC32MX_CAN_AssociateFilterWithMask(CAN_CHANNEL, 1, 2);  // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
+  PIC32MX_CAN_RegisterFIFOWithFilter(CAN_CHANNEL, 0, CAN_RX_0_FIFO);  // Both filters go into (Receive FIFO)
+  PIC32MX_CAN_RegisterFIFOWithFilter(CAN_CHANNEL, 1, CAN_RX_0_FIFO);  // Both filters go into (Receive FIFO)
+  PIC32MX_CAN_EnableDisableRXFilters(CAN_CHANNEL, $0003);        // Enable Filters 0 and 1
+  
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_TX_LO_PRIORITY_FIFO, 1, True, 0);       // FIFO 0: Buffer size of 1, Is_TX, Transmit priority of 0
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_TX_HI_PRIORITY_FIFO, 1, True, 1);       // FIFO 1: size = 1 Buffer size of 1, Is_TX, Transmit priority of 1
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_RX_0_FIFO,           1, False, 0);      // FIFO 2:  size = 1 Buffer size of 1, Is_RX,
+  PIC32MX_CAN_SetFIFOBaseAddress(CAN_CHANNEL, @FIFOBufferArray);
+  
+  // Set up the FIFO Level interrupts
+  PIC32MX_CAN_EnableTxInterrupts(CAN_CHANNEL, CAN_TX_LO_PRIORITY_FIFO, False, False, True);    // Interrupt on Empty
+  PIC32MX_CAN_EnableTxInterrupts(CAN_CHANNEL, CAN_TX_HI_PRIORITY_FIFO, False, False, True);    // Interrupt on Empty
+  PIC32MX_CAN_EnableRxInterrupts(CAN_CHANNEL, CAN_RX_0_FIFO, True, True, False, False);          // Interrupt on overflow and Full; // If we don't enable Overflow and an interrupt occurs then it hangs the loop because you can't clear the Rx Interrupt until this is serviced
+  // Setup the CAN Module Level interrupts
+  PIC32MX_CAN_EnableInterrupts(CAN_CHANNEL, False, False, False, False, True, False, False, True, True);  // Interrupt on Rx Overflow and Tz/Rx events
+  // Setup the MCU Level Interrupts
+  PIC32MX_CAN_Enable(CAN_CHANNEL, True);
+  
+  TFT_Write_Text('Entering CAN Normal ', 10, 30);
+  
+  PIC32MX_CAN_EnterNormalMode(CAN_CHANNEL);
+  
+  TFT_Write_Text('CAN Normal ', 10, 40);
 end;
 
 procedure MCU_EnableSerialFlash;
 begin
-
-  // Initialize SPI3 module
-  // master_mode    = _SPI_MASTER
-  // data_mode      = _SPI_8_BIT
-  // sec. prescaler = _SPI_PRESCALE_SEC_4
-  // pri. prescaler = _SPI_PRESCALE_PRI_16
-  // slave_select   = _SPI_SS_DISABLE (Only for slave mod)
-  // data_sample    = _SPI_DATA_SAMPLE_END
-  // clock_idle     = _SPI_CLK_IDLE_HIGH
-  // edge           = _SPI_ACTIVE_2_IDLE
-  SPI3_Init_Advanced(_SPI_MASTER,
-                     _SPI_8_BIT,
-                     8,                 // Divider need to see if it is 80Mhz/8 or 80Mhz/8/2
-                     _SPI_SS_DISABLE,
-                     _SPI_DATA_SAMPLE_END,
-                     _SPI_CLK_IDLE_HIGH,
-                     _SPI_ACTIVE_2_IDLE);
-
+  SPI3_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, 80, _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_HIGH, _SPI_ACTIVE_2_IDLE);
   Delay_ms(100);
-  SerialFlash_Init();
+  SerialFlash_init();
   SerialFlash_WriteEnable();
   Delay_ms(100);
 end;
 
 procedure MCU_Setup_Initialize;
-begin  {
-  ANSELA := 0x00;           // Convert all I/O pins to digital
-  ANSELB := 0x00;
-  ANSELC := 0x00;
-  ANSELD := 0x00;
-  ANSELE := 0x00;
-  ANSELG := 0x00;  }
+begin    
+
 end;
 
 end.

@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=PIC32MX_OLCB_Throttle_main.mpas
+Value=Templates\MCU_Setup_PIC32MXxxx.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -14,7 +14,7 @@ Value=
 [USE_HEAP]
 Value=0
 [HEAP_SIZE]
-Value=0
+Value=2000
 [FILES]
 Count=40
 File0=PIC32MX_OLCB_Throttle_main.mpas
@@ -63,13 +63,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=6
+Count=8
 File0=PIC32MX_OLCB_Throttle_main.mpas
-File1=..\..\..\..\NMRAnet\gridconnect.mpas
-File2=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\P32MX795F512L.mpas
-File3=Templates\MCU_Setup_PIC32MXxxx.mpas
-File4=..\..\..\..\NMRAnet\opstackcore.mpas
-File5=..\..\..\..\ConfigurationLayerImplementations\_M25P80_SPI\M25P80_Driver.mpas
+File1=Templates\MCU_Setup_PIC32MXxxx.mpas
+File2=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
+File3=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
+File4=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
+File5=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\P32MX795F512L.mpas
+File6=..\..\..\..\ConfigurationLayerImplementations\_M25P80_SPI\M25P80_Driver.mpas
+File7=PIC32MX_OLCB_Throttle_driver.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -116,5 +118,6 @@ VECTOR_MODE=1
 USE_SRS=7
 [EXPANDED NODES]
 Node1=Sources
-Node2=Other Files
-Count=2
+Node2=Output Files
+Node3=Other Files
+Count=3
