@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=XpressnetBridge.mpas
+Value=Templates\template_buffers.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -76,7 +76,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=9
 File0=XpressnetBridge.mpas
 File1=..\..\Library\CabCommon\NMRAnetXpressnet.mpas
 File2=..\..\Library\CabCommon\NMRAnetCabBridge.mpas
@@ -85,6 +85,7 @@ File4=Templates\template_userstatemachine.mpas
 File5=Templates\template_node.mpas
 File6=Templates\template_vnode.mpas
 File7=..\..\NMRAnet\opstack_api.mpas
+File8=Templates\template_buffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
