@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
+Value=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -78,7 +78,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=7
+Count=8
 File0=Throttle_main.mpas
 File1=Templates\MCU_Setup_dsPIC33FJ256GP710A.mpas
 File2=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC_CAN_RawBuffers.mpas
@@ -86,6 +86,7 @@ File3=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpa
 File4=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
 File5=..\..\..\..\NMRAnet\opstackcore.mpas
 File6=..\..\..\..\NMRAnet\gridconnect.mpas
+File7=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -96,16 +97,16 @@ File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
 Count=10
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\
-Path4=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\dsPIC33_Flash\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\
+Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\dsPIC33_Flash\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
 [HEADER_PATH]
 Count=0
 [HEADERS]

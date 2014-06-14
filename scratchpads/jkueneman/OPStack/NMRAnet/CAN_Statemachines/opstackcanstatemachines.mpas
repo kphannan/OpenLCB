@@ -156,38 +156,40 @@ begin
           begin
             if MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin                                                               // It is an addressed message so pull out the Destination
-              DestAlias := ((NMRAnetCanBuffer^.Payload[0] shl 8) or NMRAnetCanBuffer^.Payload[1]) and $0FFF;  // General CAN messages have the Alias in the payload first two bytes  ;
+              Hi( DestAlias) := NMRAnetCanBuffer^.Payload[0];                   // General CAN messages have the Alias in the payload first two bytes  ;
+              Lo( DestAlias) := NMRAnetCanBuffer^.Payload[1];
+              DestAlias := DestAlias and $0FFF;
               DestNode := OPStackNode_FindByAlias(DestAlias);
-              FramingBits := NMRAnetCanBuffer^.Payload[0] and $30;              // The upper nibble lower 2 bits (suppose to ignore the upper to for framing) of the destination may have special meaning, pull it out
-              if FramingBits <> 0 then
+              if DestNode <> nil then                                           // If it is not addressed to us then throw it away
               begin
-                NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
-                if StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(@ScratchMessage, InProcessMessagePtr) then   // Don't dispatch it until it is fully received
+                FramingBits := NMRAnetCanBuffer^.Payload[0] and $30;              // The upper nibble lower 2 bits (suppose to ignore the upper to for framing) of the destination may have special meaning, pull it out
+                if FramingBits <> 0 then
                 begin
-                  OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
-                  Result := True;
-                end;
-              end else
-              if MTI = MTI_SIMPLE_NODE_INFO_REPLY then                          // Does not use framing bits
-              begin
-                NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
-                if OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(@ScratchMessage, InProcessMessagePtr) then
+                  NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
+                  if StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(@ScratchMessage, InProcessMessagePtr) then   // Don't dispatch it until it is fully received
+                  begin
+                    OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
+                    Result := True;
+                  end;
+                end else
+                if MTI = MTI_SIMPLE_NODE_INFO_REPLY then                          // Does not use framing bits
                 begin
-                  OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
-                  Result := True;
-                end;
-              end else
-              begin
-                // Addressed message but a single Frame
-                if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, False) then
-                begin
-                  OPStackBuffers_CopyDataArrayWithSourceOffset(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, 2);
-                  Result := True;
+                  NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
+                  if OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(@ScratchMessage, InProcessMessagePtr) then
+                  begin
+                    OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
+                    Result := True;
+                  end;
                 end else
                 begin
-            //      UART1_Write_Text('Optional Rejected, Addressed Stack Msg'+LF);
-                  OptionalInteractionRejected(OPStackMessage, False);
-                end
+                  // Addressed message but a single Frame
+                  if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, False) then
+                  begin
+                    OPStackBuffers_CopyDataArrayWithSourceOffset(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, 2);
+                    Result := True;
+                  end else
+                    OptionalInteractionRejected(OPStackMessage, False);         // Out of buffers, try again later
+                end;
               end;
             end else
             begin   // It is not an addressed message
@@ -196,10 +198,7 @@ begin
                 OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);
                 Result := True;
               end else
-              begin
-         //       UART1_Write_Text('Optional Rejected, UnAddresssed Stack Msg'+LF);
-                OptionalInteractionRejected(OPStackMessage, False);
-              end
+                OptionalInteractionRejected(OPStackMessage, False);             // Out of buffers, please try again
             end;
           end;
       MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME,
