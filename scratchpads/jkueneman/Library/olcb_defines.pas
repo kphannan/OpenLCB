@@ -267,6 +267,8 @@ const
   MAX_DATAGRAM_LENGTH = 72;
   MAX_CONFIG_MEM_READWRITE_SIZE = 64;
 
+  MAX_MULTIFRAME_LEN = 12;
+
   DATAGRAM_REJECTED                        = $0000;
   DATAGRAM_REJECTED_PERMANENT_ERROR        = $1000;
   DATAGRAM_REJECTED_INFORMATION_LOGGED     = $1010;
@@ -299,6 +301,9 @@ type
   PEventID = ^TEventID;
 
   THexArray = TEventID;
+
+  TMultiFrameArray = array[0..MAX_MULTIFRAME_LEN-1] of Byte;
+  PMultiFrameArray = ^TMultiFrameArray;
 
 const
   NULL_EVENT_ID : TEventID = (0, 0, 0, 0, 0, 0, 0, 0);

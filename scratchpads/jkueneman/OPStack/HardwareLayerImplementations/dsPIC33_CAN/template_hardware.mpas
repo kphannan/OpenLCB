@@ -4,6 +4,7 @@ unit hardware_template;
 {$I Options.inc}
 
 uses
+  gridconnect,
   dsPIC33_CAN,
   opstackbuffers,
   opstackdefines,

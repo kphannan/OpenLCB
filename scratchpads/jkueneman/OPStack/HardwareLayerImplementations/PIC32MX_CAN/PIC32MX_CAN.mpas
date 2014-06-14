@@ -198,50 +198,50 @@ begin
     1 : begin
           UART2_Write_Text('Interrupt and Status Registers' + LF);
           LongWordToHex(C1CON, s1);
-          UART2_Write_Text('C1CON: 0x' + s1 + LF);
+          UART1_Write_Text('C1CON: 0x' + s1 + LF);
           LongWordToHex(C1CFG, s1);
-          UART2_Write_Text('C1CFG: 0x' + s1 + LF);
+          UART1_Write_Text('C1CFG: 0x' + s1 + LF);
           LongWordToHex(C1INT, s1);
-          UART2_Write_Text('C1INT: 0x' + s1 + LF);
+          UART1_Write_Text('C1INT: 0x' + s1 + LF);
           LongWordToHex(C1VEC, s1);
-          UART2_Write_Text('C1VEC: 0x' + s1 + LF);
+          UART1_Write_Text('C1VEC: 0x' + s1 + LF);
           LongWordToHex(C1TREC, s1);
-          UART2_Write_Text('C1TREC: 0x' + s1 + LF);
+          UART1_Write_Text('C1TREC: 0x' + s1 + LF);
           LongWordToHex(C1FSTAT, s1);
-          UART2_Write_Text('C1FSTAT: 0x' + s1 + LF);
+          UART1_Write_Text('C1FSTAT: 0x' + s1 + LF);
           LongWordToHex(C1RXOVF, s1);
-          UART2_Write_Text('C1RXOVF: 0x' + s1 + LF);
+          UART1_Write_Text('C1RXOVF: 0x' + s1 + LF);
           LongWordToHex(C1TMR, s1);
-          UART2_Write_Text('C1TMR: 0x' + s1 + LF);
-          UART2_Write_Text('Mask and Filter Configuration Registers' + LF);
+          UART1_Write_Text('C1TMR: 0x' + s1 + LF);
+          UART1_Write_Text('Mask and Filter Configuration Registers' + LF);
           LongWordToHex(C1RXM0, s1);
-          UART2_Write_Text('C1RXM0: 0x' + s1 + LF);
+          UART1_Write_Text('C1RXM0: 0x' + s1 + LF);
           LongWordToHex(C1RXM1, s1);
-          UART2_Write_Text('C1RXM1: 0x' + s1 + LF);
+          UART1_Write_Text('C1RXM1: 0x' + s1 + LF);
           LongWordToHex(C1RXM2, s1);
-          UART2_Write_Text('C1RXM2: 0x' + s1 + LF);
+          UART1_Write_Text('C1RXM2: 0x' + s1 + LF);
           LongWordToHex(C1RXM3, s1);
-          UART2_Write_Text('C1RXM3: 0x' + s1 + LF);
+          UART1_Write_Text('C1RXM3: 0x' + s1 + LF);
           LongWordToHex(C1FLTCON0, s1);
-          UART2_Write_Text('C1FLTCON0: 0x' + s1 + LF);
+          UART1_Write_Text('C1FLTCON0: 0x' + s1 + LF);
           
           Ptr := @C1RXF0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART2_Write_Text('C1RXFn: 0x' + s1 + LF);
+            UART1_Write_Text('C1RXFn: 0x' + s1 + LF);
             Inc(Ptr);
           end;
 
-          UART2_Write_Text('CAN Module Control Registers' + LF);
+          UART1_Write_Text('CAN Module Control Registers' + LF);
           LongWordToHex(C1FIFOBA, s1);
-          UART2_Write_Text('C1FIFOBA: 0x' + s1 + LF);
+          UART1_Write_Text('C1FIFOBA: 0x' + s1 + LF);
           
           Ptr := @C1FIFOCON0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART2_Write_Text('C1FIFOCONn: 0x' + s1 + LF);
+            UART1_Write_Text('C1FIFOCONn: 0x' + s1 + LF);
             Inc(Ptr);
           end;
           
@@ -249,7 +249,7 @@ begin
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART2_Write_Text('C1FIFOINTn: 0x' + s1 + LF);
+            UART1_Write_Text('C1FIFOINTn: 0x' + s1 + LF);
             Inc(Ptr);
           end;
           
@@ -257,7 +257,7 @@ begin
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART2_Write_Text('C1FIFOUAn: 0x' + s1 + LF);
+            UART1_Write_Text('C1FIFOUAn: 0x' + s1 + LF);
             Inc(Ptr);
           end;
           
@@ -265,57 +265,57 @@ begin
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART2_Write_Text('C1FIFOCIn: 0x' + s1 + LF);
+            UART1_Write_Text('C1FIFOCIn: 0x' + s1 + LF);
             Inc(Ptr);
           end;
         end;
       2 : begin
-            UART2_Write_Text('Interrupt and Status Registers' + LF);
+            UART1_Write_Text('Interrupt and Status Registers' + LF);
             LongWordToHex(C2CON, s1);
-            UART2_Write_Text('C2CON: 0x' + s1 + LF);
+            UART1_Write_Text('C2CON: 0x' + s1 + LF);
             LongWordToHex(C2CFG, s1);
-            UART2_Write_Text('C2CFG: 0x' + s1 + LF);
+            UART1_Write_Text('C2CFG: 0x' + s1 + LF);
             LongWordToHex(C2INT, s1);
-            UART2_Write_Text('C2INT: 0x' + s1 + LF);
+            UART1_Write_Text('C2INT: 0x' + s1 + LF);
             LongWordToHex(C2VEC, s1);
-            UART2_Write_Text('C2VEC: 0x' + s1 + LF);
+            UART1_Write_Text('C2VEC: 0x' + s1 + LF);
             LongWordToHex(C2TREC, s1);
-            UART2_Write_Text('C2TREC: 0x' + s1 + LF);
+            UART1_Write_Text('C2TREC: 0x' + s1 + LF);
             LongWordToHex(C2FSTAT, s1);
-            UART2_Write_Text('C2FSTAT: 0x' + s1 + LF);
+            UART1_Write_Text('C2FSTAT: 0x' + s1 + LF);
             LongWordToHex(C2RXOVF, s1);
-            UART2_Write_Text('C2RXOVF: 0x' + s1 + LF);
+            UART1_Write_Text('C2RXOVF: 0x' + s1 + LF);
             LongWordToHex(C2TMR, s1);
-            UART2_Write_Text('C2TMR: 0x' + s1 + LF);
-            UART2_Write_Text('Mask and Filter Configuration Registers' + LF);
+            UART1_Write_Text('C2TMR: 0x' + s1 + LF);
+            UART1_Write_Text('Mask and Filter Configuration Registers' + LF);
             LongWordToHex(C2RXM0, s1);
-            UART2_Write_Text('C2RXM0: 0x' + s1 + LF);
+            UART1_Write_Text('C2RXM0: 0x' + s1 + LF);
             LongWordToHex(C2RXM1, s1);
-            UART2_Write_Text('C2RXM1: 0x' + s1 + LF);
+            UART1_Write_Text('C2RXM1: 0x' + s1 + LF);
             LongWordToHex(C2RXM2, s1);
-            UART2_Write_Text('C2RXM2: 0x' + s1 + LF);
+            UART1_Write_Text('C2RXM2: 0x' + s1 + LF);
             LongWordToHex(C2RXM3, s1);
-            UART2_Write_Text('C2RXM3: 0x' + s1 + LF);
+            UART1_Write_Text('C2RXM3: 0x' + s1 + LF);
             LongWordToHex(C2FLTCON0, s1);
-            UART2_Write_Text('C2FLTCON0: 0x' + s1 + LF);
+            UART1_Write_Text('C2FLTCON0: 0x' + s1 + LF);
 
             Ptr := @C2RXF0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART2_Write_Text('C2RXFn: 0x' + s1 + LF);
+              UART1_Write_Text('C2RXFn: 0x' + s1 + LF);
               Inc(Ptr);
             end;
 
-            UART2_Write_Text('CAN Module Control Registers' + LF);
+            UART1_Write_Text('CAN Module Control Registers' + LF);
             LongWordToHex(C2FIFOBA, s1);
-            UART2_Write_Text('C2FIFOBA: 0x' + s1 + LF);
+            UART1_Write_Text('C2FIFOBA: 0x' + s1 + LF);
 
             Ptr := @C2FIFOCON0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART2_Write_Text('C2FIFOCONn: 0x' + s1 + LF);
+              UART1_Write_Text('C2FIFOCONn: 0x' + s1 + LF);
               Inc(Ptr);
             end;
 
@@ -323,7 +323,7 @@ begin
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART2_Write_Text('C2FIFOINTn: 0x' + s1 + LF);
+              UART1_Write_Text('C2FIFOINTn: 0x' + s1 + LF);
               Inc(Ptr);
             end;
 
@@ -331,7 +331,7 @@ begin
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART2_Write_Text('C2FIFOUAn: 0x' + s1 + LF);
+              UART1_Write_Text('C2FIFOUAn: 0x' + s1 + LF);
               Inc(Ptr);
             end;
 
@@ -339,7 +339,7 @@ begin
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART2_Write_Text('C2FIFOCIn: 0x' + s1 + LF);
+              UART1_Write_Text('C2FIFOCIn: 0x' + s1 + LF);
               Inc(Ptr);
             end;
           end;

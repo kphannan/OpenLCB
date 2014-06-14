@@ -175,12 +175,15 @@ begin
     i := 0;
     while i < MAX_PROCESS_STACK_ARRAY do
     begin
-      if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Dest, OPStackMessage^.Dest) then
-        if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Source, OPStackMessage^.Source) then
-        begin
-          Result := MessageStackRoot^.Stack[i];
-          Exit;
-        end;
+      if MessageStackRoot^.Stack[i] <> nil then
+      begin
+        if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Dest, OPStackMessage^.Dest) then
+          if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Source, OPStackMessage^.Source) then
+          begin
+            Result := MessageStackRoot^.Stack[i];
+            Exit;
+          end;
+      end;
       Inc(i);
     end;
   end;
@@ -224,13 +227,16 @@ begin
     i := 0;
     while i < MAX_PROCESS_STACK_ARRAY do
     begin
-      if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Dest, OPStackMessage^.Dest) then
-        if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Source, OPStackMessage^.Source) then
-        begin
-          MessageStackRoot^.Stack[i] := nil;
-          Dec(MessageStackRoot^.Count);
-          Exit;
-        end;
+      if MessageStackRoot^.Stack[i] <> nil then
+      begin
+        if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Dest, OPStackMessage^.Dest) then
+         if NMRAnetUtilities_EqualNodeIDInfo(MessageStackRoot^.Stack[i]^.Source, OPStackMessage^.Source) then
+          begin
+            MessageStackRoot^.Stack[i] := nil;
+            Dec(MessageStackRoot^.Count);
+            Exit;
+          end;
+      end;
       Inc(i);
     end;
   end;
@@ -252,10 +258,13 @@ begin
     i := 0;
     while i < MAX_PROCESS_STACK_ARRAY do
     begin
-      if (NodeAlias = MessageStackRoot^.Stack[i]^.Dest.AliasID) or (NodeAlias = MessageStackRoot^.Stack[i]^.Source.AliasID) then
+      if MessageStackRoot^.Stack[i] <> nil then
       begin
-        Result := MessageStackRoot^.Stack[i];
-        Exit;
+        if (NodeAlias = MessageStackRoot^.Stack[i]^.Dest.AliasID) or (NodeAlias = MessageStackRoot^.Stack[i]^.Source.AliasID) then
+        begin
+          Result := MessageStackRoot^.Stack[i];
+          Exit;
+        end;
       end;
       Inc(i);
     end;

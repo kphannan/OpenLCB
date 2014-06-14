@@ -306,6 +306,7 @@ begin
 
         CANFrameParserStreamSendManager.ProcessSend;                              // *** See if there is a stream that is being disceted and frame out on a CAN connection ***
         CANFrameParserDatagramSendManager.ProcessSend;                            // *** See if there is a datagram that is being disceted and frame out on a CAN connection ***
+        CANFrameParserMultiFrameSendManager.ProcessSend;
         OlcbTaskManager.ProcessSending;                                           // *** See if there is a task what will add a message to send ***
        if SyncSendMessageList.Count > 0 then
        begin

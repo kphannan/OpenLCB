@@ -61,6 +61,8 @@ type
   TCANFrameParserStreamBase             = class;
   TCANFrameParserStreamSendManager      = class;
   TCANFrameParserStreamReceiveManager   = class;
+  TCANFrameParserMultiFrameReceiveManager = class;
+  TCANFrameParserMultiFrameSendManager  = class;
 
   TOlcbTaskBeforeDestroy = procedure(Sender: TTaskOlcbBase) of object;
   TDispatchTaskFunc = procedure(Task: TTaskOlcbBase) of object;
@@ -99,6 +101,8 @@ type
     FBufferRawMessage: string;                                                  // Shared data to pass string between thread and the Syncronized callbacks
     FCANFrameParserDatagramReceiveManager: TCANFrameParserDatagramReceiveManager;
     FCANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager;
+    FCANFrameParserMultiFrameReceiveManager: TCANFrameParserMultiFrameReceiveManager;
+    FCANFrameParserMultiFrameSendManager: TCANFrameParserMultiFrameSendManager;
     FConnectionState: TConnectionState;
     FEnableOPStackCallback: Boolean;
     FEnableReceiveMessages: Boolean;                                            // Callback through Syncronize with the message that was received
@@ -146,6 +150,8 @@ type
     property CANFrameParserDatagramSendManager: TCANFrameParserDatagramSendManager read FCANFrameParserDatagramSendManager write FCANFrameParserDatagramSendManager;
     property CANFrameParserStreamReceiveManager: TCANFrameParserStreamReceiveManager read FCANFrameParserStreamReceiveManager write FCANFrameParserStreamReceiveManager;
     property CANFrameParserStreamSendManager: TCANFrameParserStreamSendManager read FCANFrameParserStreamSendManager write FCANFrameParserStreamSendManager;
+    property CANFrameParserMultiFrameReceiveManager: TCANFrameParserMultiFrameReceiveManager read FCANFrameParserMultiFrameReceiveManager write FCANFrameParserMultiFrameReceiveManager;
+    property CANFrameParserMultiFrameSendManager: TCANFrameParserMultiFrameSendManager read FCANFrameParserMultiFrameSendManager write FCANFrameParserMultiFrameSendManager;
     property ConnectionState: TConnectionState read FConnectionState write FConnectionState;
     property GridConnectReceiveState: Integer read FGridConnectReceiveState write FGridConnectReceiveState;
     property ReceiveGridConnectBuffer: TGridConnectString read FReceiveGridConnectBuffer write FReceiveGridConnectBuffer;
@@ -352,6 +358,52 @@ type
     property SniiMfgVersion: Byte read FSniiMfgVersion write FSniiMfgVersion;
   end;
 
+
+  { TCANFrameParserMultiFrameReceive }
+
+  TCANFrameParserMultiFrameReceive = class( TOlcbMessage)
+  private
+    FCreateTime: DWord;
+    FCurrentPos: Byte;
+    FDestinationAlias: Word;
+    FFull: Boolean;
+    FLocalHelper: TOpenLCBMessageHelper;
+    FRawMultiFrameArray: TMultiFrameArray;
+    FSourceAlias: Word;
+  protected
+    property LocalHelper: TOpenLCBMessageHelper read FLocalHelper write FLocalHelper;   // Global object to work with OLCB messages
+    property CreateTime: DWord read FCreateTime write FCreateTime;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word);
+    destructor Destroy; override;
+    procedure Process(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread);   // Processes the message/
+    property CurrentPos: Byte read FCurrentPos write FCurrentPos;                       // Running count of the number of bytes being received, once "Full" this is the number of byte in the datagram
+    property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;     // Node who is sending the Datagram to this object
+    property RawMultiFrameArray: TMultiFrameArray read FRawMultiFrameArray write FRawMultiFrameArray;          // Raw MultiFrame bytes received
+    property Full: Boolean read FFull write FFull;                                      // Raw datagram bytes with a size of CurrentPos is valid
+    property SourceAlias: Word read FSourceAlias write FSourceAlias;                    // Node who is looking for Datagrams assigned to it to come in
+  end;
+
+  { TCANFrameParserMultiFrameReceiveManager }
+
+  TCANFrameParserMultiFrameReceiveManager = class
+  private
+    FDatagrams: TThreadList;
+    FMaxCount: Integer;
+    FMultiFrames: TThreadList;
+    FOwner: TTransportLayerThread;
+  protected
+    function FindInProcessMultiFrameAndCheckForAbandonFrames(AHelper: TOpenLCBMessageHelper): TCANFrameParserMultiFrameReceive;
+    property MultiFrames: TThreadList read FMultiFrames write FMultiFrames;
+    property Owner: TTransportLayerThread read FOwner write FOwner;
+    property MaxCount: Integer read FMaxCount write FMaxCount;
+  public
+    constructor Create(AnOwner: TTransportLayerThread);
+    destructor Destroy; override;
+    procedure Clear;
+    function Process(AHelper: TOpenLCBMessageHelper): TCANFrameParserMultiFrameReceive;
+  end;
+
   { TCANFrameParserDatagramReceive }
 
   TCANFrameParserDatagramReceive = class( TOlcbMessage)
@@ -469,6 +521,56 @@ type
     procedure Clear;
     function ProcessReceive(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
     function ProcessSend(AHelper: TOpenLCBMessageHelper): TCANFrameParserStreamBase;
+  end;
+
+  { TCANFrameParserMultiFrameSend }
+
+  TCANFrameParserMultiFrameSend = class( TOlcbMessage)
+  private
+    FAbandonTime: Cardinal;
+    FCurrentPos: Byte;
+    FDataCount: Byte;
+    FDestinationAlias: Word;
+    FEmpty: Boolean;
+    FRawMultiFrameArray: TMultiFrameArray;
+    FSourceAlias: Word;
+  protected
+    property AbandonTime: Cardinal read FAbandonTime write FAbandonTime;
+    property DataCount: Byte read FDataCount write FDataCount;
+    property CurrentPos: Byte read FCurrentPos write FCurrentPos;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+    procedure Initialize(ASourceAlias, ADestinationAlias: Word; ADataCount: Byte; var ARawMultiFrameArray: TMultiFrameArray);
+    function ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+    property DestinationAlias: Word read FDestinationAlias write FDestinationAlias;
+    property Empty: Boolean read FEmpty write FEmpty;
+    property RawMultiFrameArray: TMultiFrameArray read FRawMultiFrameArray write FRawMultiFrameArray;
+    property SourceAlias: Word read FSourceAlias write FSourceAlias;
+  end;
+
+  { TCANFrameParserMultiFrameSendManager }
+
+  TCANFrameParserMultiFrameSendManager = class
+  private
+    FAbandonFrames: TThreadList;
+    FMultiFrames: TThreadList;
+    FMaxCount: Integer;
+    FOwner: TTransportLayerThread;
+    FTimer: TTimer;
+  protected
+    procedure TimerTick(Sender: TObject);
+    property AbandonFrames: TThreadList read FAbandonFrames write FAbandonFrames;
+    property MultiFrames: TThreadList read FMultiFrames write FMultiFrames;
+    property MaxCount: Integer read FMaxCount write FMaxCount;
+    property Owner: TTransportLayerThread read FOwner write FOwner;
+    property Timer: TTimer read FTimer write FTimer;
+  public
+    constructor Create(AnOwner: TTransportLayerThread);
+    destructor Destroy; override;
+    procedure Clear;
+    procedure ClearAbandon;
+    procedure ProcessSend;
   end;
 
 { TCANFrameParserDatagramSend }
@@ -631,8 +733,9 @@ end;
     procedure SendSnipMessage;
     procedure SendTractionEStopMessage;
     procedure SendTractionFunction(FunctionAddress: DWord; Value: Word);
+    procedure SendTractionProxyAllocate(TrainID: Word; SpeedSteps: Byte);
     procedure SendTractionQueryFunction(FunctionAddress: DWord);
-    procedure SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+    procedure SendTractionQueryProxyMessage;
     procedure SendTractionQuerySpeeds;
     procedure SendTractionSpeedMessage(Speed: THalfFloat);
     procedure SendVerifyNodeIDGlobalMessage;
@@ -1052,6 +1155,24 @@ end;
     property Staus: Byte read FStatus write FStatus;
   end;
 
+  { TTaskTractionProxyAllocateByTrainID }
+
+  TTaskTractionProxyAllocateByTrainID = class(TTaskOlcbBase)
+  private
+    FSpeedStep: Byte;
+    FTrainAlias: Word;
+    FTrainID: Word;
+  public
+    constructor Create(ASourceAlias, ADestinationAlias: Word; ATrainID: Word; ASpeedStep: Byte); reintroduce;
+    function Clone: TTaskOlcbBase; override;
+    procedure CopyTo(Target: TTaskOlcbBase); override;
+    procedure Process(MessageInfo: TOlcbMessage); override;
+
+    property TrainID: Word read FTrainID write FTrainID;
+    property SpeedStep: Byte read FSpeedStep write FSpeedStep;
+    property TrainAlias: Word read FTrainAlias write FTrainAlias;
+  end;
+
   { TOlcbTaskEngine }
 
   TOlcbTaskEngine = class
@@ -1094,6 +1215,300 @@ begin
     Inc(SourceStreamIdPool);
   Result := SourceStreamIdPool;
   Inc(SourceStreamIdPool);
+end;
+
+{ TCANFrameParserMultiFrameSendManager }
+
+procedure TCANFrameParserMultiFrameSendManager.TimerTick(Sender: TObject);
+var
+  SendMultiFrame: TCANFrameParserMultiFrameSend;
+  i: Integer;
+  List: TList;
+  AbandonList: TList;
+begin
+  List := MultiFrames.LockList;
+  AbandonList := AbandonFrames.LockList;
+  try
+  for i := List.Count - 1 downto 0 do     // May remove the item so need to go from the top down
+  begin
+    SendMultiFrame := TCANFrameParserMultiFrameSend( List[i]);
+    if not SendMultiFrame.Empty then
+    begin
+      if SendMultiFrame.AbandonTime > 4000 then
+      begin
+        List.Remove(SendMultiFrame);
+        AbandonList.Add(SendMultiFrame);
+      end;
+      SendMultiFrame.AbandonTime := SendMultiFrame.AbandonTime + Timer.Interval;
+    end;
+  end;
+  finally
+    MultiFrames.UnlockList;
+    AbandonFrames.UnlockList;
+  end;
+end;
+
+constructor TCANFrameParserMultiFrameSendManager.Create(AnOwner: TTransportLayerThread);
+begin
+  FAbandonFrames := TThreadList.Create;
+  FMultiFrames := TThreadList.Create;
+  FMaxCount := 0;
+  FOwner := nil;
+  FTimer := TTimer.Create(nil);
+  Timer.Interval := 500;         // Every 500m seconds
+  Timer.OnTimer := @TimerTick;
+  Timer.Enabled := False;
+end;
+
+destructor TCANFrameParserMultiFrameSendManager.Destroy;
+begin
+  ClearAbandon;
+  FreeAndNil(FAbandonFrames);
+  Clear;
+  FreeAndNil(FMultiFrames);
+  FreeAndNil(FTimer);
+  inherited Destroy;
+end;
+
+procedure TCANFrameParserMultiFrameSendManager.Clear;
+var
+  i: Integer;
+  List: TList;
+begin
+  List := MultiFrames.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+  finally
+    List.Clear;
+    MultiFrames.UnlockList;
+  end;
+end;
+
+procedure TCANFrameParserMultiFrameSendManager.ClearAbandon;
+var
+  i: Integer;
+  List: TList;
+begin
+  List := AbandonFrames.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+  finally
+    List.Clear;
+    AbandonFrames.UnlockList;
+  end;
+end;
+
+procedure TCANFrameParserMultiFrameSendManager.ProcessSend;
+var
+  MultiFrame: TCANFrameParserMultiFrameSend;
+  List: TList;
+  i: Integer;
+  Done: Boolean;
+begin
+  List := MultiFrames.LockList;
+  try
+    i := 0;
+    Done := False;
+    while (i < List.Count) and not Done do
+    begin
+      MultiFrame := TCANFrameParserMultiFrameSend( List[i]);
+      Done := MultiFrame.ProcessSend(Owner);
+      Inc(i);
+    end;
+  finally
+    MultiFrames.UnlockList;
+  end;
+end;
+
+{ TCANFrameParserMultiFrameSend }
+
+constructor TCANFrameParserMultiFrameSend.Create;
+begin
+  inherited Create;
+  FAbandonTime := 0;
+  FCurrentPos := 0;
+  FDataCount := 0;
+  FDestinationAlias := 0;
+  FEmpty := True;
+  FSourceAlias := 0;
+end;
+
+destructor TCANFrameParserMultiFrameSend.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TCANFrameParserMultiFrameSend.Initialize(ASourceAlias, ADestinationAlias: Word; ADataCount: Byte; var ARawMultiFrameArray: TMultiFrameArray);
+begin
+  FAbandonTime := 0;
+  FCurrentPos := 0;
+  FEmpty := False;
+  SourceAlias := ASourceAlias;
+  DestinationAlias := ADestinationAlias;
+  DataCount := ADataCount;
+  RawMultiFrameArray := ARawMultiFrameArray;
+end;
+
+function TCANFrameParserMultiFrameSend.ProcessSend(TransportLayerThread: TTransportLayerThread): Boolean;
+begin
+
+end;
+
+{ TCANFrameParserMultiFrameReceiveManager }
+
+function TCANFrameParserMultiFrameReceiveManager.FindInProcessMultiFrameAndCheckForAbandonFrames
+  (AHelper: TOpenLCBMessageHelper): TCANFrameParserMultiFrameReceive;
+//
+// Searches an in process Fremes interaction between the nodes in the message
+//
+var
+  i: Integer;
+  List: TList;
+  MultiFrame: TCANFrameParserMultiFrameReceive;
+begin
+  Result := nil;
+  List := MultiFrames.LockList;
+  try
+    for i := List.Count-1 downto 0 do    // So we can delete abandon items from the top of the list
+    begin
+      MultiFrame := TCANFrameParserMultiFrameReceive( List[i]);
+      if not MultiFrame.Full and (MultiFrame.DestinationAlias = AHelper.SourceAliasID) and (MultiFrame.SourceAlias = AHelper.DestinationAliasID) then
+        Result := MultiFrame;
+
+      if MultiFrame.CreateTime + GlobalSettings.General.DatagramWaitTime > GetTickCount then
+      begin
+        // Abandon MultiFrame
+    //    MultiFrame.Free;
+   //     List.Delete(i);
+      end;
+    end;
+  finally
+    MultiFrames.UnlockList;
+  end;
+end;
+
+constructor TCANFrameParserMultiFrameReceiveManager.Create(
+  AnOwner: TTransportLayerThread);
+begin
+  inherited Create;
+  FOwner := AnOwner;
+  FMultiFrames := TThreadList.Create;
+  FMaxCount := 0;
+end;
+
+destructor TCANFrameParserMultiFrameReceiveManager.Destroy;
+begin
+  Clear;
+  FreeAndNil(FMultiFrames);
+  inherited Destroy;
+end;
+
+procedure TCANFrameParserMultiFrameReceiveManager.Clear;
+var
+  i: Integer;
+  List: TList;
+begin
+  List := MultiFrames.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TObject( List[i]).Free;
+  finally
+    List.Clear;
+    MultiFrames.UnlockList;
+  end;
+end;
+
+function TCANFrameParserMultiFrameReceiveManager.Process(
+  AHelper: TOpenLCBMessageHelper): TCANFrameParserMultiFrameReceive;
+var
+  TestMultiFrame: TCANFrameParserMultiFrameReceive;
+  List: TList;
+begin
+  Result := nil;
+  if IsDatagramMTI(AHelper.MTI, False) then
+  begin
+    TestMultiFrame := FindInProcessMultiFrameAndCheckForAbandonFrames(AHelper);
+    if not Assigned(TestMultiFrame) then
+    begin
+      TestMultiFrame := TCANFrameParserMultiFrameReceive.Create(Owner.SourceAlias, AHelper.SourceAliasID);  // Create a new receiving Datagram object for source alias of the message to us
+      MultiFrames.Add(TestMultiFrame);
+      List := MultiFrames.LockList;
+      if List.Count > MaxCount then
+        MaxCount := List.Count;
+      MultiFrames.UnlockList;
+    end;
+    TestMultiFrame.Process(AHelper, Owner);
+    if TestMultiFrame.Full then
+    begin
+      MultiFrames.Remove(TestMultiFrame);
+      Result := TestMultiFrame
+    end;
+  end;
+
+end;
+
+{ TCANFrameParserMultiFrameReceive }
+
+constructor TCANFrameParserMultiFrameReceive.Create(ASourceAlias, ADestinationAlias: Word);
+begin
+  inherited Create;
+  FLocalHelper := TOpenLCBMessageHelper.Create;
+  FDestinationAlias := ADestinationAlias;
+  FSourceAlias := ASourceAlias;
+  FCreateTime := GetTickCount;
+end;
+
+destructor TCANFrameParserMultiFrameReceive.Destroy;
+begin
+  FreeAndNil(FLocalHelper);
+  inherited;
+end;
+
+procedure TCANFrameParserMultiFrameReceive.Process(AHelper: TOpenLCBMessageHelper; TransportLayerThread: TTransportLayerThread);
+var
+  i: Integer;
+begin
+  if AHelper.FramingBits = $10 then
+  begin
+    Full := False;
+    CurrentPos := 0;
+  end;
+  for i := 2 to AHelper.DataCount - 1 do         // Skip over the Dest Alias
+  begin
+    RawMultiFrameArray[CurrentPos] := AHelper.Data[i];
+    Inc(FCurrentPos);
+  end;
+  if AHelper.FramingBits = $20 then
+      Full := True;
+end;
+
+{ TTaskTractionProxyAllocateByTrainID }
+
+constructor TTaskTractionProxyAllocateByTrainID.Create(ASourceAlias,
+  ADestinationAlias: Word; ATrainID: Word;
+  ASpeedStep: Byte);
+begin
+  inherited Create(ASourceAlias, ADestinationAlias, True);
+end;
+
+function TTaskTractionProxyAllocateByTrainID.Clone: TTaskOlcbBase;
+begin
+  Result := TTaskTractionProxyAllocateByTrainID.Create(SourceAlias, DestinationAlias, TrainID, SpeedStep);
+end;
+
+procedure TTaskTractionProxyAllocateByTrainID.CopyTo(Target: TTaskOlcbBase);
+begin
+  inherited CopyTo(Target);
+  (Target as TTaskTractionProxyAllocateByTrainID).FTrainAlias := FTrainAlias;
+  (Target as TTaskTractionProxyAllocateByTrainID).FTrainID := TrainID;
+  (Target as TTaskTractionProxyAllocateByTrainID).FSpeedStep := SpeedStep;
+end;
+
+procedure TTaskTractionProxyAllocateByTrainID.Process(MessageInfo: TOlcbMessage);
+begin
+  inherited Process(MessageInfo);
 end;
 
 { TCANFrameParserStreamReceive }
@@ -2034,6 +2449,8 @@ var
   BufferDatagramReceive: TCANFrameParserDatagramReceive;
   CompletedSendStream: TCANFrameParserStreamSend;
   BufferStreamReceive: TCANFrameParserStreamBase;
+  CompletedSendMultiFrame: TCANFrameParserMultiFrameSend;
+  BufferMultiFrameReceive: TCANFrameParserMultiFrameReceive;
 begin
   ReceiveStr := Trim(ReceiveStr);
   if Helper.Decompose(ReceiveStr) then
@@ -2054,6 +2471,15 @@ begin
     if AliasList.FindByAlias(Helper.SourceAliasID) = nil then             // Any message from a node is on our segement
       AliasList.Add(TAliasTaskContainer.Create(Helper.SourceAliasID));
 
+    if Helper.FramingBits <> 0 then
+    begin
+      BufferMultiFrameReceive := CANFrameParserMultiFrameReceiveManager.Process(Helper);  // DatagramReceive object is created and given to the thread
+      if Assigned(BufferMultiFrameReceive) then
+      begin
+        OlcbTaskManager.ProcessReceiving(BufferMultiFrameReceive);              // Give the Task subsystem a crack at knowning about the received datagram
+        FreeAndNil(BufferMultiFrameReceive)
+      end;
+    end else
     if IsDatagramMTI(Helper.MTI, True) then                               // *** Test for a Datagram message that came in ***
     begin
       CompletedSendDatagram := CANFrameParserDatagramSendManager.ProcessReceive(Helper);  // Sending Datagrams are expecting replies from their destination Nodes
@@ -2200,6 +2626,8 @@ begin
   FCANFrameParserDatagramSendManager := TCANFrameParserDatagramSendManager.Create(Self);
   FCANFrameParserStreamReceiveManager := TCANFrameParserStreamReceiveManager.Create(Self);
   FCANFrameParserStreamSendManager := TCANFrameParserStreamSendManager.Create(Self);
+  FCANFrameParserMultiFrameReceiveManager := TCANFrameParserMultiFrameReceiveManager.Create(Self);
+  FCANFrameParserMultiFrameSendManager := TCANFrameParserMultiFrameSendManager.Create(Self);
   FOlcbTaskManager := TOlcbTaskEngine.Create(Self);
   FAliasList := TAliasTaskContainerList.Create;
   FTerminateComplete := False;
@@ -2238,6 +2666,10 @@ begin
   FreeAndNil(FCANFrameParserStreamReceiveManager);
   CANFrameParserStreamSendManager.Clear;
   FreeAndNil(FCANFrameParserStreamSendManager);
+  CANFrameParserMultiFrameReceiveManager.Clear;
+  FreeAndNil(FCANFrameParserMultiFrameReceiveManager);
+  FCANFrameParserMultiFrameSendManager.Clear;
+  FreeAndNil(FCANFrameParserMultiFrameSendManager);
   FreeAndNil(FAliasList);
   inherited Destroy;
 end;
@@ -3803,6 +4235,13 @@ begin
   MessageWaitTimerReset;
 end;
 
+procedure TTaskOlcbBase.SendTractionProxyAllocate(TrainID: Word; SpeedSteps: Byte);
+begin
+  MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROXY_PROTOCOL, SourceAlias, DestinationAlias, 4, TRACTION_PROXY_ALLOCATE, Hi( TrainID), Lo( TrainID), SpeedSteps, $00, $00, $00, $00);
+  TransportLayerThread.InternalAdd(MessageHelper.Encode);
+  MessageWaitTimerReset;
+end;
+
 procedure TTaskOlcbBase.SendTractionQueryFunction(FunctionAddress: DWord);
 begin
   MessageHelper.Load(ol_OpenLCB, MTI_TRACTION_PROTOCOL, SourceAlias, DestinationAlias, 6, $00, $00, TRACTION_QUERY_FUNCTION, (FunctionAddress shr 16) and $00FF, (FunctionAddress shr 8) and $00FF, FunctionAddress and $00FF, 0, 0);
@@ -3810,11 +4249,9 @@ begin
   MessageWaitTimerReset;
 end;
 
-procedure TTaskOlcbBase.SendTractionQueryDccAddressProxyMessage(Address: Word; Short: Boolean);
+procedure TTaskOlcbBase.SendTractionQueryProxyMessage;
 begin
-  if not Short then
-    Address := Address or $C000;
-  MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $06, $01, $00, $00, Hi(Address), Lo(Address), $03, $03);
+  MessageHelper.Load(ol_OpenLCB, MTI_PRODUCER_IDENDIFY, SourceAlias, 0, 8, $01, $01, $00, $00, $00, $00, $03, $04);
   TransportLayerThread.InternalAdd(MessageHelper.Encode);
   MessageWaitTimerReset;
 end;

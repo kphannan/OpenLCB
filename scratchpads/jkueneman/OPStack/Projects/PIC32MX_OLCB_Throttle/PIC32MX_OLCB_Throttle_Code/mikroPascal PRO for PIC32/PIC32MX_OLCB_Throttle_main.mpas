@@ -40,7 +40,10 @@ MCU_EnableCAN;
   OPStackCore_Initialize;
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
-  MCU_EnableUARTA;   
+  MCU_EnableUARTA; 
+  
+  UART1_Write_Text('Working I hope');
+  
    Start_TP();
   MCU_Enable100msTimer;          
   OPStackCore_Enable(True);

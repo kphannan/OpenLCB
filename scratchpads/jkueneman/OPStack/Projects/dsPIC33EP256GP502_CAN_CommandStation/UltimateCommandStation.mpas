@@ -10,6 +10,8 @@ program UltimateCommandStation;
 
 var
 
+  TrapFlagPin : sbit at LATA4_bit;
+
 // EEPROM SPI PINS
   CS_Bank_0                         : sbit at LATB6_bit;
   CS_Bank_0_Direction               : sbit at TRISB6_bit;
@@ -68,9 +70,6 @@ end;
 procedure OPStack_DCC_Timer(); iv IVT_ADDR_T1INTERRUPT; ics ICS_AUTO;
 begin
   T1IF_bit := 0;                                                                // Clear the Flag
-  
-  LATA4_bit := not LATA4_bit;
-
   
  // if CommandStationRamData.OverloadDetected then
  // begin
@@ -146,5 +145,11 @@ begin
   while True do
   begin
     OPStackCore_Process;
+    if UART1_Data_Ready then
+    begin
+      case UART1_Read of
+        '1' : OPStackBuffers_PrintBuffers;
+      end;
+    end;
   end;
 end.

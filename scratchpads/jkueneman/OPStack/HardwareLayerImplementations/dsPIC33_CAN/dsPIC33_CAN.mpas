@@ -23,7 +23,7 @@ unit dsPIC33_CAN;
 
 {.$DEFINE TRACE_CAN}
 {.$DEFINE TRACE_INTERRUPTS}
-{.$DEFINE TRACE_INTERRUPTS_OVERFLOW}
+{$DEFINE TRACE_INTERRUPTS_OVERFLOW}
 
 
 uses
@@ -212,7 +212,12 @@ var
 implementation
 
 type
+  {$IFDEF P33FJ256GP710A}
+  TFarWord = Word;          // far breaks the writing to the DMA Buffer in the FJ.....
+  {$ELSE}
   TFarWord = Word; far;
+  {$ENDIF}
+
 
 procedure dsPIC33_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var Extended: Boolean; Direction: Byte; CANPtr: ^TFarWord); forward;
 
@@ -290,13 +295,6 @@ begin
           6: ReceivedOnFilter6(@Buffer);
         end;
         dsPIC33_CAN_RX_Full(CAN_RX_0_BUFFER, True);                             // Reset the Full Flag
-        
-        if RBOVIF_bit = 1 then
-        begin
-          {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('CAN Overflow');{$ENDIF}
-          RBOVIF_bit := 0;
-        end;
-        
         dsPIC33_CAN_InterruptFlagRXBuffer(True);                                // RX Interrupt Flag Reset
       end;
       ICODE_RX_OVERFLOW :
@@ -373,33 +371,44 @@ end;
 //  BUT.....  The code does exactly what I show above!!!!  Verified the datasheet is wrong
 // *****************************************************************************
 procedure dsPIC33_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var Extended: Boolean; Direction: Byte; CANPtr: ^TFarWord);
+var
+  Temp: DWord;
+  TempWord: Word;
 begin
   if Direction = CAN_DIRECTION_WRITE then
   begin
     // Direction = 0 means Parameters to Buffer (Load TX Buffer)
     if Extended then
     begin
-      CANPtr^ := DWORD(Buffer.MTI shr 16) and $1FFC;                             // Setup the Extended iD 7..17
+      Temp := (Buffer.MTI shr 16) and $00001FFC;
+      CANPtr^ := LoWord(Temp);                                                  // Setup the Extended iD 7..17
       CANPtr^ := CANPtr^ or $0001;                                              // Setup if it is an extended ID
-      Inc(CANPtr);                                                              // Move to the Extended ID
-      CANPtr^ := DWORD(Buffer.MTI shr 6) and $0FFF;                              // put SID 0..6 into bits 5..11 and SID 6..10 in bits 0..4
+      Inc(CANPtr);
+      Temp := (Buffer.MTI shr 6) and $00000FFF;                                  // Move to the Extended ID
+      CANPtr^ := LoWord(Temp);                                                  // put SID 0..6 into bits 5..11 and SID 6..10 in bits 0..4
       Inc(CANPtr);                                                              // Move to the DLC and the rest of the EID
-      CANPtr^ := DWORD((Buffer.MTI shl 10) and $FC00);                           // Put SID 0..5 into bits 10..15
+      Temp := (Buffer.MTI shl 10) and $0000FC00;
+      CANPtr^ := LoWord(Temp);                                                  // Put SID 0..5 into bits 10..15
       CANPtr^ := CANPtr^ or (Word( Buffer.PayloadCount) and $000F);                // Put Data Length in the last 4 bits
     end else
     begin
-      CANPtr^ := DWORD(Buffer.MTI shl 2) and $007FF;                             // SID
+      Temp := (Buffer.MTI shl 2) and $000007FF;
+      CANPtr^ := LoWord(Temp);                                                  // SID
       Inc(CANPtr);                                                              // EID is not used
-      CANPtr^ := Buffer.PayloadCount;                                              // EID/DLC does not use the EID bits
+      Lo( CANPtr^) := Buffer.PayloadCount;                                           // EID/DLC does not use the EID bits
     end;
-    Inc(CANPtr);                                                                // Move to Byte 1 and Byte 2
-    CANPtr^ := Buffer.Payload[0] or (Buffer.Payload[1] shl 8);
-    Inc(CANPtr);                                                                // Move to Byte 3 and Byte 4
-    CANPtr^ := Buffer.Payload[2] or (Buffer.Payload[3] shl 8);
-    Inc(CANPtr);                                                                // Move to Byte 5 and Byte 6
-    CANPtr^ := Buffer.Payload[4] or (Buffer.Payload[5] shl 8);
-    Inc(CANPtr);                                                                // Move to Byte 7 and Byte 8
-    CANPtr^ := Buffer.Payload[6] or (Buffer.Payload[7] shl 8);
+    Inc(CANPtr);          
+    Lo(CANPtr^) := Buffer.Payload[0];                                          // Move to Byte 1 and Byte 2
+    Hi(CANPtr^) := Buffer.Payload[1];
+    Inc(CANPtr);  
+    Lo(CANPtr^) := Buffer.Payload[2];                                          // Move to Byte 1 and Byte 2
+    Hi(CANPtr^) := Buffer.Payload[3];
+    Inc(CANPtr);
+    Lo(CANPtr^) := Buffer.Payload[4];                                          // Move to Byte 1 and Byte 2
+    Hi(CANPtr^) := Buffer.Payload[5];
+    Inc(CANPtr);
+    Lo(CANPtr^) := Buffer.Payload[6];                                          // Move to Byte 1 and Byte 2
+    Hi(CANPtr^) := Buffer.Payload[7];
     Inc(CANPtr);
   end else
   begin
@@ -413,25 +422,25 @@ begin
       Inc(CANPtr);                                                              // Word 1
       Buffer.MTI := Buffer.MTI or DWORD((CANPtr^ and $0FFF) shl 6);
       Inc(CANPtr);
-      Buffer.MTI := Buffer.MTI or DWORD((CANPtr^ and $FC00) shr 10);               // Word 2
+      Buffer.MTI := Buffer.MTI or DWORD((CANPtr^ and $FC00) shr 10);            // Word 2
     end else
     begin
-      Buffer.MTI := (CANPtr^ and $1FFC) shr 2;                                   // Word 0
+      LoWord( Buffer.MTI) := (CANPtr^ and $1FFC) shr 2;                                  // Word 0
       Inc(CANPtr);                                                              // Word 1
     end;
-    Buffer.PayloadCount := CANPtr^ and $000F;                                      // Word 2
+    Buffer.PayloadCount := Lo(CANPtr^) and $000F;                               // Word 2
     Inc(CANPtr);                                                                // Move to C1RXnB1
-    Buffer.Payload[0] := CANPtr^;
-    Buffer.Payload[1] := CANPtr^ shr 8;
+    Buffer.Payload[0] := Lo(CANPtr^);
+    Buffer.Payload[1] := Hi(CANPtr^);
     Inc(CANPtr);                                                                // Move to C1RXnB2
-    Buffer.Payload[2] := CANPtr^;
-    Buffer.Payload[3] := CANPtr^ shr 8;
+    Buffer.Payload[2] := Lo(CANPtr^);
+    Buffer.Payload[3] := Hi(CANPtr^);
     Inc(CANPtr);                                                                // Move to C1RXnB3
-    Buffer.Payload[4] := CANPtr^;
-    Buffer.Payload[5] := CANPtr^ shr 8;
+    Buffer.Payload[4] := Lo(CANPtr^);
+    Buffer.Payload[5] := Hi(CANPtr^);
     Inc(CANPtr);                                                                // Move to C1RXnB4
-    Buffer.Payload[6] := CANPtr^;
-    Buffer.Payload[7] := CANPtr^ shr 8;
+    Buffer.Payload[6] := Lo(CANPtr^);
+    Buffer.Payload[7] := Hi(CANPtr^);
     Inc(CANPtr);                                                                // Move to C1RXnCON
   end
 end;
