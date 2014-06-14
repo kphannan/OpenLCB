@@ -2,6 +2,9 @@ unit template_userstatemachine;
 
 {$I Options.inc}
 
+{.$DEFINE DEBUG_TRACTION_PROTOCOL}
+{.$DEFINE DEBUG_TRACTION_PROXY_PROTOCOL}
+
 uses
   Float16,
   opstacktypes,
