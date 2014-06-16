@@ -8,9 +8,6 @@ interface
 {$I Options.inc}
 
 uses
-  {$IFNDEF FPC}
-  NMRAnetDCC,
-  {$ENDIF}
   opstacknode,
   opstackcore_basic,
   opstackdefines;

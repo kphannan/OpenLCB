@@ -433,7 +433,7 @@ begin
         Node^.iStateMachine := STATE_NODE_GENERATE_NODE_ALIAS;
       end;
     STATE_NODE_TRANSMIT_CID :
-      begin        LATB1_bit := not LATB1_bit;
+      begin
         if IsOutgoingBufferAvailable then
         begin
           case Node^.Login.iCID of

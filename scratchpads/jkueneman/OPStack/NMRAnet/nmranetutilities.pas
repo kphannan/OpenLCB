@@ -88,12 +88,21 @@ end;
 // *****************************************************************************
 procedure NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(NodeID: PNodeID; DataArray: PSimpleDataArray);
 begin
-  DataArray^[0] := Byte( NodeID^[1] shr 16);  // But these all need the 48 Bit Full ID in the Byte Fields
-  DataArray^[1] := Byte( NodeID^[1] shr 8);
+  {$IFNDEF FPC}
+  DataArray^[0] := Higher( NodeID^[1]); // But these all need the 48 Bit Full ID in the Byte Fields
+  DataArray^[1] := Hi( NodeID^[1]);
+  DataArray^[2] := Lo( NodeID^[1]);
+  DataArray^[3] := Higher( NodeID^[0]);
+  DataArray^[4] := Hi( NodeID^[0]);
+  DataArray^[5] := Lo( NodeID^[0]);
+  {$ELSE}
+  DataArray^[0] := Byte( DWord( NodeID^[1] shr 16));  // But these all need the 48 Bit Full ID in the Byte Fields
+  DataArray^[1] := Byte( DWord( NodeID^[1] shr 8));
   DataArray^[2] := Byte( NodeID^[1]);
-  DataArray^[3] := Byte( NodeID^[0] shr 16);
-  DataArray^[4] := Byte( NodeID^[0] shr 8);
+  DataArray^[3] := Byte( DWord( NodeID^[0] shr 16));
+  DataArray^[4] := Byte( DWord( NodeID^[0] shr 8));
   DataArray^[5] := Byte( NodeID^[0]);
+  {$ENDIF}
 end;
 
 

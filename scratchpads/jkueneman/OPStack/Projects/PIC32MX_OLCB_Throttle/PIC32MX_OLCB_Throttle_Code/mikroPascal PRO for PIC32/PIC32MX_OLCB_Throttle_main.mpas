@@ -33,7 +33,14 @@ var
   CS_Serial_Flash_bit: sbit at LATD14_bit;
   CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
   
+ const
+  MinSamplePeriodExt: Extended = 6.25;
+
+
+  MinSamplePeriod: Real = 6.25;
+  
 begin
+
 
 MCU_EnableCAN;
 

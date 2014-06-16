@@ -156,9 +156,7 @@ begin
           begin
             if MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin                                                               // It is an addressed message so pull out the Destination
-              Hi( DestAlias) := NMRAnetCanBuffer^.Payload[0];                   // General CAN messages have the Alias in the payload first two bytes  ;
-              Lo( DestAlias) := NMRAnetCanBuffer^.Payload[1];
-              DestAlias := DestAlias and $0FFF;
+              DestAlias := (NMRAnetCanBuffer^.Payload[0] shl 8) or NMRAnetCanBuffer^.Payload[1] and $0FFF;  // General CAN messages have the Alias in the payload first two bytes  ;
               DestNode := OPStackNode_FindByAlias(DestAlias);
               if DestNode <> nil then                                           // If it is not addressed to us then throw it away
               begin

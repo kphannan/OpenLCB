@@ -227,9 +227,11 @@ begin
   DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
   DatagramBufferPtr^.CurrentCount := 0;
 
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   if Node^.iIndex > 0 then
     OffsetAddress := ConfigAddress + (USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE)
   else
+  {$ENDIF}
     OffsetAddress := ConfigAddress;
     
   case AddressSpace of
@@ -364,9 +366,11 @@ begin
   DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, WriteCount, DataOffset); // WriteCount is not used in a Write call to this function
   WriteCount := DatagramBufferPtr^.DataBufferSize-DataOffset;
   
+  {$IFDEF SUPPORT_VIRTUAL_NODES}
   if Node^.iIndex > 0 then
     OffsetAddress := ConfigAddress + (USER_CONFIGURATION_MEMORY_SIZE + (Node^.iIndex - 1)*USER_VNODE_CONFIGURATION_MEMORY_SIZE)
   else
+  {$ENDIF}
     OffsetAddress := ConfigAddress;
 
   case AddressSpace of

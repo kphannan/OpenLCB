@@ -217,6 +217,7 @@ const
 const
   TS_WAITING_FOR_CONTROLLER_NOTIFY   = $01;
   TS_LOCKED                          = $02;
+  TS_SEND_PROXY_ALLOCATE_REPLY       = $04;
 
 
   TRACTION_PROXY_ALLOCATE            = $01;

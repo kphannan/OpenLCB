@@ -1,12 +1,12 @@
 [DEVICE]
 Name=P33FJ256GP710A
-Clock=10000000
+Clock=64000000
 [MEMORY_MODEL]
 Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_buffers.mpas
+Value=Throttle_events_code.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -78,16 +78,12 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=5
 File0=Throttle_main.mpas
-File1=Templates\MCU_Setup_dsPIC33FJ256GP710A.mpas
-File2=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC_CAN_RawBuffers.mpas
-File3=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
-File4=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
-File5=..\..\..\..\NMRAnet\opstackcore.mpas
-File6=..\..\..\..\NMRAnet\gridconnect.mpas
-File7=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
-File8=Templates\template_buffers.mpas
+File1=Throttle_objects.mpas
+File2=Throttle_driver.mpas
+File3=Throttle_events_code.mpas
+File4=Throttle_resources.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -100,8 +96,8 @@ File1=Templates\NodeID.inc
 Count=18
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
 Path4=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\
 Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
 Path6=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
@@ -124,19 +120,19 @@ Count=0
 Count=0
 [Useses]
 Count=13
-File0=TFT
-File1=TFT_Fonts
-File2=ADC
-File3=TFT_TouchPanel
-File4=Spi
-File5=String
+File0=FLASH
+File1=TFT_Defs
+File2=UART
+File3=Button
+File4=ECAN
+File5=Conversions
 File6=C_Type
-File7=Conversions
-File8=ECAN
-File9=Button
-File10=UART
-File11=TFT_Defs
-File12=FLASH
+File7=String
+File8=Spi
+File9=TFT_TouchPanel
+File10=ADC
+File11=TFT_Fonts
+File12=TFT
 [EXPANDED NODES]
 Node1=Sources
 Node2=Output Files

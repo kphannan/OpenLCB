@@ -87,19 +87,16 @@ begin
   if InProcessMessage = nil then
   begin
     if OPStackMessage^.FramingBits = $10 then
-    begin
+    begin    // It is a first frame
       if OPStackBuffers_AllocateMultiFrameMessage(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
         OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(InProcessMessage)
       else
         Exit;     // Out of buffers, exit and wait until the last frame is sent to send OIR
     end else
     begin
-      if OPStackMessage^.FramingBits = $20 then                                 // If the last frame and there is no inprocess message we are dropping the message
-        OptionalInteractionRejected(OPStackMessage, False);
-      
-    //  UART1_Write_Text('Lost MultiFrame'+LF);
-      
-      Exit;                                                                     // If a middle frame then just drop it if not in the stack
+      if OPStackMessage^.FramingBits = $20 then
+        OptionalInteractionRejected(OPStackMessage, False);                     // It is the last frame and there is no inprocess message we are dropping the message
+      Exit;
     end
   end;
 

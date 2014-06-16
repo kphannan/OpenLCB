@@ -138,9 +138,6 @@ const                                                                           
   {$IFDEF SUPPORT_VIRTUAL_NODES}NS_VIRTUAL              = $08; {$ENDIF}                                               // NodeState If is a virtual node
   NS_RELEASING            = $10;                                                // Node is tagged to send and AMD and be removed from the bus (while this is set what happens??)
 
-  TS_RESERVED             = $01;                                                // Train State = Reserved
-  TS_ALLOCATED            = $02;                                                // DCC Address Assigned
-
   // MsgFlags in order of precidence (= 0 highest precidence)
   MF_DUPLICATE_NODE_ID        = $0001;                                          // MsgFlag, a Duplicate Node ID was detected, critical fault
   MF_DUPLICATE_ALIAS          = $0002;                                          // MsgFlag, a Duplicate Alias was Detected, critical fault
@@ -280,6 +277,7 @@ type
     LinkedNode: TNodeInfo;                                                      // Controller (throttle) running the train or other linking needs
     Timer: Byte;
   end;
+  PTrainData = ^TTrainData;
   {$ENDIF}
   {$IFDEF SUPPORT_TRACTION_PROXY}
   TTrainProxyData = record
