@@ -16,7 +16,7 @@ uses
 
 procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
+procedure OptionalInteractionRejected(var DestAlias, SourceAlias: Word; var DestID, SourceID: TNodeID; MTI: DWord; IsPermenent: Boolean);
 procedure DatagramRejected(Dest, Source: PNodeInfo; ErrorCode: Word);
 function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 
@@ -40,7 +40,7 @@ begin
   end;
 end;
 
-procedure OptionalInteractionRejected(AMessage: POPStackMessage; IsPermenent: Boolean);
+procedure OptionalInteractionRejected(var DestAlias, SourceAlias: Word; var DestID, SourceID: TNodeID; MTI: DWord; IsPermenent: Boolean);
 var
   OptionalInteractionMessage: TOPStackMessage;
   OptionalnteractionBuffer: TSimpleBuffer;
@@ -48,7 +48,7 @@ begin
   OPStackBuffers_ZeroSimpleBuffer(@OptionalnteractionBuffer, False);
   OPStackBuffers_ZeroMessage(@OptionalInteractionMessage);
   OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
-  OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, AMessage^.MTI, IsPermenent);    // Unknown MTI sent to addressed node
+  OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, DestAlias, DestID, SourceAlias, SourceID, MTI, IsPermenent);    // Unknown MTI sent to addressed node
   OutgoingCriticalMessage(@OptionalInteractionMessage);
 end;
 

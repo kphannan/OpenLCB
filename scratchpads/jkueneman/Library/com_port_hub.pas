@@ -292,13 +292,14 @@ begin
     begin
       if (ComPort = TComPortThread( List[i])) or (ComPort = nil) then
       begin
-        TComPortThread( List[i]).OnReceiveMessage := nil;
+   {     TComPortThread( List[i]).OnReceiveMessage := nil;
         TComPortThread( List[i]).OnSendMessage := nil;
         TComPortThread( List[i]).OnErrorMessage := nil;
-        TComPortThread( List[i]).OnBeforeDestroyTask := nil;
+        TComPortThread( List[i]).OnBeforeDestroyTask := nil;  }
         TComPortThread( List[i]).RemoveAndFreeTasks(0);
         TComPortThread( List[i]).Terminate;
-        List.Delete(i);
+        while not  TComPortThread( List[i]).TerminateComplete do
+          Application.ProcessMessages;
       end;
     end;
   finally
@@ -356,8 +357,9 @@ begin
         ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
       end;
 
-      CANFrameParserDatagramSendManager.ProcessSend;                          // *** See if there is a datagram that will add a message to send ***
-      CANFrameParserStreamSendManager.ProcessSend;
+      CANDatagramSendManager.ProcessSend;                          // *** See if there is a datagram that will add a message to send ***
+      CANStreamSendManager.ProcessSend;
+      CANMultiFrameSendManager.ProcessSend;
       OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
       if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
       begin

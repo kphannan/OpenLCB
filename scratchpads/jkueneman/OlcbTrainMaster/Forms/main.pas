@@ -8,12 +8,11 @@ uses
   Classes, SysUtils, FileUtil, SynMemo, Forms, Controls, Graphics, Dialogs,
   ComCtrls, ExtCtrls, StdCtrls, ActnList, Menus, Buttons, Spin, form_throttle,
   ethernet_hub, olcb_app_common_settings, file_utilities,
-  olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
-  types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
+  olcb_utilities, synaser, lcltype, olcb_transport_layer,
+  olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
   template_hardware, opstackcore, template_configuration, template_node,
-  opstackbuffers, NMRAnetNceBridgeDefines, opstackdefines,
-  Float16;
+  opstackbuffers, opstacknode, opstackdefines;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';
@@ -69,7 +68,6 @@ type
     ActionCOMConnection: TAction;
     ActionList: TActionList;
     BitBtnRescanPorts: TBitBtn;
-    Button1: TButton;
     ButtonRefreshBufferCount: TButton;
     ButtonLocalHost: TButton;
     ButtonRemoteLocalHost: TButton;
@@ -190,7 +188,9 @@ type
     TabSheetMain: TTabSheet;
     TabSheetEthernet: TTabSheet;
     TabSheetCom: TTabSheet;
-    TimerOpStackTimer: TTimer;
+    TimerSlow: TTimer;
+    TimerOPStackProcess: TTimer;
+    TimerOpStack100msTimer: TTimer;
     ToolBarMain: TToolBar;
     ToolButton1: TToolButton;
     ToolButton2: TToolButton;
@@ -229,7 +229,6 @@ type
     procedure ActionStartNodeExecute(Sender: TObject);
     procedure ActionZeroizeConfigMemoryExecute(Sender: TObject);
     procedure BitBtnRescanPortsClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure ButtonLocalHostClick(Sender: TObject);
     procedure ButtonRefreshBufferCountClick(Sender: TObject);
     procedure ButtonRemoteLocalHostClick(Sender: TObject);
@@ -266,7 +265,9 @@ type
     procedure TabSheetEthernetShow(Sender: TObject);
     procedure TabSheetGeneralHide(Sender: TObject);
     procedure TabSheetGeneralShow(Sender: TObject);
-    procedure TimerOpStackTimerTimer(Sender: TObject);
+    procedure TimerOpStack100msTimerTimer(Sender: TObject);
+    procedure TimerOPStackProcessTimer(Sender: TObject);
+    procedure TimerSlowTimer(Sender: TObject);
     procedure TreeViewThrottlesCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
@@ -274,12 +275,15 @@ type
     FConfigurationFile: WideString;
     FEthernetConnectionState: TConnectionState;
     FPaused: Boolean;
+    FPhysicalNodeState: TOlcbNodeState;
     FSettingsFilePath: WideString;
     FSettingsLocked: Boolean;
     FShownOnce: Boolean;
     FThrottles: TThrottleList;
+    procedure SetPhysicalNodeState(AValue: TOlcbNodeState);
     { private declarations }
   protected
+    procedure BeforeDestroyTask(Sender: TTaskOlcbBase);
     procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
     procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
     procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
@@ -311,6 +315,7 @@ type
   public
     { public declarations }
     property SettingsFilePath: WideString read FSettingsFilePath write FSettingsFilePath;
+    property PhysicalNodeState: TOlcbNodeState read FPhysicalNodeState write SetPhysicalNodeState;
     property Throttles: TThrottleList read FThrottles write FThrottles;
     procedure UpdateUI;
   end;
@@ -335,13 +340,12 @@ begin
   Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, nil, ImageList16x16);
   if Assigned(Throttle) then
   begin
+    Throttle.OPStackNode := OPStackNode_Allocate;
     Throttle.PanelMain.Enabled := False;                                        // Not until the Node is created
-    Throttle.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
+    Throttle.UpdateStatus('Status: Please Wait... Logging node onto network.');
     Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
     Node.Throttle := Throttle;
     UpdateUI;
-    Throttle.TimerGeneralTimeout.Interval := 1000;
-    Throttle.TimerGeneralTimeout.Enabled := True;
   end;
 end;
 
@@ -476,15 +480,21 @@ procedure TFormOlcbTrainMaster.ActionStartNodeExecute(Sender: TObject);
 begin
   if OPStackCore_IsRunning then
   begin
+    TimerOPStackProcess.Enabled := False;
+    TimerOpStack100msTimer.Enabled := False;
     OPStackCore_Enable(False);
     ActionStartNode.ImageIndex := 239;
     ActionStartNode.Caption := 'Node Stopped';
+    PhysicalNodeState := ons_Disabled;
   end else
   begin
     ActionStartNode.ImageIndex := 240;
     OPStackCore_Initialize;
     OPStackCore_Enable(True);
     ActionStartNode.Caption := 'Node Running';
+    PhysicalNodeState := ons_Started;
+    TimerOPStackProcess.Enabled := True;
+    TimerOpStack100msTimer.Enabled := True;
   end;
 end;
 
@@ -493,29 +503,29 @@ begin
   ZeroConfiguration
 end;
 
+procedure TFormOlcbTrainMaster.BeforeDestroyTask(Sender: TTaskOlcbBase);
+var
+  Event: TTaskEvent;
+  i: Integer;
+begin
+  if Sender is TTaskEvent then
+  begin
+    Event := TTaskEvent( Sender);
+    if EqualEvents(@EVENT_IS_PROXY, Event.MessageHelper.ExtractDataBytesAsEventID) then
+    begin
+      for i := 0 to USER_MAX_NODE_COUNT - 1 do
+      begin
+        NodePool.Pool[i].TrainData.LinkedNode.AliasID := Event.MessageHelper.SourceAliasID;
+        NodePool.Pool[i].TrainData.LinkedNode.ID[0] := 0;
+        NodePool.Pool[i].TrainData.LinkedNode.ID[1] := 0;
+      end;
+    end;
+  end;
+end;
+
 procedure TFormOlcbTrainMaster.BitBtnRescanPortsClick(Sender: TObject);
 begin
   ScanComPorts;
-end;
-
-procedure TFormOlcbTrainMaster.Button1Click(Sender: TObject);
-var
-  H: THalfFloat;
-  R: double;
-  Address, Mask: DWord;
-
-begin
-  Address := 1;
-  Mask := $00000001;
-  Mask := Mask shl Address;
-
-
-  H := FloatToHalf(100.0);
-  H := H + 1;
-  H := H - 1;
-  R := HalfToFloat(H);
-  R := R + 1;
-  R := R - 1;
 end;
 
 procedure TFormOlcbTrainMaster.ButtonLocalHostClick(Sender: TObject);
@@ -627,6 +637,39 @@ begin
     ComboBoxComPort.ItemIndex := 0;
 end;
 
+procedure TFormOlcbTrainMaster.SetPhysicalNodeState(AValue: TOlcbNodeState);
+begin
+  if FPhysicalNodeState <> AValue then
+  begin
+    FPhysicalNodeState := AValue;
+
+    case PhysicalNodeState of
+      ons_Disabled :
+        begin
+          Statusbar.Panels[3].Text := 'NodeID: [None]';
+          Statusbar.Panels[4].Text := 'Alias: [None]';
+          UpdateUI;
+        end;
+      ons_Started :
+        begin
+          Statusbar.Panels[3].Text := 'Starting Node...';
+          Statusbar.Panels[4].Text := '';
+        end;
+      ons_LoggingIn :
+        begin
+          Statusbar.Panels[3].Text := 'NodeID: [None]';
+          Statusbar.Panels[4].Text := 'Allocating...';
+        end;
+      ons_Permitted :
+        begin
+          Statusbar.Panels[3].Text := 'NodeID: ' + NodeIDToDotHex( NodePool.Pool[0].Info.ID);
+          Statusbar.Panels[4].Text := 'Alias: 0x' + IntToHex(NodePool.Pool[0].Info.AliasID, 4);
+          UpdateUI;
+        end;
+    end
+  end;
+end;
+
 procedure TFormOlcbTrainMaster.SpinEditEthernetLocalPortChange(Sender: TObject);
 begin
   StoreSettings(lstEthernet)
@@ -700,16 +743,8 @@ end;
 
 procedure TFormOlcbTrainMaster.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
-  EthernetHub.OnReceiveMessage := nil;
-  EthernetHub.OnSendMessage := nil;
-  EthernetHub.OnErrorMessage := nil;
-  EthernetHub.OnConnectionStateChange := nil;
-  EthernetHub.OnStatus := nil;
-  EthernetHub.OnOPStackCallback := nil;
-  EthernetHub.EnableReceiveMessages := False;
-  EthernetHub.EnableSendMessages := False;
-  EthernetHub.OnBeforeDestroyTask := nil;
-  EthernetHub.EnableOPStackCallback := False;
+  EthernetHub.Enabled := False;
+  ComPortHub.RemoveComPort(nil);
 end;
 
 procedure TFormOlcbTrainMaster.FormCreate(Sender: TObject);
@@ -723,11 +758,13 @@ begin
   ComPortHub.OnSendMessage := @ComPortSendLogging;
   ComPortHub.OnErrorMessage := @ComPortError;
   ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
+  ComPortHub.OnBeforeDestroyTask := @BeforeDestroyTask;
 
   EthernetHub.OnReceiveMessage := @EthernetReceiveLogging;
   EthernetHub.OnSendMessage := @EthernetSendLogging;
   EthernetHub.OnErrorMessage := @EthernetError;
   EthernetHub.OnConnectionStateChange := @EthernetConnectState;
+  EthernetHub.OnBeforeDestroyTask := @BeforeDestroyTask;
 
   FComConnectionState := csDisconnected;
   FEthernetConnectionState := csDisconnected;
@@ -744,6 +781,7 @@ begin
   Markup.IgnoreKeywords := False;
 
   FConfigurationFile := '';
+  FPhysicalNodeState := ons_Disabled;
   UserStateMachine_Initialize;
 end;
 
@@ -808,8 +846,6 @@ begin
     LoadSettings(lstCom);
     LoadSettings(lstEthernet);
     LoadSettings(lstGeneral);
-
-    TimerOpStackTimer.Enabled := True;
 
     ShownOnce := True;
   end;
@@ -916,9 +952,37 @@ begin
   //
 end;
 
-procedure TFormOlcbTrainMaster.TimerOpStackTimerTimer(Sender: TObject);
+procedure TFormOlcbTrainMaster.TimerOpStack100msTimerTimer(Sender: TObject);
 begin
   OPStackCore_Timer;
+
+  if NodePool.Pool[0].State and NS_PERMITTED <> 0 then
+    PhysicalNodeState := ons_Permitted
+  else
+  if NodePool.Pool[0].State and NS_INITIALIZED <> 0 then
+    PhysicalNodeState := ons_LoggingIn;
+end;
+
+procedure TFormOlcbTrainMaster.TimerOPStackProcessTimer(Sender: TObject);
+begin
+  OPStackCore_Process;
+end;
+
+procedure TFormOlcbTrainMaster.TimerSlowTimer(Sender: TObject);
+var
+  Task: TTaskIdentifyProducer;
+begin
+  if PhysicalNodeState = ons_Permitted then
+  begin
+    if NodePool.Pool[0].TrainData.LinkedNode.AliasID = 0 then
+    begin
+       Task := TTaskIdentifyProducer.Create(NodePool.Pool[0].Info.AliasID, 0, True, EVENT_IS_PROXY);
+       Task.OnBeforeDestroy := @BeforeDestroyTask;
+       EthernetHub.AddTask(Task);
+       ComPortHub.AddTask(Task);
+       FreeAndNil(Task);
+    end;
+  end;
 end;
 
 procedure TFormOlcbTrainMaster.EditAliasIDChange(Sender: TObject);
@@ -990,6 +1054,7 @@ begin
     ActionShowAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
     ActionCloseAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
     ActionHideAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
+    ActionAddNewThrottle.Enabled := PhysicalNodeState = ons_Permitted;
 
     case ComConnectionState of
       csDisconnected :

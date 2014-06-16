@@ -95,7 +95,7 @@ begin
     end else
     begin
       if OPStackMessage^.FramingBits = $20 then
-        OptionalInteractionRejected(OPStackMessage, False);                     // It is the last frame and there is no inprocess message we are dropping the message
+        OptionalInteractionRejected(OPStackMessage^.Source.AliasID, OPStackmessage^.Dest.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.ID, OPStackMessage^.MTI, False);                     // It is the last frame and there is no inprocess message we are dropping the message
       Exit;
     end
   end;

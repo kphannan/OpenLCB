@@ -121,7 +121,8 @@ type
     procedure SetListener(AValue: Boolean);
   protected
     procedure InternalAdd(Msg: AnsiString);
-    procedure InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
+    procedure InternalAddDatagramToSendByCAN(Datagram: TCANDatagramSend);
+    procedure InternalAddMultiFrameToSendByCAN(MultiFrame: TCANMultiFrameSend);
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property ListenDameon: TEthernetListenDameonThread read FListenDameon;
     property SingletonClient: TClientSocketThread read FSingletonClient write FSingletonClient;
@@ -304,13 +305,12 @@ begin
           ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
         end;
 
-        CANFrameParserStreamSendManager.ProcessSend;                              // *** See if there is a stream that is being disceted and frame out on a CAN connection ***
-        CANFrameParserDatagramSendManager.ProcessSend;                            // *** See if there is a datagram that is being disceted and frame out on a CAN connection ***
-        CANFrameParserMultiFrameSendManager.ProcessSend;
-        OlcbTaskManager.ProcessSending;                                           // *** See if there is a task what will add a message to send ***
-       if SyncSendMessageList.Count > 0 then
-       begin
-
+        CANStreamSendManager.ProcessSend;                              // *** See if there is a stream that is being disceted and frame out on a CAN connection ***
+        CANDatagramSendManager.ProcessSend;                            // *** See if there is a datagram that is being disceted and frame out on a CAN connection ***
+        CANMultiFrameSendManager.ProcessSend;
+        OlcbTaskManager.ProcessSending;                                // *** See if there is a task what will add a message to send ***
+        if SyncSendMessageList.Count > 0 then
+        begin
           for i := 0 to SyncSendMessageList.Count - 1 do
           begin
             ConnectedSocket.SendString(SyncSendMessageList[i]);
@@ -569,16 +569,6 @@ begin
         ListenDameon.Suspended := False;
       end else
       begin
-        ListenDameon.OnReceiveMessage := nil;
-        ListenDameon.OnSendMessage := nil;
-        ListenDameon.OnErrorMessage := nil;
-        ListenDameon.OnConnectionStateChange := nil;
-        ListenDameon.OnBeforeDestroyTask := nil;
-        ListenDameon.OnStatus := nil;
-        ListenDameon.OnOPStackCallback := nil;
-        ListenDameon.EnableReceiveMessages := False;
-        ListenDameon.EnableSendMessages := False;
-        ListenDameon.EnableOPStackCallback := False;
         ListenDameon.Terminate;
         while not ListenDameon.TerminateComplete do
           Application.ProcessMessages;         // Yuck, but Syncronize needs the main thread to pump messages to complete and not deadlock
@@ -604,16 +594,6 @@ begin
         SingletonClient.Suspended := False;
       end else
       begin
-        SingletonClient.OnReceiveMessage := nil;
-        SingletonClient.OnSendMessage := nil;
-        SingletonClient.OnErrorMessage := nil;
-        SingletonClient.OnConnectionStateChange := nil;
-        SingletonClient.OnBeforeDestroyTask := nil;
-        SingletonClient.OnStatus := nil;
-        SingletonClient.OnOPStackCallback := nil;
-        SingletonClient.EnableReceiveMessages := False;
-        SingletonClient.EnableSendMessages := False;
-        SingletonClient.EnableOPStackCallback := False;
         SingletonClient.Terminate;
         while not SingletonClient.TerminateComplete do
           Application.ProcessMessages;
@@ -704,7 +684,7 @@ begin
   end;
 end;
 
-procedure TEthernetHub.InternalAddDatagramToSendByCANParsing(Datagram: TCANFrameParserDatagramSend);
+procedure TEthernetHub.InternalAddDatagramToSendByCAN(Datagram: TCANDatagramSend);
 var
   List: TList;
   i: Integer;
@@ -712,10 +692,25 @@ begin
   List := ClientThreadList.LockList;
   try
     for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).InternalAddDatagramToSendByCANParsing(Datagram);
+      TClientSocketThread( List[i]).InternalAddDatagramToSendByCAN(Datagram);
   finally
     ClientThreadList.UnlockList;
   end;
+end;
+
+procedure TEthernetHub.InternalAddMultiFrameToSendByCAN(MultiFrame: TCANMultiFrameSend);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := ClientThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TClientSocketThread( List[i]).InternalAddMultiFrameToSendByCAN(MultiFrame);
+  finally
+    ClientThreadList.UnlockList;
+  end;
+
 end;
 
 function TEthernetHub.AddGridConnectStr(GridConnectStr: ansistring): Boolean;

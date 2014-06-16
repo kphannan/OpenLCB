@@ -22,7 +22,7 @@ uses
   opstackdefines,
   opstackbuffers,
   opstacktypes,
-  opstacknode,
+  OPStackNode,
   template_event_callbacks,
   template_node,
   template_vnode,
@@ -170,7 +170,7 @@ begin
                 {$ENDIF}
                 MTI_OPTIONAL_INTERACTION_REJECTED  : begin {TODO: What to do if one of the messages is Rejected!} end
               else
-                  OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
+                  OptionalInteractionRejected(DestNode^.Info.AliasID, SourceNode^.Info.AliasID, DestNode^.Info.ID, SourceNode^.Info.ID, AMessage^.MTI, True);        // Unknown message, permenent error
               end; {case}
             end                                                      // It is not for of or our nodes
           end else
@@ -194,11 +194,9 @@ begin
                 MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified( AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end;
                 MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(AMessage^.Source, NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); end;
                 MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(AMessage^.Source,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); end;
-                MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end
-             else {case}
-               OptionalInteractionRejected(AMessage, True);        // Unknown message, permenent error
-             end
-          end
+                MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end;
+            end;
+          end;
         end;
     {$IFDEF SUPPORT_STREAMS}
     MT_STREAM,

@@ -11,7 +11,7 @@ uses
   olcb_utilities, olcb_defines,
   laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
   form_train_config_editor, com_port_hub, ethernet_hub,
-  template_userstatemachine;
+  template_userstatemachine, opstackdefines, opstacknode, opstackcore;
 
 const
   ANIMATION_DELTA = 50;
@@ -125,7 +125,7 @@ type
     ScrollBoxFunctions: TScrollBox;
     SpinEditAddress: TSpinEdit;
     StatusBar: TStatusBar;
-    TimerGeneralTimeout: TTimer;
+    TimerGeneral: TTimer;
     TimerToggleAnimation: TTimer;
     TrackBarSpeed: TTrackBar;
     procedure ActionAllocationByAddressExecute(Sender: TObject);
@@ -168,29 +168,25 @@ type
     procedure ActionToggleAllocationPanelExecute(Sender: TObject);
     procedure ActionToggleDirExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupDirectionClick(Sender: TObject);
     procedure RadioGroupShortLongClick(Sender: TObject);
     procedure RadioGroupSpeedStepClick(Sender: TObject);
-    procedure TimerGeneralTimeoutTimer(Sender: TObject);
+    procedure SpinEditAddressChange(Sender: TObject);
+    procedure TimerGeneralTimer(Sender: TObject);
     procedure TimerToggleAnimationTimer(Sender: TObject);
     procedure TrackBarSpeedChange(Sender: TObject);
   private
-    FAllocateByAddressFlagged: Boolean;
-    FCabSubStateMachine: Integer;
     FAllocated: Boolean;
-    FCabStateMachine: Integer;
     FClosing: Boolean;
     FCurrentFunctions: DWord;
     FCurrentFuntions: DWord;
     FCurrentSpeed: THalfFloat;
-    FFreeTrain: Boolean;
-    FReleaseTrain: Boolean;
+    FOPStackNode: PNMRAnetNode;
+    FPhysicalNodeState: TOlcbNodeState;
     FThrottleAlias: Word;
-    FToggleDir: Boolean;
     FTrainAlias: Word;
     FAllocationPanelToggleExpand: Boolean;
     FComPortHub: TComPortHub;
@@ -211,9 +207,11 @@ type
     procedure RunTractionQueryFunctions(AliasID: Word; Address: DWord);
     procedure RunTractionQuerySpeed(AliasID: Word);
     procedure SetAllocatedAlias(AValue: Word);
+    procedure SetPhysicalNodeState(AValue: TOlcbNodeState);
   protected
     procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
+    function GetSpeedStep: Byte;
     function IsForward: Boolean;
     function IsShortAddress: Boolean;
     procedure OnBeforeDestroyTask(Sender: TTaskOlcbBase);
@@ -233,15 +231,10 @@ type
     property ThrottleAlias: Word read FThrottleAlias write FThrottleAlias;
     property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
     property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
+    property OPStackNode: PNMRAnetNode read FOPStackNode write FOPStackNode;
+    property PhysicalNodeState: TOlcbNodeState read FPhysicalNodeState write SetPhysicalNodeState;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
-
-    property CabStateMachine: Integer read FCabStateMachine write FCabStateMachine;
-    property AllocateByAddressFlagged: Boolean read FAllocateByAddressFlagged write FAllocateByAddressFlagged;
-    property CabSubStateMachine: Integer read FCabSubStateMachine write FCabSubStateMachine;
-    property ToggleDir: Boolean read FToggleDir write FToggleDir;
-    property ReleaseTrain: Boolean read FReleaseTrain write FReleaseTrain;
-    property FreeTrain: Boolean read FFreeTrain write FFreeTrain;
 
     property CurrentSpeedDir: THalfFloat read FCurrentSpeed write FCurrentSpeed;
     property CurrentFunctions: DWord read GetCurrentFuntions write FCurrentFunctions;
@@ -378,25 +371,11 @@ end;
 
 procedure TFormThrottle.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
+  OPStackNode_MarkForRelease(OPStackNode);
   if Assigned(OnThrottleClose) then
     OnThrottleClose(Self);
   ActionAllocationFree.Execute;
   CloseAction := caFree;
-end;
-
-procedure TFormThrottle.FormCloseQuery(Sender: TObject; var CanClose: boolean);
-begin
-  if not Closing then
-  begin
-    CanClose := False;
-    Closing := True;
-    EnterCriticalsection(OPStackCriticalSection);
-    try
-
-    finally
-      LeaveCriticalsection(OPStackCriticalSection);
-    end;
-  end;
 end;
 
 procedure TFormThrottle.FormCreate(Sender: TObject);
@@ -408,13 +387,9 @@ begin
   ThrottleAlias := 0;
   TrainAlias := 0;
   FClosing := False;
-  FAllocateByAddressFlagged := False;
-  FCabStateMachine := 0;
-  FCurrentSpeed := 0;
-  FToggleDir := False;
+  FCurrentSpeed := $0000;
   FCurrentFunctions := 0;
-  FReleaseTrain := False;
-  FFreeTrain := False;
+  FOPStackNode := nil;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -425,21 +400,26 @@ end;
 
 procedure TFormThrottle.ActionToggleDirExecute(Sender: TObject);
 begin
-  ToggleDir := True;
   if RadioGroupDirection.ItemIndex = 0 then
     RadioGroupDirection.ItemIndex := 1
   else
     RadioGroupDirection.ItemIndex := 0;
-  if CurrentSpeedDir and $8000 <> 0 then
-    CurrentSpeedDir := CurrentSpeedDir and not $8000
-  else
-    CurrentSpeedDir := $8000;
+
 end;
 
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
+var
+  Task: TTaskTractionProxyAllocateByTrainID;
 begin
-  AllocateByAddressFlagged := True;
-  CabSubStateMachine := 0;
+  if Assigned(OPStackNode) and (OPstackNode^.TrainData.LinkedNode.AliasID <> 0) then
+  begin
+    // Linked Node is the Proxy....
+    Task := TTaskTractionProxyAllocateByTrainID.Create(OPStackNode^.Info.AliasID, OPstackNode^.TrainData.LinkedNode.AliasID, SpinEditAddress.Value, GetSpeedStep, OPStackNode);
+    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
+    EthernetHub.AddTask(Task);
+    ComPortHub.AddTask(Task);
+    FreeAndNil(Task);
+  end;
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
@@ -459,13 +439,12 @@ end;
 
 procedure TFormThrottle.ActionAllocationFreeExecute(Sender: TObject);
 begin
-  FFreeTrain := True;
+
   UpdateUI
 end;
 
 procedure TFormThrottle.ActionAllocationReleaseExecute(Sender: TObject);
 begin
-  FReleaseTrain := True;
   UpdateUI;
 end;
 
@@ -688,10 +667,20 @@ begin
   Result := FCurrentFunctions;
 end;
 
+function TFormThrottle.GetSpeedStep: Byte;
+begin
+  case RadioGroupSpeedStep.ItemIndex of
+    0 : Result := 14;
+    1 : Result := 28;
+    2 : Result := 128
+  else
+    Result := 28;
+  end;
+end;
+
 procedure TFormThrottle.RadioGroupDirectionClick(Sender: TObject);
 begin
-  if not ToggleDir then
-    RunTractionSpeed(TrainAlias, False);
+  RunTractionSpeed(TrainAlias, False);
 end;
 
 procedure TFormThrottle.RadioGroupShortLongClick(Sender: TObject);
@@ -702,59 +691,6 @@ end;
 procedure TFormThrottle.RadioGroupSpeedStepClick(Sender: TObject);
 begin
   UpdateAddressRange
-end;
-
-procedure TFormThrottle.TimerGeneralTimeoutTimer(Sender: TObject);
-var
-  i: Integer;
-  LinkFound: Boolean;
-begin
-  LinkFound := False;
-  System.EnterCriticalsection(OPStackCriticalSection);
-
-  {
-  for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
-  begin
-    // Look for links associated with this throttle
-    if Sync.Link[i].Throttle.ObjPtr = Self then
-    begin
-      LinkFound := True;
-
-      if Sync.Link[i].SyncState and SYNC_NODE_INFO <> 0 then
-      begin
-        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_NODE_INFO;
-        PanelMain.Enabled := True;
-        UpdateStatus('OpenLCB link established, Alias = 0x' + IntToHex(Sync.Link[i].Node.Info.AliasID, 4));
-        ThrottleAlias := Sync.Link[i].Node.Info.AliasID;
-      end;
-
-      if Sync.Link[i].SyncState and SYNC_CONTROLLER <> 0 then
-      begin
-         Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_CONTROLLER;
-         if Sync.Link[i].TrainAllocated then
-           TrainAlias := Sync.Link[i].AllocatedNode.AliasID
-         else
-           TrainAlias := 0;
-         UpdateUI;
-      end;
-
-      if Sync.Link[i].SyncState and SYNC_CLOSED <> 0 then
-      begin
-         TimerGeneralTimeout.Enabled := False;
-         Close
-      end;
-
-    end;
-  end;  }
-
-  // If the throttle is open there MUST be a link or it is broken
-  {if not LinkFound then
-  begin
-    // Something is broken we don't have a link...
-    PanelMain.Enabled := False;
-    UpdateStatus('Fatal Error: Link with OpenLCB unexpectedly lost');
-  end;     }
-  System.LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 procedure TFormThrottle.TimerToggleAnimationTimer(Sender: TObject);
@@ -926,19 +862,64 @@ end;
 
 procedure TFormThrottle.SetAllocatedAlias(AValue: Word);
 begin
-  if FTrainAlias <> AValue then
+  FTrainAlias := AValue;
+end;
+
+procedure TFormThrottle.SetPhysicalNodeState(AValue: TOlcbNodeState);
+begin
   begin
-    FTrainAlias:=AValue;
-    if FTrainAlias = 0 then
-      UpdateFunctionsWithDefault
-    else begin
-      if GlobalSettings.Throttle.AutoLoadFDI then
-      begin
-   //     Include(FWaitingActions, wa_FDItoFunctions);
-   //     RunProtocolSupport(FTrainAlias);         // Kick it off
-      end;
+    if FPhysicalNodeState <> AValue then
+    begin
+      FPhysicalNodeState := AValue;
+
+      case PhysicalNodeState of
+        ons_Disabled :
+          begin
+            OPStackNode^.Info.AliasID := 0;
+            Statusbar.Panels[0].Text := 'NodeID: [None]';
+            Statusbar.Panels[1].Text := 'Alias: [None]';
+            UpdateUI;
+          end;
+        ons_Started :
+          begin
+            Statusbar.Panels[0].Text := 'Starting Node...';
+            Statusbar.Panels[1].Text := '';
+          end;
+        ons_LoggingIn :
+          begin
+            Statusbar.Panels[0].Text := 'NodeID: [None]';
+            Statusbar.Panels[1].Text := 'Allocating...';
+          end;
+        ons_Permitted :
+          begin
+            if Assigned(OPStackNode) then
+            begin
+              Statusbar.Panels[0].Text := 'NodeID: ' + NodeIDToDotHex(OPStackNode^.Info.ID);
+              Statusbar.Panels[1].Text := 'Alias: 0x' + IntToHex(OPStackNode^.Info.AliasID, 4);
+              PanelMain.Enabled := True;
+            end else
+              PhysicalNodeState := ons_Disabled;
+            UpdateUI;
+          end;
+      end
     end;
-    UpdateUI;
+  end;
+end;
+
+procedure TFormThrottle.SpinEditAddressChange(Sender: TObject);
+begin
+  UpdateAddressRange
+end;
+
+procedure TFormThrottle.TimerGeneralTimer(Sender: TObject);
+begin
+  if Assigned(OPStackNode) then
+  begin
+    if OPStackNode^.State and NS_PERMITTED <> 0 then
+      PhysicalNodeState := ons_Permitted
+    else
+    if OPStackNode^.State and NS_INITIALIZED <> 0 then
+      PhysicalNodeState := ons_LoggingIn
   end;
 end;
 
@@ -986,8 +967,19 @@ begin
 end;
 
 procedure TFormThrottle.OnBeforeDestroyTask(Sender: TTaskOlcbBase);
+var
+  ProxyAllocate: TTaskTractionProxyAllocateByTrainID;
 begin
-
+  if Sender is TTaskTractionProxyAllocateByTrainID then
+  begin
+    ProxyAllocate := TTaskTractionProxyAllocateByTrainID( Sender);
+    if (ProxyAllocate.ErrorCode = TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK) and (ProxyAllocate.TrainNodeID.AliasID <> 0) then
+    begin
+      TrainAlias := ProxyAllocate.TrainNodeID.AliasID;
+      UpdateUI
+    end else
+      ShowMessage('Unable to Allocate Train, please try again');
+  end;
 end;
 
 procedure TFormThrottle.ToggleTagOnComponent(Sender: TComponent);
@@ -1003,15 +995,8 @@ end;
 
 procedure TFormThrottle.UpdateAddressRange;
 begin
-  if IsShortAddress then
-  begin
-    SpinEditAddress.MinValue := 1;
-    SpinEditAddress.MaxValue := 127;
-  end else
-  begin
-    SpinEditAddress.MinValue := 0;
-    SpinEditAddress.MaxValue := 16383;
-  end;
+  if SpinEditAddress.Value > 127 then
+    RadioGroupShortLong.ItemIndex := 1;
 end;
 
 procedure TFormThrottle.UpdateFunctionsClearControls;
@@ -1129,7 +1114,7 @@ end;
 
 procedure TFormThrottle.UpdateStatus(NewStatus: string);
 begin
-  StatusBar.Panels[1].Text := NewStatus;
+  StatusBar.Panels[0].Text := NewStatus;
 end;
 
 procedure TFormThrottle.InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
@@ -1147,11 +1132,11 @@ begin
   ActionAllocationByAddress.Enabled := TrainAlias = 0;
 //  ActionAllocationFree.Enabled := TrainAlias <> 0; ;
 //  ActionAllocationRelease.Enabled := TrainAlias <> 0; ;
-  GroupBoxFunctions.Enabled := TrainAlias <> 0; ;
-  GroupBoxControl.Enabled := TrainAlias <> 0; ;
-  GroupBoxConfiguration.Enabled := TrainAlias <> 0; ;
-  RadioGroupSpeedStep.Enabled := TrainAlias = 0; ;
-  SpinEditAddress.Enabled := TrainAlias = 0; ;
+  GroupBoxFunctions.Enabled := TrainAlias <> 0;
+  GroupBoxControl.Enabled := TrainAlias <> 0;
+  GroupBoxConfiguration.Enabled := TrainAlias <> 0;
+  RadioGroupSpeedStep.Enabled := TrainAlias = 0;
+  SpinEditAddress.Enabled := TrainAlias = 0;
   if TrainAlias <> 0 then
     LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value)
   else

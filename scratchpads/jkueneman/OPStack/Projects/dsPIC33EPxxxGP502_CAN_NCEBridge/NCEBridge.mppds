@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_userstatemachine.mpas
+Value=..\..\NMRAnet\opstackcore.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -76,13 +76,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=6
+Count=8
 File0=NCEBridge.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=..\..\Library\CabCommon\NMRAnetCabBridge.mpas
 File3=..\..\Library\CabCommon\NMRAnetCabBridgeDefines.mpas
 File4=..\..\NMRAnet\nmranetdefines.mpas
 File5=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
+File6=..\..\NMRAnet\nmranetutilities.mpas
+File7=..\..\NMRAnet\opstackcore.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -92,27 +94,18 @@ Count=2
 File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
-Count=20
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Count=11
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
-Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
-Path4=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\Templates\
-Path10=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path11=E:\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\
-Path12=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path13=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path14=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path15=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
-Path16=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path17=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\Templates\
-Path18=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path19=Z:\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\
+Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\Templates\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\
 [HEADER_PATH]
 Count=0
 [HEADERS]

@@ -57,6 +57,9 @@ type
   TConnectionState = (csConnecting, csConnected, csDisconnecting, csDisconnected);
 
 type
+    TOlcbNodeState = (ons_Disabled, ons_Started, ons_LoggingIn, ons_Permitted );
+
+type
   TOnRawMessage = procedure(Sender: TObject; MessageStr: String) of object;
   TOnConnectionStateChange = procedure (Sender: TObject; ConnectionState: TConnectionState) of object;
   TOnOPStackCallback = procedure(GridConnectStrPtr: PGridConnectString);
@@ -109,6 +112,7 @@ type
     procedure StoreNodeIDToData(NodeID: Int64; IsAddressed: Boolean);
     function ExtractDataBytesAsInt(StartByteIndex, EndByteIndex: Integer): QWord;
     function ExtractDataBytesAsString(StartIndex, Count: Integer): String;
+    function ExtractDataBytesAsEventID: PEventID;
     procedure IntToByteArray(Int: QWord; var ByteArray: TCANByteArray);
   end;
 
@@ -133,7 +137,8 @@ type
   function GridConnectToJMRI(GridStr: AnsiString): AnsiString;
   function ProtocolSupportReplyToString(Mask: QWord): string;
   function AddressSpaceToString(AddressSpace: Byte): string;
-  function NodeIDToDotHex(NodeID: QWord): string;
+  function NodeIDToDotHex(NodeID: QWord): string; overload;
+  function NodeIDToDotHex(NodeInfo: TNodeID): string; overload;
   function DotHexToNodeID(NodeID: string): QWord;
   function EventToDoxHex(Event: TEventID): string;
   function DotHexToEvent(Event: string): TEventID;
@@ -841,6 +846,11 @@ begin
   Result := Result  + ';'
 end;
 
+function TOpenLCBMessageHelper.ExtractDataBytesAsEventID: PEventID;
+begin
+  Result := @Data;
+end;
+
 procedure TOpenLCBMessageHelper.Load(ALayer: TOpenLCBLayer; AMTI: DWord;
   ASourceAlias: Word; ADestinationAlias: Word; ADataCount: Integer; AData0,
   AData1, AData2, AData3, AData4, AData5, AData6, AData7: Byte);
@@ -1274,14 +1284,17 @@ var
   Dot: string;
 begin
   Dot := '.';
-  Result := IntToHex(NodeID, 1);
-  if Length(Result) < 12 then
-    Result := '0' + Result;
+  Result := IntToHex(NodeID, 12);
   Insert(Dot, Result, 3);
   Insert(Dot, Result, 6);
   Insert(Dot, Result, 9);
   Insert(Dot, Result, 12);
   Insert(Dot, Result, 15);
+end;
+
+function NodeIDToDotHex(NodeInfo: TNodeID): string;
+begin
+  Result := NodeIDToDotHex((QWord( NodeInfo[1]) shl 24 ) or NodeInfo[0])
 end;
 
 function DotHexToNodeID(NodeID: string): QWord;

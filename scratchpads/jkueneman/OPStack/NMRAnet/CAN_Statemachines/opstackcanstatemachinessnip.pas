@@ -82,7 +82,7 @@ begin
     if OPStackBuffers_Allcoate_ACDI_SNIP_Message(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
       OPStackCANStatemachineBuffers_AddIncomingAcdiSnipMessage(InProcessMessage)
     else begin
-      OptionalInteractionRejected(OPStackMessage, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
+      OptionalInteractionRejected(OPStackMessage^.Source.AliasID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.ID, OPStackMessage^.MTI, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
       Exit;
     end;
   end;

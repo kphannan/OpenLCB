@@ -186,7 +186,7 @@ begin
                     OPStackBuffers_CopyDataArrayWithSourceOffset(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, 2);
                     Result := True;
                   end else
-                    OptionalInteractionRejected(OPStackMessage, False);         // Out of buffers, try again later
+                    OptionalInteractionRejected(SourceAlias, DestAlias, NULL_NODE_ID, NULL_NODE_ID, MTI, False);         // Out of buffers, try again later
                 end;
               end;
             end else
@@ -196,7 +196,7 @@ begin
                 OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);
                 Result := True;
               end else
-                OptionalInteractionRejected(OPStackMessage, False);             // Out of buffers, please try again
+                OptionalInteractionRejected(SourceAlias, DestAlias, NULL_NODE_ID, NULL_NODE_ID, MTI, False);             // Out of buffers, please try again
             end;
           end;
       MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME,
