@@ -69,12 +69,9 @@ procedure OPStackNode_IncomingMessageLink(Node: PNMRAnetNode; AMessage: POPStack
 procedure OPStackNode_IncomingMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 function OPStackNode_NextIncomingMessage(Node: PNMRAnetNode): POPStackMessage;
 
-procedure OPStackNode_StateMachineMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-procedure OPStackNode_StateMachineMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-function OPStackNode_NextStateMachineMessage(Node: PNMRAnetNode): POPStackMessage;
-
-
 function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
+
+function OPStackNode_FindNodeByNodeInfo(var NodeInfo: TNodeInfo): PNMRANetNode;
 
 {$IFNDEF FPC}
 procedure OPStackNode_PrintPool;
@@ -185,7 +182,6 @@ begin
     Node^.iIndex := i;
     OPStackNode_ZeroizeNode(Node);
     Node^.IncomingMessages := nil;
-    Node^.StateMachineMessages := nil;
     Node^.Info.ID[0] := NodeID_LO + i;         // Picked up from the NodeID.inc file
     Node^.Info.ID[1] := NodeID_HI;
     Node^.Login.Seed := Node^.Info.ID;
@@ -394,7 +390,6 @@ begin
   for j := 0 to USER_MAX_PCER_BYTES - 1 do
     Node^.Events.Produced[j] := 0;
   Node^.IncomingMessages := nil;
-  Node^.StateMachineMessages := nil;
   Node^.Flags := 0;
   Node^.UserData := nil;
   Node^.iUserStateMachine := 0;
@@ -843,65 +838,6 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure OPStackNode_StateMachineMessageLink;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-procedure OPStackNode_StateMachineMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-var
-  Temp: POPStackMessage;
-begin
-  if Node^.StateMachineMessages = nil then
-    Node^.StateMachineMessages := AMessage
-  else begin                                  // Tack it to the end of the chain
-    Temp := Node^.StateMachineMessages;
-    while Temp^.NextIncoming <> nil do
-      Temp := Temp^.NextIncoming;
-    Temp^.NextIncoming := AMessage
-  end
-end;
-
-// *****************************************************************************
-//  procedure OPStackNode_StateMachineMessageUnLink;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-procedure OPStackNode_StateMachineMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
-var
-  Temp, Parent: POPStackMessage;
-begin
-  if Node^.StateMachineMessages <> nil then
-  begin
-    if Node^.StateMachineMessages = AMessage then                                           // Root Buffer match case is easy
-      Node^.StateMachineMessages := Node^.StateMachineMessages^.NextIncoming
-    else begin
-      Parent := Node^.StateMachineMessages;                                                 // Already know it is not the root buffer so setup for the first level down
-      Temp := Node^.StateMachineMessages^.NextIncoming;
-      while (Temp <> nil) and (Temp <> AMessage) do
-      begin
-        Parent := Temp;
-        Temp := Temp^.NextIncoming
-      end;
-      if Temp <> nil then
-        Parent^.NextIncoming := Temp^.NextIncoming
-    end
-  end
-end;
-
-// *****************************************************************************
-//  procedure OPStackNode_NextStateMachineMessage;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-function OPStackNode_NextStateMachineMessage(Node: PNMRAnetNode): POPStackMessage;
-begin
-  Result := Node^.StateMachineMessages;    // Basic for now
-end;
-
-// *****************************************************************************
 //  procedure OPStackNode_Find;
 //    Parameters:
 //    Result:
@@ -962,6 +898,27 @@ begin
   if NMRAnetUtilities_EqualNodeIDInfo(Message1^.Dest, Message2^.Dest) then
     if NMRAnetUtilities_EqualNodeIDInfo(Message1^.Source, Message2^.Source) then
       Result := True
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_FindNodeByNodeInfo;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_FindNodeByNodeInfo(var NodeInfo: TNodeInfo): PNMRANetNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i:= 0 to NodePool.AllocatedCount - 1 do
+  begin
+    if NMRAnetUtilities_EqualNodeIDInfo(NodeInfo, NodePool.AllocatedList[i]^.Info) then
+    begin
+      Result := NodePool.AllocatedList[i];
+      Break;
+    end;
+  end;
 end;
 
 end.

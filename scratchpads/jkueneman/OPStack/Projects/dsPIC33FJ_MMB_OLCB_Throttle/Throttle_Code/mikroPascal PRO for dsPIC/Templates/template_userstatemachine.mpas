@@ -2,14 +2,22 @@ unit template_userstatemachine;
 
 {$I Options.inc}
 
+{.$DEFINE LOG_STATEMACHINE}
+{.$DEFINE LOG_TRAIN_BY_ADDRESS_STATEMACHINE}
+
 uses
+  NMRAnetCabBridgeDefines,
+  NMRAnetCabBridge,
   Float16,
   opstacktypes,
   opstackdefines,
   template_node,
   opstack_api,
   nmranetdefines,
-  nmranetutilities;
+  nmranetutilities,
+  Throttle_events_code,
+  Throttle_driver,
+  Throttle_objects;
 
 procedure UserStateMachine_Initialize;
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
@@ -53,10 +61,75 @@ procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
   procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
 
 
+procedure SetStatemachine(StateIndex, AllocatedNodeIndex: Word);
+procedure SetFunction(StateIndex, AbsoluteNodeIndex: Word; FunctionAddress: DWord);
+procedure SetFunctions(AbsoluteNodeIndex: Word);
+
 implementation
+  
+const
+  QUERY_NORMAL                             = 0;
+  QUERY_FOR_ALLOCATION                     = 1;
+  
+const
+   STATE_CAB_SEND_QUERY                    = 0;
+   STATE_CAB_WAIT_QUERY                    = 1;
+   STATE_CAB_DONE_QUERY                    = 2;
+  
+type
+  TUserData = record
+    iSubStateMachine: Word;
+    Watchdog: Word;
+    QueryFunctionAddress: DWord;
+    QueryType: Byte;
+  end;
+  PUserData = ^TUserData;
 
 var
   GlobalTimer: Word;
+  UserDataArray: array[0..USER_MAX_NODE_COUNT-1] of TUserData;
+  LastTick: Word;
+  ProxyNode: TNodeInfo;
+  
+procedure SetStatemachine(StateIndex, AllocatedNodeIndex: Word);
+begin
+  if AllocatedNodeIndex < NodePool.AllocatedCount then
+  begin
+    NodePool.Pool[AllocatedNodeIndex].iUserStateMachine := StateIndex;
+    PUserData( NodePool.Pool[AllocatedNodeIndex].UserData)^.iSubStateMachine := 0;
+  end;
+end;
+
+procedure SetFunction(StateIndex, AbsoluteNodeIndex: Word; FunctionAddress: DWord);
+var
+  Node: PNMRANetNode;
+begin
+  if AbsoluteNodeIndex < USER_MAX_NODE_COUNT then
+  begin
+    Node := @NodePool.Pool[AbsoluteNodeIndex];
+    Node^.iUserStateMachine := StateIndex;
+    PUserData( Node^.UserData)^.iSubStateMachine := 0;
+    PUserData( Node^.UserData)^.QueryFunctionAddress := FunctionAddress;
+  end;
+end;
+
+procedure SetFunctions(AbsoluteNodeIndex: Word);
+var
+  Node: PNMRANetNode;
+  Mask: DWord;
+  i: Integer;
+begin
+  if AbsoluteNodeIndex < USER_MAX_NODE_COUNT then
+  begin
+    Node := @NodePool.Pool[AbsoluteNodeIndex];
+    Mask := Node^.TrainData.Functions shr FunctionScrollOffset;
+    for i := 0 to FUNCTION_BUTTON_DISPLAY_COUNT - 1 do
+    begin
+      ReloadFunction(Mask and $00000001, i + FunctionScrollOffset);
+      Mask := Mask shr 1;
+    end;
+  end;
+end;
 
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize
@@ -67,6 +140,56 @@ var
 // *****************************************************************************
 procedure UserStateMachine_Initialize;
 begin
+  FunctionStrings[0] := 'Function 0';
+  FunctionStrings[1] := 'Function 1';
+  FunctionStrings[2] := 'Function 2';
+
+  FunctionStrings[3] := 'Function 3';
+  FunctionStrings[4] := 'Function 4';
+  FunctionStrings[5] := 'Function 5';
+  FunctionStrings[6] := 'Function 6';
+  FunctionStrings[7] := 'Function 7';
+  FunctionStrings[8] := 'Function 8';
+  FunctionStrings[9] := 'Function 9';
+  FunctionStrings[10] := 'Function 10';
+  FunctionStrings[11] := 'Function 11';
+  FunctionStrings[12] := 'Function 12';
+  FunctionStrings[13] := 'Function 13';
+  FunctionStrings[14] := 'Function 14';
+  FunctionStrings[15] := 'Function 15';
+  FunctionStrings[16] := 'Function 16';
+  FunctionStrings[17] := 'Function 17';
+  FunctionStrings[18] := 'Function 18';
+  FunctionStrings[19] := 'Function 19';
+  FunctionStrings[20] := 'Function 20';
+  FunctionStrings[21] := 'Function 21';
+  FunctionStrings[22] := 'Function 22';
+  FunctionStrings[23] := 'Function 23';
+  FunctionStrings[24] := 'Function 24';
+  FunctionStrings[25] := 'Function 25';
+  FunctionStrings[26] := 'Function 26';
+  FunctionStrings[27] := 'Function 27';
+  FunctionStrings[28] := '';
+  FunctionStrings[29] := '';
+  FunctionScrollOffset := 0;
+
+  LongShortStrings[0] := 'S';
+  LongShortStrings[1] := 'L';
+  LongShortStringIndex := 0;
+
+  SpeedStepStrings[0] := '14';
+  SpeedStepStrings[1] := '28';
+  SpeedStepStrings[2] := '128';
+  SpeedStepIndex := 0;
+
+  StartupStrings[0] := 'Logging into OpenLCB Network...';
+  StartupStrings[1] := 'Locating a OpenLCB Proxy...';
+
+  ButtonLoginMessage.Caption := @StartupStrings[iSTR_STARTUP_OLCB_NETWORK];
+  DrawButton(@ButtonLoginMessage);
+  
+  ProxyNode.AliasID := 0;
+  ProxyNode.ID := NULL_NODE_ID;
 end;
 
 // *****************************************************************************
@@ -75,13 +198,293 @@ end;
 //     Returns     : None
 //     Description : Called as often as possible to run the user statemachine
 // *****************************************************************************
+  
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
+var
+  UserDataPtr: PUserData;
+  SpeedDir: THalfFloat;
+  DccAddress, NewFunctionValue: Word;
 begin
-   if Node^.State and NS_PERMITTED <> 0 then
-   begin
- //    TrySendIdentifyConsumer(Node^.Info, @EVENT_IS_PROXY);
-  //   LATB1_bit := not LATB1_bit;
-   end;
+  if Node = GetPhysicalNode then
+  begin
+    case Node^.iUserStateMachine of
+      STATE_THROTTLE_START :
+          begin
+            if Node^.State and NS_PERMITTED <> 0 then
+            begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('STATE_THROTTLE_START: Permitted' + LF);{$ENDIF}
+              Node^.iUserStateMachine := STATE_THROTTLE_LOG_IN;
+            end;
+            Exit;
+          end;
+      STATE_THROTTLE_LOG_IN :
+          begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('STATE_THROTTLE_LOG_IN' + LF);{$ENDIF}
+            GlobalTimer := 0;
+            LastTick := 0;
+            ProgressBarStart.Position := 0;
+            DrawProgressBar(@ProgressBarStart);
+            Node^.iUserStateMachine := STATE_THROTTLE_SPLASH_SCREEN;
+            Exit;
+          end;
+      STATE_THROTTLE_SPLASH_SCREEN :
+          begin
+            if GlobalTimer > LastTick then
+            begin
+              LastTick := GlobalTimer;
+              ProgressBarStart.Position := LastTick;
+              DrawProgressBar(@ProgressBarStart);
+            end;
+            if GlobalTimer = 10 then
+            begin
+              ButtonLoginMessage.Caption := @StartupStrings[iSTR_STARTUP_PROXY];
+              DrawButton(@ButtonLoginMessage);
+            end;
+            
+            if GlobalTimer > 24 then
+            begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('STATE_THROTTLE_SPLASH_SCREEN' + LF);{$ENDIF}
+              CurrentScreenID := ThrottleScreenID;
+              DrawScreen(ThrottleScreenID);    
+              AddressStr := '0003';
+              LongShortStringIndex := 1;
+              SpeedStepIndex := 1;
+              ReloadFunctionStrings;  
+              ReloadTrainStrings;
+              Node^.iUserStateMachine := STATE_THROTTLE_START_FIND_PROXY;
+            end;
+            Exit;
+          end;
+      STATE_THROTTLE_START_FIND_PROXY :
+          begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('STATE_THROTTLE_START_FIND_PROXY' + LF);{$ENDIF}
+            GlobalTimer := 0;
+            if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+              Node^.iUserStateMachine := STATE_THROTTLE_FIND_PROXY;
+            Exit;
+          end;
+      STATE_THROTTLE_FIND_PROXY :   // Find the Proxy node (Command Station) on the network before progressing
+          begin
+            if NMRAnetUtilities_NullNodeIDInfo(ProxyNode) then
+            begin
+              if GlobalTimer > 10 then
+                Node^.iUserStateMachine := STATE_THROTTLE_START_FIND_PROXY       // Try again
+            end else
+            begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('STATE_THROTTLE_START_FIND_PROXY' + LF);{$ENDIF}
+              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+            end;
+            Exit;
+          end;
+      STATE_THROTTLE_IDLE :
+          begin
+            Check_TP;
+          end;
+      STATE_THROTTLE_TRAIN_BY_ADDRESS :
+          begin
+            if not NMRAnetUtilities_NullNodeIDInfo(ProxyNode) then
+            begin
+              UserDataPtr := PUserData( PByte( Node^.UserData));
+              case UserDataPtr^.iSubStateMachine of
+                STATE_SUB_BRIDGE_INITIALIZE :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_SUB_BRIDGE_INITIALIZE' + LF);{$ENDIF}
+                       UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK;
+                       Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK' + LF);{$ENDIF}
+                      if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT; // Wait for the Manage Reply Callback
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE' + LF);{$ENDIF}
+                      DccAddress := StrToWord(AddressStr);
+                      if LongShortStringIndex = 1 then
+                        DccAddress := DccAddress or $C000;
+                      if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, DccAddress, SpeedStepIndexToSpeedStep(SpeedStepIndex), 0) then
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK :
+                    begin  {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK' + LF);{$ENDIF}
+                      if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK; // No Reply for Unlock
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK' + LF);{$ENDIF}
+                      if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER' + LF);{$ENDIF}
+                      if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      UserDataPtr^.WatchDog := 0;
+                      PUserData( Node^.UserData)^.QueryType := QUERY_FOR_ALLOCATION;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED' + LF);{$ENDIF}
+                      if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
+                      begin
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                        UserDataPtr^.QueryFunctionAddress := 0;
+                        UserDataPtr^.QueryType := QUERY_FOR_ALLOCATION;
+                      end;
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS' + LF);{$ENDIF}
+                      if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, UserDataPtr^.QueryFunctionAddress) then
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK' + LF);{$ENDIF}
+                      if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, False) then
+                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;                                // We are done....  Look for more tasks
+                      UserDataPtr^.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
+                    begin
+                      if UserDataPtr^.WatchDog > 50 then         // Waiting for the Reply to come into a callback
+                      begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT' + LF);{$ENDIF}
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
+                      end;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK :
+                    begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK' + LF);{$ENDIF}
+                      if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then   // Unsure if we are locked or not, just release just in case
+                        UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK; // No Reply for Unlock, just unlock the Traction Protcol and end
+                      Exit;
+                    end;
+              end;
+            end else
+              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+            Exit;
+          end;
+      STATE_THROTTLE_TRAIN_BY_LIST :
+          begin
+            Exit;
+          end;
+      STATE_THROTTLE_DIRECTION_FORWARD :
+          begin
+            Exit;
+          end;
+      STATE_THROTTLE_DIRECTION_REVERSE :
+          begin
+            Exit;
+          end;
+      STATE_THROTTLE_SPEED_CHANGE :
+          begin
+            if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              SpeedDir := FloatToHalf( real(  ProgressBarSpeed.Position));
+              if RadioButtonReverse.Checked then
+                SpeedDir := SpeedDir or $8000
+              else
+                SpeedDir := SpeedDir and not $8000;
+              if TrySendTractionSpeedSet(Node^.Info, Node^.TrainData.LinkedNode, SpeedDir) then
+                Node^.iUserStateMachine := STATE_THROTTLE_IDLE; // We are done....
+            end else
+              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+            Exit;
+          end;
+      STATE_THROTTLE_FUNCTION :
+          begin
+            if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              if ToggleFunction(Node, Node^.TrainData.Functions, PUserData( Node^.UserData)^.QueryFunctionAddress, NewFunctionValue) then
+              begin
+                ReloadFunction(NewFunctionValue, PUserData( Node^.UserData)^.QueryFunctionAddress);
+                Node^.iUserStateMachine := STATE_THROTTLE_IDLE; // We are done....
+              end;
+            end else
+              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+            Exit;
+          end;
+      STATE_THROTTLE_E_STOP :
+          begin
+            if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              if TrySendTractionEmergencyStop(Node^.Info, Node^.TrainData.LinkedNode) then
+                Node^.iUserStateMachine := STATE_THROTTLE_IDLE; // We are done....
+            end else
+              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+            Exit;
+          end;
+      STATE_THROTTLE_QUERY_SPEED :
+          begin
+            if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              case PUserData( Node^.UserData)^.iSubStateMachine of
+                  STATE_CAB_SEND_QUERY :
+                      begin
+                        if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+                        begin
+                          if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
+                            PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_WAIT_QUERY;        // Wait for response
+                        end else
+                          Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+                        Exit;
+                      end;
+                  STATE_CAB_WAIT_QUERY :
+                      begin
+                        if PUserData( Node^.UserData)^.WatchDog > 20 then         // Waiting for the Reply to come into a callback
+                           Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                        Exit;
+                      end;
+                  STATE_CAB_DONE_QUERY :
+                      begin
+                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                        Exit;
+                      end;
+                end
+              end;
+            Exit;
+          end;
+      STATE_THROTTLE_QUERY_FUNCTION :
+          begin
+            if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+            begin
+              case PUserData( Node^.UserData)^.iSubStateMachine of
+                  STATE_CAB_SEND_QUERY :
+                      begin
+                        if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
+                        begin
+                          if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, PUserData( Node^.UserData)^.QueryFunctionAddress) then
+                            PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_WAIT_QUERY;        // Wait for response
+                        end else
+                          Node^.iUserStateMachine := STATE_THROTTLE_IDLE;
+                        Exit;
+                      end;
+                  STATE_CAB_WAIT_QUERY :
+                      begin
+                        if PUserData( Node^.UserData)^.WatchDog > 20 then         // Waiting for the Reply to come into a callback
+                           Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                        Exit;
+                      end;
+                  STATE_CAB_DONE_QUERY :
+                      begin
+                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                        Exit;
+                      end;
+                end
+              end;
+              Exit;
+            end;
+
+    end; // case
+  end else
+  begin
+    // Should NEVER get here as there are no virtual nodes
+  end;
 end;
 
 // *****************************************************************************
@@ -96,6 +499,7 @@ end;
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 begin
   Node^.iUserStateMachine := 0;
+  Node^.UserData := @UserDataArray[Node^.iIndex];
 end;
 
 {$IFDEF SUPPORT_TRACTION}
@@ -144,7 +548,98 @@ end;
 //     Description : Called in response to a Traction Protcool request
 // *****************************************************************************
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  MultiFrameBuffer: PMultiFrameBuffer;
+  FunctionAddress: DWord;
+  FunctionValue: Word;
+  Mask: DWord;
 begin
+  MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
+
+  case MultiFrameBuffer^.DataArray[0] of
+    TRACTION_QUERY_SPEED :
+        begin
+          Node^.TrainData.SpeedDir := (MultiFrameBuffer^.DataArray[1] shl 8) or MultiFrameBuffer^.DataArray[2];   // Update our local copy
+
+          if PUserData( Node^.UserData)^.QueryType = QUERY_FOR_ALLOCATION then
+          begin
+            ReloadSpeedDir(Node^.TrainData.SpeedDir and $8000 = 0, HalfToFloat(Node^.TrainData.SpeedDir and not $8000));
+            PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS;
+          end else
+          if PUserData( Node^.UserData)^.QueryType = QUERY_NORMAL then
+          begin
+            ReloadSpeedDir(Node^.TrainData.SpeedDir and $8000 = 0, HalfToFloat(Node^.TrainData.SpeedDir and not $8000));
+            PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_DONE_QUERY
+          end;
+        end;
+    TRACTION_QUERY_FUNCTION :
+        begin
+          FunctionAddress := DWord(MultiFrameBuffer^.DataArray[1] shr 16) or DWord(MultiFrameBuffer^.DataArray[2] shr 8) or DWord(MultiFrameBuffer^.DataArray[3]);
+          FunctionValue := Word(MultiFrameBuffer^.DataArray[4] shr 8) or Word(MultiFrameBuffer^.DataArray[5]);
+
+          Mask := $00000001;
+          Mask := Mask shl FunctionAddress;
+          
+          if FunctionValue = 0 then
+            Node^.TrainData.Functions := Node^.TrainData.Functions and not Mask
+          else
+            Node^.TrainData.Functions := Node^.TrainData.Functions or Mask;
+
+          if PUserData( Node^.UserData)^.QueryType = QUERY_FOR_ALLOCATION then
+          begin
+            if PUserData( Node^.UserData)^.QueryFunctionAddress < 28 then
+            begin
+              ReloadFunction(FunctionValue, FunctionAddress);               // Update the UI, if needed
+              PUserData( Node^.UserData)^.QueryFunctionAddress := FunctionAddress + 1;
+              PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS;
+            end else
+              PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
+          end else
+          if PUserData( Node^.UserData)^.QueryType = QUERY_NORMAL then
+          begin
+            ReloadFunction(FunctionValue, FunctionAddress);               // Update the UI, if needed
+            PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_DONE_QUERY
+          end;
+        end;
+    TRACTION_CONTROLLER_CONFIG :
+        begin
+          case MultiFrameBuffer^.DataArray[1] of
+            TRACTION_CONTROLLER_CONFIG_ASSIGN :
+                begin
+                  if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
+                    PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED
+                  else
+                    PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
+                end;
+          end;
+        end;
+    TRACTION_CONSIST :
+        begin
+          case MultiFrameBuffer^.DataArray[1] of
+            TRACTION_CONSIST_ATTACH :
+                begin
+                end;
+            TRACTION_CONSIST_DETACH :
+                begin
+                end;
+            TRACTION_CONSIST_QUERY :
+                begin
+                end;
+          end // case
+        end;
+    TRACTION_MANAGE :
+        begin
+          case MultiFrameBuffer^.DataArray[1] of
+            TRACTION_MANAGE_RESERVE :
+                begin
+                  if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                    PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER
+                  else
+                    PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
+                end;
+          end
+        end;
+    end;
 
 end;
 {$ENDIF}
@@ -173,8 +668,30 @@ end;
 //     Description :
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
-begin
-
+var
+  MultiFrameBuffer: PMultiFrameBuffer;
+begin  {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('AppCallback_TractionProxyProtocolReply' + LF);{$ENDIF}
+  case AMessage^.Buffer^.DataArray[0] of
+    TRACTION_PROXY_MANAGE :
+        begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('TRACTION_PROXY_MANAGE' + LF);{$ENDIF}
+          if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE then
+          begin
+             if AMessage^.Buffer^.DataArray[2] = 0 then
+               PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE             // Move to next state after reserving
+             else
+               PUserData( Node^.UserData)^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
+          end;
+          Exit;
+        end;
+    TRACTION_PROXY_ALLOCATE :
+        begin {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('TRACTION_PROXY_ALLOCATE' + LF);{$ENDIF}
+          MultiFrameBuffer := PMultiFrameBuffer( PByte(AMessage^.Buffer));
+          Node^.TrainData.LinkedNode.AliasID := (MultiFrameBuffer^.DataArray[11] shl 8) or (MultiFrameBuffer^.DataArray[12]);
+          NMRAnetUtilities_Load48BitNodeIDWithSimpleData(Node^.TrainData.LinkedNode.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5]))^);
+          PUserData( Node^.UserData)^.iSubStateMachine  := STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK;    // Now need to unlock the Proxy
+          Exit;
+        end;
+  end; // case
 end;
 {$ENDIF}
 
@@ -226,7 +743,11 @@ end;
 // *****************************************************************************
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 begin
-
+  if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
+  begin
+    ProxyNode := Source;
+   {$IFDEF LOG_STATEMACHINE}UART2_Write_Text('NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY)' + LF);{$ENDIF}
+  end;
 end;
 
 // *****************************************************************************
@@ -289,8 +810,12 @@ end;
 //                   to update asyncronous flags
 // *****************************************************************************
 procedure AppCallback_Timer_100ms;
+var
+ i: Integer;
 begin
   Inc(GlobalTimer);
+  for i := 0 to NodePool.AllocatedCount - 1 do
+    PUserData( NodePool.Pool[i].UserData)^.Watchdog := PUserData( NodePool.Pool[i].UserData)^.Watchdog + 1;
 end;
 
 // *****************************************************************************

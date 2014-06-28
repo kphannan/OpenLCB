@@ -12,7 +12,7 @@ uses
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
   template_hardware, opstackcore, template_configuration, template_node,
-  opstackbuffers, NMRAnetNceBridgeDefines, cabIDchooser, opstackdefines,
+  opstackbuffers, opstackdefines, threadedstringlist, nmranetutilities,
   Float16;
 
 const
@@ -24,12 +24,16 @@ const
   WM_CLOSE_CONNECTIONS = WM_USER + 234;
 
 type
-
   TLoadSettingType = (
     lstEthernet,
     lstCom,
     lstGeneral
   );
+
+type
+  TThrottleServerState = record
+    Proxy: TNodeInfo;
+  end;
 
   { TOlcbThrottleTreeNode }
 
@@ -69,7 +73,6 @@ type
     ActionCOMConnection: TAction;
     ActionList: TActionList;
     BitBtnRescanPorts: TBitBtn;
-    Button1: TButton;
     ButtonRefreshBufferCount: TButton;
     ButtonLocalHost: TButton;
     ButtonRemoteLocalHost: TButton;
@@ -190,20 +193,18 @@ type
     TabSheetMain: TTabSheet;
     TabSheetEthernet: TTabSheet;
     TabSheetCom: TTabSheet;
-    TimerOpStackProcess: TTimer;
-    TimerOpStackTimer: TTimer;
     ToolBarMain: TToolBar;
     ToolButton1: TToolButton;
     ToolButton2: TToolButton;
+    ToolButton3: TToolButton;
     ToolButton4: TToolButton;
     ToolButton5: TToolButton;
     ToolButton6: TToolButton;
     ToolButton7: TToolButton;
-    ToolButtonLog: TToolButton;
-    ToolButton3: TToolButton;
     ToolButtonCOM: TToolButton;
-    ToolButtonEthernet: TToolButton;
     ToolButtonDeleteThrottle: TToolButton;
+    ToolButtonEthernet: TToolButton;
+    ToolButtonLog: TToolButton;
     ToolButtonNewThrottle: TToolButton;
     ToolButtonSeparator: TToolButton;
     TreeViewProxies: TTreeView;
@@ -225,12 +226,10 @@ type
     procedure ActionLogPasteExecute(Sender: TObject);
     procedure ActionLogPauseExecute(Sender: TObject);
     procedure ActionLogSelectAllExecute(Sender: TObject);
-    procedure ActionRediscoverProxiesExecute(Sender: TObject);
     procedure ActionShowAllThrottlesExecute(Sender: TObject);
     procedure ActionStartNodeExecute(Sender: TObject);
     procedure ActionZeroizeConfigMemoryExecute(Sender: TObject);
     procedure BitBtnRescanPortsClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure ButtonLocalHostClick(Sender: TObject);
     procedure ButtonRefreshBufferCountClick(Sender: TObject);
     procedure ButtonRemoteLocalHostClick(Sender: TObject);
@@ -243,7 +242,6 @@ type
     procedure EditAliasIDChange(Sender: TObject);
     procedure EditEthernetLocalIPChange(Sender: TObject);
     procedure EditNodeIDChange(Sender: TObject);
-    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -267,30 +265,29 @@ type
     procedure TabSheetEthernetShow(Sender: TObject);
     procedure TabSheetGeneralHide(Sender: TObject);
     procedure TabSheetGeneralShow(Sender: TObject);
-    procedure TimerOpStackProcessTimer(Sender: TObject);
-    procedure TimerOpStackTimerTimer(Sender: TObject);
     procedure TreeViewThrottlesCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
     FComConnectionState: TConnectionState;
     FConfigurationFile: WideString;
+    FEthernetConnectionCount: Integer;
     FEthernetConnectionState: TConnectionState;
     FPaused: Boolean;
     FSettingsFilePath: WideString;
     FSettingsLocked: Boolean;
     FShownOnce: Boolean;
     FThrottles: TThrottleList;
+    FThrottleServerState: TThrottleServerState;
     { private declarations }
   protected
-    procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
-    procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
+    function AnyConnectionActive: Boolean;
     procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
     procedure EthernetError(Sender: TObject; MessageStr: string);
     procedure ComPortError(Sender: TObject; MessageStr: String);
     procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
-    procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
-    procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
     procedure LoadSettings(SettingType: TLoadSettingType);
+    procedure MessageLogging(Sender: TObject; MessageStr: String);
+    procedure NodeEvent(Sender: TObject; EventList: TList);
     procedure ScanComPorts;
     procedure StoreSettings(SettingType: TLoadSettingType);
     procedure ThrottleClosing(Throttle: TFormThrottle);
@@ -298,12 +295,11 @@ type
     procedure UpdateMessageCountUI;
     procedure WMCloseConnections(var Message: TMessage); message WM_CLOSE_CONNECTIONS;
 
-    function CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
-
     property AppAboutCmd: TMenuItem read FAppAboutCmd write FAppAboutCmd;
     property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
     property ConfigurationFile: WideString read FConfigurationFile write FConfigurationFile;
     property EthernetConnectionState: TConnectionState read FEthernetConnectionState write FEthernetConnectionState;
+    property EthernetConnectionCount: Integer read FEthernetConnectionCount write FEthernetConnectionCount;
     {$IFDEF DARWIN}
     property OSXMenu: TMenuItem read FOSXMenu write FOSXMenu;
     property OSXSep1Cmd: TMenuItem read FOSXSep1Cmd write FOSXSep1Cmd;
@@ -316,7 +312,9 @@ type
     { public declarations }
     property SettingsFilePath: WideString read FSettingsFilePath write FSettingsFilePath;
     property Throttles: TThrottleList read FThrottles write FThrottles;
+    property ThrottleServerState: TThrottleServerState read FThrottleServerState write FThrottleServerState;
     procedure UpdateUI;
+
   end;
 
 var
@@ -334,31 +332,23 @@ uses
 procedure TFormOlcbTrainMaster.ActionAddNewThrottleExecute(Sender: TObject);
 var
   Throttle: TFormThrottle;
-  CabChooser: TFormCabChooser;
-  Node: TOlcbThrottleTreeNode;
-  CabID: Word;
+  TreeNode: TOlcbThrottleTreeNode;
 begin
-  if  Throttles.Count <= (ID_MAX_DEVICE - ID_MIN_DEVICE) then
   begin
-    CabChooser := TFormCabChooser.Create(Self);
-    CabChooser.Throttles := Self.Throttles;
-    if CabChooser.ShowModal = mrOK then
-    begin      // In the Ping callback it will see a Cab without a link and fire off the Traction Proxy, it uses the CabID to match Node with Throttle
-      Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, nil, ImageList16x16, CabChooser.CabID);
+   Throttle := nil;
+    begin      // In the Ping callback it will see a Cab without a link and fire off the Traction Proxy, it uses the CabID to match TreeNode with Throttle
+      Throttle := Throttles.CreateThrottle(EthernetHub, ComPortHub, ImageList16x16);
       if Assigned(Throttle) then
       begin
-        Throttle.PanelMain.Enabled := False;                                        // Not until the Node is created
-        Throttle.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
-        Node := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
-        Node.Throttle := Throttle;
+        Throttle.PanelMain.Enabled := False;                                        // Not until the TreeNode is created
+        Throttle.UpdateStatus(0, 'Creating and logging OpenLCB TreeNode into network.... Please Wait');
+        TreeNode := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
+        TreeNode.Throttle := Throttle;
+        NodeThread.AddTask(TNodeTaskAllocateNewNode.Create(NodePool.Pool[0].Info, STATE_THROTTLE_ROOT_ALLOCATE_NEW, Throttle));  // Ask the Throttle Manager Node to create a new virtual Throttle node
         UpdateUI;
-        Throttle.TimerGeneralTimeout.Interval := 1000;
-        Throttle.TimerGeneralTimeout.Enabled := True;
       end;
     end;
-    CabChooser.Close;
-  end else
-    ShowMessage('OpenLCB stack exhausted, can not create any more throttles');
+  end
 end;
 
 procedure TFormOlcbTrainMaster.ActionCloseAllThrottlesExecute(Sender: TObject);
@@ -379,8 +369,6 @@ begin
       ComPortHub.AddComPort(GlobalSettings.ComPort.BaudRate, PATH_LINUX_DEV + GlobalSettings.ComPort.Port);
       {$ENDIF}
     {$ENDIF}
-    ComPortHub.EnableReceiveMessages := ActionLogging.Checked;
-    ComPortHub.EnableSendMessages := ActionLogging.Checked;
   end
   else begin
     ComPortHub.RemoveComPort(nil);
@@ -396,8 +384,6 @@ end;
 procedure TFormOlcbTrainMaster.ActionEthernetClientConnectionExecute(Sender: TObject);
 begin
   EthernetHub.Listener := False;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.Enabled := ActionEthernetClientConnection.Checked;
 end;
 
@@ -409,8 +395,6 @@ end;
 procedure TFormOlcbTrainMaster.ActionEthernetListenerConnectionExecute(Sender: TObject);
 begin
   EthernetHub.Listener := True;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.Enabled := ActionEthernetListenerConnection.Checked;
 end;
 
@@ -441,11 +425,11 @@ end;
 
 procedure TFormOlcbTrainMaster.ActionLoggingExecute(Sender: TObject);
 begin
-  ComPortHub.EnableReceiveMessages := ActionLogging.Checked;
-  ComPortHub.EnableSendMessages := ActionLogging.Checked;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
   StoreSettings(lstGeneral);
+  if ActionLogging.Checked then
+    NodeThread.OnLogMessages := @MessageLogging
+  else
+    NodeThread.OnLogMessages := nil;
 end;
 
 procedure TFormOlcbTrainMaster.ActionLogInJMRIExecute(Sender: TObject);
@@ -468,21 +452,6 @@ begin
   SynMemoLog.SelectAll;
 end;
 
-procedure TFormOlcbTrainMaster.ActionRediscoverProxiesExecute(Sender: TObject);
-//var
- // Task: TTaskIdentifyProducer;
-begin
-{  TreeViewProxies.Items.Clear;
-  Task := TTaskIdentifyProducer.Create(GlobalSettings.General.AliasIDAsVal, 0, True, EVENT_IS_PROXY);
-  try
-    ComPortHub.AddTask(Task);
-    EthernetHub.AddTask(Task);
-    Task.Free;
-  finally
-    Task.Free;
-  end; }
-end;
-
 procedure TFormOlcbTrainMaster.ActionShowAllThrottlesExecute(Sender: TObject);
 begin
   Throttles.ShowAll;
@@ -490,17 +459,17 @@ end;
 
 procedure TFormOlcbTrainMaster.ActionStartNodeExecute(Sender: TObject);
 begin
-  if OPStackCore_IsRunning then
+  if NodeThread.StackRunning then
   begin
-    OPStackCore_Enable(False);
     ActionStartNode.ImageIndex := 239;
     ActionStartNode.Caption := 'Node Stopped';
+    NodeThread.EnableNode(False);
   end else
   begin
     ActionStartNode.ImageIndex := 240;
-    OPStackCore_Initialize;
-    OPStackCore_Enable(True);
     ActionStartNode.Caption := 'Node Running';
+    NodeThread.InitializeNode;
+    NodeThread.EnableNode(True);
   end;
 end;
 
@@ -509,29 +478,14 @@ begin
   ZeroConfiguration
 end;
 
+function TFormOlcbTrainMaster.AnyConnectionActive: Boolean;
+begin
+  Result := (ActionEthernetClientConnection.Enabled or ActionEthernetListenerConnection.Enabled or ActionCOMConnection.Enabled) and (EthernetHub.Enabled or ComPortHub.Connected);
+end;
+
 procedure TFormOlcbTrainMaster.BitBtnRescanPortsClick(Sender: TObject);
 begin
   ScanComPorts;
-end;
-
-procedure TFormOlcbTrainMaster.Button1Click(Sender: TObject);
-var
-  H: THalfFloat;
-  R: double;
-  Address, Mask: DWord;
-
-begin
-  Address := 1;
-  Mask := $00000001;
-  Mask := Mask shl Address;
-
-
-  H := FloatToHalf(100.0);
-  H := H + 1;
-  H := H - 1;
-  R := HalfToFloat(H);
-  R := R + 1;
-  R := R - 1;
 end;
 
 procedure TFormOlcbTrainMaster.ButtonLocalHostClick(Sender: TObject);
@@ -547,225 +501,6 @@ end;
 procedure TFormOlcbTrainMaster.ButtonRemoteLocalHostClick(Sender: TObject);
 begin
   EditEthernetRemoteIP.Text := '127.0.0.1';
-end;
-
-// State machine constants for the emulated NCE Throttle
-const
-  STATE_CAB_IDLE                 = 0;
-  STATE_CAB_ALLOCATE_BY_ADDRESS  = 1;
-  STATE_CAB_MACRO                = 2;
-  STATE_CAB_UPDATE_SPEEDDIR      = 3;
-  STATE_CAB_TOGGLE_DIR           = 4;
-  STATE_CAB_FUNCTIONS            = 5;
-  STATE_CAB_FREE_TRAIN           = 6;
-  STATE_CAB_RELEASE_TRAIN        = 7;
-
-
-  // *****************************************************************************
-// Here is where we pretend to be a NCE throttle that receives a PING (we don't care about
-// the SYNC pulse here) and replies with a 2 byte response based on what the delta between
-// the TrainInfo data and the current state of the Throttle
-// *****************************************************************************
-function TFormOlcbTrainMaster.CabPingEmulator(CabAddress: Word; Node: PNMRAnetNode): Boolean;
-var
-  i, j: Integer;
-  TrainSpeed, CabSpeed: single;
-  IsReverse: Boolean;
-begin
-  Result := False;
-  for i := 0 to Throttles.Count - 1 do
-  begin
-    if Assigned(Node) then
-    begin
-      if Throttles[i].CabID = CabAddress then
-      begin
-        // Sync the Node with the Cab UI
-        if Throttles[i].ThrottleAlias <> Node^.Info.AliasID then
-        begin
-          Throttles[i].ThrottleAlias := Node^.Info.AliasID;
-          Throttles[i].StatusBar.Panels[1].Text := 'Cab Alias ID: 0x' + IntTohex(Node^.Info.AliasID, 4);
-          Throttles[i].PanelMain.Enabled := True;
-        end;
-        // Sync the Node with the Cab UI
-        if Throttles[i].TrainAlias <> Node^.TrainData.LinkedNode.AliasID then
-        begin
-          Throttles[i].TrainAlias := Node^.TrainData.LinkedNode.AliasID;
-          Throttles[i].StatusBar.Panels[2].Text := 'Train Alias ID: 0x' + IntTohex(Node^.TrainData.LinkedNode.AliasID, 4);
-          Throttles[i].PanelMain.Enabled := True;
-        end;
-
-        // Test to Free the train
-        if Throttles[i].FreeTrain then
-          Throttles[i].CabStateMachine := STATE_CAB_FREE_TRAIN
-        else
-        // Test to Release the Train
-        if Throttles[i].ReleaseTrain then
-          Throttles[i].CabStateMachine := STATE_CAB_RELEASE_TRAIN
-        else
-        // Test for Allocation by Address, and the statemachine is not busy
-        if (Throttles[i].CabStateMachine = STATE_CAB_IDLE) and (Throttles[i].AllocateByAddressFlagged) then
-        begin
-          Throttles[i].CabStateMachine := STATE_CAB_ALLOCATE_BY_ADDRESS;
-          Throttles[i].CabSubStateMachine := 0;
-          Throttles[i].AllocateByAddressFlagged := False;
-        end else
-        // Test for a Direction Toggle
-        if Throttles[i].ToggleDir then
-          Throttles[i].CabStateMachine := STATE_CAB_TOGGLE_DIR
-        else
-        // Test for a Speed Change (or direction Change)
-        if Node^.TrainData.SpeedDir <> Throttles[i].CurrentSpeedDir then
-          Throttles[i].CabStateMachine := STATE_CAB_UPDATE_SPEEDDIR
-        else
-        // Test for a Function change
-        if Node^.TrainData.Functions <> Throttles[i].CurrentFunctions then
-          Throttles[i].CabStateMachine := STATE_CAB_FUNCTIONS;
-
-        // Run the Cab Statemachine based on what changes between the throttle and train were detected
-        case Throttles[i].CabStateMachine of
-          STATE_CAB_IDLE :
-              begin
-                UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
-                UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                Result := True;
-              end;
-          STATE_CAB_ALLOCATE_BY_ADDRESS :
-              begin
-                case Throttles[i].CabSubStateMachine of
-                    0 : begin
-                          UART_RX_StateMachine(NCE_CAB_SELECT_LOCO);
-                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
-                          Result := True;
-                        end;
-                    1 : begin
-                          UART_RX_StateMachine(NCE_CAB_TOGGLE_F1_1);
-                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
-                          Result := True;
-                        end;
-                    2 : begin
-                          UART_RX_StateMachine(NCE_CAB_TOGGLE_F2_2);
-                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
-                          Result := True;
-                        end;
-                    3 : begin
-                          UART_RX_StateMachine(NCE_CAB_ENTER);
-                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                          Throttles[i].AllocateByAddressFlagged := False;
-                          Throttles[i].CabStateMachine := STATE_CAB_IDLE;
-                          Result := True;
-                        end;
-
-                end;  // Case
-              end;
-          STATE_CAB_MACRO :
-              begin
-                 case Throttles[i].CabSubStateMachine of
-                    0 : begin
-                          UART_RX_StateMachine(NCE_CAB_SELECT_MACRO);
-                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                          Throttles[i].CabSubStateMachine := Throttles[i].CabSubStateMachine + 1;
-                          Result := True;
-                        end;
-                    // Add Macro code here....
-                    1 : begin
-                          UART_RX_StateMachine(NCE_CAB_ENTER);
-                          UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                          Throttles[i].AllocateByAddressFlagged := False;
-                          Throttles[i].CabStateMachine := STATE_CAB_IDLE;
-                          Result := True;
-                        end;
-
-                end;  // Case
-                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
-              end;
-          STATE_CAB_UPDATE_SPEEDDIR :
-              begin
-                IsReverse := Throttles[i].CurrentSpeedDir and $8000 <> 0;
-                CabSpeed := ( HalfToFloat(Throttles[i].CurrentSpeedDir and not $8000)) ;
-                TrainSpeed := ( HalfToFloat(Node^.TrainData.SpeedDir and not $8000)) ;
-                if CabSpeed - TrainSpeed = 0 then
-                begin  // Direction change (sign change)
-                  if IsReverse then
-                     UART_RX_StateMachine(NCE_CAB_DIR_REVERSE)
-                  else
-                    UART_RX_StateMachine(NCE_CAB_DIR_FORWARD);
-                  UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                  Result := True;
-                end else
-                if CabSpeed - TrainSpeed > 0 then
-                begin   // Slowing Down
-                   if Abs(CabSpeed - TrainSpeed) > 4 then
-                   begin
-                     UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_FASTER);
-                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                     Result := True;
-                   end else
-                   begin
-                     UART_RX_StateMachine(NCE_CAB_ONE_STEP_FASTER);
-                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                     Result := True;
-                   end;
-                end else
-                begin  // Speeding Up
-                   if Abs(CabSpeed - TrainSpeed) > 4 then
-                   begin
-                     UART_RX_StateMachine(NCE_CAB_FIVE_STEPS_SLOWER);
-                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                     Result := True;
-                   end else
-                   begin
-                     UART_RX_StateMachine(NCE_CAB_ONE_STEP_SLOWER);
-                     UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                     Result := True;
-                   end;
-                end;
-                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
-              end;
-          STATE_CAB_TOGGLE_DIR :
-              begin
-                UART_RX_StateMachine(NCE_CAB_DIR_TOGGLE);
-                UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                Throttles[i].ToggleDir := False;
-                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
-                Result := True;
-              end;
-          STATE_CAB_FUNCTIONS :
-              begin
-                for j := 0 to 9 do
-                begin
-                  if ((Throttles[i].CurrentFunctions shr j) and $00000001) xor ((Node^.TrainData.Functions shr j) and $00000001) <> 0 then
-                  begin
-                    UART_RX_StateMachine(NCE_CAB_TOGGLE_F0_0 + j);
-                    UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-                    Result := True;
-                    Break;
-                  end;
-                end;
-                Throttles[i].CabStateMachine := STATE_CAB_IDLE;
-              end;
-          STATE_CAB_FREE_TRAIN :
-              begin
-                Throttles[i].CabStateMachine := STATE_CAB_IDLE;   // NCE does not have a command to do this....
-              end;
-          STATE_CAB_RELEASE_TRAIN :
-              begin
-                Throttles[i].CabStateMachine := STATE_CAB_IDLE;  // NCE does not have a command to do this....
-              end;
-        end;
-      end;
-    end else
-    begin   // Cab is just logging on (no node yet) so just tell the caller we are here
-      if Throttles[i].CabID = CabAddress then
-      begin
-        UART_RX_StateMachine(NCE_NO_KEY_TO_REPORT);
-        UART_RX_StateMachine(NCE_NO_SPEED_TO_REPORT);
-        Result := True;
-      end;
-    end;
-  end;
 end;
 
 procedure TFormOlcbTrainMaster.ComboBoxBaudChange(Sender: TObject);
@@ -802,16 +537,6 @@ procedure TFormOlcbTrainMaster.ComPortConnectionState(Sender: TObject; NewConnec
 begin
   ComConnectionState := NewConnectionState;
   UpdateUI;
-end;
-
-procedure TFormOlcbTrainMaster.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
-begin
-  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
-end;
-
-procedure TFormOlcbTrainMaster.ComPortSendLogging(Sender: TObject; MessageStr: String);
-begin
-  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
 procedure TFormOlcbTrainMaster.LoadSettings(SettingType: TLoadSettingType);
@@ -927,45 +652,35 @@ begin
  PostMessage(Handle, WM_CLOSE_CONNECTIONS, 0, 0);
 end;
 
-procedure TFormOlcbTrainMaster.FormClose(Sender: TObject;
-  var CloseAction: TCloseAction);
-begin
-  Throttles.CloseAll;
-end;
-
 procedure TFormOlcbTrainMaster.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
-  EthernetHub.OnReceiveMessage := nil;
-  EthernetHub.OnSendMessage := nil;
-  EthernetHub.OnErrorMessage := nil;
-  EthernetHub.OnConnectionStateChange := nil;
-  EthernetHub.OnStatus := nil;
-  EthernetHub.OnOPStackCallback := nil;
-  EthernetHub.EnableReceiveMessages := False;
-  EthernetHub.EnableSendMessages := False;
-  EthernetHub.OnBeforeDestroyTask := nil;
-  EthernetHub.EnableOPStackCallback := False;
+  NodeThread.OnLogMessages := nil;
+  EthernetHub.Enabled := False;
+  ComPortHub.RemoveComPort(nil);
+  Throttles.CloseAll;
+  DestroyHubs;
 end;
 
 procedure TFormOlcbTrainMaster.FormCreate(Sender: TObject);
 var
   Markup: TSynEditMarkupHighlightAllCaret;
 begin
+  CreateHubs;
   Throttles := TThrottleList.Create;
   Throttles.OnThrottleClose := @ThrottleClosing;
   Throttles.OnThrottleHide := @ThrottleHiding;
-  ComPortHub.OnReceiveMessage := @ComPortReceiveLogging;
-  ComPortHub.OnSendMessage := @ComPortSendLogging;
+
   ComPortHub.OnErrorMessage := @ComPortError;
   ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
 
-  EthernetHub.OnReceiveMessage := @EthernetReceiveLogging;
-  EthernetHub.OnSendMessage := @EthernetSendLogging;
   EthernetHub.OnErrorMessage := @EthernetError;
   EthernetHub.OnConnectionStateChange := @EthernetConnectState;
 
   FComConnectionState := csDisconnected;
   FEthernetConnectionState := csDisconnected;
+  EthernetConnectionCount := 0;
+
+
   FShownOnce := False;
   FSettingsLocked := False;
   FPaused := False;
@@ -978,8 +693,11 @@ begin
   Markup.FullWord := False;
   Markup.IgnoreKeywords := False;
 
+  // Initialize the State of the Node
+  FThrottleServerState.Proxy.ID := NULL_NODE_ID;
+  FThrottleServerState.Proxy.AliasID := 0;
+
   FConfigurationFile := '';
-  PingEnumlatorFunc := @CabPingEmulator;
   UserStateMachine_Initialize;
 end;
 
@@ -1023,7 +741,7 @@ begin
     SettingsFilePath:= GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + {PATH_LINUX_APP_FOLDER +} PATH_SETTINGS_FILE));
     {$ELSE}
-   SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;
+    SettingsFilePath := GetSettingsPath + PATH_SETTINGS_FILE;
     ConfigurationFile := GetSettingsPath + PATH_CONFIGURATION_FILE;
     GlobalSettings.LoadFromFile(UTF8ToSys( GetSettingsPath + PATH_SETTINGS_FILE));
     SetConfigurationFile(ConfigurationFile);
@@ -1045,8 +763,9 @@ begin
     LoadSettings(lstEthernet);
     LoadSettings(lstGeneral);
 
-    TimerOpStackTimer.Enabled := True;
-    TimerOpStackProcess.Enabled := True;
+    NodeThread.OnNodeEvent := @NodeEvent;
+    if ActionLogging.Checked then
+      NodeThread.OnLogMessages := @MessageLogging;
 
     ShownOnce := True;
   end;
@@ -1153,16 +872,6 @@ begin
   //
 end;
 
-procedure TFormOlcbTrainMaster.TimerOpStackProcessTimer(Sender: TObject);
-begin
-  OPStackCore_Process;
-end;
-
-procedure TFormOlcbTrainMaster.TimerOpStackTimerTimer(Sender: TObject);
-begin
-  OPStackCore_Timer;
-end;
-
 procedure TFormOlcbTrainMaster.EditAliasIDChange(Sender: TObject);
 begin
   StoreSettings(lstGeneral)
@@ -1181,7 +890,15 @@ end;
 procedure TFormOlcbTrainMaster.EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
 begin
   if (Sender is TEthernetListenDameonThread) or (not EthernetHub.Listener) then
-    EthernetConnectionState := ConnectionState;
+    EthernetConnectionState := ConnectionState
+  else
+  if (Sender is TSocketThread) then
+  begin
+    case ConnectionState of
+      csConnected    : Inc(FEthernetConnectionCount);
+      csDisconnected : Dec(FEthernetConnectionCount);
+    end;
+  end;
   UpdateUI
 end;
 
@@ -1212,16 +929,57 @@ begin
   LabelMessageCountMax.Caption := IntToStr(OPStackMessagePool.MaxCount);
 end;
 
-procedure TFormOlcbTrainMaster.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
+procedure TFormOlcbTrainMaster.MessageLogging(Sender: TObject; MessageStr: String);
 begin
   PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
-
-
-procedure TFormOlcbTrainMaster.EthernetSendLogging(Sender: TObject; MessageStr: String);
+procedure TFormOlcbTrainMaster.NodeEvent(Sender: TObject; EventList: TList);
+var
+  i: Integer;
+  ProxyEvent: TNodeEventProxyAssigned;
+  Event: TNodeEvent;
 begin
-  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
+  try
+    for i := 0 to EventList.Count - 1 do
+    begin
+      if TObject( EventList[i]) is TNodeEventProxyAssigned then
+      begin
+        ProxyEvent := TObject( EventList[i]) as TNodeEventProxyAssigned;
+        FThrottleServerState.Proxy.AliasID := ProxyEvent.ProxyNodeInfo.AliasID;
+        FThrottleServerState.Proxy.ID := ProxyEvent.ProxyNodeInfo.ID;
+        UpdateUI;
+      end else
+      if TObject( EventList[i]) is TNodeEventNodeCreated then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventNodeAllocated(Event as TNodeEventNodeCreated);
+      end else
+      if TObject( EventList[i]) is TNodeEventThrottleAssignedToTrain then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventTrainAllocated(Event as TNodeEventThrottleAssignedToTrain);
+      end else
+      if TObject( EventList[i]) is TNodeEventFunctionQuery then
+      begin
+         Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventFunctionQuery(Event as TNodeEventFunctionQuery);
+      end else
+      if TObject( EventList[i]) is TNodeEventSpeedDirQuery then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventSpeedDirQuery(Event as TNodeEventSpeedDirQuery);
+      end else
+
+      TObject( EventList[i]).Destroy
+    end;
+  finally
+    FreeAndNil(EventList);
+  end;
 end;
 
 procedure TFormOlcbTrainMaster.UpdateUI;
@@ -1232,6 +990,8 @@ begin
     ActionShowAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
     ActionCloseAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
     ActionHideAllThrottles.Enabled := TreeViewThrottles.Items.Count > 0;
+
+    ActionAddNewThrottle.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FThrottleServerState.Proxy) and AnyConnectionActive;
 
     case ComConnectionState of
       csDisconnected :
@@ -1277,8 +1037,10 @@ begin
         end;
     end;
 
-    if Assigned(EthernetHub) then
-      Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetHub.ClientThreadList.Count);
+    if EthernetHub.Listener and EthernetHub.Enabled then
+      Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetConnectionCount)
+    else
+      Statusbar.Panels[2].Text := '';
 
     UpdateMessageCountUI;
   end;
@@ -1286,12 +1048,9 @@ end;
 
 procedure TFormOlcbTrainMaster.WMCloseConnections(var Message: TMessage);
 begin
-  if ActionEthernetListenerConnection.Checked then
-    ActionEthernetListenerConnection.Execute;
-  if ActionEthernetClientConnection.Checked then
-    ActionEthernetClientConnection.Execute;
-  if ActionCOMConnection.Checked then
-    ActionCOMConnection.Execute;
+  ActionEthernetListenerConnection.Checked := False;
+  ActionEthernetClientConnection.Checked := False;
+  ActionCOMConnection.Checked := False;
   UpdateUI
 end;
 

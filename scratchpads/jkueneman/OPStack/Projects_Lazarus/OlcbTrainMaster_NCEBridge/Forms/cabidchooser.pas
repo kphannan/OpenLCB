@@ -41,8 +41,6 @@ implementation
 
 {$R *.lfm}
 
-uses
-  NMRAnetNceBridgeDefines;
 
 { TFormCabChooser }
 

@@ -2,17 +2,515 @@ unit Throttle_events_code;
 
 uses Throttle_objects, Throttle_resources, Throttle_driver;
 
+procedure ButtonRoundDecSpeedOnClick();
+procedure ButtonRoundEmergencyStopOnClick();
+procedure ButtonRoundF0OnClick();
+procedure ButtonRoundF1OnClick();
+procedure ButtonRoundF2OnClick();
+procedure ButtonRoundF3OnClick();
+procedure ButtonRoundF4OnClick();
+procedure ButtonRoundF5OnClick();
+procedure ButtonRoundFunctionBackOnClick();
+procedure ButtonRoundFunctionNextOnClick();
+procedure ButtonRoundIncSpeedOnClick();
+procedure ButtonRoundKeyBoard0OnClick();
+procedure ButtonRoundKeyBoard1OnClick();
+procedure ButtonRoundKeyBoard2OnClick();
+procedure ButtonRoundKeyBoard3OnClick();
+procedure ButtonRoundKeyBoard4OnClick();
+procedure ButtonRoundKeyBoard5OnClick();
+procedure ButtonRoundKeyBoard6OnClick();
+procedure ButtonRoundKeyBoard7OnClick();
+procedure ButtonRoundKeyBoard8OnClick();
+procedure ButtonRoundKeyBoard9OnClick();
+procedure ButtonRoundKeyboardBackspaceOnClick();
+procedure ButtonRoundKeyboardCancelOnClick();
+procedure ButtonRoundKeyboardClearOnClick();
+procedure ButtonRoundKeyboardOKOnClick();
+procedure ButtonRoundStopOnClick();
+procedure ButtonRoundTrainOpenLCBCancelOnClick();
+procedure ButtonRoundTrainWizardOnClick();
+procedure ButtonRoundWizardByAddressOnClick();
+procedure ButtonRoundWizardByListOnClick();
+procedure ButtonWizardCancelOnClick();
+procedure RadioButtonForwardOnClick();
+procedure RadioButtonKeyboard128StepOnClick();
+procedure RadioButtonKeyboard14StepOnClick();
+procedure RadioButtonKeyboard28StepOnClick();
+procedure RadioButtonKeyboardLongOnClick();
+procedure RadioButtonKeyboardShortOnClick();
+procedure RadioButtonReverseOnClick();
 //--------------------- Externals ---------------------//
 //----------------- End of Externals ------------------//
 
 //-------------- User code declarations ---------------//
+
+const
+  FUNCTION_BUTTON_DISPLAY_COUNT = 6;          // This is only part of what is needed to change the number of buttons displayed, ReloadFunctionStrings and ReloadFunction are hardcoded and must also be changed
+  
+const
+  STATE_THROTTLE_START                     = 0;
+  STATE_THROTTLE_LOG_IN                    = 1;
+  STATE_THROTTLE_SPLASH_SCREEN             = 2;
+  STATE_THROTTLE_START_FIND_PROXY          = 3;
+  STATE_THROTTLE_FIND_PROXY                = 4;
+  STATE_THROTTLE_IDLE                      = 5;
+  STATE_THROTTLE_TRAIN_BY_ADDRESS          = 6;
+  STATE_THROTTLE_TRAIN_BY_LIST             = 7;
+  STATE_THROTTLE_DIRECTION_FORWARD         = 8;
+  STATE_THROTTLE_DIRECTION_REVERSE         = 9;
+  STATE_THROTTLE_SPEED_CHANGE              = 10;
+  STATE_THROTTLE_FUNCTION                  = 11;
+  STATE_THROTTLE_E_STOP                    = 12;
+  STATE_THROTTLE_QUERY_SPEED               = 13;
+  STATE_THROTTLE_QUERY_FUNCTION            = 14;
+  
+var 
+  AddressStr,
+  AddressStrTemp: string[5];
+  
+  FunctionStrings: array[0..29] of string[18];    // Padded so it is divisible by the number of buttons in a screen (6)
+  FunctionScrollOffset: Integer;
+  FunctionScrollOffsetTemp: Integer;
+  
+  LongShortStrings: array[0..1] of string[1];
+  LongShortStringIndex: Integer;
+  LongShortStringIndexTemp: Integer;
+  
+  SpeedStepStrings: array[0..2] of string[3];
+  SpeedStepIndex: Integer;
+  SpeedStepIndexTemp: Integer;
+
+  StartupStrings: array[0..1] of string[32];
+  
+const
+  iSTR_STARTUP_OLCB_NETWORK = 0;
+  iSTR_STARTUP_PROXY        = 1;
+  
+  procedure ReloadFunctionStrings;
+  procedure ReloadTrainStrings;
+  function SpeedStepIndexToSpeedStep(ASpeedStepIndex: Integer): Byte;
+  procedure ReloadFunction(Value: Word; FunctionAddress: DWord);
+  procedure ReloadSpeedDir(IsForward: Boolean; Speed: real);
+  
+  procedure SetStatemachine(StateIndex, AllocatedNodeIndex: Word); external;
+  procedure SetFunction(StateIndex, AllocatedNodeIndex: Word; FunctionAddress: DWord); external;
+  procedure SetFunctions(AbsoluteNodeIndex: Word); external;
+  
 //-------------- End of User code declarations --------//
 
 implementation
 
 //--------------------- User code ---------------------//
 
+const
+  PHYSICAL_NODE_INDEX = 0;
+  
+procedure UpdateAddressString(NewChar: Char);
+begin
+  if NewChar = 'C' then
+    AddressStrTemp := ''
+  else
+  if NewChar = 'B' then
+  begin
+    if Length(AddressStrTemp) > 0 then
+      AddressStrTemp[ Length(AddressStrTemp) - 1] := #0
+  end else
+  if Length(AddressStrTemp) < 5 then
+    AddressStrTemp := AddressStrTemp + NewChar;
+    
+  DrawCBox(@BoxKeyboardAddressBkgnd);
+  DrawLabel(@LabelKeyboardAddress);
+end;
+
+procedure ReloadFunctionStrings;
+begin
+  ButtonRoundF0.Caption := @FunctionStrings[FunctionScrollOffset];
+  ButtonRoundF1.Caption := @FunctionStrings[FunctionScrollOffset+1];
+  ButtonRoundF2.Caption := @FunctionStrings[FunctionScrollOffset+2];
+  ButtonRoundF3.Caption := @FunctionStrings[FunctionScrollOffset+3];
+  ButtonRoundF4.Caption := @FunctionStrings[FunctionScrollOffset+4];
+  ButtonRoundF5.Caption := @FunctionStrings[FunctionScrollOffset+5];
+  DrawRoundButton(@ButtonRoundF0);
+  DrawRoundButton(@ButtonRoundF1);
+  DrawRoundButton(@ButtonRoundF2);
+  DrawRoundButton(@ButtonRoundF3);
+  DrawRoundButton(@ButtonRoundF4);
+  DrawRoundButton(@ButtonRoundF5);
+end;
+
+procedure ReloadTrainStrings;
+begin
+  ButtonRoundTrainWizard.Caption := @AddressStr;
+  ButtonRoundTrainSpeedStep.Caption := @SpeedStepStrings[SpeedStepIndex];
+  ButtonRoundTrainLongShort.Caption := @LongShortStrings[LongShortStringIndex];
+
+  DrawRoundButton(@ButtonRoundTrainWizard);
+  DrawRoundButton(@ButtonRoundTrainSpeedStep);
+  DrawRoundButton(@ButtonRoundTrainLongShort);
+end;
+
+function SpeedStepIndexToSpeedStep(ASpeedStepIndex: Integer): Byte;
+begin
+  case SpeedStepIndex of
+    0 : Result := 14;
+    1 : Result := 28;
+    2 : Result := 128
+  else
+    Result := 28;
+  end;
+end;
+
+procedure ReloadFunction(Value: Word; FunctionAddress: DWord);
+var
+  GradientState: Byte;
+begin
+  if FunctionAddress >= FunctionScrollOffset then
+  begin
+    if Value = 1 then
+      GradientState := 0
+    else
+      GradientState := 1;
+    
+    case FunctionAddress - FunctionScrollOffset of
+      0 : begin
+            ButtonRoundF0.Gradient := GradientState;
+            DrawRoundButton(@ButtonRoundF0);
+          end;
+      1 : begin
+            ButtonRoundF1.Gradient := GradientState;
+            DrawRoundButton(@ButtonRoundF1);
+          end;
+      2 : begin
+            ButtonRoundF2.Gradient := GradientState;
+            DrawRoundButton(@ButtonRoundF2);
+          end;
+      3 : begin
+            ButtonRoundF3.Gradient := GradientState;
+            DrawRoundButton(@ButtonRoundF3);
+          end;
+      4 : begin
+            ButtonRoundF4.Gradient := GradientState;
+            DrawRoundButton(@ButtonRoundF4);
+          end;
+      5 : begin
+            ButtonRoundF5.Gradient := GradientState;
+            DrawRoundButton(@ButtonRoundF5);
+          end;
+    end;
+  end
+end;
+
+procedure ReloadSpeedDir(IsForward: Boolean; Speed: real);
+begin
+  if IsForward then
+  begin
+    RadioButtonForward.Checked := 1;
+    RadioButtonReverse.Checked := 0;
+  end else
+  begin
+    RadioButtonForward.Checked := 0;
+    RadioButtonReverse.Checked := 1;
+  end;
+  ProgressBarSpeed.Position := Word( Speed);
+  DrawRadioButton(@RadioButtonForward);
+  DrawRadioButton(@RadioButtonReverse);
+  DrawProgressBar(@ProgressBarSpeed);
+end;
+
 //----------------- End of User code ------------------//
 
 // Event Handlers
+
+
+procedure ButtonRoundKeyboardCancelOnClick();
+begin
+  CurrentScreenID := ThrottleScreenID;
+  DrawScreen(ThrottleScreenID);
+end;
+
+procedure RadioButtonKeyboardLongOnClick();
+begin
+  if RadioButtonKeyboardLong.Checked = 0 then
+  begin
+    RadioButtonKeyboardLong.Checked := 1;
+    RadioButtonKeyboardShort.Checked := 0;
+    DrawRadioButton(@RadioButtonKeyboardLong);
+    DrawRadioButton(@RadioButtonKeyboardShort);
+    LongShortStringIndexTemp := 1;
+  end
+end;
+
+procedure RadioButtonKeyboardShortOnClick();
+begin
+  if RadioButtonKeyboardShort.Checked = 0 then
+  begin
+    RadioButtonKeyboardLong.Checked := 0;
+    RadioButtonKeyboardShort.Checked := 1;
+    DrawRadioButton(@RadioButtonKeyboardLong);
+    DrawRadioButton(@RadioButtonKeyboardShort);
+    LongShortStringIndexTemp := 0;
+  end
+end;
+
+procedure ButtonRoundKeyBoard1OnClick();
+begin
+  UpdateAddressString('1');
+end;
+
+procedure ButtonRoundKeyBoard2OnClick();
+begin
+  UpdateAddressString('2');
+end;
+
+procedure ButtonRoundKeyBoard3OnClick();
+begin
+  UpdateAddressString('3');
+end;
+
+procedure ButtonRoundKeyBoard4OnClick();
+begin
+  UpdateAddressString('4');
+end;
+
+procedure ButtonRoundKeyBoard5OnClick();
+begin
+  UpdateAddressString('5');
+end;
+
+procedure ButtonRoundKeyBoard6OnClick();
+begin
+  UpdateAddressString('6');
+end;
+
+procedure ButtonRoundKeyBoard7OnClick();
+begin
+  UpdateAddressString('7');
+end;
+
+procedure ButtonRoundKeyBoard8OnClick();
+begin
+  UpdateAddressString('8');
+end;
+
+procedure ButtonRoundKeyBoard9OnClick();
+begin
+  UpdateAddressString('9');
+end;
+
+procedure ButtonRoundKeyBoard0OnClick();
+begin
+  UpdateAddressString('0');
+end;
+
+procedure ButtonRoundKeyboardClearOnClick();
+begin
+  UpdateAddressString('C');
+end;
+
+procedure ButtonRoundKeyboardBackspaceOnClick();
+begin
+  UpdateAddressString('B');
+end;
+
+procedure ButtonRoundKeyboardOKOnClick();
+begin  
+  AddressStr := AddressStrTemp;
+  FunctionScrollOffset := FunctionScrollOffsetTemp;
+  LongShortStringIndex := LongShortStringIndexTemp;
+  SpeedStepIndex := SpeedStepIndexTemp;
+  ReloadTrainStrings;
+  CurrentScreenID := ThrottleScreenID;
+  DrawScreen(ThrottleScreenID);
+  SetStatemachine(STATE_THROTTLE_TRAIN_BY_ADDRESS, PHYSICAL_NODE_INDEX);
+end;
+
+
+procedure ButtonRoundWizardByAddressOnClick();
+begin
+  AddressStrTemp := AddressStr;
+  FunctionScrollOffsetTemp := FunctionScrollOffset;
+  LongShortStringIndexTemp := LongShortStringIndex;
+  SpeedStepIndexTemp := SpeedStepIndex;
+  LabelKeyboardAddress.Caption := @AddressStrTemp;
+  CurrentScreenID := TrainSelectorDCCScreenID;
+  DrawScreen(TrainSelectorDCCScreenID);
+end;
+
+procedure ButtonWizardCancelOnClick();
+begin
+  CurrentScreenID := ThrottleScreenID;
+  DrawScreen(ThrottleScreenID);
+end;
+
+procedure ButtonRoundTrainOpenLCBCancelOnClick();
+begin
+  CurrentScreenID := ThrottleScreenID;
+  DrawScreen(ThrottleScreenID);
+end;
+
+procedure ButtonRoundWizardByListOnClick();
+begin
+  CurrentScreenID := TrainSelectorOpenLCBScreenID;
+  DrawScreen(TrainSelectorOpenLCBScreenID);
+end;
+
+procedure ButtonRoundFunctionBackOnClick();
+var
+  i: Integer;
+begin
+  if FunctionScrollOffset - FUNCTION_BUTTON_DISPLAY_COUNT > -1 then
+  begin
+    FunctionScrollOffset := FunctionScrollOffset - FUNCTION_BUTTON_DISPLAY_COUNT;
+    ReloadFunctionStrings;
+    SetFunctions(PHYSICAL_NODE_INDEX);
+  end;
+end;
+
+procedure ButtonRoundFunctionNextOnClick();
+begin
+  if FunctionScrollOffset + FUNCTION_BUTTON_DISPLAY_COUNT < 25 then
+  begin
+    FunctionScrollOffset := FunctionScrollOffset + FUNCTION_BUTTON_DISPLAY_COUNT;
+    ReloadFunctionStrings;
+    SetFunctions(PHYSICAL_NODE_INDEX);
+  end;
+end;
+
+procedure RadioButtonKeyboard14StepOnClick();
+begin
+  if RadioButtonKeyboard14Step.Checked = 0 then
+  begin
+    RadioButtonKeyboard128Step.Checked := 0;
+    RadioButtonKeyboard28Step.Checked := 0;
+    RadioButtonKeyboard14Step.Checked := 1;
+    DrawRadioButton(@RadioButtonKeyboard128Step);
+    DrawRadioButton(@RadioButtonKeyboard28Step);
+    DrawRadioButton(@RadioButtonKeyboard14Step);
+    SpeedStepIndexTemp := 0;
+  end
+end;
+
+procedure RadioButtonKeyboard28StepOnClick();
+begin
+  if RadioButtonKeyboard28Step.Checked = 0 then
+  begin
+    RadioButtonKeyboard128Step.Checked := 0;
+    RadioButtonKeyboard28Step.Checked := 1;
+    RadioButtonKeyboard14Step.Checked := 0;
+    DrawRadioButton(@RadioButtonKeyboard128Step);
+    DrawRadioButton(@RadioButtonKeyboard28Step);
+    DrawRadioButton(@RadioButtonKeyboard14Step);
+    SpeedStepIndexTemp := 1;
+  end
+end;
+
+procedure RadioButtonKeyboard128StepOnClick();
+begin
+  if RadioButtonKeyboard128Step.Checked = 0 then
+  begin
+    RadioButtonKeyboard128Step.Checked := 1;
+    RadioButtonKeyboard28Step.Checked := 0;
+    RadioButtonKeyboard14Step.Checked := 0;
+    DrawRadioButton(@RadioButtonKeyboard128Step);
+    DrawRadioButton(@RadioButtonKeyboard28Step);
+    DrawRadioButton(@RadioButtonKeyboard14Step);
+    SpeedStepIndexTemp := 2;
+  end
+end;
+
+procedure ButtonRoundTrainWizardOnClick();
+begin
+  CurrentScreenID := TrainSelectWizardScreenID;
+  DrawScreen(TrainSelectWizardScreenID);
+end;
+
+procedure RadioButtonForwardOnClick();
+begin
+  if RadioButtonForward.Checked = 0 then
+  begin
+    RadioButtonForward.Checked := 1;
+    RadioButtonReverse.Checked := 0;
+    DrawRadioButton(@RadioButtonForward);
+    DrawRadioButton(@RadioButtonReverse);
+    SetStatemachine(STATE_THROTTLE_SPEED_CHANGE, PHYSICAL_NODE_INDEX);
+  end;
+end;
+
+procedure RadioButtonReverseOnClick();
+begin
+  if RadioButtonReverse.Checked = 0 then
+  begin
+    RadioButtonForward.Checked := 0;
+    RadioButtonReverse.Checked := 1;
+    DrawRadioButton(@RadioButtonForward);
+    DrawRadioButton(@RadioButtonReverse);
+    SetStatemachine(STATE_THROTTLE_SPEED_CHANGE, PHYSICAL_NODE_INDEX);
+  end;
+end;
+
+procedure ButtonRoundIncSpeedOnClick();
+begin
+  if ProgressBarSpeed.Position < ProgressBarSpeed.Max then
+  begin
+    ProgressBarSpeed.Position := ProgressBarSpeed.Position + 1;
+    DrawProgressBar(@ProgressBarSpeed);
+    SetStatemachine(STATE_THROTTLE_SPEED_CHANGE, PHYSICAL_NODE_INDEX);
+  end;
+end;
+
+procedure ButtonRoundEmergencyStopOnClick();
+begin
+  ProgressBarSpeed.Position := 0;
+  DrawProgressBar(@ProgressBarSpeed);
+  SetStatemachine(STATE_THROTTLE_E_STOP, PHYSICAL_NODE_INDEX);
+end;
+
+procedure ButtonRoundStopOnClick();
+begin
+  ProgressBarSpeed.Position := 0;
+  DrawProgressBar(@ProgressBarSpeed);
+  SetStatemachine(STATE_THROTTLE_SPEED_CHANGE, PHYSICAL_NODE_INDEX);
+end;
+
+procedure ButtonRoundDecSpeedOnClick();
+begin
+  if ProgressBarSpeed.Position > 0 then
+  begin
+    ProgressBarSpeed.Position := ProgressBarSpeed.Position - 1;
+    DrawProgressBar(@ProgressBarSpeed);
+    SetStatemachine(STATE_THROTTLE_SPEED_CHANGE, PHYSICAL_NODE_INDEX);
+  end;
+end;
+
+procedure ButtonRoundF0OnClick();
+begin
+  SetFunction(STATE_THROTTLE_FUNCTION, PHYSICAL_NODE_INDEX, 0 + FunctionScrollOffset)
+end;
+
+procedure ButtonRoundF1OnClick();
+begin
+  SetFunction(STATE_THROTTLE_FUNCTION, PHYSICAL_NODE_INDEX, 1 + FunctionScrollOffset)
+end;
+
+procedure ButtonRoundF2OnClick();
+begin
+  SetFunction(STATE_THROTTLE_FUNCTION, PHYSICAL_NODE_INDEX, 2 + FunctionScrollOffset)
+end;
+
+procedure ButtonRoundF3OnClick();
+begin
+  SetFunction(STATE_THROTTLE_FUNCTION, PHYSICAL_NODE_INDEX, 3 + FunctionScrollOffset)
+end;
+
+procedure ButtonRoundF4OnClick();
+begin
+  SetFunction(STATE_THROTTLE_FUNCTION, PHYSICAL_NODE_INDEX, 4 + FunctionScrollOffset)
+end;
+
+procedure ButtonRoundF5OnClick();
+begin
+  SetFunction(STATE_THROTTLE_FUNCTION, PHYSICAL_NODE_INDEX, 5 + FunctionScrollOffset)
+end;
+
 end.

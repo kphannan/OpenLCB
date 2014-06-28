@@ -8,7 +8,6 @@ object FormThrottle: TFormThrottle
   ClientHeight = 481
   ClientWidth = 588
   OnClose = FormClose
-  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnHide = FormHide
   OnShow = FormShow
@@ -336,14 +335,11 @@ object FormThrottle: TFormThrottle
     Width = 588
     Panels = <    
       item
-        Text = 'Cab ID:'
-        Width = 100
+        Text = 'Status: '
+        Width = 300
       end    
       item
-        Width = 200
-      end    
-      item
-        Width = 200
+        Width = 50
       end>
     SimplePanel = False
   end
@@ -565,11 +561,6 @@ object FormThrottle: TFormThrottle
     OnTimer = TimerToggleAnimationTimer
     left = 248
     top = 160
-  end
-  object TimerGeneralTimeout: TTimer
-    OnTimer = TimerGeneralTimeoutTimer
-    left = 248
-    top = 216
   end
   object OpenDialog: TOpenDialog
     Filter = 'OpenLCB FDI Files|*.xml'

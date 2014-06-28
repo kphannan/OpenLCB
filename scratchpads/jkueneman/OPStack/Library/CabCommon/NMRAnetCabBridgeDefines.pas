@@ -47,7 +47,7 @@ const
   STATE_SUB_BRIDGE_CAB_REPLIED                         = 9;
   STATE_SUB_BRIDGE_DISPATCH_MESSAGE                    = 10;
   STATE_SUB_BRIDGE_NEXT_CAB                            = 11;
-
+  
   STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK               = 1;
   STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE                  = 2;
   STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK             = 3;
@@ -59,10 +59,10 @@ const
   STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT                   = 20;
   STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK         = 21;
   STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_TRACTION_UNLOCK      = 22;
-
+  
 const
   CAB_MAX_DATA_BYTE = 15;                                                    // Max number of databytes in a Cab message
-
+  
   // Olcb bus statemachine
   STATE_WAIT_FOR_USER_MESSAGE     = 0;
 
@@ -76,18 +76,18 @@ const
   NCEBUS_PING                          = %10000000;   // P10A AAAA
   MAX_MISSED_PINGS_TO_REMOVE_FROM_BUS  = 12;          // not supported as NCE cabs can't be on the bus alone they need pings to other cabs to work.....bit 4/7/2013
   NCE_CAB_BUS_PADDING                  = 8;          // How many fixed Cab objects to always have on the bus to Ping, NCE Cabs can't be on the bus alone and a NCE CS has 8 always available.
-
-
+  
+  
   ID_MIN_DEVICE_XPRESSNET                    = 1;
   ID_MAX_DEVICE_XPRESSNET                    = 31;   // 31 Devices on NceBus bus allowed not including ID = 0
   XPRESSNET_CAB_BUS_PADDING                  = 4;    // How many fixed Cab objects to always have on the bus to Ping, Xpressnet Cabs can be on the bus alone
 
   REDISCOVERY_TIME                           = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
-
+  
   CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
   CS_NCE_MACRO_MESSAGE                          = $08;  // NCE specific
   CS_NCE_LOCO_SELECT                            = $10;  // NCE specific
-
+  
   CS_NCE_MULTI_FRAME_MESSAGE = CS_NCE_MACRO_MESSAGE or CS_NCE_LOCO_SELECT;
 
   // NCE Specific Constants for the Throttle Messages
@@ -95,9 +95,9 @@ const
   NCE_NO_SPEED_TO_REPORT       = %01111111;              // $7F
   NCE_NO_KEY_TO_REPORT         = %01111101;              // $7D
   NCE_SPEED_MASK               = %01111111;              // $7F
-
+  
   NCE_CAB_SELECT_LOCO       = $48;   // 72
-  NCE_CAB_ENTER             = $40;   // 64
+  NCE_CAB_ENTER             = $40;   // 64   
   NCE_CAB_DIR_TOGGLE        = $43;
   NCE_HORN_KEY_DOWN         = $49;
   NCE_CAB_ONE_STEP_FASTER   = $4A;
@@ -121,10 +121,10 @@ const
   NCE_CAB_DIR_FORWARD       = $6A;
   NCE_CAB_DIR_REVERSE       = $6B;
 
-
+  
   NCE_CMD_CURSOR_ON         = $CF;  // 207
   NCE_CMD_CURSOR_OFF        = $CE;  // 206
-
+  
   // Xpressnet specific messages for the throttles
     // Call Byte Definitions
   CALLBYTE_RESPONSE_XPRESSNET                = %01100000;   // P11A AAAA
@@ -132,14 +132,14 @@ const
   CALLBYTE_REQUEST_ACK_FROM_DEVICE_XPRESSNET = %00000000;   // P00A AAAA
   CALLBYTE_BROADCAST_XPRESSNET               = %01100000;   // P110 0000
   CALLBYTE_TRANSFER_ERRORS_XPRESSNET         = %01100000;   // P11A AAAA
-
+  
   VERSION_SOFTWARE_XPRESSNET   = $36;        // Version 3.6 Compatible
   VERSION_COMMANDSTATION_LZ100 = $00;        // LZ 100 - command station
   VERSION_COMMANDSTATION_LH200 = $01;        // LH 200 - command station
   VERSION_COMMANDSTATION_DPC   = $02;        // DPC - command station (Compact and COMM other)
-
+  
   MAX_XPRESSNET_SHORT_ADDRESS = 99;
-
+  
 type
   TCabMessageArray = array[0..CAB_MAX_DATA_BYTE] of Byte;
   PCabMessageArray = ^TCabMessageArray;
@@ -152,7 +152,7 @@ type
   end;
   PCabMessage = ^TCabMessage;
   {$ENDIF}
-
+ 
   TCab = record
     State: Byte;                                                                // See CS_xxxx constants
     ID: Byte;                                                                   // Cab Address (ID/Index)
@@ -163,9 +163,9 @@ type
     {$ENDIF}
   end;
   PCab = ^TCab;
-
+  
   TAssignedCabArray = array[0..USER_MAX_NODE_COUNT-2] of PNMRAnetNode;          // Only Virtual Nodes make sense, skip the physical server node
-
+  
   TCabBridge = record
     Discovering: Boolean;                        // The bridge is pinging all Cab IDs looking for newly added Cabs
     iStateMachine: Byte;                         // Main Statemachine index
@@ -186,10 +186,10 @@ type
     CurrentCabID: Byte;
   end;
   PCabBridge = ^TCabBridge;
-
+  
   // Array of User Data for all Nodes ( there will be one extra since the Root Node is differnet and not a CAB
   TCabArray = array[0..USER_MAX_NODE_COUNT-1] of TCab;
-
+  
 var
   CabArray: TCabArray;
   CabBridge: TCabBridge;

@@ -47,7 +47,7 @@ function InsertXpressnetHiBitParity(DataByte: Word): Word;
 function OPStackNode_Allocate: PNMRAnetNode; external;
 {$ENDIF}
 
-function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte; var NewValue: Word): Boolean;
+function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
 function ChangeSpeed(Speed: THalfFloat; DeltaInRealSpeed: {$IFDEF FPC}single{$ELSE}real{$ENDIF}): Word;
 
 {$IFNDEF FPC}
@@ -520,7 +520,7 @@ begin
     Result := Result or $8000;
 end;
 
-function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte; var NewValue: Word): Boolean;
+function ToggleFunction(Node: PNMRAnetNode; var Functions: DWord; FunctionAddress: Byte): Boolean;
 var
   Mask: DWord;
 begin
@@ -533,7 +533,6 @@ begin
     begin
       Mask := not Mask;
       Functions := Functions and Mask;
-      NewValue := 0;
       Result := True
     end;
   end else
@@ -541,11 +540,10 @@ begin
     if TrySendTractionFunctionSet(Node^.Info, Node^.TrainData.LinkedNode, FunctionAddress, 1) then
     begin
       Functions := Functions or Mask;
-      NewValue := 1;
       Result := True
     end;
   end;
 end;
 
 
-end.
+end.

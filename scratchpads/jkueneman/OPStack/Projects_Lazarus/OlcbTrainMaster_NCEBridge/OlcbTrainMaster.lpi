@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="7">
+    <Units Count="6">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -80,14 +80,6 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
       </Unit5>
-      <Unit6>
-        <Filename Value="Forms\cabidchooser.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="FormCabChooser"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="Form"/>
-        <UnitName Value="cabIDchooser"/>
-      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -98,7 +90,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="Forms;Templates;..\..\NMRAnet;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File;..\..\NMRAnet\CAN_Statemachines;..\..\Common;..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\..\Components\kHexEditor\source;..\..\Library\NCE"/>
+      <OtherUnitFiles Value="Forms;Templates;..\..\NMRAnet;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File;..\..\NMRAnet\CAN_Statemachines;..\..\Common;..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\..\Components\kHexEditor\source;..\..\..\Components\Mustangpeak;..\..\Library\CabCommon"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

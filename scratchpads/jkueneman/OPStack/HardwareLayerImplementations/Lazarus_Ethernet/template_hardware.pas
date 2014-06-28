@@ -8,7 +8,7 @@ interface
 
 uses
   {$IFDEF FPC}
-  Classes, SysUtils, blcksock, synsock, Forms, Dialogs, ethernet_hub, com_port_hub,
+  Classes, SysUtils, blcksock, synsock, Forms, Dialogs, ethernet_hub, com_port_hub, olcb_transport_layer,
   {$ENDIF}
   gridconnect,
   opstackbuffers,
@@ -30,6 +30,9 @@ procedure OutgoingMessage(AMessage: POPStackMessage);                           
 procedure ProcessHardwareMessages;
 function IsOutgoingBufferAvailable: Boolean;
 
+
+procedure DispatchGridConnectStr(GridConnectStrPtr: PGridConnectString);
+
 {$IFNDEF FPC}
 // Callback to push received messages into the OPStack
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
@@ -40,9 +43,14 @@ function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
 {$ENDIF}
 
 {$IFDEF FPC}
+
+procedure CreateHubs;
+procedure DestroyHubs;
+
 var
   EthernetHub: TEthernetHub;
   ComPortHub: TComPortHub;
+  NodeThread: TNodeThread;
 {$ENDIF}
 
 implementation
@@ -60,6 +68,31 @@ type
 
 var
   Hardware: THardware;
+
+  {$IFDEF FPC}
+procedure CreateHubs;
+begin
+  NodeThread := TNodeThread.Create(True);
+  NodeThread.Suspended := False;
+  EthernetHub := TEthernetHub.Create(NodeThread);
+  ComPortHub := TComPortHub.Create(NodeThread);
+end;
+
+procedure DestroyHubs;
+begin
+  EthernetHub.Enabled := False;
+  EthernetHub.NodeThread := nil;
+  FreeAndNil(EthernetHub);
+  ComPortHub.NodeThread := nil;
+  ComPortHub.RemoveComPort(nil);
+  FreeAndNil(ComPortHub);
+  NodeThread.EnableNode(False);
+  NodeThread.Terminate;
+  while not NodeThread.TerminateCompleted do
+    Application.ProcessMessages;
+  FreeAndNil(NodeThread);
+end;
+  {$ENDIF}
 
 procedure Hardware_Initialize;
 begin
@@ -120,8 +153,6 @@ procedure OutgoingMessage(AMessage: POPStackMessage);
 var
   GridConnectStr: TGridConnectString;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
-
-  P: Integer;
 begin
   GridConnectStr[0] := #0;                                                       // Quiet the compiler
   case AMessage^.MessageType and MT_MASK of
@@ -131,10 +162,7 @@ begin
           GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GridConnectStr);
           OPStackBuffers_DeAllocateMessage(AMessage);
           {$IFDEF FPC}
-          if EthernetHub.Enabled then
-            EthernetHub.AddGridConnectStr(GridConnectStr + LF);
-          if ComPortHub.Connected then
-            ComPortHub.AddGridConnectStr(GridConnectStr + LF);
+             NodeThread.SendMessage(GridConnectStr + LF);
           {$ENDIF}
         end;
     MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
@@ -183,19 +211,5 @@ begin
     IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
 end;
 
-{$IFDEF FPC}
-initialization
-  EthernetHub := TEthernetHub.Create;
-  EthernetHub.OnOPStackCallback := @DispatchGridConnectStr;
-  EthernetHub.EnableOPStackCallback := True;
-
-  ComPortHub := TComPortHub.Create;
-  ComPortHub.OnOPStackCallback := @DispatchGridConnectStr;
-  ComPortHub.EnableOPStackCallback := True;
-
-finalization
-  EthernetHub.Enabled := False;
-  ComPortHub.RemoveComPort(nil);
-{$ENDIF}
 
 end.

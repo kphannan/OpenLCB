@@ -6,12 +6,13 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  ComCtrls, StdCtrls, ActnList, Spin, Buttons, float16,
+  ComCtrls, StdCtrls, ActnList, Spin, Buttons,
   olcb_transport_layer, olcb_app_common_settings,
-  olcb_utilities, olcb_defines,
+  olcb_utilities, olcb_defines, Float16,
   laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
   form_train_config_editor, com_port_hub, ethernet_hub,
-  template_userstatemachine;
+  template_userstatemachine, template_hardware, opstackdefines,
+  nmranetutilities;
 
 const
   ANIMATION_DELTA = 50;
@@ -37,7 +38,7 @@ type
     procedure DoThrottleHide(Throttle: TFormThrottle);
   public
     constructor Create; virtual;
-    function CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList; CabID: Word): TFormThrottle;
+    function CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ImageList16x16: TImageList): TFormThrottle;
     procedure Clear; override;
     procedure CloseThrottle(Throttle: TFormThrottle);
     procedure HideAll;
@@ -125,7 +126,6 @@ type
     ScrollBoxFunctions: TScrollBox;
     SpinEditAddress: TSpinEdit;
     StatusBar: TStatusBar;
-    TimerGeneralTimeout: TTimer;
     TimerToggleAnimation: TTimer;
     TrackBarSpeed: TTrackBar;
     procedure ActionAllocationByAddressExecute(Sender: TObject);
@@ -168,88 +168,61 @@ type
     procedure ActionToggleAllocationPanelExecute(Sender: TObject);
     procedure ActionToggleDirExecute(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupDirectionClick(Sender: TObject);
     procedure RadioGroupShortLongClick(Sender: TObject);
     procedure RadioGroupSpeedStepClick(Sender: TObject);
-    procedure TimerGeneralTimeoutTimer(Sender: TObject);
     procedure TimerToggleAnimationTimer(Sender: TObject);
     procedure TrackBarSpeedChange(Sender: TObject);
   private
-    FAllocateByAddressFlagged: Boolean;
-    FCabSubStateMachine: Integer;
-    FAllocated: Boolean;
-    FCabID: Word;
-    FCabStateMachine: Integer;
     FClosing: Boolean;
     FCurrentFunctions: DWord;
-    FCurrentFuntions: DWord;
     FCurrentSpeed: THalfFloat;
-    FFreeTrain: Boolean;
-    FReleaseTrain: Boolean;
-    FThrottleAlias: Word;
-    FToggleDir: Boolean;
-    FTrainAlias: Word;
+    FThrottleNodeInfo: TNodeInfo;
+    FTrainNodeInfo: TNodeInfo;
     FAllocationPanelToggleExpand: Boolean;
-    FComPortHub: TComPortHub;
     FConfigurationViewer: TFormTrainConfigEditor;
-    FDispatchTask: TDispatchTaskFunc;
-    FEthernetHub: TEthernetHub;
     FImageList16x16: TImageList;
     { private declarations }
     FOnThrottleClose: TOnThrottleEvent;
     FOnThrottleHide: TOnThrottleEvent;
-    function GetCurrentFuntions: DWord;
-    procedure RunWriteFdiFile(AliasID: Word; FileName: string);
-    procedure RunProtocolSupport(AliasID: Word);
-    procedure RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
-    procedure RunReadMemorySpaceRaw(AliasID: Word; AddressSpace: Byte; StartAddress, ByteCount: DWord);
-    procedure RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
-    procedure RunTractionFunction(Address: DWord; Value: Word);
-    procedure RunTractionQueryFunctions(AliasID: Word; Address: DWord);
-    procedure RunTractionQuerySpeed(AliasID: Word);
-    procedure SetAllocatedAlias(AValue: Word);
+    procedure RunWriteFdiFile(NodeInfo: TNodeInfo; FileName: string);
+    procedure RunTractionSpeed(NodeInfo: TNodeInfo; EmergencyStop: Boolean);
+    procedure RunTractionFunction(NodeInfo: TNodeInfo; Address: DWord; Value: Word);
+    procedure RunTractionQueryFunctions(NodeInfo: TNodeInfo; Address: DWord);
+    procedure RunTractionQuerySpeed(NodeInfo: TNodeInfo);
   protected
     procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
     function IsForward: Boolean;
     function IsShortAddress: Boolean;
-    procedure OnBeforeDestroyTask(Sender: TTaskOlcbBase);
+    function SpeedStepRadioToSpeedStep: Byte;
     procedure ToggleTagOnComponent(Sender: TComponent);
     procedure UpdateAddressRange;
     procedure UpdateFunctionsClearControls;
     procedure UpdateFunctionsWithDefault;
     procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
-    property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
-    property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
-    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
     property Closing: Boolean read FClosing write FClosing;
   public
     { public declarations }
-    property CabID: Word read FCabID write FCabID;
-    property TrainAlias: Word read FTrainAlias write SetAllocatedAlias;
-    property ThrottleAlias: Word read FThrottleAlias write FThrottleAlias;
+    property TrainNodeInfo: TNodeInfo read FTrainNodeInfo write FTrainNodeInfo;
+    property ThrottleNodeInfo: TNodeInfo read FThrottleNodeInfo write FThrottleNodeInfo;
     property ConfigurationViewer: TFormTrainConfigEditor read FConfigurationViewer;
     property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
     property OnThrottleHide: TOnThrottleEvent read FOnThrottleHide write FOnThrottleHide;
     property OnThrottleClose: TOnThrottleEvent read FOnThrottleClose write FOnThrottleClose;
 
-    property CabStateMachine: Integer read FCabStateMachine write FCabStateMachine;
-    property AllocateByAddressFlagged: Boolean read FAllocateByAddressFlagged write FAllocateByAddressFlagged;
-    property CabSubStateMachine: Integer read FCabSubStateMachine write FCabSubStateMachine;
-    property ToggleDir: Boolean read FToggleDir write FToggleDir;
-    property ReleaseTrain: Boolean read FReleaseTrain write FReleaseTrain;
-    property FreeTrain: Boolean read FFreeTrain write FFreeTrain;
-
     property CurrentSpeedDir: THalfFloat read FCurrentSpeed write FCurrentSpeed;
-    property CurrentFunctions: DWord read GetCurrentFuntions write FCurrentFunctions;
+    property CurrentFunctions: DWord read FCurrentFunctions write FCurrentFunctions;
 
-    procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
-    procedure UpdateStatus(NewStatus: string);
+    procedure EventNodeAllocated(Event: TNodeEventNodeCreated);
+    procedure EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);
+    procedure EventFunctionQuery(Event: TNodeEventFunctionQuery);
+    procedure EventSpeedDirQuery(Event: TNodeEventSpeedDirQuery);
+    procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
 
@@ -301,16 +274,14 @@ begin
   Clear;
 end;
 
-function TThrottleList.CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc; ImageList16x16: TImageList; CabID: Word): TFormThrottle;
+function TThrottleList.CreateThrottle(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ImageList16x16: TImageList): TFormThrottle;
 begin
   Result := TFormThrottle.Create(Application.MainForm);
   if Result <> nil then
   begin
     Self.Add(Result);
-    Result.CabID := CabID;
     Result.OnThrottleClose := @DoThrottleClose;
     Result.OnThrottleHide := @DoThrottleHide;
-    Result.InitTransportLayers(AnEthernetHub, AComPortHub, ADispatchTaskFunc);
     Result.ImageList16x16 := ImageList16x16;
     Result.Show
   end;
@@ -381,44 +352,25 @@ end;
 
 procedure TFormThrottle.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
+  NodeThread.AddTask( TNodeTaskAllocateDestroyNode.Create(FThrottleNodeInfo, STATE_THROTTLE_FREE, Self));
   if Assigned(OnThrottleClose) then
     OnThrottleClose(Self);
   ActionAllocationFree.Execute;
   CloseAction := caFree;
-end;
 
-procedure TFormThrottle.FormCloseQuery(Sender: TObject; var CanClose: boolean);
-begin
-  if not Closing then
-  begin
-    CanClose := False;
-    Closing := True;
-    EnterCriticalsection(OPStackCriticalSection);
-    try
-
-    finally
-      LeaveCriticalsection(OPStackCriticalSection);
-    end;
-  end;
 end;
 
 procedure TFormThrottle.FormCreate(Sender: TObject);
 begin
-  FComPortHub := nil;
-  FEthernetHub := nil;
   FConfigurationViewer := nil;
   FImageList16x16 := nil;
-  ThrottleAlias := 0;
-  TrainAlias := 0;
+  FThrottleNodeInfo.AliasID := 0;
+  FThrottleNodeInfo.ID := NULL_NODE_ID;
+  FTrainNodeInfo.AliasID := 0;
+  FTrainNodeInfo.ID := NULL_NODE_ID;
   FClosing := False;
-  FCabID := 0;
-  FAllocateByAddressFlagged := False;
-  FCabStateMachine := 0;
   FCurrentSpeed := 0;
-  FToggleDir := False;
   FCurrentFunctions := 0;
-  FReleaseTrain := False;
-  FFreeTrain := False;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -429,7 +381,7 @@ end;
 
 procedure TFormThrottle.ActionToggleDirExecute(Sender: TObject);
 begin
-  ToggleDir := True;
+  RadioGroupDirection.OnClick := nil;
   if RadioGroupDirection.ItemIndex = 0 then
     RadioGroupDirection.ItemIndex := 1
   else
@@ -437,229 +389,230 @@ begin
   if CurrentSpeedDir and $8000 <> 0 then
     CurrentSpeedDir := CurrentSpeedDir and not $8000
   else
-    CurrentSpeedDir := $8000;
+    CurrentSpeedDir := CurrentSpeedDir or $8000;
+  NodeThread.AddTask( TNodeTaskSpeedDir.Create( ThrottleNodeInfo, STATE_THROTTLE_SPEED_CHANGE, Self, CurrentSpeedDir));
+  RadioGroupDirection.OnClick := @RadioGroupDirectionClick;
 end;
 
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
-  AllocateByAddressFlagged := True;
-  CabSubStateMachine := 0;
+  NodeThread.AddTask(TNodeTaskAllocateTrainByAddress.Create(FThrottleNodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS, Self, SpinEditAddress.Value, SpeedStepRadioToSpeedStep));
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
 begin
   if not Assigned(ConfigurationViewer) then
   begin
-    FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
-    ConfigurationViewer.InitTransportLayers(EthernetHub, ComPortHub, DispatchTask);
-    ConfigurationViewer.AliasID := TrainAlias;
+ {   FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
+    ConfigurationViewer.InitTransportLayers(EthernetHub, ComPortHub);
+    ConfigurationViewer.AliasID := TrainNodeInfo;
     ConfigurationViewer.ImageList16x16 := ImageList16x16;
     ConfigurationViewer.Caption := 'Configuration Editor: Train ' + IntToStr(SpinEditAddress.Value);
     ConfigurationViewer.ShowModal;
     ConfigurationViewer.Release;
-    FConfigurationViewer := nil;
+    FConfigurationViewer := nil;   }
   end;
 end;
 
 procedure TFormThrottle.ActionAllocationFreeExecute(Sender: TObject);
 begin
-  FFreeTrain := True;
+
   UpdateUI
 end;
 
 procedure TFormThrottle.ActionAllocationReleaseExecute(Sender: TObject);
 begin
-  FReleaseTrain := True;
+
   UpdateUI;
 end;
 
 procedure TFormThrottle.ActionControlEmergencyStopExecute(Sender: TObject);
 begin
   TrackBarSpeed.Position := 0;
-  RunTractionSpeed(TrainAlias, True);
-  RunTractionSpeed(TrainAlias, True);
-  RunTractionSpeed(TrainAlias, True);
+  RunTractionSpeed(ThrottleNodeInfo, True);
+  RunTractionSpeed(ThrottleNodeInfo, True);
+  RunTractionSpeed(ThrottleNodeInfo, True);
 end;
 
 procedure TFormThrottle.ActionControlStopExecute(Sender: TObject);
 begin
   TrackBarSpeed.Position := 0;
-  RunTractionSpeed(TrainAlias, False);
-  RunTractionSpeed(TrainAlias, False);
+  RunTractionSpeed(ThrottleNodeInfo, False);
+  RunTractionSpeed(ThrottleNodeInfo, False);
 end;
 
 procedure TFormThrottle.ActionFunction0Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(0, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 0, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction10Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(10, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 10, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction11Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(11, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 11, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction12Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(12, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 12, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction13Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(13, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 13, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction14Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(14, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 14, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction15Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(15, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 15, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction16Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(16, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 16, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction17Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(17, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 17, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction18Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(18, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 18, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction19Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(19, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 19, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction1Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(1, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 1, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction20Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(20, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 20, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction21Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(21, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 21, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction22Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(22, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 22, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction23Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(23, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 23, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction24Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(24, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 24, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction25Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(25, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 25, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction26Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(26, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 26, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction27Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(27, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 27, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction28Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(28, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 28, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction2Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(2, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 2, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction3Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(3, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 3, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction4Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(4, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 4, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction5Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(5, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 5, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction6Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(6, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 6, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction7Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(7, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 7, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction8Execute(Sender: TObject);
 begin
    ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(8, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 8, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionFunction9Execute(Sender: TObject);
 begin
   ToggleTagOnComponent(Sender as TComponent);
-  RunTractionFunction(9, (Sender as TComponent).Tag)
+  RunTractionFunction(ThrottleNodeInfo, 9, (Sender as TComponent).Tag)
 end;
 
 procedure TFormThrottle.ActionQueryFunctionsExecute(Sender: TObject);
@@ -667,12 +620,12 @@ var
   i: Integer;
 begin
   for i := 0 to 28 do
-   RunTractionQueryFunctions(TrainAlias, i);
+    RunTractionQueryFunctions(ThrottleNodeInfo, i);
 end;
 
 procedure TFormThrottle.ActionQuerySpeedExecute(Sender: TObject);
 begin
-  RunTractionQuerySpeed(TrainAlias);
+  RunTractionQuerySpeed(ThrottleNodeInfo);
 end;
 
 procedure TFormThrottle.FormHide(Sender: TObject);
@@ -685,18 +638,11 @@ procedure TFormThrottle.FormShow(Sender: TObject);
 begin
   UpdateFunctionsWithDefault;
   UpdateUI;
-  StatusBar.Panels[0].Text := 'Cab ID: ' + IntToStr(CabID);
-end;
-
-function TFormThrottle.GetCurrentFuntions: DWord;
-begin
-  Result := FCurrentFunctions;
 end;
 
 procedure TFormThrottle.RadioGroupDirectionClick(Sender: TObject);
 begin
-  if not ToggleDir then
-    RunTractionSpeed(TrainAlias, False);
+  RunTractionSpeed(ThrottleNodeInfo, False);
 end;
 
 procedure TFormThrottle.RadioGroupShortLongClick(Sender: TObject);
@@ -707,59 +653,6 @@ end;
 procedure TFormThrottle.RadioGroupSpeedStepClick(Sender: TObject);
 begin
   UpdateAddressRange
-end;
-
-procedure TFormThrottle.TimerGeneralTimeoutTimer(Sender: TObject);
-var
-  i: Integer;
-  LinkFound: Boolean;
-begin
-  LinkFound := False;
-  System.EnterCriticalsection(OPStackCriticalSection);
-
-  {
-  for i := 0 to Sync.NextLink - 1 do     // Look only at active Link Objects
-  begin
-    // Look for links associated with this throttle
-    if Sync.Link[i].Throttle.ObjPtr = Self then
-    begin
-      LinkFound := True;
-
-      if Sync.Link[i].SyncState and SYNC_NODE_INFO <> 0 then
-      begin
-        Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_NODE_INFO;
-        PanelMain.Enabled := True;
-        UpdateStatus('OpenLCB link established, Alias = 0x' + IntToHex(Sync.Link[i].Node.Info.AliasID, 4));
-        ThrottleAlias := Sync.Link[i].Node.Info.AliasID;
-      end;
-
-      if Sync.Link[i].SyncState and SYNC_CONTROLLER <> 0 then
-      begin
-         Sync.Link[i].SyncState := Sync.Link[i].SyncState and not SYNC_CONTROLLER;
-         if Sync.Link[i].TrainAllocated then
-           TrainAlias := Sync.Link[i].AllocatedNode.AliasID
-         else
-           TrainAlias := 0;
-         UpdateUI;
-      end;
-
-      if Sync.Link[i].SyncState and SYNC_CLOSED <> 0 then
-      begin
-         TimerGeneralTimeout.Enabled := False;
-         Close
-      end;
-
-    end;
-  end;  }
-
-  // If the throttle is open there MUST be a link or it is broken
-  {if not LinkFound then
-  begin
-    // Something is broken we don't have a link...
-    PanelMain.Enabled := False;
-    UpdateStatus('Fatal Error: Link with OpenLCB unexpectedly lost');
-  end;     }
-  System.LeaveCriticalsection(OPStackCriticalSection);
 end;
 
 procedure TFormThrottle.TimerToggleAnimationTimer(Sender: TObject);
@@ -790,12 +683,12 @@ begin
   LastPos := StrToInt(LabelPosValue.Caption);
   if LastPos <> TrackBarSpeed.Position then
   begin
-    RunTractionSpeed(TrainAlias, False);
+    RunTractionSpeed(ThrottleNodeInfo, False);
     LabelPosValue.Caption := IntToStr(TrackBarSpeed.Position);
   end;
 end;
 
-procedure TFormThrottle.RunWriteFdiFile(AliasID: Word; FileName: string);
+procedure TFormThrottle.RunWriteFdiFile(NodeInfo: TNodeInfo; FileName: string);
 {var
   FileStream: TFileStream;
   MemStream, BufferStream: TMemoryStream;
@@ -842,7 +735,7 @@ begin
             while (MemStream.Position < MemStream.Size) and (BufferStream.Size < MAX_CONFIG_MEM_READWRITE_SIZE) do
               BufferStream.WriteByte( MemStream.ReadByte);
 
-            Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(ThrottleAlias, AliasID, True, MSI_FDI, Offset, BufferStream);
+            Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(ThrottleNodeInfo, AliasID, True, MSI_FDI, Offset, BufferStream);
             if MemStream.Position >= MemStream.Size then
             Task.OnBeforeDestroy := @OnBeforeDestroyTask;  // The Last block signals the callback so we know we are done
             DispatchTask(Task);
@@ -859,46 +752,22 @@ begin
   end;   }
 end;
 
-procedure TFormThrottle.RunProtocolSupport(AliasID: Word);
-{var
-  Task: TTaskProtocolSupport; }
-begin
- { Task := TTaskProtocolSupport.Create(ThrottleAlias, AliasID, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);   }
-end;
-
-procedure TFormThrottle.RunReadMemorySpace(AliasID: Word; AddressSpace: Byte);
-{var
-  Task: TTaskAddressSpaceMemoryReadWithDatagram; }
-begin
- { Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(ThrottleAlias, AliasID, True, AddressSpace, False);
-  Task.ForceOptionalSpaceByte := False;
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);  }
-end;
-
-procedure TFormThrottle.RunReadMemorySpaceRaw(AliasID: Word;  AddressSpace: Byte; StartAddress, ByteCount: DWord);
-{var
-  Task: TTaskAddressSpaceMemoryReadRawWithDatagram;    }
-begin
- { Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(ThrottleAlias, AliasID, True, AddressSpace, StartAddress, ByteCount, True);
-  Task.ForceOptionalSpaceByte := False;
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);  }
-end;
-
-procedure TFormThrottle.RunTractionSpeed(AliasID: Word; EmergencyStop: Boolean);
+procedure TFormThrottle.RunTractionSpeed(NodeInfo: TNodeInfo; EmergencyStop: Boolean);
 var
   Speed: single;
 begin
-  Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
-  if not IsForward then
-    Speed := -Speed;
-  CurrentSpeedDir := FloatToHalf( Speed);
+  if EmergencyStop then
+    NodeThread.AddTask( TNodeTask.Create( NodeInfo, STATE_THROTTLE_E_STOP, Self))
+  else begin
+    Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
+    if not IsForward then
+      Speed := -Speed;
+    CurrentSpeedDir := FloatToHalf( Speed);
+    NodeThread.AddTask( TNodeTaskSpeedDir.Create( NodeInfo, STATE_THROTTLE_SPEED_CHANGE, Self, CurrentSpeedDir))
+  end;
 end;
 
-procedure TFormThrottle.RunTractionFunction(Address: DWord; Value: Word);
+procedure TFormThrottle.RunTractionFunction(NodeInfo: TNodeInfo; Address: DWord; Value: Word);
 var
   Mask: DWord;
 begin
@@ -907,43 +776,29 @@ begin
   if Value = 0 then
     FCurrentFunctions := CurrentFunctions and not Mask
   else
-    FCurrentFunctions := CurrentFunctions or Mask
+    FCurrentFunctions := CurrentFunctions or Mask;
+
+  NodeThread.AddTask( TNodeTaskFunction.Create( NodeInfo, STATE_THROTTLE_FUNCTION, Self, Address, Value))
 end;
 
-procedure TFormThrottle.RunTractionQueryFunctions(AliasID: Word; Address: DWord);
-{var
-  Task: TTaskTractionQueryFunction;}
+procedure TFormThrottle.RunTractionQueryFunctions(NodeInfo: TNodeInfo; Address: DWord);
 begin
-  {
-  Task := TTaskTractionQueryFunction.Create(ThrottleAlias, AliasID, True, Address);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);   }
+  NodeThread.AddTask( TNodeTaskFunctionQuery.Create(NodeInfo, STATE_THROTTLE_QUERY_FUNCTION, Self, Address));
 end;
 
-procedure TFormThrottle.RunTractionQuerySpeed(AliasID: Word);
-{var
-  Task: TTaskTractionQuerySpeed;}
+procedure TFormThrottle.RunTractionQuerySpeed(NodeInfo: TNodeInfo);
 begin
-{  Task := TTaskTractionQuerySpeed.Create(ThrottleAlias, AliasID, True);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  DispatchTask(Task);  }
+  NodeThread.AddTask( TNodeTaskSpeedDirQuery.Create(NodeInfo, STATE_THROTTLE_QUERY_SPEED, Self));
 end;
 
-procedure TFormThrottle.SetAllocatedAlias(AValue: Word);
+function TFormThrottle.SpeedStepRadioToSpeedStep: Byte;
 begin
-  if FTrainAlias <> AValue then
-  begin
-    FTrainAlias:=AValue;
-    if FTrainAlias = 0 then
-      UpdateFunctionsWithDefault
-    else begin
-      if GlobalSettings.Throttle.AutoLoadFDI then
-      begin
-   //     Include(FWaitingActions, wa_FDItoFunctions);
-   //     RunProtocolSupport(FTrainAlias);         // Kick it off
-      end;
-    end;
-    UpdateUI;
+  case RadioGroupSpeedStep.ItemIndex of
+    0 : Result := 14;
+    1 : Result := 28;
+    2 : Result := 128
+  else
+    Result := 28;
   end;
 end;
 
@@ -980,6 +835,52 @@ begin
   GroupHeading.Parent := ScrollBoxFunctions;
 end;
 
+procedure TFormThrottle.EventFunctionQuery(Event: TNodeEventFunctionQuery);
+var
+  Mask: DWord;
+  FunctionAction: TAction;
+  OldEvent: TNotifyEvent;
+begin
+  FunctionAction := FindComponent('ActionFunction' + IntToStr(Event.Address)) as TAction;
+  OldEvent := FunctionAction.OnExecute;
+  FunctionAction.OnExecute := nil;
+  if Event.Value = 0 then
+    FunctionAction.Checked := False
+  else
+   FunctionAction.Checked := True;
+  FunctionAction.OnExecute := OldEvent;
+end;
+
+procedure TFormThrottle.EventNodeAllocated(Event: TNodeEventNodeCreated);
+begin
+  // update it all here
+  ThrottleNodeInfo := Event.NodeInfo;
+  PanelMain.Enabled := True;
+  UpdateStatus(0, 'Cab - Alias: 0x' + IntToHex(Event.NodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(Event.NodeInfo.ID));
+end;
+
+procedure TFormThrottle.EventSpeedDirQuery(Event: TNodeEventSpeedDirQuery);
+begin
+  TrackBarSpeed.OnChange := nil;
+  RadioGroupDirection.OnClick := nil;
+  CurrentSpeedDir := Event.SpeedDir;
+  TrackBarSpeed.Position := Round( HalfToFloat( CurrentSpeedDir and not $8000));
+  LabelPosValue.Caption := IntToStr(TrackBarSpeed.Position);
+  if CurrentSpeedDir and $8000 <> 0 then
+    RadioGroupDirection.ItemIndex := 1
+  else
+    RadioGroupDirection.ItemIndex := 0;
+  TrackBarSpeed.OnChange := @TrackBarSpeedChange;
+  RadioGroupDirection.OnClick := @RadioGroupDirectionClick;
+end;
+
+procedure TFormThrottle.EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);
+begin
+  FTrainNodeInfo := Event.TrainNodeInfo;
+  UpdateStatus(1, 'Train - Alias: 0x' + IntToHex(Event.TrainNodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(Event.TrainNodeInfo.ID));
+  UpdateUI;
+end;
+
 function TFormThrottle.IsForward: Boolean;
 begin
   Result := RadioGroupDirection.ItemIndex = 0;
@@ -988,11 +889,6 @@ end;
 function TFormThrottle.IsShortAddress: Boolean;
 begin
   Result := RadioGroupShortLong.ItemIndex = 0;
-end;
-
-procedure TFormThrottle.OnBeforeDestroyTask(Sender: TTaskOlcbBase);
-begin
-
 end;
 
 procedure TFormThrottle.ToggleTagOnComponent(Sender: TComponent);
@@ -1132,35 +1028,26 @@ begin
   end;
 end;
 
-procedure TFormThrottle.UpdateStatus(NewStatus: string);
+procedure TFormThrottle.UpdateStatus(iPanel: Integer; NewStatus: string);
 begin
-  StatusBar.Panels[1].Text := NewStatus;
-end;
-
-procedure TFormThrottle.InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortHub: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
-begin
-  FDispatchTask := ADispatchTaskFunc;
-  FEthernetHub := AnEthernetHub;
-  FComPortHub := AComPortHub;
-  if Assigned(ConfigurationViewer) then
-    ConfigurationViewer.InitTransportLayers(AnEthernetHub, AComPortHub, ADispatchTaskFunc)
+  StatusBar.Panels[iPanel].Text := NewStatus;
 end;
 
 procedure TFormThrottle.UpdateUI;
 begin
-  ActionAllocationByList.Enabled :=  TrainAlias = 0;
-  ActionAllocationByAddress.Enabled := TrainAlias = 0;
-//  ActionAllocationFree.Enabled := TrainAlias <> 0; ;
-//  ActionAllocationRelease.Enabled := TrainAlias <> 0; ;
-  GroupBoxFunctions.Enabled := TrainAlias <> 0; ;
-  GroupBoxControl.Enabled := TrainAlias <> 0; ;
-  GroupBoxConfiguration.Enabled := TrainAlias <> 0; ;
-  RadioGroupSpeedStep.Enabled := TrainAlias = 0; ;
-  SpinEditAddress.Enabled := TrainAlias = 0; ;
-  if TrainAlias <> 0 then
-    LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value)
+  ActionAllocationByList.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  ActionAllocationByAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+//  ActionAllocationFree.Enabled := TrainNodeInfo <> 0; ;
+//  ActionAllocationRelease.Enabled := TrainNodeInfo <> 0; ;
+  GroupBoxFunctions.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  GroupBoxControl.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  GroupBoxConfiguration.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  RadioGroupSpeedStep.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  SpinEditAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  if NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
+    LabelAllocatedAddress.Caption := STR_UNASSIGNED
   else
-    LabelAllocatedAddress.Caption := STR_UNASSIGNED;
+    LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value);
 
   Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
   UpdateAddressRange;

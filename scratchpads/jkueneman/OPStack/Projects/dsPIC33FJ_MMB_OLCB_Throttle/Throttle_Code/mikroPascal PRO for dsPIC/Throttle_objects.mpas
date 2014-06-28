@@ -8,6 +8,35 @@ const  _taLeft   = 2;
 const  _taCenter = 3;
 const  _taRight = 4;
 
+type TButton = record
+  OwnerScreenID        : word;
+  Order                : byte;
+  Left                 : word;
+  Top                  : word;
+  Width                : word;
+  Height               : word;
+  Pen_Width            : byte;
+  Pen_Color            : word;
+  Visible              : byte;
+  Active               : byte;
+  Transparent          : byte;
+  Caption              : ^char;
+  TextAlign            : byte;
+  Fontname             : ^ const far byte;
+  Font_Color           : word;
+  Gradient             : byte;
+  Gradient_Orientation : byte;
+  Gradient_Start_Color : word;
+  Gradient_End_Color   : word;
+  Color                : word;
+  PressColEnabled      : byte;
+  Press_Color          : word;
+  OnUpPtr              : ^TOnEventPtr;
+  OnDownPtr            : ^TOnEventPtr;
+  OnClickPtr           : ^TOnEventPtr;
+  OnPressPtr           : ^TOnEventPtr;
+end;
+
 type TButton_Round = record
   OwnerScreenID        : word;
   Order                : byte;
@@ -37,6 +66,36 @@ type TButton_Round = record
   OnClickPtr           : ^TOnEventPtr;
   OnPressPtr           : ^TOnEventPtr;
 end;
+
+type TCButton_Round = record
+  OwnerScreenID        : word;
+  Order                : byte;
+  Left                 : word;
+  Top                  : word;
+  Width                : word;
+  Height               : word;
+  Pen_Width            : byte;
+  Pen_Color            : word;
+  Visible              : byte;
+  Active               : byte;
+  Transparent          : byte;
+  Caption              : ^ const far char;
+  TextAlign            : byte;
+  Fontname             : ^ const far byte;
+  Font_Color           : word;
+  Gradient             : byte;
+  Gradient_Orientation : byte;
+  Gradient_Start_Color : word;
+  Gradient_End_Color   : word;
+  Color                : word;
+  Corner_Radius	    	: byte;
+  PressColEnabled      : byte;
+  Press_Color          : word;
+  OnUpPtr              : ^TOnEventPtr;
+  OnDownPtr            : ^TOnEventPtr;
+  OnClickPtr           : ^TOnEventPtr;
+  OnPressPtr           : ^TOnEventPtr;
+end; code; far;
 
 type TLabel = record
   OwnerScreenID        : word;
@@ -86,59 +145,6 @@ type TImage = record
   Active               : byte;
   Picture_Type         : byte;
   Picture_Ratio        : byte;
-  OnUpPtr              : ^TOnEventPtr;
-  OnDownPtr            : ^TOnEventPtr;
-  OnClickPtr           : ^TOnEventPtr;
-  OnPressPtr           : ^TOnEventPtr;
-end;
-
-type TCircleButton = record
-  OwnerScreenID        : word;
-  Order                : byte;
-  Left                 : word;
-  Top                  : word;
-  Radius               : word;
-  Pen_Width            : byte;
-  Pen_Color            : word;
-  Visible              : byte;
-  Active               : byte;
-  Transparent          : byte;
-  Caption              : ^char;
-  TextAlign            : byte;
-  Fontname             : ^ const far byte;
-  Font_Color           : word;
-  Gradient             : byte;
-  Gradient_Orientation : byte;
-  Gradient_Start_Color : word;
-  Gradient_End_Color   : word;
-  Color                : word;
-  PressColEnabled      : byte;
-  Press_Color          : word;
-  OnUpPtr              : ^TOnEventPtr;
-  OnDownPtr            : ^TOnEventPtr;
-  OnClickPtr           : ^TOnEventPtr;
-  OnPressPtr           : ^TOnEventPtr;
-end;
-
-type TBox = record
-  OwnerScreenID        : word;
-  Order                : byte;
-  Left                 : word;
-  Top                  : word;
-  Width                : word;
-  Height               : word;
-  Pen_Width            : byte;
-  Pen_Color            : word;
-  Visible              : byte;
-  Active               : byte;
-  Transparent          : byte;
-  Gradient             : byte;
-  Gradient_Orientation : byte;
-  Gradient_Start_Color : word;
-  Gradient_End_Color   : word;
-  Color                : word;
-  PressColEnabled      : byte;
-  Press_Color          : word;
   OnUpPtr              : ^TOnEventPtr;
   OnDownPtr            : ^TOnEventPtr;
   OnClickPtr           : ^TOnEventPtr;
@@ -195,6 +201,32 @@ type TBox_Round = record
   OnClickPtr           : ^TOnEventPtr;
   OnPressPtr           : ^TOnEventPtr;
 end;
+
+type TCBox_Round = record
+  OwnerScreenID        : word;
+  Order                : byte;
+  Left                 : word;
+  Top                  : word;
+  Width                : word;
+  Height               : word;
+  Pen_Width            : byte;
+  Pen_Color            : word;
+  Visible              : byte;
+  Active               : byte;
+  Transparent          : byte;
+  Gradient             : byte;
+  Gradient_Orientation : byte;
+  Gradient_Start_Color : word;
+  Gradient_End_Color   : word;
+  Color                : word;
+  Corner_Radius		   	: byte;
+  PressColEnabled      : byte;
+  Press_Color          : word;
+  OnUpPtr              : ^TOnEventPtr;
+  OnDownPtr            : ^TOnEventPtr;
+  OnClickPtr           : ^TOnEventPtr;
+  OnPressPtr           : ^TOnEventPtr;
+end; code; far;
 
 type TLine = record
   OwnerScreenID        : word;
@@ -274,12 +306,12 @@ type TCScreen = record
   Width                      : word;
   Height                     : word;
   ObjectsCount               : word;
+  ButtonsCount               : word;
+  Buttons                    : ^ const code far ^TButton;
   CLabelsCount               : word;
   CLabels                    : ^ const code far ^TCLabel;
   ImagesCount                : word;
   Images                     : ^ const code far ^TImage;
-  CBoxesCount                : word;
-  CBoxes                     : ^ const code far ^TCBox;
   Boxes_RoundCount           : word;
   Boxes_Round                : ^ const code far ^TBox_Round;
   ProgressBarsCount          : word;
@@ -291,14 +323,20 @@ type TScreen = record
   Width                      : word;
   Height                     : word;
   ObjectsCount               : word;
+  ButtonsCount               : word;
+  Buttons                    : ^ const code far ^TButton;
   Buttons_RoundCount         : word;
   Buttons_Round              : ^ const code far ^TButton_Round;
+  CButtons_RoundCount        : word;
+  CButtons_Round             : ^ const code far ^TCButton_Round;
   LabelsCount                : word;
   Labels                     : ^ const code far ^TLabel;
-  CircleButtonsCount         : word;
-  CircleButtons              : ^ const code far ^TCircleButton;
-  BoxesCount                 : word;
-  Boxes                      : ^ const code far ^TBox;
+  CBoxesCount                : word;
+  CBoxes                     : ^ const code far ^TCBox;
+  Boxes_RoundCount           : word;
+  Boxes_Round                : ^ const code far ^TBox_Round;
+  CBoxes_RoundCount          : word;
+  CBoxes_Round               : ^ const code far ^TCBox_Round;
   LinesCount                 : word;
   Lines                      : ^ const code far ^TLine;
   RadioButtonsCount          : word;
@@ -312,22 +350,24 @@ type TMyScreen = record
   Width                      : word;
   Height                     : word;
   ObjectsCount               : word;
+  ButtonsCount               : word;
+  Buttons                    : ^ const code far ^TButton;
   Buttons_RoundCount         : word;
   Buttons_Round              : ^ const code far ^TButton_Round;
+  CButtons_RoundCount        : word;
+  CButtons_Round             : ^ const code far ^TCButton_Round;
   LabelsCount                : word;
   Labels                     : ^ const code far ^TLabel;
   CLabelsCount               : word;
   CLabels                    : ^ const code far ^TCLabel;
   ImagesCount                : word;
   Images                     : ^ const code far ^TImage;
-  CircleButtonsCount         : word;
-  CircleButtons              : ^ const code far ^TCircleButton;
-  BoxesCount                 : word;
-  Boxes                      : ^ const code far ^TBox;
   CBoxesCount                : word;
   CBoxes                     : ^ const code far ^TCBox;
   Boxes_RoundCount           : word;
   Boxes_Round                : ^ const code far ^TBox_Round;
+  CBoxes_RoundCount          : word;
+  CBoxes_Round               : ^ const code far ^TCBox_Round;
   LinesCount                 : word;
   Lines                      : ^ const code far ^TLine;
   RadioButtonsCount          : word;
@@ -339,7 +379,9 @@ end;
 
   const StartScreenID  = 32768;
   const ThrottleScreenID = 0;
-  const TrainSelectorScreenID = 1;
+  const TrainSelectorDCCScreenID = 1;
+  const TrainSelectWizardScreenID = 2;
+  const TrainSelectorOpenLCBScreenID = 3;
 
 implementation
 

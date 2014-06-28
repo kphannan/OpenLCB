@@ -254,7 +254,6 @@ begin
              if not OPStackNode_IsAnyPCER_Set(Node) then
                if Node^.Flags = 0 then
                  if Node^.IncomingMessages = nil then
-                   if Node^.StateMachineMessages = nil then
                      if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
                      begin
                        NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
@@ -547,7 +546,6 @@ begin
               for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
                 AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
             end;
-
             Node^.iStateMachine := STATE_NODE_PERMITTED;
             IncomingMessageDispatch(OPStackMessage, Node, nil);
           end

@@ -38,13 +38,12 @@ begin
   MCU_Enable100msTimer;
   MCU_InitializeSpi;
   OPStackCore_Enable(True);
-
+  
+  UART2_Write_Text('Mustangpeak OpenLCB Throttle'+LF);
   
   while (TRUE) do
   begin 
-    Check_TP;
     OPStackCore_Process;
-
   end;
 end.
         Check_TP();

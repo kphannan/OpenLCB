@@ -22,9 +22,12 @@ type
     FSerial: TBlockSerial;                                                      // Serial object
     protected
       procedure Execute; override;
+      procedure ExecuteBegin; override;
+      procedure ExecuteEnd; override;
     public
-      constructor Create(CreateSuspended: Boolean);  override;
+      constructor Create(CreateSuspended: Boolean; ANodeThread: TNodeThread); reintroduce;
       destructor Destroy; override;
+      procedure SendMessage(AMessage: AnsiString); override;
 
       property Serial: TBlockSerial read FSerial write FSerial;
       property BaudRate: DWord read FBaudRate write FBaudRate;
@@ -48,39 +51,22 @@ type
   TComPortHub = class
   private
     FComPortThreadList: TComPortThreadList;
-    FEnableOPStackCallback: Boolean;
-    FEnableReceiveMessages: Boolean;
-    FEnableSendMessages: Boolean;
-    FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;
-    FOnOPstackCallback: TOnOPStackCallback;
-    FSyncConnectionStateFunc: TOnConnectionStateChange;
-    FOnErrorMessage: TOnRawMessage;
-    FOnReceiveMessage: TOnRawMessage;
-    FOnSendMessage: TOnRawMessage;
+    FNodeThread: TNodeThread;
+    FSyncConnectionStateFunc: TOnConnectionStateChangeFunc;
+    FOnErrorMessage: TOnRawMessageFunc;
     function GetConnected: Boolean;
-    procedure SetEnableReceiveMessages(AValue: Boolean);
-    procedure SetEnableSendMessages(AValue: Boolean);
+    procedure SetNodeThread(AValue: TNodeThread);
   protected
-    procedure DoBeforeThreadDestroy(Sender: TObject); virtual;
     property ComPortThreadList: TComPortThreadList read FComPortThreadList write FComPortThreadList;
   public
-    constructor Create;
+    constructor Create(ANodeThread: TNodeThread);
     destructor Destroy; override;
-    function AddGridConnectStr(GridConnectStr: ansistring): Boolean;
-    function AddTask(NewTask: TTaskOlcbBase): Boolean;
     function AddComPort(BaudRate: DWord; Port: String): TComPortThread;
-    procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
     procedure RemoveComPort(ComPort: TComPortThread);
     property Connected: Boolean read GetConnected;
-    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write SetEnableReceiveMessages;
-    property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
-    property EnableOPStackCallback: Boolean read FEnableOPStackCallback write FEnableOPStackCallback;
-    property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
-    property OnConnectionStateChange: TOnConnectionStateChange read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
-    property OnErrorMessage: TOnRawMessage read FOnErrorMessage write FOnErrorMessage;
-    property OnReceiveMessage: TOnRawMessage read FOnReceiveMessage write FOnReceiveMessage;
-    property OnSendMessage: TOnRawMessage read FOnSendMessage write FOnSendMessage;
-    property OnOPStackCallback: TOnOPStackCallback read FOnOPstackCallback write FOnOPStackCallback;
+    property NodeThread: TNodeThread read FNodeThread write SetNodeThread;
+    property OnConnectionStateChange: TOnConnectionStateChangeFunc read FSyncConnectionStateFunc write FSyncConnectionStateFunc;
+    property OnErrorMessage: TOnRawMessageFunc read FOnErrorMessage write FOnErrorMessage;
   end;
 
 
@@ -127,54 +113,36 @@ end;
 
 { TComPortHub }
 
-procedure TComPortHub.SetEnableReceiveMessages(AValue: Boolean);
-var
-  List: TList;
-  i: Integer;
-begin
-  if FEnableSendMessages=AValue then Exit;
-  FEnableSendMessages:=AValue;
-  List := ComPortThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TComPortThread( List[i]).EnableSendMessages := AValue;
-  finally
-    ComPortThreadList.UnlockList;
-  end;
-end;
-
 function TComPortHub.GetConnected: Boolean;
 begin
   Result := ComPortThreadList.Count > 0;
 end;
 
-procedure TComPortHub.SetEnableSendMessages(AValue: Boolean);
+procedure TComPortHub.SetNodeThread(AValue: TNodeThread);
 var
   List: TList;
   i: Integer;
 begin
-  if FEnableReceiveMessages=AValue then Exit;
-  FEnableReceiveMessages:=AValue;
-  List := ComPortThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TComPortThread( List[i]).EnableReceiveMessages := AValue;
-  finally
-    ComPortThreadList.UnlockList;
+  if FNodeThread <> AValue then
+  begin
+    FNodeThread := AValue;
+    List := ComPortThreadList.LockList;
+    try
+      for i := 0 to List.Count - 1 do
+        TComPortThread( List[i]).NodeThread := FNodeThread;
+    finally
+      ComPortThreadList.UnlockList;
+    end;
   end;
 end;
 
-constructor TComPortHub.Create;
+constructor TComPortHub.Create(ANodeThread: TNodeThread);
 begin
   inherited Create;
   ComPortThreadList := TComPortThreadList.Create;
-  FOnBeforeDestroyTask := nil;
   FOnErrorMessage := nil;
-  FOnReceiveMessage := nil;
-  FOnSendMessage := nil;
   FSyncConnectionStateFunc := nil;
-  FOnOPStackCallback := nil;
-  FEnableOPStackCallback := False;
+  NodeThread := ANodeThread;
 end;
 
 destructor TComPortHub.Destroy;
@@ -184,101 +152,17 @@ begin
   inherited Destroy
 end;
 
-procedure TComPortHub.DoBeforeThreadDestroy(Sender: TObject);
-var
-  List: TList;
-begin
-  List := ComPortThreadList.LockList;
-  try
-    List.Remove(Sender);
-  finally
-    ComPortThreadList.UnlockList;
-  end;
-end;
-
-function TComPortHub.AddTask(NewTask: TTaskOlcbBase): Boolean;
-var
-  List: TList;
-  i: Integer;
-  Done: Boolean;
-begin
-  Done := False;
-  List := ComPortThreadList.LockList;
-  try
-    if NewTask.DestinationAlias = 0 then
-    begin
-      for i := 0 to List.Count - 1 do
-        TComPortThread( List[i]).AddTask(NewTask, True);   // Broadcast, Thread will clone task
-      Done := True;
-    end else
-    begin
-      i := 0;
-      while (i < List.Count) and not Done do
-      begin
-        Done := TComPortThread( List[i]).AddTask(NewTask, True);  // Thread will clone task
-        Inc(i);
-      end;
-    end;
-  finally
-    ComPortThreadList.UnlockList;
-    Result := Done;
-  end;
-end;
-
 function TComPortHub.AddComPort(BaudRate: DWord; Port: String): TComPortThread;
 var
   List: TList;
 begin
-  Result := TComPortThread.Create(True);
-  Result.FreeOnTerminate := True;
+  Result := TComPortThread.Create(True, NodeThread);
   Result.BaudRate := BaudRate;
   Result.Port := Port;
   Result.OnErrorMessage := OnErrorMessage;
-  Result.OnReceiveMessage := OnReceiveMessage;
-  Result.OnSendMessage := OnSendMessage;
   Result.OnConnectionStateChange := OnConnectionStateChange;
-  Result.OnBeforeDestroyTask := OnBeforeDestroyTask;
-  Result.OnBeforeDestroy := @DoBeforeThreadDestroy;
-  Result.OnOPStackCallback := OnOPStackCallback;
-  Result.EnableOPStackCallback := EnableOPStackCallback;
-  Result.EnableReceiveMessages := EnableReceiveMessages;
-  Result.EnableSendMessages := EnableSendMessages;
-
-  List := ComPortThreadList.LockList;
-  try
-    List.Add(Result);
-  finally
-    ComPortThreadList.UnlockList;
-  end;
+  ComPortThreadList.Add(Result);
   Result.Suspended := False;
-end;
-
-function TComPortHub.AddGridConnectStr(GridConnectStr: ansistring): Boolean;
-var
-  List: TList;
-  i: Integer;
-begin
-  List := ComPortThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TComPortThread( List[i]).InternalAdd(GridConnectStr);
-  finally
-    ComPortThreadList.UnlockList;
-  end;
-end;
-
-procedure TComPortHub.RemoveAndFreeTasks(RemoveKey: PtrInt);
-var
-  List: TList;
-  i: Integer;
-begin
-  List := ComPortThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TComPortThread( List[i]).RemoveAndFreeTasks(RemoveKey);   // UNKNWON IF THIS IS CORRECT >>>>>>>>>>>>>>>>>>
-  finally
-    ComPortThreadList.UnlockList;
-  end;
 end;
 
 procedure TComPortHub.RemoveComPort(ComPort: TComPortThread);
@@ -292,14 +176,10 @@ begin
     begin
       if (ComPort = TComPortThread( List[i])) or (ComPort = nil) then
       begin
-   {     TComPortThread( List[i]).OnReceiveMessage := nil;
-        TComPortThread( List[i]).OnSendMessage := nil;
-        TComPortThread( List[i]).OnErrorMessage := nil;
-        TComPortThread( List[i]).OnBeforeDestroyTask := nil;  }
-        TComPortThread( List[i]).RemoveAndFreeTasks(0);
         TComPortThread( List[i]).Terminate;
         while not  TComPortThread( List[i]).TerminateComplete do
           Application.ProcessMessages;
+        List.Remove(List[i]);
       end;
     end;
   finally
@@ -312,10 +192,10 @@ end;
 procedure TComPortThread.Execute;
 var
   List: TList;
-  SendStr: AnsiString;
+  RcvStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
-  TractionProtocolTask: TTaskTractionProtocol;
-  InitializationCompleteTask: TTaskInitializationComplete;
+  i: Integer;
+  GridConnectStrPtr: PGridConnectString;
 begin
   ExecuteBegin;
   Helper := TOpenLCBMessageHelper.Create;
@@ -333,54 +213,25 @@ begin
   if Serial.LastError <> 0 then
   begin
     BufferRawMessage := Serial.LastErrorDesc;
-    Synchronize(@SyncOnErrorMessage);
+    Synchronize(@DoErrorMessage);
   end;
 
-  Synchronize(@SyncOnConnectionState);
+  Synchronize(@DoConnectionState);
 
   try
     while not Terminated and (ConnectionState = csConnected) do
     begin
       ThreadSwitch;
 
-      List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
-      try
-        if List.Count > 0 then
-        begin
-          if TStringList( List[0]).Count > 0 then
-          begin
-            SendStr := TStringList( List[0])[0];
-            TStringList( List[0]).Delete(0);
-          end;
-        end;
-      finally
-        ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
-      end;
-
-      CANDatagramSendManager.ProcessSend;                          // *** See if there is a datagram that will add a message to send ***
-      CANStreamSendManager.ProcessSend;
-      CANMultiFrameSendManager.ProcessSend;
-      OlcbTaskManager.ProcessSending;                                         // *** See if there is a task what will add a message to send ***
-      if SendStr <> '' then                                                   // *** Put the message on the wire and communicate back the raw message sent ***
-      begin
-        if Helper.Decompose(SendStr) then
-        begin
-          if GlobalSettings.General.SendPacketDelay > 0 then
-            Sleep(GlobalSettings.General.SendPacketDelay);
-          if EnableSendMessages then
-          begin
-            BufferRawMessage := SendStr;
-            Synchronize(@SyncOnSendMessage);
-          end;
-          Serial.SendString(SendStr + LF);
-        end;
-        SendStr := '';
-      end;
-
-      if GlobalSettings.General.SendPacketDelay > 0 then                      // *** Grab the next message from the wire ***
+      if GlobalSettings.General.SendPacketDelay > 0 then
         Sleep(GlobalSettings.General.SendPacketDelay);
 
-      DecomposeAndDispatchGridConnectString(Serial.Recvstring(0), Helper);
+      RcvStr := Serial.Recvstring(0);
+      for i := 1 to Length(RcvStr) do
+       begin
+         if GridConnect_DecodeMachine(RcvStr[i], GridConnectStrPtr) then
+           DecomposeAndDispatchGridConnectString(GridConnectStrPtr, Helper);
+       end;
     end;
   finally
     if Serial.InstanceActive then
@@ -391,10 +242,29 @@ begin
   end;
 end;
 
-
-constructor TComPortThread.Create(CreateSuspended: Boolean);
+procedure TComPortThread.ExecuteBegin;
 begin
-  inherited Create(CreateSuspended);
+  inherited ExecuteBegin;
+  if Assigned(NodeThread) then
+    NodeThread.RegisterThread(Self);
+end;
+
+procedure TComPortThread.ExecuteEnd;
+begin
+  if Assigned(NodeThread) then
+    NodeThread.UnRegisterThread(Self);
+  inherited ExecuteEnd;
+end;
+
+procedure TComPortThread.SendMessage(AMessage: AnsiString);
+begin
+  Serial.SendString(AMessage);
+end;
+
+
+constructor TComPortThread.Create(CreateSuspended: Boolean; ANodeThread: TNodeThread);
+begin
+  inherited Create(CreateSuspended, ANodeThread);
   FBaudRate := 9600;
   FPort := '';
 end;

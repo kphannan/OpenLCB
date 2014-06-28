@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls,
-  template_userstatemachine, Float16;
+  template_userstatemachine, Float16, opstackdefines, olcb_transport_layer;
 
 type
   TFormIsTrainNode = class;
@@ -18,6 +18,8 @@ type
 
   TTrainNodeList = class(TList)
   private
+    FNodeInfoCab: TNodeInfo;
+    FNodeInfoTrain: TNodeInfo;
     FOnTrainClose: TOnTrainEvent;
     FOnTrainHide: TOnTrainEvent;
     function GetTrains(Index: Integer): TFormIsTrainNode;
@@ -30,9 +32,12 @@ type
     function CreateTrain(ImageList16x16: TImageList): TFormIsTrainNode;
     procedure Clear; override;
     procedure CloseTrain(Train: TFormIsTrainNode);
+    function Find(Address: Word; SpeedSteps: Byte): TFormIsTrainNode;
     procedure HideAll;
     procedure CloseAll;
     procedure ShowAll;
+    property NodeInfoTrain: TNodeInfo read FNodeInfoTrain write FNodeInfoTrain;
+    property NodeInfoCab: TNodeInfo read FNodeInfoCab write FNodeInfoCab;
     property Trains[Index: Integer]: TFormIsTrainNode read GetTrains write SetTrains;
     property OnTrainHide: TOnTrainEvent read FOnTrainHide write FOnTrainHide;
     property OnTrainClose: TOnTrainEvent read FOnTrainClose write FOnTrainClose;
@@ -50,26 +55,31 @@ type
     Label6: TLabel;
     Label7: TLabel;
     LabelAddress: TLabel;
-    LabelSpeed: TLabel;
     LabelAlias: TLabel;
+    LabelThrottleAlias: TLabel;
+    LabelSpeed: TLabel;
     LabelDirection: TLabel;
     LabelFunctions1: TLabel;
     LabelSpeedSteps: TLabel;
     LabelFunctions2: TLabel;
-    LabelThrottleAlias: TLabel;
     StatusBar: TStatusBar;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
     FImageList16x16: TImageList;
     FOnTrainClose: TOnTrainEvent;
     FOnTrainHide: TOnTrainEvent;
+    FTrainState: TNodeEventTrainInfo;
     { private declarations }
   public
     { public declarations }
+    procedure EventTrainInfo(Event: TNodeEventTrainInfo);
+    procedure UpdateStatus(NewStatus: string);
+    procedure UpdateUI;
     property ImageList16x16: TImageList read FImageList16x16 write FImageList16x16;
     property OnTrainHide: TOnTrainEvent read FOnTrainHide write FOnTrainHide;
     property OnTrainClose: TOnTrainEvent read FOnTrainClose write FOnTrainClose;
-    procedure UpdateStatus(NewStatus: string);
-    procedure LoadTrainState(Train: PSyncRec);
+    property TrainState: TNodeEventTrainInfo read FTrainState write FTrainState;
   end;
 
 var
@@ -125,6 +135,10 @@ begin
   inherited Create;
   OnTrainClose := nil;
   OnTrainHide := nil;
+  FNodeInfoCab.AliasID := 0;
+  FNodeInfoCab.ID := NULL_NODE_ID;
+  FNodeInfoTrain.AliasID := 0;
+  FNodeInfoTrain.ID := NULL_NODE_ID;
 end;
 
 function TTrainNodeList.CreateTrain(ImageList16x16: TImageList): TFormIsTrainNode;
@@ -169,6 +183,21 @@ begin
   end;
 end;
 
+function TTrainNodeList.Find(Address: Word; SpeedSteps: Byte): TFormIsTrainNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to Count - 1 do
+  begin
+    if (Trains[i].TrainState.Address = Address) and (Trains[i].TrainState.SpeedSteps = SpeedSteps) then
+    begin
+      Result := Trains[i];
+      Break
+    end;
+  end;
+end;
+
 function TTrainNodeList.GetTrains(Index: Integer): TFormIsTrainNode;
 begin
   Result := TFormIsTrainNode( Items[Index]);
@@ -197,22 +226,48 @@ end;
 
 { TFormIsTrainNode }
 
-procedure TFormIsTrainNode.LoadTrainState(Train: PSyncRec);
+procedure TFormIsTrainNode.EventTrainInfo(Event: TNodeEventTrainInfo);
+begin
+  TrainState.CopyTo(Event);
+  UpdateUI
+end;
+
+procedure TFormIsTrainNode.FormCreate(Sender: TObject);
+var
+  Temp: TNodeInfo;
+begin
+  Temp.ID := NULL_NODE_ID;
+  Temp.AliasID := 0;
+  TrainState := TNodeEventTrainInfo.Create(Temp, nil);
+end;
+
+procedure TFormIsTrainNode.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FTrainState);
+end;
+
+procedure TFormIsTrainNode.UpdateStatus(NewStatus: string);
+begin
+  Statusbar.Panels[1].Text:=NewStatus;
+end;
+
+procedure TFormIsTrainNode.UpdateUI;
 var
   i: Integer;
   Temp: DWORD;
 begin
-  LabelAlias.Caption := '0x' + IntToHex(Train^.Node^.Info.AliasID, 2);
-  if Train^.Node^.TrainData.SpeedDir and $8000 = 0 then
+  LabelAlias.Caption := '0x' + IntToHex(TrainState.NodeInfo.AliasID, 2);
+  if TrainState.Speed and $8000 = 0 then
     LabelDirection.Caption := 'Forward'
   else
     LabelDirection.Caption := 'Reverse';
-  if Train^.Node^.TrainData.Address and $C000 = $C000 then
-    LabelAddress.Caption := IntToStr(Train^.Node^.TrainData.Address and not $C000) + ' - Long'
-  else
-    LabelAddress.Caption := IntToStr(Train^.Node^.TrainData.Address) + ' - Short';
 
-  Temp := Train^.Node^.TrainData.Functions;
+  if TrainState.Address and $C000 = $C000 then
+    LabelAddress.Caption := IntToStr(TrainState.Address and not $C000) + ' - Long'
+  else
+    LabelAddress.Caption := IntToStr(TrainState.Address) + ' - Short';
+
+  Temp := TrainState.Functions;
   LabelFunctions1.Caption := '';
   for i := 0 to 13 do
   begin
@@ -233,14 +288,9 @@ begin
     Temp := Temp shr 1;
   end;
 
-  LabelSpeedSteps.Caption := IntToStr(Train^.Node^.TrainData.SpeedSteps);
-  LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(Train^.Node^.TrainData.SpeedDir)));
-  LabelThrottleAlias.Caption := '0x' + IntToHex(Train^.Node^.TrainData.Controller.AliasID, 2);
-end;
-
-procedure TFormIsTrainNode.UpdateStatus(NewStatus: string);
-begin
-  Statusbar.Panels[1].Text:=NewStatus;
+  LabelSpeedSteps.Caption := IntToStr(TrainState.SpeedSteps);
+  LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(TrainState.Speed)));
+  LabelThrottleAlias.Caption := '0x' + IntToHex(TrainState.ControllerInfo.AliasID, 2);
 end;
 
 end.

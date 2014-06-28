@@ -164,9 +164,6 @@ type
     TabSheetCommandStation: TTabSheet;
     TabSheetEthernet: TTabSheet;
     TabSheetGeneral: TTabSheet;
-    TimerGeneral: TTimer;
-    TimerOpStackProcess: TTimer;
-    TimerOpStackTimer: TTimer;
     ToolBarMain: TToolBar;
     ToolButton1: TToolButton;
     ToolButton2: TToolButton;
@@ -228,14 +225,12 @@ type
     procedure TabSheetEthernetShow(Sender: TObject);
     procedure TabSheetGeneralHide(Sender: TObject);
     procedure TabSheetGeneralShow(Sender: TObject);
-    procedure TimerGeneralTimer(Sender: TObject);
-    procedure TimerOpStackProcessTimer(Sender: TObject);
-    procedure TimerOpStackTimerTimer(Sender: TObject);
     procedure TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView; var NodeClass: TTreeNodeClass);
   private
     FAppAboutCmd: TMenuItem;
     FComConnectionState: TConnectionState;
     FConfigurationFile: WideString;
+    FEthernetConnectionCount: Integer;
     FEthernetConnectionState: TConnectionState;
     {$IFDEF DARWIN}
     FOSXMenu: TMenuItem;
@@ -249,15 +244,12 @@ type
     FTrainNodeList: TTrainNodeList;
     { private declarations }
   protected
-    procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
-    procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
-    procedure EthernetError(Sender: TObject; ErrorMessage: string);
+    procedure MessageLogging(Sender: TObject; MessageStr: String);
+    procedure NodeEvent(Sender: TObject; EventList: TList);
+    procedure EthernetError(Sender: TObject; MessageStr: string);
     procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
     procedure ComPortError(Sender: TObject; MessageStr: String);
     procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
-    procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
-    procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
-    procedure DestroyTask(Sender: TTaskOlcbBase);
     procedure LoadSettings(SettingType: TLoadSettingType);
     procedure ScanComPorts;
     procedure StoreSettings(SettingType: TLoadSettingType);
@@ -267,6 +259,7 @@ type
     property ComConnectionState: TConnectionState read FComConnectionState write FComConnectionState;
     property ConfigurationFile: WideString read FConfigurationFile write FConfigurationFile;
     property EthernetConnectionState: TConnectionState read FEthernetConnectionState write FEthernetConnectionState;
+    property EthernetConnectionCount: Integer read FEthernetConnectionCount write FEthernetConnectionCount;
     {$IFDEF DARWIN}
     property OSXMenu: TMenuItem read FOSXMenu write FOSXMenu;
     property OSXSep1Cmd: TMenuItem read FOSXSep1Cmd write FOSXSep1Cmd;
@@ -306,8 +299,6 @@ begin
       ComPortHub.AddComPort(GlobalSettings.ComPort.BaudRate, PATH_LINUX_DEV + GlobalSettings.ComPort.Port);
       {$ENDIF}
     {$ENDIF}
-    ComPortHub.EnableReceiveMessages := ActionLogging.Checked;
-    ComPortHub.EnableSendMessages := ActionLogging.Checked;
   end
   else begin
     ComPortHub.RemoveComPort(nil);
@@ -323,16 +314,12 @@ end;
 procedure TForm1.ActionEthernetClientConnectionExecute(Sender: TObject);
 begin
   EthernetHub.Listener := False;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.Enabled := ActionEthernetClientConnection.Checked;
 end;
 
 procedure TForm1.ActionEthernetListenerConnectionExecute(Sender: TObject);
 begin
   EthernetHub.Listener := True;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
   EthernetHub.Enabled := ActionEthernetListenerConnection.Checked;
 end;
 
@@ -363,11 +350,11 @@ end;
 
 procedure TForm1.ActionLoggingExecute(Sender: TObject);
 begin
-  ComPortHub.EnableReceiveMessages := ActionLogging.Checked;
-  ComPortHub.EnableSendMessages := ActionLogging.Checked;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
   StoreSettings(lstGeneral);
+  if ActionLogging.Checked then
+    NodeThread.OnLogMessages := @MessageLogging
+  else
+    NodeThread.OnLogMessages := nil;
 end;
 
 procedure TForm1.ActionLogInJMRIExecute(Sender: TObject);
@@ -466,18 +453,17 @@ procedure TForm1.FormCreate(Sender: TObject);
 var
   Markup: TSynEditMarkupHighlightAllCaret;
 begin
-  EthernetHub.OnReceiveMessage := @EthernetReceiveLogging;
-  EthernetHub.OnSendMessage:=@EthernetSendLogging;
-  EthernetHub.OnBeforeDestroyTask := @DestroyTask;
+  CreateHubs;
+  NodeThread.OnLogMessages := @MessageLogging;
+
   EthernetHub.OnErrorMessage := @EthernetError;
   EthernetHub.OnConnectionStateChange := @EthernetConnectState;
-  EthernetHub.EnableReceiveMessages := ActionLogging.Checked;
-  EthernetHub.EnableSendMessages := ActionLogging.Checked;
+  FEthernetConnectionCount := 0;
 
-  ComPortHub.OnReceiveMessage := @ComPortReceiveLogging;
-  ComPortHub.OnSendMessage := @ComPortSendLogging;
   ComPortHub.OnErrorMessage := @ComPortError;
   ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
+
+  NodeThread.OnNodeEvent := @NodeEvent;
 
   FShownOnce := False;
   OPStackCore_Initialize;
@@ -561,9 +547,10 @@ begin
     LoadSettings(lstEthernet);
     LoadSettings(lstGeneral);
 
-    TimerGeneral.Enabled := True;
-    TimerOpStackProcess.Enabled := True;
-    TimerOpStackTimer.Enabled := True;
+    if ActionLogging.Checked then
+      NodeThread.OnLogMessages := @MessageLogging
+    else
+      NodeThread.OnLogMessages := nil;
 
     ShownOnce := True;
   end;
@@ -622,9 +609,17 @@ end;
 
 procedure TForm1.EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
 begin
-  if (ActionEthernetClientConnection.Checked) or (Sender is TEthernetListenDameonThread) then
-    EthernetConnectionState := ConnectionState;
-  UpdateUI
+  if (Sender is TEthernetListenDameonThread) or (not EthernetHub.Listener) then
+      EthernetConnectionState := ConnectionState
+    else
+    if (Sender is TSocketThread) then
+    begin
+      case ConnectionState of
+        csConnected    : Inc(FEthernetConnectionCount);
+        csDisconnected : Dec(FEthernetConnectionCount);
+      end;
+    end;
+    UpdateUI
 end;
 
 procedure TForm1.ComPortError(Sender: TObject; MessageStr: String);
@@ -639,48 +634,52 @@ begin
   UpdateUI;
 end;
 
-procedure TForm1.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
+procedure TForm1.EthernetError(Sender: TObject; MessageStr: string);
+begin
+  ShowMessage(MessageStr);
+ PostMessage(Handle, WM_CLOSE_CONNECTIONS, 0, 0);
+end;
+
+procedure TForm1.MessageLogging(Sender: TObject; MessageStr: String);
 begin
   PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
 end;
 
-procedure TForm1.ComPortSendLogging(Sender: TObject; MessageStr: String);
+procedure TForm1.NodeEvent(Sender: TObject; EventList: TList);
+var
+  i: Integer;
+  Event: TNodeEvent;
+  EventTrainInfo: TNodeEventTrainInfo;
+  TrainForm: TFormIsTrainNode;
 begin
-  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
-end;
-
-procedure TForm1.DestroyTask(Sender: TTaskOlcbBase);
-begin
-  Exit;
-end;
-
-procedure TForm1.EthernetError(Sender: TObject; ErrorMessage: string);
-begin
-
-end;
-
-procedure TForm1.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
-begin
-  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
-end;
-
-procedure TForm1.EthernetSendLogging(Sender: TObject; MessageStr: String);
-begin
-  PrintToSynMemo(MessageStr, SynMemoLog, Paused, ActionDetailedLogging.Checked, ActionLogInJMRI.Checked);
+  try
+    for i := 0 to EventList.Count - 1 do
+    begin
+      if TObject( EventList[i]) is TNodeEventTrainInfo then
+      begin
+        EventTrainInfo := TNodeEventTrainInfo( EventList[i]);
+        TrainForm := TrainNodeList.Find(EventTrainInfo.Address, EventTrainInfo.SpeedSteps);
+        if Assigned(TrainForm) then
+          TrainForm.EventTrainInfo(EventTrainInfo)
+        else begin
+          TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
+          TrainForm.EventTrainInfo(EventTrainInfo);
+        end;
+      end;
+      Event := TNodeEvent( EventList[i]);
+      FreeAndNil(Event);
+    end;
+  finally
+    FreeAndNil(EventList)
+  end;
 end;
 
 procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
-  EthernetHub.OnReceiveMessage := nil;
-  EthernetHub.OnSendMessage := nil;
-  EthernetHub.OnErrorMessage := nil;
-  EthernetHub.OnConnectionStateChange := nil;
-  EthernetHub.OnStatus := nil;
-  EthernetHub.OnOPStackCallback := nil;
-  EthernetHub.EnableReceiveMessages := False;
-  EthernetHub.EnableSendMessages := False;
-  EthernetHub.OnBeforeDestroyTask := nil;
-  EthernetHub.EnableOPStackCallback := False;
+  NodeThread.OnLogMessages := nil;
+  EthernetHub.Enabled := False;
+  ComPortHub.RemoveComPort(nil);
+  DestroyHubs;
 end;
 
 procedure TForm1.LoadSettings(SettingType: TLoadSettingType);
@@ -820,85 +819,6 @@ begin
   LoadSettings(lstGeneral)
 end;
 
-procedure TForm1.TimerGeneralTimer(Sender: TObject);
-var
-  i: Integer;
-  Train: PSyncRec;
-  Node: TOlcbTrainTreeNode;
-  TrainForm: TFormIsTrainNode;
-begin
-  System.EnterCriticalsection(OPStackCriticalSection);
-  try
-    for i := 0 to Trains.Count - 1 do
-    begin
-      Train := TrainItem(i);
-      if Train^.State <> 0 then
-      begin
-        if Train^.State and SYNC_REPLY_ALLOC_NODE <> 0 then
-        begin
-          Train^.State := Train^.State and not SYNC_REPLY_ALLOC_NODE;
-          TrainForm :=  TFormIsTrainNode( Train^.ObjPtr);
-          if not Assigned(TrainForm) then
-            TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
-          if Assigned(TrainForm) then
-          begin
-            TrainForm.UpdateStatus('Creating and logging OpenLCB node into network.... Please Wait');
-            TrainForm.LoadTrainState(Train);
-            Node := TreeViewTrains.Items.Add(nil, TrainForm.Caption) as TOlcbTrainTreeNode;
-            Node.Train := TrainForm;
-            UpdateUI;
-            TrainForm.Caption := 'Train Node [' + TrainForm.LabelAddress.Caption + ']';
-            TrainForm.UpdateStatus('Train Node Created');
-            Train^.ObjPtr := TrainForm;
-          end;
-        end else
-        if Train^.State and SYNC_CONTROLLER <> 0 then
-        begin
-          Train^.State := Train^.State and not SYNC_CONTROLLER;
-          TrainForm := TFormIsTrainNode( Train^.ObjPtr );
-          if Assigned(TrainForm) then
-          begin
-            TrainForm.LoadTrainState(Train);
-            TrainForm.UpdateStatus('Throttle assignment changed');
-          end;
-        end else
-        if Train^.State and SYNC_STATE_SPEED_DIR <> 0 then
-        begin
-          Train^.State := Train^.State and not SYNC_STATE_SPEED_DIR;
-          TrainForm := TFormIsTrainNode(Train^.ObjPtr );
-          if Assigned(TrainForm) then
-          begin
-            TrainForm.LoadTrainState(Train);
-            TrainForm.UpdateStatus('Speed/Direction changed');
-          end;
-        end else
-        if Train^.State and SYNC_STATE_FUNCTIONS <> 0 then
-        begin
-          Train^.State := Train^.State and not SYNC_STATE_FUNCTIONS;
-          TrainForm := TFormIsTrainNode( Train^.ObjPtr );
-          if Assigned(TrainForm) then
-          begin
-            TrainForm.LoadTrainState(Train);
-            TrainForm.UpdateStatus('Functions changed');
-          end;
-        end;
-      end;
-    end;
-  finally
-    System.LeaveCriticalsection(OPStackCriticalSection);
-  end;
-end;
-
-procedure TForm1.TimerOpStackProcessTimer(Sender: TObject);
-begin
-  OPStackCore_Process;
-end;
-
-procedure TForm1.TimerOpStackTimerTimer(Sender: TObject);
-begin
-  OPStackCore_Timer;
-end;
-
 procedure TForm1.TreeViewTrainsCreateNodeClass(Sender: TCustomTreeView;
   var NodeClass: TTreeNodeClass);
 begin
@@ -909,26 +829,44 @@ procedure TForm1.UpdateUI;
 begin
   if ComponentState * [csDestroying] = [] then
   begin
-    case EthernetConnectionState of
+
+    case ComConnectionState of
       csDisconnected :
         begin
-          Statusbar.Panels[0].Text := 'Ethernet: Disconnected';
+          ActionCOMConnection.ImageIndex := 892;
+          Statusbar.Panels[0].Text := 'COM: Disconnected';
         end;
       csConnecting :
         begin
-         Statusbar.Panels[0].Text := 'Ethernet: Connecting';
-        end;
-      csDisconnecting :
-        begin
-         Statusbar.Panels[0].Text := 'Ethernet: Disconnecting';
+          ActionCOMConnection.ImageIndex := 892;
+          Statusbar.Panels[0].Text := 'COM: Connecting';
         end;
       csConnected :
         begin
-          Statusbar.Panels[0].Text := 'Ethernet: Connected: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort);
+          ActionCOMConnection.ImageIndex := 891;
+          Statusbar.Panels[0].Text := 'COM: Connected';
         end;
     end;
-    if Assigned(EthernetHub) then
-      Statusbar.Panels[1].Text := 'Clients: ' + IntToStr(EthernetHub.ClientThreadList.Count);
+
+    case EthernetConnectionState of
+      csDisconnected :
+        begin
+          Statusbar.Panels[1].Text := 'Ethernet: Disconnected';
+        end;
+      csConnecting :
+        begin
+         Statusbar.Panels[1].Text := 'Ethernet: Connecting';
+        end;
+      csDisconnecting :
+        begin
+         Statusbar.Panels[1].Text := 'Ethernet: Disconnecting';
+        end;
+      csConnected :
+        begin
+          Statusbar.Panels[1].Text := 'Ethernet: Connected: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort);
+        end;
+    end;
+    Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetConnectionCount);
   end;
   UpdateMessageCountUI;
 end;

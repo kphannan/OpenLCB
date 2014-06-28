@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Throttle_events_code.mpas
+Value=Templates\template_userstatemachine.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -16,7 +16,7 @@ Value=0
 [HEAP_SIZE]
 Value=2000
 [FILES]
-Count=55
+Count=57
 File0=Throttle_main.mpas
 File1=Throttle_objects.mpas
 File2=Throttle_driver.mpas
@@ -72,18 +72,24 @@ File51=..\..\..\..\Library\NMRA_DCC\NMRAnetServiceMode.mpas
 File52=..\..\..\..\Library\NMRA_DCC\PagedServiceMode.mpas
 File53=..\..\..\..\Library\NMRA_DCC\RegisterServiceMode.mpas
 File54=..\..\..\..\Library\NMRA_DCC\ServiceModeDefines.mpas
+File55=..\..\..\..\Library\CabCommon\NMRAnetCabBridgeDefines.mpas
+File56=..\..\..\..\Library\CabCommon\NMRAnetCabBridge.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=5
+Count=9
 File0=Throttle_main.mpas
-File1=Throttle_objects.mpas
-File2=Throttle_driver.mpas
-File3=Throttle_events_code.mpas
-File4=Throttle_resources.mpas
+File1=Templates\template_userstatemachine.mpas
+File2=Throttle_events_code.mpas
+File3=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
+File4=..\..\..\..\NMRAnet\opstackcore.mpas
+File5=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
+File6=..\..\..\..\Library\CabCommon\NMRAnetCabBridge.mpas
+File7=Throttle_driver.mpas
+File8=Throttle_objects.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -93,25 +99,18 @@ Count=2
 File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
-Count=18
+Count=11
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path3=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
-Path4=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\
-Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path6=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path7=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path9=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\dsPIC33_Flash\
-Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path11=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\
-Path12=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path13=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path14=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path15=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path16=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\dsPIC33_Flash\
-Path17=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path2=Z:\branches\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
+Path3=Z:\branches\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\
+Path4=Z:\branches\jkueneman\OPStack\NMRAnet\
+Path5=Z:\branches\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path6=Z:\branches\jkueneman\OPStack\Common\
+Path7=Z:\branches\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path8=Z:\branches\jkueneman\OPStack\ConfigurationLayerImplementations\dsPIC33_Flash\
+Path9=Z:\branches\jkueneman\OPStack\Library\NMRA_DCC\
+Path10=Z:\branches\jkueneman\OPStack\Library\CabCommon\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -120,19 +119,19 @@ Count=0
 Count=0
 [Useses]
 Count=13
-File0=FLASH
-File1=TFT_Defs
-File2=UART
-File3=Button
-File4=ECAN
-File5=Conversions
+File0=TFT
+File1=TFT_Fonts
+File2=ADC
+File3=TFT_TouchPanel
+File4=Spi
+File5=String
 File6=C_Type
-File7=String
-File8=Spi
-File9=TFT_TouchPanel
-File10=ADC
-File11=TFT_Fonts
-File12=TFT
+File7=Conversions
+File8=ECAN
+File9=Button
+File10=UART
+File11=TFT_Defs
+File12=FLASH
 [EXPANDED NODES]
 Node1=Sources
 Node2=Output Files

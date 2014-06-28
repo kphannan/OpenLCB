@@ -194,9 +194,9 @@ begin
                 MTI_PRODUCER_IDENTIFIED_UNKNOWN : begin AppCallback_ProducerIdentified( AMessage^.Source, AMessage^.MTI, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end;
                 MTI_VERIFIED_NODE_ID_NUMBER     : begin AppCallback_VerifiedNodeID(AMessage^.Source, NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); end;
                 MTI_INITIALIZATION_COMPLETE     : begin AppCallback_InitializationComplete(AMessage^.Source,  NMRAnetUtilities_Load48BitNodeIDWithSimpleData(NodeID, AMessage^.Buffer^.DataArray)); end;
-                MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))); end;
-            end;
-          end;
+                MTI_PC_EVENT_REPORT             : begin AppCallBack_PCEventReport(AMessage^.Source, PEventID( PByte(@AMessage^.Buffer^.DataArray[0]))) end;
+             end
+          end
         end;
     {$IFDEF SUPPORT_STREAMS}
     MT_STREAM,
@@ -254,7 +254,6 @@ begin
              if not OPStackNode_IsAnyPCER_Set(Node) then
                if Node^.Flags = 0 then
                  if Node^.IncomingMessages = nil then
-                   if Node^.StateMachineMessages = nil then
                      if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
                      begin
                        NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
@@ -547,7 +546,6 @@ begin
               for i := 0 to USER_MAX_SUPPORTED_DYNAMIC_EVENTS_PRODUCED - 1 do
                 AppCallback_InitializeDynamicEvents(Node, i, EVENT_TYPE_PRODUCED);
             end;
-
             Node^.iStateMachine := STATE_NODE_PERMITTED;
             IncomingMessageDispatch(OPStackMessage, Node, nil);
           end
@@ -629,13 +627,24 @@ function OPStackCore_Process: PNMRAnetnode;
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
+    Hardware_DisableInterrupts;
     Result := OPStackNode_NextNode;
+    Hardware_EnableInterrupts;
+    
     if Result <> nil then
     begin
+      Hardware_DisableInterrupts;
       NodeRunStateMachine(Result);
+      Hardware_EnableInterrupts;
+      
+      Hardware_DisableInterrupts;
       AppCallback_UserStateMachine_Process(Result);    // Do I want to let this run with nil?  Why should there be a nil?  There shouldn't
+      Hardware_EnableInterrupts;
     end;
+    
+    Hardware_DisableInterrupts;
     ProcessHardwareMessages;
+    Hardware_EnableInterrupts
   end;
 end;
 

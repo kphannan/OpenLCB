@@ -1,10 +1,10 @@
 object Form1: TForm1
   Left = 385
-  Height = 394
+  Height = 415
   Top = 203
   Width = 672
   Caption = 'Mustangpeak OclbCommandStation Emulator'
-  ClientHeight = 394
+  ClientHeight = 395
   ClientWidth = 672
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
@@ -14,15 +14,15 @@ object Form1: TForm1
   LCLVersion = '1.2.0.3'
   object StatusBar: TStatusBar
     Left = 0
-    Height = 15
-    Top = 379
+    Height = 23
+    Top = 372
     Width = 672
     Panels = <    
       item
-        Width = 250
+        Width = 150
       end    
       item
-        Width = 150
+        Width = 250
       end    
       item
         Width = 150
@@ -52,17 +52,17 @@ object Form1: TForm1
       Style = tbsCheck
     end
     object ToolButtonNewThrottle: TToolButton
-      Left = 273
+      Left = 227
       Top = 2
       Action = ActionStartNode
     end
     object ToolButtonDeleteThrottle: TToolButton
-      Left = 362
+      Left = 302
       Top = 2
       Action = ActionLogging
     end
     object ToolButtonSeparator: TToolButton
-      Left = 581
+      Left = 479
       Top = 2
       Width = 10
       Caption = 'ToolButtonSeparator'
@@ -74,36 +74,36 @@ object Form1: TForm1
       Action = ActionCOMConnection
     end
     object ToolButton1: TToolButton
-      Left = 161
+      Left = 137
       Top = 2
       Action = ActionEthernetClientConnection
     end
     object ToolButton2: TToolButton
-      Left = 421
+      Left = 347
       Top = 2
       Action = ActionDetailedLogging
     end
     object ToolButton3: TToolButton
-      Left = 536
+      Left = 434
       Top = 2
       Action = ActionLogClear
     end
     object ToolButton4: TToolButton
-      Left = 263
+      Left = 217
       Top = 2
       Width = 10
       Caption = 'ToolButton4'
       Style = tbsSeparator
     end
     object ToolButton5: TToolButton
-      Left = 347
+      Left = 287
       Top = 2
       Width = 10
       Caption = 'ToolButton5'
       Style = tbsSeparator
     end
     object ToolButton6: TToolButton
-      Left = 357
+      Left = 297
       Top = 2
       Width = 5
       Caption = 'ToolButton6'
@@ -112,7 +112,7 @@ object Form1: TForm1
   end
   object PageControlMain: TPageControl
     Left = 0
-    Height = 335
+    Height = 328
     Top = 44
     Width = 672
     ActivePage = TabSheetCommandStation
@@ -121,24 +121,24 @@ object Form1: TForm1
     TabOrder = 2
     object TabSheetCommandStation: TTabSheet
       Caption = 'Command Station'
-      ClientHeight = 296
-      ClientWidth = 666
+      ClientHeight = 302
+      ClientWidth = 664
       object GroupBoxLogging: TGroupBox
         Left = 233
-        Height = 224
+        Height = 230
         Top = 64
-        Width = 423
+        Width = 421
         Anchors = [akTop, akLeft, akRight, akBottom]
         Caption = 'Logging'
-        ClientHeight = 202
-        ClientWidth = 415
+        ClientHeight = 212
+        ClientWidth = 417
         TabOrder = 0
         inline SynMemoLog: TSynMemo
           Cursor = crIBeam
           Left = 0
-          Height = 189
+          Height = 199
           Top = 9
-          Width = 409
+          Width = 411
           Anchors = [akTop, akLeft, akRight, akBottom]
           Font.Height = 12
           Font.Name = 'Monaco'
@@ -148,7 +148,7 @@ object Form1: TForm1
           ParentFont = False
           PopupMenu = PopupMenuSynEditLog
           TabOrder = 0
-          Gutter.Width = 55
+          Gutter.Width = 51
           Gutter.MouseActions = <>
           Keystrokes = <          
             item
@@ -587,7 +587,7 @@ object Form1: TForm1
               MouseActions = <>
             end
             object SynGutterLineNumber1: TSynGutterLineNumber
-              Width = 15
+              Width = 11
               MouseActions = <>
               MarkupInfo.Background = clBtnFace
               MarkupInfo.Foreground = clNone
@@ -625,11 +625,11 @@ object Form1: TForm1
         Left = 233
         Height = 64
         Top = 0
-        Width = 423
+        Width = 421
         Anchors = [akTop, akLeft, akRight]
         Caption = 'Trains'
-        ClientHeight = 42
-        ClientWidth = 415
+        ClientHeight = 46
+        ClientWidth = 417
         TabOrder = 1
         object ButtonShowAllThrottles: TButton
           Left = 4
@@ -650,11 +650,11 @@ object Form1: TForm1
       end
       object TreeViewTrains: TTreeView
         Left = 0
-        Height = 296
+        Height = 302
         Top = 0
         Width = 221
         Align = alLeft
-        DefaultItemHeight = 18
+        DefaultItemHeight = 16
         TabOrder = 2
         OnCreateNodeClass = TreeViewTrainsCreateNodeClass
       end
@@ -675,10 +675,10 @@ object Form1: TForm1
       end
       object ComboBoxComPort: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 32
         Width = 226
-        ItemHeight = 0
+        ItemHeight = 13
         Style = csDropDownList
         TabOrder = 0
       end
@@ -695,7 +695,7 @@ object Form1: TForm1
         Height = 21
         Top = 80
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           '19200'
@@ -727,10 +727,10 @@ object Form1: TForm1
       end
       object ComboBoxDataBits: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 128
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 3
         Items.Strings = (
           '5'
@@ -753,10 +753,10 @@ object Form1: TForm1
       end
       object ComboBoxStopBits: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 176
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           '0'
@@ -777,10 +777,10 @@ object Form1: TForm1
       end
       object ComboBoxParity: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 224
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           'None'
@@ -803,10 +803,10 @@ object Form1: TForm1
       end
       object ComboBoxFlowControl: TComboBox
         Left = 22
-        Height = 20
+        Height = 21
         Top = 268
         Width = 132
-        ItemHeight = 0
+        ItemHeight = 13
         ItemIndex = 0
         Items.Strings = (
           'None'
@@ -8419,20 +8419,6 @@ object Form1: TForm1
         }
       end
     end
-  end
-  object TimerOpStackTimer: TTimer
-    Enabled = False
-    Interval = 100
-    OnTimer = TimerOpStackTimerTimer
-    left = 56
-    top = 192
-  end
-  object TimerOpStackProcess: TTimer
-    Enabled = False
-    Interval = 10
-    OnTimer = TimerOpStackProcessTimer
-    left = 136
-    top = 192
   end
   object ImageList16x16: TImageList
     left = 192
@@ -40443,8 +40429,8 @@ object Form1: TForm1
   end
   object ActionList: TActionList
     Images = ImageList16x16
-    left = 200
-    top = 160
+    left = 152
+    top = 144
     object ActionCOMConnection: TAction
       Category = 'PhysicalLayer'
       AutoCheck = True
@@ -40660,12 +40646,5 @@ object Form1: TForm1
     object MenuItemCommonToolsZeroizeConfigMem: TMenuItem
       Action = ActionZeroizeConfigMemory
     end
-  end
-  object TimerGeneral: TTimer
-    Enabled = False
-    Interval = 300
-    OnTimer = TimerGeneralTimer
-    left = 142
-    top = 110
   end
 end

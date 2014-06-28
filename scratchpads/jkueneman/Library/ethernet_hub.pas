@@ -9,45 +9,10 @@ uses
   common_utilities, olcb_utilities, olcb_transport_layer, olcb_defines, strutils;
 
 type
-  TClientSocketThread = class;
+  TSocketThread = class;
   TEthernetHub = class;
   TSocketThreadList = class;
-
-  { TTCPMessage }
-
-  TTCPMessage = class
-  private
-    FMessage: string;
-    FSource: TClientSocketThread;
-  public
-    constructor Create;
-    property Source: TClientSocketThread read FSource write FSource;   // which socket the message came from
-    property Message: string read FMessage write FMessage;           // Grid Connect message received
-  end;
-
-  { TTCPMessageList }
-
-  TTCPMessageList = class(TThreadList)
-  private
-    function GetCount: Integer;
-  public
-    destructor Destroy; override;
-    procedure ClearObjects;
-
-    property Count: Integer read GetCount;
-  end;
-
-  { TTCPMessageManager }
-
-  TTCPMessageManager = class
-  private
-    FMessages: TTCPMessageList;
-  public
-    constructor Create;
-    destructor Destroy; override;
-
-    property Messages: TTCPMessageList read FMessages write FMessages;
-  end;
+  TEthernetListenDameonThread = class;
 
   { TSocketThreadList }
   TSocketThreadList = class(TThreadList)      // Contains TClientSocketThread objects
@@ -55,30 +20,34 @@ type
     function GetCount: Integer;
   public
     destructor Destroy; override;
-    procedure ClearObjects;
+    procedure TerminateThreads;
+    procedure TerminateAndWaitForThreads;
 
     property Count: Integer read GetCount;
   end;
 
-  { TClientSocketThread }
-  TClientSocketThread = class(TTransportLayerThread)
+  { TSocketThread }
+
+  TSocketThread = class(TTransportLayerThread)
   private
     FhSocketLocal: TSocket;
+    FListenDameon: TEthernetListenDameonThread;                                 // Used if the Thread is created by a Listen Dameon
     FMaxLoopTime: DWord;
-    FOwnerHub: TEthernetHub;
     FUseSocketHandle: Boolean;
   protected
+    Socket: TTCPBlockSocket;                                                    // thread created Socket
     procedure Execute; override;
-    procedure SyncOnConnectionState; override;
+    procedure ExecuteBegin; override;
+    procedure ExecuteEnd; override;
+    procedure SendMessage(AMessage: AnsiString); override;
     property hSocketLocal: TSocket read FhSocketLocal write FhSocketLocal;
-    property OwnerHub: TEthernetHub read FOwnerHub write FOwnerHub;
+    property ListenDameon: TEthernetListenDameonThread read FListenDameon write FListenDameon;
     property UseSocketHandle: Boolean read FUseSocketHandle write FUseSocketHandle;            // If true the socket will use the handle in hSocketLocal to create the connection, else it will use the GlobalSettings for the Listen and Client Ports
   public
-    constructor Create(CreateSuspended: Boolean; UseSocketLocalParemeter: Boolean); reintroduce; virtual;
+    constructor Create(CreateSuspended: Boolean; UseSocketLocalParemeter: Boolean; AListenDameon: TEthernetListenDameonThread; ANodeThread: TNodeThread); reintroduce; virtual;
     destructor Destroy; override;
     property MaxLoopTime: DWord read FMaxLoopTime write FMaxLoopTIme;
   end;
-
 
   { TEthernetListenDameonThread }
 
@@ -86,261 +55,135 @@ type
   private
     FOwnerHub: TEthernetHub;
     FListeningSocket: TTCPBlockSocket;
+    FSocketThreadList: TSocketThreadList;
   protected
     procedure Execute; override;
     property OwnerHub: TEthernetHub read FOwnerHub write FOwnerHub;
     property ListeningSocket: TTCPBlockSocket read FListeningSocket write FListeningSocket;     // Caution, created in context of thread
+    property SocketThreadList: TSocketThreadList read FSocketThreadList write FSocketThreadList;
   public
-    constructor Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize); reintroduce;
+    constructor Create(CreateSuspended: Boolean; ANodeThread: TNodeThread; const StackSize: SizeUInt = DefaultStackSize); reintroduce;
     destructor Destroy; override;
   end;
 
   { TEthernetHub }
+
   TEthernetHub = class
   private
     FBufferRawMessage: string;
-    FEnableOPStackCallback: Boolean;
-    FEnableReceiveMessages: Boolean;
-    FEnableSendMessages: Boolean;
     FListener: Boolean;
-    FMessageManager: TTCPMessageManager;
-    FOnBeforeDestroyTask: TOlcbTaskBeforeDestroy;
+    FNodeThread: TNodeThread;
     FEnabled: Boolean;
     FListenDameon: TEthernetListenDameonThread;
-    FClientThreadList: TSocketThreadList;
-    FOnOPstackCallback: TOnOPStackCallback;
     FOnStatus: THookSocketStatus;
-    FSingletonClient: TClientSocketThread;
-    FOnConnectionStateChange: TOnConnectionStateChange;
-    FOnErrorMessage: TOnRawMessage;
-    FOnReceiveMessage: TOnRawMessage;
-    FOnSendMessage: TOnRawMessage;
+    FSingletonSocket: TSocketThread;
+    FOnConnectionStateChange: TOnConnectionStateChangeFunc;
+    FOnErrorMessage: TOnRawMessageFunc;
     procedure SetEnabled(AValue: Boolean);
-    procedure SetEnableReceiveMessages(AValue: Boolean);
-    procedure SetEnableSendMessages(AValue: Boolean);
     procedure SetListener(AValue: Boolean);
+    procedure SetNodeThread(AValue: TNodeThread);
   protected
-    procedure InternalAdd(Msg: AnsiString);
-    procedure InternalAddDatagramToSendByCAN(Datagram: TCANDatagramSend);
-    procedure InternalAddMultiFrameToSendByCAN(MultiFrame: TCANMultiFrameSend);
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property ListenDameon: TEthernetListenDameonThread read FListenDameon;
-    property SingletonClient: TClientSocketThread read FSingletonClient write FSingletonClient;
+    property SingletonSocket: TSocketThread read FSingletonSocket write FSingletonSocket;
   public
-    constructor Create;
+    constructor Create(ANodeThread: TNodeThread);
     destructor Destroy; override;
 
-    function AddGridConnectStr(GridConnectStr: ansistring): Boolean;
-    function AddTask(NewTask: TTaskOlcbBase): Boolean;
-    procedure RemoveAndFreeTasks(RemoveKey: PtrInt);
-
-    property ClientThreadList: TSocketThreadList read FClientThreadList write FClientThreadList;
     property Enabled: Boolean read FEnabled write SetEnabled;
-    property EnableReceiveMessages: Boolean read FEnableReceiveMessages write SetEnableReceiveMessages;
-    property EnableSendMessages: Boolean read FEnableSendMessages write SetEnableSendMessages;
-    property EnableOPStackCallback: Boolean read FEnableOPStackCallback write FEnableOPStackCallback;
     property Listener: Boolean read FListener write SetListener;
-    property MessageManager: TTCPMessageManager read FMessageManager write FMessageManager;
-    property OnBeforeDestroyTask: TOlcbTaskBeforeDestroy read FOnBeforeDestroyTask write FOnBeforeDestroyTask;
+    property NodeThread: TNodeThread read FNodeThread write SetNodeThread;
+  published
     property OnStatus: THookSocketStatus read FOnStatus write FOnStatus;
-    property OnErrorMessage: TOnRawMessage read FOnErrorMessage write FOnErrorMessage;
-    property OnReceiveMessage: TOnRawMessage read FOnReceiveMessage write FOnReceiveMessage;
-    property OnSendMessage: TOnRawMessage read FOnSendMessage write FOnSendMessage;
-    property OnConnectionStateChange: TOnConnectionStateChange read FOnConnectionStateChange write FOnConnectionStateChange;
-    property OnOPStackCallback: TOnOPStackCallback read FOnOPstackCallback write FOnOPStackCallback;
+    property OnErrorMessage: TOnRawMessageFunc read FOnErrorMessage write FOnErrorMessage;
+    property OnConnectionStateChange: TOnConnectionStateChangeFunc read FOnConnectionStateChange write FOnConnectionStateChange;
   end;
 
 
 implementation
 
-  const
-  // :X19170640N0501010107015555;   Example.....
-  // ^         ^                ^
-  // 0         10               27
-  MAX_GRID_CONNECT_LEN = 28;
-  GRID_CONNECT_HEADER_OFFSET_HI = 2;
-  GRID_CONNECT_HEADER_OFFSET_LO = 4;
-  GRID_CONNECT_DATA_OFFSET = 11;
+{ TSocketThread }
 
-constructor TTCPMessage.Create;
-begin
-  FMessage := '';
-  FSource := nil;
-end;
-
-{ TTCPMessageManager }
-
-constructor TTCPMessageManager.Create;
-begin
-  FMessages := TTCPMessageList.Create;
-end;
-
-destructor TTCPMessageManager.Destroy;
-begin
-  FreeAndNil(FMessages);
-  inherited Destroy;
-end;
-
-{ TTCPMessageList }
-
-function TTCPMessageList.GetCount: Integer;
+procedure TSocketThread.Execute;
 var
-  L: TList;
-begin
-  L := LockList;
-  try
-    Result := L.Count
-  finally
-    UnLockList
-  end;
-end;
-
-destructor TTCPMessageList.Destroy;
-begin
-  ClearObjects;
-  inherited Destroy;
-end;
-
-procedure TTCPMessageList.ClearObjects;
-var
-  L: TList;
-  i: Integer;
-begin
-  L := LockList;
-  try
-    for i := 0 to L.Count - 1 do
-      TObject(L[i]).Free;
-  finally
-    L.Clear;
-    UnLockList
-  end;
-end;
-
-{ TClientSocketThread }
-
-procedure TClientSocketThread.Execute;
-var
-  i: Integer;
-  List: TList;
- { SendStr,} RcvStr: AnsiString;
   Helper: TOpenLCBMessageHelper;
-  SyncSendMessageList: TStringList;
-  ConnectedSocket: TTCPBlockSocket;
   DoClose: Boolean;
+  RcvStr: AnsiString;
+  i: Integer;
   GridConnectStrPtr: PGridConnectString;
 begin
   Helper := nil;
-  SyncSendMessageList := nil;
-  ConnectedSocket := nil;
+  Socket := nil;
 
   // Startup, this sends the csConnecting state which will add the object to the Hub List of Clients
   ExecuteBegin;
   try
     // Setup the socket and try to create it
-    ConnectedSocket := TTCPBlockSocket.Create;
-    ConnectedSocket.OnStatus := OnStatus;
-    ConnectedSocket.ConvertLineEnd := True;      // User #10, #13, or both to be a "string"
-    ConnectedSocket.SetLinger(False, 0);
-    ConnectedSocket.SetSendTimeout(0);
-    ConnectedSocket.SetRecvTimeout(0);
-    ConnectedSocket.SetTimeout(0);
+    Socket := TTCPBlockSocket.Create;
+    Socket.OnStatus := OnStatus;
+    Socket.ConvertLineEnd := True;      // User #10, #13, or both to be a "string"
+    Socket.SetLinger(False, 0);
+    Socket.SetSendTimeout(0);
+    Socket.SetRecvTimeout(0);
+    Socket.SetTimeout(0);
     try
       // Create helpers
       Helper := TOpenLCBMessageHelper.Create;
-      SyncSendMessageList := TStringList.Create;
 
       // The socket can be created from an existing handle from a remote IP:Port or from a direct connect
       if UseSocketHandle then
       begin
-        ConnectedSocket.Socket := hSocketLocal;
-        if ConnectedSocket.LastError = 0 then
+        Socket.Socket := hSocketLocal;
+        if Socket.LastError = 0 then
         begin
-          ConnectedSocket.GetSins;                     // Back load the IP's / Ports information from the handle
-          if ConnectedSocket.LastError = 0 then
+          Socket.GetSins;                     // Back load the IP's / Ports information from the handle
+          if Socket.LastError = 0 then
             ConnectionState := csConnected
         end
       end else
       begin
-        ConnectedSocket.Bind(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ClientPort));
-        if ConnectedSocket.LastError = 0 then
+        Socket.Bind(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ClientPort));
+        if Socket.LastError = 0 then
         begin
-          ConnectedSocket.Connect(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ListenPort));
-          if ConnectedSocket.LastError = 0 then
+          Socket.Connect(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ListenPort));
+          if Socket.LastError = 0 then
             ConnectionState := csConnected;
         end
       end;
 
       // If error show the message and terminate
-      if ConnectedSocket.LastError <> 0 then
+      if Socket.LastError <> 0 then
       begin
         if UseSocketHandle then
-          ShowErrorMessageAndTerminate('Unable to connect to IP: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort) + #13 + #10 + ConnectedSocket.LastErrorDesc)
+          ShowErrorMessageAndTerminate('Unable to connect to IP: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort) + #13 + #10 + Socket.LastErrorDesc)
         else
           ShowErrorMessageAndTerminate('Unable to connect Local IP: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ClientPort) + #13 + #10
-                                        + 'to Remote IP: ' + GlobalSettings.Ethernet.RemoteIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort) + #13 + #10 + ConnectedSocket.LastErrorDesc)
+                                        + 'to Remote IP: ' + GlobalSettings.Ethernet.RemoteIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort) + #13 + #10 + Socket.LastErrorDesc)
       end;
 
       // This will either be csConnected or csConnecting if it failed
-      Synchronize(@SyncOnConnectionState);
+      Synchronize(@DoConnectionState);
 
       while not Terminated and (ConnectionState = csConnected) do
       begin
         ThreadSwitch;
-        List := ThreadListSendStrings.LockList;                                 // *** Pickup the next Message to Send ***
-        try
-          if List.Count > 0 then
-          begin
-            if TStringList( List[0]).Count > 0 then
-            begin
-              for i := 0 to TStringList( List[0]).Count - 1 do
-              begin
-                BufferRawMessage := TStringList( List[0])[i] ;
-                if Helper.Decompose(BufferRawMessage) then
-                  SyncSendMessageList.Add(BufferRawMessage);
-              end;
-              TStringList( List[0]).Clear;
-            end;
-          end;
-        finally
-          ThreadListSendStrings.UnlockList;                                     // Deadlock if we don't do this here when the main thread blocks trying to add a new Task and we call Syncronize asking the main thread to run.....
-        end;
-
-        CANStreamSendManager.ProcessSend;                              // *** See if there is a stream that is being disceted and frame out on a CAN connection ***
-        CANDatagramSendManager.ProcessSend;                            // *** See if there is a datagram that is being disceted and frame out on a CAN connection ***
-        CANMultiFrameSendManager.ProcessSend;
-        OlcbTaskManager.ProcessSending;                                // *** See if there is a task what will add a message to send ***
-        if SyncSendMessageList.Count > 0 then
-        begin
-          for i := 0 to SyncSendMessageList.Count - 1 do
-          begin
-            ConnectedSocket.SendString(SyncSendMessageList[i]);
-            if EnableSendMessages then
-            begin
-              BufferRawMessage := SyncSendMessageList[i];
-              Synchronize(@SyncOnSendMessage);
-            end;
-          end;
-          SyncSendMessageList.Clear;
-
-          if ConnectedSocket.LastError <> 0 then
-            ShowErrorMessageAndTerminate('Socket Error: ' + ConnectedSocket.LastErrorDesc);
-        end;
 
         if not Terminated then
         begin
-          RcvStr := ConnectedSocket.RecvPacket(1);
-          case ConnectedSocket.LastError of
-            S_OK         : begin
-                             GridConnectStrPtr := nil;
-                             for i := 1 to Length(RcvStr) do
-                             begin
-                               if GridConnect_DecodeMachine(RcvStr[i], GridConnectStrPtr) then
-                                 DecomposeAndDispatchGridConnectString(GridConnectStrPtr^, Helper);
-                             end;
-                           end;
-            WSAETIMEDOUT : begin end; // Normal if nothing to read
+          RcvStr := Socket.RecvPacket(1);
+          case Socket.LastError of
+            S_OK            : begin
+                                for i := 1 to Length(RcvStr) do
+                                begin
+                                  if GridConnect_DecodeMachine(RcvStr[i], GridConnectStrPtr) then
+                                    DecomposeAndDispatchGridConnectString(GridConnectStrPtr, Helper);
+                                 end;
+                               end;
+            WSAETIMEDOUT    : begin end;                  // Normal if nothing to read
+            WSAECONNRESET,
+            WSAECONNABORTED : begin Terminate end;     // This is normal if the other app is shut down so don't waste time with errors and shutting us down
           else
-            ShowErrorMessageAndTerminate('Socket Error: ' + ConnectedSocket.LastErrorDesc)
+            ShowErrorMessageAndTerminate('Socket Error: ' + Socket.LastErrorDesc)
           end;
         end;
       end;
@@ -349,52 +192,70 @@ begin
       // Signal we are disconneting to the UI, will remove the thread from the Hub List
       DoClose := ConnectionState = csConnected;
       ConnectionState := csDisconnecting;
-        Synchronize(@SyncOnConnectionState);
+        Synchronize(@DoConnectionState);
 
       // Close the socket if it was open
       if DoClose then
-        ConnectedSocket.CloseSocket;
+        Socket.CloseSocket;
 
       // Clean up
       FreeAndNil(Helper);
-      FreeAndNil(SyncSendMessageList);
     end;
   finally
     // Cleanup
-    FreeAndNil(ConnectedSocket);
+    FreeAndNil(Socket);
     // Will send csDisconnected state
     ExecuteEnd;
   end
 end;
 
-procedure TClientSocketThread.SyncOnConnectionState;
+procedure TSocketThread.ExecuteBegin;
 begin
-  case ConnectionState of
-    csConnecting : OwnerHub.ClientThreadList.Add(Self);
-    csDisconnecting :
-      begin
-        OwnerHub.ClientThreadList.Remove(Self);
-        FreeOnTerminate := True;
-      end;
-  end;
-  inherited SyncOnConnectionState;
+  inherited ExecuteBegin;
+  if Assigned(NodeThread) then
+    NodeThread.RegisterThread(Self);
 end;
 
-constructor TClientSocketThread.Create(CreateSuspended: Boolean; UseSocketLocalParemeter: Boolean);
+procedure TSocketThread.ExecuteEnd;
 begin
-  inherited Create(True);
+  if Assigned(NodeThread) then
+    NodeThread.UnRegisterThread(Self);
+  inherited ExecuteEnd;
+end;
+
+procedure TSocketThread.SendMessage(AMessage: AnsiString);
+begin
+  Socket.SendString(AMessage);   // Is this ok to send from a different thread???
+end;
+
+constructor TSocketThread.Create(CreateSuspended: Boolean;
+  UseSocketLocalParemeter: Boolean; AListenDameon: TEthernetListenDameonThread;
+  ANodeThread: TNodeThread);
+begin
+  inherited Create(True, ANodeThread);
   UseSocketHandle := UseSocketLocalParemeter;
+  FListenDameon := AListenDameon;
+  if Assigned(ListenDameon) then
+    ListenDameon.SocketThreadList.Add(Self);
   FMaxLoopTime := 0;
-  FOwnerHub := nil;
 end;
 
-destructor TClientSocketThread.Destroy;
+destructor TSocketThread.Destroy;
 begin
+  if Assigned(ListenDameon) then
+    ListenDameon.SocketThreadList.Remove(Self);
+  if Assigned(NodeThread) then
+    NodeThread.UnRegisterThread(Self);
   inherited Destroy;
 end;
 
 { TSocketThreadList }
 
+destructor TSocketThreadList.Destroy;
+begin
+  TerminateThreads;
+  inherited Destroy;
+end;
 
 function TSocketThreadList.GetCount: Integer;
 var
@@ -408,23 +269,41 @@ begin
   end;
 end;
 
-destructor TSocketThreadList.Destroy;
-begin
-  ClearObjects;
-  inherited Destroy;
-end;
-
-procedure TSocketThreadList.ClearObjects;
+procedure TSocketThreadList.TerminateAndWaitForThreads;
 var
   i: Integer;
   L: TList;
-  SocketThread: TClientSocketThread;
+  SocketThread: TSocketThread;
 begin
   L := LockList;
   try
-    for i := 0 to L.Count - 1 do
+    for i := L.Count - 1 downto 0 do         // Need to do this backwards because when they are freed they will remove themselves from this list
     begin;
-      SocketThread := TClientSocketThread( L[i]);
+      SocketThread := TSocketThread( L[i]);
+      SocketThread.Terminate;
+      while not SocketThread.TerminateComplete do
+      begin
+        Application.ProcessMessages;
+      end;
+      SocketThread.Free;
+    end;
+  finally
+    L.Clear;
+    UnlockList;
+  end;
+end;
+
+procedure TSocketThreadList.TerminateThreads;
+var
+  i: Integer;
+  L: TList;
+  SocketThread: TSocketThread;
+begin
+  L := LockList;
+  try
+    for i := L.Count - 1 downto 0 do
+    begin;
+      SocketThread := TSocketThread( L[i]);
       SocketThread.Terminate;
     end;
   finally
@@ -435,21 +314,24 @@ end;
 
 { TEthernetListenDameonThread }
 
-constructor TEthernetListenDameonThread.Create(CreateSuspended: Boolean; const StackSize: SizeUInt = DefaultStackSize);
+constructor TEthernetListenDameonThread.Create(CreateSuspended: Boolean;
+  ANodeThread: TNodeThread; const StackSize: SizeUInt);
 begin
-  inherited Create(CreateSuspended);
+  inherited Create(CreateSuspended, ANodeThread);
+  SocketThreadList := TSocketThreadList.Create;
   FOwnerHub := nil;
 end;
 
 destructor TEthernetListenDameonThread.Destroy;
 begin
+  SocketThreadList.TerminateAndWaitForThreads;
   inherited Destroy;
 end;
 
 procedure TEthernetListenDameonThread.Execute;
 var
   hSocket: TSocket;
-  ClientSocketThread: TClientSocketThread;
+  NewSocketThread: TSocketThread;
   List: TList;
   i: Integer;
   DoClose: Boolean;
@@ -479,7 +361,7 @@ begin
       ShowErrorMessageAndTerminate('Unable to connect to IP: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort) + #13 + #10 + ListeningSocket.LastErrorDesc);
 
     // This will either be csConnected or csConnecting if it failed
-    Synchronize(@SyncOnConnectionState);
+    Synchronize(@DoConnectionState);
 
     // Run the loop looking for clients, but only if connected
     while not Terminated and (ConnectionState = csConnected) do
@@ -493,20 +375,13 @@ begin
             hSocket := ListeningSocket.Accept;        // Get the handle of the new ListeningSocket for the client connection
             if ListeningSocket.LastError = 0 then
             begin
-              ClientSocketThread := TClientSocketThread.Create(True, True);   // Use the hSocketLocal parameter to create socket
-              ClientSocketThread.hSocketLocal := hSocket;
-              ClientSocketThread.OwnerHub := OwnerHub;
-              ClientSocketThread.OnReceiveMessage := OwnerHub.OnReceiveMessage;
-              ClientSocketThread.OnSendMessage := OwnerHub.OnSendMessage;
-              ClientSocketThread.OnErrorMessage := OwnerHub.OnErrorMessage;
-              ClientSocketThread.OnConnectionStateChange := OwnerHub.OnConnectionStateChange;
-              ClientSocketThread.OnOPStackCallback := OnOPStackCallback;
-              ClientSocketThread.EnableReceiveMessages := OwnerHub.EnableReceiveMessages;
-              ClientSocketThread.EnableSendMessages := OwnerHub.EnableSendMessages;
-              ClientSocketThread.EnableOPStackCallback := EnableOPStackCallback;
-              ClientSocketThread.OnBeforeDestroyTask := OwnerHub.OnBeforeDestroyTask;
-              ClientSocketThread.OnStatus := OwnerHub.OnStatus;
-              ClientSocketThread.Suspended := False;
+              NewSocketThread := TSocketThread.Create(True, True, Self, NodeThread);   // Use the hSocketLocal parameter to create socket
+              NewSocketThread.hSocketLocal := hSocket;
+              NewSocketThread.ListenDameon := Self;
+              NewSocketThread.OnErrorMessage := OwnerHub.OnErrorMessage;
+              NewSocketThread.OnConnectionStateChange := OwnerHub.OnConnectionStateChange;
+              NewSocketThread.OnStatus := OwnerHub.OnStatus;
+              NewSocketThread.Suspended := False;
             end else
               ShowErrorMessageAndTerminate('Error in connection to IP: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort) + #13 + #10 + ListeningSocket.LastErrorDesc);
           end;
@@ -515,21 +390,12 @@ begin
       end;
     end;
   finally
-    // If the Listener goes down take down the Clients.  They will remove themselves
-    // from the list and free themselves
-    List := OwnerHub.ClientThreadList.LockList;
-    try
-      for i := 0 to List.Count - 1 do
-        TClientSocketThread( List.Items[i]).Terminate;
-    finally
-      OwnerHub.ClientThreadList.UnlockList;
-    end;
 
 
     // Signal we are disconneting to the UI
     DoClose := ConnectionState = csConnected;
     ConnectionState := csDisconnecting;
-      Synchronize(@SyncOnConnectionState);
+      Synchronize(@DoConnectionState);
 
     // Close the Socket
     if DoClose then
@@ -554,18 +420,11 @@ begin
     begin
       if FEnabled then
       begin
-        FListenDameon := TEthernetListenDameonThread.Create(True);
+        FListenDameon := TEthernetListenDameonThread.Create(True, NodeThread);
         ListenDameon.OwnerHub := Self;
-        ListenDameon.OnReceiveMessage := OnReceiveMessage;
-        ListenDameon.OnSendMessage := OnSendMessage;
         ListenDameon.OnErrorMessage := OnErrorMessage;
         ListenDameon.OnConnectionStateChange := OnConnectionStateChange;
-        ListenDameon.OnBeforeDestroyTask := OnBeforeDestroyTask;
         ListenDameon.OnStatus := OnStatus;
-        ListenDameon.OnOPStackCallback := OnOPStackCallback;
-        ListenDameon.EnableReceiveMessages := EnableReceiveMessages;
-        ListenDameon.EnableSendMessages := EnableSendMessages;
-        ListenDameon.EnableOPStackCallback := EnableOPStackCallback;
         ListenDameon.Suspended := False;
       end else
       begin
@@ -573,64 +432,24 @@ begin
         while not ListenDameon.TerminateComplete do
           Application.ProcessMessages;         // Yuck, but Syncronize needs the main thread to pump messages to complete and not deadlock
         FreeAndNil(FListenDameon);             // Can't free on terminate because it may be gone when we check for IsTerminated....
-        ClientThreadList.Clear;
       end;
     end else
     begin
       if FEnabled then
       begin
-        FSingletonClient := TClientSocketThread.Create(True, False);            // Use the IP and Port to create the socket
-        SingletonClient.OwnerHub := Self;
-        SingletonClient.OnReceiveMessage := OnReceiveMessage;
-        SingletonClient.OnSendMessage := OnSendMessage;
-        SingletonClient.OnErrorMessage := OnErrorMessage;
-        Singletonclient.OnConnectionStateChange := OnConnectionStateChange;
-        SingletonClient.OnStatus := OnStatus;
-        SingletonClient.OnOPStackCallback := OnOPStackCallback;
-        SingletonClient.EnableReceiveMessages := EnableReceiveMessages;
-        SingletonClient.EnableSendMessages := EnableSendMessages;
-        SingletonClient.OnBeforeDestroyTask := OnBeforeDestroyTask;
-        SingletonClient.EnableOPStackCallback := EnableOPStackCallback;
-        SingletonClient.Suspended := False;
+        FSingletonSocket := TSocketThread.Create(True, False, nil, NodeThread);            // Use the IP and Port to create the socket
+        SingletonSocket.OnErrorMessage := OnErrorMessage;
+        SingletonSocket.OnConnectionStateChange := OnConnectionStateChange;
+        SingletonSocket.OnStatus := OnStatus;
+        SingletonSocket.Suspended := False;
       end else
       begin
-        SingletonClient.Terminate;
-        while not SingletonClient.TerminateComplete do
+        SingletonSocket.Terminate;
+        while not SingletonSocket.TerminateComplete do
           Application.ProcessMessages;
+        FreeAndNil(FSingletonSocket);
       end
     end;
-  end;
-end;
-
-procedure TEthernetHub.SetEnableReceiveMessages(AValue: Boolean);
-var
-  List: TList;
-  i: Integer;
-begin
-  if FEnableReceiveMessages=AValue then Exit;
-  FEnableReceiveMessages:=AValue;
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).EnableReceiveMessages := AValue;
-  finally
-    ClientThreadList.UnlockList;
-  end;
-end;
-
-procedure TEthernetHub.SetEnableSendMessages(AValue: Boolean);
-var
-  List: TList;
-  i: Integer;
-begin
-  if FEnableSendMessages=AValue then Exit;
-  FEnableSendMessages:=AValue;
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).EnableSendMessages := AValue;
-  finally
-    ClientThreadList.UnlockList;
   end;
 end;
 
@@ -638,142 +457,36 @@ procedure TEthernetHub.SetListener(AValue: Boolean);
 var
   WasEnabled: Boolean;
 begin
-  if FListener=AValue then Exit;
-  WasEnabled := Enabled;
-  Enabled := False;
-  FListener:=AValue;
-  Enabled := WasEnabled;
+  if FListener <>AValue then
+  begin
+    WasEnabled := Enabled;
+    Enabled := False;
+    FListener:=AValue;
+    Enabled := WasEnabled;
+  end;
 end;
 
-constructor TEthernetHub.Create;
+procedure TEthernetHub.SetNodeThread(AValue: TNodeThread);
 begin
-  EnableReceiveMessages := False;
-  EnableSendMessages := False;
-  EnableOPStackCallback := False;
+  if FNodeThread <> AValue then
+    FNodeThread:=AValue;
+end;
+
+constructor TEthernetHub.Create(ANodeThread: TNodeThread);
+begin
   FOnErrorMessage := nil;
-  FOnReceiveMessage := nil;
-  FOnSendMessage := nil;
-  FOnBeforeDestroyTask := nil;
   FOnStatus := nil;
-  FClientThreadList := TSocketThreadList.Create;
-  FMessageManager := TTCPMessageManager.Create;
-  FSingletonClient := nil;
+  FSingletonSocket := nil;
   FOnConnectionStateChange := nil;
+  FNodeThread := nil;
+  NodeThread := ANodeThread;
 end;
 
 destructor TEthernetHub.Destroy;
 begin
-  Enabled := False;                      // Destroy the thread, this ensures that no more client thread will be added to ClientThreadList
-  FreeAndNil(FClientThreadList);
+  Enabled := False;                      // Destroy the thread, this ensures that no more client thread will be added to SocketThreadList
   // Possible issue here with Client threads silently quitting in the background, did set Hub to nil but they may be in a place where it is waiting to do something with Hub....
-  FreeAndNil(FMessageManager);
   inherited Destroy;
-end;
-
-procedure TEthernetHub.InternalAdd(Msg: AnsiString);
-var
-  List: TList;
-  i: Integer;
-begin
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).InternalAdd(Msg);
-  finally
-    ClientThreadList.UnlockList;
-  end;
-end;
-
-procedure TEthernetHub.InternalAddDatagramToSendByCAN(Datagram: TCANDatagramSend);
-var
-  List: TList;
-  i: Integer;
-begin
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).InternalAddDatagramToSendByCAN(Datagram);
-  finally
-    ClientThreadList.UnlockList;
-  end;
-end;
-
-procedure TEthernetHub.InternalAddMultiFrameToSendByCAN(MultiFrame: TCANMultiFrameSend);
-var
-  List: TList;
-  i: Integer;
-begin
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).InternalAddMultiFrameToSendByCAN(MultiFrame);
-  finally
-    ClientThreadList.UnlockList;
-  end;
-
-end;
-
-function TEthernetHub.AddGridConnectStr(GridConnectStr: ansistring): Boolean;
-var
-  List: TList;
-  i: Integer;
-  Done: Boolean;
-begin
-  Done := False;
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).InternalAdd(GridConnectStr);
-  finally
-    ClientThreadList.UnlockList;
-    Result := Done;
-  end;
-end;
-
-function TEthernetHub.AddTask(NewTask: TTaskOlcbBase): Boolean;
-var
-  List: TList;
-  i: Integer;
-  Done: Boolean;
-begin
-  Done := False;
-  if Enabled then
-  begin
-    List := ClientThreadList.LockList;
-    try
-      if NewTask.DestinationAlias = 0 then
-      begin
-        for i := 0 to List.Count - 1 do
-          TClientSocketThread( List[i]).AddTask(NewTask, True);   // Broadcast, Task will be cloned in thread
-        Done := True;
-      end else
-      begin
-        i := 0;
-        while (i < List.Count) and not Done do
-        begin
-          Done := TClientSocketThread( List[i]).AddTask(NewTask, True); // Task will be cloned in thread
-          Inc(i);
-        end;
-      end;
-    finally
-      ClientThreadList.UnlockList;
-      Result := Done;
-    end;
-  end;
-end;
-
-procedure TEthernetHub.RemoveAndFreeTasks(RemoveKey: PtrInt);
-var
-  List: TList;
-  i: Integer;
-begin
-  List := ClientThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-      TClientSocketThread( List[i]).RemoveAndFreeTasks(RemoveKey);   // UNKNWON IF THIS IS CORRECT >>>>>>>>>>>>>>>>>>
-  finally
-    ClientThreadList.UnlockList;
-  end;
 end;
 
 end.

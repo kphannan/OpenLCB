@@ -60,9 +60,9 @@ type
     TOlcbNodeState = (ons_Disabled, ons_Started, ons_LoggingIn, ons_Permitted );
 
 type
-  TOnRawMessage = procedure(Sender: TObject; MessageStr: String) of object;
-  TOnConnectionStateChange = procedure (Sender: TObject; ConnectionState: TConnectionState) of object;
-  TOnOPStackCallback = procedure(GridConnectStrPtr: PGridConnectString);
+  TOnRawMessageFunc = procedure(Sender: TObject; MessageStr: String) of object;
+  TOnConnectionStateChangeFunc = procedure (Sender: TObject; ConnectionState: TConnectionState) of object;
+  TOnNodeEventFunc = procedure(Sender: TObject; EventList: TList) of object;
 
   TCANByteArray = array[0..CAN_BYTE_COUNT-1] of Byte;
   PCANByteArray = ^TCANByteArray;
@@ -146,6 +146,7 @@ type
   function StrToHexArray(Value: string): THexArray;
   function RawHelperDataToStr(HelperData: TOpenLCBMessageHelper; ASCII: Boolean): string;
   procedure PrintToSynMemo(MessageStr: AnsiString; SynMemoLog: TSynMemo; Paused: Boolean; Detailed: Boolean; JMRIFormat: Boolean);
+  function DeleteLineBreaks(const S: Ansistring): Ansistring;
 
 
   function GetTickCount : DWORD;
@@ -193,6 +194,7 @@ type
 var
   LocalHelper: TOpenLCBMessageHelper;
   MultiFrames: TMultiFrameBufferList;
+  LogStrings: TStringList;
 
 function GetTickCount : DWORD;
  {On Windows, this is number of milliseconds since Windows was
@@ -997,11 +999,11 @@ begin
     if IsStreamMTI( LocalHelper.MTI, True) then
     begin
       case LocalHelper.MTI of
-        MTI_STREAM_INIT_REQUEST            : Result := Result + ' Suggested Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]);
-        MTI_STREAM_INIT_REPLY              : Result := Result + ' Negotiated Bufer Size = ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]) + ' Destination Stream ID: ' + IntToStr(LocalHelper.Data[7]);
+        MTI_STREAM_INIT_REQUEST            : Result := Result + ' Suggested Bufer Size: ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]);
+        MTI_STREAM_INIT_REPLY              : Result := Result + ' Negotiated Bufer Size: ' + IntToStr((Localhelper.Data[2] shl 8) or LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2) + ' Source Stream ID: ' + IntToStr(LocalHelper.Data[6]) + ' Destination Stream ID: ' + IntToStr(LocalHelper.Data[7]);
         MTI_FRAME_TYPE_CAN_STREAM_SEND     : begin end;
-        MTI_STREAM_PROCEED                 : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
-        MTI_STREAM_COMPLETE                : Result := Result + ' Source Stream ID = ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID = ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
+        MTI_STREAM_PROCEED                 : Result := Result + ' Source Stream ID: ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID: ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
+        MTI_STREAM_COMPLETE                : Result := Result + ' Source Stream ID: ' + IntToStr(Localhelper.Data[2]) + ' Destination Stream ID: ' + IntToStr(LocalHelper.Data[3]) + ' Flags: 0x' + IntToHex(LocalHelper.Data[4], 2) + ' Additional Flags: 0x' + IntToHex(LocalHelper.Data[5], 2);
       end
     end;
 
@@ -1041,17 +1043,17 @@ begin
                 end else
                   Result := Result + IntToStr( round(f));
               end;
-            TRACTION_FUNCTION : Result := Result + 'OLCB Traction Operation, Function Address = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + '], Value = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 5)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(4, 5), 2) + ']';
+            TRACTION_FUNCTION : Result := Result + 'OLCB Traction Operation, Function Address: ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + '], Value: ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 5)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(4, 5), 2) + ']';
             TRACTION_E_STOP : Result := Result + 'OLCB Traction Emergency Stop';
             TRACTION_QUERY_SPEED : Result := Result + 'Query Speeds';
-            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + ']';
+            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function - Address: ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3));
             TRACTION_CONTROLLER_CONFIG :
               begin;
                 case MultiFrame.DataArray[1] of
-                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config - Assign - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
-                  TRACTION_CONTROLLER_CONFIG_RELEASE : Result := Result + 'Controller Config - Release - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
+                  TRACTION_CONTROLLER_CONFIG_ASSIGN : Result := Result + 'Controller Config - Assign - Flags: ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
+                  TRACTION_CONTROLLER_CONFIG_RELEASE : Result := Result + 'Controller Config - Release - Flags: ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']';
                   TRACTION_CONTROLLER_CONFIG_QUERY : Result := Result + 'Controller Config - Query';
-                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config - Notify - Flags = ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']'
+                  TRACTION_CONTROLLER_CONFIG_NOTIFY : Result := Result + 'Controller Config - Notify - Flags: ' + MultiFrame.ExtractDataBytesAsHex(2, 2) + ' Controller ID ' + MultiFrame.ExtractDataBytesAsHex(3, 8) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(9, 10) + ']'
                 end
               end;
             TRACTION_CONSIST :
@@ -1157,7 +1159,7 @@ begin
                       Result := Result + IntToStr( round(f));
                   end
               end;
-            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 3), 4) + ']';
+            TRACTION_QUERY_FUNCTION : Result := Result + 'Query Function - Address: ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 3)) + ', Value: ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 5));
             TRACTION_CONTROLLER_CONFIG :
               begin;
                 case MultiFrame.DataArray[1] of
@@ -1403,27 +1405,32 @@ procedure PrintToSynMemo(MessageStr: AnsiString; SynMemoLog: TSynMemo; Paused: B
 var
   SemiColonPos: Integer;
   Header: PChar;
+  i: Integer;
 begin
   if not Paused then
   begin
      SynMemoLog.BeginUpdate();
      try
-       if JMRIFormat then
+       LogStrings.Text := MessageStr;
+       for i := 0 to LogStrings.Count - 1 do
        begin
-         if Detailed then
+         if JMRIFormat then
          begin
-            MessageStr := MessageToDetailedMessage(MessageStr, True);
-            SemiColonPos := Pos(';',  MessageStr);
-            Header := @MessageStr[SemiColonPos] + 1;
-            SynMemoLog.Lines.Add( GridConnectToJMRI(MessageStr) + Header);
+           if Detailed then
+           begin
+              LogStrings[i] := MessageToDetailedMessage(LogStrings[i], True);
+              SemiColonPos := Pos(';',  LogStrings[i]);
+              Header := @LogStrings[i][SemiColonPos] + 1;
+              SynMemoLog.Lines.Add( GridConnectToJMRI(LogStrings[i]) + Header);
+           end else
+             SynMemoLog.Lines.Add( GridConnectToJMRI(LogStrings[i]));
          end else
-           SynMemoLog.Lines.Add( GridConnectToJMRI(MessageStr));
-       end else
-       begin
-         if Detailed then
-           SynMemoLog.Lines.Add(MessageToDetailedMessage(MessageStr, True))
-         else
-           SynMemoLog.Lines.Add(MessageStr);
+         begin
+           if Detailed then
+             SynMemoLog.Lines.Add(MessageToDetailedMessage(LogStrings[i], True))
+           else
+             SynMemoLog.Lines.Add(LogStrings[i]);
+         end;
        end;
      finally
        SynMemoLog.CaretY := SynMemoLog.LineHeight * SynMemoLog.Lines.Count;
@@ -1432,14 +1439,33 @@ begin
   end;
 end;
 
+function DeleteLineBreaks(const S: Ansistring): Ansistring;
+var
+   Source, SourceEnd: PChar;
+begin
+   Source := Pointer(S) ;
+   SourceEnd := Source + Length(S) ;
+   while Source < SourceEnd do
+   begin
+     case Source^ of
+       #10: Source^ := #32;
+       #13: Source^ := #32;
+     end;
+     Inc(Source) ;
+   end;
+   Result := Trim(S);
+end;
+
 
 initialization
   LocalHelper := TOpenLCBMessageHelper.Create;
   MultiFrames := TMultiFrameBufferList.Create;
+  LogStrings := TStringList.Create;
 
 finalization
   FreeAndNil(MultiFrames);
   FreeAndNil(LocalHelper);
+  FreeAndNil(LogStrings);
 
 
 end.

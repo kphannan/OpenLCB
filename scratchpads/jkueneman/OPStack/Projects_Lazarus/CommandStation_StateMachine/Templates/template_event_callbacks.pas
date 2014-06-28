@@ -25,6 +25,10 @@ uses
   opstacknode,
   opstackdefines;
 
+const
+  EVENT_TYPE_CONSUMED = 1;
+  EVENT_TYPE_PRODUCED = 2;
+
 procedure AppCallback_InitializeEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
 procedure AppCallback_InitializeDynamicEvents(Node: PNMRAnetNode; EventIndex: Integer; ConsumedProduced: Byte);
 

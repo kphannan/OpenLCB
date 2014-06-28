@@ -317,7 +317,8 @@ begin
     MessageToSend^.Buffer^.DataArray[2] := NextMessage^.Buffer^.DataArray[2];
     MessageToSend^.Buffer^.DataArray[3] := NextMessage^.Buffer^.DataArray[3];
     MessageToSend^.Buffer^.DataArray[4] := 0;
-    MessageToSend^.Buffer^.DataBufferSize := 5;
+    MessageToSend^.Buffer^.DataArray[5] := 0;
+    MessageToSend^.Buffer^.DataBufferSize := 6;
     FunctionAddress := (DWord( NextMessage^.Buffer^.DataArray[1]) shl 16) or (DWord( NextMessage^.Buffer^.DataArray[2]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[3]);
     MessageToSend^.Buffer^.DataArray[5] := Byte( (DestNode^.TrainData.Functions shr FunctionAddress) and $00000001);
     AppCallback_TractionProtocol(DestNode, NextMessage);
