@@ -173,6 +173,7 @@ var
   NewNodeCreatedEvent: TNodeEventNodeCreated;
   NewNode: PNMRAnetNode;
   TrainAllocateByAddressTask: TNodeTaskAllocateTrainByAddress;
+  NewFunctionValue: Word;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -359,7 +360,7 @@ begin
             begin
               if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
               begin
-                if ToggleFunction(Node, Node^.TrainData.Functions, TNodeTaskFunction( Node^.UserData).Address) then
+                if ToggleFunction(Node, Node^.TrainData.Functions, TNodeTaskFunction( Node^.UserData).Address, NewFunctionValue) then
                 begin
                   UnLinkFirstTaskFromNode(Node, True);
                   Node^.iUserStateMachine := STATE_THROTTLE_IDLE; // We are done....

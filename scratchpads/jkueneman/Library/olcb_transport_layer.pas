@@ -693,6 +693,11 @@ begin
   while not Terminated do
   begin
     ThreadSwitch;
+    ThreadSwitch;
+    ThreadSwitch;
+    ThreadSwitch;
+    ThreadSwitch;
+    ThreadSwitch;
     ProcessNode;
     CheckForAndLinkNewTasks;
   end;

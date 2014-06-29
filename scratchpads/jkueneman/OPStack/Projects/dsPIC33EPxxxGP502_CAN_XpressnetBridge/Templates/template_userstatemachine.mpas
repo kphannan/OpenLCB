@@ -222,7 +222,7 @@ begin
       %10010000:  // 1001 xxxx {$9x}
         begin
           case DataCount of
-            1: Result := EmergencyStopLocomotiveRequestV2_Down(CabNode);                                         // 2.2.5.1 Emergency stop a locomotive (X-Bus V1 and V2)
+            1: Result := EmergencyStopLocomotiveRequestV2_Down(CabNode);                       // 2.2.5.1 Emergency stop a locomotive (X-Bus V1 and V2)
             2: Result := EmergencyStopLocomotiveRequestV3(CabNode)                             // 2.2.5.2 Emergency stop a locomotive (XpressNet)
           else
             Result := Send_InstructionNotSupported(CabNode);
@@ -618,20 +618,9 @@ begin
       STATE_CAB_IDLE :
           begin
             // Nothing going on....
-    //        if CabData^.IncomingMsg.Full then
-    //        begin
-    //          if DispatchMessage(Node) then
-    //            CabData^.IncomingMsg.Full := False;
-    //        end;
+            // All the work in Xpressnet is done during the Ping of the Throttle by
+            // the Bridge Node
             Exit;
-          end;
-      STATE_CAB_CLEAR_MSG :
-          begin {$IFDEF DEBUG_STATE_CAB_STATEMACHINE} UART1_Write_Text('STATE_CAB_CLEAR_MSG'+LF); {$ENDIF}
-    //        CabData^.IncomingMsg.Full := False;
-    //        CabData^.State := CabData^.State and not (CS_MACRO_MESSAGE or CS_LOCO_SELECT);
-    //        CabData^.IncomingMsg.Count := 0;
-    //        Node^.iUserStateMachine := STATE_CAB_IDLE; // We are done....
-    //        CabData^.iStateMachine := STATE_SUB_BRIDGE_INITIALIZE;  // Reset
           end;
     end;
   end;
@@ -696,19 +685,49 @@ procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPSta
 var
  MultiFrameBuffer: PMultiFrameBuffer;
  CabData: PCab;
+ FunctionAddress, Mask: DWord;
+ FunctionValue: Word;
 begin
   MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
   CabData := PCab( Node^.UserData);
   case MultiFrameBuffer^.DataArray[0] of
     TRACTION_QUERY_SPEED :
         begin    {$IFDEF TRACE_TRACTION_REPLIES} UART1_Write_Text('TRACTION_QUERY_SPEED' + LF); {$ENDIF}
-          Node^.TrainData.SpeedDir := (MultiFrameBuffer^.DataArray[1] shl 8) or MultiFrameBuffer^.DataArray[2];
-          CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS
+          Node^.TrainData.SpeedDir := Word(MultiFrameBuffer^.DataArray[1] shl 8) or Word(MultiFrameBuffer^.DataArray[2]);
+          
+          if CabData^.QueryType = QUERY_FOR_ALLOCATION then
+          begin
+            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS
+          end else
+          begin
+            CabData^.iSubStateMachine := STATE_CAB_DONE_QUERY                   // Default is to end the substatemachine
+          end;
         end;
     TRACTION_QUERY_FUNCTION :
         begin  {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_QUERY_FUNCTION' + LF);{$ENDIF}
-         // Node^.TrainData.Functions......
-         CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
+          FunctionAddress := DWord(MultiFrameBuffer^.DataArray[1] shr 16) or DWord(MultiFrameBuffer^.DataArray[2] shr 8) or DWord(MultiFrameBuffer^.DataArray[3]);
+          FunctionValue := Word(MultiFrameBuffer^.DataArray[4] shr 8) or Word(MultiFrameBuffer^.DataArray[5]);
+
+          Mask := $00000001;
+          Mask := Mask shl FunctionAddress;
+
+          if FunctionValue = 0 then
+            Node^.TrainData.Functions := Node^.TrainData.Functions and not Mask
+          else
+            Node^.TrainData.Functions := Node^.TrainData.Functions or Mask;
+            
+          if CabData^.QueryType = QUERY_FOR_ALLOCATION then
+          begin
+            if CabData^.iQueryFunction < 28 then
+            begin
+              CabData^.iQueryFunction := FunctionAddress + 1;
+              CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS;
+            end else
+              CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
+          end else
+          begin
+            CabData^.iSubStateMachine := STATE_CAB_DONE_QUERY                   // Default is to end the substatemachine
+          end;
         end;
     TRACTION_CONTROLLER_CONFIG :
         begin {$IFDEF TRACE_TRACTION_REPLIES}UART1_Write_Text('TRACTION_CONTROLLER_CONFIG' + LF);{$ENDIF}

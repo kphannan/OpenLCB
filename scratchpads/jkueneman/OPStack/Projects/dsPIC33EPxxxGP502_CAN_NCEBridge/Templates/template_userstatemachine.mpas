@@ -253,7 +253,7 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 var
   i: Integer;
   CabData: PCab;
-  Address: Word;
+  Address, NewFunctionValue: Word;
   SpeedStep, AddressType: Byte;
   NewSpeed: THalfFloat;
 begin
@@ -569,13 +569,17 @@ LATB4_bit := 0;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED'+LF); {$ENDIF}
                     if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
+                    begin
+                      CabData^.iQueryFunction := 0;
+                      CabData^.QueryType := QUERY_FOR_ALLOCATION;
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                    end;
                     CabData^.WatchDog := 0;
                     Exit;
                   end;
               STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
                   begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS'+LF); {$ENDIF}
-                    if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, 0) then
+                    if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, CabData^.iQueryFunction) then
                       CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                     CabData^.WatchDog := 0;
                     Exit;
@@ -671,66 +675,66 @@ LATB4_bit := 0;
                   end;
                 NCE_CAB_BELL                        :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, FUNCTION_BELL) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, FUNCTION_BELL, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F0_0                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 0) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 0, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                   end;
                 NCE_CAB_TOGGLE_F1_1                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 1) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 1, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F2_2                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 2) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 2, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F3_3                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 3) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 3, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F4_4                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 4) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 4, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F5_5                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 5) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 5, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F6_6                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 6) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 6, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done...
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F7_7                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 7) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 7, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_TOGGLE_F8_8                 :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 8) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 8, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
                 NCE_CAB_9                           :
                   begin
-                    if ToggleFunction(Node, Node^.TrainData.Functions, 9) then
+                    if ToggleFunction(Node, Node^.TrainData.Functions, 9, NewFunctionValue) then
                       Node^.iUserStateMachine := STATE_CAB_CLEAR_MSG; // We are done....
                     Exit;
                   end;
@@ -850,6 +854,8 @@ procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPSta
 var
  MultiFrameBuffer: PMultiFrameBuffer;
  CabData: PCab;
+ FunctionAddress, Mask: DWord;
+ FunctionValue: Word;
 begin
   MultiFrameBuffer := PMultiFrameBuffer( PByte( AMessage^.Buffer));
   CabData := PCab( Node^.UserData);
@@ -861,8 +867,31 @@ begin
         end;
     TRACTION_QUERY_FUNCTION :
         begin
-         // Node^.TrainData.Functions......
-         CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
+          FunctionAddress := DWord(MultiFrameBuffer^.DataArray[1] shr 16) or DWord(MultiFrameBuffer^.DataArray[2] shr 8) or DWord(MultiFrameBuffer^.DataArray[3]);
+          FunctionValue := Word(MultiFrameBuffer^.DataArray[4] shr 8) or Word(MultiFrameBuffer^.DataArray[5]);
+
+          Mask := $00000001;
+          Mask := Mask shl FunctionAddress;
+
+          if FunctionValue = 0 then
+            Node^.TrainData.Functions := Node^.TrainData.Functions and not Mask
+          else
+            Node^.TrainData.Functions := Node^.TrainData.Functions or Mask;
+            
+          if CabData^.QueryType = QUERY_FOR_ALLOCATION then
+          begin
+            if PCab( Node^.UserData)^.iQueryFunction < 28 then
+            begin
+              CabData^.iQueryFunction := FunctionAddress + 1;
+              CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS;
+            end else
+              CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
+          end else
+          if CabData^.QueryType = QUERY_NORMAL then
+          begin
+            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
+          end else
+            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK
         end;
     TRACTION_CONTROLLER_CONFIG :
         begin

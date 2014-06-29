@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\..\..\..\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\NMRAnetCabBridge.mpas
+Value=..\..\NMRAnet\opstackcore.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -76,7 +76,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=10
 File0=NCEBridge.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=..\..\Library\CabCommon\NMRAnetCabBridge.mpas
@@ -85,7 +85,8 @@ File4=..\..\NMRAnet\nmranetdefines.mpas
 File5=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
 File6=..\..\NMRAnet\nmranetutilities.mpas
 File7=..\..\NMRAnet\opstackcore.mpas
-File8=..\..\..\..\..\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\NMRAnetCabBridge.mpas
+File8=..\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\template_userstatemachine.mpas
+File9=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -98,8 +99,8 @@ File1=Templates\NodeID.inc
 Count=20
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=Z:\branches\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
+Path3=Z:\branches\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_NCEBridge\
 Path4=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
 Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
 Path6=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\

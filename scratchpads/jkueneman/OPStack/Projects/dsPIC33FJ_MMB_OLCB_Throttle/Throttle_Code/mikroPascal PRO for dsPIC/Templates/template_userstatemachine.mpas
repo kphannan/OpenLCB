@@ -67,15 +67,6 @@ procedure SetFunctions(AbsoluteNodeIndex: Word);
 
 implementation
   
-const
-  QUERY_NORMAL                             = 0;
-  QUERY_FOR_ALLOCATION                     = 1;
-  
-const
-   STATE_CAB_SEND_QUERY                    = 0;
-   STATE_CAB_WAIT_QUERY                    = 1;
-   STATE_CAB_DONE_QUERY                    = 2;
-  
 type
   TUserData = record
     iSubStateMachine: Word;

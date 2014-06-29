@@ -118,7 +118,7 @@ begin
   EventTrainInfo.Functions := Node^.TrainData.Functions;
   EventTrainInfo.SpeedSteps := Node^.TrainData.SpeedSteps;
   EventTrainInfo.Speed := Node^.TrainData.SpeedDir;
-  EventTrainInfo.ControllerInfo := Node^.TrainData.LinkedNode;
+  EventTrainInfo.ControllerInfo := Node^.TrainData.Controller;
 end;
 
 // *****************************************************************************

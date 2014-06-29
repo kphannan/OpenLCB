@@ -28,12 +28,21 @@ interface
 uses
   opstackdefines,
   template_node;
+  
+const
+  QUERY_NORMAL                             = 0;
+  QUERY_FOR_ALLOCATION                     = 1;
+  
+const
+   STATE_CAB_SEND_QUERY                    = 0;
+   STATE_CAB_WAIT_QUERY                    = 1;
+   STATE_CAB_DONE_QUERY                    = 2;
 
 const
-  STATE_BRIDGE_USER_START              = 0;
-  STATE_BRIDGE_FIND_PROXY              = 1;
-  STATE_BRIDGE_CREATE_REQUIRED_CABS    = 2;
-  STATE_BRIDGE_POLL_CABS               = 3;
+  STATE_BRIDGE_USER_START                  = 0;
+  STATE_BRIDGE_FIND_PROXY                  = 1;
+  STATE_BRIDGE_CREATE_REQUIRED_CABS        = 2;
+  STATE_BRIDGE_POLL_CABS                   = 3;
 
   STATE_SUB_BRIDGE_INITIALIZE                          = 0;
   STATE_SUB_BRIDGE_SYNC_TRANSMIT_BYTE                  = 1;
@@ -157,7 +166,10 @@ type
     State: Byte;                                                                // See CS_xxxx constants
     ID: Byte;                                                                   // Cab Address (ID/Index)
     iStateMachine: Byte;                                                        // SubStatemachine index
+    iSubStateMachine: Byte;
     WatchDog: Word;
+    iQueryFunction: Integer;                                                    // For rowing through all Functions during mass query
+    QueryType: Byte;                                                            // QUERY_xxxx constants
     {$IFDEF SUPPORT_CAB_INPUT_BUFFER}                                           // NCE interleave user input button presses so we need per cab buffer
     UserInputBuffer: TCabMessage;
     {$ENDIF}
@@ -197,4 +209,4 @@ var
 implementation
 
 
-end.
+end.

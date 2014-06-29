@@ -144,8 +144,8 @@ begin
         else
           Result := SpeedByte + 1;
         if IsForward then
-          Result.5 := 1;
-        Result := Result or %01000000;
+          Result := Result or $80;
+        Result := Result or $40;  // NMRA Spec
       end;
     28 :
       begin
@@ -156,8 +156,8 @@ begin
         Result.5 := Result.0;
         Result := Result shr 1;
         if IsForward then
-          Result.5 := 1;
-        Result := Result or %01000000;
+          Result := Result or $80;
+        Result := Result or $40;  // NMRA Spec
       end;
     128 :
       begin
@@ -166,7 +166,7 @@ begin
         else
           Result := SpeedByte + 1;
         if IsForward then
-          Result.7 := 1;
+          Result := Result or $8000;
       end;
   end;
 end;
@@ -597,12 +597,16 @@ end;
 function EmergencyStopLocomotiveRequestV3(CabNode: PNMRAnetNode): Boolean;
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('EmergencyStopLocomotiveRequestV3'+LF);{$ENDIF}
-  Result := False;
-  if IsOutgoingBufferAvailable then
-  begin
-    if TrySendTractionEmergencyStop(CabNode^.Info, CabNode^.TrainData.LinkedNode) then
-      Result := True;
-  end
+  if not NMRAnetUtilities_NullNodeIDInfo(CabNode^.TrainData.LinkedNode) then
+  begin  
+   Result := False;
+    if IsOutgoingBufferAvailable then
+    begin
+      if TrySendTractionEmergencyStop(CabNode^.Info, CabNode^.TrainData.LinkedNode) then
+        Result := True;
+    end
+  end else
+    Result := True; // Just bail
 end;
 
 // *****************************************************************************
@@ -735,21 +739,28 @@ begin
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER'+LF); {$ENDIF}
           if TrySendTractionControllerConfig(CabNode^.Info, CabNode^.TrainData.LinkedNode, CabNode^.Info, True) then
+          begin
+            CabData^.QueryType := QUERY_FOR_ALLOCATION;
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+          end;
           CabData^.WatchDog := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED'+LF); {$ENDIF}
           if TrySendTractionQuerySpeed(CabNode^.Info, CabNode^.TrainData.LinkedNode) then
-            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+          begin
+            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Query Traction Reply Callback
+            CabData^.QueryType := QUERY_FOR_ALLOCATION;
+            CabData^.iQueryFunction := 0;
+          end;
           CabData^.WatchDog := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS'+LF); {$ENDIF}
-          if TrySendTractionQueryFunction(CabNode^.Info, CabNode^.TrainData.LinkedNode, 0) then
-            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+          if TrySendTractionQueryFunction(CabNode^.Info, CabNode^.TrainData.LinkedNode, CabData^.iQueryFunction) then
+            CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Query Function Reply Callback
           CabData^.WatchDog := 0;
           Exit;
         end;
@@ -765,34 +776,35 @@ begin
             case TrainData^.SpeedSteps of
               14  : begin
                       CabBridge.OutGoingBuffer[1] := %0000000;              // Identification, Loco Free, 14 Speed Step Default
-                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 14/100, 14, TrainData^.SpeedDir and $8000 = 0);
+                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep(14, HalfToFloat(TrainData^.SpeedDir and not $8000) * 14/100, TrainData^.SpeedDir and $8000 = 0);
                     end;
               28  : begin
                       CabBridge.OutGoingBuffer[1] := %0000010;              // Identification, Loco Free, 28 Speed Step Default
-                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 28/100, 28, TrainData^.SpeedDir and $8000 = 0);
+                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep(28, HalfToFloat(TrainData^.SpeedDir and not $8000) * 28/100, TrainData^.SpeedDir and $8000 = 0);
                     end;
               128 : begin
                       CabBridge.OutGoingBuffer[1] := %0000100;              // Identification, Loco Free, 128 Speed Step Default
-                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep( HalfToFloat(TrainData^.SpeedDir and not $8000) * 128/100, 128, TrainData^.SpeedDir and $8000 = 0);
+                      CabBridge.OutGoingBuffer[2] := XpressnetEncodeSpeedStep(128, HalfToFloat(TrainData^.SpeedDir and not $8000) * 128/100, TrainData^.SpeedDir and $8000 = 0);
                     end;
             end;
             
             CabBridge.OutGoingBuffer[3] := 0;
+            CabBridge.OutGoingBuffer[4] := 0;
             FunctionBits := TrainData^.Functions;        // procedures F0..F4;   Bottom 5 Bits F0-F4
-            for i := 4 downto 0 do
-            begin
+
+            if FunctionBits and $00000001 = 1 then
+              CabBridge.OutGoingBuffer[3].4 := 1;
+            for i := 0 to 3 do
+            begin  
+              FunctionBits := FunctionBits shr 1;
               if FunctionBits and $00000001 = 1 then
                 CabBridge.OutGoingBuffer[3].i := 1;
-              FunctionBits := FunctionBits shr 1;
             end;
-            
-            CabBridge.OutGoingBuffer[4] := 0;
-            FunctionBits := TrainData^.Functions;        // procedures F5..F12;  Shift out the bottom 5 bits to get F5-F12
-            for i := 7 downto 0 do
-            begin
+            for i := 0 to 7 do
+            begin   
+              FunctionBits := FunctionBits shr 1;
               if FunctionBits and $00000001 = 1 then
                 CabBridge.OutGoingBuffer[4].i := 1;
-              FunctionBits := FunctionBits shr 1;
             end;
 
             CabBridge.OutGoingBuffer[5] := CalculateError(5, CabBridge.OutGoingBuffer);
@@ -1135,32 +1147,35 @@ var
   SpeedStep: Byte;
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('LocomotiveOperationsRequest'+LF);{$ENDIF}
-  
-  if IsOutgoingBufferAvailable then
+  if not NMRAnetUtilities_NullNodeIDInfo(CabNode^.TrainData.LinkedNode) then
   begin
-    Cab := PCab( CabNode^.UserData);
+    if IsOutgoingBufferAvailable then
+    begin
+      Cab := PCab( CabNode^.UserData);
 
-    Address := (CabBridge.IncomingBuffer[1] shl 8) or CabBridge.IncomingBuffer[2];
+      Address := (CabBridge.IncomingBuffer[1] shl 8) or CabBridge.IncomingBuffer[2];
 
-    case CabBridge.IncomingBuffer[0] of
-      $10 : SpeedStep := 14;
-      $11 : begin   // 27 Speed Step
-              Result := Send_InstructionNotSupported(CabNode);
-              Exit;
-            end;
-      $12 : SpeedStep := 28;
-      $13 : SpeedStep := 128;
-    end; // case
-    
-    CabNode^.TrainData.SpeedDir := FloatToHalf( NMRAExtractSpeedStep(SpeedStep, CabBridge.IncomingBuffer[3])* 100/SpeedStep);
-    if CabBridge.IncomingBuffer[3] and $80 <> 0 then
-      CabNode^.TrainData.SpeedDir := CabNode^.TrainData.SpeedDir or $8000
-    else
-      CabNode^.TrainData.SpeedDir := CabNode^.TrainData.SpeedDir and not $8000;
+      case CabBridge.IncomingBuffer[0] of
+        $10 : SpeedStep := 14;
+        $11 : begin   // 27 Speed Step
+                Result := Send_InstructionNotSupported(CabNode);
+                Exit;
+              end;
+        $12 : SpeedStep := 28;
+        $13 : SpeedStep := 128;
+      end; // case
 
-    if TrySendTractionSpeedSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, CabNode^.TrainData.SpeedDir) then
-      Result := True;
-  end;
+      CabNode^.TrainData.SpeedDir := FloatToHalf( NMRAExtractSpeedStep(SpeedStep, CabBridge.IncomingBuffer[3])* 100/SpeedStep);
+      if CabBridge.IncomingBuffer[3] and $80 = 0 then
+        CabNode^.TrainData.SpeedDir := CabNode^.TrainData.SpeedDir or $8000
+      else
+        CabNode^.TrainData.SpeedDir := CabNode^.TrainData.SpeedDir and not $8000;
+
+      if TrySendTractionSpeedSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, CabNode^.TrainData.SpeedDir) then
+        Result := True;
+    end;
+  end else
+    Result := True
 end;
 
 
@@ -1193,127 +1208,133 @@ var
   i: Integer;
 begin
   {$IFDEF TRACE_XPRESSNET_MESSAGES_BASIC} UART1_Write_Text('SetFunctionOperationRequest'+LF);{$ENDIF}
-  if IsOutgoingBufferAvailable then
+  if not NMRAnetUtilities_NullNodeIDInfo(CabNode^.TrainData.LinkedNode) then
   begin
-    Cab := PCab( CabNode^.UserData);
+    if IsOutgoingBufferAvailable then
+    begin
+      Cab := PCab( CabNode^.UserData);
 
-    Address := (CabBridge.IncomingBuffer[1] shl 8) or CabBridge.IncomingBuffer[2];
-    FunctionBits := CabBridge.IncomingBuffer[3];
+      Address := (CabBridge.IncomingBuffer[1] shl 8) or CabBridge.IncomingBuffer[2];
+      FunctionBits := CabBridge.IncomingBuffer[3];
 
-    // There are better ways of doing this....
-    case CabBridge.IncomingBuffer[0] of
-      $20 : begin                    // Functions 0 0 0 F0 F4 F3 F2 F1
-               if FunctionBits.4 <> CabNode^.TrainData.Functions.0 then
-               begin
-                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 0, FunctionBits.4) then
+      // There are better ways of doing this....
+      case CabBridge.IncomingBuffer[0] of
+        $20 : begin                    // Functions 0 0 0 F0 F4 F3 F2 F1
+                 if FunctionBits.4 <> CabNode^.TrainData.Functions.0 then
                  begin
-                   CabNode^.TrainData.Functions.0 := FunctionBits.4;
-                   Result := True;
-                 end;
-               end else
-               if FunctionBits.0 <> CabNode^.TrainData.Functions.1 then
-               begin
-                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 1, FunctionBits.0) then
-                 begin
-                   CabNode^.TrainData.Functions.1 := FunctionBits.0;
-                   Result := True;
-                 end;
-               end else
-               if FunctionBits.1 <> CabNode^.TrainData.Functions.2 then
-               begin
-                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 2, FunctionBits.1) then
-                 begin
-                   CabNode^.TrainData.Functions.2 := FunctionBits.1;
-                   Result := True;
-                 end;
-               end else
-               if FunctionBits.2 <> CabNode^.TrainData.Functions.3 then
-               begin
-                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 3, FunctionBits.2) then
-                 begin
-                   CabNode^.TrainData.Functions.3 := FunctionBits.2;
-                   Result := True;
-                 end;
-               end else
-               if FunctionBits.3 <> CabNode^.TrainData.Functions.4 then
-               begin
-                 if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 4, FunctionBits.3) then
-                 begin
-                   CabNode^.TrainData.Functions.4 := FunctionBits.3;
-                   Result := True;
-                 end;
-               end
-            end;
-      $21 : begin                  // Functions 0 0 0 0 F8 F7 F6 F5
-              if FunctionBits.0 <> CabNode^.TrainData.Functions.5 then
-                 begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 5, FunctionBits.0) then
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 0, FunctionBits.4) then
                    begin
-                     CabNode^.TrainData.Functions.5 := FunctionBits.0;
+                     CabNode^.TrainData.Functions.0 := FunctionBits.4;
                      Result := True;
                    end;
                  end else
-                 if FunctionBits.1 <> CabNode^.TrainData.Functions.6 then
+                 if FunctionBits.0 <> CabNode^.TrainData.Functions.1 then
                  begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 6, FunctionBits.1) then
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 1, FunctionBits.0) then
                    begin
-                     CabNode^.TrainData.Functions.6 := FunctionBits.1;
+                     CabNode^.TrainData.Functions.1 := FunctionBits.0;
                      Result := True;
                    end;
                  end else
-                 if FunctionBits.2 <> CabNode^.TrainData.Functions.7 then
+                 if FunctionBits.1 <> CabNode^.TrainData.Functions.2 then
                  begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 7, FunctionBits.2) then
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 2, FunctionBits.1) then
                    begin
-                     CabNode^.TrainData.Functions.7 := FunctionBits.2;
+                     CabNode^.TrainData.Functions.2 := FunctionBits.1;
                      Result := True;
                    end;
                  end else
-                 if FunctionBits.3 <> CabNode^.TrainData.Functions.8 then
+                 if FunctionBits.2 <> CabNode^.TrainData.Functions.3 then
                  begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 8, FunctionBits.3) then
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 3, FunctionBits.2) then
                    begin
-                     CabNode^.TrainData.Functions.8 := FunctionBits.3;
+                     CabNode^.TrainData.Functions.3 := FunctionBits.2;
+                     Result := True;
+                   end;
+                 end else
+                 if FunctionBits.3 <> CabNode^.TrainData.Functions.4 then
+                 begin
+                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 4, FunctionBits.3) then
+                   begin
+                     CabNode^.TrainData.Functions.4 := FunctionBits.3;
                      Result := True;
                    end;
                  end
-            end;
-      $22 : begin                 // Function 0 0 0 0 F12 F11 F10 F9
-              if FunctionBits.0 <> CabNode^.TrainData.Functions.9 then
-                 begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 9, FunctionBits.0) then
+              end;
+        $21 : begin                  // Functions 0 0 0 0 F8 F7 F6 F5
+                if FunctionBits.0 <> CabNode^.TrainData.Functions.5 then
                    begin
-                     CabNode^.TrainData.Functions.9 := FunctionBits.0;
-                     Result := True;
-                   end;
-                 end else
-                 if FunctionBits.1 <> CabNode^.TrainData.Functions.10 then
-                 begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 10, FunctionBits.1) then
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 5, FunctionBits.0) then
+                     begin
+                       CabNode^.TrainData.Functions.5 := FunctionBits.0;
+                       Result := True;
+                     end;
+                   end else
+                   if FunctionBits.1 <> CabNode^.TrainData.Functions.6 then
                    begin
-                     CabNode^.TrainData.Functions.10 := FunctionBits.1;
-                     Result := True;
-                   end;
-                 end else
-                 if FunctionBits.2 <> CabNode^.TrainData.Functions.11 then
-                 begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 11, FunctionBits.2) then
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 6, FunctionBits.1) then
+                     begin
+                       CabNode^.TrainData.Functions.6 := FunctionBits.1;
+                       Result := True;
+                     end;
+                   end else
+                   if FunctionBits.2 <> CabNode^.TrainData.Functions.7 then
                    begin
-                     CabNode^.TrainData.Functions.11 := FunctionBits.2;
-                     Result := True;
-                   end;
-                 end else
-                 if FunctionBits.3 <> CabNode^.TrainData.Functions.12 then
-                 begin
-                   if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 12, FunctionBits.3) then
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 7, FunctionBits.2) then
+                     begin
+                       CabNode^.TrainData.Functions.7 := FunctionBits.2;
+                       Result := True;
+                     end;
+                   end else
+                   if FunctionBits.3 <> CabNode^.TrainData.Functions.8 then
                    begin
-                     CabNode^.TrainData.Functions.12 := FunctionBits.3;
-                     Result := True;
-                   end;
-                 end
-            end;
-    end; // case
-  end;
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 8, FunctionBits.3) then
+                     begin
+                       CabNode^.TrainData.Functions.8 := FunctionBits.3;
+                       Result := True;
+                     end;
+                   end
+              end;
+        $22 : begin                 // Function 0 0 0 0 F12 F11 F10 F9
+                if FunctionBits.0 <> CabNode^.TrainData.Functions.9 then
+                   begin
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 9, FunctionBits.0) then
+                     begin
+                       CabNode^.TrainData.Functions.9 := FunctionBits.0;
+                       Result := True;
+                     end;
+                   end else
+                   if FunctionBits.1 <> CabNode^.TrainData.Functions.10 then
+                   begin
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 10, FunctionBits.1) then
+                     begin
+                       CabNode^.TrainData.Functions.10 := FunctionBits.1;
+                       Result := True;
+                     end;
+                   end else
+                   if FunctionBits.2 <> CabNode^.TrainData.Functions.11 then
+                   begin
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 11, FunctionBits.2) then
+                     begin
+                       CabNode^.TrainData.Functions.11 := FunctionBits.2;
+                       Result := True;
+                     end;
+                   end else
+                   if FunctionBits.3 <> CabNode^.TrainData.Functions.12 then
+                   begin
+                     if TrySendTractionFunctionSet(CabNode^.Info, CabNode^.TrainData.LinkedNode, 12, FunctionBits.3) then
+                     begin
+                       CabNode^.TrainData.Functions.12 := FunctionBits.3;
+                       Result := True;
+                     end;
+                   end
+              end
+      else
+        Result := True; // Just Bail
+      end; // case
+    end;
+  end else
+    Result := True; // Just bail
 end;
 
 
