@@ -50,6 +50,7 @@
       </xs:attribute>
       <xs:attribute name="replication" type="xs:int" default="1"/>
    </xs:complexType>
+   
    <xs:complexType name="eventidType">
       <xs:sequence>
          <xs:element name="name" minOccurs="0" maxOccurs="1"/>
@@ -64,6 +65,7 @@
          </xs:annotation>
       </xs:attribute>
    </xs:complexType>
+   
    <xs:complexType name="intType">
       <xs:sequence>
          <xs:element name="name" minOccurs="0" maxOccurs="1"/>
@@ -95,6 +97,7 @@
          </xs:annotation>
       </xs:attribute>
    </xs:complexType>
+   
    <xs:complexType name="bitType">
       <xs:sequence>
          <xs:element name="name" minOccurs="0" maxOccurs="1"/>
@@ -123,6 +126,7 @@
          </xs:annotation>
       </xs:attribute>
    </xs:complexType>
+   
    <xs:complexType name="stringType">
       <xs:sequence>
          <xs:element name="name" minOccurs="0" maxOccurs="1"/>
@@ -146,6 +150,7 @@
          </xs:annotation>
       </xs:attribute>
    </xs:complexType>
+   
    <xs:complexType name="functionType">
       <xs:sequence>
          <xs:element name="name" minOccurs="0" maxOccurs="1"/>
@@ -158,13 +163,9 @@
            </xs:annotation>
          </xs:element>
       </xs:sequence>
-      <xs:attribute name="kind" type="xs:string" use="required">
-         <xs:annotation>
-            <xs:documentation>
-               So far, the only valid value for this is "binary", so schema needs to be restricted to that.
-            </xs:documentation>
-         </xs:annotation>
-      </xs:attribute>
+      <xs:attribute name="size" type="xs:int" default="1"/>
+      <xs:attribute name="offset" type="xs:int" default="0"/>
+      <xs:attribute name="kind" type="functionKindType" use="required"/>
       <xs:attribute name="latch" type="trueFalseType" default="false">
          <xs:annotation>
             <xs:documentation>
@@ -184,6 +185,18 @@
      <xs:restriction base="xs:token">
        <xs:enumeration value="true"/>
        <xs:enumeration value="false"/>
+     </xs:restriction>
+   </xs:simpleType>
+
+   <xs:simpleType name="functionKindType">
+     <xs:annotation>
+       <xs:documentation>
+          Possible values for "kind" attribute of function element.
+       </xs:documentation>
+     </xs:annotation>
+     <xs:restriction base="xs:token">
+       <xs:enumeration value="binary"/>
+       <xs:enumeration value="analog"/>
      </xs:restriction>
    </xs:simpleType>
 
