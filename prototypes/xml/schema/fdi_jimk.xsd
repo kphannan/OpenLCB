@@ -30,7 +30,7 @@
          </xs:element>
       </xs:sequence>
       <xs:attribute name="size" type="xs:int" default="1"/>
-      <xs:attribute name="kind" type="functionKindType" use="required"/>
+      <xs:attribute name="kind" type="functionKindType" default="binary"/>
    </xs:complexType>
    <xs:simpleType name="functionKindType">
       <xs:annotation>
