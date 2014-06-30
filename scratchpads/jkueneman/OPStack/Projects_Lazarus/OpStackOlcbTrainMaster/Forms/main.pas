@@ -936,7 +936,7 @@ end;
 
 procedure TFormOlcbTrainMaster.NodeEvent(Sender: TObject; EventList: TList);
 var
-  i: Integer;
+  i, j: Integer;
   ProxyEvent: TNodeEventProxyAssigned;
   Event: TNodeEvent;
 begin
@@ -946,8 +946,8 @@ begin
       if TObject( EventList[i]) is TNodeEventProxyAssigned then
       begin
         ProxyEvent := TObject( EventList[i]) as TNodeEventProxyAssigned;
-        FThrottleServerState.Proxy.AliasID := ProxyEvent.ProxyNodeInfo.AliasID;
-        FThrottleServerState.Proxy.ID := ProxyEvent.ProxyNodeInfo.ID;
+        FThrottleServerState.Proxy.AliasID := ProxyEvent.NodeInfo.AliasID;
+        FThrottleServerState.Proxy.ID := ProxyEvent.NodeInfo.ID;
         UpdateUI;
       end else
       if TObject( EventList[i]) is TNodeEventNodeCreated then
@@ -977,10 +977,17 @@ begin
       if TObject( EventList[i]) is TNodeEventIsTrain then
       begin
         Event := TNodeEvent( EventList[i]);
-        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+        if Event.LinkedObj = nil then
+        begin
+          for j := 0 to Throttles.Count - 1 do
+            Throttles[j].EventIsTrain(Event as TNodeEventIsTrain);
+        end else
+        begin
+          if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventIsTrain(Event as TNodeEventIsTrain);
+        end;
       end else
-      if TObject( EventList[i]) is TNodeEventTrainInfo then
+      if TObject( EventList[i]) is TNodeEventSimpleTrainNodeInfo then
       begin
         Event := TNodeEvent( EventList[i]);
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then

@@ -9,7 +9,7 @@ uses
   Interfaces, // this includes the LCL widgetset
   Forms, main,
   form_throttle_multiple_trains, form_train_config_editor, form_throttle, 
-template_traction;
+form_train_selector;
 
 {$R *.res}
 
@@ -17,6 +17,7 @@ begin
   RequireDerivedFormResource := True;
   Application.Initialize;
   Application.CreateForm(TFormOlcbTrainMaster, FormOlcbTrainMaster);
+  Application.CreateForm(TFormTrainSelector, FormTrainSelector);
   Application.Run;
 end.
 

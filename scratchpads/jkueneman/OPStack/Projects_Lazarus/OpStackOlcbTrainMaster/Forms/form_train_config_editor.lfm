@@ -13,7 +13,7 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
   OnHide = FormHide
   OnShow = FormShow
   PopupMenu = PopupMenuMain
-  LCLVersion = '1.0.8.0'
+  LCLVersion = '1.2.0.3'
   object PanelBkGnd: TPanel
     Left = 0
     Height = 346
@@ -26,8 +26,8 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
   end
   object StatusBar: TStatusBar
     Left = 0
-    Height = 23
-    Top = 411
+    Height = 15
+    Top = 419
     Width = 636
     Panels = <    
       item
@@ -309,7 +309,6 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
     TabOrder = 7
   end
   object ActionList: TActionList
-    Images = FormOLCB_Commander.ImageList16x16
     left = 55
     top = 290
     object ActionReadAll: TAction
@@ -355,7 +354,6 @@ object FormTrainConfigEditor: TFormTrainConfigEditor
     end
   end
   object PopupMenuMain: TPopupMenu
-    Images = FormOLCB_Commander.ImageList16x16
     left = 48
     top = 352
     object MenuItemWriteAll: TMenuItem

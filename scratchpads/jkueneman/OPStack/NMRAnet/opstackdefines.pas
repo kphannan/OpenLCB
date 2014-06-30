@@ -23,7 +23,7 @@ const
   MAX_BUS_LOGIN_TIMEOUT = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
 
 const
-  MAX_STR_LEN = 32;
+  STNIP_MAX_STR_LEN = 32;
   STNIP_OFFSET_ROADNAME     = 128;   // Need to move past the User Name and User Description space
   STNIP_OFFSET_CLASS        = 160;
   STNIP_OFFSET_ROADNUMBER   = 192;
@@ -36,7 +36,7 @@ const
   STNIP_PROTOCOL: TPIVProtocolValueArray = ($00, $00, $80, $00, $00, $00);
 
 type
-  TStnipBuffer = array[0..MAX_STR_LEN] of Char;
+  TStnipBuffer = array[0..STNIP_MAX_STR_LEN] of Char;
 
 // Various Statemachine defines
 const

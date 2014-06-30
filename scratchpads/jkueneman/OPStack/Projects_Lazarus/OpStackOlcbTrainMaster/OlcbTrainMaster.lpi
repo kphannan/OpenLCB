@@ -70,6 +70,7 @@
         <Filename Value="Forms\form_train_config_editor.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
       </Unit4>
       <Unit5>
@@ -81,9 +82,12 @@
         <UnitName Value="form_throttle"/>
       </Unit5>
       <Unit6>
-        <Filename Value="Templates\template_traction.pas"/>
+        <Filename Value="Forms\form_train_selector.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="template_traction"/>
+        <ComponentName Value="FormTrainSelector"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_train_selector"/>
       </Unit6>
     </Units>
   </ProjectOptions>

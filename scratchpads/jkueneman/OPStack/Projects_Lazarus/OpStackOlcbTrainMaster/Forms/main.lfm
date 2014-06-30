@@ -16,7 +16,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
   LCLVersion = '1.2.0.3'
   object PageControlMain: TPageControl
     Left = 0
-    Height = 438
+    Height = 423
     Top = 44
     Width = 820
     ActivePage = TabSheetMain
@@ -25,7 +25,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     TabOrder = 0
     object TabSheetMain: TTabSheet
       Caption = 'Trains'
-      ClientHeight = 399
+      ClientHeight = 384
       ClientWidth = 814
       object TreeViewThrottles: TTreeView
         Left = 0
@@ -631,26 +631,6 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
         Height = 384
         Top = 0
         Width = 5
-      end
-      object StatusBar: TStatusBar
-        Left = 0
-        Height = 15
-        Top = 384
-        Width = 814
-        Panels = <        
-          item
-            Text = 'COM: Disconnected'
-            Width = 120
-          end        
-          item
-            Text = 'Ethernet: Disconnected'
-            Width = 300
-          end        
-          item
-            Text = 'Clients Connected:'
-            Width = 150
-          end>
-        SimplePanel = False
       end
     end
     object TabSheetCom: TTabSheet
@@ -8509,6 +8489,26 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
       Caption = 'ToolButton7'
       Style = tbsSeparator
     end
+  end
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 15
+    Top = 467
+    Width = 820
+    Panels = <    
+      item
+        Text = 'COM: Disconnected'
+        Width = 120
+      end    
+      item
+        Text = 'Ethernet: Disconnected'
+        Width = 300
+      end    
+      item
+        Text = 'Clients Connected:'
+        Width = 150
+      end>
+    SimplePanel = False
   end
   object ActionList: TActionList
     Images = ImageList16x16

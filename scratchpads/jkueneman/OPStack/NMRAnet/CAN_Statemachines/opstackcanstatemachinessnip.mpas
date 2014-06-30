@@ -43,7 +43,7 @@ begin
     if LocalOutgoingMessagePtr <> nil then
     begin
       AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
-      OPStackBuffers_LoadMessage(@LocalMessage, MTI_SIMPLE_NODE_INFO_REPLY, LocalOutgoingMessagePtr^.Source.AliasID, LocalOutgoingMessagePtr^.Source.ID, LocalOutgoingMessagePtr^.Dest.AliasID, LocalOutgoingMessagePtr^.Dest.ID, 0);
+      OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source.AliasID, LocalOutgoingMessagePtr^.Source.ID, LocalOutgoingMessagePtr^.Dest.AliasID, LocalOutgoingMessagePtr^.Dest.ID, 0);
       OPStackBuffers_ZeroSimpleBuffer(@LocalBuffer, False);
       LocalMessage.MessageType := MT_SIMPLE;
       LocalMessage.Buffer := @LocalBuffer;

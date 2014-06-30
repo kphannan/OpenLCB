@@ -477,6 +477,9 @@ begin
     MTI_SIMPLE_NODE_INFO_REQUEST       : Result := 'Simple Node Info Request [SNIP]';
     MTI_SIMPLE_NODE_INFO_REPLY         : Result := 'Simple Node Info Reply [SNIP]';
 
+    MTI_SIMPLE_TRAIN_INFO_REQUEST       : Result := 'Simple Train Node Info Request [STNIP]';
+    MTI_SIMPLE_TRAIN_INFO_REPLY         : Result := 'Simple Train Node Info Reply [STNIP]';
+
     MTI_DATAGRAM_OK_REPLY              : begin
                                            Result := 'Datagram Reply OK';
                                            if LocalHelper.DataCount > 2 then
@@ -1013,6 +1016,10 @@ begin
 
     // SNII/SNIP
     if LocalHelper.MTI = MTI_SIMPLE_NODE_INFO_REPLY then
+      Result := Result + RawHelperDataToStr(LocalHelper, True);
+
+    // STNIP
+    if LocalHelper.MTI = MTI_SIMPLE_TRAIN_INFO_REPLY then
       Result := Result + RawHelperDataToStr(LocalHelper, True);
 
     // Events

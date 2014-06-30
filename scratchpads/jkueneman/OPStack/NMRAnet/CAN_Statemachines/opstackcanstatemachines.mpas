@@ -170,7 +170,7 @@ begin
                     Result := True;
                   end;
                 end else
-                if MTI = MTI_SIMPLE_NODE_INFO_REPLY then                          // Does not use framing bits
+                if (MTI = MTI_SIMPLE_NODE_INFO_REPLY) or (MTI = MTI_SIMPLE_TRAIN_NODE_INFO_REPLY) then   // Does not use framing bits
                 begin
                   NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
                   if OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(@ScratchMessage, InProcessMessagePtr) then

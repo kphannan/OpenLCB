@@ -150,12 +150,6 @@ type
   { TNodeEventProxyAssigned }
 
   TNodeEventProxyAssigned = class(TNodeEvent)  // Event that the Proxy Node was discovered and its details
-  private
-    FOnNodeEvent: TOnNodeEventFunc;
-    FProxyNodeInfo: TNodeInfo;
-  public
-    constructor Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject; AProxyNodeInfo: TNodeInfo); reintroduce;
-    property ProxyNodeInfo: TNodeInfo read FProxyNodeInfo write FProxyNodeInfo;
   end;
 
   { TNodeEventNodeAssigned }
@@ -222,8 +216,21 @@ type
   { TNodeEventSimpleTrainNodeInfo }
 
   TNodeEventSimpleTrainNodeInfo = class(TNodeEvent)
+  private
+    FManufacturer: TStnipBuffer;
+    FOwner: TStnipBuffer;
+    FRoadName: TStnipBuffer;
+    FRoadNumber: TStnipBuffer;
+    FTrainClass: TStnipBuffer;
+    FTrainName: TStnipBuffer;
   public
-
+    procedure Decode(AMessage: POpStackMessage);
+    property RoadName: TStnipBuffer read FRoadName write FRoadName;
+    property TrainClass: TStnipBuffer read FTrainClass write FTrainClass;
+    property RoadNumber: TStnipBuffer read FRoadNumber write FRoadNumber;
+    property TrainName: TStnipBuffer read FTrainName write FTrainName;
+    property Manufacturer: TStnipBuffer read FManufacturer write FManufacturer;
+    property Owner: TStnipBuffer read FOwner write FOwner;
   end;
 
   { TNodeEventThread }
@@ -394,6 +401,101 @@ const
   GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
   GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
 
+  { TNodeEventSimpleTrainNodeInfo }
+
+  procedure TNodeEventSimpleTrainNodeInfo.Decode(AMessage: POpStackMessage);
+  var
+    i: Integer;
+    AcdiSnipBufferPtr: PAcdiSnipBuffer;
+    Head: ^Char;
+  begin
+    AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( AMessage^.Buffer));
+    Head := @AcdiSnipBufferPtr^.DataArray[1];  // Skip past the Version ID
+
+    i := 0;
+    while Head^ <> #0 do
+    begin
+      if i < STNIP_MAX_STR_LEN then
+        FRoadName[i] := Head^;
+      Head := Head + 1;
+      Inc(i);
+    end;
+    if i < STNIP_MAX_STR_LEN then
+      FRoadName[i] := #0
+    else
+      FRoadName[STNIP_MAX_STR_LEN] := #0;
+
+    Head := Head + 2;  // Skip over the null and to the next string
+    i := 0;
+    while Head^ <> #0 do
+    begin
+      if i < STNIP_MAX_STR_LEN then
+        FTrainClass[i] := Head^;
+      Head := Head + 1;
+      Inc(i);
+    end;
+    if i < STNIP_MAX_STR_LEN then
+      FTrainClass[i] := #0
+    else
+      FTrainClass[STNIP_MAX_STR_LEN] := #0;
+
+    Head := Head + 2;  // Skip over the null and to the next string
+    i := 0;
+    while Head^ <> #0 do
+    begin
+      if i < STNIP_MAX_STR_LEN then
+        FRoadNumber[i] := Head^;
+      Head := Head + 1;
+      Inc(i);
+    end;
+    if i < STNIP_MAX_STR_LEN then
+      FRoadNumber[i] := #0
+    else
+      FRoadNumber[STNIP_MAX_STR_LEN] := #0;
+
+    Head := Head + 2;  // Skip over the null and to the next string
+    i := 0;
+    while Head^ <> #0 do
+    begin
+      if i < STNIP_MAX_STR_LEN then
+        FTrainName[i] := Head^;
+      Head := Head + 1;
+      Inc(i);
+    end;
+    if i < STNIP_MAX_STR_LEN then
+      FTrainName[i] := #0
+    else
+      FTrainName[STNIP_MAX_STR_LEN] := #0;
+
+    Head := Head + 2;  // Skip over the null and to the next string
+    i := 0;
+    while Head^ <> #0 do
+    begin
+      if i < STNIP_MAX_STR_LEN then
+        FManufacturer[i] := Head^;
+      Head := Head + 1;
+      Inc(i);
+    end;
+    if i < STNIP_MAX_STR_LEN then
+      FManufacturer[i] := #0
+    else
+      FManufacturer[STNIP_MAX_STR_LEN] := #0;
+
+    Head := Head + 2;  // Skip over the null and to the next string
+    i := 0;
+    while Head^ <> #0 do
+    begin
+      if i < STNIP_MAX_STR_LEN then
+        FOwner[i] := Head^;
+      Head := Head + 1;
+      Inc(i);
+    end;
+    if i < STNIP_MAX_STR_LEN then
+      FOwner[i] := #0
+    else
+      FOwner[STNIP_MAX_STR_LEN] := #0;
+  end;
+
   { TNodeEventTrainInfo }
 
   procedure TNodeEventTrainInfo.CopyTo(EventTrainInfo: TNodeEventTrainInfo);
@@ -471,14 +573,6 @@ begin
   FLinkedObj := ALinkedObj;
 end;
 
-{ TNodeEventProxyAssigned }
-
-constructor TNodeEventProxyAssigned.Create(ANodeInfo: TNodeInfo;
-  ALinkedObj: TObject; AProxyNodeInfo: TNodeInfo);
-begin
-  inherited Create(ANodeInfo, ALinkedObj);
-  FProxyNodeInfo := AProxyNodeInfo;
-end;
 
 { TNodeEventThrottleAssignedToTrain }
 

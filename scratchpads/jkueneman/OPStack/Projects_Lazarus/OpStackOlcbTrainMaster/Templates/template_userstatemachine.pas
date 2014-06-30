@@ -89,6 +89,10 @@ const
    STATE_THROTTLE_FIND_TRAINS                = 14;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 15;
 
+   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_START = 0;
+   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT  = 1;
+   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE  = 2;
+
 var
   ProxyNode: TNodeInfo;
   GlobalTimer: Word;
@@ -465,10 +469,28 @@ begin
               end;
         STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO :
               begin
-                if TrySendStnipRequest(Node^.Info, TNodeTaskSimpleTrainNodeInfo( Node^.UserData).FDestNodeInfo) then
-                begin
-                  Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
-                  UnLinkFirstTaskFromNode(Node, True);
+             //   if TrySendSupportInquiry(Node^.Info, TNodeTaskSimpleTrainNodeInfo( Node^.UserData).FDestNodeInfo) then
+             //   begin
+             //   end;
+                case TNodeTask( Node^.UserData).iSubStateMachine of
+                   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_START :
+                     begin
+                       if TrySendStnipRequest(Node^.Info, TNodeTaskSimpleTrainNodeInfo( Node^.UserData).FDestNodeInfo) then
+                       begin
+                         TNodeTask( Node^.UserData).Watchdog := 0;
+                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT;
+                       end;
+                     end;
+                   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT :
+                     begin
+                       if  TNodeTask( Node^.UserData).Watchdog > 20 then
+                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE
+                     end;
+                  STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE :
+                     begin
+                       Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                       UnLinkFirstTaskFromNode(Node, True);
+                     end;
                 end;
               end
       end
@@ -712,16 +734,14 @@ end;
 //                   main statemachine.
 // *****************************************************************************
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
-var
-  NodeInfo: TNodeInfo;
 begin
   if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
   begin
     ProxyNode := Source;
-    NodeInfo.AliasID := 0;
-    NodeInfo.ID := NULL_NODE_ID;
-    NodeThread.AddEvent( TNodeEventProxyAssigned.Create(NodeInfo, nil, Source));
+    NodeThread.AddEvent( TNodeEventProxyAssigned.Create(Source, nil));
   end;
+  if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_TRAIN) then
+    NodeThread.AddEvent( TNodeEventIsTrain.Create(Source, nil));
 end;
 
 // *****************************************************************************
@@ -781,8 +801,13 @@ end;
 //     Description : Called in response to a STNIP request
 // *****************************************************************************
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Event: TNodeEventSimpleTrainNodeInfo;
 begin
-
+  Event := TNodeEventSimpleTrainNodeInfo.Create(Node^.Info, TNodeTask( Node^.UserData).LinkedObj);
+  Event.Decode(AMessage);
+  NodeThread.AddEvent(Event);
+  TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE;       // Next Please
 end;
 {$ENDIF}
 

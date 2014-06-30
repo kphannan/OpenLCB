@@ -9,7 +9,7 @@ uses
   ComCtrls, StdCtrls, ActnList, Spin, Buttons,
   olcb_transport_layer, olcb_app_common_settings,
   olcb_utilities, olcb_defines, Float16,
-  laz2_DOM, laz2_XMLRead, laz2_XMLWrite,
+  laz2_DOM, laz2_XMLRead, laz2_XMLWrite, form_train_selector,
   form_train_config_editor, com_port_hub, ethernet_hub,
   template_userstatemachine, template_hardware, opstackdefines,
   nmranetutilities;
@@ -185,6 +185,7 @@ type
     FClosing: Boolean;
     FCurrentFunctions: DWord;
     FCurrentSpeed: THalfFloat;
+    FFormSelector: TFormTrainSelector;
     FThrottleNodeInfo: TNodeInfo;
     FTimerType: TTimerType;
     FTrainNodeInfo: TNodeInfo;
@@ -213,6 +214,7 @@ type
     procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
     property Closing: Boolean read FClosing write FClosing;
+    property FormSelector: TFormTrainSelector read FFormSelector write FFormSelector;
     property TimerType: TTimerType read FTimerType write SetTimerType;
   public
     { public declarations }
@@ -381,6 +383,7 @@ begin
   FClosing := False;
   FCurrentSpeed := 0;
   FCurrentFunctions := 0;
+  FFormSelector := nil;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -414,21 +417,32 @@ begin
   NodeThread.AddTask(TNodeTaskFindTrains.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FIND_TRAINS, Self));
   TimerGeneral.Interval := 2000;
   TimerGeneral.Enabled := True;
-  TimerType := tt_AllocateByList
+  TimerType := tt_AllocateByList;
+  FormSelector := TFormTrainSelector.Create(Self);
+  try
+    UpdateUI;
+    if FormSelector.ShowModal = mrOK then
+    begin
+
+    end;
+  finally
+    FormSelector.Close;
+    FormSelector := nil;
+    UpdateUI;
+  end;
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
 begin
   if not Assigned(ConfigurationViewer) then
   begin
- {   FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
-    ConfigurationViewer.InitTransportLayers(EthernetHub, ComPortHub);
-    ConfigurationViewer.AliasID := TrainNodeInfo;
+    FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
+ //   ConfigurationViewer.AliasID := TrainNodeInfo;
     ConfigurationViewer.ImageList16x16 := ImageList16x16;
     ConfigurationViewer.Caption := 'Configuration Editor: Train ' + IntToStr(SpinEditAddress.Value);
     ConfigurationViewer.ShowModal;
     ConfigurationViewer.Release;
-    FConfigurationViewer := nil;   }
+    FConfigurationViewer := nil;
   end;
 end;
 
@@ -889,7 +903,7 @@ begin
   if TimerType = tt_AllocateByList then
   begin
     // If we are allocating by list then for any IsTrain Event send a STNIP request
-    NodeThread.AddTask( TNodeTaskSimpleTrainNodeInfo.Create(ThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FIND_TRAINS, Self));
+    NodeThread.AddTask( TNodeTaskSimpleTrainNodeInfo.Create(ThrottleNodeInfo, Event.NodeInfo, STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO, Self));
   end;
 end;
 
@@ -905,7 +919,7 @@ procedure TFormThrottle.EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNod
 begin
   if TimerType = tt_AllocateByList then
   begin
-
+    FormSelector.TreeViewTrainList.Items.Add(nil, Event.RoadName);
   end;
 end;
 
@@ -1085,6 +1099,8 @@ end;
 
 procedure TFormThrottle.UpdateUI;
 begin
+  PanelMain.Enabled := FormSelector = nil;
+  ActionAllocationEditCustomization.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo); ;
   ActionAllocationByList.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   ActionAllocationByAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
 //  ActionAllocationFree.Enabled := TrainNodeInfo <> 0; ;
