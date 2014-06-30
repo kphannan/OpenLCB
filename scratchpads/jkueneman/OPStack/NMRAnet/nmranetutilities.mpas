@@ -7,6 +7,9 @@ interface
 {$I Options.inc}
 
 uses
+  template_node,
+  template_vnode,
+  nmranetdefines,
   opstackdefines,
   opstacktypes;
 
@@ -22,6 +25,7 @@ function NMRAnetUtilities_EqualEventID(Event1, Event2: PEventID): Boolean;
 function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNodeInfo): Boolean;
 function NMRAnetUtilities_NullNodeIDInfo(var Info1: TNodeInfo): Boolean;
 function NMRAnetUtilities_EqualNodeID(var NodeID1: TNodeID; var NodeID2: TNodeID): Boolean;
+function NMRAnetUtilities_NodeSupportsProtcol(Node: PNMRAnetNode; var Protocol: TPIVProtocolValueArray): Boolean;
 
 
 implementation
@@ -220,6 +224,45 @@ begin
       Result := True;
 end;
 
+function NMRAnetUtilities_NodeSupportsProtcol(Node: PNMRAnetNode; var Protocol: TPIVProtocolValueArray): Boolean;
+var
+  i, j: Integer;
+begin
+  Result := False;
+  if Node^.iIndex = 0 then
+  begin
+    for i := 0 to USER_PIV_SUPPORTED_PROTOCOL_COUNT - 1 do
+    begin
+      Result := True;
+      for j := 0 to LEN_PIV_PROTOCOL - 1 do
+      begin
+        if USER_PIV_SUPPORTED_PROTOCOLS[i][j] <> Protocol[j] then
+        begin
+          Result := False;
+          Break
+        end;
+      end;
+      if Result then
+        Break
+    end;
+  end else
+  begin
+    for i := 0 to USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT - 1 do
+    begin
+      Result := True;
+      for j := 0 to LEN_PIV_PROTOCOL - 1 do
+      begin
+        if USER_PIV_VNODE_SUPPORTED_PROTOCOLS[i][j] <> Protocol[j] then
+        begin
+          Result := False;
+          Break
+        end;
+      end;
+      if Result then
+        Break
+    end;
+  end;
+end;
 
 
 end.

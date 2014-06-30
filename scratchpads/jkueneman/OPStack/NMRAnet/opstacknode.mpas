@@ -105,8 +105,6 @@ begin
     UART1_Write_Text('  Flags: ' + s1 + LF);
     WordToStr(NodePool.Pool[i].IncomingMessages, s1);
     UART1_Write_Text('  IncomingMessages: ' + s1 + LF);
-    WordToStr(NodePool.Pool[i].StateMachineMessages, s1);
-    UART1_Write_Text('  StateMachineMessages: ' + s1 + LF);
     ByteToStr(NodePool.Pool[i].iStateMachine, s1);
     UART1_Write_Text('  iStateMachine: ' + s1 + LF);
   end;

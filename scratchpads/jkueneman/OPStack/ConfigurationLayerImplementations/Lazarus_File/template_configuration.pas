@@ -34,7 +34,7 @@ procedure ZeroConfiguration;
 
 procedure TemplateConfiguration_Initialize;
 function AppCallback_ReadConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
-function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
+function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; DatagramData: PByte): Word;
 
 function AppCallback_ReadAcdiUser(ConfigAddress: DWord; ReadCount: Word; ConfigData: PByte): Word;
 function AppCallback_WriteAcdiUser(ConfigAddress: DWord; WriteCount: Word; ConfigData: PByte): Word;
@@ -97,7 +97,7 @@ begin
   if ConfigAddress + ReadCount < AddressSpace.Size then
   begin
     AddressSpace.Position := ConfigAddress;
-    for iCount := 0 to ReadCount do
+    for iCount := 0 to ReadCount - 1 do
     begin
       DatagramData^ := AddressSpace.ReadByte;
       Inc(DatagramData);
@@ -118,16 +118,16 @@ end;
 //     Description: Override to write from the configuration memory (could be
 //                  SPI EEPROM, internal EEPROM, files, etc)
 // *****************************************************************************
-function AppCallback_WriteConfiguration(ConfigAddress: DWord; ReadCount: Word; DatagramData: PByte): Word;
+function AppCallback_WriteConfiguration(ConfigAddress: DWord; WriteCount: Word; DatagramData: PByte): Word;
 var
   iCount: Integer;
 begin
   Result := 0;
   {$IFDEF FPC}
-  if ConfigAddress + ReadCount < AddressSpace.Size then
+  if ConfigAddress + WriteCount < AddressSpace.Size then
   begin
     AddressSpace.Position := ConfigAddress;
-    for iCount := 0 to ReadCount do
+    for iCount := 0 to WriteCount - 1 do
     begin
       AddressSpace.WriteByte( DatagramData^);
       Inc(DatagramData);

@@ -344,7 +344,7 @@ begin
         Throttle.UpdateStatus(0, 'Creating and logging OpenLCB TreeNode into network.... Please Wait');
         TreeNode := TreeViewThrottles.Items.Add(nil, Throttle.Caption) as TOlcbThrottleTreeNode;
         TreeNode.Throttle := Throttle;
-        NodeThread.AddTask(TNodeTaskAllocateNewNode.Create(NodePool.Pool[0].Info, STATE_THROTTLE_ROOT_ALLOCATE_NEW, Throttle));  // Ask the Throttle Manager Node to create a new virtual Throttle node
+        NodeThread.AddTask(TNodeTaskAllocateNewNode.Create(NodePool.Pool[0].Info, NullNodeInfo, STATE_THROTTLE_ROOT_ALLOCATE_NEW, Throttle));  // Ask the Throttle Manager Node to create a new virtual Throttle node
         UpdateUI;
       end;
     end;
@@ -974,7 +974,18 @@ begin
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventSpeedDirQuery(Event as TNodeEventSpeedDirQuery);
       end else
-
+      if TObject( EventList[i]) is TNodeEventIsTrain then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventIsTrain(Event as TNodeEventIsTrain);
+      end else
+      if TObject( EventList[i]) is TNodeEventTrainInfo then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventSimpleTrainNodeInfo(Event as TNodeEventSimpleTrainNodeInfo);
+      end;
       TObject( EventList[i]).Destroy
     end;
   finally

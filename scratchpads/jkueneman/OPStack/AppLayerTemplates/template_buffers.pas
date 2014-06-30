@@ -37,13 +37,7 @@ const
 
 // Enter the size of a buffer to hold a complete ACDI or SNIP string
 const
-  USER_MAX_ACDI_SNIP_BYTES = 128;
-
-{$IFDEF SUPPORT_TRACTION}
-// Enter the size of a buffer to hold a complete Simple Train Node Information string
-const
-  USER_MAX_STNIP_BYTES = 128;
-{$ENDIF}
+  USER_MAX_ACDI_SNIP_BYTES = 256;
 
 implementation
 

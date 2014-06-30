@@ -16,6 +16,7 @@ uses
   ethernet_hub,
   olcb_transport_layer,
   template_hardware,
+  template_configuration,
   olcb_defines,
  // LCLIntf,
  // LCLType,
@@ -26,6 +27,7 @@ uses
   template_node,
   opstack_api,
   nmranetdefines,
+  template_vnode,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -61,11 +63,16 @@ procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
 procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
 
+{$IFNDEF FPC}
+procedure SimpleTrainNodeInfoWriteConfig(ConfigOffset: DWord; var Info: TStnipBuffer); external;
+{$ENDIF}
+
 implementation
 
 {$IFDEF FPC}
   {$IFDEF SUPPORT_TRACTION and SUPPORT_TRACTION_PROXY}
   uses
+    opstackcore_stnip,
     opstacknode,
     opstackcore_traction,
     opstackcore_traction_proxy;
@@ -270,6 +277,8 @@ var
   i: Integer;
   TrainID: Word;
   TrainNode: PNMRAnetNode;
+  ConfigOffset: DWord;
+  Info: TStnipBuffer;
 begin
   {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('AppCallback_TractionProxyProtocol'+LF); {$ENDIF}
   // Only the main physical node is the proxy and can reply to these messages
@@ -296,6 +305,22 @@ begin
               TrainNode^.TrainData.LinkedNode.ID[0] := AMessage^.Source.ID[0];      // Store the node that sent the Allocate message
               TrainNode^.TrainData.LinkedNode.ID[1] := AMessage^.Source.ID[1];
               TrainNode^.TrainData.LinkedNode.AliasID := AMessage^.Source.AliasID;
+
+              ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
+
+              Info := #0;
+              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_ROADNAME, Info);
+              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_CLASS, Info);
+              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_MANUFACTURER, Info);
+              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_OWNER, Info);
+              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_ROADNUMBER, Info);
+
+              Info := 'NMRA DCC Address: ' + IntToStr(TrainNode^.TrainData.Address) + #0;
+              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_TRAINNAME, Info);
+
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ADDRESS, 2, @TrainNode^.TrainData.Address);
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_FUNCTIONS, 4, @TrainNode^.TrainData.Functions);
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @TrainNode^.TrainData.SpeedSteps);
             end;
           end;
     end

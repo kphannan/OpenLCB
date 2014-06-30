@@ -252,9 +252,9 @@ const
 //  to linearly line up the configruation memory block for multiple nodes, i.e.
 //  defines the offsets to the start of the configuration memory for the next
 //  virtual node
-//  xxxxxxxxxxxxxxxxxxxx|yyyyyyyyy|yyyyyyyyy|yyyyyyyyy|yyyyyyyyy|
-//  |   Physical Node   | VNode 1 | Vnode 2 | Vnode 3 | Vnode 4 |
-//  | USER_NODE_SIZE    |     USER_VNODE_SIZE * 4               |
+//  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy|yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy|.....
+//  |   Physical Node                |             VNode 1            |             VNode 2            |.....
+//  | USER_CONFIGURATION_MEMORY_SIZE | USER_CONFIGURATION_MEMORY_SIZE | USER_CONFIGURATION_MEMORY_SIZE |.....
 // **************************************************************************************************************************************************************
 const
   USER_CONFIGURATION_MEMORY_SIZE = 256;

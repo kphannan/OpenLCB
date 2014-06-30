@@ -30,6 +30,34 @@
       </string>
     </group>
   </segment>
+  <segment origin="128" space="253">
+  <name>Train Information</name>  
+    <description>Describes a train by it type, name and owner</description>  
+    <group>
+      <name>Locomotive Specific Information</name>
+      <string size="32">
+        <name>Road Name</name>
+      </string>
+      <string size="32">
+        <name>Closs</name>
+      </string>
+      <string size="32">
+        <name>Road Number</name>
+      </string>
+      <string size="32">
+        <name>Train Name</name>
+      </string>
+    </group>
+    <group>
+      <name>Model Specific Information</name>
+      <string size="32">
+        <name>Manufacturer</name>
+      </string>
+      <string size="32">
+        <name>Owner</name>
+      </string>
+    </group>
+  </segment>
   <segment origin="0" space="252">
     <name></name>
     <group>

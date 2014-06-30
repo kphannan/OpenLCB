@@ -86,6 +86,8 @@ const
    STATE_THROTTLE_E_STOP                     = 11;
    STATE_THROTTLE_QUERY_SPEED                = 12;
    STATE_THROTTLE_QUERY_FUNCTION             = 13;
+   STATE_THROTTLE_FIND_TRAINS                = 14;
+   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 15;
 
 var
   ProxyNode: TNodeInfo;
@@ -360,6 +362,7 @@ begin
             begin
               if not NMRAnetUtilities_NullNodeIDInfo(Node^.TrainData.LinkedNode) then
               begin
+                NewFunctionValue := 0;
                 if ToggleFunction(Node, Node^.TrainData.Functions, TNodeTaskFunction( Node^.UserData).Address, NewFunctionValue) then
                 begin
                   UnLinkFirstTaskFromNode(Node, True);
@@ -451,8 +454,23 @@ begin
                         end
                   end
                 end
+              end;
+        STATE_THROTTLE_FIND_TRAINS :
+              begin
+                if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_TRAIN) then
+                begin
+                  UnLinkFirstTaskFromNode(Node, True);
+                  Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                end;
+              end;
+        STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO :
+              begin
+                if TrySendStnipRequest(Node^.Info, TNodeTaskSimpleTrainNodeInfo( Node^.UserData).FDestNodeInfo) then
+                begin
+                  Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                  UnLinkFirstTaskFromNode(Node, True);
+                end;
               end
-
       end
   end
 end;

@@ -1,15 +1,16 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <?xml-stylesheet type='text/xsl' href='http://openlcb.org/trunk/prototypes/xml/xslt/fdi.xsl'?>
-<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi.xsd">
-<segment origin='0' space='128'>
+<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://localhost/Users/jimkueneman/Documents/OpenLCB/trunk/prototypes/xml/schema/fdi_jimk.xsd">
+ <segment origin='0' space='128'>
+  <name>Function Definitions</name>
   <group>
     <name>Lighting Functions</name>
     <description>Headlights and Markerlights and Runninglights, oh my.</description>
-    <function offset="5" size ="1" kind="binary" latch="true">
+    <function size ="1" kind="binary">
       <name>Headlights</name>
       <number>0</number>
     </function>
-    <function size ="1" kind="binary" latch="true">
+    <function size ="1" kind="binary">
       <name>Ditch Lights</name>
       <number>4</number>
     </function>
@@ -17,10 +18,10 @@
   <group>
     <name>Sound Functions</name>
     <description>Toot toot!.</description>
-    <function size ="2" kind="analog" latch="false">
+    <function size ="2" kind="analog">
       <name>Horn</name>
       <number>8</number>
-    </function>
+   </function>  
   </group>
 </segment>
 </fdi>

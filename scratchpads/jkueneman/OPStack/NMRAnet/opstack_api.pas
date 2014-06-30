@@ -41,7 +41,7 @@ function TrySendRemoteButtonRequest(var Source: TNodeInfo; var Dest: TNodeInfo; 
 // Snip/Snii
 function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
 // Traction
-function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
+function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function TrySendTractionFunctionSet(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord; Value: Word): Boolean;
 function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: THalfFloat): Boolean;
 function TrySendTractionDirectionToggle(var Source: TNodeInfo; var Dest: TNodeInfo; var Speed: THalfFloat): Boolean;
@@ -262,7 +262,7 @@ end;
 
 {$IFDEF SUPPORT_TRACTION}
 
-function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
+function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 var
   NewMessage: POPStackMessage;
 begin

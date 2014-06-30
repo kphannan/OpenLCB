@@ -7,6 +7,7 @@ interface
 {$I Options.inc}
 
 uses
+  nmranetutilities,
   opstackcore_basic,
   template_node,
   template_vnode,
@@ -14,6 +15,7 @@ uses
   opstackbuffers,
   nmranetdefines,
   opstackdefines,
+  template_configuration,
   template_userstatemachine,
   opstacktypes;
 
@@ -21,7 +23,42 @@ procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAn
 function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
+procedure SimpleTrainNodeInfoWriteConfig(ConfigOffset: DWord; var Info: TStnipBuffer);
+
 implementation
+
+procedure SimpleTrainNodeInfoWriteConfig(ConfigOffset: DWord; var Info: TStnipBuffer);
+begin
+  AppCallback_WriteConfiguration(ConfigOffset, strlen(Info) + 1, @Info);
+end;
+
+procedure ReadConfigStringOffset(ConfigOffset: DWord; AcdiSnipBufferPtr: PAcdiSnipBuffer);
+var
+  i, BufferLen: Integer;
+  Buffer: TStnipBuffer;
+begin
+  if AppCallback_ReadConfiguration(ConfigOffset, 32, @Buffer) = 32 then
+  begin
+    BufferLen := -1;
+    for i := 0 to MAX_STR_LEN - 1 do
+    begin
+      if Buffer[i] = #0 then
+        BufferLen := i
+    end;
+    if BufferLen > -1 then
+    begin
+      for i := 0 to BufferLen - 1 do
+      begin
+        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := Ord( Buffer[i]);
+        Inc(AcdiSnipBufferPtr^.DataBufferSize);
+      end
+    end else
+    begin
+      AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := Ord(#0);
+      Inc(AcdiSnipBufferPtr^.DataBufferSize);
+    end
+  end
+end;
 
 procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 begin
@@ -31,45 +68,31 @@ end;
 function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
-  j: Integer;
+  ConfigOffset: DWord;
 begin
-  Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
+  if NMRAnetUtilities_NodeSupportsProtcol(Node, STNIP_PROTOCOL) then
   begin
-    AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
-    AcdiSnipBufferPtr^.DataBufferSize := 0;
-    {$IFDEF SUPPORT_VIRTUAL_NODES}
-    if Node^.State and NS_VIRTUAL <> 0 then
+    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
     begin
-      while AcdiSnipBufferPtr^.DataBufferSize < USER_VNODE_MAX_ACDI_MFG_ARRAY do
-      begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_VNODE_ACDI_MFG_STRINGS[AcdiSnipBufferPtr^.DataBufferSize];
-        Inc(AcdiSnipBufferPtr^.DataBufferSize);
-      end;
-    end else
-    {$ENDIF}
-    begin
-      while AcdiSnipBufferPtr^.DataBufferSize < USER_MAX_ACDI_MFG_ARRAY do
-      begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_ACDI_MFG_STRINGS[AcdiSnipBufferPtr^.DataBufferSize];
-        Inc(AcdiSnipBufferPtr^.DataBufferSize);
-      end;
-    end;
-    
-    
-    // Need to read configuration memory here in a callback
-    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 1;
-    Inc(AcdiSnipBufferPtr^.DataBufferSize);
-    j := 0;
-    while j < 2 do
-    begin
-      AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 0;
-      Inc(AcdiSnipBufferPtr^.DataBufferSize);
-      Inc(j)
+      AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
+      AcdiSnipBufferPtr^.DataBufferSize := 0;
+
+      ConfigOffset := 0;
+      if Node^.iIndex > 0 then
+        ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((Node^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
+
+      AcdiSnipBufferPtr^.DataArray[0] := 1;   // Version ID
+      AcdiSnipBufferPtr^.DataBufferSize := 1;
+      ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_ROADNAME, AcdiSnipBufferPtr);
+      ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_CLASS, AcdiSnipBufferPtr);
+      ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_ROADNUMBER, AcdiSnipBufferPtr);
+      ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_TRAINNAME, AcdiSnipBufferPtr);
+      ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_MANUFACTURER, AcdiSnipBufferPtr);
+      ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_OWNER, AcdiSnipBufferPtr);
     end;
   end;
-  UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+  Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
 end;
 
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);

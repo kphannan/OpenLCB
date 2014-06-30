@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\Library\CabCommon\NMRAnetXpressnet.mpas
+Value=XpressnetBridge.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -76,11 +76,13 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=4
+Count=6
 File0=XpressnetBridge.mpas
 File1=..\..\Library\CabCommon\NMRAnetXpressnet.mpas
 File2=Templates\template_userstatemachine.mpas
 File3=..\..\NMRAnet\opstackcore_traction.mpas
+File4=Templates\template_buffers.mpas
+File5=Templates\template_node.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -91,7 +93,7 @@ File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
 Count=11
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\
 Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\Templates\

@@ -13,6 +13,7 @@ uses
   {$IFDEF SUPPORT_TRACTION}Float16,{$ENDIF}
   template_node,
   opstacktypes,
+  nmranetdefines,
   template_buffers;
 
 const
@@ -20,6 +21,22 @@ const
   
 const
   MAX_BUS_LOGIN_TIMEOUT = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
+
+const
+  MAX_STR_LEN = 32;
+  STNIP_OFFSET_ROADNAME     = 128;   // Need to move past the User Name and User Description space
+  STNIP_OFFSET_CLASS        = 160;
+  STNIP_OFFSET_ROADNUMBER   = 192;
+  STNIP_OFFSET_TRAINNAME    = 224;
+  STNIP_OFFSET_MANUFACTURER = 256;
+  STNIP_OFFSET_OWNER        = 288;
+  STNIP_OFFSET_FUNCTIONS    = 320;
+  STNIP_OFFSET_ADDRESS      = 324;
+  STNIP_OFFSET_SPEEDSTEPS   = 326;
+  STNIP_PROTOCOL: TPIVProtocolValueArray = ($00, $00, $80, $00, $00, $00);
+
+type
+  TStnipBuffer = array[0..MAX_STR_LEN] of Char;
 
 // Various Statemachine defines
 const

@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="7">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -80,6 +80,11 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="Templates\template_traction.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="template_traction"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

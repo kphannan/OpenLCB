@@ -25,6 +25,8 @@ type
 
   TOnThrottleEvent = procedure(Throttle: TFormThrottle) of object;
 
+  TTimerType = (tt_None, tt_AllocateByList);
+
   { TThrottleList }
 
   TThrottleList = class(TList)
@@ -126,9 +128,11 @@ type
     ScrollBoxFunctions: TScrollBox;
     SpinEditAddress: TSpinEdit;
     StatusBar: TStatusBar;
+    TimerGeneral: TTimer;
     TimerToggleAnimation: TTimer;
     TrackBarSpeed: TTrackBar;
     procedure ActionAllocationByAddressExecute(Sender: TObject);
+    procedure ActionAllocationByListExecute(Sender: TObject);
     procedure ActionAllocationEditCustomizationExecute(Sender: TObject);
     procedure ActionAllocationFreeExecute(Sender: TObject);
     procedure ActionAllocationReleaseExecute(Sender: TObject);
@@ -174,6 +178,7 @@ type
     procedure RadioGroupDirectionClick(Sender: TObject);
     procedure RadioGroupShortLongClick(Sender: TObject);
     procedure RadioGroupSpeedStepClick(Sender: TObject);
+    procedure TimerGeneralTimer(Sender: TObject);
     procedure TimerToggleAnimationTimer(Sender: TObject);
     procedure TrackBarSpeedChange(Sender: TObject);
   private
@@ -181,6 +186,7 @@ type
     FCurrentFunctions: DWord;
     FCurrentSpeed: THalfFloat;
     FThrottleNodeInfo: TNodeInfo;
+    FTimerType: TTimerType;
     FTrainNodeInfo: TNodeInfo;
     FAllocationPanelToggleExpand: Boolean;
     FConfigurationViewer: TFormTrainConfigEditor;
@@ -193,6 +199,7 @@ type
     procedure RunTractionFunction(NodeInfo: TNodeInfo; Address: DWord; Value: Word);
     procedure RunTractionQueryFunctions(NodeInfo: TNodeInfo; Address: DWord);
     procedure RunTractionQuerySpeed(NodeInfo: TNodeInfo);
+    procedure SetTimerType(AValue: TTimerType);
   protected
     procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
@@ -206,6 +213,7 @@ type
     procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
     property Closing: Boolean read FClosing write FClosing;
+    property TimerType: TTimerType read FTimerType write SetTimerType;
   public
     { public declarations }
     property TrainNodeInfo: TNodeInfo read FTrainNodeInfo write FTrainNodeInfo;
@@ -222,6 +230,8 @@ type
     procedure EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);
     procedure EventFunctionQuery(Event: TNodeEventFunctionQuery);
     procedure EventSpeedDirQuery(Event: TNodeEventSpeedDirQuery);
+    procedure EventIsTrain(Event: TNodeEventIsTrain);
+    procedure EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
     procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
@@ -352,7 +362,7 @@ end;
 
 procedure TFormThrottle.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  NodeThread.AddTask( TNodeTaskAllocateDestroyNode.Create(FThrottleNodeInfo, STATE_THROTTLE_FREE, Self));
+  NodeThread.AddTask( TNodeTaskAllocateDestroyNode.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FREE, Self));
   if Assigned(OnThrottleClose) then
     OnThrottleClose(Self);
   ActionAllocationFree.Execute;
@@ -390,13 +400,21 @@ begin
     CurrentSpeedDir := CurrentSpeedDir and not $8000
   else
     CurrentSpeedDir := CurrentSpeedDir or $8000;
-  NodeThread.AddTask( TNodeTaskSpeedDir.Create( ThrottleNodeInfo, STATE_THROTTLE_SPEED_CHANGE, Self, CurrentSpeedDir));
+  NodeThread.AddTask( TNodeTaskSpeedDir.Create( ThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_SPEED_CHANGE, Self, CurrentSpeedDir));
   RadioGroupDirection.OnClick := @RadioGroupDirectionClick;
 end;
 
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
-  NodeThread.AddTask(TNodeTaskAllocateTrainByAddress.Create(FThrottleNodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS, Self, SpinEditAddress.Value, SpeedStepRadioToSpeedStep));
+  NodeThread.AddTask(TNodeTaskAllocateTrainByAddress.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS, Self, SpinEditAddress.Value, SpeedStepRadioToSpeedStep));
+end;
+
+procedure TFormThrottle.ActionAllocationByListExecute(Sender: TObject);
+begin
+  NodeThread.AddTask(TNodeTaskFindTrains.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FIND_TRAINS, Self));
+  TimerGeneral.Interval := 2000;
+  TimerGeneral.Enabled := True;
+  TimerType := tt_AllocateByList
 end;
 
 procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject);
@@ -752,18 +770,27 @@ begin
   end;   }
 end;
 
+procedure TFormThrottle.SetTimerType(AValue: TTimerType);
+begin
+  if FTimerType <> AValue then
+  begin
+    FTimerType:=AValue;
+    ActionAllocationByList.Enabled := AValue = tt_None;
+  end;
+end;
+
 procedure TFormThrottle.RunTractionSpeed(NodeInfo: TNodeInfo; EmergencyStop: Boolean);
 var
   Speed: single;
 begin
   if EmergencyStop then
-    NodeThread.AddTask( TNodeTask.Create( NodeInfo, STATE_THROTTLE_E_STOP, Self))
+    NodeThread.AddTask( TNodeTask.Create( NodeInfo, NullNodeInfo, STATE_THROTTLE_E_STOP, Self))
   else begin
     Speed := TrackBarSpeed.Position/TrackBarSpeed.Max * 100;
     if not IsForward then
       Speed := -Speed;
     CurrentSpeedDir := FloatToHalf( Speed);
-    NodeThread.AddTask( TNodeTaskSpeedDir.Create( NodeInfo, STATE_THROTTLE_SPEED_CHANGE, Self, CurrentSpeedDir))
+    NodeThread.AddTask( TNodeTaskSpeedDir.Create( NodeInfo, NullNodeInfo, STATE_THROTTLE_SPEED_CHANGE, Self, CurrentSpeedDir))
   end;
 end;
 
@@ -778,17 +805,17 @@ begin
   else
     FCurrentFunctions := CurrentFunctions or Mask;
 
-  NodeThread.AddTask( TNodeTaskFunction.Create( NodeInfo, STATE_THROTTLE_FUNCTION, Self, Address, Value))
+  NodeThread.AddTask( TNodeTaskFunction.Create( NodeInfo, NullNodeInfo, STATE_THROTTLE_FUNCTION, Self, Address, Value))
 end;
 
 procedure TFormThrottle.RunTractionQueryFunctions(NodeInfo: TNodeInfo; Address: DWord);
 begin
-  NodeThread.AddTask( TNodeTaskFunctionQuery.Create(NodeInfo, STATE_THROTTLE_QUERY_FUNCTION, Self, Address));
+  NodeThread.AddTask( TNodeTaskFunctionQuery.Create(NodeInfo, NullNodeInfo, STATE_THROTTLE_QUERY_FUNCTION, Self, Address));
 end;
 
 procedure TFormThrottle.RunTractionQuerySpeed(NodeInfo: TNodeInfo);
 begin
-  NodeThread.AddTask( TNodeTaskSpeedDirQuery.Create(NodeInfo, STATE_THROTTLE_QUERY_SPEED, Self));
+  NodeThread.AddTask( TNodeTaskSpeedDirQuery.Create(NodeInfo, NullNodeInfo, STATE_THROTTLE_QUERY_SPEED, Self));
 end;
 
 function TFormThrottle.SpeedStepRadioToSpeedStep: Byte;
@@ -800,6 +827,12 @@ begin
   else
     Result := 28;
   end;
+end;
+
+procedure TFormThrottle.TimerGeneralTimer(Sender: TObject);
+begin
+  TimerGeneral.Enabled := False;
+  TimerType := tt_None;
 end;
 
 procedure TFormThrottle.CreateFunctionUIButton(ButtonLabel: string;
@@ -851,12 +884,29 @@ begin
   FunctionAction.OnExecute := OldEvent;
 end;
 
+procedure TFormThrottle.EventIsTrain(Event: TNodeEventIsTrain);
+begin
+  if TimerType = tt_AllocateByList then
+  begin
+    // If we are allocating by list then for any IsTrain Event send a STNIP request
+    NodeThread.AddTask( TNodeTaskSimpleTrainNodeInfo.Create(ThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FIND_TRAINS, Self));
+  end;
+end;
+
 procedure TFormThrottle.EventNodeAllocated(Event: TNodeEventNodeCreated);
 begin
   // update it all here
   ThrottleNodeInfo := Event.NodeInfo;
   PanelMain.Enabled := True;
   UpdateStatus(0, 'Cab - Alias: 0x' + IntToHex(Event.NodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(Event.NodeInfo.ID));
+end;
+
+procedure TFormThrottle.EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
+begin
+  if TimerType = tt_AllocateByList then
+  begin
+
+  end;
 end;
 
 procedure TFormThrottle.EventSpeedDirQuery(Event: TNodeEventSpeedDirQuery);

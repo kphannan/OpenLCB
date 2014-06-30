@@ -53,12 +53,14 @@ type
   protected
     property NodeInfo: TNodeInfo read FNodeInfo write FNodeInfo;
   public
-    constructor Create(var ANodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject);
+    FDestNodeInfo: TNodeInfo;
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject);
     property NextTask: TNodeTask read FNextTask write FNextTask;
     property iStateMachine: Word read FiStateMachine write FiStateMachine;
     property iSubStateMachine: Word read FiSubStateMachine write FiSubStateMachine;
     property LinkedObj: TObject read FLinkedObj write FLinkedObj;
     property Watchdog: LongWord read FWatchDog write FWatchDog;
+    property DestNodeInfo: TNodeInfo read FDestNodeInfo write FDestNodeInfo;
   end;
 
   { TNodeTaskAllocateNewNode }
@@ -79,7 +81,7 @@ type
     FFunctionIndex: Word;
     FSpeedStep: Byte;
   public
-    constructor Create(var ANodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;AnAddress: Word; ASpeedStep: Byte);
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;AnAddress: Word; ASpeedStep: Byte);
     property Address: Word read FAddress write FAddress;
     property SpeedStep: Byte read FSpeedStep write FSpeedStep;
     property FunctionIndex: Word read FFunctionIndex write FFunctionIndex;
@@ -91,7 +93,7 @@ type
   private
     FSpeedDir: THalfFloat;
   public
-    constructor Create(ANodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; ASpeedDir: THalfFloat);
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; ASpeedDir: THalfFloat);
     property SpeedDir: THalfFloat read FSpeedDir write FSpeedDir;
   end;
 
@@ -102,7 +104,7 @@ type
     FAddress: DWord;
     FValue: Word;
   public
-    constructor Create(ANodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddress: DWord; AValue: Word);
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddress: DWord; AValue: Word);
     property Address: DWord read FAddress write FAddress;
     property Value: Word read FValue write FValue;
   end;
@@ -113,13 +115,23 @@ type
   private
     FAddress: DWord;
   public
-    constructor Create(ANodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddress: DWord);
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddress: DWord);
     property Address: DWord read FAddress write FAddress;
   end;
 
   { TNodeTaskSpeedDirQuery }
 
   TNodeTaskSpeedDirQuery = class(TNodeTask)
+
+  end;
+
+  { TNodeTaskFindTrains }
+
+  TNodeTaskFindTrains = class(TNodeTask)
+
+  end;
+
+  TNodeTaskSimpleTrainNodeInfo = class(TNodeTask)
 
   end;
 
@@ -199,6 +211,19 @@ type
     property ControllerInfo: TNodeInfo read FControllerInfo write FControllerInfo;
     property Address: Word read FAddress write FAddress;
     property SpeedSteps: Byte read FSpeedSteps write FSpeedSteps;
+  end;
+
+  { TNodeEventIsTrain }
+
+  TNodeEventIsTrain = class(TNodeEvent)
+
+  end;
+
+  { TNodeEventSimpleTrainNodeInfo }
+
+  TNodeEventSimpleTrainNodeInfo = class(TNodeEvent)
+  public
+
   end;
 
   { TNodeEventThread }
@@ -354,6 +379,9 @@ type
     property Running: Boolean read FRunning;
   end;
 
+var
+  NullNodeInfo: TNodeInfo;
+
 
 implementation
 
@@ -380,8 +408,8 @@ const
 
   { TNodeTask }
 
-  constructor TNodeTask.Create(var ANodeInfo: TNodeInfo; AniStateMachine: Word;
-    ALinkedObj: TObject);
+constructor TNodeTask.Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo;
+  AniStateMachine: Word; ALinkedObj: TObject);
   begin
     FNodeInfo := ANodeInfo;
     FiStateMachine := AniStateMachine;
@@ -389,34 +417,37 @@ const
     FNextTask := nil;
     FiSubStateMachine := 0;
     FWatchDog := 0;
+    FDestNodeInfo := ADestNodeInfo;
   end;
 
 { TNodeTaskSpeedDir }
 
 constructor TNodeTaskSpeedDir.Create(ANodeInfo: TNodeInfo;
-  AniStateMachine: Word; ALinkedObj: TObject; ASpeedDir: THalfFloat);
+  ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
+  ASpeedDir: THalfFloat);
 begin
-  inherited Create(ANodeInfo, AniStateMachine, ALinkedObj);
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
   FSpeedDir := ASpeedDir;
 end;
 
 { TNodeTaskFunction }
 
 constructor TNodeTaskFunction.Create(ANodeInfo: TNodeInfo;
-  AniStateMachine: Word; ALinkedObj: TObject; AnAddress: DWord; AValue: Word);
+  ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
+  AnAddress: DWord; AValue: Word);
 begin
-  inherited Create(ANodeInfo, AniStateMachine, ALinkedObj);
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
   FAddress := AnAddress;
   FValue := AValue;
 end;
 
 { TNodeTaskAllocateTrainByAddress }
 
-constructor TNodeTaskAllocateTrainByAddress.Create(var ANodeInfo: TNodeInfo;
-  AniStateMachine: Word; ALinkedObj: TObject; AnAddress: Word; ASpeedStep: Byte
-  );
+constructor TNodeTaskAllocateTrainByAddress.Create(ANodeInfo: TNodeInfo;
+  ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
+  AnAddress: Word; ASpeedStep: Byte);
 begin
-  inherited Create(ANodeInfo, AniStateMachine, ALinkedObj);
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
   FAddress := AnAddress;
   FSpeedStep := ASpeedStep;
 end;
@@ -424,9 +455,10 @@ end;
 { TNodeTaskFunctionQuery }
 
 constructor TNodeTaskFunctionQuery.Create(ANodeInfo: TNodeInfo;
-  AniStateMachine: Word; ALinkedObj: TObject; AnAddress: DWord);
+  ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
+  AnAddress: DWord);
 begin
-  inherited Create(ANodeInfo, AniStateMachine, ALinkedObj);
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
   FAddress := AnAddress;
 end;
 
@@ -1005,6 +1037,8 @@ begin
 end;
 
 initialization
+  NullNodeInfo.AliasID := 0;
+  NullNodeInfo.ID := NULL_NODE_ID;
 
 
 finalization
