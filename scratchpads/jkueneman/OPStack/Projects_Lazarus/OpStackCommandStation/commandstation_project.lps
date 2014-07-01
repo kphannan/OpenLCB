@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="53">
+    <Units Count="54">
       <Unit0>
         <Filename Value="commandstation_project.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -43,9 +43,9 @@
       <Unit3>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="421"/>
+        <TopLine Value="422"/>
         <CursorPos X="1" Y="432"/>
         <UsageCount Value="105"/>
         <Loaded Value="True"/>
@@ -53,12 +53,10 @@
       <Unit4>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
         <UnitName Value="opstackcore"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="150"/>
         <CursorPos X="102" Y="320"/>
-        <UsageCount Value="134"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="133"/>
       </Unit4>
       <Unit5>
         <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachines.pas"/>
@@ -66,7 +64,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="221"/>
         <CursorPos X="1" Y="235"/>
-        <UsageCount Value="93"/>
+        <UsageCount Value="92"/>
       </Unit5>
       <Unit6>
         <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
@@ -74,15 +72,17 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="161"/>
-        <UsageCount Value="101"/>
+        <UsageCount Value="100"/>
       </Unit6>
       <Unit7>
         <Filename Value="../../NMRAnet/nmranetutilities.pas"/>
         <UnitName Value="nmranetutilities"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="22" Y="1"/>
-        <UsageCount Value="160"/>
+        <TopLine Value="185"/>
+        <CursorPos X="26" Y="202"/>
+        <UsageCount Value="159"/>
+        <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="../../NMRAnet/gridconnect.pas"/>
@@ -90,16 +90,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="174"/>
         <CursorPos X="1" Y="197"/>
-        <UsageCount Value="17"/>
+        <UsageCount Value="16"/>
       </Unit8>
       <Unit9>
         <Filename Value="../../NMRAnet/opstackdefines.pas"/>
         <UnitName Value="opstackdefines"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="20"/>
         <CursorPos X="3" Y="32"/>
-        <UsageCount Value="36"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit9>
       <Unit10>
@@ -108,23 +108,25 @@
         <WindowIndex Value="0"/>
         <TopLine Value="757"/>
         <CursorPos X="1" Y="780"/>
-        <UsageCount Value="140"/>
+        <UsageCount Value="139"/>
       </Unit10>
       <Unit11>
         <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
         <UnitName Value="opstackcore_traction"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="462"/>
-        <CursorPos X="25" Y="484"/>
-        <UsageCount Value="144"/>
+        <TopLine Value="433"/>
+        <CursorPos X="32" Y="447"/>
+        <UsageCount Value="143"/>
+        <Loaded Value="True"/>
       </Unit11>
       <Unit12>
         <Filename Value="../../NMRAnet/opstackcore_traction_proxy.pas"/>
         <UnitName Value="opstackcore_traction_proxy"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="67"/>
+        <TopLine Value="18"/>
         <CursorPos X="1" Y="33"/>
-        <UsageCount Value="111"/>
+        <UsageCount Value="110"/>
       </Unit12>
       <Unit13>
         <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinesmultiframe.pas"/>
@@ -132,17 +134,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="92"/>
         <CursorPos X="1" Y="104"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="24"/>
       </Unit13>
       <Unit14>
         <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinessnip.pas"/>
         <UnitName Value="opstackcanstatemachinessnip"/>
-        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="26"/>
         <CursorPos X="38" Y="46"/>
-        <UsageCount Value="25"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="24"/>
       </Unit14>
       <Unit15>
         <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinesdatagram.pas"/>
@@ -150,44 +150,42 @@
         <WindowIndex Value="0"/>
         <TopLine Value="91"/>
         <CursorPos X="1" Y="105"/>
-        <UsageCount Value="41"/>
+        <UsageCount Value="40"/>
       </Unit15>
       <Unit16>
         <Filename Value="../../../Library/olcb_utilities.pas"/>
         <UnitName Value="olcb_utilities"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1006"/>
-        <CursorPos X="53" Y="1022"/>
-        <UsageCount Value="15"/>
-        <Loaded Value="True"/>
+        <CursorPos X="29" Y="1021"/>
+        <UsageCount Value="14"/>
       </Unit16>
       <Unit17>
         <Filename Value="../../NMRAnet/nmranetdefines.pas"/>
         <UnitName Value="nmranetdefines"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="57"/>
-        <CursorPos X="56" Y="63"/>
-        <UsageCount Value="161"/>
+        <TopLine Value="253"/>
+        <CursorPos X="26" Y="266"/>
+        <UsageCount Value="160"/>
+        <Loaded Value="True"/>
       </Unit17>
       <Unit18>
         <Filename Value="../../../Library/olcb_defines.pas"/>
         <UnitName Value="olcb_defines"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="73"/>
         <CursorPos X="31" Y="84"/>
-        <UsageCount Value="152"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="151"/>
       </Unit18>
       <Unit19>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <EditorIndex Value="11"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="301"/>
-        <CursorPos X="1" Y="309"/>
+        <TopLine Value="33"/>
+        <CursorPos X="11" Y="46"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit19>
@@ -197,7 +195,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="498"/>
         <CursorPos X="1" Y="509"/>
-        <UsageCount Value="69"/>
+        <UsageCount Value="68"/>
       </Unit20>
       <Unit21>
         <Filename Value="../../NMRAnet/opstack_api.pas"/>
@@ -205,7 +203,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="60"/>
         <CursorPos X="1" Y="75"/>
-        <UsageCount Value="106"/>
+        <UsageCount Value="105"/>
       </Unit21>
       <Unit22>
         <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinesbuffers.pas"/>
@@ -213,14 +211,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="487"/>
         <CursorPos X="1" Y="504"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="24"/>
       </Unit22>
       <Unit23>
         <Filename Value="/Developer/lazarus/lcl/include/control.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="3228"/>
         <CursorPos X="1" Y="3242"/>
-        <UsageCount Value="134"/>
+        <UsageCount Value="133"/>
       </Unit23>
       <Unit24>
         <Filename Value="/Developer/lazarus/lcl/customtimer.pas"/>
@@ -228,7 +226,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="154"/>
         <CursorPos X="65" Y="169"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit24>
       <Unit25>
         <Filename Value="Templates/template_node.pas"/>
@@ -236,31 +234,29 @@
         <WindowIndex Value="0"/>
         <TopLine Value="243"/>
         <CursorPos X="3" Y="263"/>
-        <UsageCount Value="47"/>
+        <UsageCount Value="46"/>
       </Unit25>
       <Unit26>
         <Filename Value="Templates/template_vnode.pas"/>
         <UnitName Value="template_vnode"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="124"/>
-        <CursorPos X="78" Y="141"/>
-        <UsageCount Value="18"/>
-        <Loaded Value="True"/>
+        <TopLine Value="70"/>
+        <CursorPos X="58" Y="83"/>
+        <UsageCount Value="17"/>
       </Unit26>
       <Unit27>
         <Filename Value="Templates/Options.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit27>
       <Unit28>
         <Filename Value="Templates/NodeID.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="39" Y="10"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit28>
       <Unit29>
         <Filename Value="Templates/template_buffers.pas"/>
@@ -268,17 +264,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="16"/>
         <CursorPos X="35" Y="37"/>
-        <UsageCount Value="46"/>
+        <UsageCount Value="45"/>
       </Unit29>
       <Unit30>
         <Filename Value="../../NMRAnet/opstackcore_snip.pas"/>
         <UnitName Value="opstackcore_snip"/>
-        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="35"/>
         <CursorPos X="3" Y="43"/>
-        <UsageCount Value="26"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="25"/>
       </Unit30>
       <Unit31>
         <Filename Value="../../NMRAnet/opstackcore_basic.pas"/>
@@ -286,7 +280,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="68"/>
         <CursorPos X="1" Y="90"/>
-        <UsageCount Value="30"/>
+        <UsageCount Value="29"/>
       </Unit31>
       <Unit32>
         <Filename Value="../../NMRAnet/opstackcore_events.pas"/>
@@ -294,16 +288,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="527"/>
         <CursorPos X="1" Y="552"/>
-        <UsageCount Value="41"/>
+        <UsageCount Value="40"/>
       </Unit32>
       <Unit33>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="689"/>
         <CursorPos X="66" Y="693"/>
-        <UsageCount Value="24"/>
+        <UsageCount Value="32"/>
         <Loaded Value="True"/>
       </Unit33>
       <Unit34>
@@ -312,7 +306,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="202"/>
         <CursorPos X="121" Y="211"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="24"/>
       </Unit34>
       <Unit35>
         <Filename Value="../../NMRAnet/opstackcore_pip.pas"/>
@@ -320,16 +314,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="38"/>
         <CursorPos X="3" Y="32"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit35>
       <Unit36>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
         <UnitName Value="opstackcore_stnip"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="66"/>
-        <CursorPos X="1" Y="83"/>
-        <UsageCount Value="21"/>
+        <TopLine Value="1"/>
+        <CursorPos X="153" Y="7"/>
+        <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit36>
       <Unit37>
@@ -337,14 +331,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1518"/>
         <CursorPos X="26" Y="1533"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit37>
       <Unit38>
         <Filename Value="/usr/local/share/fpcsrc/rtl/inc/threadh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit38>
       <Unit39>
         <Filename Value="../OlcbTrainMaster_NCEBridge/Templates/template_userstatemachine.pas"/>
@@ -352,7 +346,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="103"/>
         <CursorPos X="1" Y="104"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit39>
       <Unit40>
         <Filename Value="../../AppLayerTemplates/template_event_callbacks.pas"/>
@@ -360,7 +354,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="14"/>
         <CursorPos X="30" Y="17"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit40>
       <Unit41>
         <Filename Value="Templates/template_event_callbacks.pas"/>
@@ -368,7 +362,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="14"/>
         <CursorPos X="28" Y="30"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit41>
       <Unit42>
         <Filename Value="../OlcbTrainMaster_NCEBridge/Templates/template_event_callbacks.pas"/>
@@ -376,7 +370,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="17"/>
         <CursorPos X="1" Y="28"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit42>
       <Unit43>
         <Filename Value="../OlcbTrainMaster_NCEBridge/Forms/main.pas"/>
@@ -384,14 +378,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="24"/>
         <CursorPos X="55" Y="282"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit43>
       <Unit44>
         <Filename Value="../../../../../trunk/scratchpads/jkueneman/OPStack/Projects/dsPIC33EP256GP502_CAN_CommandStation/Templates/template_userstatemachine.mpas"/>
         <WindowIndex Value="0"/>
         <TopLine Value="175"/>
         <CursorPos X="1" Y="60"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
         <DefaultSyntaxHighlighter Value="None"/>
       </Unit44>
       <Unit45>
@@ -400,14 +394,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="219"/>
         <CursorPos X="18" Y="233"/>
-        <UsageCount Value="20"/>
+        <UsageCount Value="19"/>
       </Unit45>
       <Unit46>
         <Filename Value="../../Projects/dsPIC33EP256GP502_CAN_CommandStation/Templates/template_userstatemachine.mpas"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
         <DefaultSyntaxHighlighter Value="None"/>
       </Unit46>
       <Unit47>
@@ -415,7 +409,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="3" Y="10"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit47>
       <Unit48>
         <Filename Value="../../NMRAnet/opstacktypes.pas"/>
@@ -423,7 +417,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit48>
       <Unit49>
         <Filename Value="../../NMRAnet/opstackcore_configmem.pas"/>
@@ -431,16 +425,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="232"/>
         <CursorPos X="83" Y="244"/>
-        <UsageCount Value="17"/>
+        <UsageCount Value="16"/>
       </Unit49>
       <Unit50>
         <Filename Value="../../ConfigurationLayerImplementations/Lazarus_File/template_configuration.pas"/>
         <UnitName Value="template_configuration"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="120"/>
         <CursorPos X="1" Y="140"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit50>
       <Unit51>
@@ -449,7 +443,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="58"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit51>
       <Unit52>
         <Filename Value="../../Common/helperfunctions.pas"/>
@@ -459,131 +453,134 @@
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
       </Unit52>
+      <Unit53>
+        <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/sysutils/syswideh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="19"/>
+        <CursorPos X="10" Y="39"/>
+        <UsageCount Value="9"/>
+      </Unit53>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="30" HistoryIndex="27">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="374" Column="1" TopLine="310"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="410" Column="1" TopLine="398"/>
       </Position1>
       <Position2>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="80" Column="76" TopLine="74"/>
+        <Filename Value="../../NMRAnet/nmranetutilities.pas"/>
+        <Caret Line="121" Column="1" TopLine="109"/>
       </Position2>
       <Position3>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="14" Column="53" TopLine="1"/>
+        <Filename Value="../../NMRAnet/nmranetutilities.pas"/>
+        <Caret Line="122" Column="1" TopLine="109"/>
       </Position3>
       <Position4>
-        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinessnip.pas"/>
-        <Caret Line="46" Column="67" TopLine="31"/>
+        <Filename Value="../../NMRAnet/nmranetutilities.pas"/>
+        <Caret Line="123" Column="1" TopLine="109"/>
       </Position4>
       <Position5>
-        <Filename Value="../../NMRAnet/opstackcore_snip.pas"/>
-        <Caret Line="43" Column="3" TopLine="35"/>
+        <Filename Value="../../NMRAnet/nmranetutilities.pas"/>
+        <Caret Line="124" Column="1" TopLine="109"/>
       </Position5>
       <Position6>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="78" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="411" Column="1" TopLine="398"/>
       </Position6>
       <Position7>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="79" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="412" Column="145" TopLine="399"/>
       </Position7>
       <Position8>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="81" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="512" Column="1" TopLine="499"/>
       </Position8>
       <Position9>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="83" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="390" Column="1" TopLine="378"/>
       </Position9>
       <Position10>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="84" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="391" Column="1" TopLine="378"/>
       </Position10>
       <Position11>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="86" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="392" Column="1" TopLine="378"/>
       </Position11>
       <Position12>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="78" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="394" Column="1" TopLine="378"/>
       </Position12>
       <Position13>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="79" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="397" Column="1" TopLine="378"/>
       </Position13>
       <Position14>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="81" Column="1" TopLine="70"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="422" Column="1" TopLine="411"/>
       </Position14>
       <Position15>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="99" Column="1" TopLine="86"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="424" Column="1" TopLine="411"/>
       </Position15>
       <Position16>
-        <Filename Value="../../NMRAnet/opstackcore.pas"/>
-        <Caret Line="320" Column="102" TopLine="150"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="425" Column="1" TopLine="411"/>
       </Position16>
       <Position17>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="79" Column="1" TopLine="59"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="426" Column="1" TopLine="411"/>
       </Position17>
       <Position18>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="81" Column="1" TopLine="61"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="427" Column="1" TopLine="411"/>
       </Position18>
       <Position19>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="83" Column="1" TopLine="63"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="398" Column="16" TopLine="389"/>
       </Position19>
       <Position20>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="84" Column="1" TopLine="64"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="507" Column="45" TopLine="499"/>
       </Position20>
       <Position21>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="86" Column="1" TopLine="66"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="508" Column="45" TopLine="499"/>
       </Position21>
       <Position22>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="79" Column="1" TopLine="66"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="509" Column="51" TopLine="499"/>
       </Position22>
       <Position23>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="81" Column="1" TopLine="66"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="510" Column="54" TopLine="499"/>
       </Position23>
       <Position24>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="100" Column="1" TopLine="84"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="514" Column="57" TopLine="499"/>
       </Position24>
       <Position25>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="79" Column="1" TopLine="66"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="513" Column="54" TopLine="499"/>
       </Position25>
       <Position26>
-        <Filename Value="unitmain.pas"/>
-        <Caret Line="645" Column="14" TopLine="632"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="393" Column="14" TopLine="388"/>
       </Position26>
       <Position27>
-        <Filename Value="../../../Library/olcb_utilities.pas"/>
-        <Caret Line="1421" Column="47" TopLine="1412"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="395" Column="1" TopLine="388"/>
       </Position27>
       <Position28>
-        <Filename Value="../../../Library/olcb_utilities.pas"/>
-        <Caret Line="1015" Column="32" TopLine="999"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="441" Column="34" TopLine="428"/>
       </Position28>
       <Position29>
-        <Filename Value="../../../Library/olcb_utilities.pas"/>
-        <Caret Line="973" Column="16" TopLine="962"/>
+        <Filename Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Caret Line="447" Column="32" TopLine="433"/>
       </Position29>
-      <Position30>
-        <Filename Value="../../../Library/olcb_utilities.pas"/>
-        <Caret Line="480" Column="88" TopLine="461"/>
-      </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
@@ -600,8 +597,8 @@
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsLocal"/>
         <WatchKind Value="wpkWrite"/>
-        <Source Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Line Value="83"/>
+        <Source Value="../../NMRAnet/opstackcore_traction.pas"/>
+        <Line Value="395"/>
       </Item2>
     </BreakPoints>
   </Debugging>

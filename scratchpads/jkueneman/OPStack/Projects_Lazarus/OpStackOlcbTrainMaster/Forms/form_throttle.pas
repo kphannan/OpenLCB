@@ -234,6 +234,7 @@ type
     procedure EventSpeedDirQuery(Event: TNodeEventSpeedDirQuery);
     procedure EventIsTrain(Event: TNodeEventIsTrain);
     procedure EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
+    procedure EventReleaseController(Event: TNodeEventReleaseController);
     procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
@@ -364,9 +365,11 @@ end;
 
 procedure TFormThrottle.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  NodeThread.AddTask( TNodeTaskAllocateDestroyNode.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FREE, Self));
   if Assigned(OnThrottleClose) then
     OnThrottleClose(Self);
+  if not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
+    NodeThread.AddTask( TNodeTaskReleaseController.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_RELEASE_CONTROLLER, Self));
+  NodeThread.AddTask( TNodeTaskAllocateDestroyNode.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FREE, Self));
   ActionAllocationFree.Execute;
   CloseAction := caFree;
 
@@ -409,7 +412,7 @@ end;
 
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
-  NodeThread.AddTask(TNodeTaskAllocateTrainByAddress.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS, Self, SpinEditAddress.Value, SpeedStepRadioToSpeedStep));
+  NodeThread.AddTask(TNodeTaskAllocateTrainByAddress.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS, Self, SpinEditAddress.Value, SpeedStepRadioToSpeedStep, RadioGroupShortLong.ItemIndex = 1));
 end;
 
 procedure TFormThrottle.ActionAllocationByListExecute(Sender: TObject);
@@ -454,8 +457,7 @@ end;
 
 procedure TFormThrottle.ActionAllocationReleaseExecute(Sender: TObject);
 begin
-
-  UpdateUI;
+  NodeThread.AddTask( TNodeTaskReleaseController.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_RELEASE_CONTROLLER, Self));
 end;
 
 procedure TFormThrottle.ActionControlEmergencyStopExecute(Sender: TObject);
@@ -912,7 +914,15 @@ begin
   // update it all here
   ThrottleNodeInfo := Event.NodeInfo;
   PanelMain.Enabled := True;
-  UpdateStatus(0, 'Cab - Alias: 0x' + IntToHex(Event.NodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(Event.NodeInfo.ID));
+  UpdateUI
+end;
+
+procedure TFormThrottle.EventReleaseController(Event: TNodeEventReleaseController);
+begin
+  FTrainNodeInfo.AliasID := 0;
+  FTrainNodeInfo.ID[0] := 0;
+  FTrainNodeInfo.ID[1] := 0;
+  UpdateUI;
 end;
 
 procedure TFormThrottle.EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
@@ -941,7 +951,6 @@ end;
 procedure TFormThrottle.EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);
 begin
   FTrainNodeInfo := Event.TrainNodeInfo;
-  UpdateStatus(1, 'Train - Alias: 0x' + IntToHex(Event.TrainNodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(Event.TrainNodeInfo.ID));
   UpdateUI;
 end;
 
@@ -1104,7 +1113,7 @@ begin
   ActionAllocationByList.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   ActionAllocationByAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
 //  ActionAllocationFree.Enabled := TrainNodeInfo <> 0; ;
-//  ActionAllocationRelease.Enabled := TrainNodeInfo <> 0; ;
+  ActionAllocationRelease.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   GroupBoxFunctions.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   GroupBoxControl.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   GroupBoxConfiguration.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
@@ -1117,6 +1126,11 @@ begin
 
   Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
   UpdateAddressRange;
+  UpdateStatus(0, 'Cab - Alias: 0x' + IntToHex(ThrottleNodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(ThrottleNodeInfo.ID));
+  if not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
+    UpdateStatus(1, 'Train - Alias: 0x' + IntToHex(TrainNodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(TrainNodeInfo.ID))
+  else
+    UpdateStatus(1, '');
 end;
 
 end.

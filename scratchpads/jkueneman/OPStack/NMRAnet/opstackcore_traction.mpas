@@ -34,7 +34,7 @@ procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
 
 implementation
 
-procedure TractionProtocolReplySpeedDir(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolSpeedDirReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   IsForward: Boolean;
   AbsoluteSpeed: Real;
@@ -47,89 +47,92 @@ var
   {$ENDIF}
 begin
   MessageToSend := nil;
-  {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
-  AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;                                                        // Split the address to make clear when loading bytes
-  AddressLo := DestNode^.TrainData.Address and $00FF;
-  {$ENDIF}
-  {$ENDIF}
-  DestNode^.TrainData.SpeedDir := (NextMessage^.Buffer^.DataArray[1] shl 8) or (NextMessage^.Buffer^.DataArray[2]);  // Update with the new Speed
-  IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;                                                      // Split the Speed and Direction
-  AbsoluteSpeed := HalfToFloat(DestNode^.TrainData.SpeedDir and not $8000);
-  case DestNode^.TrainData.SpeedSteps of
-    14  : begin
-            AbsoluteSpeed := (14/100) * AbsoluteSpeed;
-            {$IFDEF FPC}
-            SpeedStep := Trunc(AbsoluteSpeed);
-            {$ELSE}
-            SpeedStep := Word( AbsoluteSpeed);
-            {$ENDIF}
-            SpeedStep := _14_STEP_TABLE[SpeedStep];
-            if IsForward then
-              SpeedStep := SpeedStep or $60
-            else
-              SpeedStep := SpeedStep or $40;
-            {$IFNDEF FPC}
-            {$IFDEF SUPPORTS_DCC}
-            if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
-              NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
-            else
-              NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
-            NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-            {$ENDIF}
-            {$ENDIF}
-          end;
-    28  : begin
-            AbsoluteSpeed := (28/100) * AbsoluteSpeed;
-            {$IFDEF FPC}
-            SpeedStep := Trunc(AbsoluteSpeed);
-            {$ELSE}
-            SpeedStep := Word( AbsoluteSpeed);
-            {$ENDIF}
-            SpeedStep := _28_STEP_TABLE[SpeedStep];
-            if IsForward then
-              SpeedStep := SpeedStep or $60
-            else
-              SpeedStep := SpeedStep or $40;
-            {$IFNDEF FPC}
-            {$IFDEF SUPPORTS_DCC}
-            if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
-              NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
-            else
-              NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
-            NMRA_DCC_QueuePacket(@Track, @DCCPacket, False)
-            {$ENDIF}
-            {$ENDIF}
-          end;
-    128 : begin
-            {$IFNDEF FPC}
-            {$IFDEF SUPPORTS_DCC}
-            AddressHi := AddressHi or NMRA_LONGADDRESS_MASK_BYTE;               // Allow a mistaken short address to work here by adding the $C0  Per Tim
-            {$ENDIF}
-            {$ENDIF}
-            AbsoluteSpeed := (127/100) * AbsoluteSpeed;
-            {$IFDEF FPC}
-            SpeedStep := Trunc(AbsoluteSpeed);
-            {$ELSE}
-            SpeedStep := Word( AbsoluteSpeed);
-            {$ENDIF}
-            if SpeedStep > 0 then
-              Inc(SpeedStep);   // 1 = EStop
-            if IsForward then
-              SpeedStep := SpeedStep or $80;
-            {$IFNDEF FPC}
-            {$IFDEF SUPPORTS_DCC}
-            NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
-            NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-            {$ENDIF}
-            {$ENDIF}
-          end;
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+  begin
+    {$IFNDEF FPC}
+    {$IFDEF SUPPORTS_DCC}
+    AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;                                                        // Split the address to make clear when loading bytes
+    AddressLo := DestNode^.TrainData.Address and $00FF;
+    {$ENDIF}
+    {$ENDIF}
+    DestNode^.TrainData.SpeedDir := (NextMessage^.Buffer^.DataArray[1] shl 8) or (NextMessage^.Buffer^.DataArray[2]);  // Update with the new Speed
+    IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;                                                      // Split the Speed and Direction
+    AbsoluteSpeed := HalfToFloat(DestNode^.TrainData.SpeedDir and not $8000);
+    case DestNode^.TrainData.SpeedSteps of
+      14  : begin
+              AbsoluteSpeed := (14/100) * AbsoluteSpeed;
+              {$IFDEF FPC}
+              SpeedStep := Trunc(AbsoluteSpeed);
+              {$ELSE}
+              SpeedStep := Word( AbsoluteSpeed);
+              {$ENDIF}
+              SpeedStep := _14_STEP_TABLE[SpeedStep];
+              if IsForward then
+                SpeedStep := SpeedStep or $60
+              else
+                SpeedStep := SpeedStep or $40;
+              {$IFNDEF FPC}
+              {$IFDEF SUPPORTS_DCC}
+              if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
+                NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
+              else
+                NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
+              NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+              {$ENDIF}
+              {$ENDIF}
+            end;
+      28  : begin
+              AbsoluteSpeed := (28/100) * AbsoluteSpeed;
+              {$IFDEF FPC}
+              SpeedStep := Trunc(AbsoluteSpeed);
+              {$ELSE}
+              SpeedStep := Word( AbsoluteSpeed);
+              {$ENDIF}
+              SpeedStep := _28_STEP_TABLE[SpeedStep];
+              if IsForward then
+                SpeedStep := SpeedStep or $60
+              else
+                SpeedStep := SpeedStep or $40;
+              {$IFNDEF FPC}
+              {$IFDEF SUPPORTS_DCC}
+              if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
+                NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
+              else
+                NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
+              NMRA_DCC_QueuePacket(@Track, @DCCPacket, False)
+              {$ENDIF}
+              {$ENDIF}
+            end;
+      128 : begin
+              {$IFNDEF FPC}
+              {$IFDEF SUPPORTS_DCC}
+              AddressHi := AddressHi or NMRA_LONGADDRESS_MASK_BYTE;               // Allow a mistaken short address to work here by adding the $C0  Per Tim
+              {$ENDIF}
+              {$ENDIF}
+              AbsoluteSpeed := (127/100) * AbsoluteSpeed;
+              {$IFDEF FPC}
+              SpeedStep := Trunc(AbsoluteSpeed);
+              {$ELSE}
+              SpeedStep := Word( AbsoluteSpeed);
+              {$ENDIF}
+              if SpeedStep > 0 then
+                Inc(SpeedStep);   // 1 = EStop
+              if IsForward then
+                SpeedStep := SpeedStep or $80;
+              {$IFNDEF FPC}
+              {$IFDEF SUPPORTS_DCC}
+              NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
+              NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+              {$ENDIF}
+              {$ENDIF}
+            end;
+    end;
+    AppCallback_TractionProtocol(DestNode, NextMessage);
   end;
-  AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-procedure TractionProtocolReplyFunction(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolFunctionReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   FunctionAddress: DWord;
   FunctionValue: Word;
@@ -143,84 +146,87 @@ var
   {$ENDIF}
 begin
   MessageToSend := nil;
-
-  {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
-  // Split the address to make clear when loading bytes
-  AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
-  AddressLo := DestNode^.TrainData.Address and $00FF;
-  {$ENDIF}
-  {$ENDIF}
-
-  // Get the new values
-  FunctionAddress := (DWord( NextMessage^.Buffer^.DataArray[1]) shl 16) or (DWord( NextMessage^.Buffer^.DataArray[2]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[3]);
-  FunctionValue := (DWord( NextMessage^.Buffer^.DataArray[4]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[5]);
-
-  // Decode and update the proxy
-  WideFunctionMask := $00000001;
-  WideFunctionMask := WideFunctionMask shl FunctionAddress;                     // Set the correct Function Bit
-  DestNode^.TrainData.Functions := DestNode^.TrainData.Functions and not WideFunctionMask;        // Clear the bit
-  if FunctionValue > 0 then
-    DestNode^.TrainData.Functions := DestNode^.TrainData.Functions or WideFunctionMask;      // Set the bit if needed
-
-  if FunctionAddress < 29 then
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
   begin
-    if FunctionAddress < 5 then
+
+    {$IFNDEF FPC}
+    {$IFDEF SUPPORTS_DCC}
+    // Split the address to make clear when loading bytes
+    AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
+    AddressLo := DestNode^.TrainData.Address and $00FF;
+    {$ENDIF}
+    {$ENDIF}
+
+    // Get the new values
+    FunctionAddress := (DWord( NextMessage^.Buffer^.DataArray[1]) shl 16) or (DWord( NextMessage^.Buffer^.DataArray[2]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[3]);
+    FunctionValue := (DWord( NextMessage^.Buffer^.DataArray[4]) shl 8) or DWord( NextMessage^.Buffer^.DataArray[5]);
+
+    // Decode and update the proxy
+    WideFunctionMask := $00000001;
+    WideFunctionMask := WideFunctionMask shl FunctionAddress;                     // Set the correct Function Bit
+    DestNode^.TrainData.Functions := DestNode^.TrainData.Functions and not WideFunctionMask;        // Clear the bit
+    if FunctionValue > 0 then
+      DestNode^.TrainData.Functions := DestNode^.TrainData.Functions or WideFunctionMask;      // Set the bit if needed
+
+    if FunctionAddress < 29 then
     begin
-      FunctionMask := (DestNode^.TrainData.Functions shr 1) and $0F;
-      if DestNode^.TrainData.Functions and $00000001 = 0 then
-        FunctionMask := FunctionMask and not $10                                // Clear Bit 4
+      if FunctionAddress < 5 then
+      begin
+        FunctionMask := (DestNode^.TrainData.Functions shr 1) and $0F;
+        if DestNode^.TrainData.Functions and $00000001 = 0 then
+          FunctionMask := FunctionMask and not $10                                // Clear Bit 4
+        else
+          FunctionMask := FunctionMask or $10;                                    // Set Bit 4
+        FunctionMask := FunctionMask or %10000000;                                // Opcode bits
+      end else
+      if FunctionAddress < 9 then
+      begin
+        FunctionMask := (DestNode^.TrainData.Functions shr 5) and $0F;
+        FunctionMask := FunctionMask or %10110000;                                // Opcode bits
+      end else
+      if FunctionAddress < 13 then
+      begin
+        FunctionMask := (DestNode^.TrainData.Functions shr 9) and $0F;
+        FunctionMask := FunctionMask or %10100000;                                // Opcode bits
+      end else
+      if FunctionAddress < 21 then
+      begin
+        FunctionMask := DestNode^.TrainData.Functions shr 13;
+        FunctionExtendedCode := %11011110
+      end
+    end else
+    begin
+      FunctionMask := DestNode^.TrainData.Functions shr 21;
+      FunctionExtendedCode := %11011111
+    end;
+
+    {$IFNDEF FPC}
+    {$IFDEF SUPPORTS_DCC}
+    // Now create the DCC Packet
+    if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
+    begin
+      if FunctionAddress < 13 then
+        NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionMask, 0, 0, 3)
       else
-        FunctionMask := FunctionMask or $10;                                    // Set Bit 4
-      FunctionMask := FunctionMask or %10000000;                                // Opcode bits
+        NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionExtendedCode, FunctionMask, 0, 4)
     end else
-    if FunctionAddress < 9 then
     begin
-      FunctionMask := (DestNode^.TrainData.Functions shr 5) and $0F;
-      FunctionMask := FunctionMask or %10110000;                                // Opcode bits
-    end else
-    if FunctionAddress < 13 then
-    begin
-      FunctionMask := (DestNode^.TrainData.Functions shr 9) and $0F;
-      FunctionMask := FunctionMask or %10100000;                                // Opcode bits
-    end else
-    if FunctionAddress < 21 then
-    begin
-      FunctionMask := DestNode^.TrainData.Functions shr 13;
-      FunctionExtendedCode := %11011110
-    end
-  end else
-  begin
-    FunctionMask := DestNode^.TrainData.Functions shr 21;
-    FunctionExtendedCode := %11011111
-  end;
+      if FunctionAddress < 13 then
+        NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionMask, 0, 0, 0, 3)
+      else
+        NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionExtendedCode, FunctionMask, 0, 0, 4)
+    end;
 
-  {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
-  // Now create the DCC Packet
-  if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
-  begin
-    if FunctionAddress < 13 then
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionMask, 0, 0, 3)
-    else
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, FunctionExtendedCode, FunctionMask, 0, 4)
-  end else
-  begin
-    if FunctionAddress < 13 then
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionMask, 0, 0, 0, 3)
-    else
-      NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, FunctionExtendedCode, FunctionMask, 0, 0, 4)
+    // Queue the Packet
+    NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+    {$ENDIF}
+    {$ENDIF}
+    AppCallback_TractionProtocol(DestNode, NextMessage);
   end;
-
-  // Queue the Packet
-  NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-  {$ENDIF}
-  {$ENDIF}
-  AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-procedure TractionProtocolReplyEmergencyStop(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolEmergencyStopReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   IsForward: Boolean;
   SpeedStep: Byte;
@@ -232,59 +238,62 @@ var
   {$ENDIF}
 begin
   MessageToSend := nil;
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+  begin
 
-  {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
-  // Split the address to make clear when loading bytes
-  AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
-  AddressLo := DestNode^.TrainData.Address and $00FF;
-  {$ENDIF}
-  {$ENDIF}
+    {$IFNDEF FPC}
+    {$IFDEF SUPPORTS_DCC}
+    // Split the address to make clear when loading bytes
+    AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
+    AddressLo := DestNode^.TrainData.Address and $00FF;
+    {$ENDIF}
+    {$ENDIF}
 
-  // Update the Speed to 0
-  IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;
-  if IsForward then
-    DestNode^.TrainData.SpeedDir := $0000
-  else
-    DestNode^.TrainData.SpeedDir := $8000;
-  case DestNode^.TrainData.SpeedSteps of
-    14, 28 :
-      begin
-        SpeedStep := $01;
-        if IsForward then
-          SpeedStep := SpeedStep or $60
-        else
-          SpeedStep := SpeedStep or $40;
-        {$IFNDEF FPC}
-        {$IFDEF SUPPORTS_DCC}
-        if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
-          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
-        else
-          NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
+    // Update the Speed to 0
+    IsForward := DestNode^.TrainData.SpeedDir and $8000 <> $8000;
+    if IsForward then
+      DestNode^.TrainData.SpeedDir := $0000
+    else
+      DestNode^.TrainData.SpeedDir := $8000;
+    case DestNode^.TrainData.SpeedSteps of
+      14, 28 :
+        begin
+          SpeedStep := $01;
+          if IsForward then
+            SpeedStep := SpeedStep or $60
+          else
+            SpeedStep := SpeedStep or $40;
+          {$IFNDEF FPC}
+          {$IFDEF SUPPORTS_DCC}
+          if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
+            NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
+          else
+            NMRA_DCC_LoadPacket(@DCCPacket, AddressLo, SpeedStep, 0, 0, 0, 2);
 
-        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-        {$ENDIF}
-        {$ENDIF}
-      end;
-    128 :
-      begin
-        SpeedStep := $01;
-        if IsForward then
-          SpeedStep := SpeedStep or $80;
-        {$IFNDEF FPC}
-        {$IFDEF SUPPORTS_DCC}
-        NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
+          NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+          {$ENDIF}
+          {$ENDIF}
+        end;
+      128 :
+        begin
+          SpeedStep := $01;
+          if IsForward then
+            SpeedStep := SpeedStep or $80;
+          {$IFNDEF FPC}
+          {$IFDEF SUPPORTS_DCC}
+          NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
 
-        NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
-        {$ENDIF}
-        {$ENDIF}
-      end;
+          NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
+          {$ENDIF}
+          {$ENDIF}
+        end;
+    end;
+    AppCallback_TractionProtocol(DestNode, NextMessage);
   end;
-  AppCallback_TractionProtocol(DestNode, NextMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-function TractionProtocolReplyQuerySpeed(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolQuerySpeedReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;
@@ -304,7 +313,7 @@ begin
   end;
 end;
 
-function TractionProtocolReplyQueryFunction(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolQueryFunctionReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 var
   FunctionAddress: DWord;
 begin
@@ -336,7 +345,7 @@ end;
 //    later in the Reply
 //******************************************************************************
 
-function TractionProtocolManage(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolManageReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;
@@ -360,6 +369,7 @@ begin
       Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
     end
   end else
+  if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RELEASE then
   begin
     if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
     begin
@@ -373,7 +383,7 @@ begin
   end;
 end;
 
-function TractionProtocolController(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolControllerReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 var
   i: Integer;
   MultiFrameBuffer: PMultiFrameBuffer;
@@ -396,7 +406,11 @@ begin
                 MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
                 MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
                 MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
-                DestNode^.TrainData.Controller := NextMessage^.Source;
+
+                MultiFrameBuffer := PMultiFrameBuffer( PByte( NextMessage^.Buffer));
+                NMRAnetUtilities_Load48BitNodeIDWithSimpleData(DestNode^.TrainData.Controller.ID, PSimpleDataArray( @MultiFrameBuffer^.DataArray[3])^);
+                if MultiFrameBuffer^.DataArray[2] and TRACTION_FLAGS_ALIAS_INCLUDED <> 0 then
+                  DestNode^.TrainData.Controller.AliasID := Word(MultiFrameBuffer^.DataArray[9] shl 8) or Word(MultiFrameBuffer^.DataArray[10]);
                 AppCallback_TractionProtocol(DestNode, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
               end
@@ -467,14 +481,17 @@ begin
   end
 end;
 
-function TractionProtocolConsist(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolConsistReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   MessageToSend := nil;
-  if DestNode^.TrainData.State and TS_LOCKED <> 0 then
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
   begin
-    // Only manage if the DestNode is locked
+   // if DestNode^.TrainData.State and TS_LOCKED <> 0 then
+   /// begin
+      // Only manage if the DestNode is locked
+   // end;
+    AppCallback_TractionProtocol(DestNode, NextMessage);
   end;
-  AppCallback_TractionProtocol(DestNode, NextMessage);
   Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
@@ -488,14 +505,14 @@ begin
   Result := False;
   MessageToSend := nil;
   case NextMessage^.Buffer^.DataArray[0] of
-    TRACTION_SPEED_DIR         : begin TractionProtocolReplySpeedDir(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_FUNCTION          : begin TractionProtocolReplyFunction(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_E_STOP            : begin TractionProtocolReplyEmergencyStop(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_QUERY_SPEED       : begin Result := TractionProtocolReplyQuerySpeed(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_QUERY_FUNCTION    : begin Result := TractionProtocolReplyQueryFunction(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_CONTROLLER_CONFIG : begin Result := TractionProtocolController(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_CONSIST           : begin Result := TractionProtocolConsist(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_MANAGE            : begin Result := TractionProtocolManage(DestNode, MessageToSend, NextMessage); Exit; end
+    TRACTION_SPEED_DIR         : begin TractionProtocolSpeedDirReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_FUNCTION          : begin TractionProtocolFunctionReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_E_STOP            : begin TractionProtocolEmergencyStopReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_QUERY_SPEED       : begin Result := TractionProtocolQuerySpeedReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_QUERY_FUNCTION    : begin Result := TractionProtocolQueryFunctionReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_CONTROLLER_CONFIG : begin Result := TractionProtocolControllerReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_CONSIST           : begin Result := TractionProtocolConsistReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_MANAGE            : begin Result := TractionProtocolManageReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end
   else
     UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;

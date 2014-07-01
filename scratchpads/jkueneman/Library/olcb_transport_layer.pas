@@ -79,12 +79,20 @@ type
   private
     FAddress: Word;
     FFunctionIndex: Word;
+    FLong: Boolean;
     FSpeedStep: Byte;
   public
-    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;AnAddress: Word; ASpeedStep: Byte);
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;AnAddress: Word; ASpeedStep: Byte; IsLong: Boolean);
     property Address: Word read FAddress write FAddress;
+    property Long: Boolean read FLong write FLong;
     property SpeedStep: Byte read FSpeedStep write FSpeedStep;
     property FunctionIndex: Word read FFunctionIndex write FFunctionIndex;
+  end;
+
+  { TNodeTaskReleaseController }
+
+  TNodeTaskReleaseController = class(TNodeTask)
+
   end;
 
   { TNodeTaskSpeedDir }
@@ -231,6 +239,12 @@ type
     property TrainName: TStnipBuffer read FTrainName write FTrainName;
     property Manufacturer: TStnipBuffer read FManufacturer write FManufacturer;
     property Owner: TStnipBuffer read FOwner write FOwner;
+  end;
+
+  { TNodeEventReleaseController }
+
+  TNodeEventReleaseController = class(TNodeEvent)
+
   end;
 
   { TNodeEventThread }
@@ -547,9 +561,10 @@ end;
 
 constructor TNodeTaskAllocateTrainByAddress.Create(ANodeInfo: TNodeInfo;
   ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
-  AnAddress: Word; ASpeedStep: Byte);
+  AnAddress: Word; ASpeedStep: Byte; IsLong: Boolean);
 begin
   inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
+  FLong := IsLong;
   FAddress := AnAddress;
   FSpeedStep := ASpeedStep;
 end;

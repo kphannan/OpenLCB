@@ -260,7 +260,7 @@ const
 //  | USER_NODE_SIZE    |     USER_VNODE_SIZE * 4               |
 // **************************************************************************************************************************************************************
 const
-  USER_CONFIGURATION_MEMORY_SIZE = 256;
+  USER_CONFIGURATION_MEMORY_SIZE = 512;
 
 implementation
 

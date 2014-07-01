@@ -10,7 +10,9 @@ uses
   opstacktypes,
   opstackdefines,
   template_node,
+  template_vnode,
   opstack_api,
+  template_configuration,
   nmranetdefines,
   nmranetutilities;
 
@@ -229,6 +231,9 @@ var
   i: Integer;
   TrainID: Word;
   TrainNode: PNMRAnetNode;
+  ConfigOffset: DWord;
+  Info: string[STNIP_MAX_STR_LEN];
+  Str1: array[0..5] of Char;
 begin
   {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('AppCallback_TractionProxyProtocol'+LF); {$ENDIF}
   // Only the main physical node is the proxy and can reply to these messages
@@ -255,6 +260,18 @@ begin
               TrainNode^.TrainData.LinkedNode.ID[0] := AMessage^.Source.ID[0];      // Store the node that sent the Allocate message
               TrainNode^.TrainData.LinkedNode.ID[1] := AMessage^.Source.ID[1];
               TrainNode^.TrainData.LinkedNode.AliasID := AMessage^.Source.AliasID;
+              
+              ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
+              WordToStr(TrainNode^.TrainData.Address, Str1);
+              Info := 'NMRA DCC Address: ' + Str1 + #0;
+              AppCallback_WriteConfiguration(ConfigOffset+STNIP_OFFSET_ROADNAME, strlen(Info), @Info);
+
+              Info[0] := #0;
+              AppCallback_WriteConfiguration(ConfigOffset+STNIP_OFFSET_CLASS, strlen(Info), @Info);
+              AppCallback_WriteConfiguration(ConfigOffset+STNIP_OFFSET_ROADNUMBER, strlen(Info), @Info);
+              AppCallback_WriteConfiguration(ConfigOffset+STNIP_OFFSET_TRAINNAME, strlen(Info), @Info);
+              AppCallback_WriteConfiguration(ConfigOffset+STNIP_OFFSET_MANUFACTURER, strlen(Info), @Info);
+              AppCallback_WriteConfiguration(ConfigOffset+STNIP_OFFSET_ROADNUMBER, strlen(Info), @Info);
             end;
           end;
     end

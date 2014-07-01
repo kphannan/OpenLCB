@@ -369,6 +369,7 @@ begin
       Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
     end
   end else
+  if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RELEASE then
   begin
     if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
     begin
@@ -405,7 +406,11 @@ begin
                 MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
                 MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
                 MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
-                DestNode^.TrainData.Controller := NextMessage^.Source;
+
+                MultiFrameBuffer := PMultiFrameBuffer( PByte( NextMessage^.Buffer));
+                NMRAnetUtilities_Load48BitNodeIDWithSimpleData(DestNode^.TrainData.Controller.ID, PSimpleDataArray( @MultiFrameBuffer^.DataArray[3])^);
+                if MultiFrameBuffer^.DataArray[2] and TRACTION_FLAGS_ALIAS_INCLUDED <> 0 then
+                  DestNode^.TrainData.Controller.AliasID := Word(MultiFrameBuffer^.DataArray[9] shl 8) or Word(MultiFrameBuffer^.DataArray[10]);
                 AppCallback_TractionProtocol(DestNode, NextMessage);
                 Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
               end

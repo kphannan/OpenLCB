@@ -75,7 +75,7 @@ const
 
 // Set Protocols that the node(s) will support and return in the Protocol Identification Protcol
 const
-  USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT = 8;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
+  USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT = 9;    // UPDATE THIS IF ADDING OR SUBTRACTING SUPPORTED PROTOCOLS
   USER_PIV_VNODE_SUPPORTED_PROTOCOLS: array[0..USER_PIV_VNODE_SUPPORTED_PROTOCOL_COUNT-1] of TPIVProtocolValueArray = (     // Look at the PIV_xxxx constants for more Protocols
     ($80, $00, $00, $00, $00, $00),                                             // Protocol
     ($40, $00, $00, $00, $00, $00),                                             // Datagram Protocol
@@ -84,7 +84,7 @@ const
     ($00, $08, $00, $00, $00, $00),                                             // CDI Protocol
     ($00, $10, $00, $00, $00, $00),                                             // SNIP Protocol
     ($00, $40, $00, $00, $00, $00),                                             // ACDI Protocol
-    ($00, $04, $00, $00, $00, $00)                                              // Traction Protocol
+    ($00, $04, $00, $00, $00, $00)                                             // Traction Protocol
     );
 
 

@@ -79,8 +79,9 @@ const
    STATE_THROTTLE_LOG_IN_AND_NOTIFY          = 3;
    STATE_THROTTLE_FREE                       = 4;
    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS  = 5;
-   STATE_THROTTLE_DIRECTION_FORWARD          = 6;
-   STATE_THROTTLE_DIRECTION_REVERSE          = 7;
+   STATE_THROTTLE_RELEASE_CONTROLLER         = 6;
+   STATE_THROTTLE_DIRECTION_FORWARD          = 7;
+   STATE_THROTTLE_DIRECTION_REVERSE          = 8;
    STATE_THROTTLE_SPEED_CHANGE               = 9;
    STATE_THROTTLE_FUNCTION                   = 10;
    STATE_THROTTLE_E_STOP                     = 11;
@@ -179,7 +180,8 @@ var
   NewNodeCreatedEvent: TNodeEventNodeCreated;
   NewNode: PNMRAnetNode;
   TrainAllocateByAddressTask: TNodeTaskAllocateTrainByAddress;
-  NewFunctionValue: Word;
+  TrainReleaseController: TNodeTaskReleaseController;
+  NewFunctionValue, Address: Word;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -274,7 +276,10 @@ begin
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
                     begin
-                      if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, TrainAllocateByAddressTask.Address, TrainAllocateByAddressTask.SpeedStep, 0) then
+                      Address := TrainAllocateByAddressTask.Address;
+                      if TrainAllocateByAddressTask.Long then
+                        Address := Address or $C000;
+                      if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Address, TrainAllocateByAddressTask.SpeedStep, 0) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
                       TrainAllocateByAddressTask.WatchDog := 0;
                       Exit;
@@ -341,6 +346,52 @@ begin
                     end;
               end;
           end;
+        STATE_THROTTLE_RELEASE_CONTROLLER :
+            begin
+              TrainReleaseController := TNodeTaskReleaseController( Node^.UserData);
+              case TrainReleaseController.iSubStateMachine of
+                STATE_SUB_BRIDGE_INITIALIZE :
+                    begin
+                      TrainReleaseController.WatchDog := 0;
+                      TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_LOCK;
+                      Exit;
+                    end;
+                STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_LOCK :
+                    begin
+                      if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
+                        TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_WAIT;  // Wait for the Lock Reply Callback
+                      TrainReleaseController.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE_CONTROLLER :
+                    begin
+                      if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, False) then
+                      begin
+                        Node^.TrainData.LinkedNode.AliasID := 0;
+                        Node^.TrainData.LinkedNode.ID := NULL_NODE_ID;
+                        NodeThread.AddEvent(TNodeEventReleaseController.Create(Node^.Info, TrainReleaseController.LinkedObj));
+                        TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK;  // There is no reply to this message
+                      end;
+                      TrainReleaseController.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK :
+                    begin
+                      if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, False) then
+                      begin
+                        UnLinkFirstTaskFromNode(Node, True);
+                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;                     // Look for more tasks
+                      end;
+                      Exit;
+                    end;
+                STATE_SUB_RELEASE_CONTROLLER_WAIT :
+                    begin
+                      if TrainReleaseController.WatchDog > 20 then
+                        TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK;   // Something is wrong, bail out
+                      Exit;
+                    end;
+              end;
+            end;
         STATE_THROTTLE_DIRECTION_FORWARD :
             begin
             end;
@@ -597,14 +648,19 @@ begin
           case MultiFrameBuffer^.DataArray[1] of
             TRACTION_CONTROLLER_CONFIG_ASSIGN :
                 begin
-                  if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
-                  begin
-                    NodeThread.AddEvent( TNodeEventThrottleAssignedToTrain.Create(Node^.Info, TNodeTask( Node^.UserData).LinkedObj, Node^.TrainData.LinkedNode));  // Send this before Querying Functions and Speed
-                    TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED
-                  end else
-                    TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
-                end;
-          end;
+                  case Node^.iUserStateMachine of
+                    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS :
+                        begin
+                          if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
+                          begin
+                            NodeThread.AddEvent( TNodeEventThrottleAssignedToTrain.Create(Node^.Info, TNodeTask( Node^.UserData).LinkedObj, Node^.TrainData.LinkedNode));  // Send this before Querying Functions and Speed
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED
+                          end else
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
+                        end;
+                  end;  // case
+                end
+          end; // case
         end;
     TRACTION_CONSIST :
         begin
@@ -625,14 +681,26 @@ begin
           case MultiFrameBuffer^.DataArray[1] of
             TRACTION_MANAGE_RESERVE :
                 begin
-                  if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-                    TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER
-                  else
-                    TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
+                  case Node^.iUserStateMachine of
+                    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS :
+                        begin
+                          if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER
+                          else
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK   // Can't reserve now go back to normal polling
+                        end;
+                    STATE_THROTTLE_RELEASE_CONTROLLER :
+                        begin
+                          if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE_CONTROLLER
+                          else
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK   // Can't reserve now go back to normal polling
+                        end;
+                  end; // case
                 end;
           end
-        end;
-    end;
+        end
+  end;
 end;
 {$ENDIF}
 

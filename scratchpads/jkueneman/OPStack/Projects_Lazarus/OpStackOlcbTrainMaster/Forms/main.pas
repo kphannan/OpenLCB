@@ -993,6 +993,15 @@ begin
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventSimpleTrainNodeInfo(Event as TNodeEventSimpleTrainNodeInfo);
       end;
+      if TObject( EventList[i]) is TNodeEventReleaseController then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventReleaseController(Event as TNodeEventReleaseController);
+      end;
+
+
+
       TObject( EventList[i]).Destroy
     end;
   finally

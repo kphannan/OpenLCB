@@ -308,15 +308,16 @@ begin
 
               ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
 
-              Info := #0;
-              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_CLASS, Info);
-              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_TRAINNAME, Info);
-              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_MANUFACTURER, Info);
-              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_OWNER, Info);
-              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_ROADNUMBER, Info);
               Info := 'NMRA DCC Address: ' + IntToStr(TrainNode^.TrainData.Address) + #0;
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, strlen(Info) + 1, @Info);
 
-              SimpleTrainNodeInfoWriteConfig(ConfigOffset + STNIP_OFFSET_ROADNAME, Info);
+              Info := #0;
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, 1, @Info);
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, 1, @Info);
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, 1, @Info);
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, 1, @Info);
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNUMBER, 1, @Info);
+
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ADDRESS, 2, @TrainNode^.TrainData.Address);
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_FUNCTIONS, 4, @TrainNode^.TrainData.Functions);
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @TrainNode^.TrainData.SpeedSteps);

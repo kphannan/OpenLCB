@@ -23,14 +23,7 @@ procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAn
 function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
-procedure SimpleTrainNodeInfoWriteConfig(ConfigOffset: DWord; var Info: TStnipBuffer);
-
 implementation
-
-procedure SimpleTrainNodeInfoWriteConfig(ConfigOffset: DWord; var Info: TStnipBuffer);
-begin
-  AppCallback_WriteConfiguration(ConfigOffset, strlen(Info) + 1, @Info);
-end;
 
 procedure ReadConfigStringOffset(ConfigOffset: DWord; AcdiSnipBufferPtr: PAcdiSnipBuffer);
 var
@@ -66,7 +59,10 @@ end;
 
 procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 begin
-  if NMRAnetUtilities_NodeSupportsProtcol(DestNode, STNIP_PROTOCOL) then        // We don't support this protocol drop it
+  if AMessage^.MTI = MTI_SIMPLE_TRAIN_NODE_INFO_REPLY then                      // Take a crack at all incoming reply
+    OPStackNode_IncomingMessageLink(DestNode, AMessage)
+  else                                                                          // Incoming reqests need the node to support it first.
+  if NMRAnetUtilities_NodeSupportsProtcol(DestNode, STNIP_PROTOCOL) then        // If we don't support this protocol drop it
     OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 

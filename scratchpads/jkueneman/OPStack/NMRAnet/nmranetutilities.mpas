@@ -193,10 +193,14 @@ end;
 function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNodeInfo): Boolean;
 begin
   Result := False;
-  if Info1.AliasID = Info2.AliasID then
-    if Info1.ID[0] = Info2.ID[0] then
-      if Info1.ID[1] = Info2.ID[1] then
-        Result := True;
+  if ((Info1.ID[0] = 0) and (Info1.ID[0] = 0)) or ((Info2.ID[0] = 0) and (Info2.ID[0] = 0)) then
+    Result := Info1.AliasID = Info2.AliasID
+  else begin
+    if Info1.AliasID = Info2.AliasID then
+      if Info1.ID[0] = Info2.ID[0] then
+        if Info1.ID[1] = Info2.ID[1] then
+          Result := True;
+  end;
 end;
 
 function NMRAnetUtilities_NullNodeIDInfo(var Info1: TNodeInfo): Boolean;
