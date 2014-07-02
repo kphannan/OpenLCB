@@ -21,13 +21,6 @@
       <xs:sequence>
          <xs:element name="name" minOccurs="1" maxOccurs="1"/>
          <xs:element name="description" minOccurs="0" maxOccurs="1"/>
-         <xs:element name="number" type="xs:int" minOccurs="0" maxOccurs="1">
-            <xs:annotation>
-               <xs:documentation>
-                  What does this mean?  Is "number" a general concept? Is it required?
-               </xs:documentation>
-            </xs:annotation>
-         </xs:element>
       </xs:sequence>
       <xs:attribute name="size" type="xs:int" default="1"/>
       <xs:attribute name="kind" type="functionKindType" default="binary"/>
