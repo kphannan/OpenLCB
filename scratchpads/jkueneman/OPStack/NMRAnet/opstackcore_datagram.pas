@@ -26,10 +26,10 @@ procedure OPStackCoreDatagram_Initialize;
 procedure DatagramMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
 
 
-procedure DatagramOkReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-procedure DatagramRejectedReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramOkReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramRejectedReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
-function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMsg: POPStackMessage): Boolean;
+function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMsg: POPStackMessage): Boolean;
 
 procedure FlushWaitingForAckResponseMessagesByDestinationAlias(var DestID: TNodeInfo);
 
@@ -88,6 +88,7 @@ function FindWaitingForAckResponseMessage(var SourceID: TNodeInfo; var DestID: T
 var
   LocalMessage: POPStackMessage;
 begin
+  Result := nil;
   LocalMessage := WaitingForAckList;
   while LocalMessage <> nil do
   begin
@@ -185,12 +186,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure DatagramReply;
+//  procedure DatagramReplyHandler;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-function DatagramReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMsg: POPStackMessage): Boolean;
+function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMsg: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
@@ -208,10 +209,15 @@ begin
           begin
             MessageToSend := DatagramMsg;
             case DatagramBufferPtr^.DataArray[1] and $F0 of
-               MCP_COMMAND_READ         : begin Result := CommandReadReply(Node, MessageToSend); end;
-               MCP_COMMAND_READ_STREAM  : begin Result := CommandReadStreamReply(Node, MessageToSend); end;
-               MCP_COMMAND_WRITE        : begin Result := CommandWriteReply(Node, MessageToSend); end;
-               MCP_COMMAND_WRITE_STREAM : begin Result := CommandWriteStreamReply(Node, MessageToSend); end;
+               MCP_COMMAND_READ             : begin Result := CommandReadReply(Node, MessageToSend); end;
+               MCP_COMMAND_READ_REPLY_OK    : begin end;
+               MCP_COMMAND_READ_REPLY_FAIL  : begin end;
+               MCP_COMMAND_READ_STREAM      : begin Result := CommandReadStreamReply(Node, MessageToSend); end;
+               MCP_COMMAND_READ_SREAM_REPLY : begin end;
+               MCP_COMMAND_WRITE            : begin Result := CommandWriteReply(Node, MessageToSend); end;
+               MCP_COMMAND_WRITE_REPLY_OK   : begin end;
+               MCP_COMMAND_WRITE_REPLY_FAIL : begin end;
+               MCP_COMMAND_WRITE_STREAM     : begin Result := CommandWriteStreamReply(Node, MessageToSend); end;
                MCP_OPERATION :
                    begin
                      case DatagramBufferPtr^.DataArray[1] of
@@ -237,12 +243,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure DatagramOkReply;
+//  procedure DatagramOkReplyHandler;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure DatagramOkReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramOkReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   WaitingMessage: POPStackMessage;
 begin
@@ -255,12 +261,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure DatagramRejectedReply;
+//  procedure DatagramRejectedReplyHandler;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure DatagramRejectedReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramRejectedReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 var
   WaitingMessage: POPStackMessage;
   DatagramBuffer: PDatagramBuffer;

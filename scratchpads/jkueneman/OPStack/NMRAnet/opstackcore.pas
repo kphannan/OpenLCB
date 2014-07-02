@@ -148,8 +148,8 @@ begin
                 MTI_EVENTS_IDENTIFY_DEST           : begin IdentifyEvents(DestNode, AMessage); end;                // Sets Flag(s) to be processed in main loop
                 MTI_PROTOCOL_SUPPORT_INQUIRY,
                 MTI_PROTOCOL_SUPPORT_REPLY         : begin ProtocolSupportMessage(DestNode, AMessage); Exit; end;   // Don't free the Message
-                MTI_DATAGRAM_OK_REPLY              : begin DatagramOkReply(DestNode, AMessage); end;               // Updates internal states
-                MTI_DATAGRAM_REJECTED_REPLY        : begin DatagramRejectedReply(DestNode, AMessage); end;         // Updates internal states
+                MTI_DATAGRAM_OK_REPLY              : begin DatagramOkReplyHandler(DestNode, AMessage); end;         // Updates internal states
+                MTI_DATAGRAM_REJECTED_REPLY        : begin DatagramRejectedReplyHandler(DestNode, AMessage); end;   // Updates internal states
                 {$IFDEF SUPPORT_TRACTION}
                 MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST,
                 MTI_SIMPLE_TRAIN_NODE_INFO_REPLY   : begin SimpleTrainNodeInfoMessage(AMessage, DestNode);  Exit; end;   // Don't free the Message
@@ -356,7 +356,7 @@ begin
         MTI_DATAGRAM :
             begin
               if DatagramSendAckReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source, PDatagramBuffer( PByte( NextMessage^.Buffer))) then
-                DatagramReply(Node, MessageToSend, NextMessage);
+                DatagramReplyHandler(Node, MessageToSend, NextMessage);
               Result :=  MessageToSend <> nil
             end
       else begin

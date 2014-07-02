@@ -16,7 +16,7 @@ type
     ButtonUseThrottle: TButton;
     ButtonUseTrain: TButton;
     ButtonUseCustom: TButton;
-    Label1: TLabel;
+    LabelHeader: TLabel;
     Label2: TLabel;
     OpenDialog: TOpenDialog;
     procedure ButtonUseCustomClick(Sender: TObject);

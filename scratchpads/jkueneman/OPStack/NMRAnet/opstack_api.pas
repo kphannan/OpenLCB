@@ -12,7 +12,7 @@ uses
   SysUtils,
   FileUtil,
   {$ENDIF}
-  float16,
+  Float16,
   nmranetdefines,
   opstackbuffers,
   template_hardware,
@@ -53,12 +53,13 @@ function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; 
 function TrySendTractionQuerySpeed(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord): Boolean;
 function TrySendTractionEmergencyStop(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
-
 // Traction Proxy
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
 function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; var AllocatedNodeID: TNodeInfo; TrainID: Word): Boolean;
 function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
+// Configuration Memeory
+function TrySendConfigMemoryRead(var Source: TNodeInfo; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
 
 
 
@@ -565,6 +566,31 @@ begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
       NewMessage^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
       NewMessage^.Buffer^.DataArray[2] := ResultFlag;
+      OutgoingMessage(NewMessage);
+      Result := True;
+    end;
+  end;
+end;
+
+function TrySendConfigMemoryRead(var Source: TNodeInfo; var Dest: TNodeInfo;
+  AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateDatagramMessage(NewMessage, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, 0) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 8;
+      NewMessage^.Buffer^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+      NewMessage^.Buffer^.DataArray[1] := MCP_COMMAND_READ or MCP_NONE;         // Address is in byte 6
+      NewMessage^.Buffer^.DataArray[2] := Byte( StartAddress shr 24);
+      NewMessage^.Buffer^.DataArray[3] := Byte( StartAddress shr 16);
+      NewMessage^.Buffer^.DataArray[4] := Byte( StartAddress shr 8);
+      NewMessage^.Buffer^.DataArray[5] := Byte( StartAddress);
+      NewMessage^.Buffer^.DataArray[6] := AddressSpace;
+      NewMessage^.Buffer^.DataArray[7] := ReadCount;
       OutgoingMessage(NewMessage);
       Result := True;
     end;

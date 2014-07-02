@@ -212,6 +212,7 @@ type
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray
     DataArray: TDatagramDataArray;
     // *******
+    iStateMachine: Byte;
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     ResendCount: Byte;                                                          // Number of tries to resend the datagram if sending is rejected
     NextWaitingForAck: PByte;                                                   // Pointer to the Next _Message_ (not Buffer) that is waiting for an Ack

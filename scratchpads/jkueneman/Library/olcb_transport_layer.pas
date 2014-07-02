@@ -52,7 +52,7 @@ type
     FWatchDog: LongWord;
   public
     FDestNodeInfo: TNodeInfo;
-    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject);
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject); virtual;
     property NextTask: TNodeTask read FNextTask write FNextTask;
     property iStateMachine: Word read FiStateMachine write FiStateMachine;
     property iSubStateMachine: Word read FiSubStateMachine write FiSubStateMachine;
@@ -148,6 +148,16 @@ type
 
   TNodeTaskSupportsProtocols = class(TNodeTask)
 
+  end;
+
+  { TNodeTaskReadConfigMemory }
+
+  TNodeTaskReadConfigMemory = class(TNodeTask)
+  private
+    FCurrentAddress: DWord;
+  public
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AStartAddress: DWord); reintroduce;
+    property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
   end;
 
   { TNodeEvent }
@@ -465,6 +475,16 @@ const
   GRIDCONNECT_STATE_SYNC_FIND_X = 1;
   GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
   GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
+
+  { TNodeTaskReadConfigMemory }
+
+constructor TNodeTaskReadConfigMemory.Create(ANodeInfo: TNodeInfo;
+  ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
+  AStartAddress: DWord);
+begin
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
+  FCurrentAddress := AStartAddress;
+end;
 
   { TNodeEventSupportsProtocols }
 

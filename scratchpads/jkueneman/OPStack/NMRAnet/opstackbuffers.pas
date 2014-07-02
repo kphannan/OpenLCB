@@ -622,6 +622,7 @@ begin
   ABuffer^.CurrentCount := 0;
   ABuffer^.ResendCount := 0;
   ABuffer^.NextWaitingForAck := nil;
+  ABuffer^.iStateMachine := 0;
 end;
 
 {$IFDEF SUPPORT_STREAMS}

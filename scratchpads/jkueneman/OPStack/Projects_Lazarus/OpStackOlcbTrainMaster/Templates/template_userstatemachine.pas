@@ -90,6 +90,7 @@ const
    STATE_THROTTLE_FIND_TRAINS                = 14;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 15;
    STATE_THROTTLE_PROTOCOL_SUPPORT           = 16;
+   STATE_THROTTLE_READ_FDI                   = 17;
 
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_START = 0;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT  = 1;
@@ -98,6 +99,10 @@ const
    STATE_THROTTLE_PROTOCOL_SUPPORT_SEND        = 0;
    STATE_THROTTLE_PROTOCOL_SUPPORT_END         = 1;
    STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT        = 2;
+
+   STATE_THROTTLE_READ_FDI_SEND                = 0;
+   STATE_THROTTLE_READ_FDI_END                 = 1;
+   STATE_THROTTLE_READ_FDI_WAIT                = 2;
 
 var
   ProxyNode: TNodeInfo;
@@ -568,7 +573,27 @@ begin
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_PROTOCOL_SUPPORT_END
                     end;
                end
-             end
+             end;
+          STATE_THROTTLE_READ_FDI :
+             begin
+               case TNodeTask( Node^.UserData).iSubStateMachine of
+                 STATE_THROTTLE_READ_FDI_SEND :
+                    begin
+                      if TrySendConfigMemoryRead(Node^.Info, TNodeTaskReadConfigMemory( Node^.UserData).FDestNodeInfo, MSI_FDI, TNodeTaskReadConfigMemory( Node^.UserData).CurrentAddress, 64) then
+                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_WAIT
+                    end;
+                 STATE_THROTTLE_READ_FDI_END :
+                    begin
+                      Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                      UnLinkFirstTaskFromNode(Node, True);
+                    end;
+                 STATE_THROTTLE_READ_FDI_WAIT :
+                    begin
+                      if  TNodeTask( Node^.UserData).Watchdog > 20 then
+                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_END
+                    end;
+               end
+             end;
       end
   end
 end;

@@ -10,7 +10,7 @@ object FormFdiPicker: TFormFdiPicker
   ClientWidth = 470
   Position = poOwnerFormCenter
   LCLVersion = '1.2.0.3'
-  object Label1: TLabel
+  object LabelHeader: TLabel
     Left = 20
     Height = 32
     Top = 20

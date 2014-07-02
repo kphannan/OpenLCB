@@ -967,46 +967,50 @@ var
   FileStream: TFileStream;
   MemStream: TMemoryStream;
 begin
-  if Event.FDI then
-  begin
-    FdiPicker := TFormFdiPicker.Create(Self);
+  FdiPicker := TFormFdiPicker.Create(Self);
+  try
+    FdiPicker.ButtonUseTrain.Enabled := Event.FDI;
+    if Event.FDI then
+      FdiPicker.LabelHeader.Caption :=  'This train supports Function Definition Information (FDI) to add custom names and order to your Functions.'
+    else
+      FdiPicker.LabelHeader.Caption :=  'This train does not support Function Definition Information (FDI).';
     FdiPicker.OpenDialog.InitialDir := DefaultFdiPath;
-    try
-      case FdiPicker.ShowModal of      // Can't use mrClose because "X"ing out of the dialog fires that modal result
-        mrIgnore :           // do nothing
-           begin
-             UpdateFunctionsWithDefault;
-           end;
-        mrOK :              // Use the Trains
-          begin
 
-          end;
-        mrAll :         // Use the custom file
+    case FdiPicker.ShowModal of      // Can't use mrClose because "X"ing out of the dialog fires that modal result
+      mrIgnore :           // do nothing
+         begin
+           UpdateFunctionsWithDefault;
+         end;
+      mrOK :              // Use the Trains
+        begin
+          NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_FDI, Self, 0));
+        end;
+      mrAll :         // Use the custom file
+        begin
+          if FileExistsUTF8(FdiPicker.OpenDialog.FileName) then
           begin
-            if FileExistsUTF8(FdiPicker.OpenDialog.FileName) then
-            begin
-              DefaultFdiPath := ExtractFilePath(FdiPicker.OpenDialog.FileName);
-              FileStream := TFileStream.Create(FdiPicker.OpenDialog.FileName, fmOpenRead);
-              MemStream := TMemoryStream.Create;
-              try
-                MemStream.CopyFrom(FileStream, FileStream.Size);
-                MemStream.WriteByte( Ord(#0));
-                UpdateFunctionsWithFDI(MemStream);
-              finally
-                FileStream.Free;
-                MemStream.Free;
-              end;
-            end else
-              UpdateFunctionsWithDefault;
-          end;
-      end;
-      begin
-
-      end;
-    finally
-      FdiPicker.Close;
+            DefaultFdiPath := ExtractFilePath(FdiPicker.OpenDialog.FileName);
+            FileStream := TFileStream.Create(FdiPicker.OpenDialog.FileName, fmOpenRead);
+            MemStream := TMemoryStream.Create;
+            try
+              MemStream.CopyFrom(FileStream, FileStream.Size);
+              MemStream.WriteByte( Ord(#0));
+              UpdateFunctionsWithFDI(MemStream);
+            finally
+              FileStream.Free;
+              MemStream.Free;
+            end;
+          end else
+            UpdateFunctionsWithDefault;
+        end;
     end;
+    begin
+
+    end;
+  finally
+    FdiPicker.Close;
   end;
+
 end;
 
 procedure TFormThrottle.EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);

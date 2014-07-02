@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="8">
+    <Units Count="9">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -93,9 +93,15 @@
         <Filename Value="Forms\form_fdi_picker.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FormFdiPicker"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_fdi_picker"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="..\..\Common\Float16.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Float16"/>
+      </Unit8>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
