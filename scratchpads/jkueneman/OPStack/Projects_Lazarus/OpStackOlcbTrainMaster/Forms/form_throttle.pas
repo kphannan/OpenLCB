@@ -12,7 +12,7 @@ uses
   laz2_DOM, laz2_XMLRead, laz2_XMLWrite, form_train_selector,
   form_train_config_editor, com_port_hub, ethernet_hub,
   template_userstatemachine, template_hardware, opstackdefines,
-  nmranetutilities;
+  nmranetutilities, form_fdi_picker;
 
 const
   ANIMATION_DELTA = 50;
@@ -26,6 +26,8 @@ type
   TOnThrottleEvent = procedure(Throttle: TFormThrottle) of object;
 
   TTimerType = (tt_None, tt_AllocateByList);
+
+  TFunctionState = array[0..28] of Boolean;
 
   { TThrottleList }
 
@@ -183,6 +185,7 @@ type
     FClosing: Boolean;
     FCurrentFunctions: DWord;
     FCurrentSpeed: THalfFloat;
+    FDefaultFdiPath: string;
     FFormSelector: TFormTrainSelector;
     FThrottleNodeInfo: TNodeInfo;
     FTimerType: TTimerType;
@@ -212,6 +215,7 @@ type
     procedure UpdateFunctionsWithFDI(MemStream: TMemoryStream);
     property AllocationPanelToggleExpand: Boolean read FAllocationPanelToggleExpand write FAllocationPanelToggleExpand;
     property Closing: Boolean read FClosing write FClosing;
+    property DefaultFdiPath: string read FDefaultFdiPath write FDefaultFdiPath;
     property FormSelector: TFormTrainSelector read FFormSelector write FFormSelector;
     property TimerType: TTimerType read FTimerType write SetTimerType;
   public
@@ -385,6 +389,7 @@ begin
   FCurrentSpeed := 0;
   FCurrentFunctions := 0;
   FFormSelector := nil;
+  DefaultFdiPath := '';
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -871,6 +876,8 @@ begin
   Button.BorderSpacing.Right := 4;
   Button.Height := 22;;
   Button.GroupIndex := ButtonIndex + 1;
+  if ButtonAction.Checked then
+    Button.Down := True;
   Button.Action := ButtonAction;
   ButtonAction.Caption := ButtonLabel;
   Button.Parent := ScrollBoxFunctions;
@@ -955,8 +962,51 @@ begin
 end;
 
 procedure TFormThrottle.EventSupportsProtocols(Event: TNodeEventSupportsProtocols);
+var
+  FdiPicker: TFormFdiPicker;
+  FileStream: TFileStream;
+  MemStream: TMemoryStream;
 begin
-  beep;
+  if Event.FDI then
+  begin
+    FdiPicker := TFormFdiPicker.Create(Self);
+    FdiPicker.OpenDialog.InitialDir := DefaultFdiPath;
+    try
+      case FdiPicker.ShowModal of      // Can't use mrClose because "X"ing out of the dialog fires that modal result
+        mrIgnore :           // do nothing
+           begin
+             UpdateFunctionsWithDefault;
+           end;
+        mrOK :              // Use the Trains
+          begin
+
+          end;
+        mrAll :         // Use the custom file
+          begin
+            if FileExistsUTF8(FdiPicker.OpenDialog.FileName) then
+            begin
+              DefaultFdiPath := ExtractFilePath(FdiPicker.OpenDialog.FileName);
+              FileStream := TFileStream.Create(FdiPicker.OpenDialog.FileName, fmOpenRead);
+              MemStream := TMemoryStream.Create;
+              try
+                MemStream.CopyFrom(FileStream, FileStream.Size);
+                MemStream.WriteByte( Ord(#0));
+                UpdateFunctionsWithFDI(MemStream);
+              finally
+                FileStream.Free;
+                MemStream.Free;
+              end;
+            end else
+              UpdateFunctionsWithDefault;
+          end;
+      end;
+      begin
+
+      end;
+    finally
+      FdiPicker.Close;
+    end;
+  end;
 end;
 
 procedure TFormThrottle.EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);
@@ -1011,12 +1061,13 @@ end;
 procedure TFormThrottle.UpdateFunctionsWithDefault;
 var
   i: Integer;
+  FunctionsState: TFunctionState;
 begin
   ScrollBoxFunctions.BeginUpdateBounds;
   try
     UpdateFunctionsClearControls;
     for i := 0 to 28 do
-      CreateFunctionUIButton('F' + IntToStr(i), 0, FindComponent('ActionFunction' + IntToStr(i)) as TAction, i) ;
+      CreateFunctionUIButton('Function ' + IntToStr(i), 0, FindComponent('ActionFunction' + IntToStr(i)) as TAction, i) ;
   finally
       ScrollBoxFunctions.EndUpdateBounds;
   end;
@@ -1029,7 +1080,7 @@ procedure TFormThrottle.UpdateFunctionsWithFDI(MemStream: TMemoryStream);
 
   procedure RunDownGroup(Parent: TDOMNode; Level: Integer);
   var
-    Child, NameNode, NumberNode: TDOMNode;
+    Child, NameNode, OriginNode: TDOMNode;
     i, iButton: Integer;
     ActionName: string;
   begin
@@ -1050,17 +1101,10 @@ procedure TFormThrottle.UpdateFunctionsWithFDI(MemStream: TMemoryStream);
         if LowerCase(Child.NodeName) = 'function' then
         begin
           NameNode := Child.FindNode('name');
-          NumberNode := Child.FindNode('number');
-          if Assigned(NumberNode) then
+          OriginNode := Child.Attributes.GetNamedItem('origin');
+          if Assigned(OriginNode) then
           begin
-            for i := 0 to Child.Attributes.Length - 1 do
-            begin
-              if LowerCase(Child.Attributes.Item[i].NodeName) = 'kind' then
-              begin end;
-              if LowerCase(Child.Attributes.Item[i].NodeName) = 'latch' then
-              begin end;
-            end;
-            ActionName := 'ActionFunction' + NumberNode.FirstChild.NodeValue;
+            ActionName := 'ActionFunction' + OriginNode.FirstChild.NodeValue;
             CreateFunctionUIButton(NameNode.FirstChild.NodeValue, Level, FindComponent(ActionName) as TAction, iButton);
             Inc(iButton);
           end else

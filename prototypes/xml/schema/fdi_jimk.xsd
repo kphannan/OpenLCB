@@ -24,7 +24,7 @@
       </xs:sequence>
       <xs:attribute name="size" type="xs:int" default="1"/>
       <xs:attribute name="kind" type="functionKindType" default="binary"/>
-      <xs:attribute name="origin" type="xs:int" default="0">
+      <xs:attribute name="origin" type="xs:int" use="required">
          <xs:annotation>
             <xs:documentation>
                Starting address of the segment's contents within the memory space.

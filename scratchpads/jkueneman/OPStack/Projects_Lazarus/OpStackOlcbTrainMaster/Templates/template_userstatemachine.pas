@@ -355,32 +355,32 @@ begin
             begin
               TrainReleaseController := TNodeTaskReleaseController( Node^.UserData);
               case TrainReleaseController.iSubStateMachine of
-                STATE_SUB_BRIDGE_INITIALIZE :
+                STATE_THROTTLE_RELEASE_CONTROLLER_INITIALIZE :
                     begin
                       TrainReleaseController.WatchDog := 0;
-                      TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_LOCK;
+                      TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_LOCK;
                       Exit;
                     end;
-                STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_LOCK :
+                STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_LOCK :
                     begin
                       if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
-                        TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_WAIT;  // Wait for the Lock Reply Callback
+                        TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_WAIT;  // Wait for the Lock Reply Callback
                       TrainReleaseController.WatchDog := 0;
                       Exit;
                     end;
-                STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE_CONTROLLER :
+                STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE :
                     begin
                       if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, False) then
                       begin
                         Node^.TrainData.LinkedNode.AliasID := 0;
                         Node^.TrainData.LinkedNode.ID := NULL_NODE_ID;
                         NodeThread.AddEvent(TNodeEventReleaseController.Create(Node^.Info, TrainReleaseController.LinkedObj));
-                        TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK;  // There is no reply to this message
+                        TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK;  // There is no reply to this message
                       end;
                       TrainReleaseController.WatchDog := 0;
                       Exit;
                     end;
-                STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK :
+                STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK :
                     begin
                       if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, False) then
                       begin
@@ -389,10 +389,10 @@ begin
                       end;
                       Exit;
                     end;
-                STATE_SUB_RELEASE_CONTROLLER_WAIT :
+                STATE_THROTTLE_RELEASE_CONTROLLER_WAIT :
                     begin
                       if TrainReleaseController.WatchDog > 20 then
-                        TrainReleaseController.iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK;   // Something is wrong, bail out
+                        TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK;   // Something is wrong, bail out
                       Exit;
                     end;
               end;
@@ -717,9 +717,9 @@ begin
                     STATE_THROTTLE_RELEASE_CONTROLLER :
                         begin
                           if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
-                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE_CONTROLLER
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE
                           else
-                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK   // Can't reserve now go back to normal polling
+                            TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK   // Can't reserve now go back to normal polling
                         end;
                   end; // case
                 end;
