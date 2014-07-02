@@ -50,8 +50,6 @@ type
     FNextTask: TNodeTask;
     FNodeInfo: TNodeInfo;
     FWatchDog: LongWord;
-  protected
-    property NodeInfo: TNodeInfo read FNodeInfo write FNodeInfo;
   public
     FDestNodeInfo: TNodeInfo;
     constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject);
@@ -59,6 +57,7 @@ type
     property iStateMachine: Word read FiStateMachine write FiStateMachine;
     property iSubStateMachine: Word read FiSubStateMachine write FiSubStateMachine;
     property LinkedObj: TObject read FLinkedObj write FLinkedObj;
+    property NodeInfo: TNodeInfo read FNodeInfo write FNodeInfo;
     property Watchdog: LongWord read FWatchDog write FWatchDog;
     property DestNodeInfo: TNodeInfo read FDestNodeInfo write FDestNodeInfo;
   end;
@@ -139,7 +138,15 @@ type
 
   end;
 
+  { TNodeTaskSimpleTrainNodeInfo }
+
   TNodeTaskSimpleTrainNodeInfo = class(TNodeTask)
+
+  end;
+
+  { TNodeTaskSupportsProtocols }
+
+  TNodeTaskSupportsProtocols = class(TNodeTask)
 
   end;
 
@@ -245,6 +252,50 @@ type
 
   TNodeEventReleaseController = class(TNodeEvent)
 
+  end;
+
+  { TNodeEventSupportsProtocols }
+
+  TNodeEventSupportsProtocols = class(TNodeEvent)
+  private
+    FACDI: Boolean;
+    FCDI: Boolean;
+    FDatagram: Boolean;
+    FDisplay: Boolean;
+    FEdentification: Boolean;
+    FEventExchange: Boolean;
+    FFDI: Boolean;
+    FIdentification: Boolean;
+    FMemConfig: Boolean;
+    FProtocols: QWord;
+    FRemoteButton: Boolean;
+    FReservation: Boolean;
+    FSimpleProtocol: Boolean;
+    FSNIP: Boolean;
+    FSTNIP: Boolean;
+    FStream: Boolean;
+    FTeaching: Boolean;
+    FTraction: Boolean;
+    FTractionProxy: Boolean;
+  public
+    constructor Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject); reintroduce;
+    property SimpleProtocol: Boolean read FSimpleProtocol write FSimpleProtocol;
+    property Datagram: Boolean read FDatagram write FDatagram;
+    property Stream: Boolean read FStream write FStream;
+    property MemConfig: Boolean read FMemConfig write FMemConfig;
+    property Reservation: Boolean read FReservation write FReservation;
+    property EventExchange: Boolean read FEventExchange write FEventExchange;
+    property Identification: Boolean read FIdentification write FEdentification;
+    property Teaching: Boolean read FTeaching write FTeaching;
+    property RemoteButton: Boolean read FRemoteButton write FRemoteButton;
+    property ACDI: Boolean read FACDI write FACDI;
+    property Display: Boolean read FDisplay write FDisplay;
+    property SNIP: Boolean read FSNIP write FSNIP;
+    property CDI: Boolean read FCDI write FCDI;
+    property Traction: Boolean read FTraction write FTraction;
+    property FDI: Boolean read FFDI write FFDI;
+    property TractionProxy: Boolean read FTractionProxy write FTractionProxy;
+    property STNIP: Boolean read FSTNIP write FSTNIP;
   end;
 
   { TNodeEventThread }
@@ -414,6 +465,31 @@ const
   GRIDCONNECT_STATE_SYNC_FIND_X = 1;
   GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
   GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
+
+  { TNodeEventSupportsProtocols }
+
+  constructor TNodeEventSupportsProtocols.Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject);
+  begin
+    inherited Create(ANodeInfo, ALinkedObj);
+    FACDI := False;
+    FCDI := False;
+    FDatagram := False;
+    FDisplay := False;
+    FEdentification := False;
+    FEventExchange := False;
+    FFDI := False;
+    FIdentification := False;
+    FMemConfig := False;
+    FRemoteButton := False;
+    FReservation := False;
+    FSimpleProtocol := False;
+    FSNIP := False;
+    FSTNIP := False;
+    FStream := False;
+    FTraction := False;
+    FTractionProxy := False;
+    FTeaching := False;
+  end;
 
   { TNodeEventSimpleTrainNodeInfo }
 

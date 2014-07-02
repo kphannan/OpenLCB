@@ -999,7 +999,12 @@ begin
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventReleaseController(Event as TNodeEventReleaseController);
       end;
-
+      if TObject( EventList[i]) is TNodeEventSupportsProtocols then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventSupportsProtocols(Event as TNodeEventSupportsProtocols);
+      end;
 
 
       TObject( EventList[i]).Destroy

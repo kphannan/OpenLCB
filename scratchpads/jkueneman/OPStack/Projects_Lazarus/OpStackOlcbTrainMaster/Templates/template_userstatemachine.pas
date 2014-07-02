@@ -89,10 +89,15 @@ const
    STATE_THROTTLE_QUERY_FUNCTION             = 13;
    STATE_THROTTLE_FIND_TRAINS                = 14;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 15;
+   STATE_THROTTLE_PROTOCOL_SUPPORT           = 16;
 
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_START = 0;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT  = 1;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE  = 2;
+
+   STATE_THROTTLE_PROTOCOL_SUPPORT_SEND        = 0;
+   STATE_THROTTLE_PROTOCOL_SUPPORT_END         = 1;
+   STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT        = 2;
 
 var
   ProxyNode: TNodeInfo;
@@ -543,7 +548,27 @@ begin
                        UnLinkFirstTaskFromNode(Node, True);
                      end;
                 end;
-              end
+              end;
+          STATE_THROTTLE_PROTOCOL_SUPPORT :
+             begin
+               case TNodeTask( Node^.UserData).iSubStateMachine of
+                 STATE_THROTTLE_PROTOCOL_SUPPORT_SEND :
+                    begin
+                      if TrySendSupportInquiry(Node^.Info, TNodeTaskSupportsProtocols( Node^.UserData).FDestNodeInfo) then
+                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT
+                    end;
+                 STATE_THROTTLE_PROTOCOL_SUPPORT_END :
+                    begin
+                      Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                      UnLinkFirstTaskFromNode(Node, True);
+                    end;
+                 STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT :
+                    begin
+                      if  TNodeTask( Node^.UserData).Watchdog > 20 then
+                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_PROTOCOL_SUPPORT_END
+                    end;
+               end
+             end
       end
   end
 end;
@@ -764,8 +789,41 @@ end;
 //     Description : Called in response to a Protocol Support Request
 // *****************************************************************************
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Protocols: TNodeEventSupportsProtocols;
 begin
-
+  if Node^.iUserStateMachine = STATE_THROTTLE_PROTOCOL_SUPPORT then
+  begin
+    Protocols := TNodeEventSupportsProtocols.Create(Node^.Info, TNodeTask( Node^.UserData).LinkedObj);
+    if AMessage^.Buffer^.DataBufferSize > 0 then
+    begin
+      Protocols.SimpleProtocol := AMessage^.Buffer^.DataArray[0] and $80 <> 0;
+      Protocols.Datagram := AMessage^.Buffer^.DataArray[0] and $40 <> 0;
+      Protocols.Stream := AMessage^.Buffer^.DataArray[0] and $20 <> 0;
+      Protocols.MemConfig := AMessage^.Buffer^.DataArray[0] and $10 <> 0;
+      Protocols.Reservation := AMessage^.Buffer^.DataArray[0] and $08 <> 0;
+      Protocols.EventExchange := AMessage^.Buffer^.DataArray[0] and $04 <> 0;
+      Protocols.Identification := AMessage^.Buffer^.DataArray[0] and $02 <> 0;
+      Protocols.Teaching := AMessage^.Buffer^.DataArray[0] and $01 <> 0;
+    end;
+    if AMessage^.Buffer^.DataBufferSize > 1 then
+    begin
+      Protocols.RemoteButton := AMessage^.Buffer^.DataArray[1] and $80 <> 0;
+      Protocols.ACDI := AMessage^.Buffer^.DataArray[1] and $40 <> 0;
+      Protocols.Display := AMessage^.Buffer^.DataArray[1] and $20 <> 0;
+      Protocols.SNIP := AMessage^.Buffer^.DataArray[1] and $10 <> 0;
+      Protocols.CDI := AMessage^.Buffer^.DataArray[1] and $08 <> 0;
+      Protocols.Traction := AMessage^.Buffer^.DataArray[1] and $04 <> 0;
+      Protocols.FDI := AMessage^.Buffer^.DataArray[1] and $02 <> 0;
+      Protocols.TractionProxy := AMessage^.Buffer^.DataArray[1] and $01 <> 0;
+    end;
+    if AMessage^.Buffer^.DataBufferSize > 2 then
+    begin
+      Protocols.STNIP := AMessage^.Buffer^.DataArray[2] and $80 <> 0;
+    end;
+    NodeThread.AddEvent(Protocols);
+    TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_PROTOCOL_SUPPORT_END;
+  end;
 end;
 
 // *****************************************************************************

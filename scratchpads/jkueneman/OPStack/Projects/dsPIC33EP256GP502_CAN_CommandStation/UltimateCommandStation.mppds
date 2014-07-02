@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_userstatemachine.mpas
+Value=Templates\template_configmem.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -16,7 +16,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [FILES]
-Count=48
+Count=50
 File0=UltimateCommandStation.mpas
 File1=Templates\template_buffers.mpas
 File2=Templates\template_configmem.mpas
@@ -65,13 +65,15 @@ File44=Templates\template_userstatemachine.mpas
 File45=..\..\NMRAnet\opstack_api.mpas
 File46=Templates\MCU_Setup_dsPIC33EP256GP502.mpas
 File47=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_Traps.mpas
+File48=Templates\template_node_fdi.mpas
+File49=Templates\template_vnode_fdi.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=9
 File0=UltimateCommandStation.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=Templates\template_buffers.mpas
@@ -80,6 +82,7 @@ File4=..\..\NMRAnet\opstacknode.mpas
 File5=Templates\template_node.mpas
 File6=..\..\NMRAnet\opstackcore_stnip.mpas
 File7=..\..\ConfigurationLayerImplementations\_M25P80_SPI\template_configuration.mpas
+File8=Templates\template_configmem.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

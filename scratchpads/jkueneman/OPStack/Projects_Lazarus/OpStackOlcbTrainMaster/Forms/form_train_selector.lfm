@@ -1,17 +1,18 @@
 object FormTrainSelector: TFormTrainSelector
   Left = 412
-  Height = 318
+  Height = 282
   Top = 209
-  Width = 470
+  Width = 474
   Caption = 'OpenLCB Train Selector'
-  ClientHeight = 318
-  ClientWidth = 470
+  ClientHeight = 282
+  ClientWidth = 474
   LCLVersion = '1.2.0.3'
   object ButtonOk: TButton
-    Left = 176
+    Left = 184
     Height = 22
-    Top = 280
+    Top = 240
     Width = 125
+    Anchors = [akRight, akBottom]
     Caption = 'Ok'
     ModalResult = 1
     TabOrder = 0
@@ -19,19 +20,33 @@ object FormTrainSelector: TFormTrainSelector
   object ButtonCancel: TButton
     Left = 320
     Height = 22
-    Top = 280
+    Top = 240
     Width = 125
+    Anchors = [akRight, akBottom]
     Caption = 'Cancel'
     ModalResult = 2
     TabOrder = 1
   end
   object TreeViewTrainList: TTreeView
     Left = 0
-    Height = 272
+    Height = 232
     Top = 0
-    Width = 470
+    Width = 474
     Align = alTop
+    Anchors = [akTop, akLeft, akRight, akBottom]
     DefaultItemHeight = 18
     TabOrder = 2
+  end
+  object StatusBar: TStatusBar
+    Left = 0
+    Height = 15
+    Top = 267
+    Width = 474
+    Panels = <    
+      item
+        Text = 'Status:'
+        Width = 50
+      end>
+    SimplePanel = False
   end
 end

@@ -91,7 +91,6 @@ type
     ActionFunction0: TAction;
     ActionAllocationEditCustomization: TAction;
     ActionAllocationLoadEffectsFile: TAction;
-    ActionAllocationFree: TAction;
     ActionAllocationRelease: TAction;
     ActionAllocationByList: TAction;
     ActionAllocationByAddress: TAction;
@@ -100,7 +99,6 @@ type
     ButtonAllocateTrainByAddress: TButton;
     ButtonEditConfiguration: TButton;
     ButtonEStop: TButton;
-    ButtonFreeTrain: TButton;
     ButtonQueryFunctions: TButton;
     ButtonQuerySpeed: TButton;
     ButtonReleaseTrain: TButton;
@@ -235,6 +233,7 @@ type
     procedure EventIsTrain(Event: TNodeEventIsTrain);
     procedure EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
     procedure EventReleaseController(Event: TNodeEventReleaseController);
+    procedure EventSupportsProtocols(Event: TNodeEventSupportsProtocols);
     procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
@@ -370,7 +369,6 @@ begin
   if not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
     NodeThread.AddTask( TNodeTaskReleaseController.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_RELEASE_CONTROLLER, Self));
   NodeThread.AddTask( TNodeTaskAllocateDestroyNode.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FREE, Self));
-  ActionAllocationFree.Execute;
   CloseAction := caFree;
 
 end;
@@ -424,6 +422,7 @@ begin
   FormSelector := TFormTrainSelector.Create(Self);
   try
     UpdateUI;
+    FormSelector.UpdateStatus(0, 'Status: Looking for Trains...');
     if FormSelector.ShowModal = mrOK then
     begin
 
@@ -848,6 +847,13 @@ end;
 procedure TFormThrottle.TimerGeneralTimer(Sender: TObject);
 begin
   TimerGeneral.Enabled := False;
+  if TimerType = tt_AllocateByList then
+  begin
+    if FormSelector.TreeViewTrainList.Items.Count > 0 then
+      FormSelector.UpdateStatus(0, 'Status: Please select a train to run')
+    else
+      FormSelector.UpdateStatus(0, 'Status: Sorry could not find any trains on the network')
+  end;
   TimerType := tt_None;
 end;
 
@@ -948,9 +954,15 @@ begin
   RadioGroupDirection.OnClick := @RadioGroupDirectionClick;
 end;
 
+procedure TFormThrottle.EventSupportsProtocols(Event: TNodeEventSupportsProtocols);
+begin
+  beep;
+end;
+
 procedure TFormThrottle.EventTrainAllocated(Event: TNodeEventThrottleAssignedToTrain);
 begin
   FTrainNodeInfo := Event.TrainNodeInfo;
+  NodeThread.AddTask( TNodeTaskSupportsProtocols.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_PROTOCOL_SUPPORT, Self));
   UpdateUI;
 end;
 
@@ -1109,10 +1121,9 @@ end;
 procedure TFormThrottle.UpdateUI;
 begin
   PanelMain.Enabled := FormSelector = nil;
-  ActionAllocationEditCustomization.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo); ;
+  ActionAllocationEditCustomization.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   ActionAllocationByList.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   ActionAllocationByAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-//  ActionAllocationFree.Enabled := TrainNodeInfo <> 0; ;
   ActionAllocationRelease.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   GroupBoxFunctions.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
   GroupBoxControl.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
@@ -1126,9 +1137,9 @@ begin
 
   Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
   UpdateAddressRange;
-  UpdateStatus(0, 'Cab - Alias: 0x' + IntToHex(ThrottleNodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(ThrottleNodeInfo.ID));
+  UpdateStatus(0, 'Throttle: 0x' + IntToHex(ThrottleNodeInfo.AliasID, 4) + ' [0x' + NodeIDToDotHex(ThrottleNodeInfo.ID)  + ']');
   if not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
-    UpdateStatus(1, 'Train - Alias: 0x' + IntToHex(TrainNodeInfo.AliasID, 4) + '   NodeID: 0x' + NodeIDToDotHex(TrainNodeInfo.ID))
+    UpdateStatus(1, 'Train: 0x' + IntToHex(TrainNodeInfo.AliasID, 4) + ' [0x' + NodeIDToDotHex(TrainNodeInfo.ID) + ']')
   else
     UpdateStatus(1, '');
 end;

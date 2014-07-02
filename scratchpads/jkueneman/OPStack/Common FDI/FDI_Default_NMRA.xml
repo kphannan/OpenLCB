@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?xml-stylesheet type='text/xsl' href='http://openlcb.org/trunk/prototypes/xml/xslt/fdi.xsl'?>
-<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi_jimk.xsd">
+<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi.xsd">
   <segment space="250" origin="0">
     <name>Default NMRA Functions</name>
     <description>Generic mapping of the NMRA functions</description>
@@ -84,11 +84,14 @@
       <function>
         <name>F25</name>
       </function>
-       <function>
+      <function>
         <name>F26</name>
       </function>
-       <function>
+      <function>
         <name>F27</name>
+      </function>
+       <function>
+        <name>F28</name>
       </function>
     </group>
   </segment>

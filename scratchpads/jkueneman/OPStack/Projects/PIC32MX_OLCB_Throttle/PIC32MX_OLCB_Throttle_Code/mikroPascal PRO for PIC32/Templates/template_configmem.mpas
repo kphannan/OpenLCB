@@ -58,6 +58,7 @@ begin
   Result := False;
   case AddressSpace of
     MSI_CDI,
+    MSI_FDI,
     MSI_ACDI_MFG,
     MSI_ALL        : Result := True;
   end;

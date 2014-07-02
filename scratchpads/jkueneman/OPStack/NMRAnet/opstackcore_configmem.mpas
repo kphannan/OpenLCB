@@ -8,8 +8,14 @@ interface
 
 uses
   template_node,
+  {$IFDEF SUPPORT_NODE_FDI}
+  template_node_fdi,
+  {$ENDIF}
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   template_vnode,
+  {$IFDEF SUPPORT_VIRTUAL_NODE_FDI}
+  template_vnode_fdi,
+  {$ENDIF}
   {$ENDIF}
   template_configuration,
   template_configmem,
@@ -283,9 +289,19 @@ begin
           end;
       MSI_FDI :
           begin
-      //      AppCallback_ReadFDI(ConfigAddress, ReadCount, PByte( @DatagramBufferPtr^.DataArray[DataOffset]));
-            for i := 0 to ReadCount - 1 do
-              DatagramBufferPtr^.DataArray[DataOffset+i] := $AA;      // TEMPORARY
+            {$IFDEF SUPPORT_VIRTUAL_NODES}
+            {$IFDEF SUPPORT_VIRTUAL_NODE_FDI}
+            if Node^.State and NS_VIRTUAL <> 0 then
+            begin
+               for i := 0 to ReadCount - 1 do
+                DatagramBufferPtr^.DataArray[DataOffset+i] := USER_FDI_VNODE_ARRAY[i+ConfigAddress]
+            end else {$ENDIF}{$ENDIF}
+            begin
+              {$IFDEF SUPPORT_NODE_FDI}
+              for i := 0 to ReadCount - 1 do
+                 DatagramBufferPtr^.DataArray[DataOffset+i] := USER_FDI_ARRAY[i+ConfigAddress];
+              {$ENDIF}
+            end;
           end;
   end;
   Result := True;

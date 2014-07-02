@@ -144,17 +144,17 @@ object FormThrottle: TFormThrottle
     end
     object GroupBoxConfiguration: TGroupBox
       Left = 392
-      Height = 78
-      Top = 379
+      Height = 72
+      Top = 352
       Width = 185
       Caption = 'Configuration'
-      ClientHeight = 56
+      ClientHeight = 50
       ClientWidth = 177
       TabOrder = 1
       object ButtonEditConfiguration: TButton
         Left = 12
         Height = 22
-        Top = 9
+        Top = 14
         Width = 155
         Action = ActionAllocationEditCustomization
         TabOrder = 0
@@ -209,11 +209,11 @@ object FormThrottle: TFormThrottle
     end
     object GroupBoxAllocation: TGroupBox
       Left = 392
-      Height = 368
+      Height = 336
       Top = 8
       Width = 185
       Caption = 'Train Allocation'
-      ClientHeight = 346
+      ClientHeight = 314
       ClientWidth = 177
       TabOrder = 4
       object LabelAddress: TLabel
@@ -240,14 +240,6 @@ object FormThrottle: TFormThrottle
         Action = ActionAllocationRelease
         TabOrder = 1
       end
-      object ButtonFreeTrain: TButton
-        Left = 10
-        Height = 22
-        Top = 310
-        Width = 155
-        Action = ActionAllocationFree
-        TabOrder = 2
-      end
       object RadioGroupSpeedStep: TRadioGroup
         Left = 10
         Height = 100
@@ -272,7 +264,7 @@ object FormThrottle: TFormThrottle
           '128 Step'
         )
         OnClick = RadioGroupSpeedStepClick
-        TabOrder = 3
+        TabOrder = 2
       end
       object ButtonSearchForTrain: TButton
         Left = 10
@@ -280,7 +272,7 @@ object FormThrottle: TFormThrottle
         Top = 246
         Width = 155
         Action = ActionAllocationByList
-        TabOrder = 4
+        TabOrder = 3
       end
       object SpinEditAddress: TSpinEdit
         Left = 10
@@ -289,7 +281,7 @@ object FormThrottle: TFormThrottle
         Width = 157
         Font.Height = -16
         ParentFont = False
-        TabOrder = 5
+        TabOrder = 4
         Value = 3
       end
       object RadioGroupShortLong: TRadioGroup
@@ -316,7 +308,7 @@ object FormThrottle: TFormThrottle
           'Long'
         )
         OnClick = RadioGroupShortLongClick
-        TabOrder = 6
+        TabOrder = 5
       end
     end
     object ButtonShowHideAllocatePanel: TButton
@@ -335,8 +327,8 @@ object FormThrottle: TFormThrottle
     Width = 588
     Panels = <    
       item
-        Text = 'Status: '
-        Width = 300
+        Style = psOwnerDraw
+        Width = 280
       end    
       item
         Width = 50
@@ -367,12 +359,6 @@ object FormThrottle: TFormThrottle
       Caption = 'Release'
       Enabled = False
       OnExecute = ActionAllocationReleaseExecute
-    end
-    object ActionAllocationFree: TAction
-      Category = 'Allocation'
-      Caption = 'Free'
-      Enabled = False
-      OnExecute = ActionAllocationFreeExecute
     end
     object ActionAllocationLoadEffectsFile: TAction
       Category = 'Allocation'
