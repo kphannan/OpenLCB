@@ -1,56 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?xml-stylesheet type="text/xsl" href="http://openlcb.org/trunk/prototypes/xml/xslt/fdi.xsl"?>
-<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi.xsd">
+<fdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/prototypes/xml/schema/fdi_jimk.xsd">
   <segment origin="0" space="250">
+    <name>Function Definition for a SoundTraxx Narrow Guage Loco</name>
     <group>
       <name>Locomotive Sounds</name>
-      <function kind="binary" latch="true">
+      <function>
         <name>Headlights</name>
         <number>0</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Dimmer</name>
         <number>7</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Bell</name>
         <number>1</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Whistle</name>
         <number>2</number>
       </function>
-      <function kind="binary" latch="false">
+      <function>
         <name>Short Whistle</name>
         <number>3</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Hiss</name>
         <number>4</number>
       </function>
     </group>
     <group>
       <name>Train Sounds</name>
-      <function kind="binary" latch="true">
+      <function>
         <name>Water Stop</name>
         <number>5</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Coupler</name>
         <number>6</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Brake Squeal</name>
         <number>11</number>
       </function>
-      <function kind="binary" latch="true">
+      <function>
         <name>Injectors</name>
         <number>12</number>
       </function>
     </group>
     <group>
       <name>Misc Functions</name>
-      <function kind="binary" latch="true">
+      <function>
         <name>Mute</name>
         <number>8</number>
       </function>

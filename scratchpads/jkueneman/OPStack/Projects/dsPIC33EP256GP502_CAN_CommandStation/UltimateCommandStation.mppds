@@ -16,7 +16,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [FILES]
-Count=50
+Count=49
 File0=UltimateCommandStation.mpas
 File1=Templates\template_buffers.mpas
 File2=Templates\template_configmem.mpas
@@ -65,8 +65,7 @@ File44=Templates\template_userstatemachine.mpas
 File45=..\..\NMRAnet\opstack_api.mpas
 File46=Templates\MCU_Setup_dsPIC33EP256GP502.mpas
 File47=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_Traps.mpas
-File48=Templates\template_node_fdi.mpas
-File49=Templates\template_vnode_fdi.mpas
+File48=Templates\template_vnode_fdi.mpas
 [BINARIES]
 Count=0
 [IMAGES]
