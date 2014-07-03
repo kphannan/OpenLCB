@@ -43,8 +43,7 @@ begin
           begin
             case OPStackMessage^.Buffer^.DataArray[0] of
       //        DATAGRAM_TYPE_BOOTLOADER,
-              DATAGRAM_TYPE_MEMORY_CONFIGURATION,
-              DATAGRAM_TYPE_TRAIN_CONTROL :
+              DATAGRAM_TYPE_MEMORY_CONFIGURATION :
                   begin                                                         // Allocate a message for a full MTI_DATRGRAM and return the pointer to the message
                     if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID, 0) then
                     begin
@@ -93,8 +92,7 @@ begin
             DatagramMessage := InProcessMessage;                                        // Return the completed message
             case InProcessMessage^.Buffer^.DataArray[0] of
      //         DATAGRAM_TYPE_BOOTLOADER,
-              DATAGRAM_TYPE_MEMORY_CONFIGURATION,
-              DATAGRAM_TYPE_TRAIN_CONTROL :  Result := DATAGRAM_PROCESS_ERROR_OK // Send it back to be dispatched
+              DATAGRAM_TYPE_MEMORY_CONFIGURATION :  Result := DATAGRAM_PROCESS_ERROR_OK // Send it back to be dispatched
             else
               Result := DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED;              // Unknown Datagram type
             end
@@ -134,7 +132,7 @@ begin
         OPStackBuffers_CopyDataArray(@NewBuffer, @DatagramBuffer^.DataArray, LocalOutgoingMessage^.Buffer^.DataBufferSize, True);
         NewMessage.Buffer^.DataBufferSize := LocalOutgoingMessage^.Buffer^.DataBufferSize;
         OPStackCANStatemachineBuffers_RemoveOutgoingDatagramMessage(LocalOutgoingMessage);
-        OutgoingMessage(@NewMessage);
+        OutgoingMessage(@NewMessage, True);
         Exit;
       end else
       if PDatagramBuffer( PByte( LocalOutgoingMessage^.Buffer))^.CurrentCount = 0 then
@@ -159,7 +157,7 @@ begin
         if NewBuffer.DataBufferSize = 8 then
           Break;
       end;
-      OutgoingMessage(@NewMessage);
+      OutgoingMessage(@NewMessage, True);
     end;
   end;
 end;

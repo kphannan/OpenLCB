@@ -64,7 +64,7 @@ begin
       else
         LocalMessage.FramingBits := $30;                                        // Upper nibble = $30 means middle frame
 
-      OutgoingMessage(@LocalMessage);
+      OutgoingMessage(@LocalMessage, True);
 
       if MultiFrameBufferPtr^.CurrentCount >= MultiFrameBufferPtr^.DataBufferSize then
       begin

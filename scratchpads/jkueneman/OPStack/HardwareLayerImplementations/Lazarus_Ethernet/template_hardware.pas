@@ -25,8 +25,8 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
-procedure OutgoingCriticalMessage(AMessage: POPStackMessage);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
-procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage; FreeMessage: Boolean);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
+procedure OutgoingMessage(AMessage: POPStackMessage; FreeMessage: Boolean);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 procedure ProcessHardwareMessages;
 function IsOutgoingBufferAvailable: Boolean;
 
@@ -136,9 +136,9 @@ begin
   end;
 end;
 
-procedure OutgoingCriticalMessage(AMessage: POPStackMessage);
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage; FreeMessage: Boolean);
 begin
-  OutgoingMessage(AMessage)  // For Ethernet this is no different than a nomral Message
+  OutgoingMessage(AMessage, FreeMessage)  // For Ethernet this is no different than a nomral Message
 end;
 
 // *****************************************************************************
@@ -149,7 +149,7 @@ end;
 //                   IsOutgoingBufferAvailable before to ensure a buffer is
 //                   available to use
 // *****************************************************************************
-procedure OutgoingMessage(AMessage: POPStackMessage);
+procedure OutgoingMessage(AMessage: POPStackMessage; FreeMessage: Boolean);
 var
   GridConnectStr: TGridConnectString;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
@@ -160,7 +160,8 @@ begin
         begin
           OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
           GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GridConnectStr);
-          OPStackBuffers_DeAllocateMessage(AMessage);
+          if FreeMessage then
+            OPStackBuffers_DeAllocateMessage(AMessage);
           {$IFDEF FPC}
              NodeThread.SendMessage(GridConnectStr + LF);
           {$ENDIF}

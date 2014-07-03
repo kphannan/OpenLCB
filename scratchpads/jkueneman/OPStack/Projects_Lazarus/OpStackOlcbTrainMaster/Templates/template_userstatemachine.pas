@@ -60,8 +60,6 @@ procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
-procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
-
 const
    STATE_CAB_SEND_QUERY = 0;
    STATE_CAB_WAIT_QUERY = 1;
@@ -128,43 +126,6 @@ implementation
     {$ENDIF}
   {$ENDIF}
 {$ENDIF}
-
-procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
-var
-  Task: TNodeTask;
-begin
-  if Assigned(Node^.UserData) then
-  begin
-    Task := TNodeTask( Node^.UserData);
-    if Assigned(Task.NextTask) then
-    begin
-      while Assigned( Task.NextTask) do
-      begin
-        if Assigned(Task.NextTask.NextTask) then
-          Task := Task.NextTask
-        else begin
-          Task.NextTask.NextTask := NewTask;
-          Break;
-        end;
-      end;
-    end else
-       Task.NextTask := NewTask
-  end else
-    Node^.UserData := NewTask;
-end;
-
-procedure UnLinkFirstTaskFromNode(Node: PNMRANetNode; FreeTask: Boolean);
-var
-  Task: TNodeTask;
-begin
-  if Assigned(Node^.UserData) then
-  begin
-    Task := TNodeTask( Node^.UserData);
-    Node^.UserData := Task.NextTask;
-    if FreeTask then
-      FreeAndNil(Task)
-  end;
-end;
 
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize

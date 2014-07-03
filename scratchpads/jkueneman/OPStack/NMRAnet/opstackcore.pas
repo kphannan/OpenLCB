@@ -170,7 +170,7 @@ begin
                 {$ENDIF}
                 MTI_OPTIONAL_INTERACTION_REJECTED  : begin {TODO: What to do if one of the messages is Rejected!} end
               else
-                  OptionalInteractionRejected(DestNode^.Info.AliasID, SourceNode^.Info.AliasID, DestNode^.Info.ID, SourceNode^.Info.ID, AMessage^.MTI, True);        // Unknown message, permenent error
+                 OptionalInteractionRejected(DestNode^.Info.AliasID, AMessage^.Source.AliasID, DestNode^.Info.ID, AMessage^.Source.ID, AMessage^.MTI, True);         // Unknown message, permenent error
               end; {case}
             end                                                      // It is not for of or our nodes
           end else
@@ -258,7 +258,7 @@ begin
                      begin
                        NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                        OPStackMessage^.Buffer^.DataBufferSize := 6;
-                       OutgoingMessage(OPStackMessage); // Tell the network we are leaving
+                       OutgoingMessage(OPStackMessage, True); // Tell the network we are leaving
                        DoDeallocate := True;
                      end;
       end else
@@ -353,12 +353,7 @@ begin
               Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
             end;
         {$ENDIF}
-        MTI_DATAGRAM :
-            begin
-              if DatagramSendAckReply(Node, MessageToSend, NextMessage^.Dest, NextMessage^.Source, PDatagramBuffer( PByte( NextMessage^.Buffer))) then
-                DatagramReplyHandler(Node, MessageToSend, NextMessage);
-              Result :=  MessageToSend <> nil
-            end
+        MTI_DATAGRAM : Result := DatagramReplyHandler(Node, MessageToSend, NextMessage)
       else begin
           OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
           OPStackBuffers_DeAllocateMessage(NextMessage);
@@ -441,7 +436,7 @@ begin
           end;
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, CAN_MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
           begin
-            OutgoingMessage(OPStackMessage);
+            OutgoingMessage(OPStackMessage, True);
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
           end
         end;
@@ -473,7 +468,7 @@ begin
           if IsOutgoingBufferAvailable then
             if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
             begin
-              OutgoingMessage(OPStackMessage);
+              OutgoingMessage(OPStackMessage, True);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
             end
         end
@@ -490,7 +485,7 @@ begin
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
-              OutgoingMessage(OPStackMessage);
+              OutgoingMessage(OPStackMessage, True);
               OPStackNode_SetState(Node, NS_PERMITTED);
               Node^.iStateMachine := STATE_NODE_INITIALIZED;
             end
@@ -508,7 +503,7 @@ begin
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
-              OutgoingMessage(OPStackMessage);
+              OutgoingMessage(OPStackMessage, True);
               OPStackNode_SetState(Node, NS_INITIALIZED);
               Node^.iStateMachine := STATE_NODE_LOGIN_IDENTIFY_EVENTS;
             end
@@ -555,16 +550,16 @@ begin
         if IsOutgoingBufferAvailable then
         begin
           if NodeRunPCERFlagsReply(Node, OPStackMessage) then
-            OutgoingMessage(OPStackMessage)
+            OutgoingMessage(OPStackMessage, True)
           else
           if NodeRunFlagsReply(Node, OPStackMessage) then
-            OutgoingMessage(OPStackMessage)
+            OutgoingMessage(OPStackMessage, True)
           else
           if NodeRunEventFlagsReply(Node, OPStackMessage) then
-            OutgoingMessage(OPStackMessage)
+            OutgoingMessage(OPStackMessage, True)
           else
           if NodeRunMessageBufferReply(Node, OPStackMessage) then
-            OutgoingMessage(OPStackMessage);
+            OutgoingMessage(OPStackMessage, True);
           ProcessMarkedForDelete(Node);                                           // Handle vNodes marked to be deleted
           ProcessAbandonMessages(Node);
         end;
@@ -577,7 +572,7 @@ begin
           begin
             NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
-            OutgoingMessage(OPStackMessage);
+            OutgoingMessage(OPStackMessage, True);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
             Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
@@ -591,7 +586,7 @@ begin
           begin
             NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
-            OutgoingMessage(OPStackMessage);
+            OutgoingMessage(OPStackMessage, True);
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
             Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
@@ -604,7 +599,7 @@ begin
           begin
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             PEventID( @OPStackMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
-            OutgoingMessage(OPStackMessage);
+            OutgoingMessage(OPStackMessage, True);
             Node^.iStateMachine := STATE_NODE_OFFLINE;
           end
       end;

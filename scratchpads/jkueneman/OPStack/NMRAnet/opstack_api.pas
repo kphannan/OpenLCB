@@ -41,6 +41,7 @@ function TrySendRemoteButtonRequest(var Source: TNodeInfo; var Dest: TNodeInfo; 
 // Snip/Snii
 function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
 // Traction
+{$IFDEF SUPPORT_TRACTION}
 function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function TrySendTractionFunctionSet(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord; Value: Word): Boolean;
 function TrySendTractionSpeedSet(var Source: TNodeInfo; var Dest: TNodeInfo; Speed: THalfFloat): Boolean;
@@ -53,11 +54,14 @@ function TrySendTractionManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; 
 function TrySendTractionQuerySpeed(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function TrySendTractionQueryFunction(var Source: TNodeInfo; var Dest: TNodeInfo; FunctionAddress: DWord): Boolean;
 function TrySendTractionEmergencyStop(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+{$ENDIF}
 // Traction Proxy
+{$IFDEF SUPPORT_TRACTION_PROXY}
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
 function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; var AllocatedNodeID: TNodeInfo; TrainID: Word): Boolean;
 function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
+{$ENDIF}
 // Configuration Memeory
 function TrySendConfigMemoryRead(var Source: TNodeInfo; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
 
@@ -96,7 +100,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_VERIFY_NODE_ID_NUMBER_DEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -111,7 +115,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_VERIFY_NODE_ID_NUMBER, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -126,7 +130,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -143,7 +147,7 @@ begin
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -160,7 +164,7 @@ begin
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -175,7 +179,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENTS_IDENTIFY_DEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -190,7 +194,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENTS_IDENTIFY, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -207,7 +211,7 @@ begin
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -224,7 +228,7 @@ begin
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -241,7 +245,7 @@ begin
     begin
       NewMessage^.Buffer^.DataArray := DataBuffer^.DataArray;
       NewMessage^.Buffer^.DataBufferSize := DataBuffer^.DataBufferSize;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -256,7 +260,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -273,7 +277,7 @@ begin
   if IsOutgoingBufferAvailable then
     if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
     begin
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -294,7 +298,7 @@ begin
       NewMessage^.Buffer^.DataArray[3] := FunctionAddress;
       NewMessage^.Buffer^.DataArray[4] := Hi( Value);
       NewMessage^.Buffer^.DataArray[5] := Lo( Value);
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -312,7 +316,7 @@ begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_SPEED_DIR;
       NewMessage^.Buffer^.DataArray[1] := Hi( Speed);
       NewMessage^.Buffer^.DataArray[2] := Lo( Speed);
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -370,7 +374,7 @@ begin
       MultiFrameBuffer^.DataArray[9] := Hi( NodeID.AliasID);
       MultiFrameBuffer^.DataArray[10] := Lo( NodeID.AliasID);
       MultiFrameBuffer^.DataBufferSize := 11;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -387,7 +391,7 @@ begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG; // Manage Proxy
       NewMessage^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
       NewMessage^.Buffer^.DataBufferSize := 2;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -407,7 +411,7 @@ begin
       else
         NewMessage^.Buffer^.DataArray[1] := TRACTION_MANAGE_RELEASE;
       NewMessage^.Buffer^.DataBufferSize := 2;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -425,7 +429,7 @@ begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_MANAGE;
       NewMessage^.Buffer^.DataArray[1] := TRACTION_MANAGE_RESERVE;
       NewMessage^.Buffer^.DataArray[2] := ResultFlag;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end;
   end;
@@ -442,7 +446,7 @@ begin
     begin
       NewMessage^.Buffer^.DataBufferSize := 1;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end;
   end;
@@ -462,7 +466,7 @@ begin
       NewMessage^.Buffer^.DataArray[1] := FunctionAddress shr 16;
       NewMessage^.Buffer^.DataArray[2] := FunctionAddress shr 8;
       NewMessage^.Buffer^.DataArray[3] := FunctionAddress;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end;
   end;
@@ -479,12 +483,14 @@ begin
     begin
       NewMessage^.Buffer^.DataBufferSize := 1;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_E_STOP;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end;
   end;
 end;
+{$ENDIF}
 
+{$IFDEF SUPPORT_TRACTION_PROXY}
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 var
   NewMessage: POPStackMessage;
@@ -500,7 +506,7 @@ begin
       else
         NewMessage^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RELEASE;
       NewMessage^.Buffer^.DataBufferSize := 2;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -521,7 +527,7 @@ begin
       NewMessage^.Buffer^.DataArray[4] := Param0;        // DCC Speed Step
       NewMessage^.Buffer^.DataArray[5] := Param1;        //
       NewMessage^.Buffer^.DataBufferSize := 6;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
 end;
@@ -547,7 +553,7 @@ begin
       NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@AllocatedNodeID.ID, PSimpleDataArray( PByte( @MultiFrameBuffer^.DataArray[5])));
       MultiFrameBuffer^.DataArray[11] := Hi(AllocatedNodeID.AliasID);
       MultiFrameBuffer^.DataArray[12] := Lo(AllocatedNodeID.AliasID);
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end
   end
@@ -566,11 +572,13 @@ begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
       NewMessage^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
       NewMessage^.Buffer^.DataArray[2] := ResultFlag;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end;
   end;
 end;
+
+{$ENDIF}
 
 function TrySendConfigMemoryRead(var Source: TNodeInfo; var Dest: TNodeInfo;
   AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
@@ -591,12 +599,10 @@ begin
       NewMessage^.Buffer^.DataArray[5] := Byte( StartAddress);
       NewMessage^.Buffer^.DataArray[6] := AddressSpace;
       NewMessage^.Buffer^.DataArray[7] := ReadCount;
-      OutgoingMessage(NewMessage);
+      OutgoingMessage(NewMessage, True);
       Result := True;
     end;
   end;
 end;
-
-{$ENDIF}
 
 end.

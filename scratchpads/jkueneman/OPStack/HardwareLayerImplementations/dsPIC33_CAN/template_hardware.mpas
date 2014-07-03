@@ -17,8 +17,8 @@ procedure Hardware_Initialize;
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
 
-procedure OutgoingCriticalMessage(AMessage: POPStackMessage);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
-procedure OutgoingMessage(AMessage: POPStackMessage);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage; FreeMessage: Boolean);  // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
+procedure OutgoingMessage(AMessage: POPStackMessage; FreeMessage: Boolean);          // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
 procedure ProcessHardwareMessages;
 function IsOutgoingBufferAvailable: Boolean;
 
@@ -131,7 +131,7 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure OutgoingCriticalMessage(AMessage: POPStackMessage);
+procedure OutgoingCriticalMessage(AMessage: POPStackMessage; FreeMessage: Boolean);
 var
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
 begin
@@ -142,7 +142,8 @@ begin
       OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
       dsPIC33_StartCANHighPriorityMessageEngine(@NMRAnetCanBuffer, True);
       Hardware.OutgoingHighPriortyTxBufferEmpty := True;
-      OPStackBuffers_DeAllocateMessage(AMessage);
+      if FreeMessage then
+        OPStackBuffers_DeAllocateMessage(AMessage);
     end;
   end else
   begin
@@ -158,7 +159,7 @@ end;
 //                   IsOutgoingBufferAvailable before to ensure a buffer is
 //                   available to use
 // *****************************************************************************
-procedure OutgoingMessage(AMessage: POPStackMessage);
+procedure OutgoingMessage(AMessage: POPStackMessage; FreeMessage: Boolean);
 var
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
 begin
@@ -170,7 +171,8 @@ begin
             OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
             dsPIC33_StartTransmission(@NMRAnetCanBuffer, True);
             Hardware.OutgoingTxBufferEmpty := True;
-            OPStackBuffers_DeAllocateMessage(AMessage);
+            if FreeMessage then
+              OPStackBuffers_DeAllocateMessage(AMessage);
           end;
       {$IFDEF SUPPORT_STREAMS}
       MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage);     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames

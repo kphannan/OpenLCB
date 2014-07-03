@@ -75,7 +75,6 @@ procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; FramingBits: Byte);
-procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 
 // Zero buffer helpers
@@ -95,9 +94,6 @@ function AllocateStreamDestID: Byte;
 procedure OPStackBuffers_CopyData(DestData, SourceData: PSimpleBuffer);
 procedure OPStackBuffers_CopyDataArray(DestData: PSImpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; ClearDestSize: Boolean);
 procedure OPStackBuffers_CopyDataArrayWithSourceOffset(DestData: PSimpleBuffer; SourceDataArray: PSimpleDataArray; Count: Word; SourceOffset: Word);
-
-// Message Node ID helpers
-procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
 
 {$IFNDEF FPC}
 procedure OPStackBuffers_PrintBuffers;
@@ -551,17 +547,6 @@ begin
   end;
 end;
 
-procedure OPStackBuffers_LoadDatagramOkMessage(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; Flags: Byte);
-begin
-  OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM_OK_REPLY, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
-  if Flags <> 0 then
-  begin
-    AMessage^.Buffer^.DataBufferSize := 1;
-    AMessage^.Buffer^.DataArray[0] := Flags;
-  end else
-   AMessage^.Buffer^.DataBufferSize := 0;
-end;
-
 procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
 begin
   OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
@@ -621,7 +606,7 @@ begin
   ABuffer^.DataBufferSize := 0;
   ABuffer^.CurrentCount := 0;
   ABuffer^.ResendCount := 0;
-  ABuffer^.NextWaitingForAck := nil;
+  ABuffer^.iStateMachine := 0;
 end;
 
 {$IFDEF SUPPORT_STREAMS}
@@ -753,18 +738,6 @@ begin
     DestData^.DataArray[DestData^.DataBufferSize] := SourceDataArray^[DestData^.DataBufferSize+SourceOffset];
     Inc(DestData^.DataBufferSize);
   end
-end;
-
-procedure OPStackBuffers_SwapDestAndSourceIDs(AMessage: POPStackMessage);
-var
-  Temp: TNodeInfo;
-begin
-  Temp.AliasID := AMessage^.Dest.AliasID;
-  Temp.ID := AMessage^.Dest.ID;
-  AMessage^.Dest.AliasID := AMessage^.Source.AliasID;
-  AMessage^.Dest.ID := AMessage^.Source.ID;
-  AMessage^.Source.AliasID := Temp.AliasID;
-  AMessage^.Source.ID := Temp.ID;
 end;
 
 end.

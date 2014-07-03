@@ -461,6 +461,9 @@ type
     property Running: Boolean read FRunning;
   end;
 
+procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
+procedure UnLinkFirstTaskFromNode(Node: PNMRANetNode; FreeTask: Boolean);
+
 var
   NullNodeInfo: TNodeInfo;
 
@@ -476,7 +479,44 @@ const
   GRIDCONNECT_STATE_SYNC_FIND_HEADER = 2;
   GRIDCONNECT_STATE_SYNC_FIND_DATA = 4;
 
-  { TNodeTaskReadConfigMemory }
+procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
+var
+  Task: TNodeTask;
+begin
+  if Assigned(Node^.UserData) then
+  begin
+    Task := TNodeTask( Node^.UserData);
+    if Assigned(Task.NextTask) then
+    begin
+      while Assigned( Task.NextTask) do
+      begin
+        if Assigned(Task.NextTask.NextTask) then
+          Task := Task.NextTask
+        else begin
+          Task.NextTask.NextTask := NewTask;
+          Break;
+        end;
+      end;
+    end else
+       Task.NextTask := NewTask
+  end else
+    Node^.UserData := NewTask;
+end;
+
+procedure UnLinkFirstTaskFromNode(Node: PNMRANetNode; FreeTask: Boolean);
+var
+  Task: TNodeTask;
+begin
+  if Assigned(Node^.UserData) then
+  begin
+    Task := TNodeTask( Node^.UserData);
+    Node^.UserData := Task.NextTask;
+    if FreeTask then
+      FreeAndNil(Task)
+  end;
+end;
+
+{ TNodeTaskReadConfigMemory }
 
 constructor TNodeTaskReadConfigMemory.Create(ANodeInfo: TNodeInfo;
   ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
@@ -488,137 +528,137 @@ end;
 
   { TNodeEventSupportsProtocols }
 
-  constructor TNodeEventSupportsProtocols.Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject);
+constructor TNodeEventSupportsProtocols.Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject);
+begin
+  inherited Create(ANodeInfo, ALinkedObj);
+  FACDI := False;
+  FCDI := False;
+  FDatagram := False;
+  FDisplay := False;
+  FEdentification := False;
+  FEventExchange := False;
+  FFDI := False;
+  FIdentification := False;
+  FMemConfig := False;
+  FRemoteButton := False;
+  FReservation := False;
+  FSimpleProtocol := False;
+  FSNIP := False;
+  FSTNIP := False;
+  FStream := False;
+  FTraction := False;
+  FTractionProxy := False;
+  FTeaching := False;
+end;
+
+{ TNodeEventSimpleTrainNodeInfo }
+
+procedure TNodeEventSimpleTrainNodeInfo.Decode(AMessage: POpStackMessage);
+var
+  i: Integer;
+  AcdiSnipBufferPtr: PAcdiSnipBuffer;
+  Head: ^Char;
+begin
+  AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( AMessage^.Buffer));
+  Head := @AcdiSnipBufferPtr^.DataArray[1];  // Skip past the Version ID
+
+  i := 0;
+  while Head^ <> #0 do
   begin
-    inherited Create(ANodeInfo, ALinkedObj);
-    FACDI := False;
-    FCDI := False;
-    FDatagram := False;
-    FDisplay := False;
-    FEdentification := False;
-    FEventExchange := False;
-    FFDI := False;
-    FIdentification := False;
-    FMemConfig := False;
-    FRemoteButton := False;
-    FReservation := False;
-    FSimpleProtocol := False;
-    FSNIP := False;
-    FSTNIP := False;
-    FStream := False;
-    FTraction := False;
-    FTractionProxy := False;
-    FTeaching := False;
+    if i < STNIP_MAX_STR_LEN then
+      FRoadName[i] := Head^;
+    Head := Head + 1;
+    Inc(i);
   end;
+  if i < STNIP_MAX_STR_LEN then
+    FRoadName[i] := #0
+  else
+    FRoadName[STNIP_MAX_STR_LEN] := #0;
 
-  { TNodeEventSimpleTrainNodeInfo }
-
-  procedure TNodeEventSimpleTrainNodeInfo.Decode(AMessage: POpStackMessage);
-  var
-    i: Integer;
-    AcdiSnipBufferPtr: PAcdiSnipBuffer;
-    Head: ^Char;
+  Head := Head + 2;  // Skip over the null and to the next string
+  i := 0;
+  while Head^ <> #0 do
   begin
-    AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( AMessage^.Buffer));
-    Head := @AcdiSnipBufferPtr^.DataArray[1];  // Skip past the Version ID
-
-    i := 0;
-    while Head^ <> #0 do
-    begin
-      if i < STNIP_MAX_STR_LEN then
-        FRoadName[i] := Head^;
-      Head := Head + 1;
-      Inc(i);
-    end;
     if i < STNIP_MAX_STR_LEN then
-      FRoadName[i] := #0
-    else
-      FRoadName[STNIP_MAX_STR_LEN] := #0;
-
-    Head := Head + 2;  // Skip over the null and to the next string
-    i := 0;
-    while Head^ <> #0 do
-    begin
-      if i < STNIP_MAX_STR_LEN then
-        FTrainClass[i] := Head^;
-      Head := Head + 1;
-      Inc(i);
-    end;
-    if i < STNIP_MAX_STR_LEN then
-      FTrainClass[i] := #0
-    else
-      FTrainClass[STNIP_MAX_STR_LEN] := #0;
-
-    Head := Head + 2;  // Skip over the null and to the next string
-    i := 0;
-    while Head^ <> #0 do
-    begin
-      if i < STNIP_MAX_STR_LEN then
-        FRoadNumber[i] := Head^;
-      Head := Head + 1;
-      Inc(i);
-    end;
-    if i < STNIP_MAX_STR_LEN then
-      FRoadNumber[i] := #0
-    else
-      FRoadNumber[STNIP_MAX_STR_LEN] := #0;
-
-    Head := Head + 2;  // Skip over the null and to the next string
-    i := 0;
-    while Head^ <> #0 do
-    begin
-      if i < STNIP_MAX_STR_LEN then
-        FTrainName[i] := Head^;
-      Head := Head + 1;
-      Inc(i);
-    end;
-    if i < STNIP_MAX_STR_LEN then
-      FTrainName[i] := #0
-    else
-      FTrainName[STNIP_MAX_STR_LEN] := #0;
-
-    Head := Head + 2;  // Skip over the null and to the next string
-    i := 0;
-    while Head^ <> #0 do
-    begin
-      if i < STNIP_MAX_STR_LEN then
-        FManufacturer[i] := Head^;
-      Head := Head + 1;
-      Inc(i);
-    end;
-    if i < STNIP_MAX_STR_LEN then
-      FManufacturer[i] := #0
-    else
-      FManufacturer[STNIP_MAX_STR_LEN] := #0;
-
-    Head := Head + 2;  // Skip over the null and to the next string
-    i := 0;
-    while Head^ <> #0 do
-    begin
-      if i < STNIP_MAX_STR_LEN then
-        FOwner[i] := Head^;
-      Head := Head + 1;
-      Inc(i);
-    end;
-    if i < STNIP_MAX_STR_LEN then
-      FOwner[i] := #0
-    else
-      FOwner[STNIP_MAX_STR_LEN] := #0;
+      FTrainClass[i] := Head^;
+    Head := Head + 1;
+    Inc(i);
   end;
+  if i < STNIP_MAX_STR_LEN then
+    FTrainClass[i] := #0
+  else
+    FTrainClass[STNIP_MAX_STR_LEN] := #0;
 
-  { TNodeEventTrainInfo }
-
-  procedure TNodeEventTrainInfo.CopyTo(EventTrainInfo: TNodeEventTrainInfo);
+  Head := Head + 2;  // Skip over the null and to the next string
+  i := 0;
+  while Head^ <> #0 do
   begin
-    FAddress := EventTrainInfo.Address;
-    FControllerInfo := EventTrainInfo.ControllerInfo;
-    FFunctions := EventTrainInfo.Functions;
-    FSpeed := EventTrainInfo.Speed;
-    FSpeedSteps := EventTrainInfo.SpeedSteps;
-    FNodeInfo := EventTrainInfo.NodeInfo;
+    if i < STNIP_MAX_STR_LEN then
+      FRoadNumber[i] := Head^;
+    Head := Head + 1;
+    Inc(i);
   end;
+  if i < STNIP_MAX_STR_LEN then
+    FRoadNumber[i] := #0
+  else
+    FRoadNumber[STNIP_MAX_STR_LEN] := #0;
 
-  { TNodeTask }
+  Head := Head + 2;  // Skip over the null and to the next string
+  i := 0;
+  while Head^ <> #0 do
+  begin
+    if i < STNIP_MAX_STR_LEN then
+      FTrainName[i] := Head^;
+    Head := Head + 1;
+    Inc(i);
+  end;
+  if i < STNIP_MAX_STR_LEN then
+    FTrainName[i] := #0
+  else
+    FTrainName[STNIP_MAX_STR_LEN] := #0;
+
+  Head := Head + 2;  // Skip over the null and to the next string
+  i := 0;
+  while Head^ <> #0 do
+  begin
+    if i < STNIP_MAX_STR_LEN then
+      FManufacturer[i] := Head^;
+    Head := Head + 1;
+    Inc(i);
+  end;
+  if i < STNIP_MAX_STR_LEN then
+    FManufacturer[i] := #0
+  else
+    FManufacturer[STNIP_MAX_STR_LEN] := #0;
+
+  Head := Head + 2;  // Skip over the null and to the next string
+  i := 0;
+  while Head^ <> #0 do
+  begin
+    if i < STNIP_MAX_STR_LEN then
+      FOwner[i] := Head^;
+    Head := Head + 1;
+    Inc(i);
+  end;
+  if i < STNIP_MAX_STR_LEN then
+    FOwner[i] := #0
+  else
+    FOwner[STNIP_MAX_STR_LEN] := #0;
+end;
+
+{ TNodeEventTrainInfo }
+
+procedure TNodeEventTrainInfo.CopyTo(EventTrainInfo: TNodeEventTrainInfo);
+begin
+  FAddress := EventTrainInfo.Address;
+  FControllerInfo := EventTrainInfo.ControllerInfo;
+  FFunctions := EventTrainInfo.Functions;
+  FSpeed := EventTrainInfo.Speed;
+  FSpeedSteps := EventTrainInfo.SpeedSteps;
+  FNodeInfo := EventTrainInfo.NodeInfo;
+end;
+
+{ TNodeTask }
 
 constructor TNodeTask.Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo;
   AniStateMachine: Word; ALinkedObj: TObject);

@@ -570,7 +570,7 @@ begin
           Node^.TrainData.LinkedNode.AliasID := 0;
           Node^.TrainData.LinkedNode.ID := NULL_NODE_ID;
           AppCallback_TractionProtocol(Node, MessageToSend);
-          OutgoingMessage(MessageToSend);
+          OutgoingMessage(MessageToSend, True);
         end
     end;
   end;

@@ -188,6 +188,11 @@ begin
                   end else
                     OptionalInteractionRejected(SourceAlias, DestAlias, NULL_NODE_ID, NULL_NODE_ID, MTI, False);         // Out of buffers, try again later
                 end;
+              end else
+              begin
+                if SourceNode <> nil then
+                  if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, False) then  // does not matter about the Node IDs, only the MTI is checked
+                    Result := True   // This means we have a conflict and need to process it.
               end;
             end else
             begin   // It is not an addressed message

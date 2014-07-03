@@ -9,9 +9,11 @@ interface
 {$I Options.inc}
 
 uses
+  opstack_api,
   opstacknode,
   opstackbuffers,
   opstackcore_configmem,
+  template_hardware,
   nmranetdefines,
   nmranetutilities,
   opstackdefines,
@@ -22,30 +24,11 @@ const
 
 procedure OPStackCoreDatagram_Initialize;
 
-// Do not currently have a function that initiates a datagram from scratch, currently we mostly repond from a sent datagram
-procedure DatagramMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
-
-
-procedure DatagramOkReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-procedure DatagramRejectedReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
-function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMsg: POPStackMessage): Boolean;
-
-procedure FlushWaitingForAckResponseMessagesByDestinationAlias(var DestID: TNodeInfo);
+procedure DatagramOkReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
+procedure DatagramRejectedReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
+function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 
 implementation
-
-var
-  WaitingForAckList: POPStackMessage;
-
-procedure DatagramMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage; IsReply: Boolean);
-var
-  NewMessage: POPStackMessage;
-  MTI: Word;
-begin
-  NewMessage := nil;
-
-end;
 
 // *****************************************************************************
 //  procedure OPStackCoreDatagram_Initialize;
@@ -55,134 +38,7 @@ end;
 // *****************************************************************************
 procedure OPStackCoreDatagram_Initialize;
 begin
-  WaitingForAckList := nil;
-end;
 
-// *****************************************************************************
-//  procedure AddWaitingForAckResponseMessage;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-procedure AddWaitingForAckResponseMessage(OPStackMessage: POPStackMessage);
-var
-  LocalMessage: POPStackMessage;
-begin
-  if WaitingForAckList = nil then
-    WaitingForAckList := OPStackMessage
-  else begin
-    LocalMessage := WaitingForAckList;
-    while PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck <> nil do     // Walk the stack to the end and add our new message
-      LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck);  // WARNING MUST REMOVE THE MESSAGE FROM THE STACK IF THE DATAGRAM IS ABANDON!!!!!!!
-    PDatagramBuffer(PByte( LocalMessage^.Buffer))^.NextWaitingForAck := PByte( OPStackMessage);
-  end;
-end;
-
-// *****************************************************************************
-//  procedure FindWaitingForAckResponseMessage;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-function FindWaitingForAckResponseMessage(var SourceID: TNodeInfo; var DestID: TNodeInfo): POPStackMessage;
-var
-  LocalMessage: POPStackMessage;
-begin
-  Result := nil;
-  LocalMessage := WaitingForAckList;
-  while LocalMessage <> nil do
-  begin
-    if NMRAnetUtilities_EqualNodeIDInfo(SourceID, LocalMessage^.Source) then
-      if NMRAnetUtilities_EqualNodeIDInfo(DestID, LocalMessage^.Dest) then
-      begin
-        Result := LocalMessage;
-        Exit;
-      end;
-    LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck);
-  end;
-end;
-
-// *****************************************************************************
-//  procedure RemoveWaitingForAckResponseMessage;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-procedure RemoveWaitingForAckResponseMessage(OPStackMessage: POPStackMessage);
-var
-  LocalMessage, LocalMessageParent: POPStackMessage;
-begin
-  if WaitingForAckList <> nil then
-  begin
-    if WaitingForAckList = OPStackMessage then
-    begin
-      WaitingForAckList := POPStackMessage( PDatagramBuffer( PByte( WaitingForAckList^.Buffer))^.NextWaitingForAck);
-      PDatagramBuffer( PByte( OPStackMessage^.Buffer))^.NextWaitingForAck := nil;
-      Exit;
-    end else
-    begin
-      LocalMessage := POPStackMessage( PDatagramBuffer( PByte( WaitingForAckList^.Buffer))^.NextWaitingForAck);
-      LocalMessageParent := WaitingForAckList;
-      while LocalMessage <> nil do
-      begin
-        if LocalMessage = OPStackMessage then
-        begin
-          PDatagramBuffer( PByte( LocalMessageParent^.Buffer))^.NextWaitingForAck := PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck;   // Unlink
-          PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck := nil;
-          Exit
-        end;
-        LocalMessageParent := LocalMessage;
-        LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck);
-      end;
-    end;
-  end;
-end;
-
-// *****************************************************************************
-//  procedure FlushWaitingForAckResponseMessagesByDestinationAlias;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-procedure FlushWaitingForAckResponseMessagesByDestinationAlias(var DestID: TNodeInfo);
-var
-  LocalMessage, MatchingMessage: POPStackMessage;
-begin
-  LocalMessage := WaitingForAckList;
-  while LocalMessage <> nil do
-  begin
-    if NMRAnetUtilities_EqualNodeIDInfo(DestID, LocalMessage^.Dest) then
-    begin
-      MatchingMessage := LocalMessage;
-      LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck); // Get the next one so we can remove the current one
-      RemoveWaitingForAckResponseMessage(MatchingMessage);                      // Remove that message
-      OPStackBuffers_DeAllocateMessage(MatchingMessage);                        // Free that message
-    end else
-      LocalMessage := POPStackMessage( PDatagramBuffer( PByte( LocalMessage^.Buffer))^.NextWaitingForAck);
-  end;
-end;
-
-// *****************************************************************************
-//  procedure DatagramSendAckReply;
-//    Parameters:
-//    Result:
-//    Description:
-// *****************************************************************************
-function DatagramSendAckReply(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; var SourceID: TNodeInfo; var DestID: TNodeInfo; DatagramBufferPtr: PDatagramBuffer): Boolean;
-var
-  AckFlags: Byte;
-begin
-  Result := True;
-  if DatagramBufferPtr^.State and ABS_HASBEENACKED = 0 then
-  begin
-    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID, False) then
-    begin
-      AckFlags := $00;        // May want to change this for slow configuration reads/writes
-      OPStackBuffers_LoadDatagramOkMessage(MessageToSend, SourceID.AliasID, SourceID.ID, DestID.AliasID, DestID.ID, AckFlags);
-      DatagramBufferPtr^.State := DatagramBufferPtr^.State or ABS_HASBEENACKED;
-      Result := False;
-    end
-  end;
 end;
 
 // *****************************************************************************
@@ -191,55 +47,87 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMsg: POPStackMessage): Boolean;
+function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
   Result := False;
-  DatagramMsg^.WatchDog := 0;
-  DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMsg^.Buffer));
-  OPStackNode_IncomingMessageUnLink(Node, DatagramMsg);                         // Recycle the Datagram Message, but BE CAREFUL not to clear needed incoming information that is needed!
-  OPStackBuffers_SwapDestAndSourceIDs(DatagramMsg);
-  DatagramMsg^.FramingBits := 0;
-  DatagramBufferPtr^.CurrentCount := 0;
-  DatagramBufferPtr^.ResendCount := 0;
-  DatagramBufferPtr^.NextWaitingForAck := nil;
-  case DatagramBufferPtr^.DataArray[0] of
-      DATAGRAM_TYPE_MEMORY_CONFIGURATION :
+  MessageToSend := nil;
+  DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
+
+  case DatagramBufferPtr^.iStateMachine of
+    STATE_DATAGRAM_SEND_ACK :     // The message pump can have this message and free it, we don't care
+        begin
+          if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Dest.AliasID, DatagramMessage^.Dest.ID, DatagramMessage^.Source.AliasID, DatagramMessage^.Source.ID, False) then
           begin
-            MessageToSend := DatagramMsg;
-            case DatagramBufferPtr^.DataArray[1] and $F0 of
-               MCP_COMMAND_READ             : begin Result := CommandReadReply(Node, MessageToSend); end;
-               MCP_COMMAND_READ_REPLY_OK    : begin end;
-               MCP_COMMAND_READ_REPLY_FAIL  : begin end;
-               MCP_COMMAND_READ_STREAM      : begin Result := CommandReadStreamReply(Node, MessageToSend); end;
-               MCP_COMMAND_READ_SREAM_REPLY : begin end;
-               MCP_COMMAND_WRITE            : begin Result := CommandWriteReply(Node, MessageToSend); end;
-               MCP_COMMAND_WRITE_REPLY_OK   : begin end;
-               MCP_COMMAND_WRITE_REPLY_FAIL : begin end;
-               MCP_COMMAND_WRITE_STREAM     : begin Result := CommandWriteStreamReply(Node, MessageToSend); end;
-               MCP_OPERATION :
-                   begin
-                     case DatagramBufferPtr^.DataArray[1] of
-                       MCP_OP_GET_CONFIG         : begin Result := OperationGetConfigurationReply(Node, MessageToSend); end;
-                       MCP_OP_GET_ADD_SPACE_INFO : begin Result := OperationGetSpaceInfoReply(Node, MessageToSend); end;
-                       MCP_OP_LOCK               : begin Result := OperationLockReply(Node, MessageToSend); end;
-                       MCP_OP_GET_UNIQUEID       : begin Result := OperationGetUniqueIDReply(Node, MessageToSend); end;
-                       MCP_OP_FREEZE             : begin Result := OperationFreezeReply(Node, MessageToSend); end;
-                       MCP_OP_INDICATE           : begin Result := OperationIndicateReply(Node, MessageToSend); end;
-                       MCP_OP_UPDATE_COMPLETE    : begin Result := OperationUpdateCompleteReply(Node, MessageToSend); end;
-                       MCP_OP_RESETS             : begin Result := OperationResetReply(Node, MessageToSend); end
-                     else begin OPStackBuffers_DeAllocateMessage(DatagramMsg); end;
-                     end
-                   end
-            else begin OPStackBuffers_DeAllocateMessage(DatagramMsg); end;
-            end
+            MessageToSend^.Buffer^.DataBufferSize := 1;
+            MessageToSend^.Buffer^.DataArray[0] := $00;                         // New Flags for the ACK (slow reply, etc) mmmm... need to have the type decoded to decide what to reply here.....
+            Result := True;
+            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_PROCESS
+          end
+        end;
+    STATE_DATAGRAM_PROCESS :
+        begin                // reusing the Datagram buffer but we will send it ourselfs as we don't want it freed yet.
+          case DatagramBufferPtr^.DataArray[0] of
+              DATAGRAM_TYPE_MEMORY_CONFIGURATION :
+                  begin
+                    case DatagramBufferPtr^.DataArray[1] and $F0 of
+                       MCP_COMMAND_READ             : begin CommandReadReplyHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_READ_REPLY_OK    : begin Exit; end;
+                       MCP_COMMAND_READ_REPLY_FAIL  : begin Exit; end;
+                       MCP_COMMAND_READ_STREAM      : begin CommandReadStreamReplyHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_READ_SREAM_REPLY : begin Exit; end;
+                       MCP_COMMAND_WRITE            : begin CommandWriteReplyHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_WRITE_REPLY_OK   : begin Exit; end;
+                       MCP_COMMAND_WRITE_REPLY_FAIL : begin Exit; end;
+                       MCP_COMMAND_WRITE_STREAM     : begin CommandWriteStreamReplyHandler(Node, DatagramMessage); Exit; end;
+                       MCP_OPERATION :
+                           begin
+                             case DatagramBufferPtr^.DataArray[1] of
+                               MCP_OP_GET_CONFIG         : begin OperationGetConfigurationReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_GET_ADD_SPACE_INFO : begin OperationGetSpaceInfoReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_LOCK               : begin OperationLockReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_GET_UNIQUEID       : begin OperationGetUniqueIDReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_FREEZE             : begin OperationFreezeReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_INDICATE           : begin OperationIndicateReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_UPDATE_COMPLETE    : begin OperationUpdateCompleteReplyHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_RESETS             : begin OperationResetReplyHandler(Node, DatagramMessage); Exit; end
+                             else
+                               begin DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE; Exit; end;
+                             end
+                           end
+                    else // case
+                      begin DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE; Exit; end;
+                    end  // case
+                  end
+            else   // case
+              begin DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE; Exit; end;
+            end;   // case
+          Exit;
+        end;
+    STATE_DATAGRAM_SEND :
+        begin
+          if IsOutgoingBufferAvailable then
+          begin
+            OutgoingMessage(DatagramMessage, False);
+            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_WAITFOR_PROCESS_ACK;
           end;
-      DATAGRAM_TYPE_TRAIN_CONTROL : begin OPStackBuffers_DeAllocateMessage(DatagramMsg); end
-    else begin OPStackBuffers_DeAllocateMessage(DatagramMsg); end;
-    end;
-  if Result then                                                                // If we sent a Datagram then we need to add it to our list to wait for the dest node to Ack it
-    AddWaitingForAckResponseMessage(DatagramMsg);
+          Exit;
+        end;
+    STATE_DATAGRAM_WAITFOR_PROCESS_REPLY :                                      // polled if we requested datagram information
+        begin
+          Exit;
+        end;
+    STATE_DATAGRAM_WAITFOR_PROCESS_ACK :                                        // polled if we sent datagram data and are waiting for the receiving node to reply
+        begin
+          Exit;
+        end;
+    STATE_DATAGRAM_DONE :
+        begin
+          OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);
+          OPStackBuffers_DeAllocateMessage(DatagramMessage);
+        end;
+  end;
 end;
 
 // *****************************************************************************
@@ -248,15 +136,21 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure DatagramOkReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramOkReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 var
-  WaitingMessage: POPStackMessage;
+  DatagramBufferPtr: PDatagramBuffer;
+  Msg: POPStackMessage;
 begin
-  WaitingMessage := FindWaitingForAckResponseMessage(AMessage^.Dest, AMessage^.Source);
-  if WaitingMessage <> nil then
-  begin
-    RemoveWaitingForAckResponseMessage(WaitingMessage);
-    OPStackBuffers_DeAllocateMessage(WaitingMessage);
+  // These CAN NOT be linked to the node and processed in the main loop as the main loop
+  // links are blocked by the datagram itself.  May need new link system once we get to Streams.
+  // This should be ok due to the way we block the interupts
+  // This OPStackMessage is for the Datagram OK message, NOT the core linked message....
+  DatagramBufferPtr := PDatagramBuffer( PByte( Node^.IncomingMessages^.Buffer));
+  if DatagramBufferPtr^.iStateMachine = STATE_DATAGRAM_WAITFOR_PROCESS_ACK then
+  begin   // Gotta do this fast before the node sends us another datagram and we still have the buffer plugged up
+    Msg := Node^.IncomingMessages;
+    OPStackNode_IncomingMessageUnLink(Node, Msg);
+    OPStackBuffers_DeAllocateMessage(Msg);
   end;
 end;
 
@@ -266,25 +160,31 @@ end;
 //    Result:
 //    Description:
 // *****************************************************************************
-procedure DatagramRejectedReplyHandler(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure DatagramRejectedReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 var
-  WaitingMessage: POPStackMessage;
-  DatagramBuffer: PDatagramBuffer;
+  DatagramBufferPtr: PDatagramBuffer;
+  Msg: POPStackMessage;
+  ErrorCode: Word;
 begin
-  WaitingMessage := FindWaitingForAckResponseMessage(AMessage^.Dest, AMessage^.Source);
-  if WaitingMessage <> nil then
+  // These CAN NOT be linked to the node and processed in the main loop as the main loop
+  // links are blocked by the datagram itself.  May need new link system once we get to Streams.
+  // This should be ok due to the way we block the interupts
+  // This OPStackMessage is for the Datagram OK message, NOT the core linked message....
+  DatagramBufferPtr := PDatagramBuffer( PByte( Node^.IncomingMessages^.Buffer));
+  if DatagramBufferPtr^.iStateMachine = STATE_DATAGRAM_WAITFOR_PROCESS_ACK then
   begin
-    DatagramBuffer := PDatagramBuffer( PByte( WaitingMessage^.Buffer));
-    RemoveWaitingForAckResponseMessage(WaitingMessage);
-    if DatagramBuffer^.ResendCount < MAX_DATAGRAM_RESEND_ATTEMPTS then
+    ErrorCode := (OPStackMessage^.Buffer^.DataArray[0] shl 8) or OPStackMessage^.Buffer^.DataArray[1];
+    if (ErrorCode and DATAGRAM_RESULT_REJECTED_RESEND_MASK <> 0) and (DatagramBufferPtr^.ResendCount < MAX_DATAGRAM_RESEND_ATTEMPTS) then
     begin
-      WaitingMessage^.MessageType := WaitingMessage^.MessageType or MT_SEND;
-      Inc(DatagramBuffer^.ResendCount);
-      DatagramBuffer^.CurrentCount := 0;
-      OPStackNode_IncomingMessageLink(DestNode, WaitingMessage);
-      AddWaitingForAckResponseMessage(WaitingMessage);
+      Inc(DatagramBufferPtr^.ResendCount);
+      DatagramBufferPtr^.CurrentCount := 0;
+      DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND;
     end else
-      OPStackBuffers_DeAllocateMessage(WaitingMessage);   // Giving Up
+    begin // Gotta do this fast before the node sends us another datagram and we still have the buffer plugged up
+      Msg := Node^.IncomingMessages;
+      OPStackNode_IncomingMessageUnLink(Node, Msg);
+      OPStackBuffers_DeAllocateMessage(Msg);
+    end;
   end;
 end;
 

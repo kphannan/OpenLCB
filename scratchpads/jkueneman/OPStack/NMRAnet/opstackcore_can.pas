@@ -62,7 +62,7 @@ begin
   begin
     if OPStackNode_TestState(DestNode, NS_PERMITTED) then                       // Only reply if node is in Permitted state
       OPStackNode_SetFlag(DestNode, MF_DUPLICATE_NODE_ID);                      // The other node has the same Node ID as we do!  Warning Will Robinson, Warning
-    FlushWaitingForAckResponseMessagesByDestinationAlias(AMessage^.Source);
+ //   FlushWaitingForAckResponseMessagesByDestinationAlias(AMessage^.Source);
   end;
 end;
 
@@ -76,7 +76,7 @@ begin
     end;
   if DestNode <> nil then
   begin
-    FlushWaitingForAckResponseMessagesByDestinationAlias(AMessage^.Source);
+ //   FlushWaitingForAckResponseMessagesByDestinationAlias(AMessage^.Source);
   end;
 end;
 

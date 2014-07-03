@@ -38,7 +38,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="34">
+    <Units Count="3">
       <Unit0>
         <Filename Value="OPStackTest.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -53,167 +53,12 @@
         <UnitName Value="unitMain"/>
       </Unit1>
       <Unit2>
-        <Filename Value="..\NMRAnet\opstackcore.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore"/>
-      </Unit2>
-      <Unit3>
-        <Filename Value="..\NMRAnet\nmranetdefines.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="nmranetdefines"/>
-      </Unit3>
-      <Unit4>
-        <Filename Value="..\NMRAnet\opstackdefines.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackdefines"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="..\NMRAnet\opstacknode.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstacknode"/>
-      </Unit5>
-      <Unit6>
-        <Filename Value="..\AppLayerTemplates\template_node.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_node"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="..\AppLayerTemplates\template_vnode.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_vnode"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="..\NMRAnet\nmranetutilities.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="nmranetutilities"/>
-      </Unit8>
-      <Unit9>
-        <Filename Value="..\NMRAnet\opstackbuffers.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackbuffers"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="..\AppLayerTemplates\template_buffers.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_buffers"/>
-      </Unit10>
-      <Unit11>
-        <Filename Value="..\NMRAnet\opstacktypes.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstacktypes"/>
-      </Unit11>
-      <Unit12>
-        <Filename Value="..\NMRAnet\gridconnect.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="gridconnect"/>
-      </Unit12>
-      <Unit13>
-        <Filename Value="..\AppLayerTemplates\template_callbacks.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_callbacks"/>
-      </Unit13>
-      <Unit14>
-        <Filename Value="..\AppLayerTemplates\template_configmem.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_configmem"/>
-      </Unit14>
-      <Unit15>
         <Filename Value="unitbuffertrace.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="Form2"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="unitbuffertrace"/>
-      </Unit15>
-      <Unit16>
-        <Filename Value="..\AppLayerTemplates\template_configuration.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_configuration"/>
-      </Unit16>
-      <Unit17>
-        <Filename Value="..\NMRAnet\opstackcore_can.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_can"/>
-      </Unit17>
-      <Unit18>
-        <Filename Value="..\NMRAnet\opstackcore_events.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_events"/>
-      </Unit18>
-      <Unit19>
-        <Filename Value="..\NMRAnet\opstackcore_pip.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_pip"/>
-      </Unit19>
-      <Unit20>
-        <Filename Value="..\NMRAnet\opstackcore_basic.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_basic"/>
-      </Unit20>
-      <Unit21>
-        <Filename Value="..\NMRAnet\opstackcore_stream.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_stream"/>
-      </Unit21>
-      <Unit22>
-        <Filename Value="..\NMRAnet\opstackcore_snip.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_snip"/>
-      </Unit22>
-      <Unit23>
-        <Filename Value="..\NMRAnet\opstackcore_learn.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_learn"/>
-      </Unit23>
-      <Unit24>
-        <Filename Value="..\NMRAnet\opstackcore_datagram.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_datagram"/>
-      </Unit24>
-      <Unit25>
-        <Filename Value="..\NMRAnet\opstackcore_configmem.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_configmem"/>
-      </Unit25>
-      <Unit26>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachines"/>
-      </Unit26>
-      <Unit27>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinesbuffers"/>
-      </Unit27>
-      <Unit28>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinesdatagram"/>
-      </Unit28>
-      <Unit29>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesmultiframe.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinesmultiframe"/>
-      </Unit29>
-      <Unit30>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinesstream"/>
-      </Unit30>
-      <Unit31>
-        <Filename Value="..\NMRAnet\opstackcore_traction.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcore_traction"/>
-      </Unit31>
-      <Unit32>
-        <Filename Value="..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="opstackcanstatemachinessnip"/>
-      </Unit32>
-      <Unit33>
-        <Filename Value="..\..\HardwareLayerImplementations\Lazarus_Ethernet\template_hardware.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="template_hardware"/>
-      </Unit33>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

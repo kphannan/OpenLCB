@@ -24,19 +24,19 @@ uses
   opstackbuffers,
   opstacktypes;
 
-function CommandReadReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function CommandReadStreamReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function CommandWriteReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function CommandWriteStreamReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandReadReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandReadStreamReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandWriteReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandWriteStreamReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 
-function OperationGetConfigurationReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationGetSpaceInfoReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationLockReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationGetUniqueIDReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationFreezeReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationIndicateReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationUpdateCompleteReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
-function OperationResetReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationGetConfigurationReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationGetSpaceInfoReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationLockReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationGetUniqueIDReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationFreezeReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationIndicateReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationUpdateCompleteReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationResetReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 
 
 implementation
@@ -89,10 +89,12 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure DecodeConfigMemReadWriteHeader(Node: PNMRAnetNode; Buffer: PDatagramDataArray; var AddressSpace: Byte; var ConfigAddress: DWord; var ReadCount: DWord; var DataOffset: Byte);
+procedure DecodeConfigMemReadWriteHeader(Node: PNMRAnetNode; OPStackMessage: POPStackMessage; var AddressSpace: Byte; var ConfigAddress: DWord; var DataCount: DWord; var DataOffset: Byte);
 var
   MaxSpaceSize: DWord;
+  Buffer: PDatagramDataArray;
 begin
+  Buffer := PDatagramDataArray( PByte( @OPStackMessage^.Buffer^.DataArray));
   // Decode the Memory Space and where the Data starts
   DataOffset := 6;
   case Buffer^[1] and $03 of      // Strip off bottom two bits
@@ -108,19 +110,21 @@ begin
   ConfigAddress := DWord( Buffer^[2] shl 24) or DWord( Buffer^[3] shl 16) or DWord( Buffer^[4] shl 8) or DWord( Buffer^[5]);
 
   case Buffer^[1] and $F0 of
-    MCP_COMMAND_READ_STREAM  : ReadCount := DWord( Buffer^[DataOffset] shl 24) or DWord( Buffer^[DataOffset+1] shl 16) or DWord( Buffer^[DataOffset+2] shl 8) or DWord( Buffer^[DataOffset+3]);
-    MCP_COMMAND_READ         : ReadCount := Buffer^[DataOffset] and $7F         // Ignore the upper bit per the spec
+    MCP_COMMAND_READ_STREAM  : DataCount := DWord( Buffer^[DataOffset] shl 24) or DWord( Buffer^[DataOffset+1] shl 16) or DWord( Buffer^[DataOffset+2] shl 8) or DWord( Buffer^[DataOffset+3]);
+    MCP_COMMAND_READ         : DataCount := Buffer^[DataOffset] and $7F;         // Ignore the upper bit per the spec
+    MCP_COMMAND_WRITE_STREAM : DataCount := 0;   // TODO
+    MCP_COMMAND_WRITE        : DataCount := OPStackMessage^.Buffer^.DataBufferSize - DataOffset // The size of the datagram minus the size of the Header is the number of bytes to write
   else
-    ReadCount := 0;
+    DataCount := 0;
   end;
 
      // Test the size against the size of the Address Space and adjust to the Max size if necessary
    MaxSpaceSize := MaxAddressByAddressSpace(Node, AddressSpace);
    if ConfigAddress >= MaxSpaceSize then                               // If the caller overruns the address we are done
-     ReadCount := 0
+     DataCount := 0
    else begin
-     if ConfigAddress + ReadCount > MaxSpaceSize then
-       ReadCount := MaxSpaceSize - ConfigAddress;
+     if ConfigAddress + DataCount > MaxSpaceSize then
+       DataCount := MaxSpaceSize - ConfigAddress;
    end
 end;
 
@@ -130,8 +134,12 @@ end;
 //     Returns:
 //     Description:
 // *****************************************************************************
-procedure EncodeConfigMemReadWriteHeader(Buffer: PDatagramDataArray; IsRead, IsStream, IsForReply, IsReplyOK: Boolean; AddressSpace: Byte; ConfigAddress: DWord; ReadCount: DWord; UseAddressSpaceByte: Boolean; var DataOffset: Byte);
+procedure EncodeConfigMemReadWriteHeader(Node: PNMRAnetNode; OPStackMessage: POPStackMessage; IsRead, IsStream, IsForReply, IsReplyOK: Boolean; AddressSpace: Byte; ConfigAddress: DWord; ReadCount: DWord; UseAddressSpaceByte: Boolean; var DataOffset: Byte);
+var
+  Buffer: PDatagramDataArray;
 begin
+  Buffer := PDatagramDataArray( PByte( @OPStackMessage^.Buffer^.DataArray));
+
   Buffer^[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
 
   // Setup the Command
@@ -206,8 +214,32 @@ begin
   end;
 end;
 
+procedure InvertDatagramMessage(DatagramMessage: POPStackMessage);
+var
+  Temp: TNodeInfo;
+  DatagramBufferPtr: PDatagramBuffer;
+  i: Integer;
+begin
+  // Swap Source and Destination Node IDs
+  Temp.AliasID := DatagramMessage^.Dest.AliasID;
+  Temp.ID := DatagramMessage^.Dest.ID;
+  DatagramMessage^.Dest.AliasID := DatagramMessage^.Source.AliasID;
+  DatagramMessage^.Dest.ID := DatagramMessage^.Source.ID;
+  DatagramMessage^.Source.AliasID := Temp.AliasID;
+  DatagramMessage^.Source.ID := Temp.ID;
+
+  // Reset a few key parameters
+  DatagramBufferPtr := PDatagramBuffer( PByte(  DatagramMessage^.Buffer));
+  DatagramMessage^.FramingBits := 0;
+  DatagramBufferPtr^.CurrentCount := 0;
+  DatagramBufferPtr^.ResendCount := 0;
+
+ // for i := 0 to MAX_DATAGRAM_BYTES - 1 do
+  //  DatagramBufferPtr^.DataArray[i] := 0;
+end;
+
 // *****************************************************************************
-//  procedure CommandReadReply
+//  procedure CommandReadReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -218,20 +250,22 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function CommandReadReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandReadReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
   AddressSpace, DataOffset: Byte;
   ConfigAddress, ReadCount, OffsetAddress: DWord;
   i: Integer;
 begin
+  // Extract the information needed from the Datagram
+  DecodeConfigMemReadWriteHeader(Node, OPStackMessage, AddressSpace, ConfigAddress, ReadCount, DataOffset);
+  // Reuse the Message so invert it and reset a few key parameters
+  InvertDatagramMessage(OPStackMessage);
+  // Rebuild the Datagram to do what this functions task is...
+  EncodeConfigMemReadWriteHeader(Node, OPStackMessage, True, False, True, True, AddressSpace, ConfigAddress, ReadCount, AddressSpace < MSI_CONFIG, DataOffset);
+
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
-  DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, ReadCount, DataOffset);
-  for i := 0 to ReadCount - 1 do
-    DatagramBufferPtr^.DataArray[i] := 0;
-  EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, False, True, True, AddressSpace, ConfigAddress, ReadCount, AddressSpace < MSI_CONFIG, DataOffset);
-  DatagramBufferPtr^.DataBufferSize := ReadCount+DataOffset;
-  DatagramBufferPtr^.CurrentCount := 0;
+  DatagramBufferPtr^.DataBufferSize := ReadCount + DataOffset;                  // Number to send back + the size of the header bytes
 
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   if Node^.iIndex > 0 then
@@ -304,11 +338,12 @@ begin
             end;
           end;
   end;
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND;
   Result := True;
 end;
 
 // *****************************************************************************
-//  procedure CommandReadStreamReply
+//  procedure CommandReadStreamReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -319,14 +354,14 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function CommandReadStreamReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandReadStreamReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
-  AddressSpace, DataOffset: Byte;
-  ConfigAddress, ReadCount: DWord;
+{  AddressSpace, DataOffset: Byte;
+  ConfigAddress, ReadCount: DWord;     }
 begin
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
-  DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, ReadCount, DataOffset);
+//  DecodeConfigMemReadWriteHeader(Node, OPStackMessage, AddressSpace, ConfigAddress, ReadCount, DataOffset);
    // Option here, I could have failed the datagram ACK with "try again later" which is currently defined with error codes.
    // This method is acceptable but error codes are not defined yet.
    // Also do I do this on the Receive Side?  Is there any reason to let this propogate to here?  All this does is try to
@@ -337,9 +372,9 @@ begin
 
 (*
    if AddressSpace < MSI_CONFIG then
-     EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, True, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
+     EncodeConfigMemReadWriteHeader(Node, OPStackMessage, True, True, AddressSpace, ConfigAddress, ReadCount, True, DataOffset)
    else
-     EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, True, True, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
+     EncodeConfigMemReadWriteHeader(Node, OPStackMessage, True, True, AddressSpace, ConfigAddress, ReadCount, False, DataOffset);
 
    DatagramBufferPtr^.DataBufferSize := DataOffset;    // Just the header, no data that comes in the stream
    DatagramBufferPtr^.CurrentCount := 0;
@@ -350,16 +385,17 @@ begin
      // Streams are handled by their StateMacheines (NodeRunOutgoingStreamStateMachine).  We link to the node and allow the state
      // machine to move through the build up/sending/teardown of the stream.  The datagram ACK from the Datagram Read Reply will move this statemachine
      // into its first active state.
-     EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, True, True) ;
+     EncodeConfigMemReadWriteHeaderReply(Node, OPStackMessage, True, True) ;
      OPStackNode_StateMachineMessageLink(Node, NewMessage);      // No Stream ID's yet just waiting for the Stream link to be created
    end else
-     EncodeConfigMemReadWriteHeaderReply(@DatagramBufferPtr^.DataArray, False, True);
+     EncodeConfigMemReadWriteHeaderReply(Node, OPStackMessage, False, True);
  *)
- Result := True;
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
+  Result := False;
 end;
 
 // *****************************************************************************
-//  procedure CommandWriteReply
+//  procedure CommandWriteReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -370,7 +406,7 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function CommandWriteReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandWriteReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
   AddressSpace, DataOffset: Byte;
@@ -378,9 +414,10 @@ var
   i: Integer;
   WriteCount: DWord;
 begin
+   // Extract the information needed from the Datagram
+  DecodeConfigMemReadWriteHeader(Node, OPStackMessage, AddressSpace, ConfigAddress, WriteCount, DataOffset); // WriteCount is not used in a Write call to this function
+
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
-  DecodeConfigMemReadWriteHeader(Node, @DatagramBufferPtr^.DataArray, AddressSpace, ConfigAddress, WriteCount, DataOffset); // WriteCount is not used in a Write call to this function
-  WriteCount := DatagramBufferPtr^.DataBufferSize-DataOffset;
   
   {$IFDEF SUPPORT_VIRTUAL_NODES}
   if Node^.iIndex > 0 then
@@ -411,15 +448,18 @@ begin
     
     for i := 0 to (WriteCount+DataOffset) - 1 do
       DatagramBufferPtr^.DataArray[i] := 0;
-      
-    EncodeConfigMemReadWriteHeader(@DatagramBufferPtr^.DataArray, False, False, True, True, AddressSpace, ConfigAddress, WriteCount, AddressSpace < MSI_CONFIG, DataOffset);
-    DatagramBufferPtr^.DataBufferSize := DataOffset;
-    DatagramBufferPtr^.CurrentCount := 0;
-    Result := True;
+
+  // Reuse the Message so invert it and reset a few key parameters
+  InvertDatagramMessage(OPStackMessage);
+  // Rebuild the Datagram to do what this functions task is...
+  EncodeConfigMemReadWriteHeader(Node, OPStackMessage, False, False, True, True, AddressSpace, ConfigAddress, WriteCount, AddressSpace < MSI_CONFIG, DataOffset);
+  DatagramBufferPtr^.DataBufferSize := DataOffset;
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND;
+  Result := True;
 end;
 
 // *****************************************************************************
-//  procedure CommandWriteStreamReply
+//  procedure CommandWriteStreamReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -430,14 +470,17 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function CommandWriteStreamReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function CommandWriteStreamReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+var
+  DatagramBufferPtr: PDatagramBuffer;
 begin
-  OPStackBuffers_DeAllocateMessage(OPStackMessage);
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
   Result := False;
 end;
 
 // *****************************************************************************
-//  procedure OperationGetConfigurationReply
+//  procedure OperationGetConfigurationReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -448,10 +491,13 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationGetConfigurationReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationGetConfigurationReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
+  // Reuse the Message so invert it and reset a few key parameters
+  InvertDatagramMessage(OPStackMessage);
+
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
   DatagramBufferPtr^.DataArray[1] := MCP_OP_GET_CONFIG_REPLY;
@@ -473,12 +519,12 @@ begin
    DatagramBufferPtr^.DataArray[6] := USER_CONFIGMEM_LOWEST_SPACE;
   end;
   DatagramBufferPtr^.DataBufferSize := 7;
-  DatagramBufferPtr^.CurrentCount := 0;
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND;
   Result := True;
 end;
 
 // *****************************************************************************
-//  procedure OperationGetSpaceInfoReply
+//  procedure OperationGetSpaceInfoReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -489,11 +535,14 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationGetSpaceInfoReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationGetSpaceInfoReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
   MemorySpaceMaxAddress: DWord;
 begin
+  // Reuse the Message so invert it and reset a few key parameters
+  InvertDatagramMessage(OPStackMessage);
+
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
   DatagramBufferPtr^.DataArray[1] := MCP_OP_GET_ADD_SPACE_INFO_REPLY;
@@ -511,12 +560,12 @@ begin
   else
     DatagramBufferPtr^.DataArray[7] := $00;
   DatagramBufferPtr^.DataBufferSize := 8;
-  DatagramBufferPtr^.CurrentCount := 0;
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND;
   Result := True;
 end;
 
 // *****************************************************************************
-//  procedure OperationLockReply
+//  procedure OperationLockReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -527,14 +576,17 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationLockReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationLockReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+var
+  DatagramBufferPtr: PDatagramBuffer;
 begin
-  OPStackBuffers_DeAllocateMessage(OPStackMessage);
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
   Result := False;
 end;
 
 // *****************************************************************************
-//  procedure OperationGetUniqueIDReply
+//  procedure OperationGetUniqueIDReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -545,14 +597,17 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationGetUniqueIDReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationGetUniqueIDReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+var
+  DatagramBufferPtr: PDatagramBuffer;
 begin
-  OPStackBuffers_DeAllocateMessage(OPStackMessage);
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
   Result := False;
 end;
 
 // *****************************************************************************
-//  procedure OperationFreezeReply
+//  procedure OperationFreezeReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -563,14 +618,17 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationFreezeReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationFreezeReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+var
+  DatagramBufferPtr: PDatagramBuffer;
 begin
-  OPStackBuffers_DeAllocateMessage(OPStackMessage);
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
   Result := False;
 end;
 
 // *****************************************************************************
-//  procedure OperationIndicateReply
+//  procedure OperationIndicateReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -581,14 +639,17 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationIndicateReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationIndicateReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+var
+  DatagramBufferPtr: PDatagramBuffer;
 begin
-  OPStackBuffers_DeAllocateMessage(OPStackMessage);
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
   Result := False;
 end;
 
 // *****************************************************************************
-//  procedure OperationUpdateCompleteReply
+//  procedure OperationUpdateCompleteReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -599,14 +660,17 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationUpdateCompleteReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationUpdateCompleteReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+var
+  DatagramBufferPtr: PDatagramBuffer;
 begin
- OPStackBuffers_DeAllocateMessage(OPStackMessage);
- Result := False;
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
+  Result := False;
 end;
 
 // *****************************************************************************
-//  procedure OperationResetReply
+//  procedure OperationResetReplyHandler
 //     Parameters: Node: Node that message was sent to
 //                 OPStackMessage: Message to fill in to be sent, if no message reply
 //                                 is required the message should be DeAllocated with
@@ -617,7 +681,7 @@ end;
 //     Description: The Message is recycled from the incoming datagram so it is
 //                  allocated from the message pool
 // *****************************************************************************
-function OperationResetReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
+function OperationResetReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage): Boolean;
 begin
   {$IFNDEF FPC}
     reset();

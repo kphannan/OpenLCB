@@ -195,7 +195,6 @@ type
 
 const
   ABS_ALLOCATED            = $01;                                               // Array Buffer State Flag = Allocated Buffer
-  ABS_HASBEENACKED         = $02;                                               // Array Buffer State Flag = The received Datagram buffer has be ACK'ed
   ABS_STREAM_OUTGOING      = $04;                                               // Flag the direction of the stream (if the buffer is a stream)
   ABS_STREAM_TYPE_ID       = $08;                                               // Flag if the Stream Buffer contains a valid Stream Type ID UID
 
@@ -215,7 +214,6 @@ type
     iStateMachine: Byte;
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     ResendCount: Byte;                                                          // Number of tries to resend the datagram if sending is rejected
-    NextWaitingForAck: PByte;                                                   // Pointer to the Next _Message_ (not Buffer) that is waiting for an Ack
   end;
   PDatagramBuffer = ^TDatagramBuffer;
 
@@ -340,6 +338,15 @@ const
   DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED = $04;
   DATAGRAM_PROCESS_ERROR_QUIET_FAIL          = $05;
 
+const
+  STATE_DATAGRAM_SEND_ACK                = 0;
+  STATE_DATAGRAM_PROCESS                 = 1;
+  STATE_DATAGRAM_SEND                    = 2;
+  STATE_DATAGRAM_WAITFOR_PROCESS_REPLY   = 3;
+  STATE_DATAGRAM_WAITFOR_PROCESS_ACK     = 4;
+  STATE_DATAGRAM_DONE                    = 5;
+
+const
   STATE_CONFIG_MEM_STREAM_START                    = 0;
   STATE_CONFIG_MEM_STREAM_INIT                     = 1;
   STATE_CONFIG_MEM_STREAM_WAIT_FOR_INIT_REPLY      = 2;

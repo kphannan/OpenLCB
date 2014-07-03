@@ -28,12 +28,10 @@ type
     ButtonRefreshBufferCount: TButton;
     ButtonRefreshBufferTracking: TButton;
     ButtonSendGlobalNotify: TButton;
-    ButtonStartStack: TButton;
     ButtonAllocateNode: TButton;
     ButtonDeallocateNode: TButton;
     CheckBoxDisableLogging: TCheckBox;
     CheckBoxLogMessages: TCheckBox;
-    CheckBoxAutoConnect: TCheckBox;
     Label10: TLabel;
     Label11: TLabel;
     Label12: TLabel;
@@ -62,35 +60,30 @@ type
     Splitter1: TSplitter;
     StatusBar: TStatusBar;
     SynMemo: TSynMemo;
-    TimerStatemachine: TTimer;
-    TimerCore: TTimer;
+    ToggleBoxStart: TToggleBox;
     procedure ButtonClearClick(Sender: TObject);
     procedure ButtonRefreshBufferCountClick(Sender: TObject);
     procedure ButtonRefreshBufferTrackingClick(Sender: TObject);
     procedure ButtonSendGlobalNotifyClick(Sender: TObject);
     procedure ButtonAllocateNodeClick(Sender: TObject);
     procedure ButtonDeallocateNodeClick(Sender: TObject);
-    procedure ButtonStartStackClick(Sender: TObject);
-    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure CheckBoxDisableLoggingChange(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RadioGroupEthernetClick(Sender: TObject);
     procedure SynMemoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure TimerCoreTimer(Sender: TObject);
-    procedure TimerStatemachineTimer(Sender: TObject);
+    procedure ToggleBoxStartChange(Sender: TObject);
   private
     FComConnectionState: TConnectionState;
     FEthernetConnectionState: TConnectionState;
   public
     { public declarations }
-    procedure EthernetReceiveLogging(Sender: TObject; MessageStr: String);
-    procedure EthernetSendLogging(Sender: TObject; MessageStr: String);
     procedure EthernetConnectState(Sender: TObject; ConnectionState: TConnectionState);
     procedure EthernetError(Sender: TObject; MessageStr: string);
     procedure ComPortError(Sender: TObject; MessageStr: String);
     procedure ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
-    procedure ComPortReceiveLogging(Sender: TObject; MessageStr: String);
-    procedure ComPortSendLogging(Sender: TObject; MessageStr: String);
+    procedure ReceiveLogging(Sender: TObject; MessageStr: String);
     procedure UpdateMessageCountUI;
 
     procedure UpdateUI;
@@ -111,13 +104,10 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  ComPortHub.OnReceiveMessage := @ComPortReceiveLogging;
-  ComPortHub.OnSendMessage := @ComPortSendLogging;
+  CreateHubs;
   ComPortHub.OnErrorMessage := @ComPortError;
   ComPortHub.OnConnectionStateChange := @ComPortConnectionState;
 
-  EthernetHub.OnReceiveMessage := @EthernetReceiveLogging;
-  EthernetHub.OnSendMessage := @EthernetSendLogging;
   EthernetHub.OnErrorMessage := @EthernetError;
   EthernetHub.OnConnectionStateChange := @EthernetConnectState;
 
@@ -129,6 +119,10 @@ end;
 
 procedure TForm1.FormShow(Sender: TObject);
 begin
+  if CheckBoxDisableLogging.Checked then
+    NodeThread.OnLogMessages := nil
+  else
+    NodeThread.OnLogMessages := @ReceiveLogging;
   UpdateUI;
 end;
 
@@ -140,14 +134,18 @@ begin
         end;
     1 : begin
           EthernetHub.Listener := True;
-          EthernetHub.EnableSendMessages := not CheckBoxDisableLogging.Checked;
-          EthernetHub.EnableReceiveMessages := not CheckBoxDisableLogging.Checked;
+          if CheckBoxDisableLogging.Checked then
+            NodeThread.OnLogMessages := nil
+          else
+            NodeThread.OnLogMessages := @ReceiveLogging;
           EthernetHub.Enabled := True;
         end;
     2 : begin
           EthernetHub.Listener := False;
-          EthernetHub.EnableSendMessages := not CheckBoxDisableLogging.Checked;
-          EthernetHub.EnableReceiveMessages := not CheckBoxDisableLogging.Checked;
+          if CheckBoxDisableLogging.Checked then
+            NodeThread.OnLogMessages := nil
+          else
+            NodeThread.OnLogMessages := @ReceiveLogging;
           EthernetHub.Enabled := True;
         end;
   end;
@@ -168,14 +166,16 @@ begin
   {$ENDIF}
 end;
 
-procedure TForm1.TimerCoreTimer(Sender: TObject);
+procedure TForm1.ToggleBoxStartChange(Sender: TObject);
 begin
-  OPStackCore_Timer;
-end;
-
-procedure TForm1.TimerStatemachineTimer(Sender: TObject);
-begin
-  OPStackCore_Process;
+  if not ToggleBoxStart.Checked then
+  begin
+    NodeThread.EnableNode(False);
+  end else
+  begin
+    NodeThread.InitializeNode;
+    NodeThread.EnableNode(True);
+  end;
 end;
 
 procedure TForm1.UpdateMessageCountUI;
@@ -220,7 +220,7 @@ begin
   ButtonAllocateNode.Enabled := NodePool.AllocatedCount < USER_MAX_NODE_COUNT;
   ButtonDeallocateNode.Enabled := NodePool.AllocatedCount > 1;
   Statusbar.Panels[1].Text := 'Allocated Nodes: ' + IntToStr(NodePool.AllocatedCount);
-  ButtonStartStack.Enabled := EthernetHub.Enabled;
+  ToggleBoxStart.Enabled := EthernetHub.Enabled;
   Statusbar.Panels[2].Text := 'Message Buffers: ' + IntToStr(OPStackMessagePool.Count);
   Statusbar.Panels[3].Text := 'CAN Buffers: ' + IntToStr(SimpleBufferPool.Count);
   Statusbar.Panels[4].Text := 'Datagram Buffers: ' + IntToStr(DatagramBufferPool.Count);
@@ -235,6 +235,14 @@ begin
  // if Assigned(Listener) then
  //   Listener.Send(':X19490F37N;');
   UpdateUI
+end;
+
+procedure TForm1.CheckBoxDisableLoggingChange(Sender: TObject);
+begin
+ if CheckBoxDisableLogging.Checked then
+    NodeThread.OnLogMessages := nil
+  else
+    NodeThread.OnLogMessages := @ReceiveLogging;
 end;
 
 procedure TForm1.ButtonClearClick(Sender: TObject);
@@ -266,11 +274,6 @@ begin
   UpdateMessageCountUI
 end;
 
-procedure TForm1.ButtonStartStackClick(Sender: TObject);
-begin
-  OPStack.State := OPStack.State or OPS_PROCESSING;
-end;
-
 procedure TForm1.ComPortConnectionState(Sender: TObject; NewConnectionState: TConnectionState);
 begin
   ComConnectionState := NewConnectionState;
@@ -282,12 +285,7 @@ begin
 
 end;
 
-procedure TForm1.ComPortReceiveLogging(Sender: TObject; MessageStr: String);
-begin
-  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
-end;
-
-procedure TForm1.ComPortSendLogging(Sender: TObject; MessageStr: String);
+procedure TForm1.ReceiveLogging(Sender: TObject; MessageStr: String);
 begin
   PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
 end;
@@ -305,29 +303,9 @@ begin
 
 end;
 
-procedure TForm1.EthernetReceiveLogging(Sender: TObject; MessageStr: String);
+procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
-  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
-end;
-
-procedure TForm1.EthernetSendLogging(Sender: TObject; MessageStr: String);
-begin
-  PrintToSynMemo(MessageStr, SynMemo, False, CheckBoxDisableLogging.Checked, False);
-end;
-
-procedure TForm1.FormClose(Sender: TObject; var CloseAction: TCloseAction);
-begin
-  ComPortHub.OnReceiveMessage := nil;
-  ComPortHub.OnSendMessage := nil;
-  ComPortHub.OnErrorMessage := nil;
-  ComPortHub.OnConnectionStateChange := nil;
-  ComPortHub.RemoveComPort(nil);
-
-  EthernetHub.OnReceiveMessage := nil;
-  EthernetHub.OnSendMessage := nil;
-  EthernetHub.OnErrorMessage := nil;
-  EthernetHub.OnConnectionStateChange := nil;
-  EthernetHub.Enabled := False;
+  DestroyHubs;
 end;
 
 end.

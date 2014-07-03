@@ -49,7 +49,7 @@ begin
   OPStackBuffers_ZeroMessage(@OptionalInteractionMessage);
   OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
   OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, DestAlias, DestID, SourceAlias, SourceID, MTI, IsPermenent);    // Unknown MTI sent to addressed node
-  OutgoingCriticalMessage(@OptionalInteractionMessage);
+  OutgoingCriticalMessage(@OptionalInteractionMessage, True);
 end;
 
 procedure DatagramRejected(Dest, Source: PNodeInfo; ErrorCode: Word);
@@ -70,7 +70,7 @@ begin
   OPStackBuffers_LoadMessage(@OptionalInteractionMessage, MTI_DATAGRAM_REJECTED_REPLY, Dest^.AliasID, Dest^.ID, Source^.AliasID, Source^.ID, 0);
   OptionalInteractionMessage.MessageType := MT_SIMPLE;
   OPStackBuffers_CopyDataArray(OptionalInteractionMessage.Buffer, DatagramError, 2, True);
-  OutgoingCriticalMessage(@OptionalInteractionMessage);
+  OutgoingCriticalMessage(@OptionalInteractionMessage, True);
 end;
 
 // *****************************************************************************

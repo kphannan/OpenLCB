@@ -56,7 +56,7 @@ begin
         if LocalBuffer.DataBufferSize = 6 then
           Break;
       end;
-      OutgoingMessage(@LocalMessage);
+      OutgoingMessage(@LocalMessage, True);
 
       if AcdiSnipBufferPtr^.CurrentCount >= AcdiSnipBufferPtr^.DataBufferSize then
       begin
