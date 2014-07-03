@@ -155,9 +155,11 @@ type
   TNodeTaskReadConfigMemory = class(TNodeTask)
   private
     FCurrentAddress: DWord;
+    FFDI: string;
   public
     constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AStartAddress: DWord); reintroduce;
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
+    property FDI: string read FFDI write FFDI;
   end;
 
   { TNodeEvent }
@@ -306,6 +308,16 @@ type
     property FDI: Boolean read FFDI write FFDI;
     property TractionProxy: Boolean read FTractionProxy write FTractionProxy;
     property STNIP: Boolean read FSTNIP write FSTNIP;
+  end;
+
+  { TNodeEventReadFDI }
+
+  TNodeEventReadFDI = class(TNodeEvent)
+  private
+    FFDI: string;
+  public
+    constructor Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject; AFDI: string); reintroduce;
+    property FDI: string read FFDI write FFDI;
   end;
 
   { TNodeEventThread }
@@ -514,6 +526,15 @@ begin
     if FreeTask then
       FreeAndNil(Task)
   end;
+end;
+
+{ TNodeEventReadFDI }
+
+constructor TNodeEventReadFDI.Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject;
+  AFDI: string);
+begin
+  inherited Create(ANodeInfo, ALinkedObj);
+  FFDI := AFDI;
 end;
 
 { TNodeTaskReadConfigMemory }

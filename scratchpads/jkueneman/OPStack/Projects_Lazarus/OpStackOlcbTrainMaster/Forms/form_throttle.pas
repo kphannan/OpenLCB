@@ -238,6 +238,7 @@ type
     procedure EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
     procedure EventReleaseController(Event: TNodeEventReleaseController);
     procedure EventSupportsProtocols(Event: TNodeEventSupportsProtocols);
+    procedure EventReadFDI(Event: TNodeEventReadFDI);
     procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
@@ -931,6 +932,25 @@ begin
   ThrottleNodeInfo := Event.NodeInfo;
   PanelMain.Enabled := True;
   UpdateUI
+end;
+
+procedure TFormThrottle.EventReadFDI(Event: TNodeEventReadFDI);
+var
+  MemStream: TMemoryStream;
+  i: Integer;
+begin
+  MemStream := TMemoryStream.Create;
+  try
+    for i := 1 to Length(Event.FDI) do
+    begin
+      if AnsiChar( Event.FDI[i]) <> #0 then
+      MemStream.WriteByte( Ord( AnsiChar( Event.FDI[i])));
+    end;
+    MemStream.WriteByte( Ord(#0));
+    UpdateFunctionsWithFDI(MemStream);
+  finally
+    MemStream.Free;
+  end;
 end;
 
 procedure TFormThrottle.EventReleaseController(Event: TNodeEventReleaseController);

@@ -66,6 +66,9 @@ function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeI
 function TrySendConfigMemoryRead(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
 
 
+{$IFNDEF FPC}
+procedure OPStackNode_OutgoingMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage); external;
+{$ENDIF}
 
 {$IFNDEF FPC}
 var
@@ -596,7 +599,7 @@ begin
     NewMessage^.Buffer^.DataArray[5] := Byte( StartAddress);
     NewMessage^.Buffer^.DataArray[6] := AddressSpace;
     NewMessage^.Buffer^.DataArray[7] := ReadCount;
-    PDatagramBuffer( NewMessage^.Buffer)^.iStateMachine := STATE_DATAGRAM_SEND;
+    PDatagramBuffer( PByte( NewMessage^.Buffer))^.iStateMachine := STATE_DATAGRAM_SEND;
     OPStackNode_OutgoingMessageLink(Node, NewMessage);
     Result := True;
   end;

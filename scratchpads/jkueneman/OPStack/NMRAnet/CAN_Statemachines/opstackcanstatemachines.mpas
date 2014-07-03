@@ -200,8 +200,8 @@ begin
               begin
                 OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);
                 Result := True;
-              end else
-                OptionalInteractionRejected(SourceAlias, DestAlias, NULL_NODE_ID, NULL_NODE_ID, MTI, False);             // Out of buffers, please try again
+              end;
+              // else we just have to drop this message
             end;
           end;
       MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME,

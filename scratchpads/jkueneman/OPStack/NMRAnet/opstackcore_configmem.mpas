@@ -17,6 +17,7 @@ uses
   template_vnode_fdi,
   {$ENDIF}
   {$ENDIF}
+  template_userstatemachine,
   template_configuration,
   template_configmem,
   nmranetdefines,
@@ -28,6 +29,8 @@ procedure CommandReadHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage
 procedure CommandReadReplyOkHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 procedure CommandReadReplyFailHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 procedure CommandReadStreamHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
+procedure CommandReadStreamReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
+
 procedure CommandWriteHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 procedure CommandWriteReplyOkHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 procedure CommandWriteReplyFailHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
@@ -349,6 +352,7 @@ procedure CommandReadReplyOkHandler(Node: PNMRAnetNode; OPStackMessage: POPStack
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
+  AppCallBack_ConfigMemReadReply(Node, OPStackMessage, True);
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND_REPLY_ACK;
 end;
@@ -357,6 +361,7 @@ procedure CommandReadReplyFailHandler(Node: PNMRAnetNode; OPStackMessage: POPSta
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
+  AppCallBack_ConfigMemReadReply(Node, OPStackMessage, False);
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND_REPLY_ACK;
 end;
@@ -409,6 +414,14 @@ begin
    end else
      EncodeConfigMemReadWriteHeaderReply(Node, OPStackMessage, False, True);
  *)
+  DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
+end;
+
+procedure CommandReadStreamReply(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
+var
+  DatagramBufferPtr: PDatagramBuffer;
+begin
+  DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
 end;
 
@@ -479,6 +492,7 @@ procedure CommandWriteReplyOkHandler(Node: PNMRAnetNode; OPStackMessage: POPStac
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
+  AppCallBack_ConfigMemWriteReply(Node, OPStackMessage, True);
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND_REPLY_ACK;
 end;
@@ -487,6 +501,7 @@ procedure CommandWriteReplyFailHandler(Node: PNMRAnetNode; OPStackMessage: POPSt
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
+  AppCallBack_ConfigMemWriteReply(Node, OPStackMessage, False);
   DatagramBufferPtr := PDatagramBuffer( PByte( OPStackMessage^.Buffer));
   DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND_REPLY_ACK;
 end;

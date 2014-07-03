@@ -175,7 +175,7 @@ const
   MCP_COMMAND_READ_STREAM             = $60;                                    // MemoryConfigurationProtocol - Read Memory with Streams
   MCP_COMMAND_READ_REPLY_OK           = $50;                                    // MemoryConfigurationProtocol - Read Reply Mask [Does not include the Address Space Mask "or" it with the the Address space masks below]
   MCP_COMMAND_READ_REPLY_FAIL         = $58;
-  MCP_COMMAND_READ_SREAM_REPLY        = $30;
+  MCP_COMMAND_READ_STREAM_REPLY       = $30;
 
   // Upper 2 bits 2 = Operation Command
   MCP_OPERATION                       = $80;                                    // MemoryConfigurationProtocol - Operation Mask

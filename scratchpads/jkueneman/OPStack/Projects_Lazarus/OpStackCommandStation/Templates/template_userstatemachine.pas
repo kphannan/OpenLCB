@@ -61,7 +61,10 @@ procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
-procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
+procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 
 {$IFNDEF FPC}
 procedure SimpleTrainNodeInfoWriteConfig(ConfigOffset: DWord; var Info: TStnipBuffer); external;
@@ -99,25 +102,6 @@ const
 
 var
   GlobalTimer: Word;
-
-procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
-var
-  Task: TNodeTask;
-begin
-  if Assigned(Node^.UserData) then
-  begin
-    Task := TNodeTask( Node^.UserData);
-    while Assigned( Task.NextTask) do
-    begin
-      if Assigned(Task.NextTask.NextTask) then
-        Task := Task.NextTask
-      else begin
-        Task.NextTask.NextTask := NewTask;
-      end;
-    end
-  end else
-    Node^.UserData := NewTask;
-end;
 
 procedure LoadTrainInfo(Node: PNMRANetNode; var EventTrainInfo: TNodeEventTrainInfo);
 begin
@@ -422,6 +406,63 @@ end;
 //                   main statemachine.
 // *****************************************************************************
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
+begin
+
+end;
+
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemReadReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemStreamReadReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemWriteReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemStreamWriteReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 begin
 
 end;

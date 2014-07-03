@@ -13,6 +13,7 @@ uses
   opstacknode,
   opstackbuffers,
   opstackcore_configmem,
+  template_userstatemachine,
   template_hardware,
   nmranetdefines,
   nmranetutilities,
@@ -78,7 +79,7 @@ begin
                        MCP_COMMAND_READ_REPLY_OK    : begin CommandReadReplyOkHandler(Node, DatagramMessage); Exit; end;
                        MCP_COMMAND_READ_REPLY_FAIL  : begin CommandReadReplyFailHandler(Node, DatagramMessage); Exit; end;
                        MCP_COMMAND_READ_STREAM      : begin CommandReadStreamHandler(Node, DatagramMessage); Exit; end;
-                       MCP_COMMAND_READ_SREAM_REPLY : begin Exit; end;
+                       MCP_COMMAND_READ_STREAM_REPLY: begin CommandReadStreamReply(Node, DatagramMessage); Exit; end;
                        MCP_COMMAND_WRITE            : begin CommandWriteHandler(Node, DatagramMessage); Exit; end;
                        MCP_COMMAND_WRITE_REPLY_OK   : begin CommandWriteReplyOkHandler(Node, DatagramMessage); Exit; end;
                        MCP_COMMAND_WRITE_REPLY_FAIL : begin CommandWriteReplyFailHandler(Node, DatagramMessage); Exit; end;

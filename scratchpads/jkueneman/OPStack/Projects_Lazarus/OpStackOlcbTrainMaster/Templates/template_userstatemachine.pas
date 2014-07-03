@@ -60,6 +60,11 @@ procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
+procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+
 const
    STATE_CAB_SEND_QUERY = 0;
    STATE_CAB_WAIT_QUERY = 1;
@@ -541,12 +546,13 @@ begin
                  STATE_THROTTLE_READ_FDI_SEND :
                     begin
                       if TrySendConfigMemoryRead(Node, TNodeTaskReadConfigMemory( Node^.UserData).FDestNodeInfo, MSI_FDI, TNodeTaskReadConfigMemory( Node^.UserData).CurrentAddress, 64) then
-                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_WAIT
+                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_WAIT;
+                      TNodeTask( Node^.UserData).Watchdog := 0;
                     end;
                  STATE_THROTTLE_READ_FDI_END :
                     begin
-                      Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                       UnLinkFirstTaskFromNode(Node, True);
+                      Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                     end;
                  STATE_THROTTLE_READ_FDI_WAIT :
                     begin
@@ -886,6 +892,89 @@ end;
 //                   main statemachine.
 // *****************************************************************************
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemReadReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+var
+  TaskReadConfigMemory: TNodeTaskReadConfigMemory;
+  i, Offset: Integer;
+begin
+  if TNodeTask( Node^.UserData) is TNodeTaskReadConfigMemory then
+  begin
+    TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_SEND;
+    TaskReadConfigMemory := TNodeTask( Node^.UserData) as TNodeTaskReadConfigMemory;
+
+    // Skip over the header
+    if (AMessage^.Buffer^.DataArray[1] and $0F = 0) then
+      Offset := 7
+    else
+      Offset := 6;
+
+    TaskReadConfigMemory.Watchdog := 0;
+    for i := Offset to AMessage^.Buffer^.DataBufferSize - 1 do
+    begin
+      TaskReadConfigMemory.FDI := TaskReadConfigMemory.FDI + Char(AMessage^.Buffer^.DataArray[i]);
+      TaskReadConfigMemory.CurrentAddress := TaskReadConfigMemory.CurrentAddress + 1;
+      if Char(AMessage^.Buffer^.DataArray[i]) = #0 then
+      begin
+        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_END;
+        NodeThread.AddEvent( TNodeEventReadFDI.Create(Node^.Info, TaskReadConfigMemory.LinkedObj, TaskReadConfigMemory.FDI));
+        Break;
+      end;
+    end;
+  end;
+  TaskReadConfigMemory.Watchdog := 0;
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemStreamReadReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemWriteReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemStreamWriteReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 begin
 
 end;
