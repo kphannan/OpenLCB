@@ -26,9 +26,21 @@ procedure OPStackCoreDatagram_Initialize;
 
 procedure DatagramOkReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 procedure DatagramRejectedReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
-function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
+function DatagramHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 
 implementation
+
+function FindMessageOnStack(Node: PNMRAnetNode; OPStackMessage: POPStackMessage; FirstStackMessage: POPStackMessage): POPStackMessage;
+begin
+  Result := nil;
+  if FirstStackMessage <> nil then
+  begin
+    if FirstStackMessage^.MTI = MTI_DATAGRAM then
+      if NMRAnetUtilities_EqualNodeIDInfo(FirstStackMessage^.Source, OPStackMessage^.Dest) then    // Testing messages coming from opposite directions so need to swap source/dest to be correct
+        if NMRAnetUtilities_EqualNodeIDInfo(FirstStackMessage^.Dest, OPStackMessage^.Source) then
+          Result := FirstStackMessage
+  end;
+end;
 
 // *****************************************************************************
 //  procedure OPStackCoreDatagram_Initialize;
@@ -42,12 +54,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure DatagramReplyHandler;
+//  procedure DatagramHandler;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
-function DatagramReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
+function DatagramHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 var
   DatagramBufferPtr: PDatagramBuffer;
 begin
@@ -56,42 +68,32 @@ begin
   DatagramBufferPtr := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
 
   case DatagramBufferPtr^.iStateMachine of
-    STATE_DATAGRAM_SEND_ACK :     // The message pump can have this message and free it, we don't care
+    STATE_DATAGRAM_PROCESS :  // [*Receive_Request*-Send_Ack-Send_Data-Receive_Ack] or [Send_Request-Receive_Ack-*Receive_Data*-Send_Ack]
         begin
-          if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Dest.AliasID, DatagramMessage^.Dest.ID, DatagramMessage^.Source.AliasID, DatagramMessage^.Source.ID, False) then
-          begin
-            MessageToSend^.Buffer^.DataBufferSize := 1;
-            MessageToSend^.Buffer^.DataArray[0] := $00;                         // New Flags for the ACK (slow reply, etc) mmmm... need to have the type decoded to decide what to reply here.....
-            Result := True;
-            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_PROCESS
-          end
-        end;
-    STATE_DATAGRAM_PROCESS :
-        begin                // reusing the Datagram buffer but we will send it ourselfs as we don't want it freed yet.
           case DatagramBufferPtr^.DataArray[0] of
               DATAGRAM_TYPE_MEMORY_CONFIGURATION :
                   begin
                     case DatagramBufferPtr^.DataArray[1] and $F0 of
-                       MCP_COMMAND_READ             : begin CommandReadReplyHandler(Node, DatagramMessage); Exit; end;
-                       MCP_COMMAND_READ_REPLY_OK    : begin Exit; end;
-                       MCP_COMMAND_READ_REPLY_FAIL  : begin Exit; end;
-                       MCP_COMMAND_READ_STREAM      : begin CommandReadStreamReplyHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_READ             : begin CommandReadHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_READ_REPLY_OK    : begin CommandReadReplyOkHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_READ_REPLY_FAIL  : begin CommandReadReplyFailHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_READ_STREAM      : begin CommandReadStreamHandler(Node, DatagramMessage); Exit; end;
                        MCP_COMMAND_READ_SREAM_REPLY : begin Exit; end;
-                       MCP_COMMAND_WRITE            : begin CommandWriteReplyHandler(Node, DatagramMessage); Exit; end;
-                       MCP_COMMAND_WRITE_REPLY_OK   : begin Exit; end;
-                       MCP_COMMAND_WRITE_REPLY_FAIL : begin Exit; end;
-                       MCP_COMMAND_WRITE_STREAM     : begin CommandWriteStreamReplyHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_WRITE            : begin CommandWriteHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_WRITE_REPLY_OK   : begin CommandWriteReplyOkHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_WRITE_REPLY_FAIL : begin CommandWriteReplyFailHandler(Node, DatagramMessage); Exit; end;
+                       MCP_COMMAND_WRITE_STREAM     : begin CommandWriteStreamHandler(Node, DatagramMessage); Exit; end;
                        MCP_OPERATION :
                            begin
                              case DatagramBufferPtr^.DataArray[1] of
-                               MCP_OP_GET_CONFIG         : begin OperationGetConfigurationReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_GET_ADD_SPACE_INFO : begin OperationGetSpaceInfoReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_LOCK               : begin OperationLockReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_GET_UNIQUEID       : begin OperationGetUniqueIDReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_FREEZE             : begin OperationFreezeReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_INDICATE           : begin OperationIndicateReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_UPDATE_COMPLETE    : begin OperationUpdateCompleteReplyHandler(Node, DatagramMessage); Exit; end;
-                               MCP_OP_RESETS             : begin OperationResetReplyHandler(Node, DatagramMessage); Exit; end
+                               MCP_OP_GET_CONFIG         : begin OperationGetConfigurationHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_GET_ADD_SPACE_INFO : begin OperationGetSpaceInfoHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_LOCK               : begin OperationLockHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_GET_UNIQUEID       : begin OperationGetUniqueIDHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_FREEZE             : begin OperationFreezeHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_INDICATE           : begin OperationIndicateHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_UPDATE_COMPLETE    : begin OperationUpdateCompleteHandler(Node, DatagramMessage); Exit; end;
+                               MCP_OP_RESETS             : begin OperationResetHandler(Node, DatagramMessage); Exit; end
                              else
                                begin DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE; Exit; end;
                              end
@@ -105,26 +107,48 @@ begin
             end;   // case
           Exit;
         end;
-    STATE_DATAGRAM_SEND :
+    STATE_DATAGRAM_SEND_ACK :  // [Receive_Request-*Send_Ack*-Send_Data-Receive_Ack] The ack sent in reply to a datagram request from another node
+        begin
+           if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Source.AliasID, DatagramMessage^.Source.ID, DatagramMessage^.Dest.AliasID, DatagramMessage^.Dest.ID, False) then
+          begin
+            MessageToSend^.Buffer^.DataBufferSize := 1;
+            MessageToSend^.Buffer^.DataArray[0] := $00;                         // New Flags for the ACK (slow reply, etc) mmmm... need to have the type decoded to decide what to reply here.....
+            Result := True;
+            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND
+          end;
+          Exit;
+        end;
+    STATE_DATAGRAM_SEND :  // [Receive_Request-Send_Ack-*Send_Data*-Receive_Ack] or [*Send_Request*-Receive_Ack-Receive_Data-Send_Ack]   The data sent in reply to a datagram request from another node
         begin
           if IsOutgoingBufferAvailable then
           begin
             OutgoingMessage(DatagramMessage, False);
-            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_WAITFOR_PROCESS_ACK;
+            DatagramBufferPtr^.Watchdog := 0;
+            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_WAITFOR;         // Wait for the remote node to ACK back
           end;
           Exit;
         end;
-    STATE_DATAGRAM_WAITFOR_PROCESS_REPLY :                                      // polled if we requested datagram information
+    STATE_DATAGRAM_SEND_REPLY_ACK :  // [Send_Request-Receive_Ack-Receive_Data-*Send_Ack*]
         begin
+          if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Dest.AliasID, DatagramMessage^.Dest.ID, DatagramMessage^.Source.AliasID, DatagramMessage^.Source.ID, False) then
+          begin
+            MessageToSend^.Buffer^.DataBufferSize := 1;
+            OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);
+            OPStackBuffers_DeAllocateMessage(DatagramMessage);
+            Result := True;                                                     // Done
+          end;
           Exit;
         end;
-    STATE_DATAGRAM_WAITFOR_PROCESS_ACK :                                        // polled if we sent datagram data and are waiting for the receiving node to reply
+    STATE_DATAGRAM_WAITFOR :
         begin
+          if DatagramBufferPtr^.Watchdog > 20 then
+            DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
           Exit;
         end;
     STATE_DATAGRAM_DONE :
-        begin
+        begin // Emergency bail, only the correct link will be removed
           OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);
+          OPStackNode_OutgoingMessageUnLink(Node, DatagramMessage);
           OPStackBuffers_DeAllocateMessage(DatagramMessage);
         end;
   end;
@@ -138,19 +162,39 @@ end;
 // *****************************************************************************
 procedure DatagramOkReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 var
-  DatagramBufferPtr: PDatagramBuffer;
-  Msg: POPStackMessage;
+  DatagramBuffer: PDatagramBuffer;
+  DatagramMessage: POPStackMessage;
+  IsIncomingMessage: Boolean;
 begin
   // These CAN NOT be linked to the node and processed in the main loop as the main loop
   // links are blocked by the datagram itself.  May need new link system once we get to Streams.
-  // This should be ok due to the way we block the interupts
-  // This OPStackMessage is for the Datagram OK message, NOT the core linked message....
-  DatagramBufferPtr := PDatagramBuffer( PByte( Node^.IncomingMessages^.Buffer));
-  if DatagramBufferPtr^.iStateMachine = STATE_DATAGRAM_WAITFOR_PROCESS_ACK then
-  begin   // Gotta do this fast before the node sends us another datagram and we still have the buffer plugged up
-    Msg := Node^.IncomingMessages;
-    OPStackNode_IncomingMessageUnLink(Node, Msg);
-    OPStackBuffers_DeAllocateMessage(Msg);
+  // This is ok due to the way we block the interupts
+  // The send message is the DATAGRAM_OK message and we need to find the original message that is
+  // on either the incoming or outgoing message stacks for the node. Since one one datagram conversation
+  // in each direction is allowed we can test the source/dest Node IDs to find the right message
+  // There are 2 different reasons this is called:
+  // 1) A node requested datagram data from us and it sent us an ack saying it received the data
+  // 2) We requested data from a node and it sent us an ack saying it received the request
+
+  IsIncomingMessage := False;
+  DatagramMessage := FindMessageOnStack(Node, OPStackMessage, Node^.IncomingMessages);
+  if DatagramMessage <> nil then
+    IsIncomingMessage := True
+  else
+    DatagramMessage := FindMessageOnStack(Node, OPStackMessage, Node^.OutgoingMessages);
+
+  if DatagramMessage <> nil then
+  begin
+    DatagramBuffer := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
+    if DatagramBuffer^.iStateMachine = STATE_DATAGRAM_WAITFOR then
+    begin   // Gotta do this fast before the node sends us another datagram and we still have the buffer plugged up
+      if IsIncomingMessage then
+        OPStackNode_IncomingMessageUnLink(Node, DatagramMessage)
+      else
+        OPStackNode_OutgoingMessageUnLink(Node, DatagramMessage);
+      OPStackBuffers_DeAllocateMessage(DatagramMessage);
+    end;
+    Exit;
   end;
 end;
 
@@ -162,28 +206,47 @@ end;
 // *****************************************************************************
 procedure DatagramRejectedReplyHandler(Node: PNMRAnetNode; OPStackMessage: POPStackMessage);
 var
-  DatagramBufferPtr: PDatagramBuffer;
-  Msg: POPStackMessage;
+  DatagramBuffer: PDatagramBuffer;
+  DatagramMessage: POPStackMessage;
   ErrorCode: Word;
+  IsIncomingMessage: Boolean;
 begin
   // These CAN NOT be linked to the node and processed in the main loop as the main loop
   // links are blocked by the datagram itself.  May need new link system once we get to Streams.
-  // This should be ok due to the way we block the interupts
-  // This OPStackMessage is for the Datagram OK message, NOT the core linked message....
-  DatagramBufferPtr := PDatagramBuffer( PByte( Node^.IncomingMessages^.Buffer));
-  if DatagramBufferPtr^.iStateMachine = STATE_DATAGRAM_WAITFOR_PROCESS_ACK then
+  // This is ok due to the way we block the interupts
+  // The send message is the DATAGRAM_FAIL message and we need to find the original message that is
+  // on either the incoming or outgoing message stacks for the node. Since one one datagram conversation
+  // in each direction is allowed we can test the source/dest Node IDs to find the right message
+  // There are 2 different reasons this is called:
+  // 1) A node requested datagram data from us and it sent us an ack saying it failed on received the data
+  // 2) We requested data from a node and it sent us an ack saying it failed on receiving the request
+
+  IsIncomingMessage := False;
+  DatagramMessage := FindMessageOnStack(Node, OPStackMessage, Node^.IncomingMessages);
+  if DatagramMessage <> nil then
+    IsIncomingMessage := True
+  else
+    DatagramMessage := FindMessageOnStack(Node, OPStackMessage, Node^.OutgoingMessages);
+
+  if DatagramMessage <> nil then
   begin
-    ErrorCode := (OPStackMessage^.Buffer^.DataArray[0] shl 8) or OPStackMessage^.Buffer^.DataArray[1];
-    if (ErrorCode and DATAGRAM_RESULT_REJECTED_RESEND_MASK <> 0) and (DatagramBufferPtr^.ResendCount < MAX_DATAGRAM_RESEND_ATTEMPTS) then
+    DatagramBuffer := PDatagramBuffer( PByte( DatagramMessage^.Buffer));
+    if DatagramBuffer^.iStateMachine = STATE_DATAGRAM_WAITFOR then
     begin
-      Inc(DatagramBufferPtr^.ResendCount);
-      DatagramBufferPtr^.CurrentCount := 0;
-      DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_SEND;
-    end else
-    begin // Gotta do this fast before the node sends us another datagram and we still have the buffer plugged up
-      Msg := Node^.IncomingMessages;
-      OPStackNode_IncomingMessageUnLink(Node, Msg);
-      OPStackBuffers_DeAllocateMessage(Msg);
+      ErrorCode := (OPStackMessage^.Buffer^.DataArray[0] shl 8) or OPStackMessage^.Buffer^.DataArray[1];
+      if (ErrorCode and DATAGRAM_RESULT_REJECTED_RESEND_MASK <> 0) and (DatagramBuffer^.ResendCount < MAX_DATAGRAM_RESEND_ATTEMPTS) then
+      begin
+        Inc(DatagramBuffer^.ResendCount);
+        DatagramBuffer^.CurrentCount := 0;
+        DatagramBuffer^.iStateMachine := STATE_DATAGRAM_SEND;
+      end else
+      begin // Gotta do this fast before the node sends us another datagram and we still have the buffer plugged up
+        if IsIncomingMessage then
+          OPStackNode_IncomingMessageUnLink(Node, DatagramMessage)
+        else
+          OPStackNode_OutgoingMessageUnLink(Node, DatagramMessage);
+        OPStackBuffers_DeAllocateMessage(DatagramMessage);
+      end;
     end;
   end;
 end;

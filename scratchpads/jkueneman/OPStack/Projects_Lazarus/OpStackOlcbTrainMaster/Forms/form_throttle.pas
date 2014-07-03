@@ -854,10 +854,13 @@ begin
   TimerGeneral.Enabled := False;
   if TimerType = tt_AllocateByList then
   begin
-    if FormSelector.TreeViewTrainList.Items.Count > 0 then
-      FormSelector.UpdateStatus(0, 'Status: Please select a train to run')
-    else
-      FormSelector.UpdateStatus(0, 'Status: Sorry could not find any trains on the network')
+    if Assigned(FormSelector) then
+    begin
+      if FormSelector.TreeViewTrainList.Items.Count > 0 then
+        FormSelector.UpdateStatus(0, 'Status: Please select a train to run')
+      else
+        FormSelector.UpdateStatus(0, 'Status: Sorry could not find any trains on the network')
+    end
   end;
   TimerType := tt_None;
 end;

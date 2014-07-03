@@ -28,7 +28,7 @@ const
   MAX_CONTROLLER_NOTIFY_TIME = 10;  // 10 * 100ms = 1 second to wait for controller that is being stolen from to reply if it allows the steal
 
 procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-function TractionProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure TractionProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
 
@@ -500,7 +500,7 @@ begin
   OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
-function TractionProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;

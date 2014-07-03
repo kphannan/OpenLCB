@@ -20,7 +20,7 @@ uses
   opstacktypes;
 
 procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+function SimpleTrainNodeInfoRequestHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
 implementation
@@ -62,11 +62,11 @@ begin
   if AMessage^.MTI = MTI_SIMPLE_TRAIN_NODE_INFO_REPLY then                      // Take a crack at all incoming reply
     OPStackNode_IncomingMessageLink(DestNode, AMessage)
   else                                                                          // Incoming reqests need the node to support it first.
-  if NMRAnetUtilities_NodeSupportsProtcol(DestNode, STNIP_PROTOCOL) then        // We don't support this protocol drop it
+  if NMRAnetUtilities_NodeSupportsProtcol(DestNode, STNIP_PROTOCOL) then        // If we don't support this protocol drop it
     OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
-function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+function SimpleTrainNodeInfoRequestHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
   ConfigOffset: DWord;

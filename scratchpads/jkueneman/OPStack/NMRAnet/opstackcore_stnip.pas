@@ -20,7 +20,7 @@ uses
   opstacktypes;
 
 procedure SimpleTrainNodeInfoMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
-function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+function SimpleTrainNodeInfoRequestHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
 implementation
@@ -66,7 +66,7 @@ begin
     OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
-function SimpleTrainNodeInfoRequestReplyHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+function SimpleTrainNodeInfoRequestHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
   ConfigOffset: DWord;

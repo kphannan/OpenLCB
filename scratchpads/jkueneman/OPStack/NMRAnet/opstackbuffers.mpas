@@ -675,6 +675,7 @@ begin
   AMessage^.MessageType := 0;
   AMessage^.MTI := 0;
   AMessage^.NextIncoming := nil;
+  AMessage^.NextOutgoing := nil;
   AMessage^.Dest.AliasID := 0;
   AMessage^.Dest.ID := NULL_NODE_ID;
   AMessage^.Source.AliasID := 0;

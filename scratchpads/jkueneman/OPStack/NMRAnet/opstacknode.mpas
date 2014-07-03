@@ -69,6 +69,10 @@ procedure OPStackNode_IncomingMessageLink(Node: PNMRAnetNode; AMessage: POPStack
 procedure OPStackNode_IncomingMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
 function OPStackNode_NextIncomingMessage(Node: PNMRAnetNode): POPStackMessage;
 
+procedure OPStackNode_OutgoingMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure OPStackNode_OutgoingMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+function OPStackNode_NextOutgoingMessage(Node: PNMRAnetNode): POPStackMessage;
+
 function OPStackNode_Equal(Message1, Message2: POPStackMessage): Boolean;
 
 function OPStackNode_FindNodeByNodeInfo(var NodeInfo: TNodeInfo): PNMRANetNode;
@@ -105,6 +109,8 @@ begin
     UART1_Write_Text('  Flags: ' + s1 + LF);
     WordToStr(NodePool.Pool[i].IncomingMessages, s1);
     UART1_Write_Text('  IncomingMessages: ' + s1 + LF);
+    WordToStr(NodePool.Pool[i].OutgoingMessages, s1);
+    UART1_Write_Text('  OutgoingMessages: ' + s1 + LF);
     ByteToStr(NodePool.Pool[i].iStateMachine, s1);
     UART1_Write_Text('  iStateMachine: ' + s1 + LF);
   end;
@@ -180,6 +186,7 @@ begin
     Node^.iIndex := i;
     OPStackNode_ZeroizeNode(Node);
     Node^.IncomingMessages := nil;
+    Node^.OutgoingMessages := nil;
     Node^.Info.ID[0] := NodeID_LO + i;         // Picked up from the NodeID.inc file
     Node^.Info.ID[1] := NodeID_HI;
     Node^.Login.Seed := Node^.Info.ID;
@@ -388,6 +395,7 @@ begin
   for j := 0 to USER_MAX_PCER_BYTES - 1 do
     Node^.Events.Produced[j] := 0;
   Node^.IncomingMessages := nil;
+  Node^.OutgoingMessages := nil;
   Node^.Flags := 0;
   Node^.UserData := nil;
   Node^.iUserStateMachine := 0;
@@ -833,6 +841,69 @@ end;
 function OPStackNode_NextIncomingMessage(Node: PNMRAnetNode): POPStackMessage;
 begin
   Result := Node^.IncomingMessages;
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_OutgoingMessageLink;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_OutgoingMessageLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Temp: POPStackMessage;
+begin
+  if Node^.OutgoingMessages = nil then
+    Node^.OutgoingMessages := AMessage
+  else begin                                  // Tack it to the end of the chain
+    Temp := Node^.OutgoingMessages;
+    while Temp^.NextOutgoing <> nil do
+      Temp := Temp^.NextOutgoing;
+    Temp^.NextOutgoing := AMessage
+  end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_OutgoingMessageUnLink;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+procedure OPStackNode_OutgoingMessageUnLink(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  Temp, Parent: POPStackMessage;
+begin
+  if Node^.OutgoingMessages <> nil then
+  begin
+    if Node^.OutgoingMessages = AMessage then                                           // Root Buffer match case is easy
+    begin
+      Node^.OutgoingMessages := Node^.OutgoingMessages^.NextOutgoing;
+      AMessage^.NextOutgoing := nil;
+    end
+    else begin
+      Parent := Node^.OutgoingMessages;                                                 // Already know it is not the root buffer so setup for the first level down
+      Temp := Node^.OutgoingMessages^.NextOutgoing;
+      while (Temp <> nil) and (Temp <> AMessage) do
+      begin
+        Parent := Temp;
+        Temp := Temp^.NextOutgoing;
+        AMessage^.NextOutgoing := nil;
+      end;
+      if Temp <> nil then
+        Parent^.NextOutgoing := Temp^.NextOutgoing
+    end
+  end
+end;
+
+// *****************************************************************************
+//  procedure OPStackNode_NextOutgoingMessage;
+//    Parameters:
+//    Result:
+//    Description:
+// *****************************************************************************
+function OPStackNode_NextOutgoingMessage(Node: PNMRAnetNode): POPStackMessage;
+begin
+  Result := Node^.OutgoingMessages;
 end;
 
 // *****************************************************************************

@@ -19,7 +19,7 @@ uses
   opstackdefines;
 
 procedure ProtocolSupportMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-function ProtocolSupportInquiryReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function ProtocolSupportInquiryHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure ProtocolSupportReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 implementation
@@ -35,7 +35,7 @@ end;
 //
 //  Called to automatically reply to a Simple Node Info Request
 //
-function ProtocolSupportInquiryReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function ProtocolSupportInquiryHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 var
   i, j: Integer;
 begin

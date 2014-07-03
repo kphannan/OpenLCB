@@ -21,7 +21,7 @@ uses
   opstackbuffers;
 
 procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+function TractionProxyProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 implementation
@@ -73,7 +73,7 @@ begin
   OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
-function TractionProxyProtocolReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
+function TractionProxyProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;

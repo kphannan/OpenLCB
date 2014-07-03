@@ -226,6 +226,10 @@ begin
   begin
 
   end;
+  if Node^.OutgoingMessages <> nil then
+  begin
+
+  end;
 end;
 
 // *****************************************************************************
@@ -254,6 +258,7 @@ begin
              if not OPStackNode_IsAnyPCER_Set(Node) then
                if Node^.Flags = 0 then
                  if Node^.IncomingMessages = nil then
+                   if Node^.OutgoingMessages = nil then
                      if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
                      begin
                        NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
@@ -304,67 +309,79 @@ var
 begin
   Result := False;
   MessageToSend := nil;
+
+  NextMessage := OPStackNode_NextOutgoingMessage(Node);
+  if NextMessage <> nil then
+  begin
+    case NextMessage^.MTI of
+      MTI_DATAGRAM :
+          begin
+            Result := DatagramHandler(Node, MessageToSend, NextMessage)
+          end
+    else begin
+        OPStackNode_OutgoingMessageUnLink(Node, NextMessage);                   // We don't handle these messages
+        OPStackBuffers_DeAllocateMessage(NextMessage);
+      end;
+    end;
+  end;
+
   NextMessage := OPStackNode_NextIncomingMessage(Node);
   if NextMessage <> nil then
   begin
-    if NextMessage^.MessageType and MT_SEND = 0 then
-    begin
-      case NextMessage^.MTI of
-        MTI_SIMPLE_NODE_INFO_REQUEST         : begin Result := SimpleNodeInfoRequestReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
-        MTI_SIMPLE_NODE_INFO_REPLY           : begin SimpleNodeInfoRequestReply(Node, NextMessage); Exit; end;
-        MTI_PROTOCOL_SUPPORT_INQUIRY         : begin Result := ProtocolSupportInquiryReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
-        MTI_PROTOCOL_SUPPORT_REPLY           : begin ProtocolSupportReply(Node, NextMessage); Exit; end;
-        {$IFDEF SUPPORT_TRACTION}
-        MTI_TRACTION_PROTOCOL                : begin Result := TractionProtocolReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
-        MTI_TRACTION_REPLY                   : begin TractionProtocolReply(Node, NextMessage); Exit; end;
-        MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST   : begin Result := SimpleTrainNodeInfoRequestReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
-        MTI_SIMPLE_TRAIN_NODE_INFO_REPLY     : begin SimpleTrainNodeInfoReply(Node, NextMessage); Exit; end;
-        {$ENDIF}
-        {$IFDEF SUPPORT_TRACTION_PROXY}
-        MTI_TRACTION_PROXY_PROTOCOL          : begin Result := TractionProxyProtocolReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
-        MTI_TRACTION_PROXY_REPLY             : begin TractionProxyProtocolReply(Node, NextMessage); Exit; end;
-        {$ENDIF}
-        MTI_REMOTE_BUTTON_REQUEST            : begin Result := RemoteButtonReplyHandler(Node, MessageToSend, NextMessage); Exit; end;
-        MTI_REMOTE_BUTTON_REPLY              : begin RemoteButtonReply(Node, NextMessage); Exit; end;
-        {$IFDEF SUPPORT_STREAMS}
-        MTI_STREAM_INIT_REQUEST :
-            begin
-              StreamInitRequestReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        MTI_STREAM_INIT_REPLY :
-            begin
-              StreamInitReplyReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        MTI_STEAM_SEND :
-            begin
-              StreamSendReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        MTI_STREAM_PROCEED :
-            begin
-              StreamProceedReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        MTI_STREAM_COMPLETE :
-            begin
-              StreamCompleteReply(Node, MessageToSend, NextMessage);
-              Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
-            end;
-        {$ENDIF}
-        MTI_DATAGRAM : Result := DatagramReplyHandler(Node, MessageToSend, NextMessage)
-      else begin
-          OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
-          OPStackBuffers_DeAllocateMessage(NextMessage);
-        end;
+    case NextMessage^.MTI of
+      MTI_SIMPLE_NODE_INFO_REQUEST         : begin Result := SimpleNodeInfoRequestHandler(Node, MessageToSend, NextMessage); Exit; end;
+      MTI_SIMPLE_NODE_INFO_REPLY           : begin SimpleNodeInfoRequestReply(Node, NextMessage); Exit; end;
+      MTI_PROTOCOL_SUPPORT_INQUIRY         : begin Result := ProtocolSupportInquiryHandler(Node, MessageToSend, NextMessage); Exit; end;
+      MTI_PROTOCOL_SUPPORT_REPLY           : begin ProtocolSupportReply(Node, NextMessage); Exit; end;
+      {$IFDEF SUPPORT_TRACTION}
+      MTI_TRACTION_PROTOCOL                : begin Result := TractionProtocolHandler(Node, MessageToSend, NextMessage); Exit; end;
+      MTI_TRACTION_REPLY                   : begin TractionProtocolReply(Node, NextMessage); Exit; end;
+      MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST   : begin Result := SimpleTrainNodeInfoRequestHandler(Node, MessageToSend, NextMessage); Exit; end;
+      MTI_SIMPLE_TRAIN_NODE_INFO_REPLY     : begin SimpleTrainNodeInfoReply(Node, NextMessage); Exit; end;
+      {$ENDIF}
+      {$IFDEF SUPPORT_TRACTION_PROXY}
+      MTI_TRACTION_PROXY_PROTOCOL          : begin Result := TractionProxyProtocolHandler(Node, MessageToSend, NextMessage); Exit; end;
+      MTI_TRACTION_PROXY_REPLY             : begin TractionProxyProtocolReply(Node, NextMessage); Exit; end;
+      {$ENDIF}
+      MTI_REMOTE_BUTTON_REQUEST            : begin Result := RemoteButtonHandler(Node, MessageToSend, NextMessage); Exit; end;
+      MTI_REMOTE_BUTTON_REPLY              : begin RemoteButtonReply(Node, NextMessage); Exit; end;
+      {$IFDEF SUPPORT_STREAMS}
+      MTI_STREAM_INIT_REQUEST :
+          begin
+            StreamInitRequestReply(Node, MessageToSend, NextMessage);
+            Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+          end;
+      MTI_STREAM_INIT_REPLY :
+          begin
+            StreamInitReplyReply(Node, MessageToSend, NextMessage);
+            Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+          end;
+      MTI_STEAM_SEND :
+          begin
+            StreamSendReply(Node, MessageToSend, NextMessage);
+            Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+          end;
+      MTI_STREAM_PROCEED :
+          begin
+            StreamProceedReply(Node, MessageToSend, NextMessage);
+            Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+          end;
+      MTI_STREAM_COMPLETE :
+          begin
+            StreamCompleteReply(Node, MessageToSend, NextMessage);
+            Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);
+          end;
+      {$ENDIF}
+      MTI_DATAGRAM :
+          begin
+            Result := DatagramHandler(Node, MessageToSend, NextMessage)
+          end
+    else begin
+        OPStackNode_IncomingMessageUnLink(Node, NextMessage);                           // We don't handle these messages
+        OPStackBuffers_DeAllocateMessage(NextMessage);
       end;
-    end else
-    begin
-      OPStackNode_IncomingMessageUnLink(Node, NextMessage);
-      MessageToSend := NextMessage;
-      Result := True
     end;
+
   end;
 end;
 

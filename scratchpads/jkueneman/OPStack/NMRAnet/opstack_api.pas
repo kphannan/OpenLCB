@@ -63,7 +63,7 @@ function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNod
 function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
 {$ENDIF}
 // Configuration Memeory
-function TrySendConfigMemoryRead(var Source: TNodeInfo; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
+function TrySendConfigMemoryRead(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
 
 
 
@@ -580,28 +580,25 @@ end;
 
 {$ENDIF}
 
-function TrySendConfigMemoryRead(var Source: TNodeInfo; var Dest: TNodeInfo;
-  AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
+function TrySendConfigMemoryRead(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
 var
   NewMessage: POPStackMessage;
 begin
   Result := False;
-  if IsOutgoingBufferAvailable then
+  if OPStackBuffers_AllocateDatagramMessage(NewMessage, Node^.Info.AliasID, Node^.Info.ID, Dest.AliasID, Dest.ID, 0) then
   begin
-    if OPStackBuffers_AllocateDatagramMessage(NewMessage, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, 0) then
-    begin
-      NewMessage^.Buffer^.DataBufferSize := 8;
-      NewMessage^.Buffer^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
-      NewMessage^.Buffer^.DataArray[1] := MCP_COMMAND_READ or MCP_NONE;         // Address is in byte 6
-      NewMessage^.Buffer^.DataArray[2] := Byte( StartAddress shr 24);
-      NewMessage^.Buffer^.DataArray[3] := Byte( StartAddress shr 16);
-      NewMessage^.Buffer^.DataArray[4] := Byte( StartAddress shr 8);
-      NewMessage^.Buffer^.DataArray[5] := Byte( StartAddress);
-      NewMessage^.Buffer^.DataArray[6] := AddressSpace;
-      NewMessage^.Buffer^.DataArray[7] := ReadCount;
-      OutgoingMessage(NewMessage, True);
-      Result := True;
-    end;
+    NewMessage^.Buffer^.DataBufferSize := 8;
+    NewMessage^.Buffer^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+    NewMessage^.Buffer^.DataArray[1] := MCP_COMMAND_READ or MCP_NONE;         // Address is in byte 6
+    NewMessage^.Buffer^.DataArray[2] := Byte( StartAddress shr 24);
+    NewMessage^.Buffer^.DataArray[3] := Byte( StartAddress shr 16);
+    NewMessage^.Buffer^.DataArray[4] := Byte( StartAddress shr 8);
+    NewMessage^.Buffer^.DataArray[5] := Byte( StartAddress);
+    NewMessage^.Buffer^.DataArray[6] := AddressSpace;
+    NewMessage^.Buffer^.DataArray[7] := ReadCount;
+    PDatagramBuffer( NewMessage^.Buffer)^.iStateMachine := STATE_DATAGRAM_SEND;
+    OPStackNode_OutgoingMessageLink(Node, NewMessage);
+    Result := True;
   end;
 end;
 

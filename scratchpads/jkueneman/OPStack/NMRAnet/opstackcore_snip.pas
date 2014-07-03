@@ -18,7 +18,7 @@ uses
   opstacktypes;
 
 procedure SimpleNodeInfoMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-function SimpleNodeInfoRequestReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
+function SimpleNodeInfoRequestHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
 procedure SimpleNodeInfoRequestReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 
 implementation
@@ -35,7 +35,7 @@ end;
 //
 //  Called to automatically reply to a Simple Node Info Request
 //
-function SimpleNodeInfoRequestReplyHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
+function SimpleNodeInfoRequestHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
 var
   AcdiSnipBufferPtr: PAcdiSnipBuffer;
   j: Integer;

@@ -13,7 +13,7 @@ uses
   opstackdefines;
 
 procedure RemoteButtonMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-function RemoteButtonReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function RemoteButtonHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure RemoteButtonReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 
 
@@ -33,7 +33,7 @@ begin
   OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
-function RemoteButtonReplyHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function RemoteButtonHandler(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;

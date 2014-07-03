@@ -120,7 +120,6 @@ const
   MT_ACDISNIP           = $0008;
   MT_MULTIFRAME         = $0010;
 
-  MT_SEND               = $2000;                                                     // Set if the message should just be sent as is
   MT_CAN_TYPE           = $4000;                                                     // It is a CAN MTI
   MT_ALLOCATED          = $8000;                                                     // Buffer was allocated from the Pool, do not set this manually !!!!!
 
@@ -195,8 +194,6 @@ type
 
 const
   ABS_ALLOCATED            = $01;                                               // Array Buffer State Flag = Allocated Buffer
-  ABS_STREAM_OUTGOING      = $04;                                               // Flag the direction of the stream (if the buffer is a stream)
-  ABS_STREAM_TYPE_ID       = $08;                                               // Flag if the Stream Buffer contains a valid Stream Type ID UID
 
 type
   TSimpleBuffer = record
@@ -214,6 +211,7 @@ type
     iStateMachine: Byte;
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     ResendCount: Byte;                                                          // Number of tries to resend the datagram if sending is rejected
+    Watchdog: Word;                                                             //
   end;
   PDatagramBuffer = ^TDatagramBuffer;
 
@@ -270,8 +268,10 @@ type
     FramingBits: Byte;                                                          // The upper 4 bits sent in the Destination (when used for the message)
     {$IFDEF FPC}
     NextIncoming: POPStackMessage;
+    NextOutgoing: POPStackMessage;
     {$ELSE}
     NextIncoming: ^TOPStackMessage;
+    NextOutgoing: ^TOPStackMessage;
     {$ENDIF}
     MTI: Word;
     Buffer: PSimpleBuffer;                                                      // This can be nil, CANBuffer, Datagram Buffer, or StreamBuffer based on the lower 4 bits of MessageType
@@ -311,6 +311,7 @@ type
     Flags: Word;                                                                // Message Flags for messages passed to the Node through a simple set bit (no complex reply data needed like destination Alias), see the MF_xxxx flags
     iStateMachine: Byte;                                                        // Statemachine index for the main bus login
     IncomingMessages: POPStackMessage;                                          // Linked List of Messages incoming to process for the node
+    OutgoingMessages: POPStackMessage;                                          // Linked List of Messages outgoing from the node, mainly for Datagrams and Streams
     {$IFDEF FPC}
     UserData: Pointer;
     {$ELSE}
@@ -339,12 +340,12 @@ const
   DATAGRAM_PROCESS_ERROR_QUIET_FAIL          = $05;
 
 const
-  STATE_DATAGRAM_SEND_ACK                = 0;
-  STATE_DATAGRAM_PROCESS                 = 1;
-  STATE_DATAGRAM_SEND                    = 2;
-  STATE_DATAGRAM_WAITFOR_PROCESS_REPLY   = 3;
-  STATE_DATAGRAM_WAITFOR_PROCESS_ACK     = 4;
-  STATE_DATAGRAM_DONE                    = 5;
+  STATE_DATAGRAM_PROCESS                       = 0;
+  STATE_DATAGRAM_SEND_ACK                      = 1;
+  STATE_DATAGRAM_SEND                          = 2;
+  STATE_DATAGRAM_SEND_REPLY_ACK                = 3;
+  STATE_DATAGRAM_WAITFOR                       = 4;
+  STATE_DATAGRAM_DONE                          = 5;
 
 const
   STATE_CONFIG_MEM_STREAM_START                    = 0;

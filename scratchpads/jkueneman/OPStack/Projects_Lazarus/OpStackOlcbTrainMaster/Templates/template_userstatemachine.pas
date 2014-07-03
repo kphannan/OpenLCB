@@ -540,7 +540,7 @@ begin
                case TNodeTask( Node^.UserData).iSubStateMachine of
                  STATE_THROTTLE_READ_FDI_SEND :
                     begin
-                      if TrySendConfigMemoryRead(Node^.Info, TNodeTaskReadConfigMemory( Node^.UserData).FDestNodeInfo, MSI_FDI, TNodeTaskReadConfigMemory( Node^.UserData).CurrentAddress, 64) then
+                      if TrySendConfigMemoryRead(Node, TNodeTaskReadConfigMemory( Node^.UserData).FDestNodeInfo, MSI_FDI, TNodeTaskReadConfigMemory( Node^.UserData).CurrentAddress, 64) then
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_WAIT
                     end;
                  STATE_THROTTLE_READ_FDI_END :
