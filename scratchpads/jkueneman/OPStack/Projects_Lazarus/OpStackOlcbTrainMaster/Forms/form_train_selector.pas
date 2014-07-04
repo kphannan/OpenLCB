@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
-  StdCtrls;
+  StdCtrls, olcb_transport_layer;
 
 type
 
@@ -17,6 +17,9 @@ type
     ButtonCancel: TButton;
     StatusBar: TStatusBar;
     TreeViewTrainList: TTreeView;
+    procedure FormDestroy(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure TreeViewTrainListChange(Sender: TObject; Node: TTreeNode);
   private
     { private declarations }
   public
@@ -32,6 +35,27 @@ implementation
 {$R *.lfm}
 
 { TFormTrainSelector }
+
+procedure TFormTrainSelector.FormDestroy(Sender: TObject);
+var
+  i: Integer;
+begin
+  for i := 0 to TreeViewTrainList.Items.Count - 1 do
+  begin
+    TObject( TreeViewTrainList.Items[i].Data).Free;
+    TreeViewTrainList.Items[i].Data := nil;
+  end;
+end;
+
+procedure TFormTrainSelector.FormShow(Sender: TObject);
+begin
+  ButtonOk.Enabled := TreeViewTrainList.SelectionCount > 0;
+end;
+
+procedure TFormTrainSelector.TreeViewTrainListChange(Sender: TObject;Node: TTreeNode);
+begin
+  ButtonOk.Enabled := TreeViewTrainList.SelectionCount > 0;
+end;
 
 procedure TFormTrainSelector.UpdateStatus(iPanel: Integer; Status: String);
 begin

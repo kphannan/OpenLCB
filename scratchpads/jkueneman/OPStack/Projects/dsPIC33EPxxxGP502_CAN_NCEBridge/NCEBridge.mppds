@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_node.mpas
+Value=Templates\template_userstatemachine.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -76,7 +76,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=12
+Count=13
 File0=NCEBridge.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=..\..\Library\CabCommon\NMRAnetCabBridge.mpas
@@ -89,6 +89,7 @@ File8=..\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Tem
 File9=..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_CAN.mpas
 File10=Templates\template_buffers.mpas
 File11=Templates\template_node.mpas
+File12=..\..\NMRAnet\opstackcore_configmem.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

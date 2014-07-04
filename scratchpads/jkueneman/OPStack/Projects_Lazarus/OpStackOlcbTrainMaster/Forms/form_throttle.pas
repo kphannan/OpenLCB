@@ -420,6 +420,9 @@ begin
 end;
 
 procedure TFormThrottle.ActionAllocationByListExecute(Sender: TObject);
+var
+  Event: TNodeEventSimpleTrainNodeInfo;
+  Task: TNodeTaskAllocateTrain;
 begin
   NodeThread.AddTask(TNodeTaskFindTrains.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_FIND_TRAINS, Self));
   TimerGeneral.Interval := 2000;
@@ -428,10 +431,12 @@ begin
   FormSelector := TFormTrainSelector.Create(Self);
   try
     UpdateUI;
+    FormSelector.TreeViewTrainList.Images := ImageList16x16;
     FormSelector.UpdateStatus(0, 'Status: Looking for Trains...');
     if FormSelector.ShowModal = mrOK then
     begin
-
+      Event := TNodeEventSimpleTrainNodeInfo( FormSelector.TreeViewTrainList.Selected.Data);
+      NodeThread.AddTask(TNodeTaskAllocateTrain.Create(ThrottleNodeInfo, Event.NodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN, Self, 0, 0, False));
     end;
   finally
     FormSelector.Close;
@@ -962,10 +967,29 @@ begin
 end;
 
 procedure TFormThrottle.EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
+var
+  Node, Child: TTreeNode;
 begin
   if TimerType = tt_AllocateByList then
   begin
-    FormSelector.TreeViewTrainList.Items.Add(nil, Event.RoadName);
+    Node := FormSelector.TreeViewTrainList.Items.AddObject(nil, 'Road Name: ' + Event.RoadName, Event.Clone);
+    Node.ImageIndex := 433;
+    Node.SelectedIndex := 433;
+    Child := FormSelector.TreeViewTrainList.Items.AddChild(Node, 'Road Class: ' + Event.TrainClass);
+    Child.ImageIndex := 615;
+    Child.SelectedIndex := 615;
+    Child := FormSelector.TreeViewTrainList.Items.AddChild(Node, 'Road Number: ' + Event.RoadNumber);
+    Child.ImageIndex := 615;
+    Child.SelectedIndex := 615;
+    Child := FormSelector.TreeViewTrainList.Items.AddChild(Node, 'Train Name: ' + Event.TrainName);
+    Child.ImageIndex := 615;
+    Child.SelectedIndex := 615;
+    Child := FormSelector.TreeViewTrainList.Items.AddChild(Node, 'Manufacturer: ' + Event.Manufacturer);
+    Child.ImageIndex := 615;
+    Child.SelectedIndex := 615;
+    Child := FormSelector.TreeViewTrainList.Items.AddChild(Node, 'Owner: ' + Event.Owner);
+    Child.ImageIndex := 615;
+    Child.SelectedIndex := 615;
   end;
 end;
 

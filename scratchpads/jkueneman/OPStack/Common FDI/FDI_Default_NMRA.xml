@@ -5,7 +5,7 @@
     <name>Default NMRA Functions</name>
     <description>Generic mapping of the NMRA functions</description>
     <group>
-      <name>Functions</name>
+      <name>NMRA Functions</name>
       <function origin="0">
         <name>F0</name>
       </function>

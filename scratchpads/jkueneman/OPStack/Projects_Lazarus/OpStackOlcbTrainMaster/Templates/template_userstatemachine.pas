@@ -82,18 +82,19 @@ const
    STATE_THROTTLE_LOG_IN_AND_NOTIFY          = 3;
    STATE_THROTTLE_FREE                       = 4;
    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS  = 5;
-   STATE_THROTTLE_RELEASE_CONTROLLER         = 6;
-   STATE_THROTTLE_DIRECTION_FORWARD          = 7;
-   STATE_THROTTLE_DIRECTION_REVERSE          = 8;
-   STATE_THROTTLE_SPEED_CHANGE               = 9;
-   STATE_THROTTLE_FUNCTION                   = 10;
-   STATE_THROTTLE_E_STOP                     = 11;
-   STATE_THROTTLE_QUERY_SPEED                = 12;
-   STATE_THROTTLE_QUERY_FUNCTION             = 13;
-   STATE_THROTTLE_FIND_TRAINS                = 14;
-   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 15;
-   STATE_THROTTLE_PROTOCOL_SUPPORT           = 16;
-   STATE_THROTTLE_READ_FDI                   = 17;
+   STATE_THROTTLE_ALLOCATE_TRAIN             = 6;
+   STATE_THROTTLE_RELEASE_CONTROLLER         = 7;
+   STATE_THROTTLE_DIRECTION_FORWARD          = 8;
+   STATE_THROTTLE_DIRECTION_REVERSE          = 9;
+   STATE_THROTTLE_SPEED_CHANGE               = 10;
+   STATE_THROTTLE_FUNCTION                   = 11;
+   STATE_THROTTLE_E_STOP                     = 12;
+   STATE_THROTTLE_QUERY_SPEED                = 13;
+   STATE_THROTTLE_QUERY_FUNCTION             = 14;
+   STATE_THROTTLE_FIND_TRAINS                = 15;
+   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 16;
+   STATE_THROTTLE_PROTOCOL_SUPPORT           = 17;
+   STATE_THROTTLE_READ_FDI                   = 18;
 
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_START = 0;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT  = 1;
@@ -157,6 +158,7 @@ var
   NewNode: PNMRAnetNode;
   TrainAllocateByAddressTask: TNodeTaskAllocateTrainByAddress;
   TrainReleaseController: TNodeTaskReleaseController;
+  TrainAllocateTask: TNodeTaskAllocateTrain;
   NewFunctionValue, Address: Word;
 begin
   if Node = GetPhysicalNode then
@@ -322,6 +324,71 @@ begin
                     end;
               end;
           end;
+        STATE_THROTTLE_ALLOCATE_TRAIN :
+            begin
+              TrainAllocateTask := TNodeTaskAllocateTrain( Node^.UserData);
+              case TrainAllocateTask.iSubStateMachine of
+                STATE_SUB_BRIDGE_INITIALIZE :
+                    begin
+                       Node^.TrainData.LinkedNode := TrainAllocateTask.DestNodeInfo;
+                       TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK;
+                       Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK :
+                    begin
+                      if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
+                        TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      TrainAllocateTask.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
+                    begin
+                      if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
+                        TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      TrainAllocateTask.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
+                    begin
+                      if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
+                        TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      TrainAllocateTask.FunctionIndex := 0;
+                      TrainAllocateTask.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
+                    begin
+                      if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, TrainAllocateTask.FunctionIndex) then
+                        TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
+                      TrainAllocateTask.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
+                    begin
+                      if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, False) then
+                      begin
+                        UnLinkFirstTaskFromNode(Node, True);
+                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;                                // We are done....  Look for more tasks
+                      end;
+                      TrainAllocateTask.WatchDog := 0;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
+                    begin
+                      if TrainAllocateTask.WatchDog > 50 then         // Waiting for the Reply to come into a callback
+                      begin
+                        TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
+                      end;
+                      Exit;
+                    end;
+                STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK :
+                    begin
+                      if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then   // Unsure if we are locked or not, just release just in case
+                        TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK; // No Reply for Unlock, just unlock the Traction Protcol and end
+                      Exit;
+                    end;
+               end
+            end;
         STATE_THROTTLE_RELEASE_CONTROLLER :
             begin
               TrainReleaseController := TNodeTaskReleaseController( Node^.UserData);
@@ -620,7 +687,7 @@ begin
         begin
           Node^.TrainData.SpeedDir := (MultiFrameBuffer^.DataArray[1] shl 8) or MultiFrameBuffer^.DataArray[2];   // Update our local copy
 
-          if TNodeTask( Node^.UserData) is TNodeTaskAllocateTrainByAddress then
+          if (TNodeTask( Node^.UserData) is TNodeTaskAllocateTrainByAddress) or (TNodeTask( Node^.UserData) is TNodeTaskAllocateTrain) then
           begin
             TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS;
             NodeThread.AddEvent( TNodeEventSpeedDirQuery.Create( Node^.Info, TNodeTask( Node^.UserData).LinkedObj, (MultiFrameBuffer^.DataArray[1] shr 8) or (MultiFrameBuffer^.DataArray[2])));
@@ -643,7 +710,7 @@ begin
           else
             Node^.TrainData.Functions := Node^.TrainData.Functions or Mask;
 
-          if TNodeTask( Node^.UserData) is TNodeTaskAllocateTrainByAddress then
+          if (TNodeTask( Node^.UserData) is TNodeTaskAllocateTrainByAddress) or (TNodeTask( Node^.UserData) is TNodeTaskAllocateTrain) then
           begin
             TrainAllocateByAddressTask := TNodeTaskAllocateTrainByAddress( Node^.UserData);
             if TrainAllocateByAddressTask.FunctionIndex < 28 then
@@ -666,7 +733,8 @@ begin
             TRACTION_CONTROLLER_CONFIG_ASSIGN :
                 begin
                   case Node^.iUserStateMachine of
-                    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS :
+                    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS,
+                    STATE_THROTTLE_ALLOCATE_TRAIN :
                         begin
                           if MultiFrameBuffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
                           begin
@@ -699,7 +767,8 @@ begin
             TRACTION_MANAGE_RESERVE :
                 begin
                   case Node^.iUserStateMachine of
-                    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS :
+                    STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS,
+                    STATE_THROTTLE_ALLOCATE_TRAIN :
                         begin
                           if MultiFrameBuffer^.DataArray[2] = TRACTION_MANAGE_RESERVE_REPLY_OK then
                             TNodeTask( Node^.UserData).iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER
@@ -1005,7 +1074,7 @@ procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POP
 var
   Event: TNodeEventSimpleTrainNodeInfo;
 begin
-  Event := TNodeEventSimpleTrainNodeInfo.Create(Node^.Info, TNodeTask( Node^.UserData).LinkedObj);
+  Event := TNodeEventSimpleTrainNodeInfo.Create(AMessage^.Source, TNodeTask( Node^.UserData).LinkedObj);
   Event.Decode(AMessage);
   NodeThread.AddEvent(Event);
   TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE;       // Next Please

@@ -6,6 +6,8 @@ object FormTrainSelector: TFormTrainSelector
   Caption = 'OpenLCB Train Selector'
   ClientHeight = 282
   ClientWidth = 474
+  OnDestroy = FormDestroy
+  OnShow = FormShow
   LCLVersion = '1.2.0.3'
   object ButtonOk: TButton
     Left = 184
@@ -35,7 +37,13 @@ object FormTrainSelector: TFormTrainSelector
     Align = alTop
     Anchors = [akTop, akLeft, akRight, akBottom]
     DefaultItemHeight = 18
+    HotTrack = True
+    ReadOnly = True
+    RightClickSelect = True
+    RowSelect = True
     TabOrder = 2
+    OnChange = TreeViewTrainListChange
+    Options = [tvoAutoItemHeight, tvoHideSelection, tvoHotTrack, tvoKeepCollapsedNodes, tvoReadOnly, tvoRightClickSelect, tvoRowSelect, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
   end
   object StatusBar: TStatusBar
     Left = 0

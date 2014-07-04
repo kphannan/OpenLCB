@@ -1,0 +1,2 @@
+
+- Datagrams:  July 3, 2014 = Reworked the architecture, need to add the watchdog for abandon messages

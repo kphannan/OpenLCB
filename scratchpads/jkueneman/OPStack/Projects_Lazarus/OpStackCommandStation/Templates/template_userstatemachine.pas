@@ -292,12 +292,18 @@ begin
 
               ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
 
-              Info := 'NMRA DCC Address: ' + IntToStr(TrainNode^.TrainData.Address) + #0;
+              if TrainNode^.TrainData.Address and $C000 <> 0 then
+                Info := 'Address: ' + IntToStr(TrainNode^.TrainData.Address and not $C000) + ' [L]' + #0
+              else
+                Info := 'Address: ' + IntToStr(TrainNode^.TrainData.Address) + ' [S]' + #0 ;
+
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, strlen(Info) + 1, @Info);
+
+              Info := 'NMRA DCC Basic Train';
+              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, strlen(Info) + 1, @Info);
 
               Info := #0;
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, 1, @Info);
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, 1, @Info);
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, 1, @Info);
               AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNUMBER, 1, @Info);

@@ -68,7 +68,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
-      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File;Forms"/>
+      <OtherUnitFiles Value="..\..\..\Library;..\..\..\Components\synapse40\source\lib;..\..\NMRAnet;Templates;..\..\Common;..\..\NMRAnet\CAN_Statemachines;..\..\HardwareLayerImplementations\Lazarus_Ethernet;..\..\ConfigurationLayerImplementations\Lazarus_File;Forms;..\..\Library\CabCommon"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Conditionals Value="if TargetOS = 'darwin' then

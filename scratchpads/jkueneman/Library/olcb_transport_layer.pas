@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
   olcb_app_common_settings, math_float16, Forms, blcksock, synsock, contnrs,
-  Controls, opstackdefines, nmranetutilities, threadedstringlist;
+  Controls, opstackdefines, nmranetutilities, threadedstringlist, NMRAnetCabBridgeDefines;
 
 
 var
@@ -86,6 +86,11 @@ type
     property Long: Boolean read FLong write FLong;
     property SpeedStep: Byte read FSpeedStep write FSpeedStep;
     property FunctionIndex: Word read FFunctionIndex write FFunctionIndex;
+  end;
+
+  { TNodeTaskAllocateTrain }
+
+  TNodeTaskAllocateTrain = class(TNodeTaskAllocateTrainByAddress)
   end;
 
   { TNodeTaskReleaseController }
@@ -251,6 +256,7 @@ type
     FTrainClass: TStnipBuffer;
     FTrainName: TStnipBuffer;
   public
+    function Clone: TNodeEventSimpleTrainNodeInfo;
     procedure Decode(AMessage: POpStackMessage);
     property RoadName: TStnipBuffer read FRoadName write FRoadName;
     property TrainClass: TStnipBuffer read FTrainClass write FTrainClass;
@@ -574,6 +580,17 @@ end;
 
 { TNodeEventSimpleTrainNodeInfo }
 
+function TNodeEventSimpleTrainNodeInfo.Clone: TNodeEventSimpleTrainNodeInfo;
+begin
+  Result := TNodeEventSimpleTrainNodeInfo.Create(FNodeInfo, LinkedObj);
+  Result.FManufacturer := FManufacturer;
+  Result.FOwner := FOwner;
+  Result.FRoadName := FRoadName;
+  Result.FRoadNumber := FRoadNumber;
+  Result.FTrainClass := FTrainClass;
+  Result.FTrainName := FTrainName;
+end;
+
 procedure TNodeEventSimpleTrainNodeInfo.Decode(AMessage: POpStackMessage);
 var
   i: Integer;
@@ -596,7 +613,7 @@ begin
   else
     FRoadName[STNIP_MAX_STR_LEN] := #0;
 
-  Head := Head + 2;  // Skip over the null and to the next string
+  Head := Head + 1;  // Skip over the null and to the next string
   i := 0;
   while Head^ <> #0 do
   begin
@@ -610,7 +627,7 @@ begin
   else
     FTrainClass[STNIP_MAX_STR_LEN] := #0;
 
-  Head := Head + 2;  // Skip over the null and to the next string
+  Head := Head + 1;  // Skip over the null and to the next string
   i := 0;
   while Head^ <> #0 do
   begin
@@ -624,7 +641,7 @@ begin
   else
     FRoadNumber[STNIP_MAX_STR_LEN] := #0;
 
-  Head := Head + 2;  // Skip over the null and to the next string
+  Head := Head + 1;  // Skip over the null and to the next string
   i := 0;
   while Head^ <> #0 do
   begin
@@ -638,7 +655,7 @@ begin
   else
     FTrainName[STNIP_MAX_STR_LEN] := #0;
 
-  Head := Head + 2;  // Skip over the null and to the next string
+  Head := Head + 1;  // Skip over the null and to the next string
   i := 0;
   while Head^ <> #0 do
   begin
@@ -652,7 +669,7 @@ begin
   else
     FManufacturer[STNIP_MAX_STR_LEN] := #0;
 
-  Head := Head + 2;  // Skip over the null and to the next string
+  Head := Head + 1;  // Skip over the null and to the next string
   i := 0;
   while Head^ <> #0 do
   begin
