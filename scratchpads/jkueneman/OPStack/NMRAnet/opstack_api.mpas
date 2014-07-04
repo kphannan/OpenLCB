@@ -101,7 +101,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_VERIFY_NODE_ID_NUMBER_DEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_VERIFY_NODE_ID_NUMBER_DEST, Source, Dest, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -116,7 +116,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_VERIFY_NODE_ID_NUMBER, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_VERIFY_NODE_ID_NUMBER, Source, NULL_NODE_INFO, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -131,7 +131,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PROTOCOL_SUPPORT_INQUIRY, Source, Dest, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -146,7 +146,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_CONSUMER_IDENTIFY, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_CONSUMER_IDENTIFY, Source, NULL_NODE_INFO, False) then
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
@@ -163,7 +163,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PRODUCER_IDENTIFY, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PRODUCER_IDENTIFY, Source, NULL_NODE_INFO, False) then
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
@@ -180,7 +180,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENTS_IDENTIFY_DEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENTS_IDENTIFY_DEST, Source, Dest, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -195,7 +195,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENTS_IDENTIFY, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENTS_IDENTIFY, Source, NULL_NODE_INFO, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -210,7 +210,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENT_LEARN, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_EVENT_LEARN, Source, NULL_NODE_INFO, False) then
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
@@ -227,7 +227,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PC_EVENT_REPORT, Source.AliasID, Source.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_PC_EVENT_REPORT, Source, NULL_NODE_INFO, False) then
     begin
       NewMessage^.Buffer^.DataArray := EventID^;
       NewMessage^.Buffer^.DataBufferSize := 8;
@@ -244,7 +244,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_REMOTE_BUTTON_REQUEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_REMOTE_BUTTON_REQUEST, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataArray := DataBuffer^.DataArray;
       NewMessage^.Buffer^.DataBufferSize := DataBuffer^.DataBufferSize;
@@ -261,7 +261,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_NODE_INFO_REQUEST, Source, Dest, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -278,7 +278,7 @@ begin
   NewMessage := nil;
   // Does not matter we loaded Source into the destination, the loader will see the MTI does not have a dest and ignore it
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_SIMPLE_TRAIN_NODE_INFO_REQUEST, Source, Dest, False) then
     begin
       OutgoingMessage(NewMessage, True);
       Result := True;
@@ -292,7 +292,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 6;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_FUNCTION;
@@ -313,7 +313,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 3;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_SPEED_DIR;
@@ -364,7 +364,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest) then
     begin
       MultiFrameBuffer := PMultiFrameBuffer( PByte( NewMessage^.Buffer));
       MultiFrameBuffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG; // Manage Proxy
@@ -389,7 +389,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest) then
     begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG; // Manage Proxy
       NewMessage^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
@@ -406,7 +406,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_MANAGE; // Manage Proxy
       if Reserve then
@@ -426,7 +426,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_REPLY, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_REPLY, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 3;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_MANAGE;
@@ -445,7 +445,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 1;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
@@ -462,7 +462,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 4;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_QUERY_FUNCTION;
@@ -482,7 +482,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 1;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_E_STOP;
@@ -501,7 +501,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE; // Manage Proxy
       if Reserve then
@@ -521,7 +521,7 @@ begin
   Result := False;
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_PROTOCOL, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_PROTOCOL, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_ALLOCATE;             // Allocate Proxy
       NewMessage^.Buffer^.DataArray[1] := TechnologyID;   // Technology type (DCC, DC, Marklin, etc)
@@ -544,7 +544,7 @@ begin
   NewMessage := nil;
   if IsOutgoingBufferAvailable then
   begin   
-    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Source.AliasID, Source.ID, Dest.AliasID, Dest.ID) then
+    if OPStackBuffers_AllocateMultiFrameMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Source, Dest) then
     begin
       MultiFrameBuffer := PMultiFrameBuffer( PByte( NewMessage^.Buffer));
       MultiFrameBuffer^.DataBufferSize := 13;
@@ -569,7 +569,7 @@ begin
   Result := False;
   if IsOutgoingBufferAvailable then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Dest.AliasID, Dest.ID, Source.AliasID, Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Source, Dest, False) then
     begin
       NewMessage^.Buffer^.DataBufferSize := 3;
       NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
@@ -588,7 +588,7 @@ var
   NewMessage: POPStackMessage;
 begin
   Result := False;
-  if OPStackBuffers_AllocateDatagramMessage(NewMessage, Node^.Info.AliasID, Node^.Info.ID, Dest.AliasID, Dest.ID, 0) then
+  if OPStackBuffers_AllocateDatagramMessage(NewMessage, Node^.Info, Dest, 0) then
   begin
     NewMessage^.Buffer^.DataBufferSize := 8;
     NewMessage^.Buffer^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;

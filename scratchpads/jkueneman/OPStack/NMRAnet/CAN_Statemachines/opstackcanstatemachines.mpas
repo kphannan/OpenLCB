@@ -123,28 +123,29 @@ var
   DatagramMessagePtr, InProcessMessagePtr: POPStackMessage;
   DatagramProcessErrorCode: Word;
   MTI: DWord;
-  SourceAlias, DestAlias: Word;
   FramingBits: Byte;
-  Source: TNodeInfo;
+  Source, Dest: TNodeInfo;
 begin
   Result := False;
+  Source := NULL_NODE_INFO;
+  Dest := NULL_NODE_INFO;
   InProcessMessagePtr := nil;
   ScratchMessage.Buffer := @ScratchBuffer;
   OPStackMessage := nil;
-  SourceAlias := NMRAnetCanBuffer^.MTI and $00000FFF;
-  SourceNode := OPStackNode_FindByAlias(SourceAlias);                           // Where the message came from
+  Source.AliasID := NMRAnetCanBuffer^.MTI and $00000FFF;
+  SourceNode := OPStackNode_FindByAlias(Source.AliasID);                           // Where the message came from
   DestNode := nil;                                                              // Unknown if the message contains a destination yet
   if NMRAnetCanBuffer^.MTI and MTI_OLCB_MSG = 0 then
   begin
     MTI := (NMRAnetCanBuffer^.MTI shr 12) and $FFFF;
     if MTI and $F000 > 0 then
       MTI := MTI and $F000;                                                     // CID uses the upper nibble as the MTI, the rest use the lower 3 nibbles
-    if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, True) then
+    if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Source, NULL_NODE_INFO, True) then
     begin
       OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);  // Never has a dest
       case MTI of
         MTI_CAN_AMD,                                                            // If another node has reset then we need to clear out any inprocess states with that node
-        MTI_CAN_AMR :  FlushCanSpecificBuffers(SourceAlias);                    // This is only an issue with CAN so encapsulate it here in CAN only code
+        MTI_CAN_AMR :  FlushCanSpecificBuffers(Source.AliasID);                    // This is only an issue with CAN so encapsulate it here in CAN only code
       end;
       Result := True;
     end
@@ -156,14 +157,14 @@ begin
           begin
             if MTI and MTI_ADDRESSED_MASK = MTI_ADDRESSED_MASK then
             begin                                                               // It is an addressed message so pull out the Destination
-              DestAlias := Word(Word(Word(NMRAnetCanBuffer^.Payload[0] shl 8) or NMRAnetCanBuffer^.Payload[1]) and $0FFF);  // General CAN messages have the Alias in the payload first two bytes
-              DestNode := OPStackNode_FindByAlias(DestAlias);
+              Dest.AliasID := Word(Word(Word(NMRAnetCanBuffer^.Payload[0] shl 8) or NMRAnetCanBuffer^.Payload[1]) and $0FFF);  // General CAN messages have the Alias in the payload first two bytes
+              DestNode := OPStackNode_FindByAlias(Dest.AliasID);
               if DestNode <> nil then                                           // If it is not addressed to us then throw it away
               begin
                 FramingBits := NMRAnetCanBuffer^.Payload[0] and $30;              // The upper nibble lower 2 bits (suppose to ignore the upper to for framing) of the destination may have special meaning, pull it out
                 if FramingBits <> 0 then
                 begin
-                  NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
+                  NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, Dest.AliasID, Source.AliasID); // Need a OpStackMessage Buffer to call the next function
                   if StackCANStatemachineDatagram_ProcessIncomingMultiFrameMessage(@ScratchMessage, InProcessMessagePtr) then   // Don't dispatch it until it is fully received
                   begin
                     OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
@@ -172,7 +173,7 @@ begin
                 end else
                 if (MTI = MTI_SIMPLE_NODE_INFO_REPLY) or (MTI = MTI_SIMPLE_TRAIN_NODE_INFO_REPLY) then   // Does not use framing bits
                 begin
-                  NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
+                  NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, Dest.AliasID, Source.AliasID); // Need a OpStackMessage Buffer to call the next function
                   if OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(@ScratchMessage, InProcessMessagePtr) then
                   begin
                     OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
@@ -181,22 +182,22 @@ begin
                 end else
                 begin
                   // Addressed message but a single Frame
-                  if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, False) then
+                  if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Source, Dest, False) then
                   begin
                     OPStackBuffers_CopyDataArrayWithSourceOffset(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, 2);
                     Result := True;
                   end else
-                    OptionalInteractionRejected(SourceAlias, DestAlias, NULL_NODE_ID, NULL_NODE_ID, MTI, False);         // Out of buffers, try again later
+                    OptionalInteractionRejected(Dest, Source, MTI, False);         // Out of buffers, try again later
                 end;
               end else
               begin
                 if SourceNode <> nil then
-                  if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, DestAlias, NULL_NODE_ID, False) then  // does not matter about the Node IDs, only the MTI is checked
+                  if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Source, Dest, False) then  // does not matter about the Node IDs, only the MTI is checked
                     Result := True   // This means we have a conflict and need to process it.
               end;
             end else
             begin   // It is not an addressed message
-              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, SourceAlias, NULL_NODE_ID, 0, NULL_NODE_ID, False) then
+              if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Source, Dest, False) then
               begin
                 OPStackBuffers_CopyDataArray(OPStackMessage^.Buffer, PSimpleDataArray( PByte( @NMRAnetCanBuffer^.Payload)), NMRAnetCanBuffer^.PayloadCount, True);
                 Result := True;
@@ -209,10 +210,10 @@ begin
       MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME,
       MTI_FRAME_TYPE_CAN_DATAGRAM_FRAME_END :
         begin
-          DestAlias := (NMRAnetCanBuffer^.MTI shr 12) and $0FFF;
-          DestNode := OPStackNode_FindByAlias(DestAlias);
+          Dest.AliasID := (NMRAnetCanBuffer^.MTI shr 12) and $0FFF;
+          DestNode := OPStackNode_FindByAlias(Dest.AliasID);
           MTI := (NMRAnetCanBuffer^.MTI shr 12) and $F000;
-          NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, 0, MTI, DestAlias, SourceAlias); // Need a OpStackMessage Buffer to call the next function
+          NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, 0, MTI, Dest.AliasID, Source.AliasID); // Need a OpStackMessage Buffer to call the next function
           if DestNode <> nil then
           begin
             DatagramMessagePtr := nil;
@@ -231,7 +232,7 @@ begin
                   if DatagramMessagePtr <> nil then
                     OPStackBuffers_DeAllocateMessage(DatagramMessagePtr);          // If there is an error, need to flush the buffer
                   Source.ID := NULL_NODE_ID;
-                  Source.AliasID := SourceAlias;
+                  Source.AliasID := Source.AliasID;
                   DatagramRejected(@DestNode^.Info, @Source, DatagramProcessErrorCode);
                 end;
             end

@@ -32,7 +32,7 @@ begin
   MessageToSend := nil;
   if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RESERVE then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_PROXY_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_PROXY_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
     begin
       MessageToSend^.Buffer^.DataBufferSize := 3;
       MessageToSend^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
@@ -94,4 +94,4 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
-end.
+end.

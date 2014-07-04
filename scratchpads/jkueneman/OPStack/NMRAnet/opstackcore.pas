@@ -62,6 +62,7 @@ implementation
 procedure OPStackCore_Initialize;
 begin
   OPStack.State := 0;
+  OPStackDefines_Initialize;
   UserStateMachine_Initialize;
   TemplateConfiguration_Initialize;
   Hardware_Initialize;
@@ -170,7 +171,7 @@ begin
                 {$ENDIF}
                 MTI_OPTIONAL_INTERACTION_REJECTED  : begin {TODO: What to do if one of the messages is Rejected!} end
               else
-                 OptionalInteractionRejected(DestNode^.Info.AliasID, AMessage^.Source.AliasID, DestNode^.Info.ID, AMessage^.Source.ID, AMessage^.MTI, True);         // Unknown message, permenent error
+                 OptionalInteractionRejected(AMessage^.Dest, AMessage^.Source, AMessage^.MTI, True);         // Unknown message, permenent error
               end; {case}
             end                                                      // It is not for of or our nodes
           end else
@@ -259,7 +260,7 @@ begin
                if Node^.Flags = 0 then
                  if Node^.IncomingMessages = nil then
                    if Node^.OutgoingMessages = nil then
-                     if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
+                     if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info, NULL_NODE_INFO, True) then
                      begin
                        NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
                        OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -451,7 +452,7 @@ begin
             2 : CAN_MTI := MTI_CAN_CID2;
             3 : CAN_MTI := MTI_CAN_CID3;
           end;
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, CAN_MTI, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, CAN_MTI, Node^.Info, NULL_NODE_INFO, True) then
           begin
             OutgoingMessage(OPStackMessage, True);
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
@@ -483,7 +484,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_RID, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_RID, Node^.Info, NULL_NODE_INFO, True) then
             begin
               OutgoingMessage(OPStackMessage, True);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
@@ -498,7 +499,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMD, Node^.Info, NULL_NODE_INFO, True) then
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -516,7 +517,7 @@ begin
         end else
         begin
           if IsOutgoingBufferAvailable then
-            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then
+            if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_INITIALIZATION_COMPLETE, Node^.Info, NULL_NODE_INFO, False) then
             begin
               NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -530,7 +531,7 @@ begin
       begin
         // Fake an Identify Events to allow the AppCallbacks to be called
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, 0, NULL_NODE_ID, Node^.Info.AliasID, Node^.Info.ID, False) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, NULL_NODE_INFO, Node^.Info, False) then  // Fake Source Node
           begin
             {$IFDEF SUPPORT_VIRTUAL_NODES}
             if Node^.State and NS_VIRTUAL <> 0 then
@@ -585,7 +586,7 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info, NULL_NODE_INFO, True) then  // Fake Source Node
           begin
             NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -599,7 +600,7 @@ begin
       begin
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, True) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info, NULL_NODE_INFO, True) then  // Fake Source Node
           begin
             NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@Node^.Info.ID, PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
             OPStackMessage^.Buffer^.DataBufferSize := 6;
@@ -612,7 +613,7 @@ begin
     STATE_NODE_TAKE_OFFLINE :
       begin
         if IsOutgoingBufferAvailable then
-          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info.AliasID, Node^.Info.ID, 0, NULL_NODE_ID, False) then  // Fake Source Node
+          if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info, NULL_NODE_INFO, False) then  // Fake Source Node
           begin
             OPStackMessage^.Buffer^.DataBufferSize := 8;
             PEventID( @OPStackMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;

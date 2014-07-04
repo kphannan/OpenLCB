@@ -41,7 +41,7 @@ begin
     if LocalOutgoingMessagePtr <> nil then
     begin
       MultiFrameBufferPtr := PMultiFrameBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
-      OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source.AliasID, LocalOutgoingMessagePtr^.Source.ID, LocalOutgoingMessagePtr^.Dest.AliasID, LocalOutgoingMessagePtr^.Dest.ID, 0);
+      OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source, LocalOutgoingMessagePtr^.Dest, 0);
       OPStackBuffers_ZeroSimpleBuffer(@LocalBuffer, False);
       LocalMessage.MessageType := MT_SIMPLE;
       LocalMessage.Buffer := @LocalBuffer;
@@ -88,14 +88,14 @@ begin
   begin
     if OPStackMessage^.FramingBits = $10 then
     begin    // It is a first frame
-      if OPStackBuffers_AllocateMultiFrameMessage(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
+      if OPStackBuffers_AllocateMultiFrameMessage(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source, OPStackMessage^.Dest) then
         OPStackCANStatemachineBuffers_AddIncomingMultiFrameMessage(InProcessMessage)
       else
         Exit;     // Out of buffers, exit and wait until the last frame is sent to send OIR
     end else
     begin
       if OPStackMessage^.FramingBits = $20 then
-        OptionalInteractionRejected(OPStackMessage^.Source.AliasID, OPStackmessage^.Dest.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.ID, OPStackMessage^.MTI, False);                     // It is the last frame and there is no inprocess message we are dropping the message
+        OptionalInteractionRejected(OPStackMessage^.Dest, OPStackMessage^.Source, OPStackMessage^.MTI, False);                     // It is the last frame and there is no inprocess message we are dropping the message
       Exit;
     end
   end;

@@ -16,7 +16,7 @@ uses
 
 procedure VerifyNodeIdByDestination(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure VerifyNodeId(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-procedure OptionalInteractionRejected(var DestAlias, SourceAlias: Word; var DestID, SourceID: TNodeID; MTI: DWord; IsPermenent: Boolean);
+procedure OptionalInteractionRejected(var Source: TNodeInfo; var Dest: TNodeInfo; MTI: DWord; IsPermenent: Boolean);
 procedure DatagramRejected(Dest, Source: PNodeInfo; ErrorCode: Word);
 function UnLinkDeAllocateAndTestForMessageToSend(Node: PNMRAnetNode; MessageToSend, AMessage: POPStackMessage): Boolean;
 
@@ -40,7 +40,8 @@ begin
   end;
 end;
 
-procedure OptionalInteractionRejected(var DestAlias, SourceAlias: Word; var DestID, SourceID: TNodeID; MTI: DWord; IsPermenent: Boolean);
+procedure OptionalInteractionRejected(var Source: TNodeInfo;
+  var Dest: TNodeInfo; MTI: DWord; IsPermenent: Boolean);
 var
   OptionalInteractionMessage: TOPStackMessage;
   OptionalnteractionBuffer: TSimpleBuffer;
@@ -48,7 +49,7 @@ begin
   OPStackBuffers_ZeroSimpleBuffer(@OptionalnteractionBuffer, False);
   OPStackBuffers_ZeroMessage(@OptionalInteractionMessage);
   OptionalInteractionMessage.Buffer := @OptionalnteractionBuffer;
-  OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, DestAlias, DestID, SourceAlias, SourceID, MTI, IsPermenent);    // Unknown MTI sent to addressed node
+  OPStackBuffers_LoadOptionalInteractionRejected(@OptionalInteractionMessage, Source, Dest, MTI, IsPermenent);    // Unknown MTI sent to addressed node
   OutgoingCriticalMessage(@OptionalInteractionMessage, True);
 end;
 
@@ -67,7 +68,7 @@ begin
     DATAGRAM_PROCESS_ERROR_OUT_OF_ORDER        : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_OUT_OF_ORDER);
     DATAGRAM_PROCESS_ERROR_SOURCE_NOT_ACCEPTED : DatagramError := PSimpleDataArray(@DATAGRAM_RESULT_REJECTED_SOURCE_DATAGRAMS_NOT_ACCEPTED);
   end;
-  OPStackBuffers_LoadMessage(@OptionalInteractionMessage, MTI_DATAGRAM_REJECTED_REPLY, Dest^.AliasID, Dest^.ID, Source^.AliasID, Source^.ID, 0);
+  OPStackBuffers_LoadMessage(@OptionalInteractionMessage, MTI_DATAGRAM_REJECTED_REPLY, Source^, Dest^, 0);
   OptionalInteractionMessage.MessageType := MT_SIMPLE;
   OPStackBuffers_CopyDataArray(OptionalInteractionMessage.Buffer, DatagramError, 2, True);
   OutgoingCriticalMessage(@OptionalInteractionMessage, True);

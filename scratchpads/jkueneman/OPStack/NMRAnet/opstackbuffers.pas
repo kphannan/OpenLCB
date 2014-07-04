@@ -66,16 +66,16 @@ procedure OPStackBuffers_Initialize;
 procedure OPStackBuffers_Timer;
 
 // Allocate Message helpers
-function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsCAN: Boolean): Boolean;
-function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
-{$IFDEF SUPPORT_STREAMS}function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsOutgoing: Boolean): Boolean;{$ENDIF}
-function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
-function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsCAN: Boolean): Boolean;
+function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; var Source: TNodeInfo; var Dest: TNodeInfo; DestFlags: Byte): Boolean;
+{$IFDEF SUPPORT_STREAMS}function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsOutgoing: Boolean): Boolean;{$ENDIF}
+function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
 // Load Message helpers
-procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; FramingBits: Byte);
-procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
+procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; var Source: TNodeInfo; var Dest: TNodeInfo; FramingBits: Byte);
+procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; var Source: TNodeInfo; var Dest: TNodeInfo; RejectedMTI: Word; IsPermenent: Boolean);
 
 // Zero buffer helpers
 procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
@@ -411,7 +411,9 @@ begin
   end;
 end;
 
-function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; IsCAN: Boolean): Boolean;
+function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage;
+  MTI: Word; var Source: TNodeInfo; var Dest: TNodeInfo; IsCAN: Boolean
+  ): Boolean;
 var
   SimpleBuffer: PSimpleBuffer;
 begin
@@ -426,7 +428,7 @@ begin
     end;
     if AllocateSimpleBuffer(SimpleBuffer) then
     begin
-      OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+      OPStackBuffers_LoadMessage(AMessage, MTI, Source, Dest, 0);
       AMessage^.Buffer := PSimpleBuffer( SimpleBuffer);
       Result := True
     end else
@@ -437,7 +439,8 @@ begin
   end
 end;
 
-function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; DestFlags: Byte): Boolean;
+function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage;
+  var Source: TNodeInfo; var Dest: TNodeInfo; DestFlags: Byte): Boolean;
 var
   DatagramBuffer: PDatagramBuffer;
 begin
@@ -447,7 +450,7 @@ begin
     AMessage^.MessageType := MT_DATAGRAM or MT_ALLOCATED;
     if AllocateDatagramBuffer(DatagramBuffer) then
     begin
-      OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, DestFlags);
+      OPStackBuffers_LoadMessage(AMessage, MTI_DATAGRAM, Source, Dest, DestFlags);
       AMessage^.Buffer := PSimpleBuffer( PByte( DatagramBuffer));
       Result := True
     end else
@@ -483,7 +486,9 @@ begin
 end;
 {$ENDIF}
 
-function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_Allcoate_ACDI_SNIP_Message(
+  var AMessage: POPStackMessage; MTI: Word; var Source: TNodeInfo;
+  var Dest: TNodeInfo): Boolean;
 var
   AcdiSnipBuffer: PAcdiSnipBuffer;
 begin
@@ -493,7 +498,7 @@ begin
     AMessage^.MessageType := MT_ACDISNIP or MT_ALLOCATED;
     if AllocateAcdiSnipBuffer(AcdiSnipBuffer) then
     begin
-      OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+      OPStackBuffers_LoadMessage(AMessage, MTI, Source, Dest, 0);
       AMessage^.Buffer := PSimpleBuffer( PByte( AcdiSnipBuffer));
       Result := True
     end else
@@ -504,7 +509,9 @@ begin
   end;
 end;
 
-function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID): Boolean;
+function OPStackBuffers_AllocateMultiFrameMessage(
+  var AMessage: POPStackMessage; MTI: Word; var Source: TNodeInfo;
+  var Dest: TNodeInfo): Boolean;
 var
   MultiFrameBuffer: PMultiFrameBuffer;
 begin
@@ -514,7 +521,7 @@ begin
     AMessage^.MessageType := MT_MULTIFRAME or MT_ALLOCATED;
     if AllocateMultiFrameBuffer(MultiFrameBuffer) then
     begin
-      OPStackBuffers_LoadMessage(AMessage, MTI, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+      OPStackBuffers_LoadMessage(AMessage, MTI, Source, Dest, 0);
       AMessage^.Buffer := PSimpleBuffer( PByte( MultiFrameBuffer));
       Result := True
     end else
@@ -547,9 +554,11 @@ begin
   end;
 end;
 
-procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessage; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; RejectedMTI: Word; IsPermenent: Boolean);
+procedure OPStackBuffers_LoadOptionalInteractionRejected(
+  AMessage: POPStackMessage; var Source: TNodeInfo; var Dest: TNodeInfo;
+  RejectedMTI: Word; IsPermenent: Boolean);
 begin
-  OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, SourceNodeAlias, SourceNodeID, DestAlias, DestNodeID, 0);
+  OPStackBuffers_LoadMessage(AMessage, MTI_OPTIONAL_INTERACTION_REJECTED, Source, Dest, 0);
   AMessage^.MessageType := MT_SIMPLE;
   AMessage^.Buffer^.DataBufferSize := 4;
   if IsPermenent then
@@ -660,13 +669,12 @@ begin
   ABuffer^.CurrentCount := 0;
 end;
 
-procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; SourceNodeAlias: Word; var SourceNodeID: TNodeID; DestAlias: Word; var DestNodeID: TNodeID; FramingBits: Byte);
+procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word;
+  var Source: TNodeInfo; var Dest: TNodeInfo; FramingBits: Byte);
 begin
   AMessage^.MTI := MTI;
-  AMessage^.Dest.AliasID := DestAlias;
-  AMessage^.Dest.ID := DestNodeID;
-  AMessage^.Source.AliasID := SourceNodeAlias;
-  AMessage^.Source.ID := SourceNodeID;
+  AMessage^.Dest := Dest;
+  AMessage^.Source := Source;
   AMessage^.FramingBits := FramingBits;
 end;
 

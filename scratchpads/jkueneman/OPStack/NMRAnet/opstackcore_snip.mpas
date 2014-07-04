@@ -42,7 +42,7 @@ var
 begin
   Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID) then
+  if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest, AMessage^.Source) then
   begin
     AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
     AcdiSnipBufferPtr^.DataBufferSize := 0;

@@ -58,7 +58,8 @@ implementation
 {$IFDEF FPC}
 uses
   opstackcore,
-  opstackcanstatemachines;
+  opstackcanstatemachines,
+  opstacknode;
 {$ENDIF}
 
 type
@@ -158,6 +159,14 @@ begin
   case AMessage^.MessageType and MT_MASK of
     MT_SIMPLE :
         begin
+
+          // If it is not coming from one of our nodes it is broke
+          if OPStackNode_FindNodeByNodeInfo(AMessage^.Source) = nil then
+            beep;
+          // If it is going to one of our nodes it is broke
+          if OPStackNode_FindNodeByNodeInfo(AMessage^.Dest) <> nil then
+            beep;
+
           OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
           GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GridConnectStr);
           if FreeMessage then

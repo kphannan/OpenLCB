@@ -110,7 +110,7 @@ begin
         end;
     STATE_DATAGRAM_SEND_ACK :  // [Receive_Request-*Send_Ack*-Send_Data-Receive_Ack] The ack sent in reply to a datagram request from another node
         begin
-           if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Source.AliasID, DatagramMessage^.Source.ID, DatagramMessage^.Dest.AliasID, DatagramMessage^.Dest.ID, False) then
+           if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Source, DatagramMessage^.Dest, False) then
           begin
             MessageToSend^.Buffer^.DataBufferSize := 1;
             MessageToSend^.Buffer^.DataArray[0] := $00;                         // New Flags for the ACK (slow reply, etc) mmmm... need to have the type decoded to decide what to reply here.....
@@ -131,7 +131,7 @@ begin
         end;
     STATE_DATAGRAM_SEND_REPLY_ACK :  // [Send_Request-Receive_Ack-Receive_Data-*Send_Ack*]
         begin
-          if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Dest.AliasID, DatagramMessage^.Dest.ID, DatagramMessage^.Source.AliasID, DatagramMessage^.Source.ID, False) then
+          if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_DATAGRAM_OK_REPLY, DatagramMessage^.Dest, DatagramMessage^.Source, False) then
           begin
             MessageToSend^.Buffer^.DataBufferSize := 1;
             OPStackNode_IncomingMessageUnLink(Node, DatagramMessage);

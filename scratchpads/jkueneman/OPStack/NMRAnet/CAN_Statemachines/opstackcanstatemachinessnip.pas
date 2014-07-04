@@ -43,7 +43,7 @@ begin
     if LocalOutgoingMessagePtr <> nil then
     begin
       AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
-      OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source.AliasID, LocalOutgoingMessagePtr^.Source.ID, LocalOutgoingMessagePtr^.Dest.AliasID, LocalOutgoingMessagePtr^.Dest.ID, 0);
+      OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source, LocalOutgoingMessagePtr^.Dest, 0);
       OPStackBuffers_ZeroSimpleBuffer(@LocalBuffer, False);
       LocalMessage.MessageType := MT_SIMPLE;
       LocalMessage.Buffer := @LocalBuffer;
@@ -79,10 +79,10 @@ begin
   InProcessMessage := OPStackCANStatemachineBuffers_FindMessageOnIncomingAcdiSnipFrameStack(OPStackMessage);
   if InProcessMessage = nil then
   begin
-    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID) then
+    if OPStackBuffers_Allcoate_ACDI_SNIP_Message(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source, OPStackMessage^.Dest) then
       OPStackCANStatemachineBuffers_AddIncomingAcdiSnipMessage(InProcessMessage)
     else begin
-      OptionalInteractionRejected(OPStackMessage^.Source.AliasID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.ID, OPStackMessage^.MTI, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
+      OptionalInteractionRejected(OPStackMessage^.Dest, OPStackMessage^.Source, OPStackMessage^.MTI, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
       Exit;
     end;
   end;

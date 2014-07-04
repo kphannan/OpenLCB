@@ -102,7 +102,6 @@ type
 const
   NULL_NODE_ID: TNodeID = (0, 0);
 
-
 const
   EVENT_STATE_CLEAR                 = $00;
   EVENT_STATE_VALID                 = $01;
@@ -178,6 +177,15 @@ type
   end;
   PNodeInfo = ^TNodeInfo;
 
+ {
+const
+  NULL_NODE_INFO: TNodeInfo = (
+    ID : (0, 0);
+    AliasID: 0;
+  );
+  }
+
+type
   TNMRAnetNodeLoginInfo = record
     TimeCounter: Byte;                                                          // Number of timer ticks into the time waiting for a RID response from another node for our RID broadcasts
     iCID: Byte;                                                                 // Which of the 4 CIDs we are broadcasting
@@ -421,12 +429,21 @@ const
 
   NMRA_LONGADDRESS_MASK_BYTE         = $C0;
   NMRA_LONGADDRESS_MASK_WORD         = $C000;
+
+procedure OPStackDefines_Initialize;
   
 var
   s1: string[128];
   NodePool: TNodePool;
+  NULL_NODE_INFO: TNodeInfo;
 
 
 implementation
+
+procedure OPStackDefines_Initialize;
+begin
+  NULL_NODE_INFO.AliasID := 0;
+  NULL_NODE_INFO.ID := NULL_NODE_ID;
+end;
 
 end.

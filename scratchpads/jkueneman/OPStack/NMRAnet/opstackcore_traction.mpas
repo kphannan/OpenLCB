@@ -297,7 +297,7 @@ function TractionProtocolQuerySpeedReplyHandler(DestNode: PNMRAnetNode; var Mess
 begin
   Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
+  if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source) then
   begin
     MessageToSend^.Buffer^.DataArray[0] := TRACTION_QUERY_SPEED;
     MessageToSend^.Buffer^.DataArray[1] := Hi( DestNode^.TrainData.SpeedDir);
@@ -319,7 +319,7 @@ var
 begin
   Result := False;
   MessageToSend := nil;
-  if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, False) then
+  if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
   begin
     MessageToSend^.Buffer^.DataArray[0] := TRACTION_QUERY_FUNCTION;
     MessageToSend^.Buffer^.DataArray[1] := NextMessage^.Buffer^.DataArray[1];   // Reuse Address
@@ -351,7 +351,7 @@ begin
   MessageToSend := nil;
   if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RESERVE then
   begin
-    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, False) then
+    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
     begin
       MessageToSend^.Buffer^.DataBufferSize := 3;
       MessageToSend^.Buffer^.DataArray[0] := TRACTION_MANAGE;
@@ -400,7 +400,7 @@ begin
               // The Controller is not set to another node.......
 
               // Need to test if the controller is allowed to connect to this Train by this Train
-              if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID, False) then
+              if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
               begin
                 MessageToSend^.Buffer^.DataBufferSize := 3;
                 MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
@@ -420,7 +420,7 @@ begin
 
               // Need to ask the assigned controller if we should allow the assignment
 
-              if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_PROTOCOL, DestNode^.Info.AliasID, DestNode^.Info.ID, DestNode^.TrainData.Controller.AliasID, DestNode^.TrainData.Controller.ID) then
+              if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_PROTOCOL, DestNode^.Info, DestNode^.TrainData.Controller) then
               begin
                 MessageToSend^.Buffer^.DataBufferSize := 11;
                 MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
@@ -449,7 +449,7 @@ begin
           end;
       TRACTION_CONTROLLER_CONFIG_QUERY :
           begin
-            if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest.AliasID, NextMessage^.Dest.ID, NextMessage^.Source.AliasID, NextMessage^.Source.ID) then
+            if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source) then
             begin
               MultiFrameBuffer := PMultiFrameBuffer( PByte( MessageToSend^.Buffer));
               MultiFrameBuffer^.DataBufferSize := 11;
@@ -527,7 +527,7 @@ begin
       if AMessage^.Buffer^.DataArray[1] = TRACTION_CONTROLLER_CONFIG_NOTIFY then
       begin
         MessageToSend := nil;
-        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, AMessage^.Dest.AliasID, AMessage^.Dest.ID, AMessage^.Source.AliasID, AMessage^.Source.ID, False) then
+        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, AMessage^.Dest, AMessage^.Source, False) then
         begin
           MessageToSend^.Buffer^.DataBufferSize := 3;
           MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
@@ -559,7 +559,7 @@ begin
       MessageToSend := nil;
       // The last controller did not reply so just take it
       if IsOutgoingBufferAvailable then
-        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, Node^.Info.AliasID, Node^.Info.ID, Node^.TrainData.LinkedNode.AliasID, Node^.TrainData.LinkedNode.ID, False) then
+        if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, Node^.Info, Node^.TrainData.LinkedNode, False) then
         begin
           Node^.TrainData.State := Node^.TrainData.State and not TS_WAITING_FOR_CONTROLLER_NOTIFY;
           MessageToSend^.Buffer^.DataBufferSize := 3;

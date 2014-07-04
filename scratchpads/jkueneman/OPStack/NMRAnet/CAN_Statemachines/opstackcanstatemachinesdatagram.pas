@@ -45,7 +45,7 @@ begin
       //        DATAGRAM_TYPE_BOOTLOADER,
               DATAGRAM_TYPE_MEMORY_CONFIGURATION :
                   begin                                                         // Allocate a message for a full MTI_DATRGRAM and return the pointer to the message
-                    if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID, 0) then
+                    if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source, OPStackMessage^.Dest, 0) then
                     begin
                       OPStackBuffers_CopyData(InProcessMessage^.Buffer, OPStackMessage^.Buffer);
                       PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := 0;
@@ -64,7 +64,7 @@ begin
         begin
           if InProcessMessage = nil then
           begin
-            if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source.AliasID, OPStackMessage^.Source.ID, OPStackMessage^.Dest.AliasID, OPStackMessage^.Dest.ID, 0) then
+            if OPStackBuffers_AllocateDatagramMessage(InProcessMessage, OPStackMessage^.Source, OPStackMessage^.Dest, 0) then
             begin
               OPStackBuffers_CopyData(InProcessMessage^.Buffer, OPStackMessage^.Buffer);
               PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := OPStackMessage^.Buffer^.DataBufferSize;
@@ -126,7 +126,7 @@ begin
       OPStackBuffers_ZeroSimpleBuffer(@NewBuffer, False);
       if LocalOutgoingMessage^.Buffer^.DataBufferSize <= 8 then
       begin
-        OPStackBuffers_LoadMessage(@NewMessage, MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME, LocalOutgoingMessage^.Source.AliasID, LocalOutgoingMessage^.Source.ID, LocalOutgoingMessage^.Dest.AliasID, LocalOutgoingMessage^.Dest.ID, 0);
+        OPStackBuffers_LoadMessage(@NewMessage, MTI_FRAME_TYPE_CAN_DATAGRAM_ONLY_FRAME, LocalOutgoingMessage^.Source, LocalOutgoingMessage^.Dest, 0);
         NewMessage.MessageType := MT_SIMPLE;
         NewMessage.Buffer := @NewBuffer;
         OPStackBuffers_CopyDataArray(@NewBuffer, @DatagramBuffer^.DataArray, LocalOutgoingMessage^.Buffer^.DataBufferSize, True);
@@ -145,7 +145,7 @@ begin
         OPStackCANStatemachineBuffers_RemoveOutgoingDatagramMessage(LocalOutgoingMessage);
       end;
 
-      OPStackBuffers_LoadMessage(@NewMessage, MTI, LocalOutgoingMessage^.Source.AliasID, LocalOutgoingMessage^.Source.ID, LocalOutgoingMessage^.Dest.AliasID, LocalOutgoingMessage^.Dest.ID, 0);
+      OPStackBuffers_LoadMessage(@NewMessage, MTI, LocalOutgoingMessage^.Source, LocalOutgoingMessage^.Dest, 0);
       OPStackBuffers_ZeroSimpleBuffer(@NewBuffer, False);
       NewMessage.MessageType := MT_SIMPLE;
       NewMessage.Buffer := @NewBuffer;
