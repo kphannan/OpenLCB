@@ -22,8 +22,8 @@
         <UnitName Value="unitmain"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="28" Y="11"/>
+        <TopLine Value="381"/>
+        <CursorPos X="9" Y="403"/>
         <UsageCount Value="290"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -264,7 +264,6 @@
       <Unit29>
         <Filename Value="Templates/template_buffers.pas"/>
         <UnitName Value="template_buffers"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="14"/>
@@ -438,10 +437,11 @@
       <Unit50>
         <Filename Value="../../ConfigurationLayerImplementations/Lazarus_File/template_configuration.pas"/>
         <UnitName Value="template_configuration"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="88"/>
-        <CursorPos X="48" Y="95"/>
+        <TopLine Value="4"/>
+        <CursorPos X="11" Y="32"/>
         <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit50>
@@ -548,115 +548,115 @@
       </Position2>
       <Position3>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="36" Column="1" TopLine="19"/>
+        <Caret Line="36" Column="1" TopLine="31"/>
       </Position3>
       <Position4>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="38" Column="1" TopLine="19"/>
+        <Caret Line="45" Column="1" TopLine="31"/>
       </Position4>
       <Position5>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="36" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="31"/>
       </Position5>
       <Position6>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="45" Column="1" TopLine="31"/>
+        <Caret Line="49" Column="1" TopLine="31"/>
       </Position6>
       <Position7>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="31"/>
+        <Caret Line="50" Column="1" TopLine="31"/>
       </Position7>
       <Position8>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="49" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="31"/>
       </Position8>
       <Position9>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="50" Column="1" TopLine="31"/>
+        <Caret Line="49" Column="1" TopLine="31"/>
       </Position9>
       <Position10>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="31"/>
+        <Caret Line="50" Column="1" TopLine="31"/>
       </Position10>
       <Position11>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="49" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="31"/>
       </Position11>
       <Position12>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="50" Column="1" TopLine="31"/>
+        <Caret Line="49" Column="1" TopLine="31"/>
       </Position12>
       <Position13>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="31"/>
+        <Caret Line="50" Column="1" TopLine="31"/>
       </Position13>
       <Position14>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="49" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="31"/>
       </Position14>
       <Position15>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="50" Column="1" TopLine="31"/>
+        <Caret Line="49" Column="1" TopLine="31"/>
       </Position15>
       <Position16>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="31"/>
+        <Caret Line="50" Column="1" TopLine="31"/>
       </Position16>
       <Position17>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="49" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="31"/>
       </Position17>
       <Position18>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="50" Column="1" TopLine="31"/>
+        <Caret Line="49" Column="1" TopLine="31"/>
       </Position18>
       <Position19>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="31"/>
+        <Caret Line="50" Column="1" TopLine="31"/>
       </Position19>
       <Position20>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="49" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="31"/>
       </Position20>
       <Position21>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="50" Column="1" TopLine="31"/>
+        <Caret Line="49" Column="1" TopLine="31"/>
       </Position21>
       <Position22>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="31"/>
+        <Caret Line="50" Column="1" TopLine="31"/>
       </Position22>
       <Position23>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="49" Column="1" TopLine="31"/>
+        <Caret Line="47" Column="1" TopLine="41"/>
       </Position23>
       <Position24>
         <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="50" Column="1" TopLine="31"/>
+        <Caret Line="58" Column="1" TopLine="41"/>
       </Position24>
       <Position25>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="47" Column="1" TopLine="41"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="61" Column="27" TopLine="56"/>
       </Position25>
       <Position26>
-        <Filename Value="../../NMRAnet/opstackcore_stnip.pas"/>
-        <Caret Line="58" Column="1" TopLine="41"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="166" Column="60" TopLine="152"/>
       </Position26>
       <Position27>
         <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="61" Column="27" TopLine="56"/>
+        <Caret Line="164" Column="41" TopLine="151"/>
       </Position27>
       <Position28>
         <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="166" Column="60" TopLine="152"/>
+        <Caret Line="167" Column="67" TopLine="152"/>
       </Position28>
       <Position29>
-        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="164" Column="41" TopLine="151"/>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="3" Column="30" TopLine="1"/>
       </Position29>
       <Position30>
-        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="167" Column="67" TopLine="152"/>
+        <Filename Value="unitmain.pas"/>
+        <Caret Line="403" Column="9" TopLine="381"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

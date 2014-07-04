@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="9"/>
+    <BuildModes Active="Default"/>
+    <Units Count="9">
+      <Unit0>
+        <Filename Value="OpStackTrainDatabase.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="OpStackTrainDatabase"/>
+        <UsageCount Value="20"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="Forms/form_main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="form_main"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="763"/>
+        <CursorPos X="1" Y="775"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="Templates/template_configmem.pas"/>
+        <UnitName Value="template_configmem"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="44" Y="11"/>
+        <UsageCount Value="20"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="../../../Library/com_port_hub.pas"/>
+        <UnitName Value="com_port_hub"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="43" Y="10"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="../../NMRAnet/opstackdefines.pas"/>
+        <UnitName Value="opstackdefines"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="44" Y="3"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="Templates/Options.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="82" Y="4"/>
+        <UsageCount Value="20"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <UnitName Value="olcb_transport_layer"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="67" Y="10"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="../../Library/CabCommon/NMRAnetCabBridgeDefines.pas"/>
+        <UnitName Value="NMRAnetCabBridgeDefines"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="Templates/template_configuration.pas"/>
+        <UnitName Value="template_configuration"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+      </Unit8>
+    </Units>
+    <General>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <JumpHistory Count="9" HistoryIndex="8">
+      <Position1>
+        <Filename Value="../../../Library/com_port_hub.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position1>
+      <Position2>
+        <Filename Value="../../NMRAnet/opstackdefines.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position2>
+      <Position3>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position3>
+      <Position4>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="15" Column="73" TopLine="1"/>
+      </Position4>
+      <Position5>
+        <Filename Value="Forms/form_main.pas"/>
+        <Caret Line="355" Column="1" TopLine="342"/>
+      </Position5>
+      <Position6>
+        <Filename Value="Forms/form_main.pas"/>
+        <Caret Line="13" Column="68" TopLine="1"/>
+      </Position6>
+      <Position7>
+        <Filename Value="Forms/form_main.pas"/>
+        <Caret Line="448" Column="34" TopLine="437"/>
+      </Position7>
+      <Position8>
+        <Filename Value="Forms/form_main.pas"/>
+        <Caret Line="449" Column="1" TopLine="439"/>
+      </Position8>
+      <Position9>
+        <Filename Value="Forms/form_main.pas"/>
+        <Caret Line="618" Column="5" TopLine="604"/>
+      </Position9>
+    </JumpHistory>
+  </ProjectSession>
+  <EditorMacros Count="0"/>
+</CONFIG>
