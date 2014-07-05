@@ -1005,11 +1005,11 @@ begin
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventSupportsProtocols(Event as TNodeEventSupportsProtocols);
       end;
-      if TObject( EventList[i]) is TNodeEventReadFDI then
+      if TObject( EventList[i]) is TNodeEventReadConfigMem then
       begin
         Event := TNodeEvent( EventList[i]);
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
-          (Event.LinkedObj as TFormThrottle).EventReadFDI(Event as TNodeEventReadFDI);
+          (Event.LinkedObj as TFormThrottle).EventReadConfigMem(Event as TNodeEventReadConfigMem);
       end;
 
       TObject( EventList[i]).Destroy

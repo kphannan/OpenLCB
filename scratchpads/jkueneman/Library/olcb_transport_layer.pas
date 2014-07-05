@@ -159,12 +159,30 @@ type
 
   TNodeTaskReadConfigMemory = class(TNodeTask)
   private
+    FAddressSpace: Byte;
+    FControl: TObject;
+    FCount: Integer;
+    FiControl: Integer;
+    FiPage: Integer;
+    FProtocol: TMemoryStream;
     FCurrentAddress: DWord;
-    FFDI: string;
   public
-    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AStartAddress: DWord); reintroduce;
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddressSpace: Byte; AStartAddress: DWord; ACount: Integer; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
+    destructor Destroy; override;
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
-    property FDI: string read FFDI write FFDI;
+    property Count: Integer read FCount write FCount;
+    property Protocol: TMemoryStream read FProtocol write FProtocol;
+    property AddressSpace: Byte read FAddressSpace write FAddressSpace;         // MSI_xxx contants
+    property iControl: Integer read FiControl write FiControl;
+    property iPage: Integer read FiPage write FiPage;
+    property Control: TObject read FControl write FControl;
+  end;
+
+  { TNodeTaskWriteConfigMemory }
+
+  TNodeTaskWriteConfigMemory = class(TNodeTaskReadConfigMemory)
+  public
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddressSpace: Byte; AStartAddress: DWord; Stream: TMemoryStream; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
   end;
 
   { TNodeEvent }
@@ -316,14 +334,25 @@ type
     property STNIP: Boolean read FSTNIP write FSTNIP;
   end;
 
-  { TNodeEventReadFDI }
+  { TNodeEventReadConfigMem }
 
-  TNodeEventReadFDI = class(TNodeEvent)
+  TNodeEventReadConfigMem = class(TNodeEvent)
   private
-    FFDI: string;
+    FAddressSpace: Byte;
+    FControl: TObject;
+    FiControl: Integer;
+    FiPage: Integer;
+    FProtocol: TMemoryStream;
   public
-    constructor Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject; AFDI: string); reintroduce;
-    property FDI: string read FFDI write FFDI;
+    constructor Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject; AProtocol: TMemoryStream; AnAddressSpace: Byte; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
+    destructor Destroy; override;
+    procedure StripTrailingNull;
+    procedure AddTrailingNull;
+    property Protocol: TMemoryStream read FProtocol write FProtocol;
+    property AddressSpace: Byte read FAddressSpace write FAddressSpace;
+    property iPage: Integer read FiPage write FiPage;
+    property iControl: Integer read FiControl write FiControl;
+    property Control: TObject read FControl write FControl;
   end;
 
   { TNodeEventThread }
@@ -534,23 +563,89 @@ begin
   end;
 end;
 
-{ TNodeEventReadFDI }
+{ TNodeTaskWriteConfigMemory }
 
-constructor TNodeEventReadFDI.Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject;
-  AFDI: string);
+constructor TNodeTaskWriteConfigMemory.Create(ANodeInfo: TNodeInfo;
+  ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
+  AnAddressSpace: Byte; AStartAddress: DWord; Stream: TMemoryStream; AiPage,
+  AiControl: Integer; AControl: TObject);
+begin
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj, AnAddressSpace, AStartAddress, 0, AiPage, AiControl, AControl);
+  if Assigned(Stream) then
+  begin
+    Protocol.Position := 0;
+    Protocol.CopyFrom(Stream, Stream.Size);
+  end;
+end;
+
+{ TNodeEventReadConfigMem }
+
+procedure TNodeEventReadConfigMem.AddTrailingNull;
+begin
+  Protocol.WriteByte(Ord(#0));
+end;
+
+constructor TNodeEventReadConfigMem.Create(ANodeInfo: TNodeInfo;
+  ALinkedObj: TObject; AProtocol: TMemoryStream; AnAddressSpace: Byte; AiPage,
+  AiControl: Integer; AControl: TObject);
 begin
   inherited Create(ANodeInfo, ALinkedObj);
-  FFDI := AFDI;
+  FAddressSpace := AnAddressSpace;
+  FiControl := AiControl;
+  FiPage := AiPage;
+  FControl := AControl;
+  FProtocol := TMemoryStream.Create;
+  if AProtocol <> nil then
+  begin
+    AProtocol.Position := 0;
+    Protocol.CopyFrom(AProtocol, AProtocol.Size);
+  end;
+end;
+
+destructor TNodeEventReadConfigMem.Destroy;
+begin
+  FreeAndNil(FProtocol);
+  inherited Destroy;
+end;
+
+procedure TNodeEventReadConfigMem.StripTrailingNull;
+var
+  Done: Boolean;
+begin
+  Done := False;
+  Protocol.Position := 0;
+  while not Done and (Protocol.Position < Protocol.Size) do
+  begin
+    if Char( Protocol.ReadByte) = #0 then
+    begin
+      // Strip the null and any trailing characters.
+      Protocol.Size := Protocol.Position - 1;
+      Done := True;
+    end
+  end;
 end;
 
 { TNodeTaskReadConfigMemory }
 
 constructor TNodeTaskReadConfigMemory.Create(ANodeInfo: TNodeInfo;
   ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
-  AStartAddress: DWord);
+  AnAddressSpace: Byte; AStartAddress: DWord; ACount: Integer; AiPage,
+  AiControl: Integer; AControl: TObject);
 begin
   inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
+  FAddressSpace := AnAddressSpace;
   FCurrentAddress := AStartAddress;
+  FiPage := AiPage;
+  FiControl := AiControl;
+  FCount := ACount;
+  FControl := AControl;
+  FProtocol := TMemoryStream.Create;
+end;
+
+destructor TNodeTaskReadConfigMemory.Destroy;
+begin
+  FreeAndNil(FProtocol);
+  inherited Destroy;
 end;
 
   { TNodeEventSupportsProtocols }

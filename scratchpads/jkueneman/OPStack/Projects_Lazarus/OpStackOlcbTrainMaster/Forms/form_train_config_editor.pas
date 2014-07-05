@@ -8,7 +8,8 @@ uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, ComCtrls, laz2_DOM, laz2_XMLRead, com_port_hub, olcb_transport_layer,
   olcb_app_common_settings, olcb_utilities, olcb_defines, unit_cdi_parser, Buttons,
-  ActnList, Menus, ethernet_hub;
+  ActnList, Menus, ethernet_hub, template_hardware, opstackdefines,
+  nmranetutilities, template_userstatemachine;
 
 type
   TFormTrainConfigEditor = class;
@@ -57,20 +58,19 @@ type
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
   private
-    FAliasID: Word;
     FCdiParser: TCdiParser;
-    FComPortHub: TComPortHub;
-    FConfigReadTaskQueue: TList;
-    FConfigReadTaskRunning: Boolean;
-    FConfigWriteTaskQueue: TList;
-    FConfigWriteTaskRunning: Boolean;
-    FEthernetHub: TEthernetHub;
     FImageList16x16: TImageList;
     FOnConfigEditorClose: TOnConfigEditorEvent;
     FOnConfigEditorHide: TOnConfigEditorEvent;
     FPageControl: TPageControl;
+    FReadsQueued: Integer;
     FShownOnce: Boolean;
+    FThrottleNodeInfo: TNodeInfo;
+    FTrainNodeInfo: TNodeInfo;
+    FWritesQueued: Integer;
     procedure SetImageList(AValue: TImageList);
+    procedure SetReadsQueued(AValue: Integer);
+    procedure SetWritessQueued(AValue: Integer);
     { private declarations }
   protected
     function FindScrollBox(Page: TTabSheet): TScrollBox;
@@ -88,26 +88,21 @@ type
     procedure WriteConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
     procedure WriteConfigurationSpinEdit(Edit: TOlcbSpinEdit; iPage, iControl: Word);
     procedure WriteConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
-//    procedure QueueConfigWriteTask(Task: TTaskOlcbBase);
-//    procedure QueueConfigReadTask(Task: TTaskOlcbBase);
     procedure UpdateUI;
 
     property CdiParser: TCdiParser read FCdiParser write FCdiParser;
-    property ComPortHub: TComPortHub read FComPortHub write FComPortHub;
-    property ConfigReadTaskQueue: TList read FConfigReadTaskQueue write FConfigReadTaskQueue;
-    property ConfigWriteTaskQueue: TList read FConfigWriteTaskQueue write FConfigWriteTaskQueue;
-    property ConfigWriteTaskRunning: Boolean read FConfigWriteTaskRunning write FConfigWriteTaskRunning;
-    property ConfigReadTaskRunning: Boolean read FConfigReadTaskRunning write FConfigReadTaskRunning;
-//    property DispatchTask: TDispatchTaskFunc read FDispatchTask write FDispatchTask;
-    property EthernetHub: TEthernetHub read FEthernetHub write FEthernetHub;
+    property ReadsQueued: Integer read FReadsQueued write SetReadsQueued;
+    property WritesQueued: Integer read FWritesQueued write SetWritessQueued;
     property ShownOnce: Boolean read FShownOnce write FShownOnce;
     property PageControl: TPageControl read FPageControl write FPageControl;
   public
     { public declarations }
     procedure FlushConfigWriteTasks;
     procedure FlushConfigReadTasks;
- //   procedure InitTransportLayers(AnEthernetHub: TEthernetHub; AComPortThread: TComPortHub; ADispatchTaskFunc: TDispatchTaskFunc);
-    property AliasID: Word read FAliasID write FAliasID;
+    procedure EventReadCDI(Event: TNodeEventReadConfigMem);
+    procedure EventReadConfig(Event: TNodeEventReadConfigMem);
+    property ThrottleNodeInfo: TNodeInfo read FThrottleNodeInfo write FThrottleNodeInfo;
+    property TrainNodeInfo: TNodeInfo read FTrainNodeInfo write FTrainNodeInfo;
     property OnConfigEditorHide: TOnConfigEditorEvent read FOnConfigEditorHide write FOnConfigEditorHide;
     property OnConfigEditorClose: TOnConfigEditorEvent read FOnConfigEditorClose write FOnConfigEditorClose;
     property ImageList16x16: TImageList read FImageList16x16 write SetImageList;
@@ -121,7 +116,7 @@ type
     procedure SetConfigEditor(Index: Integer; AValue: TFormTrainConfigEditor);
   public
     procedure Clear; override;
-    function FindEditorByAlias(TestAlias: Word): TFormTrainConfigEditor;
+    function FindEditorByNodeInfo(TestInfo: TNodeInfo): TFormTrainConfigEditor;
     procedure HideAll;
     procedure CloseAll;
     procedure ShowAll;
@@ -149,7 +144,8 @@ begin
   inherited Clear;
 end;
 
-function TFormConfigEditorList.FindEditorByAlias(TestAlias: Word): TFormTrainConfigEditor;
+function TFormConfigEditorList.FindEditorByNodeInfo(TestInfo: TNodeInfo
+  ): TFormTrainConfigEditor;
 var
   i: Integer;
 begin
@@ -157,7 +153,7 @@ begin
   i := 0;
   while not Assigned(Result) and (i < Count) do
   begin
-    if TestAlias = ConfigEditors[i].AliasID then
+    if NMRAnetUtilities_EqualNodeIDInfo(TestInfo, ConfigEditors[i].FTrainNodeInfo) then
       Result := ConfigEditors[i];
     Inc(i)
   end;
@@ -192,26 +188,21 @@ end;
 
 procedure TFormTrainConfigEditor.FormCreate(Sender: TObject);
 begin
-  FComPortHub := nil;
-  FEthernetHub := nil;
-  FAliasID := 0;
+  ReadsQueued := 0;
+  WritesQueued := 0;
+  FTrainNodeInfo := NULL_NODE_INFO;
+  FThrottleNodeInfo := NULL_NODE_INFO;
   FShownOnce := False;
   FCdiParser := TCdiParser.Create;
   CdiParser.OnSpeedButtonReadConfigClickCallback := @OnSpeedButtonReadConfigClickCallback;
   CdiParser.OnSpeedButtonWriteConfigClickCallback := @OnSpeedButtonWriteConfigClickCallback;
   FPageControl := nil;
-  FConfigWriteTaskQueue := TList.Create;
-  FConfigReadTaskQueue := TList.Create;
-  ConfigWriteTaskRunning := False;
-  FConfigReadTaskRunning := False;
   ImageList16x16 := nil;
 end;
 
 procedure TFormTrainConfigEditor.FormDestroy(Sender: TObject);
 begin
   FreeAndNil( FCdiParser);
-  FreeAndNil(FConfigReadTaskQueue);
-  FreeAndNil(FConfigWriteTaskQueue);
 end;
 
 procedure TFormTrainConfigEditor.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -239,6 +230,140 @@ begin
  UpdateUI
 end;
 
+procedure TFormTrainConfigEditor.EventReadCDI(Event: TNodeEventReadConfigMem);
+var
+  ADoc: TXMLDocument;
+  iPage, iControl: Integer;
+  Control: TControl;
+  ScrollBox: TScrollBox;
+  TaskStream: TMemoryStream;
+  Str: String;
+  Relation: TMapRelation;
+  Done: Boolean;
+begin
+  Event.StripTrailingNull;
+  Event.Protocol.Position := 0;
+  ReadXMLFile(ADoc, Event.Protocol);
+  PageControl := CdiParser.Build_CDI_Interface(PanelBkGnd, ADoc);
+  ActionStopRead.Enabled := True;
+  ActionStopWrite.Enabled := True;
+  ActionReadAll.Enabled := True;
+  ActionReadPage.Enabled := True;
+  ActionWriteAll.Enabled := True;
+  ActionWritePage.Enabled := True;
+  ReadConfiguration;
+  FreeAndNil(ADoc);
+end;
+
+procedure TFormTrainConfigEditor.EventReadConfig(Event: TNodeEventReadConfigMem);
+var
+  Control: TControl;
+  ScrollBox: TScrollBox;
+  TaskStream: TMemoryStream;
+  Str: String;
+  Relation: TMapRelation;
+begin
+  if ReadsQueued > 0 then
+    ReadsQueued := ReadsQueued - 1;
+
+  if PageControl.PageCount > Event.iPage then
+  begin
+    ScrollBox := FindScrollBox(PageControl.Pages[Event.iPage]);
+    if Assigned(ScrollBox) then
+    begin
+      if ScrollBox.ControlCount > Event.iControl then
+      begin
+        Control := ScrollBox.Controls[Event.iControl];
+        if Control is TOlcbEdit then
+        begin
+           if Control = Event.Control then     // Two pronged check.  1) make sure the index is correct 2) make sure the object is the same...
+          begin
+            // Whew, success
+            TaskStream := Event.Protocol;
+            TaskStream.Position := 0;
+            case (Control as TOlcbEdit).ConfigInfo.DataType of
+              cdt_EventID : begin
+                              Str := IntToHex(TaskStream.ReadByte, 2);
+                              while (TaskStream.Position < TaskStream.Size) do
+                                Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
+                              (Control as TOlcbEdit).Text := Str;
+                            end;
+              cdt_Int     : begin
+                              Str := IntToHex(TaskStream.ReadByte, 2);
+                              while (TaskStream.Position < TaskStream.Size) do
+                                Str := Str + IntToHex(TaskStream.ReadByte, 2);
+                              (Control as TOlcbEdit).Text := Str;
+                            end;
+              cdt_String  : begin
+                              Str := Char( TaskStream.ReadByte);
+                              while (TaskStream.Position < TaskStream.Size) do
+                                Str := Str + Char( TaskStream.ReadByte);
+                              (Control as TOlcbEdit).Text := Str;
+                            end;
+            end;
+            (Control as TOlcbEdit).ConfigInfo.State := ocs_Current;
+          end
+        end else
+        if Control is TOlcbSpinEdit then
+        begin
+           if Control = Event.Control then     // Two pronged check.  1) make sure the index is correct 2) make sure the object is the same...
+          begin
+            // Whew, success
+            TaskStream := Event.Protocol;
+            TaskStream.Position := 0;
+            case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
+              cdt_Int     : begin
+                              Str := IntToHex( TaskStream.ReadByte, 2);
+                              while (TaskStream.Position < TaskStream.Size) do
+                                Str := Str + IntToHex( TaskStream.ReadByte, 2);
+                              Str := '0x' + Str;
+                              (Control as TOlcbSpinEdit).Value := StrToInt(Str);
+                            end;
+              cdt_Bit     : begin
+                              // TODO
+                            end;
+            end;
+            (Control as TOlcbSpinEdit).ConfigInfo.State := ocs_Current;
+          end
+        end else
+        if Control is TOlcbComboBox then
+        begin
+          if Control = Event.Control then     // Two pronged check.  1) make sure the index is correct 2) make sure the object is the same...
+          begin
+            // Whew, success
+            TaskStream := Event.Protocol;
+            TaskStream.Position := 0;
+            case (Control as TOlcbComboBox).ConfigInfo.DataType of
+              cdt_Int,
+              cdt_EventID : begin
+                              Str := IntToHex( TaskStream.ReadByte, 2);
+                              while (TaskStream.Position < TaskStream.Size) do
+                                Str := Str + IntToHex( TaskStream.ReadByte, 2);
+                              Str := '0x' + Str;
+                              Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(IntToStr( StrToInt( Str)));
+                              if Assigned(Relation) then
+                                (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                            end;
+              cdt_String  : begin
+                              Str := Char( TaskStream.ReadByte);
+                              while (TaskStream.Position < TaskStream.Size) do
+                                Str := Str + Char( TaskStream.ReadByte);
+                              Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
+                              if Assigned(Relation) then
+                                (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
+                            end;
+              cdt_Bit     : begin
+                              // TODO
+                            end;
+            end;
+            (Control as TOlcbComboBox).ConfigInfo.State := ocs_Current;
+          end
+        end
+      end
+    end;
+  end;
+end;
+
 procedure TFormTrainConfigEditor.ActionReadAllExecute(Sender: TObject);
 begin
   ReadConfiguration;
@@ -257,16 +382,12 @@ end;
 
 procedure TFormTrainConfigEditor.ActionStopReadExecute(Sender: TObject);
 begin
-// ComPortHub.RemoveAndFreeTasks( PtrInt( Self));
-// EthernetHub.RemoveAndFreeTasks( PtrInt(Self));
  FlushConfigReadTasks;
  UpdateUI
 end;
 
 procedure TFormTrainConfigEditor.ActionStopWriteExecute(Sender: TObject);
 begin
-// ComPortHub.RemoveAndFreeTasks( PtrInt( Self));
-// EthernetHub.RemoveAndFreeTasks( PtrInt(Self));
  FlushConfigWriteTasks;
  UpdateUI
 end;
@@ -278,24 +399,14 @@ begin
 end;
 
 procedure TFormTrainConfigEditor.FormShow(Sender: TObject);
-//var
- // Task: TTaskAddressSpaceMemoryReadWithDatagram;
 begin
-{  if Assigned(ComPortHub) and not ShownOnce then
-  begin
-    Task := TTaskAddressSpaceMemoryReadWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CDI, True);
-    Task.RemoveKey := PtrInt( Self);
-    Task.Terminator := #0;
-    Task.ForceOptionalSpaceByte := False;
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    DispatchTask(Task);
-    ActionStopRead.Enabled := False;
-    ActionStopWrite.Enabled := False;
-    ActionReadAll.Enabled := False;
-    ActionReadPage.Enabled := False;
-    ActionWriteAll.Enabled := False;
-    ActionWritePage.Enabled := False;
-  end; }
+  NodeThread.AddTask( TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Owner, MSI_CDI, $00000000, MAX_CONFIG_MEM_READWRITE_SIZE, 0, 0, nil));
+  ActionStopRead.Enabled := False;
+  ActionStopWrite.Enabled := False;
+  ActionReadAll.Enabled := False;
+  ActionReadPage.Enabled := False;
+  ActionWriteAll.Enabled := False;
+  ActionWritePage.Enabled := False;
 end;
 
 procedure TFormTrainConfigEditor.SetImageList(AValue: TImageList);
@@ -303,6 +414,20 @@ begin
   if FImageList16x16=AValue then Exit;
   FImageList16x16:=AValue;
   CdiParser.ImageList16x16 := AValue;
+end;
+
+procedure TFormTrainConfigEditor.SetReadsQueued(AValue: Integer);
+begin
+  if FReadsQueued=AValue then Exit;
+  FReadsQueued:=AValue;
+  UpdateUI;
+end;
+
+procedure TFormTrainConfigEditor.SetWritessQueued(AValue: Integer);
+begin
+  if FWritesQueued=AValue then Exit;
+  FWritesQueued:=AValue;
+  UpdateUI;
 end;
 
 function TFormTrainConfigEditor.FindScrollBox(Page: TTabSheet): TScrollBox;
@@ -333,152 +458,7 @@ begin
   try
     if not Sender.ForceTermination then
     begin
-      if Sender is TTaskAddressSpaceMemoryReadWithDatagram then
-      begin
-        // This is the CDI read result
-        MemTask := TTaskAddressSpaceMemoryReadWithDatagram(Sender);
-        if MemTask.DataStream.Size > 1 then
-        begin
-          Done := False;
-          MemTask.DataStream.Position := 0;
-          while not Done and (MemTask.DataStream.Position < MemTask.DataStream.Size) do
-          begin
-            if Char( MemTask.DataStream.ReadByte) = #0 then
-            begin
-              // Strip the null and any trailing characters.
-              MemTask.DataStream.Size := MemTask.DataStream.Position - 1;
-              Done := True;
-            end
-          end;
-          MemTask.DataStream.Position := 0;
-          ReadXMLFile(ADoc, MemTask.DataStream);                 // This corrupts the stream from its original contents
-          PageControl := CdiParser.Build_CDI_Interface(PanelBkGnd, ADoc);
-          ActionStopRead.Enabled := True;
-          ActionStopWrite.Enabled := True;
-          ActionReadAll.Enabled := True;
-          ActionReadPage.Enabled := True;
-          ActionWriteAll.Enabled := True;
-          ActionWritePage.Enabled := True;
-          ReadConfiguration;
-          FreeAndNil(ADoc);
-        end
-      end else
-      if Sender is TTaskAddressSpaceMemoryReadRawWithDatagram then
-      begin
-        if TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).ErrorCode <> 0 then
-        begin
-          ShowMessage('Error Code: ' + IntToHex(TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).ErrorCode, 4) + #13 + #10 + TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).ErrorString);
-        end else
-        begin
-          // This is a configuration read request
-          iPage := Sender.Tag and $FFFF;
-          iControl := (Sender.Tag shr 16) and $FFFF;
 
-          if PageControl.PageCount > iPage then
-          begin
-            ScrollBox := FindScrollBox(PageControl.Pages[iPage]);
-            if Assigned(ScrollBox) then
-            begin
-              if ScrollBox.ControlCount > iControl then
-              begin
-                Control := ScrollBox.Controls[iControl];
-                if Control is TOlcbEdit then
-                begin
-                  if Control = Sender.OwnerControl then
-                  begin
-                    // Whew, success
-                    TaskStream := TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).Stream;
-                    TaskStream.Position := 0;
-                    case (Control as TOlcbEdit).ConfigInfo.DataType of
-                      cdt_EventID : begin
-                                      Str := IntToHex(TaskStream.ReadByte, 2);
-                                      while (TaskStream.Position < TaskStream.Size) do
-                                        Str := Str + '.' + IntToHex(TaskStream.ReadByte, 2);
-                                      (Control as TOlcbEdit).Text := Str;
-                                    end;
-                      cdt_Int     : begin
-                                      Str := IntToHex(TaskStream.ReadByte, 2);
-                                      while (TaskStream.Position < TaskStream.Size) do
-                                        Str := Str + IntToHex(TaskStream.ReadByte, 2);
-                                      (Control as TOlcbEdit).Text := Str;
-                                    end;
-                      cdt_String  : begin
-                                      Str := Char( TaskStream.ReadByte);
-                                      while (TaskStream.Position < TaskStream.Size) do
-                                        Str := Str + Char( TaskStream.ReadByte);
-                                      (Control as TOlcbEdit).Text := Str;
-                                    end;
-                    end;
-                    (Control as TOlcbEdit).ConfigInfo.State := ocs_Current;
-                  end
-                end else
-                if Control is TOlcbSpinEdit then
-                begin
-                   if Control = Sender.OwnerControl then
-                  begin
-                    // Whew, success
-                    TaskStream := TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).Stream;
-                    TaskStream.Position := 0;
-                    case (Control as TOlcbSpinEdit).ConfigInfo.DataType of
-                      cdt_Int     : begin
-                                      Str := IntToHex( TaskStream.ReadByte, 2);
-                                      while (TaskStream.Position < TaskStream.Size) do
-                                        Str := Str + IntToHex( TaskStream.ReadByte, 2);
-                                      Str := '0x' + Str;
-                                      (Control as TOlcbSpinEdit).Value := StrToInt(Str);
-                                    end;
-                      cdt_Bit     : begin
-                                      // TODO
-                                    end;
-                    end;
-                    (Control as TOlcbSpinEdit).ConfigInfo.State := ocs_Current;
-                  end
-                end else
-                if Control is TOlcbComboBox then
-                begin
-                  if Control = Sender.OwnerControl then
-                  begin
-                    // Whew, success
-                    TaskStream := TTaskAddressSpaceMemoryReadRawWithDatagram(Sender).Stream;
-                    TaskStream.Position := 0;
-                    case (Control as TOlcbComboBox).ConfigInfo.DataType of
-                      cdt_Int,
-                      cdt_EventID : begin
-                                      Str := IntToHex( TaskStream.ReadByte, 2);
-                                      while (TaskStream.Position < TaskStream.Size) do
-                                        Str := Str + IntToHex( TaskStream.ReadByte, 2);
-                                      Str := '0x' + Str;
-                                      Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(IntToStr( StrToInt( Str)));
-                                      if Assigned(Relation) then
-                                        (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
-                                    end;
-                      cdt_String  : begin
-                                      Str := Char( TaskStream.ReadByte);
-                                      while (TaskStream.Position < TaskStream.Size) do
-                                        Str := Str + Char( TaskStream.ReadByte);
-                                      Relation := (Control as TOlcbComboBox).ConfigInfo.MapList.FindMapByProperty(Str);
-                                      if Assigned(Relation) then
-                                        (Control as TOlcbComboBox).ItemIndex := (Control as TOlcbComboBox).Items.IndexOf( Relation.Value);
-                                    end;
-                      cdt_Bit     : begin
-                                      // TODO
-                                    end;
-                    end;
-                    (Control as TOlcbComboBox).ConfigInfo.State := ocs_Current;
-                  end
-                end
-              end
-            end;
-          end;
-          if ConfigReadTaskQueue.Count > 0 then
-          begin
-            DispatchTask( TTaskOlcbBase( ConfigReadTaskQueue[0]));
-            ConfigReadTaskQueue.Delete(0);
-          end else
-            ConfigReadTaskRunning := False;
-          UpdateUI
-        end
-      end else
       if Sender is TTaskAddressSpaceMemoryWriteRawWithDatagram then
       begin
         // This is a configuration write request
@@ -609,39 +589,21 @@ begin
 end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
-//var
-//  Task: TTaskOlcbBase;
 begin
-{  Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  Task.Tag := iPage or (iControl shl 16);
-  Task.RemoveKey := PtrInt( Self);
-  Task.OwnerControl := Edit;
-  QueueConfigReadTask(Task);   }
+  NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Owner, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, iPage, iControl, Edit));
+  ReadsQueued := ReadsQueued + 1;
 end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationSpinEdit(Edit: TOlcbSpinEdit; iPage, iControl: Word);
-{var
-  Task: TTaskOlcbBase;    }
 begin
- { Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  Task.Tag := iPage or (iControl shl 16);
-  Task.RemoveKey := PtrInt( Self);
-  Task.OwnerControl := Edit;
-  QueueConfigReadTask(Task);     }
+  NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Owner, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, iPage, iControl, Edit));
+  ReadsQueued := ReadsQueued + 1;
 end;
 
 procedure TFormTrainConfigEditor.ReadConfigurationComboEdit(Edit: TOlcbComboBox; iPage, iControl: Word);
-//var
-//  Task: TTaskOlcbBase;
 begin
- { Task := TTaskAddressSpaceMemoryReadRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, False);
-  Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-  Task.Tag := iPage or (iControl shl 16);
-  Task.RemoveKey := PtrInt( Self);
-  Task.OwnerControl := Edit;
-  QueueConfigReadTask(Task); }
+   NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Owner, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Edit.ConfigInfo.ConfigMemSize, iPage, iControl, Edit));
+  ReadsQueued := ReadsQueued + 1;
 end;
 
 procedure TFormTrainConfigEditor.WriteConfigurationEdit(Edit: TOlcbEdit; iPage, iControl: Word);
@@ -650,7 +612,6 @@ var
   i: Integer;
   EventID: TEventID;
   HexArray: THexArray;
-//  Task: TTaskOlcbBase;
 begin
   Stream := TMemoryStream.Create;
   try
@@ -680,12 +641,8 @@ begin
       cdt_Bit     : begin
                     end;
     end;
-  {  Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    Task.Tag := iPage or (iControl shl 16);
-    Task.RemoveKey := PtrInt( Self);
-    Task.OwnerControl := Edit;
-    QueueConfigWriteTask(Task);    }
+    WritesQueued := WritesQueued + 1;
+    NodeThread.AddTask( TNodeTaskWriteConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_WRITE_CONFIG_MEM, Owner, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream, iPage, iControl, Edit));
   finally
     Stream.Free
   end;
@@ -696,7 +653,6 @@ var
   Stream: TMemoryStream;
   i: Integer;
   HexArray: THexArray;
- // Task: TTaskOlcbBase;
 begin
   Stream := TMemoryStream.Create;
   try
@@ -712,12 +668,8 @@ begin
                        // TODO
                     end;
     end;
- {   Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
-    Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-    Task.Tag := iPage or (iControl shl 16);
-    Task.RemoveKey := PtrInt( Self);
-    Task.OwnerControl := Edit;
-    QueueConfigWriteTask(Task);   }
+    WritesQueued := WritesQueued + 1;
+    NodeThread.AddTask( TNodeTaskWriteConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_WRITE_CONFIG_MEM, Owner, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream, iPage, iControl, Edit));
   finally
     Stream.Free
   end;
@@ -730,7 +682,6 @@ var
   Relation: TMapRelation;
   EventID: TEventID;
   HexArray: THexArray;
- // Task: TTaskOlcbBase;
 begin
   iComboBox := Edit.ItemIndex;
   if iComboBox > -1 then
@@ -775,12 +726,8 @@ begin
                         // TODO
                       end;
       end;
-  {    Task := TTaskAddressSpaceMemoryWriteRawWithDatagram.Create(GlobalSettings.General.AliasIDAsVal, AliasID, True, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream);
-      Task.OnBeforeDestroy := @OnBeforeDestroyTask;
-      Task.Tag := iPage or (iControl shl 16);
-      Task.RemoveKey := PtrInt( Self);
-      Task.OwnerControl := Edit;
-      QueueConfigWriteTask(Task);  }
+      WritesQueued := WritesQueued + 1;
+      NodeThread.AddTask( TNodeTaskWriteConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_WRITE_CONFIG_MEM, Owner, MSI_CONFIG, Edit.ConfigInfo.ConfigMemAddress, Stream, iPage, iControl, Edit));
     finally
       Stream.Free;
     end;
@@ -821,28 +768,6 @@ begin
     end;
   end;
 end;
-
-{
-procedure TFormTrainConfigEditor.QueueConfigWriteTask(Task: TTaskOlcbBase);
-begin
-  if ConfigWriteTaskRunning then
-    ConfigWriteTaskQueue.Add(Task)        // Need to allow node to finish write and send the ACK before sending next
-  else begin
-    DispatchTask(Task);
-    ConfigWriteTaskRunning := True
-  end;
-end;    }
-
-{
-procedure TFormTrainConfigEditor.QueueConfigReadTask(Task: TTaskOlcbBase);
-begin
-  if ConfigReadTaskRunning then
-    ConfigReadTaskQueue.Add(Task)        // Need to allow node to finish read and send the ACK before sending next
-  else begin
-    DispatchTask(Task);
-    ConfigReadTaskRunning := True
-  end;
-end;    }
 
 function TFormTrainConfigEditor.FindControlPageAndIndex(Control: TControl; var iPage: Word; var iControl: Word): Boolean;
 var
@@ -903,48 +828,48 @@ end;
 
 procedure TFormTrainConfigEditor.UpdateUI;
 begin
-  if ConfigReadTaskQueue.Count > 0 then
-    StatusBar.Panels[1].Text := 'Configuration reads remaining: ' + IntToStr(ConfigReadTaskQueue.Count)
+  if ReadsQueued > 0 then
+    StatusBar.Panels[1].Text := 'Configuration reads remaining: ' + IntToStr(ReadsQueued)
   else
     StatusBar.Panels[1].Text := '';
 
-  if ConfigWriteTaskQueue.Count > 0 then
-    StatusBar.Panels[0].Text := 'Configuration writes remaining: ' + IntToStr(ConfigWriteTaskQueue.Count)
+  if WritesQueued > 0 then
+    StatusBar.Panels[0].Text := 'Configuration writes remaining: ' + IntToStr(WritesQueued)
   else
     StatusBar.Panels[0].Text := '';
 
-  ActionStopRead.Enabled := ConfigReadTaskQueue.Count > 0;
-  ActionStopWrite.Enabled := ConfigWriteTaskQueue.Count > 0;
-  ActionReadAll.Enabled := (ConfigWriteTaskQueue.Count = 0) and (ConfigReadTaskQueue.Count = 0);
-  ActionReadPage.Enabled := (ConfigWriteTaskQueue.Count = 0) and (ConfigReadTaskQueue.Count = 0);
-  ActionWriteAll.Enabled := (ConfigWriteTaskQueue.Count = 0) and (ConfigReadTaskQueue.Count = 0);
-  ActionWritePage.Enabled := (ConfigWriteTaskQueue.Count = 0) and (ConfigReadTaskQueue.Count = 0);
+  ActionStopRead.Enabled := ReadsQueued > 0;
+  ActionStopWrite.Enabled := WritesQueued > 0;
+  ActionReadAll.Enabled := (WritesQueued = 0) and (ReadsQueued = 0);
+  ActionReadPage.Enabled := (WritesQueued = 0) and (ReadsQueued = 0);
+  ActionWriteAll.Enabled := (WritesQueued = 0) and (ReadsQueued = 0);
+  ActionWritePage.Enabled := (WritesQueued = 0) and (ReadsQueued = 0);
 end;
 
 procedure TFormTrainConfigEditor.FlushConfigWriteTasks;
 var
   i: Integer;
 begin
-  try
+ { try
     for i := 0 to ConfigWriteTaskQueue.Count - 1 do
       TObject( ConfigWriteTaskQueue[i]).Free;
   finally
     ConfigWriteTaskQueue.Clear;
     ConfigWriteTaskRunning := False;
-  end;
+  end;  }
 end;
 
 procedure TFormTrainConfigEditor.FlushConfigReadTasks;
 var
   i: Integer;
 begin
-  try
+ { try
     for i := 0 to ConfigReadTaskQueue.Count - 1 do
       TObject( ConfigReadTaskQueue[i]).Free;
   finally
     ConfigReadTaskQueue.Clear;
     ConfigReadTaskRunning := False;
-  end;
+  end;}
 end;
 
 end.

@@ -64,6 +64,7 @@ function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeI
 {$ENDIF}
 // Configuration Memeory
 function TrySendConfigMemoryRead(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
+function TrySendConfigMemoryWrite(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; Stream: TMemoryStream): Boolean;
 
 
 {$IFNDEF FPC}
@@ -603,6 +604,12 @@ begin
     OPStackNode_OutgoingMessageLink(Node, NewMessage);
     Result := True;
   end;
+end;
+
+function TrySendConfigMemoryWrite(Node: PNMRAnetNode; var Dest: TNodeInfo;
+  AddressSpace: Byte; StartAddress: DWord; Stream: TMemoryStream): Boolean;
+begin
+
 end;
 
 end.

@@ -238,7 +238,7 @@ type
     procedure EventSimpleTrainNodeInfo(Event: TNodeEventSimpleTrainNodeInfo);
     procedure EventReleaseController(Event: TNodeEventReleaseController);
     procedure EventSupportsProtocols(Event: TNodeEventSupportsProtocols);
-    procedure EventReadFDI(Event: TNodeEventReadFDI);
+    procedure EventReadConfigMem(Event: TNodeEventReadConfigMem);
     procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
@@ -449,8 +449,9 @@ procedure TFormThrottle.ActionAllocationEditCustomizationExecute(Sender: TObject
 begin
   if not Assigned(ConfigurationViewer) then
   begin
-    FConfigurationViewer := TFormTrainConfigEditor.Create(Application);
- //   ConfigurationViewer.AliasID := TrainNodeInfo;
+    FConfigurationViewer := TFormTrainConfigEditor.Create(Self);
+    ConfigurationViewer.TrainNodeInfo := TrainNodeInfo;
+    ConfigurationViewer.ThrottleNodeInfo := ThrottleNodeInfo;
     ConfigurationViewer.ImageList16x16 := ImageList16x16;
     ConfigurationViewer.Caption := 'Configuration Editor: Train ' + IntToStr(SpinEditAddress.Value);
     ConfigurationViewer.ShowModal;
@@ -939,23 +940,18 @@ begin
   UpdateUI
 end;
 
-procedure TFormThrottle.EventReadFDI(Event: TNodeEventReadFDI);
-var
-  MemStream: TMemoryStream;
-  i: Integer;
+procedure TFormThrottle.EventReadConfigMem(Event: TNodeEventReadConfigMem);
 begin
-  MemStream := TMemoryStream.Create;
-  try
-    for i := 1 to Length(Event.FDI) do
-    begin
-      if AnsiChar( Event.FDI[i]) <> #0 then
-      MemStream.WriteByte( Ord( AnsiChar( Event.FDI[i])));
-    end;
-    MemStream.WriteByte( Ord(#0));
-    UpdateFunctionsWithFDI(MemStream);
-  finally
-    MemStream.Free;
-  end;
+  if Event.AddressSpace = MSI_FDI then
+    UpdateFunctionsWithFDI(Event.Protocol)
+  else
+   if Event.AddressSpace = MSI_CDI then
+   begin
+     if Assigned(ConfigurationViewer) then
+       ConfigurationViewer.EventReadCDI(Event);
+   end;
+  if Event.AddressSpace = MSI_CONFIG then
+    ConfigurationViewer.EventReadConfig(Event);
 end;
 
 procedure TFormThrottle.EventReleaseController(Event: TNodeEventReleaseController);
@@ -1030,7 +1026,7 @@ begin
          end;
       mrOK :              // Use the Trains
         begin
-          NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_FDI, Self, 0));
+          NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Self, MSI_FDI, $00000000, MAX_CONFIG_MEM_READWRITE_SIZE, 0, 0, nil));
         end;
       mrAll :         // Use the custom file
         begin

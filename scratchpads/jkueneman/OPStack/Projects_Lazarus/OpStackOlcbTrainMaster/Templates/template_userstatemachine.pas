@@ -94,7 +94,8 @@ const
    STATE_THROTTLE_FIND_TRAINS                = 15;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO     = 16;
    STATE_THROTTLE_PROTOCOL_SUPPORT           = 17;
-   STATE_THROTTLE_READ_FDI                   = 18;
+   STATE_THROTTLE_READ_CONFIG_MEM            = 18;
+   STATE_THROTTLE_WRITE_CONFIG_MEM           = 19;
 
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_START = 0;
    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT  = 1;
@@ -104,9 +105,13 @@ const
    STATE_THROTTLE_PROTOCOL_SUPPORT_END         = 1;
    STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT        = 2;
 
-   STATE_THROTTLE_READ_FDI_SEND                = 0;
-   STATE_THROTTLE_READ_FDI_END                 = 1;
-   STATE_THROTTLE_READ_FDI_WAIT                = 2;
+   STATE_THROTTLE_READ_CONFIG_MEM_SEND         = 0;
+   STATE_THROTTLE_READ_CONFIG_MEM_END          = 1;
+   STATE_THROTTLE_READ_CONFIG_MEM_WAIT         = 2;
+
+   STATE_THROTTLE_WRITE_CONFIG_MEM_SEND        = 0;
+   STATE_THROTTLE_WRITE_CONFIG_MEM_END         = 1;
+   STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT        = 2;
 
 var
   ProxyNode: TNodeInfo;
@@ -160,6 +165,8 @@ var
   TrainReleaseController: TNodeTaskReleaseController;
   TrainAllocateTask: TNodeTaskAllocateTrain;
   NewFunctionValue, Address: Word;
+  ReadConfigMemTask: TNodeTaskReadConfigMemory;
+  WriteConfigMemTask: TNodeTaskWriteConfigMemory;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -607,24 +614,47 @@ begin
                     end;
                end
              end;
-          STATE_THROTTLE_READ_FDI :
+          STATE_THROTTLE_READ_CONFIG_MEM :
              begin
-               case TNodeTask( Node^.UserData).iSubStateMachine of
-                 STATE_THROTTLE_READ_FDI_SEND :
+               ReadConfigMemTask := TNodeTaskReadConfigMemory( Node^.UserData);
+               case ReadConfigMemTask.iSubStateMachine of
+                 STATE_THROTTLE_READ_CONFIG_MEM_SEND :
                     begin
-                      if TrySendConfigMemoryRead(Node, TNodeTaskReadConfigMemory( Node^.UserData).FDestNodeInfo, MSI_FDI, TNodeTaskReadConfigMemory( Node^.UserData).CurrentAddress, 64) then
-                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_WAIT;
-                      TNodeTask( Node^.UserData).Watchdog := 0;
+                      if TrySendConfigMemoryRead(Node, ReadConfigMemTask.FDestNodeInfo, ReadConfigMemTask.AddressSpace, ReadConfigMemTask.CurrentAddress, ReadConfigMemTask.Count) then
+                        ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_WAIT;
+                      ReadConfigMemTask.Watchdog := 0;
                     end;
-                 STATE_THROTTLE_READ_FDI_END :
+                 STATE_THROTTLE_READ_CONFIG_MEM_END :
                     begin
                       UnLinkFirstTaskFromNode(Node, True);
                       Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                     end;
-                 STATE_THROTTLE_READ_FDI_WAIT :
+                 STATE_THROTTLE_READ_CONFIG_MEM_WAIT :
                     begin
-                      if  TNodeTask( Node^.UserData).Watchdog > 20 then
-                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_END
+                      if  ReadConfigMemTask.Watchdog > 20 then
+                        ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END
+                    end;
+               end
+             end;
+          STATE_THROTTLE_WRITE_CONFIG_MEM :
+             begin
+               WriteConfigMemTask := TNodeTaskWriteConfigMemory( Node^.UserData);
+               case WriteConfigMemTask.iSubStateMachine of
+                 STATE_THROTTLE_WRITE_CONFIG_MEM_SEND :
+                    begin
+                      if TrySendConfigMemoryWrite(Node, WriteConfigMemTask.FDestNodeInfo, WriteConfigMemTask.AddressSpace, WriteConfigMemTask.CurrentAddress, WriteConfigMemTask.Protocol) then
+                        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT;  // NOT ALL NODES WILL REPLY HERE>>>>>>>
+                      WriteConfigMemTask.Watchdog := 0;
+                    end;
+                 STATE_THROTTLE_WRITE_CONFIG_MEM_END :
+                    begin
+                      UnLinkFirstTaskFromNode(Node, True);
+                      Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
+                    end;
+                 STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT :
+                    begin
+                      if  WriteConfigMemTask.Watchdog > 20 then
+                        WriteConfigMemTask.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_END
                     end;
                end
              end;
@@ -979,30 +1009,44 @@ var
   TaskReadConfigMemory: TNodeTaskReadConfigMemory;
   i, Offset: Integer;
 begin
-  if TNodeTask( Node^.UserData) is TNodeTaskReadConfigMemory then
+  // Need to have a global function for all these that check for matching source/dest pairs eventually
+  TaskReadConfigMemory := TNodeTask( Node^.UserData) as TNodeTaskReadConfigMemory;
+  TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_SEND;
+
+  // Skip over the header
+  if (AMessage^.Buffer^.DataArray[1] and $0F = 0) then
+    Offset := 7
+  else
+    Offset := 6;
+  TaskReadConfigMemory.Watchdog := 0;
+
+  if (TaskReadConfigMemory.AddressSpace = MSI_CDI) or (TaskReadConfigMemory.AddressSpace = MSI_FDI) then
   begin
-    TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_SEND;
-    TaskReadConfigMemory := TNodeTask( Node^.UserData) as TNodeTaskReadConfigMemory;
-
-    // Skip over the header
-    if (AMessage^.Buffer^.DataArray[1] and $0F = 0) then
-      Offset := 7
-    else
-      Offset := 6;
-
-    TaskReadConfigMemory.Watchdog := 0;
     for i := Offset to AMessage^.Buffer^.DataBufferSize - 1 do
     begin
-      TaskReadConfigMemory.FDI := TaskReadConfigMemory.FDI + Char(AMessage^.Buffer^.DataArray[i]);
+      TaskReadConfigMemory.Protocol.WriteByte(AMessage^.Buffer^.DataArray[i]);
       TaskReadConfigMemory.CurrentAddress := TaskReadConfigMemory.CurrentAddress + 1;
       if Char(AMessage^.Buffer^.DataArray[i]) = #0 then
       begin
-        TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_READ_FDI_END;
-        NodeThread.AddEvent( TNodeEventReadFDI.Create(Node^.Info, TaskReadConfigMemory.LinkedObj, TaskReadConfigMemory.FDI));
+        TaskReadConfigMemory.Protocol.WriteByte(Ord(#0));
+        TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
+        NodeThread.AddEvent( TNodeEventReadConfigMem.Create(Node^.Info, TaskReadConfigMemory.LinkedObj, TaskReadConfigMemory.Protocol, TaskReadConfigMemory.AddressSpace, TaskReadConfigMemory.iPage ,TaskReadConfigMemory.iControl, TaskReadConfigMemory.Control));
         Break;
       end;
     end;
-  end;
+  end else
+  if (TaskReadConfigMemory.AddressSpace = MSI_CONFIG) then
+  begin
+    for i := Offset to AMessage^.Buffer^.DataBufferSize - 1 do
+    begin
+      TaskReadConfigMemory.Protocol.WriteByte(AMessage^.Buffer^.DataArray[i]);
+      TaskReadConfigMemory.CurrentAddress := TaskReadConfigMemory.CurrentAddress + 1;
+    end;
+    NodeThread.AddEvent( TNodeEventReadConfigMem.Create(Node^.Info, TaskReadConfigMemory.LinkedObj, TaskReadConfigMemory.Protocol, TaskReadConfigMemory.AddressSpace, TaskReadConfigMemory.iPage ,TaskReadConfigMemory.iControl, TaskReadConfigMemory.Control));
+    TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
+  end else
+    TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
+
   TaskReadConfigMemory.Watchdog := 0;
 end;
 
