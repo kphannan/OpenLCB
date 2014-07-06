@@ -9,11 +9,10 @@ uses
   ComCtrls, ExtCtrls, StdCtrls, ActnList, Menus, Buttons, Spin, form_throttle,
   ethernet_hub, olcb_app_common_settings, file_utilities,
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
-  types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds,
+  LMessages, Messages, LCLIntf, SynEditKeyCmds,
   SynEditMarkupHighAll,
-  template_hardware, opstackcore, template_configuration, template_node,
-  opstackbuffers, opstackdefines, threadedstringlist, nmranetutilities,
-  Float16;
+  template_hardware, template_configuration,
+  opstackbuffers, opstackdefines, nmranetutilities;
 
 const
   BUNDLENAME             = 'OpenLCB TrainMaster';

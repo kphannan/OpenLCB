@@ -27,8 +27,6 @@ type
 
   TTimerType = (tt_None, tt_AllocateByList);
 
-  TFunctionState = array[0..28] of Boolean;
-
   { TThrottleList }
 
   TThrottleList = class(TList)
@@ -1108,7 +1106,6 @@ end;
 procedure TFormThrottle.UpdateFunctionsWithDefault;
 var
   i: Integer;
-  FunctionsState: TFunctionState;
 begin
   ScrollBoxFunctions.BeginUpdateBounds;
   try
@@ -1210,29 +1207,40 @@ begin
 end;
 
 procedure TFormThrottle.UpdateUI;
+var
+  TrainIsNull, ThrottleIsNull: Boolean;
 begin
+  TrainIsNull := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
+  ThrottleIsNull := NMRAnetUtilities_NullNodeIDInfo(FThrottleNodeInfo);
+
   PanelMain.Enabled := FormSelector = nil;
-  ActionAllocationEditCustomization.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  ActionAllocationByList.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  ActionAllocationByAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  ActionAllocationRelease.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  GroupBoxFunctions.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  GroupBoxControl.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  GroupBoxConfiguration.Enabled := not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  RadioGroupSpeedStep.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  SpinEditAddress.Enabled := NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo);
-  if NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
+  ActionAllocationEditCustomization.Enabled := not TrainIsNull;
+  ActionAllocationByList.Enabled := TrainIsNull;
+  ActionAllocationByAddress.Enabled := TrainIsNull;
+  ActionAllocationRelease.Enabled := not TrainIsNull;
+  GroupBoxFunctions.Enabled := not TrainIsNull;
+  GroupBoxControl.Enabled := not TrainIsNull;
+  GroupBoxConfiguration.Enabled := not TrainIsNull;
+  RadioGroupSpeedStep.Enabled := TrainIsNull;
+  SpinEditAddress.Enabled := TrainIsNull;
+  RadioGroupShortLong.Enabled := TrainIsNull;
+  if TrainIsNull then
     LabelAllocatedAddress.Caption := STR_UNASSIGNED
   else
     LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value);
 
   Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
   UpdateAddressRange;
-  UpdateStatus(0, 'Throttle: 0x' + IntToHex(ThrottleNodeInfo.AliasID, 4) + ' [0x' + NodeIDToDotHex(ThrottleNodeInfo.ID)  + ']');
-  if not NMRAnetUtilities_NullNodeIDInfo(FTrainNodeInfo) then
+
+  if not ThrottleIsNull then
+    UpdateStatus(0, 'Throttle: 0x' + IntToHex(ThrottleNodeInfo.AliasID, 4) + ' [0x' + NodeIDToDotHex(ThrottleNodeInfo.ID)  + ']')
+  else
+    UpdateStatus(0, 'Throttle Unassigned');
+
+  if not TrainIsNull then
     UpdateStatus(1, 'Train: 0x' + IntToHex(TrainNodeInfo.AliasID, 4) + ' [0x' + NodeIDToDotHex(TrainNodeInfo.ID) + ']')
   else
-    UpdateStatus(1, '');
+    UpdateStatus(1, 'Train Unassigned');
 end;
 
 end.

@@ -1074,7 +1074,22 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+var
+  TaskWriteConfigMemory: TNodeTaskWriteConfigMemory;
+  i, Offset: Integer;
 begin
+  // THIS DOES NOT HAVE TO BE CALLED>>>>>>  OLDER NODES OR SIMPLE IMPLEMENTATIONS MAY ONLY SEND THE ACK IF THE WRITE IS FAST AND SUCCESSFUL
+
+  // Need to have a global function for all these that check for matching source/dest pairs eventually
+  TaskWriteConfigMemory := TNodeTask( Node^.UserData) as TNodeTaskWriteConfigMemory;
+  TaskWriteConfigMemory.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_SEND;
+
+  // Skip over the header
+  if (AMessage^.Buffer^.DataArray[1] and $0F = 0) then
+    Offset := 7
+  else
+    Offset := 6;
+  TaskWriteConfigMemory.Watchdog := 0;
 
 end;
 

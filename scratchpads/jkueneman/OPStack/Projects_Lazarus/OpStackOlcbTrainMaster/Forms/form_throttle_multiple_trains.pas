@@ -45,7 +45,7 @@ var
   i: Integer;
 begin
   for i := 0 to AliasList.Count - 1 do
-    ListBoxTrains.Items.Add( '0x' + IntToHex( Integer( AliasList[i]), 4));
+    ListBoxTrains.Items.Add( '0x' + IntToHex( QWord( AliasList[i]), 4));
   ListBoxTrains.ItemIndex := 0;
 end;
 
@@ -60,4 +60,4 @@ begin
 end;
 
 end.
-
+
