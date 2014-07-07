@@ -9,12 +9,25 @@ interface
 {$I Options.inc}
 
 uses
+  {$IFDEF FPC}
+  Classes,
+  SysUtils,
+  FileUtil,
+  ethernet_hub,
+  olcb_transport_layer,
+  template_hardware,
+  template_configuration,
+  olcb_defines,
+ // LCLIntf,
+ // LCLType,
+  {$ENDIF}
   Float16,
   opstacktypes,
-  nmranetdefines,
   opstackdefines,
   template_node,
   opstack_api,
+  nmranetdefines,
+  template_vnode,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -57,18 +70,33 @@ procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: PO
 
 implementation
 
+{$IFDEF FPC}
+  {$IFDEF SUPPORT_TRACTION and SUPPORT_TRACTION_PROXY}
+  uses
+    opstackcore_stnip,
+    opstacknode,
+    opstackcore_traction,
+    opstackcore_traction_proxy;
+  {$ELSE}
+    {$IFDEF SUPPORT_TRACTION}
+    uses
+      opstackcore_traction;
+    {$ELSE}
+    uses
+      opstackcore_traction_proxy;
+    {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
+
 const
-  STATE_USER_START = 0;
-  STATE_USER_1     = 1;
-  STATE_USER_2     = 2;
-  STATE_USER_3     = 3;
-  STATE_USER_4     = 4;
-  STATE_USER_5     = 5;
-  STATE_USER_6     = 6;
-  STATE_USER_7     = 7;
-  STATE_USER_8     = 8;
-  STATE_USER_9     = 9;
-  STATE_USER_10    = 10;
+// Physical Proxy Node User StateMachine
+  STATE_PROXY_USER_START           = 0;
+  STATE_CREATE_DATABASE_NODES      = 1;
+  STATE_PROXY_IDLE                 = 2;
+
+// Virtual Train Node User StateMachine
+  STATE_TRAIN_USER_START           = 0;
+  STATE_TRAIN_IDLE                 = 1;
 
 type
   // User Data for a single node
@@ -123,70 +151,45 @@ end;
 //     Description : Called as often as possible to run the user statemachine
 // *****************************************************************************
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
+var
+  i: Integer;
 begin
   if Node = GetPhysicalNode then
   begin
+    // Proxy Node User StateMachine
     case Node^.iUserStateMachine of
-        STATE_USER_START :
-            begin
-
+      STATE_PROXY_USER_START :
+          begin
+            if Node^.State and NS_PERMITTED <> 0 then
+            begin   {$IFDEF DEBUG_TRAINSERVER_STATEMACHINE} UART1_Write_Text('STATE_PROXY_USER_START'+LF); {$ENDIF}
+              Node^.iUserStateMachine := STATE_CREATE_DATABASE_NODES
             end;
-        STATE_USER_1 :
-            begin
-
-            end;
-        STATE_USER_2 :
-            begin
-
-            end
+          end;
+      STATE_CREATE_DATABASE_NODES :
+          begin
+            for i := 0 to 5 do
+              OPStackNode_Allocate;
+            Node^.iUserStateMachine := STATE_PROXY_IDLE
+          end;
+      STATE_PROXY_IDLE :
+          begin
+            // Waiting for something to do
+          end;
     end;
   end else
   begin
     case Node^.iUserStateMachine of
-        STATE_USER_START :
+      STATE_TRAIN_USER_START :
             begin
-
+              if Node^.State and NS_PERMITTED <> 0 then
+              begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_USER_START'+LF); {$ENDIF}
+                Node^.iUserStateMachine := STATE_TRAIN_IDLE
+              end
             end;
-        STATE_USER_1 :
-            begin
-
-            end;
-        STATE_USER_2 :
-            begin
-
-            end;
-        STATE_USER_3  :
-            begin
-
-            end;
-        STATE_USER_4  :
-            begin
-
-            end;
-        STATE_USER_5  :
-            begin
-
-            end;
-        STATE_USER_6  :
-            begin
-
-            end;
-        STATE_USER_7  :
-            begin
-
-            end;
-        STATE_USER_8  :
-            begin
-
-            end;
-        STATE_USER_9   :
-            begin
-              Exit;
-            end;
-        STATE_USER_10  :
-            begin
-
-            end
+      STATE_TRAIN_IDLE :
+          begin
+            // Waiting for something to do
+          end;
     end
   end
 end;
@@ -206,7 +209,7 @@ var
 begin
   // Assign the user data record to the Node for future use
   Node^.UserData := @UserDataArray[Node^.iIndex];
-  Node^.iUserStateMachine := STATE_USER_START;
+  Node^.iUserStateMachine := 0;
 
   // Initialize the example data, evertime the node is reused!
   NodeData := ExtractUserData(Node);

@@ -237,6 +237,7 @@ type
     procedure EventReleaseController(Event: TNodeEventReleaseController);
     procedure EventSupportsProtocols(Event: TNodeEventSupportsProtocols);
     procedure EventReadConfigMem(Event: TNodeEventReadConfigMem);
+    procedure EventWriteConfigMem(Event: TNodeEventWriteConfigMem);
     procedure UpdateStatus(iPanel: Integer; NewStatus: string);
     procedure UpdateUI;
   end;
@@ -1059,6 +1060,12 @@ begin
   FTrainNodeInfo := Event.TrainNodeInfo;
   NodeThread.AddTask( TNodeTaskSupportsProtocols.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_PROTOCOL_SUPPORT, Self));
   UpdateUI;
+end;
+
+procedure TFormThrottle.EventWriteConfigMem(Event: TNodeEventWriteConfigMem);
+begin
+  if Event.AddressSpace = MSI_CONFIG then
+    ConfigurationViewer.EventWriteConfig(Event);
 end;
 
 function TFormThrottle.IsForward: Boolean;

@@ -1004,12 +1004,20 @@ begin
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventSupportsProtocols(Event as TNodeEventSupportsProtocols);
       end;
+      if TObject( EventList[i]) is TNodeEventWriteConfigMem then
+      begin
+        Event := TNodeEvent( EventList[i]);
+        if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
+          (Event.LinkedObj as TFormThrottle).EventWriteConfigMem(Event as TNodeEventWriteConfigMem);
+      end else
       if TObject( EventList[i]) is TNodeEventReadConfigMem then
       begin
         Event := TNodeEvent( EventList[i]);
         if Throttles.IndexOf( Event.LinkedObj as TFormThrottle) > -1 then
           (Event.LinkedObj as TFormThrottle).EventReadConfigMem(Event as TNodeEventReadConfigMem);
-      end;
+      end else
+
+
 
       TObject( EventList[i]).Destroy
     end;

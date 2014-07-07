@@ -101,6 +101,7 @@ type
     procedure FlushConfigReadTasks;
     procedure EventReadCDI(Event: TNodeEventReadConfigMem);
     procedure EventReadConfig(Event: TNodeEventReadConfigMem);
+    procedure EventWriteConfig(Event: TNodeEventWriteConfigMem);
     property ThrottleNodeInfo: TNodeInfo read FThrottleNodeInfo write FThrottleNodeInfo;
     property TrainNodeInfo: TNodeInfo read FTrainNodeInfo write FTrainNodeInfo;
     property OnConfigEditorHide: TOnConfigEditorEvent read FOnConfigEditorHide write FOnConfigEditorHide;
@@ -263,8 +264,7 @@ var
   Str: String;
   Relation: TMapRelation;
 begin
-  if ReadsQueued > 0 then
-    ReadsQueued := ReadsQueued - 1;
+  ReadsQueued := ReadsQueued - 1;
 
   if PageControl.PageCount > Event.iPage then
   begin
@@ -364,6 +364,11 @@ begin
   end;
 end;
 
+procedure TFormTrainConfigEditor.EventWriteConfig(Event: TNodeEventWriteConfigMem);
+begin
+  WritesQueued := WritesQueued - 1;
+end;
+
 procedure TFormTrainConfigEditor.ActionReadAllExecute(Sender: TObject);
 begin
   ReadConfiguration;
@@ -420,6 +425,8 @@ procedure TFormTrainConfigEditor.SetReadsQueued(AValue: Integer);
 begin
   if FReadsQueued=AValue then Exit;
   FReadsQueued:=AValue;
+  if FReadsQueued < 0 then
+    FReadsQueued := 0;
   UpdateUI;
 end;
 
@@ -427,6 +434,8 @@ procedure TFormTrainConfigEditor.SetWritessQueued(AValue: Integer);
 begin
   if FWritesQueued=AValue then Exit;
   FWritesQueued:=AValue;
+  if FWritesQueued < 0 then
+    FWritesQueued := 0;
   UpdateUI;
 end;
 

@@ -64,7 +64,7 @@ function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeI
 {$ENDIF}
 // Configuration Memeory
 function TrySendConfigMemoryRead(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; ReadCount: Byte): Boolean;
-function TrySendConfigMemoryWrite(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; Stream: TMemoryStream): Boolean;
+function TrySendConfigMemoryWrite(Node: PNMRAnetNode; var Dest: TNodeInfo; AddressSpace: Byte; StartAddress: DWord; WriteCount: Byte; WriteData: PDatagramDataArray): Boolean;
 
 
 {$IFNDEF FPC}
@@ -607,8 +607,35 @@ begin
 end;
 
 function TrySendConfigMemoryWrite(Node: PNMRAnetNode; var Dest: TNodeInfo;
-  AddressSpace: Byte; StartAddress: DWord; Stream: TMemoryStream): Boolean;
+  AddressSpace: Byte; StartAddress: DWord; WriteCount: Byte;
+  WriteData: PDatagramDataArray): Boolean;
+var
+  NewMessage: POPStackMessage;
+  DatagramBuffer: PDatagramBuffer;
+  i: Integer;
 begin
+  Result := False;
+  if OPStackBuffers_AllocateDatagramMessage(NewMessage, Node^.Info, Dest, 0) then
+  begin
+    DatagramBuffer := PDatagramBuffer( PByte(NewMessage^.Buffer));
+    DatagramBuffer^.DataBufferSize := 8;
+    DatagramBuffer^.DataArray[0] := DATAGRAM_TYPE_MEMORY_CONFIGURATION;
+    DatagramBuffer^.DataArray[1] := MCP_COMMAND_WRITE or MCP_NONE;         // Address is in byte 6
+    DatagramBuffer^.DataArray[2] := Byte( StartAddress shr 24);
+    DatagramBuffer^.DataArray[3] := Byte( StartAddress shr 16);
+    DatagramBuffer^.DataArray[4] := Byte( StartAddress shr 8);
+    DatagramBuffer^.DataArray[5] := Byte( StartAddress);
+    DatagramBuffer^.DataArray[6] := AddressSpace;
+    if WriteCount > 64 then
+      WriteCount := 64;
+    for i := 0 to WriteCount - 1 do
+      DatagramBuffer^.DataArray[i + 7] := WriteData^[i];
+    DatagramBuffer^.DataBufferSize := WriteCount + 7;
+
+    PDatagramBuffer( PByte( NewMessage^.Buffer))^.iStateMachine := STATE_DATAGRAM_SEND;
+    OPStackNode_OutgoingMessageLink(Node, NewMessage);
+    Result := True;
+  end;
 
 end;
 

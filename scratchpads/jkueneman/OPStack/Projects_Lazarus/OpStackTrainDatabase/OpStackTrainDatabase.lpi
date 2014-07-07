@@ -56,7 +56,7 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\OpStackTrainDatabase"/>
+      <Filename Value="Compiled_Binaries\$(TargetCPU)-$(TargetOS)\OpStackTrainDatabase.app\Contents\MacOS\OpStackTrainDatabase"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);Templates"/>
@@ -85,7 +85,6 @@ if TargetOS = 'linux' then
     </CodeGeneration>
     <Linking>
       <Debugging>
-        <GenerateDebugInfo Value="False"/>
         <UseValgrind Value="True"/>
       </Debugging>
       <Options>

@@ -109,9 +109,10 @@ const
    STATE_THROTTLE_READ_CONFIG_MEM_END          = 1;
    STATE_THROTTLE_READ_CONFIG_MEM_WAIT         = 2;
 
-   STATE_THROTTLE_WRITE_CONFIG_MEM_SEND        = 0;
-   STATE_THROTTLE_WRITE_CONFIG_MEM_END         = 1;
-   STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT        = 2;
+   STATE_THROTTLE_WRITE_CONFIG_MEM_INIT        = 0;
+   STATE_THROTTLE_WRITE_CONFIG_MEM_SEND        = 1;
+   STATE_THROTTLE_WRITE_CONFIG_MEM_END         = 2;
+   STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT        = 3;
 
 var
   ProxyNode: TNodeInfo;
@@ -167,6 +168,7 @@ var
   NewFunctionValue, Address: Word;
   ReadConfigMemTask: TNodeTaskReadConfigMemory;
   WriteConfigMemTask: TNodeTaskWriteConfigMemory;
+  DeltaConfigMemWrite: Int64;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -640,14 +642,32 @@ begin
              begin
                WriteConfigMemTask := TNodeTaskWriteConfigMemory( Node^.UserData);
                case WriteConfigMemTask.iSubStateMachine of
+                 STATE_THROTTLE_WRITE_CONFIG_MEM_INIT :
+                    begin
+                      WriteConfigMemTask.Protocol.Position := 0;
+                      WriteConfigMemTask.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_SEND;
+                    end;
                  STATE_THROTTLE_WRITE_CONFIG_MEM_SEND :
                     begin
-                      if TrySendConfigMemoryWrite(Node, WriteConfigMemTask.FDestNodeInfo, WriteConfigMemTask.AddressSpace, WriteConfigMemTask.CurrentAddress, WriteConfigMemTask.Protocol) then
+                      DeltaConfigMemWrite := WriteConfigMemTask.Protocol.Size - WriteConfigMemTask.Protocol.Position;
+                      if DeltaConfigMemWrite = 0 then  // Covers Size = 0 too!
+                      begin
+                        WriteConfigMemTask.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_END;
+                        Exit;
+                      end;
+                      if  DeltaConfigMemWrite > 64 then
+                        DeltaConfigMemWrite := 64;
+                      if TrySendConfigMemoryWrite(Node, WriteConfigMemTask.FDestNodeInfo, WriteConfigMemTask.AddressSpace, WriteConfigMemTask.CurrentAddress, DeltaConfigMemWrite, WriteConfigMemTask.Protocol.Memory) then
+                      begin
+                        WriteConfigMemTask.CurrentAddress := WriteConfigMemTask.CurrentAddress + DeltaConfigMemWrite;
+                        WriteConfigMemTask.Protocol.Position := WriteConfigMemTask.Protocol.Position + DeltaConfigMemWrite;
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT;  // NOT ALL NODES WILL REPLY HERE>>>>>>>
+                      end;
                       WriteConfigMemTask.Watchdog := 0;
                     end;
                  STATE_THROTTLE_WRITE_CONFIG_MEM_END :
                     begin
+                      NodeThread.AddEvent( TNodeEventWriteConfigMem.Create(Node^.Info, WriteConfigMemTask.LinkedObj, WriteConfigMemTask.Protocol, WriteConfigMemTask.AddressSpace, WriteConfigMemTask.iPage ,WriteConfigMemTask.iControl, WriteConfigMemTask.Control));
                       UnLinkFirstTaskFromNode(Node, True);
                       Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                     end;
@@ -1077,6 +1097,8 @@ procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStack
 var
   TaskWriteConfigMemory: TNodeTaskWriteConfigMemory;
   i, Offset: Integer;
+  IsPending: Boolean;
+  EstimatedTime: Byte;
 begin
   // THIS DOES NOT HAVE TO BE CALLED>>>>>>  OLDER NODES OR SIMPLE IMPLEMENTATIONS MAY ONLY SEND THE ACK IF THE WRITE IS FAST AND SUCCESSFUL
 
@@ -1089,8 +1111,17 @@ begin
     Offset := 7
   else
     Offset := 6;
-  TaskWriteConfigMemory.Watchdog := 0;
+  if AMessage^.Buffer^.DataBufferSize > Offset then
+  begin
+    IsPending := AMessage^.Buffer^.DataArray[Offset + 1] and $80 <> 0;
+    EstimatedTime := AMessage^.Buffer^.DataArray[Offset + 1] and not $80;
+  end else
+  begin
+    IsPending := False;
+    EstimatedTime := 0;
+  end;
 
+  TaskWriteConfigMemory.Watchdog := 0;
 end;
 
 // *****************************************************************************

@@ -33,15 +33,15 @@
     </group>
   </segment>
   <segment origin="128" space="253">
-    <name>Train Information</name>
-    <description>Describes a train by it type, name and owner</description>
+    <name>Database Train Information</name>
+    <description>User definable information to uniquely identify this Train</description>
     <group>
       <name>Locomotive Specific Information</name>
       <string size="32">
         <name>Road Name</name>
       </string>
       <string size="32">
-        <name>Closs</name>
+        <name>Loco Class</name>
       </string>
       <string size="32">
         <name>Road Number</name>
@@ -52,11 +52,44 @@
     </group>
     <group>
       <name>Model Specific Information</name>
+      <description>Enter the user information to describe this model</description>
       <string size="32">
         <name>Manufacturer</name>
       </string>
       <string size="32">
         <name>Owner</name>
+      </string>
+    </group>
+    <group>
+      <name>NMRA DCC Specific Information</name>
+      <int size="2">
+        <name>NMRA DCC Address</name>
+        <description>Enter the NMRA DCC address for the Train</description>
+      </int>
+      <int size="1">
+        <map>
+          <description>Select the NMRA DCC address type</description>
+          <relation>
+            <property>Short Address</property>
+            <value>0</value>
+          </relation>
+          <relation>
+            <property>Long Address</property>
+            <value>1</value>
+          </relation>
+        </map>
+      </int>
+    </group>
+    <group>
+      <name>Function and Decoder Information Assignments</name>
+      <description>URLs that point to the Function Definition File (FDI) and Train Definition File (TDI) used by this Train</description>
+      <string size="512">
+        <name>FDI</name>
+        <description>Enter the URL to the Function Definition Resource for this Train</description>
+      </string>
+      <string size="512">
+        <name>TDI</name>
+        <description>Enter the URL to the Train Definition Resource for the Train</description>
       </string>
     </group>
   </segment>

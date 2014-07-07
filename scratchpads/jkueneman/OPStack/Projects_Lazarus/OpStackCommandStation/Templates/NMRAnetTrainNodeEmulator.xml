@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="http://openlcb.org/trunk/prototypes/xml/xslt/cdi.xsl"?><cdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/specs/schema/cdi.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="http://openlcb.org/trunk/prototypes/xml/xslt/cdi.xsl"?>
+<cdi xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://openlcb.org/trunk/specs/schema/cdi.xsd">
   <identification>
     <manufacturer>Mustangpeak</manufacturer>
     <model>CE200</model>
@@ -15,7 +17,7 @@
       </relation>
     </map>
   </identification>
-  <acdi fixed="1" var="1" />
+  <acdi fixed="1" var="1"/>
   <segment origin="0" space="253">
     <name>Options</name>
     <description>Options for the Train Node Emulator</description>
@@ -31,15 +33,15 @@
     </group>
   </segment>
   <segment origin="128" space="253">
-  <name>Train Information</name>  
-    <description>Describes a train by it type, name and owner</description>  
+    <name>Train Information</name>
+    <description>Describes a train by it type, name and owner</description>
     <group>
       <name>Locomotive Specific Information</name>
       <string size="32">
         <name>Road Name</name>
       </string>
       <string size="32">
-        <name>Closs</name>
+        <name>Loco Class</name>
       </string>
       <string size="32">
         <name>Road Number</name>
@@ -59,7 +61,7 @@
     </group>
   </segment>
   <segment origin="0" space="252">
-    <name></name>
+    <name/>
     <group>
       <name>Manufacturer Information</name>
       <description>Manufacturer-provided fixed node description</description>
@@ -81,7 +83,7 @@
     </group>
   </segment>
   <segment origin="0" space="251">
-    <name></name>
+    <name/>
     <group offset="0">
       <name>User Data</name>
       <description>Add your own unique node info here</description>

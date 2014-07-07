@@ -355,6 +355,15 @@ type
     property Control: TObject read FControl write FControl;
   end;
 
+  { TNodeEventWriteConfigMem }
+
+  TNodeEventWriteConfigMem = class(TNodeEventReadConfigMem)
+  private
+    FDummy: Byte;
+  public
+    property Dummy: Byte read FDummy write FDummy;
+  end;
+
   { TNodeEventThread }
 
   TNodeEventThread = class(TThread)    // Gathers and sends Events (TNodeEvent) to the UI from the OPStack

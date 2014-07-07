@@ -507,7 +507,7 @@ begin
    else
     Result := 'Unknown MTI';
   end;
-  if LocalHelper.HasDestinationAddress then
+  if LocalHelper.HasDestinationAddress and not IsDatagramMTI(LocalHelper.MTI, False) then
   begin
     if LocalHelper.FramingBits = $00 then
       Result := Result + ' Only Frame'
@@ -1385,10 +1385,11 @@ var
   j, iStart: Integer;
 begin
   Result := '';
-  if HelperData.HasDestinationAddress then
-    iStart := 2
-  else
-    iStart := 0;
+//  if HelperData.HasDestinationAddress then
+ //   iStart := 2
+//  else
+
+  iStart := 0;
   Result := Result + ' [';
   for j := iStart to HelperData.DataCount - 1 do                     // Skip the Address
   begin

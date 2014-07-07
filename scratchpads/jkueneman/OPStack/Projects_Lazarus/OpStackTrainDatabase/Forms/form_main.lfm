@@ -3,7 +3,7 @@ object Form1: TForm1
   Height = 415
   Top = 203
   Width = 672
-  Caption = 'Mustangpeak OclbCommandStation Emulator'
+  Caption = 'Mustangpeak OclbTrainDatabase Emulator'
   ClientHeight = 415
   ClientWidth = 672
   Menu = MainMenu
