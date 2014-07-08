@@ -70,12 +70,12 @@
         <map>
           <description>Select the NMRA DCC address type</description>
           <relation>
-            <property>Short Address</property>
-            <value>0</value>
+            <property>0</property>
+            <value>Short Address</value>
           </relation>
           <relation>
-            <property>Long Address</property>
-            <value>1</value>
+            <property>1</property>
+            <value>Long Address</value>
           </relation>
         </map>
       </int>
