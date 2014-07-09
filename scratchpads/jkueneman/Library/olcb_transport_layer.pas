@@ -161,16 +161,16 @@ type
   private
     FAddressSpace: Byte;
     FControl: TObject;
-    FCount: Integer;
+    FCount: DWord;
     FiControl: Integer;
     FiPage: Integer;
     FProtocol: TMemoryStream;
     FCurrentAddress: DWord;
   public
-    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddressSpace: Byte; AStartAddress: DWord; ACount: Integer; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddressSpace: Byte; AStartAddress: DWord; ACount: DWord; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
     destructor Destroy; override;
     property CurrentAddress: DWord read FCurrentAddress write FCurrentAddress;
-    property Count: Integer read FCount write FCount;
+    property Count: DWord read FCount write FCount;
     property Protocol: TMemoryStream read FProtocol write FProtocol;
     property AddressSpace: Byte read FAddressSpace write FAddressSpace;         // MSI_xxx contants
     property iControl: Integer read FiControl write FiControl;
@@ -638,7 +638,7 @@ end;
 
 constructor TNodeTaskReadConfigMemory.Create(ANodeInfo: TNodeInfo;
   ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject;
-  AnAddressSpace: Byte; AStartAddress: DWord; ACount: Integer; AiPage,
+  AnAddressSpace: Byte; AStartAddress: DWord; ACount: DWord; AiPage,
   AiControl: Integer; AControl: TObject);
 begin
   inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
@@ -1135,6 +1135,7 @@ begin
   System.EnterCriticalsection(FCriticalSection);
   try
     OPStackCore_Initialize;
+    Hardware_Initialize;
   finally
     System.LeaveCriticalSection(FCriticalSection);
   end;

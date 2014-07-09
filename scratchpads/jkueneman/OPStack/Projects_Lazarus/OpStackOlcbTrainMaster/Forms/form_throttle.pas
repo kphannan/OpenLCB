@@ -1025,7 +1025,7 @@ begin
          end;
       mrOK :              // Use the Trains
         begin
-          NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Self, MSI_FDI, $00000000, MAX_CONFIG_MEM_READWRITE_SIZE, 0, 0, nil));
+          NodeThread.AddTask(TNodeTaskReadConfigMemory.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_READ_CONFIG_MEM, Self, MSI_FDI, $00000000, $FFFFFFFF, 0, 0, nil));  // the library will figure out the correct size
         end;
       mrAll :         // Use the custom file
         begin

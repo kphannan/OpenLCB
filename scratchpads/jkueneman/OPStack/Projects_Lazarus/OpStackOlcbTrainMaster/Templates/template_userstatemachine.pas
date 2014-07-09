@@ -1,5 +1,9 @@
 unit template_userstatemachine;
 
+
+
+still need to fix the problem of releasing messages before my statemachine is done with using them (mainly the _END messages where I need to use the UserData to send events and such........
+
 {$IFDEF FPC}
 {$mode objfpc}{$H+}
 
@@ -44,7 +48,7 @@ procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; var Source: TNodeInf
 {$IFDEF SUPPORT_TRACTION}
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
-procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+function AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
@@ -105,9 +109,10 @@ const
    STATE_THROTTLE_PROTOCOL_SUPPORT_END         = 1;
    STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT        = 2;
 
-   STATE_THROTTLE_READ_CONFIG_MEM_SEND         = 0;
-   STATE_THROTTLE_READ_CONFIG_MEM_END          = 1;
-   STATE_THROTTLE_READ_CONFIG_MEM_WAIT         = 2;
+   STATE_THROTTLE_READ_CONFIG_MEM_INIT         = 0;
+   STATE_THROTTLE_READ_CONFIG_MEM_SEND         = 1;
+   STATE_THROTTLE_READ_CONFIG_MEM_END          = 2;
+   STATE_THROTTLE_READ_CONFIG_MEM_WAIT         = 3;
 
    STATE_THROTTLE_WRITE_CONFIG_MEM_INIT        = 0;
    STATE_THROTTLE_WRITE_CONFIG_MEM_SEND        = 1;
@@ -127,6 +132,7 @@ implementation
     NMRAnetCabBridge,
     opstacknode,
     opstackcore_traction,
+    opstackcore_basic,
     opstackcore_traction_proxy;
   {$ELSE}
     {$IFDEF SUPPORT_TRACTION}
@@ -168,7 +174,7 @@ var
   NewFunctionValue, Address: Word;
   ReadConfigMemTask: TNodeTaskReadConfigMemory;
   WriteConfigMemTask: TNodeTaskWriteConfigMemory;
-  DeltaConfigMemWrite: Int64;
+  DeltaConfigMem: Int64;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -592,7 +598,8 @@ begin
                   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE :
                      begin
                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
-                       UnLinkFirstTaskFromNode(Node, True);
+                       UnLinkDeAllocateAndTestForMessageToSend(Node, nil, OPStackNode_NextIncomingMessage(Node));   // Release and unlink the message from the node
+                       UnLinkFirstTaskFromNode(Node, True);                               // Release the Task from the node
                      end;
                 end;
               end;
@@ -620,14 +627,28 @@ begin
              begin
                ReadConfigMemTask := TNodeTaskReadConfigMemory( Node^.UserData);
                case ReadConfigMemTask.iSubStateMachine of
+                 STATE_THROTTLE_READ_CONFIG_MEM_INIT :
+                    begin
+                      ReadConfigMemTask.Protocol.Size := 0;
+                      ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_SEND;
+                    end;
                  STATE_THROTTLE_READ_CONFIG_MEM_SEND :
                     begin
-                      if TrySendConfigMemoryRead(Node, ReadConfigMemTask.FDestNodeInfo, ReadConfigMemTask.AddressSpace, ReadConfigMemTask.CurrentAddress, ReadConfigMemTask.Count) then
+                      DeltaConfigMem := ReadConfigMemTask.Count - ReadConfigMemTask.Protocol.Size;
+                      if DeltaConfigMem = 0 then  // Covers Size = 0 too!
+                      begin
+                        ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
+                        Exit;
+                      end;
+                      if  DeltaConfigMem > 64 then
+                        DeltaConfigMem := 64;
+                      if TrySendConfigMemoryRead(Node, ReadConfigMemTask.FDestNodeInfo, ReadConfigMemTask.AddressSpace, ReadConfigMemTask.CurrentAddress, DeltaConfigMem) then
                         ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_WAIT;
                       ReadConfigMemTask.Watchdog := 0;
                     end;
                  STATE_THROTTLE_READ_CONFIG_MEM_END :
                     begin
+                      NodeThread.AddEvent( TNodeEventReadConfigMem.Create(Node^.Info, ReadConfigMemTask.LinkedObj, ReadConfigMemTask.Protocol, ReadConfigMemTask.AddressSpace, ReadConfigMemTask.iPage ,ReadConfigMemTask.iControl, ReadConfigMemTask.Control));
                       UnLinkFirstTaskFromNode(Node, True);
                       Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                     end;
@@ -649,18 +670,18 @@ begin
                     end;
                  STATE_THROTTLE_WRITE_CONFIG_MEM_SEND :
                     begin
-                      DeltaConfigMemWrite := WriteConfigMemTask.Protocol.Size - WriteConfigMemTask.Protocol.Position;
-                      if DeltaConfigMemWrite = 0 then  // Covers Size = 0 too!
+                      DeltaConfigMem := WriteConfigMemTask.Protocol.Size - WriteConfigMemTask.Protocol.Position;
+                      if DeltaConfigMem = 0 then  // Covers Size = 0 too!
                       begin
                         WriteConfigMemTask.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_END;
                         Exit;
                       end;
-                      if  DeltaConfigMemWrite > 64 then
-                        DeltaConfigMemWrite := 64;
-                      if TrySendConfigMemoryWrite(Node, WriteConfigMemTask.FDestNodeInfo, WriteConfigMemTask.AddressSpace, WriteConfigMemTask.CurrentAddress, DeltaConfigMemWrite, WriteConfigMemTask.Protocol.Memory) then
+                      if  DeltaConfigMem > 64 then
+                        DeltaConfigMem := 64;
+                      if TrySendConfigMemoryWrite(Node, WriteConfigMemTask.FDestNodeInfo, WriteConfigMemTask.AddressSpace, WriteConfigMemTask.CurrentAddress, DeltaConfigMem, WriteConfigMemTask.Protocol.Memory) then
                       begin
-                        WriteConfigMemTask.CurrentAddress := WriteConfigMemTask.CurrentAddress + DeltaConfigMemWrite;
-                        WriteConfigMemTask.Protocol.Position := WriteConfigMemTask.Protocol.Position + DeltaConfigMemWrite;
+                        WriteConfigMemTask.CurrentAddress := WriteConfigMemTask.CurrentAddress + DeltaConfigMem;
+                        WriteConfigMemTask.Protocol.Position := WriteConfigMemTask.Protocol.Position + DeltaConfigMem;
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT;  // NOT ALL NODES WILL REPLY HERE>>>>>>>
                       end;
                       WriteConfigMemTask.Watchdog := 0;
@@ -1059,11 +1080,13 @@ begin
   begin
     for i := Offset to AMessage^.Buffer^.DataBufferSize - 1 do
     begin
-      TaskReadConfigMemory.Protocol.WriteByte(AMessage^.Buffer^.DataArray[i]);
-      TaskReadConfigMemory.CurrentAddress := TaskReadConfigMemory.CurrentAddress + 1;
+      if TaskReadConfigMemory.Protocol.Size < TaskReadConfigMemory.Count then
+      begin
+        TaskReadConfigMemory.Protocol.WriteByte(AMessage^.Buffer^.DataArray[i]);
+        TaskReadConfigMemory.CurrentAddress := TaskReadConfigMemory.CurrentAddress + 1;
+      end else
+        TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
     end;
-    NodeThread.AddEvent( TNodeEventReadConfigMem.Create(Node^.Info, TaskReadConfigMemory.LinkedObj, TaskReadConfigMemory.Protocol, TaskReadConfigMemory.AddressSpace, TaskReadConfigMemory.iPage ,TaskReadConfigMemory.iControl, TaskReadConfigMemory.Control));
-    TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
   end else
     TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
 
@@ -1160,10 +1183,11 @@ end;
 //     Returns     : None
 //     Description : Called in response to a STNIP request
 // *****************************************************************************
-procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+function AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
 var
   Event: TNodeEventSimpleTrainNodeInfo;
 begin
+  Result := False;  // We will unlink and free the message from the node
   Event := TNodeEventSimpleTrainNodeInfo.Create(AMessage^.Source, TNodeTask( Node^.UserData).LinkedObj);
   Event.Decode(AMessage);
   NodeThread.AddEvent(Event);

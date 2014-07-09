@@ -97,8 +97,8 @@ end;
 
 procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMessage);
 begin
-  AppCallback_SimpleTrainNodeInfoReply(Node, NextMessage);
-  UnLinkDeAllocateAndTestForMessageToSend(Node, nil, NextMessage);
+  if AppCallback_SimpleTrainNodeInfoReply(Node, NextMessage) then
+    UnLinkDeAllocateAndTestForMessageToSend(Node, nil, NextMessage);
 end;
 
 end.

@@ -19,11 +19,11 @@ interface
 // Enter the number of buffers to allocate for CAN data, Datagrams, and Streams.  These
 // buffers are created in RAM so the more you creat the less free RAM you will have
 const
-  USER_MAX_SIMPLE_ARRAY_BUFFERS = 10;
-  USER_MAX_DATAGRAM_ARRAY_BUFFERS = 1;
-  USER_MAX_STREAM_ARRAY_BUFFERS = 1;
-  USER_MAX_ACDI_SNIP_ARRAY_BUFFERS = 1;
-  USER_MAX_MULTIFRAME_ARRAY_BUFFERS = 10;
+  USER_MAX_SIMPLE_ARRAY_BUFFERS = 20;
+  USER_MAX_DATAGRAM_ARRAY_BUFFERS = 100;
+  USER_MAX_STREAM_ARRAY_BUFFERS = 100;
+  USER_MAX_ACDI_SNIP_ARRAY_BUFFERS = 100;
+  USER_MAX_MULTIFRAME_ARRAY_BUFFERS = 100;
 
 // Enter the size of the buffer to hold Messages, this should be at LEAST equal to the number
 // of Nodes, 2x is recommended

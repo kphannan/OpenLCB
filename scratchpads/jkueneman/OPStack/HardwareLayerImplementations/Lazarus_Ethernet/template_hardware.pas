@@ -97,6 +97,7 @@ end;
 
 procedure Hardware_Initialize;
 begin
+  OPStackCANStatemachineBuffers_Initialize;
   Hardware.InterruptDisableCount := 0;
   GridConnect_Initialize;                                                       // This is here because it only is needed if we are using a GridConnect interface
 end;

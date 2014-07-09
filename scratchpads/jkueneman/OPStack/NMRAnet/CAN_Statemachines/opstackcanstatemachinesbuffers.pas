@@ -107,15 +107,20 @@ procedure OPStackCANStatemachineBuffers_Initialize;
 var
   i: Integer;
 begin
+
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     DatagramInProcessStack.Stack[i] := nil;
   DatagramInProcessStack.Count := 0;
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     DatagramOutgoingProcessStack.Stack[i] := nil;
   DatagramOutgoingProcessStack.Count := 0;
+
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     AcdiSnipOutgoingProcessStack.Stack[i] := nil;
   AcdiSnipOutgoingProcessStack.Count := 0;
+  for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
+    AcdiSnipInProcessStack.Stack[i] := nil;
+  AcdiSnipInProcessStack.Count := 0;
   {$IFDEF SUPPORT_STREAMS}
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     StreamInProcessStack.Stack[i] := nil;
@@ -124,6 +129,7 @@ begin
     StreamOutgoingProcessStack.Stack[i] := nil;
   StreamOutgoingProcessStack.Count := 0;
   {$ENDIF}
+
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameOutgoingProcessStack.Stack[i] := nil;
   MultiFrameOutgoingProcessStack.Count := 0;
