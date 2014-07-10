@@ -45,8 +45,8 @@
         <UnitName Value="ethernet_hub"/>
         <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="438"/>
-        <CursorPos X="1" Y="432"/>
+        <TopLine Value="76"/>
+        <CursorPos X="15" Y="82"/>
         <UsageCount Value="105"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -179,11 +179,10 @@
       <Unit19>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="116"/>
-        <CursorPos X="67" Y="300"/>
+        <TopLine Value="115"/>
+        <CursorPos X="82" Y="139"/>
         <UsageCount Value="100"/>
         <Loaded Value="True"/>
       </Unit19>
@@ -297,10 +296,11 @@
       <Unit33>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="67" Y="10"/>
+        <TopLine Value="431"/>
+        <CursorPos X="15" Y="445"/>
         <UsageCount Value="34"/>
         <Loaded Value="True"/>
       </Unit33>

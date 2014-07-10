@@ -96,18 +96,27 @@ Count=2
 File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
-Count=11
+Count=20
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\Templates\
-Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\
-Path7=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path8=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
-Path9=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\
+Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\
+Path4=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\Templates\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path11=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path12=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EPxxxGP502_CAN_XpressnetBridge\Templates\
+Path13=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path14=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path15=E:\trunk\scratchpads\jkueneman\OPStack\Library\CabCommon\
+Path16=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path17=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path18=E:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path19=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
 [HEADER_PATH]
 Count=0
 [HEADERS]

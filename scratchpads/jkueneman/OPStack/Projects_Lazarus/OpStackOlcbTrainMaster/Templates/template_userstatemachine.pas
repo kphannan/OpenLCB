@@ -1,9 +1,5 @@
 unit template_userstatemachine;
 
-
-
-still need to fix the problem of releasing messages before my statemachine is done with using them (mainly the _END messages where I need to use the UserData to send events and such........
-
 {$IFDEF FPC}
 {$mode objfpc}{$H+}
 
@@ -48,7 +44,7 @@ procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; var Source: TNodeInf
 {$IFDEF SUPPORT_TRACTION}
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
-function AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
+procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
 function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
@@ -598,7 +594,6 @@ begin
                   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE :
                      begin
                        Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
-                       UnLinkDeAllocateAndTestForMessageToSend(Node, nil, OPStackNode_NextIncomingMessage(Node));   // Release and unlink the message from the node
                        UnLinkFirstTaskFromNode(Node, True);                               // Release the Task from the node
                      end;
                 end;
@@ -1183,11 +1178,11 @@ end;
 //     Returns     : None
 //     Description : Called in response to a STNIP request
 // *****************************************************************************
-function AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage): Boolean;
+procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode;
+  AMessage: POPStackMessage);
 var
   Event: TNodeEventSimpleTrainNodeInfo;
 begin
-  Result := False;  // We will unlink and free the message from the node
   Event := TNodeEventSimpleTrainNodeInfo.Create(AMessage^.Source, TNodeTask( Node^.UserData).LinkedObj);
   Event.Decode(AMessage);
   NodeThread.AddEvent(Event);

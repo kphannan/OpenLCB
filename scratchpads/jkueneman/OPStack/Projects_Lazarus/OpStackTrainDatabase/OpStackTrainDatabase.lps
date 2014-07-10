@@ -64,7 +64,6 @@
       <Unit6>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="693"/>
@@ -221,10 +220,11 @@
       <Unit23>
         <Filename Value="../OpStackOlcbTrainMaster/Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1169"/>
-        <CursorPos X="10" Y="1185"/>
+        <TopLine Value="862"/>
+        <CursorPos X="33" Y="891"/>
         <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit23>

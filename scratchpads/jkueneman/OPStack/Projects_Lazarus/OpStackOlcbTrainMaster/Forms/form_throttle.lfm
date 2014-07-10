@@ -286,11 +286,10 @@ object FormThrottle: TFormThrottle
       end
       object RadioGroupShortLong: TRadioGroup
         Left = 10
-        Height = 44
+        Height = 32
         Top = 158
         Width = 155
         AutoFill = True
-        Caption = 'Length'
         ChildSizing.LeftRightSpacing = 6
         ChildSizing.TopBottomSpacing = 6
         ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
@@ -299,7 +298,7 @@ object FormThrottle: TFormThrottle
         ChildSizing.ShrinkVertical = crsScaleChilds
         ChildSizing.Layout = cclLeftToRightThenTopToBottom
         ChildSizing.ControlsPerLine = 2
-        ClientHeight = 22
+        ClientHeight = 25
         ClientWidth = 147
         Columns = 2
         ItemIndex = 0

@@ -97,7 +97,7 @@ begin
       Inc(AcdiSnipBuffer^.CurrentCount);
   end;
 
-  if AcdiSnipBuffer^.CurrentCount >= 5 then            // Found the 5 nulls?
+  if AcdiSnipBuffer^.CurrentCount >= 6 then            // Found the 6 nulls?
   begin
     // Done
     OPStackCANStatemachineBuffers_RemoveIncomingAcdiSnipMessage(InProcessMessage);

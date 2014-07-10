@@ -436,6 +436,9 @@ begin
     begin
       Event := TNodeEventSimpleTrainNodeInfo( FormSelector.TreeViewTrainList.Selected.Data);
       NodeThread.AddTask(TNodeTaskAllocateTrain.Create(ThrottleNodeInfo, Event.NodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN, Self, 0, 0, False));
+      SpinEditAddress.Text := '';
+      RadioGroupSpeedStep.ItemIndex := -1;
+      LabelAllocatedAddress.Caption := FormSelector.TreeViewTrainList.Selected.Text;
     end;
   finally
     FormSelector.Close;
@@ -1233,8 +1236,10 @@ begin
   RadioGroupShortLong.Enabled := TrainIsNull;
   if TrainIsNull then
     LabelAllocatedAddress.Caption := STR_UNASSIGNED
-  else
-    LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value);
+  else begin
+    if SpinEditAddress.Text <> '' then
+      LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value);
+  end;
 
   Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
   UpdateAddressRange;
