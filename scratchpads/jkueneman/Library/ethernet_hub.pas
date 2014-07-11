@@ -36,16 +36,17 @@ type
     FUseSocketHandle: Boolean;
   protected
     Socket: TTCPBlockSocket;                                                    // thread created Socket
+    procedure DispatchMessage(AMessage: AnsiString); override;
     procedure Execute; override;
     procedure ExecuteBegin; override;
     procedure ExecuteEnd; override;
-    procedure SendMessage(AMessage: AnsiString); override;
     property hSocketLocal: TSocket read FhSocketLocal write FhSocketLocal;
     property ListenDameon: TEthernetListenDameonThread read FListenDameon write FListenDameon;
     property UseSocketHandle: Boolean read FUseSocketHandle write FUseSocketHandle;            // If true the socket will use the handle in hSocketLocal to create the connection, else it will use the GlobalSettings for the Listen and Client Ports
   public
     constructor Create(CreateSuspended: Boolean; UseSocketLocalParemeter: Boolean; AListenDameon: TEthernetListenDameonThread; ANodeThread: TNodeThread); reintroduce; virtual;
     destructor Destroy; override;
+    procedure SendMessage(AMessage: AnsiString); override;
     property MaxLoopTime: DWord read FMaxLoopTime write FMaxLoopTIme;
   end;
 
@@ -64,6 +65,7 @@ type
   public
     constructor Create(CreateSuspended: Boolean; ANodeThread: TNodeThread; const StackSize: SizeUInt = DefaultStackSize); reintroduce;
     destructor Destroy; override;
+    procedure DispatchMessage(AMessage: AnsiString; Source: TTransportLayerThread);
   end;
 
   { TEthernetHub }
@@ -103,6 +105,12 @@ type
 implementation
 
 { TSocketThread }
+
+procedure TSocketThread.DispatchMessage(AMessage: AnsiString);
+begin
+  if Assigned(ListenDameon) then
+    ListenDameon.DispatchMessage(AMessage, Self);
+end;
 
 procedure TSocketThread.Execute;
 var
@@ -179,7 +187,7 @@ begin
                                     DecomposeAndDispatchGridConnectString(GridConnectStrPtr, Helper);
                                  end;
                                end;
-            WSAETIMEDOUT    : begin end;                  // Normal if nothing to read
+            WSAETIMEDOUT    : begin end;               // Normal if nothing to read
             WSAECONNRESET,
             WSAECONNABORTED : begin Terminate end;     // This is normal if the other app is shut down so don't waste time with errors and shutting us down
           else
@@ -212,13 +220,13 @@ end;
 procedure TSocketThread.ExecuteBegin;
 begin
   inherited ExecuteBegin;
-  if Assigned(NodeThread) then
+  if Assigned(NodeThread) and (ListenDameon = nil) then    // If we have a Listen Dameon he is registered with the Node
     NodeThread.RegisterThread(Self);
 end;
 
 procedure TSocketThread.ExecuteEnd;
 begin
-  if Assigned(NodeThread) then
+  if Assigned(NodeThread) and (ListenDameon = nil) then   // If we have a Listen Dameon he is registered with the Node
     NodeThread.UnRegisterThread(Self);
   inherited ExecuteEnd;
 end;
@@ -326,6 +334,23 @@ destructor TEthernetListenDameonThread.Destroy;
 begin
   SocketThreadList.TerminateAndWaitForThreads;
   inherited Destroy;
+end;
+
+procedure TEthernetListenDameonThread.DispatchMessage(AMessage: AnsiString; Source: TTransportLayerThread);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := SocketThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+    begin
+      if TTransportLayerThread( List[i]) <> Source then
+        TTransportLayerThread( List[i]).SendMessage(AMessage)
+    end;
+  finally
+    SocketThreadList.UnlockList;
+  end;
 end;
 
 procedure TEthernetListenDameonThread.Execute;

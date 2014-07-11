@@ -20,10 +20,11 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_main"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="698"/>
-        <CursorPos X="33" Y="779"/>
+        <TopLine Value="716"/>
+        <CursorPos X="20" Y="725"/>
         <UsageCount Value="27"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -182,8 +183,8 @@
         <UnitName Value="ethernet_hub"/>
         <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="162"/>
-        <CursorPos X="1" Y="178"/>
+        <TopLine Value="479"/>
+        <CursorPos X="88" Y="456"/>
         <UsageCount Value="13"/>
         <Loaded Value="True"/>
       </Unit19>
@@ -220,11 +221,10 @@
       <Unit23>
         <Filename Value="../OpStackOlcbTrainMaster/Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="862"/>
-        <CursorPos X="33" Y="891"/>
+        <TopLine Value="861"/>
+        <CursorPos X="136" Y="877"/>
         <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit23>
@@ -347,5 +347,23 @@
       </Position28>
     </JumpHistory>
   </ProjectSession>
+  <Debugging>
+    <BreakPoints Count="2">
+      <Item1>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="../../../Library/ethernet_hub.pas"/>
+        <Line Value="340"/>
+      </Item1>
+      <Item2>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="../../../Library/ethernet_hub.pas"/>
+        <Line Value="232"/>
+      </Item2>
+    </BreakPoints>
+  </Debugging>
   <EditorMacros Count="0"/>
 </CONFIG>

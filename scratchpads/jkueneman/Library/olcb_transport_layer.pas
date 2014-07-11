@@ -420,7 +420,7 @@ type
     FStack100msTimer: TTimer;
     FNodeTaskList: TThreadList;
     FTerminateCompleted: Boolean;
-    FRegisteredThreadList: TThreadList;
+    FRegisteredThread: TTransportLayerThread;
     FUserInterfaceThread: TUserInterfaceThread;
     function GetStackRunning: Boolean;
   protected
@@ -429,7 +429,7 @@ type
     function ProcessNode: Boolean;                                                                           // Main call for the threads Execute
     procedure CheckForAndLinkNewTasks;
     property Stack100msTimer: TTimer read FStack100msTimer write FStack100msTimer;                           // Timer for the 100ms OPStack ticker
-    property RegisteredThreadList: TThreadList read FRegisteredThreadList write FRegisteredThreadList;       // Holds the Registered Threads that will need to be sent any outgoing message from the OPStack
+    property RegisteredThread: TTransportLayerThread read FRegisteredThread write FRegisteredThread;         // Holds the Registered Threads that will need to be sent any outgoing message from the OPStack
     property NodeTaskList: TThreadList read FNodeTaskList write FNodeTaskList;                               // Hold the tasks the UI has requested the OPStack code to execute via the user statemachine
     property UserInterfaceThread: TUserInterfaceThread read FUserInterfaceThread write FUserInterfaceThread; // The thread that is giving message strings and call Syncronize to pass them into the UI
     property NodeEventThread: TNodeEventThread read FNodeEventThread write FNodeEventThread;                 // The thread that dispatches OPStack events to the UI via the TNodeEvent objects. when an event occurs in the OPStack (user statemachine) an object is created and places into this thread so it can pass it to the UI in order to keep it notified of what is going on.
@@ -495,7 +495,7 @@ type
     procedure DoConnectionState; virtual;
     procedure DoErrorMessage; virtual;
     procedure DoStatus; virtual;
-    procedure SendMessage(AMessage: AnsiString); virtual;
+    procedure DispatchMessage(AMessage: AnsiString); virtual;
 
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property ConnectionState: TConnectionState read FConnectionState write FConnectionState;
@@ -507,6 +507,7 @@ type
   public
     constructor Create(CreateSuspended: Boolean; ANodeThread: TNodeThread); virtual;
     destructor Destroy; override;
+    procedure SendMessage(AMessage: AnsiString); virtual;
 
     property NodeThread: TNodeThread read FNodeThread write FNodeThread;
     property TerminateComplete: Boolean read FTerminateComplete;
@@ -1066,7 +1067,7 @@ begin
   Stack100msTimer.Interval := 100;
   Stack100msTimer.OnTimer := @On100msTimer;
   System.InitCriticalSection(FCriticalSection);
-  RegisteredThreadList := TThreadList.Create;
+  RegisteredThread := nil;
   if not CreateSuspended then
     Resume;
   FTerminateCompleted := False;
@@ -1087,7 +1088,6 @@ begin
   while not NodeEventThread.TerminateCompleted do;
   FreeAndNil(FNodeEventThread);
 
-  FreeAndNil(FRegisteredThreadList);
   System.DoneCriticalSection(FCriticalSection);
 
   FreeAndNil(FNodeTaskList);
@@ -1199,7 +1199,7 @@ end;
 
 procedure TNodeThread.RegisterThread(Thread: TTransportLayerThread);
 begin
-  RegisteredThreadList.Add(Thread);
+  RegisteredThread := Thread
 end;
 
 // **************************************************************
@@ -1215,13 +1215,9 @@ var
 begin
   system.EnterCriticalsection(FCriticalSection);
   try
-    List := RegisteredThreadList.LockList;
-    try
-      for i := 0 to List.Count - 1 do
-         TTransportLayerThread( List[i]).SendMessage(AMessage);   // Send the message to each registered client thread
-    finally
-      RegisteredThreadList.UnlockList;
-    end;
+    if Assigned(RegisteredThread) then
+      if not RegisteredThread.Terminated then
+        RegisteredThread.SendMessage(AMessage);
   finally
     system.LeaveCriticalsection(FCriticalSection);
   end;
@@ -1239,7 +1235,8 @@ end;
 
 procedure TNodeThread.UnRegisterThread(Thread: TTransportLayerThread);
 begin
-  RegisteredThreadList.Remove(Thread);
+  if Thread = RegisteredThread then
+    RegisteredThread := nil;
 end;
 
 
@@ -1271,6 +1268,7 @@ begin
     System.EnterCriticalsection(NodeThread.FCriticalSection);
     try
       NodeThread.ReceiveMessageFromOtherThread(GridConnectStrPtr);
+      DispatchMessage(GridConnectStrPtr^);
     finally
       System.LeaveCriticalsection(NodeThread.FCriticalSection);
     end;
@@ -1293,6 +1291,11 @@ procedure TTransportLayerThread.DoStatus;
 begin
   if Assigned(OnStatus) then
     OnStatus(Self, StatusReason, StatusValue);
+end;
+
+procedure TTransportLayerThread.DispatchMessage(AMessage: AnsiString);
+begin
+
 end;
 
 procedure TTransportLayerThread.ExecuteBegin;
