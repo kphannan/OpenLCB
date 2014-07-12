@@ -8,7 +8,7 @@ interface
 
 uses
   {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
+  {$IFDEF SUPPORT_DCC}
   NMRAnetDCC,
   {$ENDIF}
   {$ENDIF}
@@ -94,4 +94,4 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
-end.
+end.

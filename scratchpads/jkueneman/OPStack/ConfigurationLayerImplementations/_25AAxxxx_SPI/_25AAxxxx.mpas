@@ -73,6 +73,9 @@ unit _25AAxxxx;
 {.$DEFINE EEPROM_FOUR_BANK}
 
 const
+  _25AA1024 = 131072;
+
+const
   {$IFDEF EEPROM_ONE_BANK}EEPROM_BANK_0 = 0;  {$ENDIF}
   {$IFDEF EEPROM_TWO_BANK} EEPROM_BANK_1 = 1; {$ENDIF}
   {$IFDEF EEPROM_THREE_BANK}EEPROM_BANK_2 = 3;{$ENDIF}
@@ -105,11 +108,14 @@ var
 procedure _25AAxxxx_Initialize;
 procedure _25AAxxxx_Read(Bank: Word; Address: DWORD; Count: Word; Buffer: PByte);
 procedure _25AAxxxx_Write(Bank: Word; Address: DWORD; Count: Word; Buffer: PByte);
+procedure _25AAxxxx_WriteChar(Bank: Word; Address: DWORD; Count: DWord; AChar: Char);
 function _25AAxxxx_Busy(Bank: Word): Boolean;
 function _25AAxxxx_WriteEnabled(Bank: Word): Boolean;
 procedure _25AAxxxx_Erase(Bank: Word);
 
-procedure DumpEEProm(ASCII: Boolean; Offset: DWord; Count: Byte);
+procedure DumpEEProm(Bank: Byte; ASCII: Boolean; Offset: DWord; Count, UARTPort: Byte);
+procedure CheckForInitializedEEPROM(Bank: Byte; EEPROMSize: DWord);
+procedure Zeroize(Bank: Byte; EEPROMSize: DWord);
 
 implementation
 
@@ -225,6 +231,8 @@ procedure _25AAxxxx_Write(Bank: Word; Address: DWORD; Count: Word; Buffer: PByte
 var
   i: Integer;
 begin
+  while _25AAxxxx_Busy(Bank) do;
+
   SetBank_CS(Bank, 0);
   LocalSPI_Write($06);           //  WREN (Write Enable) Instruction
   SetBank_CS(Bank, 1);
@@ -236,6 +244,40 @@ begin
   begin
     LocalSPI_Write(Buffer^);
     Inc(Buffer);
+    Inc(i);
+  end;
+  SetBank_CS(Bank, 1);
+end;
+
+//******************************************************************************
+//  procedure _25AAxxxx_Write;
+//
+//  Parameters:  Bank:      What EEPROM IC to address, see the EEPROM_BANK_x constants
+//               Address:   The 24Bit address offset of the EEPROM
+//               Count:     The number of Bytes to write, MAX 256 Bytes and in the SAME PAGE!!!!!!
+//               Buffer:    Pointer to where to retrieve the data from to write
+//
+//  Result:      None
+//
+//  Description:
+//
+//******************************************************************************
+procedure _25AAxxxx_WriteChar(Bank: Word; Address: DWORD; Count: DWord; AChar: Char);
+var
+  i: Integer;
+begin
+  while _25AAxxxx_Busy(Bank) do;
+  
+  SetBank_CS(Bank, 0);
+  LocalSPI_Write($06);           //  WREN (Write Enable) Instruction
+  SetBank_CS(Bank, 1);
+  SetBank_CS(Bank, 0);
+  LocalSPI_Write($02);           // Write Instruction
+  WriteAddress(Address);         // Can not check for Write Enabled in the Status here!
+  i := 0;
+  while i < Count do
+  begin
+    LocalSPI_Write( Ord( AChar));
     Inc(i);
   end;
   SetBank_CS(Bank, 1);
@@ -301,7 +343,7 @@ begin
   EEPROM_Hold_Direction := 0 // Output
 end;
 
-procedure DumpEEProm(ASCII: Boolean; Offset: DWord; Count: Byte);
+procedure DumpEEProm(Bank: Byte; ASCII: Boolean; Offset: DWord; Count, UARTPort: Byte);
 const
   LF = #13+#10;
 var
@@ -313,7 +355,7 @@ begin
   i := 0;
   while i < Count do        // Max is 8192 but that is too much
   begin
-    _25AAxxxx_Read(EEPROM_BANK_0, Offset, 16, @Buffer[0]);
+    _25AAxxxx_Read(Bank, Offset, 16, @Buffer[0]);
     WordToHex(Offset, s);
     Output := s + ' | ';
     for j := 0 to 15 do
@@ -325,10 +367,56 @@ begin
         ByteToHex(Buffer[j], s);
       Output := Output + s + ' ';
     end;
-    UART1_Write_Text(Output + LF);
+    case UARTPort of
+      1: UART1_Write_Text(Output + LF);
+      2: UART2_Write_Text(Output + LF);
+    end;
     Offset := Offset + 16;
     Inc(i);
   end;
+end;
+
+procedure CheckForInitializedEEPROM(Bank: Byte; EEPROMSize: DWord);
+var
+  Buffer: array[0..1] of byte;
+begin
+  _25AAxxxx_Read(Bank, 0, 1, @Buffer[0]);
+  if Buffer[0] <> $00 then
+    Zeroize(Bank, EEPROMSize);
+end;
+
+procedure Zeroize(Bank: Byte; EEPROMSize: DWord);
+var
+  Offset: DWord;
+  Done: Boolean;
+  s1: string[128];
+begin
+  Offset := 0;
+  Done := False;
+  while not Done do
+  begin
+    if (EEPROMSize - Offset) > 256 then
+    begin
+
+      LongWordToHex(Offset, s1);
+      UART1_Write_Text('Page: ' + s1+#13+#10);
+      
+      
+      _25AAxxxx_WriteChar(Bank, Offset, 256, #0);
+      Offset := Offset + 256;
+    end else
+    begin
+    
+      LongWordToHex(Offset, s1);
+      UART1_Write_Text('Page: ' + s1+#13+#10);
+      
+      _25AAxxxx_WriteChar(Bank, Offset, EEPROMSize - Offset, #0);
+      
+      UART1_Write_Text('Partial Page'+#13+#10);
+      
+      Done := True
+    end
+  end
 end;
 
 end.

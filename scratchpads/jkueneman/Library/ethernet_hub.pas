@@ -220,20 +220,21 @@ end;
 procedure TSocketThread.ExecuteBegin;
 begin
   inherited ExecuteBegin;
-  if Assigned(NodeThread) and (ListenDameon = nil) then    // If we have a Listen Dameon he is registered with the Node
+  if Assigned(NodeThread) then    // If we have a Listen Dameon he is registered with the Node
     NodeThread.RegisterThread(Self);
 end;
 
 procedure TSocketThread.ExecuteEnd;
 begin
-  if Assigned(NodeThread) and (ListenDameon = nil) then   // If we have a Listen Dameon he is registered with the Node
+  if Assigned(NodeThread) then   // If we have a Listen Dameon he is registered with the Node
     NodeThread.UnRegisterThread(Self);
   inherited ExecuteEnd;
 end;
 
 procedure TSocketThread.SendMessage(AMessage: AnsiString);
 begin
-  Socket.SendString(AMessage);   // Is this ok to send from a different thread???
+  if Assigned(Socket) then
+    Socket.SendString(AMessage);   // Is this ok to send from a different thread???
 end;
 
 constructor TSocketThread.Create(CreateSuspended: Boolean;
@@ -346,7 +347,8 @@ begin
     for i := 0 to List.Count - 1 do
     begin
       if TTransportLayerThread( List[i]) <> Source then
-        TTransportLayerThread( List[i]).SendMessage(AMessage)
+        if not TTransportLayerThread( List[i]).IsTerminated then
+          TTransportLayerThread( List[i]).SendMessage(AMessage)
     end;
   finally
     SocketThreadList.UnlockList;

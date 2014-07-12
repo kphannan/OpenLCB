@@ -1,7 +1,6 @@
 unit MCU_Setup_dsPIC33EP256GP502;
 
 uses
-  NMRAnetDCC,
   dsPIC_CAN_RawBuffers,
   dsPIC33_CAN,
   dsPIC33_DMA;
@@ -17,7 +16,6 @@ const
   
 
   procedure MCU_Setup_Initialize;
-  procedure MCU_EnableDCCTimer;
   procedure MCU_Enable100msTimer;
   procedure MCU_EnableUART;
   procedure MCU_EnableCAN;
@@ -106,18 +104,6 @@ begin
   PR5 := 625;               // Clock ticks every 31.25ns * 256 * 625 = 5ms interrupts
   T5IF_bit := 0;            // Clear T5IF
   T5IE_bit := 1;            // Enable the Interrupt
-end;
-
-procedure MCU_EnableDCCTimer;
-begin
-  TCS_T1CON_bit := 0;       // internal cycle clock
-  T1IP_0_bit := 1;          // Timer 1 Interrupt Priority = 7   (1 means off)
-  T1IP_1_bit := 1;
-  T1IP_2_bit := 1;
-  PR1 := DCC_TIMER_58US;
-  T1IF_bit := 0;           // Clear T1IF
-  T1IE_bit := 1;           // Enable the Interrupt
-  TON_T1CON_bit := 1;       // Turn on
 end;
 
 procedure MCU_Enable100msTimer;

@@ -485,6 +485,7 @@ type
     FOnConnectionStateChange: TOnConnectionStateChangeFunc;
     FOnErrorMessage: TOnRawMessageFunc;                                 // Function to callback through Syncronize if an error connecting occured
     FTerminateComplete: Boolean;                                                 // True if the thread has terminated
+    function GetIsTerminated: Boolean;
   protected
     procedure DecomposeAndDispatchGridConnectString(GridConnectStrPtr: PGridConnectString; Helper: TOpenLCBMessageHelper);
     procedure ExecuteBegin; virtual;
@@ -511,11 +512,11 @@ type
 
     property NodeThread: TNodeThread read FNodeThread write FNodeThread;
     property TerminateComplete: Boolean read FTerminateComplete;
+    property IsTerminated: Boolean read GetIsTerminated;
 
     property OnConnectionStateChange: TOnConnectionStateChangeFunc read FOnConnectionStateChange write FOnConnectionStateChange;
     property OnErrorMessage: TOnRawMessageFunc read FOnErrorMessage write FOnErrorMessage;
     property OnStatus: THookSocketStatus read FOnStatus write FOnStatus;
-    property Running: Boolean read FRunning;
   end;
 
 procedure LinkTaskToNode(Node: PNMRANetNode; NewTask: TNodeTask);
@@ -1254,11 +1255,17 @@ begin
   FGridConnectReceiveBufferIndex := 0;
   FGridConnectReceiveState := 0;
   NodeThread := ANodeThread;
+  FRunning := False;
 end;
 
 destructor TTransportLayerThread.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TTransportLayerThread.GetIsTerminated: Boolean;
+begin
+  Result := Terminated
 end;
 
 procedure TTransportLayerThread.DecomposeAndDispatchGridConnectString(GridConnectStrPtr: PGridConnectString; Helper: TOpenLCBMessageHelper);

@@ -1,19 +1,20 @@
 unit template_userstatemachine;
 
-{$I Options.inc}
+{$IFDEF FPC}
+{$mode objfpc}{$H+}
 
-{.$DEFINE DEBUG_TRACTION_PROTOCOL}
-{.$DEFINE DEBUG_TRACTION_PROXY_PROTOCOL}
+interface
+{$ENDIF}
+
+{$I Options.inc}
 
 uses
   Float16,
   opstacktypes,
+  nmranetdefines,
   opstackdefines,
   template_node,
-  template_vnode,
   opstack_api,
-  template_configuration,
-  nmranetdefines,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -27,7 +28,7 @@ procedure AppCallback_Timer_100ms;
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
 procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);  // This could be 2 replies per call.. read docs
-procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+procedure AppCallback_RemoteButtonReply(Dest: PNMRAnetNode; var Source: TNodeInfo; DataBytes: PSimpleBuffer);
 {$IFDEF SUPPORT_TRACTION}
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
@@ -47,35 +48,54 @@ procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
 
+// Configuration Memory
 procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 
 
-  function OPStackNode_Allocate: PNMRAnetNode; external;
-  procedure OPStackNode_MarkForRelease(Node: PNMRAnetNode); external;
-  function OPStackNode_Find(AMessage: POPStackMessage; FindBy: Byte): PNMRAnetNode;   external;   // See FIND_BY_xxxx constants
-  function OPStackNode_FindByTrainID(TrainID: Word): PNMRANetNode; external;
-  function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
-  function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode; external;
-  procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
-  procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
-
 implementation
 
 const
-// Physical Proxy Node User StateMachine
-  STATE_PROXY_USER_START           = 0;
-  STATE_PROXY_IDLE                 = 1;
+  STATE_USER_START = 0;
+  STATE_USER_1     = 1;
+  STATE_USER_2     = 2;
+  STATE_USER_3     = 3;
+  STATE_USER_4     = 4;
+  STATE_USER_5     = 5;
+  STATE_USER_6     = 6;
+  STATE_USER_7     = 7;
+  STATE_USER_8     = 8;
+  STATE_USER_9     = 9;
+  STATE_USER_10    = 10;
 
-// Virtual Train Node User StateMachine
-  STATE_TRAIN_USER_START           = 0;
-  STATE_TRAIN_ALLOCATE_PROXY_REPLY = 1;
-  STATE_TRAIN_IDLE                 = 2;
+type
+  // User Data for a single node
+  TSampleUserNodeData = record
+    UserData1 : Word;
+    UserData2 : Byte;
+  end;
+  PSampleUserNodeData = ^TSampleUserNodeData;
+
+  // Array of User Data for all Nodes
+  TSampleUserDataArray = array[0..USER_MAX_NODE_COUNT-1] of TSampleUserNodeData;
 
 var
-  GlobalTimer: Word;
+  UserDataArray: TSampleUserDataArray;
+
+
+// *****************************************************************************
+//  procedure ExtractUserData
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : Pointer to the defined User Data type
+//     Description : Nice helper function to type cast the user data generic pointer
+//                   to a pointer to the actual data type
+// *****************************************************************************
+function ExtractUserData(Node: PNMRAnetNode): PSampleUserNodeData;
+begin
+  Result := PSampleUserNodeData( Node^.UserData)
+end;
 
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize
@@ -85,8 +105,15 @@ var
 //                   variables, etc
 // *****************************************************************************
 procedure UserStateMachine_Initialize;
+var
+  i: Integer;
 begin
-
+  // Initialize the example data!
+  for i := 0 to USER_MAX_NODE_COUNT - 1 do
+  begin
+    UserDataArray[i].UserData1 := 0;
+    UserDataArray[i].UserData2 := 0;
+  end;
 end;
 
 // *****************************************************************************
@@ -99,47 +126,11 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 begin
   if Node = GetPhysicalNode then
   begin
-    // Proxy Node User StateMachine
-    case Node^.iUserStateMachine of
-      STATE_PROXY_USER_START :
-            begin
-              if Node^.State and NS_PERMITTED <> 0 then
-              begin   {$IFDEF DEBUG_TRAINSERVER_STATEMACHINE} UART1_Write_Text('STATE_PROXY_USER_START'+LF); {$ENDIF}
-                Node^.iUserStateMachine := STATE_PROXY_IDLE
-              end;
-            end;
-      STATE_PROXY_IDLE :
-          begin
-            // Waiting for something to do
-          end;
-    end;
+
   end else
   begin
-    // Train Node User StateMachine
-    case Node^.iUserStateMachine of
-      STATE_TRAIN_USER_START :
-            begin
-              if Node^.State and NS_PERMITTED <> 0 then
-              begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_USER_START'+LF); {$ENDIF}
-                Node^.iUserStateMachine := STATE_TRAIN_IDLE
-              end
-            end;
-      STATE_TRAIN_ALLOCATE_PROXY_REPLY :
-          begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_ALLOCATE_PROXY_REPLY'+LF); {$ENDIF}
-            if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Node^.TrainData.LinkedNode, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Node^.TrainData.Address) then
-            begin
-              Node^.TrainData.State := Node^.TrainData.State and not TS_SEND_PROXY_ALLOCATE_REPLY;
-              Node^.iUserStateMachine := STATE_TRAIN_IDLE;
-            end;
-          end;
-      STATE_TRAIN_IDLE :
-          begin
-            // Waiting for something to do
-            if Node^.TrainData.State and TS_SEND_PROXY_ALLOCATE_REPLY <> 0 then
-              Node^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY;
-          end;
-     end
-  end;
+
+  end
 end;
 
 // *****************************************************************************
@@ -152,58 +143,31 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
+var
+  NodeData: PSampleUserNodeData;
 begin
-  Node^.iUserStateMachine := STATE_PROXY_USER_START;
+  // Assign the user data record to the Node for future use
+  Node^.UserData := @UserDataArray[Node^.iIndex];
+  Node^.iUserStateMachine := STATE_USER_START;
+
+  // Initialize the example data, evertime the node is reused!
+  NodeData := ExtractUserData(Node);
+  NodeData^.UserData1 := 0;
+  NodeData^.UserData2 := 0;
 end;
 
 {$IFDEF SUPPORT_TRACTION}
 // *****************************************************************************
-//  procedure AppCallback_SimpleTrainNodeInfoReply
+//  procedure AppCallback_TractionControlReply
 //     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
 //                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   TrainNodeInfo: pointer to the null terminated strings
+//                   DataBytes: pointer to the raw data bytes
 //     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
-begin
-
-end;
-
-// *****************************************************************************
-//  procedure AppCallback_TractionProtocol
-//     Parameters: : Node           : Pointer to the node that the traction protocol has been called on
-//                   ReplyMessage   : The Reply Message that needs to be allocated, populated and returned so it can be sent
-//                   RequestingMessage    : Message that was sent to the node containing the requested information
-//     Returns     : None
-//                   the internal buffer queue.  It is recommended that the message get handled quickly and released.
-//                   The internal system can not process other incoming messages that require a reply until this message
-//                   is cleared.  This means that if a reply can not be sent until another message is sent/received this
-//                   will block that second message.  If that is required then return True with ReplyMessage = nil to
-//                   release the Requesting message then send the reply to this message at a later time
+//     Description : Called when a Traction Protocol request comes in
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-  {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('AppCallback_TractionProtocol'+LF); {$ENDIF}
-  case AMessage^.Buffer^.DataArray[0] of
-      TRACTION_CONTROLLER_CONFIG :
-          begin
-            case AMessage^.Buffer^.DataArray[1] of
-                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin end;
-                TRACTION_CONSIST_DETACH           : begin end;
-            end
-          end;
-      TRACTION_SPEED_DIR : begin end;
-      TRACTION_FUNCTION  : begin end;
-      TRACTION_E_STOP    : begin end
-  else begin
-    end;
-  end;
+
 end;
 
 // *****************************************************************************
@@ -223,88 +187,26 @@ end;
 
 {$IFDEF SUPPORT_TRACTION_PROXY}
 // *****************************************************************************
-//  procedure AppCallback_TractionProxyProtocol
+//  procedure AppCallback_TractionProtocol
 //     Parameters: : Node           : Pointer to the node that the traction protocol has been called on
 //                   ReplyMessage   : The Reply Message that needs to be allocated, populated and returned so it can be sent
 //                   RequestingMessage    : Message that was sent to the node containing the requested information
 //     Returns     : True if the RequestingMessage is handled and the ReplyMessage is ready to send
 //                   False if the request has not been completed due to no available buffers or waiting on other information
-//     Description :
+//     Description : Called when a Traction Protocol message is received
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
-var
-  i: Integer;
-  TrainID: Word;
-  TrainNode: PNMRAnetNode;
-  ConfigOffset: DWord;
-  Info: string[STNIP_MAX_STR_LEN];
-  Str1: array[0..5] of Char;
 begin
-  {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('AppCallback_TractionProxyProtocol'+LF); {$ENDIF}
-  // Only the main physical node is the proxy and can reply to these messages
-  if Node = GetPhysicalNode then
-  begin
-    case AMessage^.Buffer^.DataArray[0] of
-        TRACTION_PROXY_ALLOCATE :
-          begin {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('TRACTION_PROXY_ALLOCATE'+LF); {$ENDIF}
-            TrainID := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
-            TrainNode := OPStackNode_FindByTrainID(TrainID);
-            if TrainNode <> nil then
-              TrainNode^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY     // Node with this address exists, use it and set the state to send a Allocate Reply
-            else begin
-              TrainNode := OPStackNode_Allocate;
-              TrainNode^.TrainData.State := TrainNode^.TrainData.State or TS_SEND_PROXY_ALLOCATE_REPLY;
-           end;
-           
-           if TrainNode <> nil then
-            begin
-              // This node will now start and log in, then it will reply to the Allocate Message
-              TrainNode^.TrainData.Address := TrainID;
-              if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_TECH_ID_DCC then
-                TrainNode^.TrainData.SpeedSteps := AMessage^.Buffer^.DataArray[4];
-              TrainNode^.TrainData.LinkedNode.ID[0] := AMessage^.Source.ID[0];      // Store the node that sent the Allocate message
-              TrainNode^.TrainData.LinkedNode.ID[1] := AMessage^.Source.ID[1];
-              TrainNode^.TrainData.LinkedNode.AliasID := AMessage^.Source.AliasID;
-              
-              ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
-              
-              if TrainNode^.TrainData.Address and $C000 <> 0 then
-              begin
-                WordToStr(TrainNode^.TrainData.Address and not $C000, Str1);
-                Info := 'Address: ' + Str1 + ' [L]' + #0;
-              end else
-              begin
-                WordToStr(TrainNode^.TrainData.Address, Str1);
-                Info := 'Address: ' + Str1 + ' [S]' + #0;
-              end;
 
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, strlen(Info) + 1, @Info);
-
-              Info := 'NMRA DCC Basic Train';
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, strlen(Info) + 1, @Info);
-
-              Info[0] := #0;
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNUMBER, 1, @Info);
-
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ADDRESS, 2, @TrainNode^.TrainData.Address);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_FUNCTIONS, 4, @TrainNode^.TrainData.Functions);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @TrainNode^.TrainData.SpeedSteps);
-            end;
-          end;
-    end
-  end;
 end;
 
 // *****************************************************************************
 //  procedure AppCallback_TractionProxyProtocolReply
 //     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
 //                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer Raw data bytes, Byte 0 and 1 are the Alias
+//                   DataBytes: pointer to the raw data bytes
 //     Returns     : None
-//     Description :
+//     Description : Called in response to a Traction Proxy request
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
@@ -318,7 +220,7 @@ end;
 //                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
 //                   DataBytes: pointer Raw data bytes, Byte 0 and 1 are the Alias
 //     Returns     : None
-//     Description :
+//     Description : Called in response to a Protocol Support Request
 // *****************************************************************************
 procedure AppCallBack_ProtocolSupportReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
@@ -398,24 +300,6 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure AppCallback_RemoteButtonReply
-//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
-//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
-//                   DataBytes: pointer to the raw data bytes
-//     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
-// *****************************************************************************
-procedure AppCallback_RemoteButtonReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
-begin
-
-end;
-
-// *****************************************************************************
 //  procedure AppCallBack_ConfigMemReadReply
 //     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
 //     Returns     : None
@@ -472,6 +356,34 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure AppCallback_RemoteButtonReply
+//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
+//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
+//                   DataBytes: pointer to the raw data bytes
+//     Returns     : None
+//     Description : Called in response to a Remote Button request
+// *****************************************************************************
+procedure AppCallback_RemoteButtonReply(Dest: PNMRAnetNode; var Source: TNodeInfo; DataBytes: PSimpleBuffer);
+begin
+
+end;
+
+{$IFDEF SUPPORT_TRACTION}
+// *****************************************************************************
+//  procedure AppCallback_SimpleTrainNodeInfoReply
+//     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
+//                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
+//                   TrainNodeInfo: pointer to the null terminated strings
+//     Returns     : None
+//     Description : Called in response to a STNIP request
+// *****************************************************************************
+procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+begin
+
+end;
+{$ENDIF}
+
+// *****************************************************************************
 //  procedure AppCallback_Timer_100ms
 //     Parameters: : None
 //     Returns     : None
@@ -480,7 +392,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_Timer_100ms;
 begin
-  Inc(GlobalTimer);
+
 end;
 
 // *****************************************************************************
@@ -489,12 +401,7 @@ end;
 //                   Dest     : Full Node ID (and Alias if on CAN) of the dest node for the message
 //                   NodeInfo : pointer to the null terminated strings
 //     Returns     : None
-//     Description : This is called directly from the Hardware receive buffer.  Do
-//                   not do anything here that stalls the call.  This is called
-//                   Asyncronously from the Statemachine loop and the Statemachine loop
-//                   is stalled until this returns.  Set a flag and move on is the
-//                   best stratagy or store info in a buffer and process in the
-//                   main statemachine.
+//     Description : Called in response to a SNIP Request
 // *****************************************************************************
 procedure AppCallback_SimpleNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
@@ -534,5 +441,6 @@ procedure AppCallback_InitializationComplete(var Source: TNodeInfo; NodeID: PNod
 begin
 
 end;
+
 
 end.

@@ -88,7 +88,7 @@ const
     ($00, $04, $00, $00, $00, $00),                                             // Traction Protocol
     ($00, $02, $00, $00, $00, $00),                                             // FDI Protocol
     ($00, $00, $80, $00, $00, $00)                                              // STNIP Protocol
-  );
+);
 
 
   // Set options and configurations of the Configuration Memory Protocol.  Most depend on the
@@ -252,7 +252,6 @@ const
 // **************************************************************************************************************************************************************
 const
   USER_VNODE_CONFIGURATION_MEMORY_SIZE = 2048;
-  
 
 implementation
 

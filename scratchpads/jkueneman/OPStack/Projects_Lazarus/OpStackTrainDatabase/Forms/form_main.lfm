@@ -9,6 +9,7 @@ object Form1: TForm1
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   LCLVersion = '1.2.0.3'
   object StatusBar: TStatusBar
@@ -123,21 +124,21 @@ object Form1: TForm1
       ClientHeight = 317
       ClientWidth = 666
       object GroupBoxLogging: TGroupBox
-        Left = 17
-        Height = 301
-        Top = 8
-        Width = 639
+        Left = 233
+        Height = 245
+        Top = 64
+        Width = 423
         Anchors = [akTop, akLeft, akRight, akBottom]
         Caption = 'Logging'
-        ClientHeight = 279
-        ClientWidth = 631
+        ClientHeight = 223
+        ClientWidth = 415
         TabOrder = 0
         inline SynMemoLog: TSynMemo
           Cursor = crIBeam
           Left = 0
-          Height = 266
+          Height = 210
           Top = 9
-          Width = 625
+          Width = 409
           Anchors = [akTop, akLeft, akRight, akBottom]
           Font.Height = 12
           Font.Name = 'Monaco'
@@ -619,6 +620,43 @@ object Form1: TForm1
             end
           end
         end
+      end
+      object GroupBoxThrottles: TGroupBox
+        Left = 233
+        Height = 64
+        Top = 0
+        Width = 423
+        Anchors = [akTop, akLeft, akRight]
+        Caption = 'Trains'
+        ClientHeight = 42
+        ClientWidth = 415
+        TabOrder = 1
+        object ButtonShowAllThrottles: TButton
+          Left = 4
+          Height = 22
+          Top = 6
+          Width = 152
+          Action = ActionShowAllTrains
+          TabOrder = 0
+        end
+        object ButtonHideAllThrottles: TButton
+          Left = 168
+          Height = 22
+          Top = 6
+          Width = 153
+          Action = ActionHideAllTrains
+          TabOrder = 1
+        end
+      end
+      object TreeViewTrains: TTreeView
+        Left = 0
+        Height = 317
+        Top = 0
+        Width = 221
+        Align = alLeft
+        DefaultItemHeight = 18
+        TabOrder = 2
+        OnCreateNodeClass = TreeViewTrainsCreateNodeClass
       end
     end
     object TabSheetComPort: TTabSheet
@@ -40409,6 +40447,30 @@ object Form1: TForm1
       ImageIndex = 989
       OnExecute = ActionEthernetListenerConnectionExecute
     end
+    object ActionAddNewTrain: TAction
+      Category = 'Train'
+      Caption = 'Add Train'
+      ImageIndex = 105
+    end
+    object ActionCloseSelectedTrains: TAction
+      Category = 'Train'
+      Caption = 'Close Trains'
+      ImageIndex = 106
+    end
+    object ActionHideAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Hide All Trains'
+      OnExecute = ActionHideAllTrainsExecute
+    end
+    object ActionCloseAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Close All Trains'
+    end
+    object ActionShowAllTrains: TAction
+      Category = 'Train'
+      Caption = 'Show All Trains'
+      OnExecute = ActionShowAllTrainsExecute
+    end
     object ActionHelpAboutShow: TAction
       Caption = 'About'
       OnExecute = ActionHelpAboutShowExecute
@@ -40419,6 +40481,11 @@ object Form1: TForm1
     end
     object ActionToolsSettingsShowWin: TAction
       Caption = 'Show Settings...'
+    end
+    object ActionRediscoverProxies: TAction
+      Category = 'Tools'
+      Caption = 'Rediscover Proxies'
+      ImageIndex = 999
     end
     object ActionLogging: TAction
       Category = 'Tools'
@@ -40538,8 +40605,8 @@ object Form1: TForm1
     end
   end
   object PopupMenuCommonTools: TPopupMenu
-    left = 152
-    top = 216
+    left = 88
+    top = 320
     object MenuItemCommonToolsComPort: TMenuItem
       Action = ActionCOMConnection
       AutoCheck = True

@@ -22,7 +22,7 @@
         <UnitName Value="main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="967"/>
+        <TopLine Value="1052"/>
         <CursorPos X="31" Y="982"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
@@ -328,19 +328,21 @@
       <Unit34>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1200"/>
-        <CursorPos X="1" Y="1215"/>
+        <TopLine Value="1265"/>
+        <CursorPos X="23" Y="1268"/>
         <UsageCount Value="124"/>
         <Loaded Value="True"/>
       </Unit34>
       <Unit35>
         <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/classes/classesh.inc"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="866"/>
-        <CursorPos X="15" Y="879"/>
-        <UsageCount Value="3"/>
+        <TopLine Value="1566"/>
+        <CursorPos X="50" Y="1579"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit35>
       <Unit36>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
@@ -358,8 +360,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="226"/>
-        <CursorPos X="35" Y="237"/>
+        <TopLine Value="336"/>
+        <CursorPos X="55" Y="352"/>
         <UsageCount Value="111"/>
         <Loaded Value="True"/>
       </Unit37>
@@ -368,20 +370,18 @@
         <UnitName Value="template_hardware"/>
         <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="157"/>
-        <CursorPos X="1" Y="176"/>
+        <TopLine Value="158"/>
+        <CursorPos X="30" Y="176"/>
         <UsageCount Value="109"/>
         <Loaded Value="True"/>
       </Unit38>
       <Unit39>
         <Filename Value="../../../Library/com_port_hub.pas"/>
         <UnitName Value="com_port_hub"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="17"/>
-        <CursorPos X="80" Y="30"/>
+        <TopLine Value="250"/>
+        <CursorPos X="3" Y="267"/>
         <UsageCount Value="107"/>
-        <Loaded Value="True"/>
       </Unit39>
       <Unit40>
         <Filename Value="../../../Library/olcb_utilities.pas"/>
@@ -723,131 +723,127 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="217" Column="1" TopLine="202"/>
+        <Caret Line="218" Column="1" TopLine="211"/>
       </Position1>
       <Position2>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="218" Column="1" TopLine="202"/>
+        <Caret Line="219" Column="1" TopLine="211"/>
       </Position2>
       <Position3>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="220" Column="1" TopLine="202"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1201" Column="1" TopLine="1186"/>
       </Position3>
       <Position4>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="340" Column="1" TopLine="325"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1202" Column="1" TopLine="1186"/>
       </Position4>
       <Position5>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1218" Column="25" TopLine="1203"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="176" Column="27" TopLine="157"/>
       </Position5>
       <Position6>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="340" Column="1" TopLine="325"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1215" Column="1" TopLine="1203"/>
       </Position6>
       <Position7>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="345" Column="44" TopLine="325"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="176" Column="1" TopLine="157"/>
       </Position7>
       <Position8>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="347" Column="26" TopLine="325"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1215" Column="1" TopLine="1203"/>
       </Position8>
       <Position9>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="435" Column="1" TopLine="420"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1219" Column="30" TopLine="1203"/>
       </Position9>
       <Position10>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="217" Column="1" TopLine="202"/>
+        <Caret Line="232" Column="1" TopLine="226"/>
       </Position10>
       <Position11>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="345" Column="1" TopLine="330"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1215" Column="1" TopLine="1200"/>
       </Position11>
       <Position12>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="232" Column="1" TopLine="217"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="176" Column="1" TopLine="158"/>
       </Position12>
       <Position13>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="345" Column="44" TopLine="330"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1414" Column="1" TopLine="1399"/>
       </Position13>
       <Position14>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1412" Column="3" TopLine="1402"/>
+        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
+        <Caret Line="176" Column="30" TopLine="158"/>
       </Position14>
       <Position15>
-        <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="148" Column="10" TopLine="130"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1216" Column="1" TopLine="1204"/>
       </Position15>
       <Position16>
-        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="176" Column="29" TopLine="156"/>
+        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
+        <Caret Line="1217" Column="1" TopLine="1204"/>
       </Position16>
       <Position17>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1217" Column="61" TopLine="1203"/>
+        <Caret Line="1218" Column="1" TopLine="1204"/>
       </Position17>
       <Position18>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="435" Column="1" TopLine="420"/>
+        <Caret Line="222" Column="1" TopLine="216"/>
       </Position18>
       <Position19>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="217" Column="1" TopLine="211"/>
+        <Caret Line="229" Column="26" TopLine="216"/>
       </Position19>
       <Position20>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="218" Column="1" TopLine="211"/>
+        <Caret Line="343" Column="1" TopLine="328"/>
       </Position20>
       <Position21>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="219" Column="1" TopLine="211"/>
+        <Caret Line="237" Column="3" TopLine="221"/>
       </Position21>
       <Position22>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1201" Column="1" TopLine="1186"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="350" Column="46" TopLine="335"/>
       </Position22>
       <Position23>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1202" Column="1" TopLine="1186"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="40" Column="15" TopLine="25"/>
       </Position23>
       <Position24>
-        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="176" Column="27" TopLine="157"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="350" Column="23" TopLine="335"/>
       </Position24>
       <Position25>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1215" Column="1" TopLine="1203"/>
+        <Caret Line="473" Column="37" TopLine="465"/>
       </Position25>
       <Position26>
-        <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
-        <Caret Line="176" Column="1" TopLine="157"/>
+        <Filename Value="/usr/local/share/fpcsrc/rtl/objpas/classes/classesh.inc"/>
+        <Caret Line="1561" Column="16" TopLine="1542"/>
       </Position26>
       <Position27>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1215" Column="1" TopLine="1203"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="350" Column="23" TopLine="335"/>
       </Position27>
       <Position28>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1219" Column="30" TopLine="1203"/>
+        <Caret Line="515" Column="57" TopLine="494"/>
       </Position28>
       <Position29>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
-        <Caret Line="232" Column="1" TopLine="226"/>
+        <Caret Line="350" Column="48" TopLine="335"/>
       </Position29>
-      <Position30>
-        <Filename Value="../../../Library/olcb_transport_layer.pas"/>
-        <Caret Line="1215" Column="1" TopLine="1200"/>
-      </Position30>
     </JumpHistory>
   </ProjectSession>
   <Debugging>
-    <BreakPoints Count="7">
+    <BreakPoints Count="3">
       <Item1>
         <Kind Value="bpkSource"/>
         <WatchScope Value="wpsLocal"/>
@@ -869,34 +865,6 @@
         <Source Value="Forms/form_train_config_editor.pas"/>
         <Line Value="739"/>
       </Item3>
-      <Item4>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../../Library/ethernet_hub.pas"/>
-        <Line Value="442"/>
-      </Item4>
-      <Item5>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../../Library/ethernet_hub.pas"/>
-        <Line Value="435"/>
-      </Item5>
-      <Item6>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../../Library/olcb_transport_layer.pas"/>
-        <Line Value="1412"/>
-      </Item6>
-      <Item7>
-        <Kind Value="bpkSource"/>
-        <WatchScope Value="wpsLocal"/>
-        <WatchKind Value="wpkWrite"/>
-        <Source Value="../../../Library/ethernet_hub.pas"/>
-        <Line Value="340"/>
-      </Item7>
     </BreakPoints>
   </Debugging>
   <EditorMacros Count="0"/>

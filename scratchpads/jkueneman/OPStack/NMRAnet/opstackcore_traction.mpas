@@ -9,7 +9,7 @@ interface
 
 uses
   {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
+  {$IFDEF SUPPORT_DCC}
   NMRAnetDCC,
   {$ENDIF}
   {$ENDIF}
@@ -40,7 +40,7 @@ var
   AbsoluteSpeed: Real;
   SpeedStep: Word;
   {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
+  {$IFDEF SUPPORT_DCC}
   AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
   {$ENDIF}
@@ -50,7 +50,7 @@ begin
   if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
   begin
     {$IFNDEF FPC}
-    {$IFDEF SUPPORTS_DCC}
+    {$IFDEF SUPPORT_DCC}
     AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;                                                        // Split the address to make clear when loading bytes
     AddressLo := DestNode^.TrainData.Address and $00FF;
     {$ENDIF}
@@ -72,7 +72,7 @@ begin
               else
                 SpeedStep := SpeedStep or $40;
               {$IFNDEF FPC}
-              {$IFDEF SUPPORTS_DCC}
+              {$IFDEF SUPPORT_DCC}
               if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
                 NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
               else
@@ -94,7 +94,7 @@ begin
               else
                 SpeedStep := SpeedStep or $40;
               {$IFNDEF FPC}
-              {$IFDEF SUPPORTS_DCC}
+              {$IFDEF SUPPORT_DCC}
               if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
                 NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
               else
@@ -105,7 +105,7 @@ begin
             end;
       128 : begin
               {$IFNDEF FPC}
-              {$IFDEF SUPPORTS_DCC}
+              {$IFDEF SUPPORT_DCC}
               AddressHi := AddressHi or NMRA_LONGADDRESS_MASK_BYTE;               // Allow a mistaken short address to work here by adding the $C0  Per Tim
               {$ENDIF}
               {$ENDIF}
@@ -120,7 +120,7 @@ begin
               if IsForward then
                 SpeedStep := SpeedStep or $80;
               {$IFNDEF FPC}
-              {$IFDEF SUPPORTS_DCC}
+              {$IFDEF SUPPORT_DCC}
               NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
               NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);
               {$ENDIF}
@@ -139,7 +139,7 @@ var
   WideFunctionMask: DWord;
   FunctionMask, FunctionExtendedCode: Byte;
   {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
+  {$IFDEF SUPPORT_DCC}
   AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
   {$ENDIF}
@@ -150,7 +150,7 @@ begin
   begin
 
     {$IFNDEF FPC}
-    {$IFDEF SUPPORTS_DCC}
+    {$IFDEF SUPPORT_DCC}
     // Split the address to make clear when loading bytes
     AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
     AddressLo := DestNode^.TrainData.Address and $00FF;
@@ -201,7 +201,7 @@ begin
     end;
 
     {$IFNDEF FPC}
-    {$IFDEF SUPPORTS_DCC}
+    {$IFDEF SUPPORT_DCC}
     // Now create the DCC Packet
     if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
     begin
@@ -231,7 +231,7 @@ var
   IsForward: Boolean;
   SpeedStep: Byte;
   {$IFNDEF FPC}
-  {$IFDEF SUPPORTS_DCC}
+  {$IFDEF SUPPORT_DCC}
   AddressHi, AddressLo: Byte;
   DCCPacket: TDCCPacket;
   {$ENDIF}
@@ -242,7 +242,7 @@ begin
   begin
 
     {$IFNDEF FPC}
-    {$IFDEF SUPPORTS_DCC}
+    {$IFDEF SUPPORT_DCC}
     // Split the address to make clear when loading bytes
     AddressHi := (DestNode^.TrainData.Address shr 8) and $00FF;
     AddressLo := DestNode^.TrainData.Address and $00FF;
@@ -264,7 +264,7 @@ begin
           else
             SpeedStep := SpeedStep or $40;
           {$IFNDEF FPC}
-          {$IFDEF SUPPORTS_DCC}
+          {$IFDEF SUPPORT_DCC}
           if AddressHi and NMRA_LONGADDRESS_MASK_BYTE = NMRA_LONGADDRESS_MASK_BYTE then
             NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, SpeedStep, 0, 0, 3)
           else
@@ -280,7 +280,7 @@ begin
           if IsForward then
             SpeedStep := SpeedStep or $80;
           {$IFNDEF FPC}
-          {$IFDEF SUPPORTS_DCC}
+          {$IFDEF SUPPORT_DCC}
           NMRA_DCC_LoadPacket(@DCCPacket, AddressHi, AddressLo, %00111111, SpeedStep, 0, 4);
 
           NMRA_DCC_QueuePacket(@Track, @DCCPacket, False);

@@ -7,6 +7,9 @@ program UltimateCommandStation;
 //  CS_Serial_Flash_bit: sbit at LATD14_bit;
 //  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
   
+const
+  UART_1 = 1;
+  UART_2 = 2;
 
 var
 
@@ -141,7 +144,8 @@ begin
   TRISA4_bit := 0; // Output
   
   UART1_Write_Text('Mustangpeak Command Station'+LF);
-  
+  CheckForInitializedEEPROM(EEPROM_BANK_0, _25AA1024);
+
   while True do
   begin
     OPStackCore_Process;
@@ -149,6 +153,19 @@ begin
     begin
       case UART1_Read of
         '1' : OPStackBuffers_PrintBuffers;
+        '2' : DumpEEProm(EEPROM_BANK_0, False, 0, 255, UART_1);
+        '3' : _25AAxxxx_Erase(EEPROM_BANK_0);
+        '4' : begin
+                UART1_Write_Text('Zeroizing'+LF);
+                CheckForInitializedEEPROM(EEPROM_BANK_0, _25AA1024);
+                UART1_Write_Text('Zeroized'+LF);
+              end;
+        '5' : DumpEEProm(EEPROM_BANK_0, True, 0, 255, UART_1);
+        '6' : begin
+                UART1_Write_Text('Zeroizing'+LF);
+                Zeroize(EEPROM_BANK_0, _25AA1024);
+                UART1_Write_Text('Zeroized'+LF);
+              end;
       end;
     end;
   end;

@@ -866,7 +866,10 @@ begin
           Statusbar.Panels[1].Text := 'Ethernet: Connected: ' + GlobalSettings.Ethernet.LocalIP + ':' + IntToStr(GlobalSettings.Ethernet.ListenPort);
         end;
     end;
-    Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetConnectionCount);
+    if EthernetHub.Listener then
+      Statusbar.Panels[2].Text := 'Clients: ' + IntToStr(EthernetConnectionCount)
+    else
+      Statusbar.Panels[2].Text := '';
   end;
   UpdateMessageCountUI;
 end;
