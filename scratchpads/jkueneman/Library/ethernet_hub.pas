@@ -6,10 +6,11 @@ interface
 
 uses
   Classes, SysUtils, blcksock, synsock, Forms, olcb_app_common_settings, Dialogs,
-  common_utilities, olcb_utilities, olcb_transport_layer, olcb_defines, strutils;
+  common_utilities, olcb_utilities, olcb_transport_layer, olcb_defines, strutils,
+  threadedstringlist;
 
 type
-  TSocketThread = class;
+  TSocketReceiveThread = class;
   TEthernetHub = class;
   TSocketThreadList = class;
   TEthernetListenDameonThread = class;
@@ -26,22 +27,44 @@ type
     property Count: Integer read GetCount;
   end;
 
-  { TSocketThread }
+  { TSocketSendThread }
 
-  TSocketThread = class(TTransportLayerThread)
+  TSocketSendThread = class(TThread)
+  private
+    FhSocketLocal: TSocket;
+    FIsTerminated: Boolean;
+    FSendEvent: PRTLEvent;
+    FSendStrings: TThreadStringList;
+  protected
+    Socket: TTCPBlockSocket;
+    procedure Execute; override;
+    property hSocketLocal: TSocket read FhSocketLocal write FhSocketLocal;
+    property SendEvent: PRTLEvent read FSendEvent write FSendEvent;
+    property SendStrings: TThreadStringList read FSendStrings write FSendStrings;
+  public
+    constructor Create(CreateSuspended: Boolean; AhSocket: TSocket; const StackSize: SizeUInt = DefaultStackSize);
+    destructor Destroy; override;
+    property IsTerminated: Boolean read FIsTerminated write FIsTerminated;
+  end;
+
+  { TSocketReceiveThread }
+
+  TSocketReceiveThread = class(TTransportLayerThread)
   private
     FhSocketLocal: TSocket;
     FListenDameon: TEthernetListenDameonThread;                                 // Used if the Thread is created by a Listen Dameon
     FMaxLoopTime: DWord;
+    FSendThread: TSocketSendThread;
     FUseSocketHandle: Boolean;
   protected
     Socket: TTCPBlockSocket;                                                    // thread created Socket
-    procedure DispatchMessage(AMessage: AnsiString); override;
     procedure Execute; override;
     procedure ExecuteBegin; override;
     procedure ExecuteEnd; override;
+    procedure RelayMessage(AMessage: AnsiString; Source: TTransportLayerThread); override;
     property hSocketLocal: TSocket read FhSocketLocal write FhSocketLocal;
     property ListenDameon: TEthernetListenDameonThread read FListenDameon write FListenDameon;
+    property SendThread: TSocketSendThread read FSendThread write FSendThread;
     property UseSocketHandle: Boolean read FUseSocketHandle write FUseSocketHandle;            // If true the socket will use the handle in hSocketLocal to create the connection, else it will use the GlobalSettings for the Listen and Client Ports
   public
     constructor Create(CreateSuspended: Boolean; UseSocketLocalParemeter: Boolean; AListenDameon: TEthernetListenDameonThread; ANodeThread: TNodeThread); reintroduce; virtual;
@@ -65,7 +88,7 @@ type
   public
     constructor Create(CreateSuspended: Boolean; ANodeThread: TNodeThread; const StackSize: SizeUInt = DefaultStackSize); reintroduce;
     destructor Destroy; override;
-    procedure DispatchMessage(AMessage: AnsiString; Source: TTransportLayerThread);
+    procedure SendMessage(AMessage: AnsiString); override;
   end;
 
   { TEthernetHub }
@@ -78,7 +101,7 @@ type
     FEnabled: Boolean;
     FListenDameon: TEthernetListenDameonThread;
     FOnStatus: THookSocketStatus;
-    FSingletonSocket: TSocketThread;
+    FSingletonSocket: TSocketReceiveThread;
     FOnConnectionStateChange: TOnConnectionStateChangeFunc;
     FOnErrorMessage: TOnRawMessageFunc;
     procedure SetEnabled(AValue: Boolean);
@@ -87,7 +110,7 @@ type
   protected
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property ListenDameon: TEthernetListenDameonThread read FListenDameon;
-    property SingletonSocket: TSocketThread read FSingletonSocket write FSingletonSocket;
+    property SingletonSocket: TSocketReceiveThread read FSingletonSocket write FSingletonSocket;
   public
     constructor Create(ANodeThread: TNodeThread);
     destructor Destroy; override;
@@ -104,15 +127,69 @@ type
 
 implementation
 
-{ TSocketThread }
+{ TSocketSendThread }
 
-procedure TSocketThread.DispatchMessage(AMessage: AnsiString);
+constructor TSocketSendThread.Create(CreateSuspended: Boolean;
+  AhSocket: TSocket; const StackSize: SizeUInt);
 begin
-  if Assigned(ListenDameon) then
-    ListenDameon.DispatchMessage(AMessage, Self);
+  inherited Create(CreateSuspended, StackSize);
+  FIsTerminated := False;
+  FhSocketLocal := AhSocket;
+  SendStrings := TThreadStringList.Create;
+  FSendEvent := RTLEventCreate;
 end;
 
-procedure TSocketThread.Execute;
+destructor TSocketSendThread.Destroy;
+begin
+  FreeAndNil(FSendStrings);
+  RTLeventdestroy(FSendEvent);
+  inherited Destroy;
+end;
+
+procedure TSocketSendThread.Execute;
+var
+  List: TStringList;
+  i: Integer;
+begin
+  Socket := TTCPBlockSocket.Create;
+  try
+    Socket.ConvertLineEnd := True;      // User #10, #13, or both to be a "string"
+    Socket.SetLinger(False, 0);
+    Socket.SetSendTimeout(0);
+    Socket.SetRecvTimeout(0);
+    Socket.SetTimeout(0);
+
+    Socket.Socket := hSocketLocal;
+    if Socket.LastError = 0 then
+    begin
+      Socket.GetSins;                     // Back load the IP's / Ports information from the handle
+      while not Terminated do
+      begin
+        RTLeventWaitFor(FSendEvent);
+        begin
+          if not Terminated then
+            begin
+            List := SendStrings.LockList;
+            try
+              for i := 0 to List.Count - 1 do
+                Socket.SendString( List[i]);
+            finally
+              SendStrings.Clear;
+              SendStrings.UnlockList;
+            end;
+          end;
+        end;
+      end;
+    end
+  finally
+    FreeAndNil(Socket);
+    IsTerminated := True;
+  end;
+end;
+
+{ TSocketReceiveThread }
+
+procedure TSocketReceiveThread.Execute;
 var
   Helper: TOpenLCBMessageHelper;
   DoClose: Boolean;
@@ -172,6 +249,8 @@ begin
       // This will either be csConnected or csConnecting if it failed
       Synchronize(@DoConnectionState);
 
+      FSendThread := TSocketSendThread.Create(False, Socket.Socket);
+
       while not Terminated and (ConnectionState = csConnected) do
       begin
         ThreadSwitch;
@@ -217,27 +296,59 @@ begin
   end
 end;
 
-procedure TSocketThread.ExecuteBegin;
+procedure TSocketReceiveThread.ExecuteBegin;
 begin
   inherited ExecuteBegin;
-  if Assigned(NodeThread) then    // If we have a Listen Dameon he is registered with the Node
-    NodeThread.RegisterThread(Self);
+  if Assigned(NodeThread) then
+  begin
+    if ListenDameon <> nil then
+      NodeThread.RegisteredThread := ListenDameon
+    else
+      NodeThread.RegisteredThread := Self
+  end;
 end;
 
-procedure TSocketThread.ExecuteEnd;
+procedure TSocketReceiveThread.ExecuteEnd;
 begin
+  SendThread.Terminate;
+  RTLeventSetEvent(SendThread.SendEvent);
+  while not SendThread.IsTerminated do
+    ThreadSwitch;
   if Assigned(NodeThread) then   // If we have a Listen Dameon he is registered with the Node
-    NodeThread.UnRegisterThread(Self);
+    NodeThread.RegisteredThread := nil;
   inherited ExecuteEnd;
 end;
 
-procedure TSocketThread.SendMessage(AMessage: AnsiString);
+procedure TSocketReceiveThread.RelayMessage(AMessage: AnsiString; Source: TTransportLayerThread);
+var
+  i: Integer;
+  List: TList;
 begin
-  if Assigned(Socket) then
-    Socket.SendString(AMessage);   // Is this ok to send from a different thread???
+  if Assigned(ListenDameon) then
+  begin
+    List := ListenDameon.SocketThreadList.LockList;
+    try
+      for i := 0 to List.Count - 1 do
+      begin
+        if TTransportLayerThread( List[i]) <> Source then
+          TTransportLayerThread( List[i]).SendMessage(AMessage);
+      end;
+    finally
+      ListenDameon.SocketThreadList.UnlockList;
+    end;
+  end;
 end;
 
-constructor TSocketThread.Create(CreateSuspended: Boolean;
+procedure TSocketReceiveThread.SendMessage(AMessage: AnsiString);
+begin
+  if not Terminated then
+  begin
+    SendThread.SendStrings.Add(AMessage);
+    system.RTLeventSetEvent(SendThread.SendEvent);
+  end;
+end;
+
+constructor TSocketReceiveThread.Create(CreateSuspended: Boolean;
   UseSocketLocalParemeter: Boolean; AListenDameon: TEthernetListenDameonThread;
   ANodeThread: TNodeThread);
 begin
@@ -249,12 +360,10 @@ begin
   FMaxLoopTime := 0;
 end;
 
-destructor TSocketThread.Destroy;
+destructor TSocketReceiveThread.Destroy;
 begin
   if Assigned(ListenDameon) then
     ListenDameon.SocketThreadList.Remove(Self);
-  if Assigned(NodeThread) then
-    NodeThread.UnRegisterThread(Self);
   inherited Destroy;
 end;
 
@@ -282,13 +391,13 @@ procedure TSocketThreadList.TerminateAndWaitForThreads;
 var
   i: Integer;
   L: TList;
-  SocketThread: TSocketThread;
+  SocketThread: TSocketReceiveThread;
 begin
   L := LockList;
   try
     for i := L.Count - 1 downto 0 do         // Need to do this backwards because when they are freed they will remove themselves from this list
     begin;
-      SocketThread := TSocketThread( L[i]);
+      SocketThread := TSocketReceiveThread( L[i]);
       SocketThread.Terminate;
       while not SocketThread.TerminateComplete do
       begin
@@ -306,13 +415,13 @@ procedure TSocketThreadList.TerminateThreads;
 var
   i: Integer;
   L: TList;
-  SocketThread: TSocketThread;
+  SocketThread: TSocketReceiveThread;
 begin
   L := LockList;
   try
     for i := L.Count - 1 downto 0 do
     begin;
-      SocketThread := TSocketThread( L[i]);
+      SocketThread := TSocketReceiveThread( L[i]);
       SocketThread.Terminate;
     end;
   finally
@@ -337,28 +446,10 @@ begin
   inherited Destroy;
 end;
 
-procedure TEthernetListenDameonThread.DispatchMessage(AMessage: AnsiString; Source: TTransportLayerThread);
-var
-  List: TList;
-  i: Integer;
-begin
-  List := SocketThreadList.LockList;
-  try
-    for i := 0 to List.Count - 1 do
-    begin
-      if TTransportLayerThread( List[i]) <> Source then
-        if not TTransportLayerThread( List[i]).IsTerminated then
-          TTransportLayerThread( List[i]).SendMessage(AMessage)
-    end;
-  finally
-    SocketThreadList.UnlockList;
-  end;
-end;
-
 procedure TEthernetListenDameonThread.Execute;
 var
   hSocket: TSocket;
-  NewSocketThread: TSocketThread;
+  NewSocketThread: TSocketReceiveThread;
   List: TList;
   i: Integer;
   DoClose: Boolean;
@@ -402,7 +493,7 @@ begin
             hSocket := ListeningSocket.Accept;        // Get the handle of the new ListeningSocket for the client connection
             if ListeningSocket.LastError = 0 then
             begin
-              NewSocketThread := TSocketThread.Create(True, True, Self, NodeThread);   // Use the hSocketLocal parameter to create socket
+              NewSocketThread := TSocketReceiveThread.Create(True, True, Self, NodeThread);   // Use the hSocketLocal parameter to create socket
               NewSocketThread.hSocketLocal := hSocket;
               NewSocketThread.ListenDameon := Self;
               NewSocketThread.OnErrorMessage := OwnerHub.OnErrorMessage;
@@ -436,6 +527,21 @@ begin
   end
 end;
 
+
+procedure TEthernetListenDameonThread.SendMessage(AMessage: AnsiString);
+var
+  List: TList;
+  i: Integer;
+begin
+  List := SocketThreadList.LockList;
+  try
+    for i := 0 to List.Count - 1 do
+      TSocketReceiveThread( List[i]).SendMessage(AMessage);
+  finally
+    SocketThreadList.UnlockList;
+  end;
+end;
+
 { TEthernetHub }
 
 procedure TEthernetHub.SetEnabled(AValue: Boolean);
@@ -464,7 +570,7 @@ begin
     begin
       if FEnabled then
       begin
-        FSingletonSocket := TSocketThread.Create(True, False, nil, NodeThread);            // Use the IP and Port to create the socket
+        FSingletonSocket := TSocketReceiveThread.Create(True, False, nil, NodeThread);            // Use the IP and Port to create the socket
         SingletonSocket.OnErrorMessage := OnErrorMessage;
         SingletonSocket.OnConnectionStateChange := OnConnectionStateChange;
         SingletonSocket.OnStatus := OnStatus;

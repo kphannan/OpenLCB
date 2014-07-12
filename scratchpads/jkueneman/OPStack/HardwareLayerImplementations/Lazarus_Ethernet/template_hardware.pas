@@ -81,17 +81,26 @@ end;
 
 procedure DestroyHubs;
 begin
-  EthernetHub.Enabled := False;
-  EthernetHub.NodeThread := nil;
-  FreeAndNil(EthernetHub);
-  ComPortHub.NodeThread := nil;
-  ComPortHub.RemoveComPort(nil);
-  FreeAndNil(ComPortHub);
-  NodeThread.EnableNode(False);
-  NodeThread.Terminate;
-  while not NodeThread.TerminateCompleted do
-    Application.ProcessMessages;
-  FreeAndNil(NodeThread);
+  if Assigned(EthernetHub) then
+  begin
+    EthernetHub.Enabled := False;
+    EthernetHub.NodeThread := nil;
+    FreeAndNil(EthernetHub)
+  end;
+  if Assigned(ComPortHub) then
+  begin
+    ComPortHub.NodeThread := nil;
+    ComPortHub.RemoveComPort(nil);
+    FreeAndNil(ComPortHub);
+  end;
+  if Assigned(NodeThread) then
+  begin
+    NodeThread.EnableNode(False);
+    NodeThread.Terminate;
+    while not NodeThread.TerminateCompleted do
+      Application.ProcessMessages;
+    FreeAndNil(NodeThread);
+  end;
 end;
   {$ENDIF}
 

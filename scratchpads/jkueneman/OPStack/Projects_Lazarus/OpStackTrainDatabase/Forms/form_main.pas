@@ -612,7 +612,7 @@ begin
   if (Sender is TEthernetListenDameonThread) or (not EthernetHub.Listener) then
       EthernetConnectionState := ConnectionState
     else
-    if (Sender is TSocketThread) then
+    if (Sender is TSocketReceiveThread) then
     begin
       case ConnectionState of
         csConnected    : Inc(FEthernetConnectionCount);

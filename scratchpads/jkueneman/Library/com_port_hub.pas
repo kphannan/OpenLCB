@@ -246,13 +246,13 @@ procedure TComPortThread.ExecuteBegin;
 begin
   inherited ExecuteBegin;
   if Assigned(NodeThread) then
-    NodeThread.RegisterThread(Self);
+    NodeThread.RegisteredThread := Self;
 end;
 
 procedure TComPortThread.ExecuteEnd;
 begin
   if Assigned(NodeThread) then
-    NodeThread.UnRegisterThread(Self);
+    NodeThread.RegisteredThread := nil;
   inherited ExecuteEnd;
 end;
 

@@ -653,9 +653,12 @@ end;
 
 procedure TFormOlcbTrainMaster.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
-  NodeThread.OnLogMessages := nil;
-  EthernetHub.Enabled := False;
-  ComPortHub.RemoveComPort(nil);
+  if Assigned(NodeThread) then
+    NodeThread.OnLogMessages := nil;
+  if Assigned(EthernetHub) then
+    EthernetHub.Enabled := False;
+  if Assigned(ComPortHub) then
+    ComPortHub.RemoveComPort(nil);
   Throttles.CloseAll;
   DestroyHubs;
 end;
@@ -891,7 +894,7 @@ begin
   if (Sender is TEthernetListenDameonThread) or (not EthernetHub.Listener) then
     EthernetConnectionState := ConnectionState
   else
-  if (Sender is TSocketThread) then
+  if (Sender is TSocketReceiveThread) then
   begin
     case ConnectionState of
       csConnected    : Inc(FEthernetConnectionCount);

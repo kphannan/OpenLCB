@@ -417,6 +417,7 @@ type
     FNodeEventThread: TNodeEventThread;
     FOnLogMessages: TOnRawMessageFunc;
     FOnNodeEvent: TOnNodeEventFunc;
+    FReceiveStrings: TThreadStringList;
     FStack100msTimer: TTimer;
     FNodeTaskList: TThreadList;
     FTerminateCompleted: Boolean;
@@ -428,8 +429,9 @@ type
     procedure On100msTimer(Sender: TObject);                                                                 // Called within the contenxt of the thread (timer create in the thread) for the 100ms ticker in the OPStack library
     function ProcessNode: Boolean;                                                                           // Main call for the threads Execute
     procedure CheckForAndLinkNewTasks;
+    procedure CheckForAndHandleIncomingMessages;
     property Stack100msTimer: TTimer read FStack100msTimer write FStack100msTimer;                           // Timer for the 100ms OPStack ticker
-    property RegisteredThread: TTransportLayerThread read FRegisteredThread write FRegisteredThread;         // Holds the Registered Threads that will need to be sent any outgoing message from the OPStack
+    property ReceiveStrings: TThreadStringList read FReceiveStrings write FReceiveStrings;
     property NodeTaskList: TThreadList read FNodeTaskList write FNodeTaskList;                               // Hold the tasks the UI has requested the OPStack code to execute via the user statemachine
     property UserInterfaceThread: TUserInterfaceThread read FUserInterfaceThread write FUserInterfaceThread; // The thread that is giving message strings and call Syncronize to pass them into the UI
     property NodeEventThread: TNodeEventThread read FNodeEventThread write FNodeEventThread;                 // The thread that dispatches OPStack events to the UI via the TNodeEvent objects. when an event occurs in the OPStack (user statemachine) an object is created and places into this thread so it can pass it to the UI in order to keep it notified of what is going on.
@@ -440,11 +442,10 @@ type
     procedure AddTask(NewTask: TNodeTask);
     procedure EnableNode(DoStart: Boolean);
     procedure InitializeNode;
+    procedure ReceiveMessage(GridConnectStrPtr: PGridConnectString);
     procedure SendMessage(AMessage: AnsiString);
-    procedure ReceiveMessageFromOtherThread(GridConnectStrPtr: PGridConnectString);
-    procedure RegisterThread(Thread: TTransportLayerThread);
-    procedure UnRegisterThread(Thread: TTransportLayerThread);                                              // If a outgoing messages needs to be sent to a harware interface (ethernet/can/etc) it must register its thread so it will be send the outgoing message from the OPStack
     property CriticalSection: TRTLCriticalSection read FCriticalSection write FCriticalSection;             // Critical Section that serializes the calls in from the hardware interfaces (ethernet/can/etx) with the OPStack code.  It ensures the in/out ports of the OPStack are only called after the OPStack is in its top level of the main polling loop so there are no race condition on buffers, etc
+    property RegisteredThread: TTransportLayerThread read FRegisteredThread write FRegisteredThread;        // Holds the Registered Thread that will need to be sent any outgoing message from the OPStack
     property StackRunning: Boolean read GetStackRunning;
     property TerminateCompleted: Boolean read FTerminateCompleted;
 
@@ -496,7 +497,7 @@ type
     procedure DoConnectionState; virtual;
     procedure DoErrorMessage; virtual;
     procedure DoStatus; virtual;
-    procedure DispatchMessage(AMessage: AnsiString); virtual;
+    procedure RelayMessage(AMessage: AnsiString; Source: TTransportLayerThread); virtual;
 
     property BufferRawMessage: string read FBufferRawMessage write FBufferRawMessage;
     property ConnectionState: TConnectionState read FConnectionState write FConnectionState;
@@ -1060,10 +1061,29 @@ begin
   NodeTaskList.Add(NewTask);
 end;
 
+procedure TNodeThread.CheckForAndHandleIncomingMessages;
+var
+  GridConnectStr: TGridConnectString;
+  List: TStringList;
+begin
+  List := ReceiveStrings.LockList;
+  try
+    if List.Count > 0 then
+    begin
+      GridConnectStr := List[0] + #0;
+      template_hardware.DispatchGridConnectStr(@GridConnectStr);                  // This next code block is running in the OPStack Node code
+      List.Delete(0);
+    end;
+  finally
+    ReceiveStrings.UnlockList;
+  end;
+end;
+
 constructor TNodeThread.Create(CreateSuspended: Boolean);
 begin
   inherited Create(False);
   FOnLogMessages := nil;
+  RegisteredThread := nil;
   FStack100msTimer := TTimer.Create(nil);
   Stack100msTimer.Interval := 100;
   Stack100msTimer.OnTimer := @On100msTimer;
@@ -1072,6 +1092,7 @@ begin
   if not CreateSuspended then
     Resume;
   FTerminateCompleted := False;
+  FReceiveStrings := TThreadStringList.Create;
   UserInterfaceThread := TUserInterfaceThread.Create(False, Self);
   NodeEventThread := TNodeEventThread.Create(False, Self);
   NodeTaskList := TThreadList.Create;
@@ -1092,6 +1113,7 @@ begin
   System.DoneCriticalSection(FCriticalSection);
 
   FreeAndNil(FNodeTaskList);
+  FreeAndNil(FReceiveStrings);
 
   inherited Destroy;
 end;
@@ -1113,13 +1135,9 @@ begin
   while not Terminated do
   begin
     ThreadSwitch;
-    ThreadSwitch;
-    ThreadSwitch;
-    ThreadSwitch;
-    ThreadSwitch;
-    ThreadSwitch;
     ProcessNode;
     CheckForAndLinkNewTasks;
+    CheckForAndHandleIncomingMessages;
   end;
   FTerminateCompleted := True;
 end;
@@ -1192,15 +1210,10 @@ end;
 //    clients.  It is called within the context of the
 //    hardware buffers
 // **************************************************************
-procedure TNodeThread.ReceiveMessageFromOtherThread(GridConnectStrPtr: PGridConnectString);
+procedure TNodeThread.ReceiveMessage(GridConnectStrPtr: PGridConnectString);
 begin
-  template_hardware.DispatchGridConnectStr(GridConnectStrPtr);                  // This next code block is running in the OPStack Node code
+  ReceiveStrings.Add(GridConnectStrPtr^);
   UserInterfaceThread.AddMessage(GridConnectStrPtr^);
-end;
-
-procedure TNodeThread.RegisterThread(Thread: TTransportLayerThread);
-begin
-  RegisteredThread := Thread
 end;
 
 // **************************************************************
@@ -1217,8 +1230,7 @@ begin
   system.EnterCriticalsection(FCriticalSection);
   try
     if Assigned(RegisteredThread) then
-      if not RegisteredThread.Terminated then
-        RegisteredThread.SendMessage(AMessage);
+      RegisteredThread.SendMessage(AMessage);              // If this is a Listener then it will be sent to all client, else it is just goes to the client thread
   finally
     system.LeaveCriticalsection(FCriticalSection);
   end;
@@ -1232,12 +1244,6 @@ begin
   begin
     NodeEventThread.Trigger(AnEvent);
   end;
-end;
-
-procedure TNodeThread.UnRegisterThread(Thread: TTransportLayerThread);
-begin
-  if Thread = RegisteredThread then
-    RegisteredThread := nil;
 end;
 
 
@@ -1274,8 +1280,8 @@ begin
   begin
     System.EnterCriticalsection(NodeThread.FCriticalSection);
     try
-      NodeThread.ReceiveMessageFromOtherThread(GridConnectStrPtr);
-      DispatchMessage(GridConnectStrPtr^);
+      NodeThread.ReceiveMessage(GridConnectStrPtr);
+      RelayMessage(GridConnectStrPtr^, Self);
     finally
       System.LeaveCriticalsection(NodeThread.FCriticalSection);
     end;
@@ -1298,11 +1304,6 @@ procedure TTransportLayerThread.DoStatus;
 begin
   if Assigned(OnStatus) then
     OnStatus(Self, StatusReason, StatusValue);
-end;
-
-procedure TTransportLayerThread.DispatchMessage(AMessage: AnsiString);
-begin
-
 end;
 
 procedure TTransportLayerThread.ExecuteBegin;
@@ -1419,6 +1420,12 @@ end;
 function TTransportLayerThread.IsValidHexChar(AChar: Char): Boolean;
 begin
   Result := ((AChar >= '0') and (AChar <= '9')) or ((AChar >= 'A') and (AChar <= 'F')) or ((AChar >= 'a') and (AChar <= 'f'))
+end;
+
+procedure TTransportLayerThread.RelayMessage(AMessage: AnsiString;
+  Source: TTransportLayerThread);
+begin
+
 end;
 
 procedure TTransportLayerThread.SendMessage(AMessage: AnsiString);
