@@ -161,7 +161,7 @@ type
     SynMemoLog: TSynMemo;
     TabSheetAbout: TTabSheet;
     TabSheetComPort: TTabSheet;
-    TabSheetCommandStation: TTabSheet;
+    TabSheetTrainDatabase: TTabSheet;
     TabSheetEthernet: TTabSheet;
     TabSheetGeneral: TTabSheet;
     ToolBarMain: TToolBar;

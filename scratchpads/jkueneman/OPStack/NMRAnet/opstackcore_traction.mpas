@@ -55,11 +55,13 @@ begin
     Train.Owner[i] := #0;
   end;
   Train.TrainID := 0;
-  Train.SpeedSteps := 0;
+  Train.SpeedStep := 14;
   Train.ShortLong := 0;
 end;
 
 procedure WriteTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig);
+var
+  ID: Word;
 begin
   AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, strlen(Train.RoadName) + 1, @Train.RoadName);
   AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, strlen(Train.TrainClass) + 1, @Train.TrainClass);
@@ -67,12 +69,17 @@ begin
   AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, strlen(Train.Name) + 1, @Train.Name);
   AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, strlen(Train.Manufacturer) + 1, @Train.Manufacturer);
   AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, strlen(Train.Owner) + 1, @Train.Owner);
-  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID, 2, @Train.TrainID);
-  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @Train.SpeedSteps);
+  ID := Train.TrainID shr 8;
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID, 1, @ID);
+  ID := Train.TrainID;
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID+1, 1, @ID);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @Train.SpeedStep);
   AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SHORT_LONG, 1, @Train.ShortLong);
 end;
 
 procedure ReadTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig);
+var
+  ID: Byte;
 begin
   AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, STNIP_MAX_STR_LEN, @Train.RoadName);
   AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, STNIP_MAX_STR_LEN, @Train.TrainClass);
@@ -80,8 +87,11 @@ begin
   AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, STNIP_MAX_STR_LEN, @Train.Name);
   AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, STNIP_MAX_STR_LEN, @Train.Manufacturer);
   AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, STNIP_MAX_STR_LEN, @Train.Owner);
-  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID, 2, @Train.TrainID);
-  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @Train.SpeedSteps);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID, 1, @ID);         // Endian issues...
+  Train.TrainID := Word( ID) shl 8;
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID + 1, 1, @ID);
+  Train.TrainID := Word( ID) or Train.TrainID;
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @Train.SpeedStep);
   AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_SHORT_LONG, 1, @Train.ShortLong);
 end;
 
@@ -90,7 +100,7 @@ begin
   Node^.TrainData.Address := Train.TrainID;
   if Train.ShortLong = 1 then
     Node^.TrainData.Address := Node^.TrainData.Address or $C000;
-  Node^.TrainData.SpeedSteps := Train.SpeedSteps;
+  Node^.TrainData.SpeedSteps := Train.SpeedStep;
 end;
 
 procedure TractionProtocolSpeedDirReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);

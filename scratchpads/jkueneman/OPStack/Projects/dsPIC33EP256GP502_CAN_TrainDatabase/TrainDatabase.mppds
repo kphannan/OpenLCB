@@ -14,7 +14,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [ACTIVE_TAB]
-Value=Templates\template_vnode.mpas
+Value=Templates\template_userstatemachine.mpas
 [FILES]
 Count=47
 File0=TrainDatabase.mpas
@@ -73,32 +73,31 @@ ActiveImageIndex=-1
 Count=6
 File0=..\..\NMRAnet\opstackdefines.mpas
 File1=Templates\template_userstatemachine.mpas
-File2=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
-File3=Templates\template_node.mpas
-File4=..\..\NMRAnet\nmranetutilities.mpas
-File5=Templates\template_vnode.mpas
+File2=TrainDatabase.mpas
+File3=..\..\NMRAnet\opstackcore_traction.mpas
+File4=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\template_configuration.mpas
+File5=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\_25AAxxxx.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
 Count=0
 [OTHER_FILES]
-Count=3
-File0=
-File1=Templates\NodeID.inc
-File2=Templates\Options.inc
+Count=2
+File0=Templates\NodeID.inc
+File1=Templates\Options.inc
 [SEARCH_PATH]
 Count=11
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_TrainDatabase\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_TrainDatabase\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
 Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path10=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_TrainDatabase\Templates\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_TrainDatabase\Templates\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -116,5 +115,6 @@ File5=String
 File6=SPI
 [EXPANDED NODES]
 Node1=Sources
-Node2=Other Files
-Count=2
+Node2=Output Files
+Node3=Other Files
+Count=3

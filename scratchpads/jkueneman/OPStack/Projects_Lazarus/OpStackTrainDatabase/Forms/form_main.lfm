@@ -115,12 +115,12 @@ object Form1: TForm1
     Height = 356
     Top = 44
     Width = 672
-    ActivePage = TabSheetCommandStation
+    ActivePage = TabSheetTrainDatabase
     Align = alClient
     TabIndex = 0
     TabOrder = 2
-    object TabSheetCommandStation: TTabSheet
-      Caption = 'Command Station'
+    object TabSheetTrainDatabase: TTabSheet
+      Caption = 'Database'
       ClientHeight = 317
       ClientWidth = 666
       object GroupBoxLogging: TGroupBox

@@ -814,7 +814,7 @@ begin
     FTrainConfig.Manufacturer := EventTrainInfo.TrainConfig.Manufacturer;
     FTrainConfig.Owner := EventTrainInfo.TrainConfig.Owner;
     FTrainConfig.TrainID := EventTrainInfo.TrainConfig.TrainID;
-    FTrainConfig.SpeedSteps := EventTrainInfo.TrainConfig.SpeedSteps;
+    FTrainConfig.SpeedStep := EventTrainInfo.TrainConfig.SpeedStep;
     FTrainConfig.ShortLong := EventTrainInfo.TrainConfig.ShortLong;
   end;
 end;

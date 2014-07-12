@@ -126,8 +126,6 @@ end;
 //                   variables, etc
 // *****************************************************************************
 procedure UserStateMachine_Initialize;
-var
-  i: Integer;
 begin
   // Initialize the example data!
 end;
@@ -192,7 +190,7 @@ begin
                       Train.Manufacturer := 'Blackstone Models' + #0;
                       Train.Owner := 'Jim Kueneman' + #0;
                       Train.TrainID := 455;
-                      Train.SpeedSteps := 28;
+                      Train.SpeedStep := 28;
                       Train.ShortLong := 1;
                       WriteTrainConfiguration(ConfigOffset, Train);
                     end;
@@ -204,7 +202,7 @@ begin
                       Train.Manufacturer := 'Blackstone Models' + #0;
                       Train.Owner := 'Jim Kueneman' + #0;
                       Train.TrainID := 461;
-                      Train.SpeedSteps := 28;
+                      Train.SpeedStep := 28;
                       Train.ShortLong := 1;
                       WriteTrainConfiguration(ConfigOffset, Train);
                     end;
@@ -216,7 +214,7 @@ begin
                       Train.Manufacturer := 'Blackstone Models' + #0;
                       Train.Owner := 'Jim Kueneman' + #0;
                       Train.TrainID := 40;
-                      Train.SpeedSteps := 28;
+                      Train.SpeedStep := 28;
                       Train.ShortLong := 1;
                       WriteTrainConfiguration(ConfigOffset, Train);
                     end;
@@ -228,7 +226,7 @@ begin
                       Train.Manufacturer := 'Blackstone Models' + #0;
                       Train.Owner := 'Jim Kueneman' + #0;
                       Train.TrainID := 40;
-                      Train.SpeedSteps := 28;
+                      Train.SpeedStep := 28;
                       Train.ShortLong := 1;
                       WriteTrainConfiguration(ConfigOffset, Train);
                     end;
@@ -240,7 +238,7 @@ begin
                       Train.Manufacturer := 'Blackstone Models' + #0;
                       Train.Owner := 'Jim Kueneman' + #0;
                       Train.TrainID := 452;
-                      Train.SpeedSteps := 28;
+                      Train.SpeedStep := 28;
                       Train.ShortLong := 1;
                       WriteTrainConfiguration(ConfigOffset, Train);
                     end;
@@ -252,7 +250,7 @@ begin
                       Train.Manufacturer := 'Blackstone Models' + #0;
                       Train.Owner := 'Jim Kueneman' + #0;
                       Train.TrainID := 5;
-                      Train.SpeedSteps := 28;
+                      Train.SpeedStep := 28;
                       Train.ShortLong := 1;
                       WriteTrainConfiguration(ConfigOffset, Train);
                     end;
@@ -519,8 +517,13 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+var
+  Train: TTrainConfig;
+  ConfigOffset: DWord;
 begin
-
+  ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((Node^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
+  ReadTrainConfiguration(ConfigOffset, Train);
+  LoadNodeWithTrainConfig(Node, Train);
 end;
 
 // *****************************************************************************

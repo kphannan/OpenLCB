@@ -1,5 +1,7 @@
 
 - Datagrams:  July 3, 2014 = Reworked the architecture, need to add the watchdog for abandon messages
-- OIR:        July 4, 2014 = Now I have and OutgoingMessage linked list for the Datagrams need to implement a way to hold onto addressed messages for a time to allow resending if we receive an Optional Interaction Rejected - Temporary. I can create one using the TrainMaster application and set the SNIP buffers to 1 then use STNIP via the Allocate by List with more than 4 trains on the network.
+- OIR:        July 4, 2014 = Now I have an OutgoingMessage linked list for the Datagrams need to implement a way to hold onto addressed messages for a time to allow resending if we receive an Optional Interaction Rejected - Temporary. I can create one using the TrainMaster application and set the SNIP buffers to 1 then use STNIP via the Allocate by List with more than 4 trains on the network.
 - FDI: July 4, 2014 = Need to implement the Configuration Memory read/write to the Functions.  Also includes deciding where the Functions should live in RAM or FLASH
 - ConfigMem Write: July 6, 2014 = The implementation expects a Write to have a Write Reply.  The Reply is optional and my implementation will need to wait for a timeout to occur if another node that does not support Write Reply accesses it.
+- Currently the library relies on a ConfigMem Write Reply.  If I don't get it then we will not work right.  May need to fake a reply if one does not come after some time.
+- Need a callback for configuration read/writes to know when something has changed (or to custom hook them say for CV access or Function access through config memory)

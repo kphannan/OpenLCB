@@ -1,5 +1,9 @@
 unit template_userstatemachine;
 
+
+// CHANGES TO CONFIG MEM WILL NOT UPDATE THE TRAIN FIELD IN THE NODE>>>>
+//  NEED TO HAVE CALLBACK HOOKS FOR MEMORY READ/WRITES TO KNOW WHEN TO UPDATE...
+
 {$IFDEF FPC}
 {$mode objfpc}{$H+}
 
@@ -15,6 +19,9 @@ uses
   opstackdefines,
   template_node,
   opstack_api,
+  template_configuration,
+  template_node,
+  template_vnode,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -54,48 +61,30 @@ procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POP
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 
+function OPStackNode_Allocate: PNMRAnetNode; external;
+procedure WriteTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig); external;
+procedure ReadTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig); external;
+procedure LoadNodeWithTrainConfig(Node: PNMRANetNode; var Train: TTrainConfig); external;
 
 implementation
 
 const
-  STATE_USER_START = 0;
-  STATE_USER_1     = 1;
-  STATE_USER_2     = 2;
-  STATE_USER_3     = 3;
-  STATE_USER_4     = 4;
-  STATE_USER_5     = 5;
-  STATE_USER_6     = 6;
-  STATE_USER_7     = 7;
-  STATE_USER_8     = 8;
-  STATE_USER_9     = 9;
-  STATE_USER_10    = 10;
+// Physical Proxy Node User StateMachine
+  STATE_SERVER_USER_START                 = 0;
+  STATE_SERVER_FIND_PROXY                 = 1;
+  STATE_SERVER_CREATE_DATABASE_NODES      = 2;
+  STATE_SERVER_CREATE_DATABASE            = 3;
+  STATE_SERVER_PROXY_IDLE                 = 4;
 
-type
-  // User Data for a single node
-  TSampleUserNodeData = record
-    UserData1 : Word;
-    UserData2 : Byte;
-  end;
-  PSampleUserNodeData = ^TSampleUserNodeData;
-
-  // Array of User Data for all Nodes
-  TSampleUserDataArray = array[0..USER_MAX_NODE_COUNT-1] of TSampleUserNodeData;
+// Virtual Train Node User StateMachine
+  STATE_TRAIN_USER_START           = 0;
+  STATE_TRAIN_CREATE_UI            = 1;
+  STATE_TRAIN_IDLE                 = 2;
 
 var
-  UserDataArray: TSampleUserDataArray;
+  ProxyNode: TNodeInfo;
+  GlobalTimer: Word;
 
-
-// *****************************************************************************
-//  procedure ExtractUserData
-//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
-//     Returns     : Pointer to the defined User Data type
-//     Description : Nice helper function to type cast the user data generic pointer
-//                   to a pointer to the actual data type
-// *****************************************************************************
-function ExtractUserData(Node: PNMRAnetNode): PSampleUserNodeData;
-begin
-  Result := PSampleUserNodeData( Node^.UserData)
-end;
 
 // *****************************************************************************
 //  procedure UserStateMachine_Initialize
@@ -109,11 +98,6 @@ var
   i: Integer;
 begin
   // Initialize the example data!
-  for i := 0 to USER_MAX_NODE_COUNT - 1 do
-  begin
-    UserDataArray[i].UserData1 := 0;
-    UserDataArray[i].UserData2 := 0;
-  end;
 end;
 
 // *****************************************************************************
@@ -123,13 +107,159 @@ end;
 //     Description : Called as often as possible to run the user statemachine
 // *****************************************************************************
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
+var
+  i: Integer;
+  ConfigOffset: DWord;
+  Train: TTrainConfig;
+  Databyte: Byte;
 begin
   if Node = GetPhysicalNode then
   begin
+    // Proxy Node User StateMachine
+    case Node^.iUserStateMachine of
+      STATE_SERVER_USER_START :
+          begin
+            if Node^.State and NS_PERMITTED <> 0 then
+            begin
+              GlobalTimer := 0;
+              if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
+                Node^.iUserStateMachine := STATE_SERVER_FIND_PROXY;
+            end;
+            Exit;
+          end;
+      STATE_SERVER_FIND_PROXY :
+          begin
+            if (ProxyNode.AliasID > 0) or (ProxyNode.ID[0] > 0) or (ProxyNode.ID[1] > 0) then
+              Node^.iUserStateMachine := STATE_SERVER_CREATE_DATABASE_NODES
+            else begin
+              if GlobalTimer > 10 then
+                Node^.iUserStateMachine := STATE_SERVER_USER_START       // Try again
+            end;
+            Exit;
+          end;
+      STATE_SERVER_CREATE_DATABASE_NODES :
+          begin
+            for i := 0 to 5 do
+              OPStackNode_Allocate;
 
+            { Need to build EEPROM Database HERE}
+            AppCallback_ReadConfiguration(0, 1, @DataByte);
+            if DataByte = 0 then
+              Node^.iUserStateMachine := STATE_SERVER_CREATE_DATABASE
+            else
+              Node^.iUserStateMachine := STATE_SERVER_PROXY_IDLE
+          end;
+      STATE_SERVER_CREATE_DATABASE :
+          begin
+            for i := 0 to 5 do
+            begin
+              ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + (i * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
+              case i of
+                0 : begin
+                      Train.RoadName := 'Rio Grande Southern' + #0;
+                      Train.TrainClass := 'K-27' + #0;
+                      Train.RoadNumber := '455' + #0;
+                      Train.Name[0] :=  #0;
+                      Train.Manufacturer := 'Blackstone Models' + #0;
+                      Train.Owner := 'Jim Kueneman' + #0;
+                      Train.TrainID := 455;
+                      Train.SpeedSteps := 28;
+                      Train.ShortLong := 1;
+                      WriteTrainConfiguration(ConfigOffset, Train);
+                    end;
+                1 : begin
+                      Train.RoadName := 'Rio Grande Southern' + #0;
+                      Train.TrainClass := 'K-27' + #0;
+                      Train.RoadNumber := '461' + #0;
+                      Train.Name[0] :=  #0;
+                      Train.Manufacturer := 'Blackstone Models' + #0;
+                      Train.Owner := 'Jim Kueneman' + #0;
+                      Train.TrainID := 461;
+                      Train.SpeedSteps := 28;
+                      Train.ShortLong := 1;
+                      WriteTrainConfiguration(ConfigOffset, Train);
+                    end;
+                  2 : begin
+                      Train.RoadName := 'Rio Grande Southern' + #0;
+                      Train.TrainClass := 'C-19' + #0;
+                      Train.RoadNumber := '40' + #0;
+                      Train.Name :=  'Sunrise Herald on Tender' + #0;
+                      Train.Manufacturer := 'Blackstone Models' + #0;
+                      Train.Owner := 'Jim Kueneman' + #0;
+                      Train.TrainID := 40;
+                      Train.SpeedSteps := 28;
+                      Train.ShortLong := 1;
+                      WriteTrainConfiguration(ConfigOffset, Train);
+                    end;
+                  3 : begin
+                      Train.RoadName := 'Rio Grande Southern' + #0;
+                      Train.TrainClass := 'C-19' + #0;
+                      Train.RoadNumber := '40' + #0;
+                      Train.Name :=  'Large Number on Tender ' + #0;
+                      Train.Manufacturer := 'Blackstone Models' + #0;
+                      Train.Owner := 'Jim Kueneman' + #0;
+                      Train.TrainID := 40;
+                      Train.SpeedSteps := 28;
+                      Train.ShortLong := 1;
+                      WriteTrainConfiguration(ConfigOffset, Train);
+                    end;
+                  4 : begin
+                      Train.RoadName := 'Denver Rio Grande & Western' + #0;
+                      Train.TrainClass := 'K-27' + #0;
+                      Train.RoadNumber := '452' + #0;
+                      Train.Name[0] :=  #0;
+                      Train.Manufacturer := 'Blackstone Models' + #0;
+                      Train.Owner := 'Jim Kueneman' + #0;
+                      Train.TrainID := 452;
+                      Train.SpeedSteps := 28;
+                      Train.ShortLong := 1;
+                      WriteTrainConfiguration(ConfigOffset, Train);
+                    end;
+                  5 : begin
+                      Train.RoadName := 'Rio Grande Southern' + #0;
+                      Train.TrainClass := 'Railbus' + #0;
+                      Train.RoadNumber := '5' + #0;
+                      Train.Name :=  'Later Build with Tourist Windows' + #0;
+                      Train.Manufacturer := 'Blackstone Models' + #0;
+                      Train.Owner := 'Jim Kueneman' + #0;
+                      Train.TrainID := 5;
+                      Train.SpeedSteps := 28;
+                      Train.ShortLong := 1;
+                      WriteTrainConfiguration(ConfigOffset, Train);
+                    end;
+                end
+            end;
+            DataByte := 1;                                                      // If Byte 0 in the Configmemory = 1 then we have built the default database
+            AppCallback_WriteConfiguration(0, 1, @DataByte);
+            Node^.iUserStateMachine := STATE_SERVER_PROXY_IDLE
+          end;
+      STATE_SERVER_PROXY_IDLE :
+          begin
+            // Waiting for something to do
+          end;
+    end;
   end else
   begin
-
+    case Node^.iUserStateMachine of
+      STATE_TRAIN_USER_START :
+            begin
+              if Node^.State and NS_PERMITTED <> 0 then
+              begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_USER_START'+LF); {$ENDIF}
+                Node^.iUserStateMachine := STATE_TRAIN_CREATE_UI
+              end
+            end;
+      STATE_TRAIN_CREATE_UI :       // This is really just syncronizes the NMRAnet Node and the database
+            begin
+              ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((Node^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
+              ReadTrainConfiguration(ConfigOffset, Train);
+              LoadNodeWithTrainConfig(Node, Train);
+              Node^.iUserStateMachine := STATE_TRAIN_IDLE
+            end;
+      STATE_TRAIN_IDLE :
+          begin
+            // Waiting for something to do
+          end;
+    end
   end
 end;
 
@@ -143,17 +273,8 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
-var
-  NodeData: PSampleUserNodeData;
 begin
-  // Assign the user data record to the Node for future use
-  Node^.UserData := @UserDataArray[Node^.iIndex];
-  Node^.iUserStateMachine := STATE_USER_START;
-
-  // Initialize the example data, evertime the node is reused!
-  NodeData := ExtractUserData(Node);
-  NodeData^.UserData1 := 0;
-  NodeData^.UserData2 := 0;
+  Node^.iUserStateMachine := 0;
 end;
 
 {$IFDEF SUPPORT_TRACTION}
@@ -167,7 +288,21 @@ end;
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 begin
-
+  {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('AppCallback_TractionProtocol'+LF); {$ENDIF}
+  case AMessage^.Buffer^.DataArray[0] of
+      TRACTION_CONTROLLER_CONFIG :
+          begin
+            case AMessage^.Buffer^.DataArray[1] of
+                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin end;
+                TRACTION_CONSIST_DETACH           : begin end;
+            end
+          end;
+      TRACTION_SPEED_DIR : begin end;
+      TRACTION_FUNCTION  : begin end;
+      TRACTION_E_STOP    : begin end
+  else begin
+    end;
+  end;
 end;
 
 // *****************************************************************************
@@ -262,7 +397,8 @@ end;
 // *****************************************************************************
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 begin
-
+  if NMRAnetUtilities_EqualEventID(EventID, @EVENT_IS_PROXY) then
+    ProxyNode := Source;
 end;
 
 // *****************************************************************************
@@ -392,7 +528,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_Timer_100ms;
 begin
-
+  Inc(GlobalTimer);
 end;
 
 // *****************************************************************************

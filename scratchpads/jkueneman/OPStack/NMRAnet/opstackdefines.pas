@@ -30,10 +30,9 @@ const
   STNIP_OFFSET_TRAINNAME    = 224;
   STNIP_OFFSET_MANUFACTURER = 256;
   STNIP_OFFSET_OWNER        = 288;
-  STNIP_OFFSET_FUNCTIONS    = 320;
-  STNIP_OFFSET_TRAIN_ID     = 324;
-  STNIP_OFFSET_SPEEDSTEPS   = 326;
-  STNIP_OFFSET_SHORT_LONG   = 327;
+  STNIP_OFFSET_TRAIN_ID     = 320;
+  STNIP_OFFSET_SHORT_LONG   = 322;
+  STNIP_OFFSET_SPEEDSTEPS   = 323;
   STNIP_PROTOCOL: TPIVProtocolValueArray = ($00, $00, $80, $00, $00, $00);
 
 type
@@ -440,7 +439,7 @@ type
     Manufacturer: TStnipBuffer;
     Owner: TStnipBuffer;
     TrainID: Word;
-    SpeedSteps: Byte;
+    SpeedStep: Byte;
     ShortLong: Byte;
   end;
 

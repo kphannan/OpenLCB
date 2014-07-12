@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="86">
+    <Units Count="87">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -74,7 +74,6 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_throttle"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1263"/>
@@ -90,6 +89,7 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_selector"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
         <TopLine Value="29"/>
@@ -747,6 +747,13 @@
         <CursorPos X="8" Y="192"/>
         <UsageCount Value="10"/>
       </Unit85>
+      <Unit86>
+        <Filename Value="../../Projects/dsPIC33EP256GP502_CAN_TrainDatabase/Templates/NodeID.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="22" Y="14"/>
+        <UsageCount Value="10"/>
+      </Unit86>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
