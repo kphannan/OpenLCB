@@ -25,7 +25,7 @@ object FormThrottle: TFormThrottle
     object GroupBoxControl: TGroupBox
       Left = 8
       Height = 377
-      Top = 80
+      Top = 72
       Width = 184
       Caption = 'Control'
       ClientHeight = 355
@@ -308,6 +308,18 @@ object FormThrottle: TFormThrottle
         )
         OnClick = RadioGroupShortLongClick
         TabOrder = 5
+      end
+      object LabelOlcbMessage: TLabel
+        Left = 0
+        Height = 171
+        Top = 0
+        Width = 177
+        Align = alTop
+        Alignment = taCenter
+        AutoSize = False
+        Caption = 'This train was allocated by the OpenLCB  Traction Protocol.   The train node has  all the technical information to run the  train. The throttle concerns itself with train names and information that is more convient for the user.'
+        ParentColor = False
+        WordWrap = True
       end
     end
     object ButtonShowHideAllocatePanel: TButton

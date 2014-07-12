@@ -31,8 +31,9 @@ const
   STNIP_OFFSET_MANUFACTURER = 256;
   STNIP_OFFSET_OWNER        = 288;
   STNIP_OFFSET_FUNCTIONS    = 320;
-  STNIP_OFFSET_ADDRESS      = 324;
+  STNIP_OFFSET_TRAIN_ID     = 324;
   STNIP_OFFSET_SPEEDSTEPS   = 326;
+  STNIP_OFFSET_SHORT_LONG   = 327;
   STNIP_PROTOCOL: TPIVProtocolValueArray = ($00, $00, $80, $00, $00, $00);
 
 type
@@ -429,6 +430,19 @@ const
 
   NMRA_LONGADDRESS_MASK_BYTE         = $C0;
   NMRA_LONGADDRESS_MASK_WORD         = $C000;
+
+type
+  TTrainConfig = record
+    RoadName: TStnipBuffer;
+    TrainClass: TStnipBuffer;
+    RoadNumber: TStnipBuffer;
+    Name: TStnipBuffer;
+    Manufacturer: TStnipBuffer;
+    Owner: TStnipBuffer;
+    TrainID: Word;
+    SpeedSteps: Byte;
+    ShortLong: Byte;
+  end;
 
 procedure OPStackDefines_Initialize;
   

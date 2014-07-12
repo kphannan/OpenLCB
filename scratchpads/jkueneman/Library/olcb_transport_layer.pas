@@ -248,13 +248,17 @@ type
     FFunctions: DWord;
     FSpeed: THalfFloat;
     FSpeedSteps: Byte;
+    FTrainConfigValid: Boolean;
   public
+    FTrainConfig: TTrainConfig;
     procedure CopyTo(EventTrainInfo: TNodeEventTrainInfo);
     property Speed: THalfFloat read FSpeed write FSpeed;
     property Functions: DWord read FFunctions write FFunctions;
     property ControllerInfo: TNodeInfo read FControllerInfo write FControllerInfo;
     property Address: Word read FAddress write FAddress;
     property SpeedSteps: Byte read FSpeedSteps write FSpeedSteps;
+    property TrainConfig: TTrainConfig read FTrainConfig write FTrainConfig;
+    property TrainConfigValid: Boolean read FTrainConfigValid write FTrainConfigValid;
   end;
 
   { TNodeEventIsTrain }
@@ -801,6 +805,18 @@ begin
   FSpeed := EventTrainInfo.Speed;
   FSpeedSteps := EventTrainInfo.SpeedSteps;
   FNodeInfo := EventTrainInfo.NodeInfo;
+  if EventTrainInfo.TrainConfigValid then
+  begin
+    FTrainConfig.RoadName := EventTrainInfo.TrainConfig.RoadName;
+    FTrainConfig.TrainClass := EventTrainInfo.TrainConfig.TrainClass;
+    FTrainConfig.RoadNumber := EventTrainInfo.TrainConfig.RoadNumber;
+    FTrainConfig.Name := EventTrainInfo.TrainConfig.Name;
+    FTrainConfig.Manufacturer := EventTrainInfo.TrainConfig.Manufacturer;
+    FTrainConfig.Owner := EventTrainInfo.TrainConfig.Owner;
+    FTrainConfig.TrainID := EventTrainInfo.TrainConfig.TrainID;
+    FTrainConfig.SpeedSteps := EventTrainInfo.TrainConfig.SpeedSteps;
+    FTrainConfig.ShortLong := EventTrainInfo.TrainConfig.ShortLong;
+  end;
 end;
 
 { TNodeTask }

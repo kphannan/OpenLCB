@@ -111,6 +111,7 @@ type
     GroupBoxConfiguration: TGroupBox;
     GroupBoxControl: TGroupBox;
     GroupBoxFunctions: TGroupBox;
+    LabelOlcbMessage: TLabel;
     LabelAddress: TLabel;
     LabelAllocatedAddress: TLabel;
     LabelMaxSpeed: TLabel;
@@ -187,6 +188,8 @@ type
     FFormSelector: TFormTrainSelector;
     FThrottleNodeInfo: TNodeInfo;
     FTimerType: TTimerType;
+    FTrainConfig: TTrainConfig;
+    FTrainConfigValid: Boolean;
     FTrainNodeInfo: TNodeInfo;
     FAllocationPanelToggleExpand: Boolean;
     FConfigurationViewer: TFormTrainConfigEditor;
@@ -200,6 +203,7 @@ type
     procedure RunTractionQueryFunctions(NodeInfo: TNodeInfo; Address: DWord);
     procedure RunTractionQuerySpeed(NodeInfo: TNodeInfo);
     procedure SetTimerType(AValue: TTimerType);
+    procedure SetTrainConfigValid(AValue: Boolean);
   protected
     procedure CreateFunctionUIButton(ButtonLabel: string; Level: Integer; ButtonAction: TAction; ButtonIndex: Integer);
     procedure CreateFunctionUIGroup(GroupLabel: string; Level: Integer);
@@ -216,6 +220,8 @@ type
     property DefaultFdiPath: string read FDefaultFdiPath write FDefaultFdiPath;
     property FormSelector: TFormTrainSelector read FFormSelector write FFormSelector;
     property TimerType: TTimerType read FTimerType write SetTimerType;
+    property TrainConfig: TTrainConfig read FTrainConfig write FTrainConfig;
+    property TrainConfigValid: Boolean read FTrainConfigValid write SetTrainConfigValid;
   public
     { public declarations }
     property TrainNodeInfo: TNodeInfo read FTrainNodeInfo write FTrainNodeInfo;
@@ -390,6 +396,7 @@ begin
   FCurrentFunctions := 0;
   FFormSelector := nil;
   DefaultFdiPath := '';
+  TrainConfigValid := False;
 end;
 
 procedure TFormThrottle.ActionToggleAllocationPanelExecute(Sender: TObject);
@@ -416,6 +423,7 @@ end;
 procedure TFormThrottle.ActionAllocationByAddressExecute(Sender: TObject);
 begin
   NodeThread.AddTask(TNodeTaskAllocateTrainByAddress.Create(FThrottleNodeInfo, NullNodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN_BY_ADDRESS, Self, SpinEditAddress.Value, SpeedStepRadioToSpeedStep, RadioGroupShortLong.ItemIndex = 1));
+  TrainConfigValid := False;
 end;
 
 procedure TFormThrottle.ActionAllocationByListExecute(Sender: TObject);
@@ -436,9 +444,13 @@ begin
     begin
       Event := TNodeEventSimpleTrainNodeInfo( FormSelector.TreeViewTrainList.Selected.Data);
       NodeThread.AddTask(TNodeTaskAllocateTrain.Create(ThrottleNodeInfo, Event.NodeInfo, STATE_THROTTLE_ALLOCATE_TRAIN, Self, 0, 0, False));
-      SpinEditAddress.Text := '';
-      RadioGroupSpeedStep.ItemIndex := -1;
-      LabelAllocatedAddress.Caption := FormSelector.TreeViewTrainList.Selected.Text;
+      TrainConfigValid := True;
+      FTrainConfig.RoadName := Event.RoadName;
+      FTrainConfig.TrainClass := Event.TrainClass;
+      FTrainConfig.RoadNumber := Event.RoadNumber;
+      FTrainConfig.Name := Event.TrainName;
+      FTrainConfig.Manufacturer := Event.Manufacturer;
+      FTrainConfig.Owner := Event.Owner;
     end;
   finally
     FormSelector.Close;
@@ -470,6 +482,7 @@ end;
 
 procedure TFormThrottle.ActionAllocationReleaseExecute(Sender: TObject);
 begin
+  TrainConfigValid := False;
   NodeThread.AddTask( TNodeTaskReleaseController.Create(ThrottleNodeInfo, TrainNodeInfo, STATE_THROTTLE_RELEASE_CONTROLLER, Self));
 end;
 
@@ -806,6 +819,16 @@ begin
     FTimerType:=AValue;
     ActionAllocationByList.Enabled := AValue = tt_None;
   end;
+end;
+
+procedure TFormThrottle.SetTrainConfigValid(AValue: Boolean);
+begin
+  FTrainConfigValid := AValue;
+  RadioGroupSpeedStep.Visible := not TrainConfigValid;
+  LabelAddress.Visible := not TrainConfigValid;
+  SpinEditAddress.Visible := not TrainConfigValid;
+  RadioGroupShortLong.Visible := not TrainConfigValid;
+  LabelOlcbMessage.Visible := TrainConfigValid;
 end;
 
 procedure TFormThrottle.RunTractionSpeed(NodeInfo: TNodeInfo; EmergencyStop: Boolean);
@@ -1234,15 +1257,22 @@ begin
   RadioGroupSpeedStep.Enabled := TrainIsNull;
   SpinEditAddress.Enabled := TrainIsNull;
   RadioGroupShortLong.Enabled := TrainIsNull;
-  if TrainIsNull then
-    LabelAllocatedAddress.Caption := STR_UNASSIGNED
-  else begin
-    if SpinEditAddress.Text <> '' then
-      LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value);
-  end;
 
-  Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
-  UpdateAddressRange;
+  if not TrainConfigValid then
+  begin
+    if TrainIsNull then
+      LabelAllocatedAddress.Caption := STR_UNASSIGNED
+    else begin
+      if SpinEditAddress.Text <> '' then
+        LabelAllocatedAddress.Caption := IntToStr(SpinEditAddress.Value);
+    end;
+    Caption := 'Open LCB Throttle - ' + LabelAllocatedAddress.Caption;
+    UpdateAddressRange;
+  end else
+  begin
+    LabelAllocatedAddress.Caption := 'N/A';
+    Caption := 'Open LCB Throttle - ' + TrainConfig.RoadName + ' ' + TrainConfig.RoadNumber;
+  end;
 
   if not ThrottleIsNull then
     UpdateStatus(0, 'Throttle: 0x' + IntToHex(ThrottleNodeInfo.AliasID, 4) + ' [0x' + NodeIDToDotHex(ThrottleNodeInfo.ID)  + ']')

@@ -481,6 +481,7 @@ begin
   Markup.IgnoreKeywords := False;
 
   TrainNodeList := TTrainNodeList.Create;
+
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
@@ -551,6 +552,8 @@ begin
       NodeThread.OnLogMessages := @MessageLogging
     else
       NodeThread.OnLogMessages := nil;
+
+    template_userstatemachine.DatabaseFile := ConfigurationFile;
 
     ShownOnce := True;
   end;
@@ -658,13 +661,15 @@ begin
       if TObject( EventList[i]) is TNodeEventTrainInfo then
       begin
         EventTrainInfo := TNodeEventTrainInfo( EventList[i]);
-        TrainForm := TrainNodeList.Find(EventTrainInfo.Address, EventTrainInfo.SpeedSteps);
-        if Assigned(TrainForm) then
-          TrainForm.EventTrainInfo(EventTrainInfo)
-        else begin
-          TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
-          TrainForm.EventTrainInfo(EventTrainInfo);
+        TrainForm := TrainNodeList.FindByNodeInfo(EventTrainInfo.NodeInfo);
+        if not Assigned(TrainForm) then
+        begin
+          TrainForm := TrainNodeList.CreateTrain(ImageList16x16);                // Database Trains ar all unique regardless of attributes
+          TrainForm.TrainInfo := EventTrainInfo.NodeInfo;
         end;
+
+        if TrainForm <> nil then
+          TrainForm.EventTrainInfo(EventTrainInfo);
       end;
       Event := TNodeEvent( EventList[i]);
       FreeAndNil(Event);

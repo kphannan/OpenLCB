@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, ComCtrls,
   StdCtrls,
-  template_userstatemachine, Float16, opstackdefines, olcb_transport_layer;
+  template_userstatemachine, Float16, opstackdefines, olcb_transport_layer, nmranetutilities;
 
 type
   TFormIsTrainNode = class;
@@ -33,6 +33,7 @@ type
     procedure Clear; override;
     procedure CloseTrain(Train: TFormIsTrainNode);
     function Find(Address: Word; SpeedSteps: Byte): TFormIsTrainNode;
+    function FindByNodeInfo(TestInfo: TNodeInfo): TFormIsTrainNode;
     procedure HideAll;
     procedure CloseAll;
     procedure ShowAll;
@@ -69,6 +70,7 @@ type
     FImageList16x16: TImageList;
     FOnTrainClose: TOnTrainEvent;
     FOnTrainHide: TOnTrainEvent;
+    FTrainInfo: TNodeInfo;
     FTrainState: TNodeEventTrainInfo;
     { private declarations }
   public
@@ -80,6 +82,7 @@ type
     property OnTrainHide: TOnTrainEvent read FOnTrainHide write FOnTrainHide;
     property OnTrainClose: TOnTrainEvent read FOnTrainClose write FOnTrainClose;
     property TrainState: TNodeEventTrainInfo read FTrainState write FTrainState;
+    property TrainInfo: TNodeInfo read FTrainInfo write FTrainInfo;
   end;
 
 var
@@ -198,6 +201,21 @@ begin
   end;
 end;
 
+function TTrainNodeList.FindByNodeInfo(TestInfo: TNodeInfo): TFormIsTrainNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to Count - 1 do
+  begin
+    if NMRAnetUtilities_EqualNodeIDInfo(TestInfo, Trains[i].FTrainInfo) then
+    begin
+      Result := Trains[i];
+      Break
+    end;
+  end;
+end;
+
 function TTrainNodeList.GetTrains(Index: Integer): TFormIsTrainNode;
 begin
   Result := TFormIsTrainNode( Items[Index]);
@@ -291,6 +309,18 @@ begin
   LabelSpeedSteps.Caption := IntToStr(TrainState.SpeedSteps);
   LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(TrainState.Speed)));
   LabelThrottleAlias.Caption := '0x' + IntToHex(TrainState.ControllerInfo.AliasID, 2);
+
+  if (TrainState.TrainConfig.RoadName <> '') and (TrainState.TrainConfig.RoadNumber <> '') then
+    Caption := TrainState.TrainConfig.RoadName + ' ' + TrainState.TrainConfig.RoadNumber
+  else
+  if TrainState.TrainConfig.RoadName <> '' then
+    Caption := TrainState.TrainConfig.RoadName
+  else begin
+    if TrainState.TrainConfig.ShortLong = 0 then
+      Caption := 'TrainID: ' + IntToStr(TrainState.TrainConfig.TrainID) + ' [S]'
+    else
+      Caption := 'TrainID: ' + IntToStr(TrainState.TrainConfig.TrainID) + ' [L]'
+  end;
 end;
 
 end.

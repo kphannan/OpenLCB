@@ -291,6 +291,18 @@ begin
   LabelSpeedSteps.Caption := IntToStr(TrainState.SpeedSteps);
   LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(TrainState.Speed)));
   LabelThrottleAlias.Caption := '0x' + IntToHex(TrainState.ControllerInfo.AliasID, 2);
+
+  if (TrainState.TrainConfig.RoadName <> '') and (TrainState.TrainConfig.RoadNumber <> '') then
+    Caption := TrainState.TrainConfig.RoadName + ' ' + TrainState.TrainConfig.RoadNumber
+  else
+  if TrainState.TrainConfig.RoadName <> '' then
+    Caption := TrainState.TrainConfig.RoadName
+  else begin
+    if TrainState.TrainConfig.ShortLong = 0 then
+      Caption := 'TrainID: ' + IntToStr(TrainState.TrainConfig.TrainID) + ' [S]'
+    else
+      Caption := 'TrainID: ' + IntToStr(TrainState.TrainConfig.TrainID) + ' [L]'
+  end;
 end;
 
 end.

@@ -22,6 +22,7 @@ uses
   opstackbuffers,
   nmranetutilities,
   template_userstatemachine,
+  template_configuration,
   opstacktypes;
 
 const
@@ -32,7 +33,65 @@ function TractionProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend, Next
 procedure TractionProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
 
+// Utility Functions
+procedure ZeroTrainConfiguration(var Train: TTrainConfig);
+procedure WriteTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig);
+procedure ReadTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig);
+procedure LoadNodeWithTrainConfig(Node: PNMRANetNode; var Train: TTrainConfig);
+
 implementation
+
+procedure ZeroTrainConfiguration(var Train: TTrainConfig);
+var
+  i: Integer;
+begin
+  for i := 0 to STNIP_MAX_STR_LEN - 1 do
+  begin
+    Train.RoadName[i] := #0;
+    Train.TrainClass[i] := #0;
+    Train.RoadNumber[i] := #0;
+    Train.Name[i] := #0;
+    Train.Manufacturer[i] := #0;
+    Train.Owner[i] := #0;
+  end;
+  Train.TrainID := 0;
+  Train.SpeedSteps := 0;
+  Train.ShortLong := 0;
+end;
+
+procedure WriteTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig);
+begin
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, strlen(Train.RoadName) + 1, @Train.RoadName);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, strlen(Train.TrainClass) + 1, @Train.TrainClass);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNUMBER, strlen(Train.RoadNumber) + 1, @Train.RoadNumber);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, strlen(Train.Name) + 1, @Train.Name);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, strlen(Train.Manufacturer) + 1, @Train.Manufacturer);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, strlen(Train.Owner) + 1, @Train.Owner);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID, 2, @Train.TrainID);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @Train.SpeedSteps);
+  AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SHORT_LONG, 1, @Train.ShortLong);
+end;
+
+procedure ReadTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig);
+begin
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, STNIP_MAX_STR_LEN, @Train.RoadName);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, STNIP_MAX_STR_LEN, @Train.TrainClass);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_ROADNUMBER, STNIP_MAX_STR_LEN, @Train.RoadNumber);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, STNIP_MAX_STR_LEN, @Train.Name);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, STNIP_MAX_STR_LEN, @Train.Manufacturer);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, STNIP_MAX_STR_LEN, @Train.Owner);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_TRAIN_ID, 2, @Train.TrainID);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @Train.SpeedSteps);
+  AppCallback_ReadConfiguration(ConfigOffset + STNIP_OFFSET_SHORT_LONG, 1, @Train.ShortLong);
+end;
+
+procedure LoadNodeWithTrainConfig(Node: PNMRANetNode; var Train: TTrainConfig);
+begin
+  Node^.TrainData.Address := Train.TrainID;
+  if Train.ShortLong = 1 then
+    Node^.TrainData.Address := Node^.TrainData.Address or $C000;
+  Node^.TrainData.SpeedSteps := Train.SpeedSteps;
+end;
 
 procedure TractionProtocolSpeedDirReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
