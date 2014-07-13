@@ -6,7 +6,7 @@ Value=-1
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=UltimateCommandStation.mpas
+Value=Templates\template_userstatemachine.mpas
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -73,23 +73,12 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=16
+Count=5
 File0=UltimateCommandStation.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=Templates\template_buffers.mpas
-File3=..\..\NMRAnet\opstackcore_configmem.mpas
-File4=..\..\NMRAnet\opstacknode.mpas
-File5=..\..\NMRAnet\opstackcore_stnip.mpas
-File6=Templates\template_configmem.mpas
-File7=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
-File8=..\..\NMRAnet\opstackcore_datagram.mpas
-File9=..\..\NMRAnet\opstackcore.mpas
-File10=Templates\template_vnode.mpas
-File11=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\template_configuration.mpas
-File12=Templates\MCU_Setup_dsPIC33EP256GP502.mpas
-File13=..\..\NMRAnet\opstackcore_traction.mpas
-File14=..\..\NMRAnet\opstackdefines.mpas
-File15=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\_25AAxxxx.mpas
+File3=..\..\NMRAnet\opstackcore_traction.mpas
+File4=..\..\NMRAnet\opstackcore_traction_proxy.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -102,16 +91,16 @@ File1=Templates\NodeID.inc
 Count=12
 Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
-Path2=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_CommandStation\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_CommandStation\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\
 Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_WiFi_dsPIC\Uses\
-Path5=E:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_CommandStation\Templates\
-Path6=E:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=E:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
-Path8=E:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
-Path9=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path10=E:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path11=E:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP256GP502_CAN_CommandStation\Templates\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\dsPIC33_CAN\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\Library\NMRA_DCC\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path11=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_25AAxxxx_SPI\
 [HEADER_PATH]
 Count=0
 [HEADERS]

@@ -61,6 +61,10 @@ procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: PO
   function OPStackNode_FindByID(var ID: TNodeID): PNMRAnetNode; external;
   procedure TractionProxyProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
   procedure TractionProtocolReply(Node: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage); external;
+  procedure ZeroTrainConfiguration(var Train: TTrainConfig);  external;
+  procedure WriteTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig); external;
+  procedure ReadTrainConfiguration(ConfigOffset: DWord; var Train: TTrainConfig); external;
+  procedure LoadNodeWithTrainConfig(Node: PNMRANetNode; var Train: TTrainConfig); external;
 
 implementation
 
@@ -237,8 +241,10 @@ var
   TrainID: Word;
   TrainNode: PNMRAnetNode;
   ConfigOffset: DWord;
-  Info: string[STNIP_MAX_STR_LEN];
-  Str1: array[0..5] of Char;
+ // Info: string[STNIP_MAX_STR_LEN];
+ // Str1: array[0..5] of Char;
+  Train: TTrainConfig;
+  SpeedSteps: Byte;
 begin
   {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('AppCallback_TractionProxyProtocol'+LF); {$ENDIF}
   // Only the main physical node is the proxy and can reply to these messages
@@ -247,54 +253,50 @@ begin
     case AMessage^.Buffer^.DataArray[0] of
         TRACTION_PROXY_ALLOCATE :
           begin {$IFDEF DEBUG_TRACTION_PROXY_PROTOCOL} UART1_Write_Text('TRACTION_PROXY_ALLOCATE'+LF); {$ENDIF}
+            // Extract Train ID
             TrainID := (AMessage^.Buffer^.DataArray[2] shl 8) or AMessage^.Buffer^.DataArray[3];
+            // Extract Speed Steps
+            if AMessage^.Buffer^.DataArray[1] and TRACTION_PROXY_TECH_ID_DCC <> 0 then
+              SpeedSteps := AMessage^.Buffer^.DataArray[4]
+            else
+              SpeedSteps := 28;
             TrainNode := OPStackNode_FindByTrainID(TrainID);
             if TrainNode <> nil then
               TrainNode^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY     // Node with this address exists, use it and set the state to send a Allocate Reply
             else begin
               TrainNode := OPStackNode_Allocate;
               TrainNode^.TrainData.State := TrainNode^.TrainData.State or TS_SEND_PROXY_ALLOCATE_REPLY;
-           end;
-           
-           if TrainNode <> nil then
+            end;
+          
+          
+            if TrainNode <> nil then
             begin
               // This node will now start and log in, then it will reply to the Allocate Message
               TrainNode^.TrainData.Address := TrainID;
+              TrainNode^.TrainData.SpeedSteps := SpeedSteps;
               if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_TECH_ID_DCC then
-                TrainNode^.TrainData.SpeedSteps := AMessage^.Buffer^.DataArray[4];
+               TrainNode^.TrainData.SpeedSteps := AMessage^.Buffer^.DataArray[4];
               TrainNode^.TrainData.LinkedNode.ID[0] := AMessage^.Source.ID[0];      // Store the node that sent the Allocate message
               TrainNode^.TrainData.LinkedNode.ID[1] := AMessage^.Source.ID[1];
               TrainNode^.TrainData.LinkedNode.AliasID := AMessage^.Source.AliasID;
-              
+
               ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
               
-              if TrainNode^.TrainData.Address and $C000 <> 0 then
-              begin
-                WordToStr(TrainNode^.TrainData.Address and not $C000, Str1);
-                Info := 'Address: ' + Str1 + ' [L]' + #0;
-              end else
-              begin
-                WordToStr(TrainNode^.TrainData.Address, Str1);
-                Info := 'Address: ' + Str1 + ' [S]' + #0;
-              end;
+              ZeroTrainConfiguration(Train);
+              Train.RoadName := 'Address: ';
+              WordToStr(TrainNode^.TrainData.Address and not $C000, Train.RoadNumber);
+              Train.TrainClass := '';
+              Train.Name := 'Transient DCC Node';
+              Train.Manufacturer := 'Mustangpeak';
+              Train.Owner := 'NMRA';
+              Train.TrainID := TrainNode^.TrainData.Address;
+              Train.SpeedStep := TrainNode^.TrainData.SpeedSteps;
+              if TrainNode^.TrainData.Address and $C000 <> 0 then Train.ShortLong := 1 else Train.ShortLong := 0;
 
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNAME, strlen(Info) + 1, @Info);
-
-              Info := 'NMRA DCC Basic Train';
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_TRAINNAME, strlen(Info) + 1, @Info);
-
-              Info[0] := #0;
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_CLASS, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_MANUFACTURER, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_OWNER, 1, @Info);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ROADNUMBER, 1, @Info);
-
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_ADDRESS, 2, @TrainNode^.TrainData.Address);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_FUNCTIONS, 4, @TrainNode^.TrainData.Functions);
-              AppCallback_WriteConfiguration(ConfigOffset + STNIP_OFFSET_SPEEDSTEPS, 1, @TrainNode^.TrainData.SpeedSteps);
+              WriteTrainConfiguration(ConfigOffset, Train);
             end;
-          end;
-    end
+        end;
+    end; // case
   end;
 end;
 

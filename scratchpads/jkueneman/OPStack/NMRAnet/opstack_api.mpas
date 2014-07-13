@@ -60,6 +60,8 @@ function TrySendTractionEmergencyStop(var Source: TNodeInfo; var Dest: TNodeInfo
 function TrySendTractionProxyManage(var Source: TNodeInfo; var Dest: TNodeInfo; Reserve: Boolean): Boolean;
 function TrySendTractionProxyAllocate(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; TrainID: Word; Param0, Param1: Byte): Boolean;
 function TrySendTractionProxyAllocateReply(var Source: TNodeInfo; var Dest: TNodeInfo; TechnologyID: Byte; var AllocatedNodeID: TNodeInfo; TrainID: Word): Boolean;
+function TrySendTractionProxyAttach(var Source: TNodeInfo; var Dest: TNodeInfo; TrainID: Word; Param0, Param1: Byte; DoAttach: Boolean): Boolean;
+function TrySendTractionProxyAttachReply(var Source: TNodeInfo; var Dest: TNodeInfo; ReplyCode: Byte): Boolean;
 function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;
 {$ENDIF}
 // Configuration Memeory
@@ -561,6 +563,48 @@ begin
       Result := True;
     end
   end
+end;
+
+function TrySendTractionProxyAttach(var Source: TNodeInfo; var Dest: TNodeInfo; TrainID: Word; Param0, Param1: Byte; DoAttach: Boolean): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_PROTOCOL, Source, Dest, False) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 5;
+      if DoAttach then
+        NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_ATTACH
+      else
+        NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_DETACH;
+      NewMessage^.Buffer^.DataArray[1] := Hi(TrainID);
+      NewMessage^.Buffer^.DataArray[2] := Lo(TrainID);
+      NewMessage^.Buffer^.DataArray[3] := Param0;
+      NewMessage^.Buffer^.DataArray[4] := Param1;
+      OutgoingMessage(NewMessage, True);
+      Result := True;
+    end;
+  end;
+end;
+
+function TrySendTractionProxyAttachReply(var Source: TNodeInfo; var Dest: TNodeInfo; ReplyCode: Byte): Boolean;
+var
+  NewMessage: POPStackMessage;
+begin
+  Result := False;
+  if IsOutgoingBufferAvailable then
+  begin
+    if OPStackBuffers_AllocateOPStackMessage(NewMessage, MTI_TRACTION_PROXY_REPLY, Source, Dest, False) then
+    begin
+      NewMessage^.Buffer^.DataBufferSize := 2;
+      NewMessage^.Buffer^.DataArray[0] := TRACTION_PROXY_ATTACH_REPLY;
+      NewMessage^.Buffer^.DataArray[1] := ReplyCode;
+      OutgoingMessage(NewMessage, True);
+      Result := True;
+    end;
+  end;
 end;
 
 function TrySendTractionProxyManageReply(var Source: TNodeInfo; var Dest: TNodeInfo; ResultFlag: Word): Boolean;

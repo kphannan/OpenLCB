@@ -221,6 +221,7 @@ const
 
   TRACTION_PROXY_ALLOCATE            = $01;
   TRACTION_PROXY_ATTACH              = $02;
+  TRACTION_PROXY_ATTACH_REPLY        = $02;
   TRACTION_PROXY_DETACH              = $03;
   TRACTION_PROXY_MANAGE              = $80;
   TRACTION_PROXY_MANAGE_RESERVE      = $01;

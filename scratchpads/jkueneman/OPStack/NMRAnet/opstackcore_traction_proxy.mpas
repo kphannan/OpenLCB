@@ -16,6 +16,7 @@ uses
   opstackcore_basic,
   nmranetdefines,
   opstackdefines,
+  opstack_api,
   template_userstatemachine,
   nmranetutilities,
   opstackbuffers;
@@ -79,7 +80,23 @@ begin
   MessageToSend := nil;
   {$IFDEF SUPPORT_TRACTION_PROXY}
   case NextMessage^.Buffer^.DataArray[0] of
-    TRACTION_PROXY_MANAGE : begin Result := TractionProxyProtocolManage(DestNode, MessageToSend, NextMessage); Exit; end
+    TRACTION_PROXY_MANAGE : begin
+                              Result := TractionProxyProtocolManage(DestNode, MessageToSend, NextMessage);
+                              Exit;
+                            end;
+    TRACTION_PROXY_ATTACH : begin
+                              DestNode^.State := DestNode^.State or NS_PROXY_ATTACHED;
+                              DestNode^.TrainData.Address := Word( NextMessage^.Buffer^.DataArray[1] shl 8) or Word( NextMessage^.Buffer^.DataArray[2]);
+                              DestNode^.TrainData.SpeedSteps := NextMessage^.Buffer^.DataArray[3];
+                              if TrySendTractionProxyAttachReply(NextMessage^.Dest, NextMessage^.Source, TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK) then
+                                Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                              Exit;
+                            end;
+    TRACTION_PROXY_DETACH : begin
+                              DestNode^.State := DestNode^.State and not NS_PROXY_ATTACHED;
+                              Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                              Exit;
+                            end
   else begin
     AppCallback_TractionProxyProtocol(DestNode, NextMessage, NMRAnetUtilities_EqualNodeIDInfo(DestNode^.Info, NextMessage^.Source));
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);

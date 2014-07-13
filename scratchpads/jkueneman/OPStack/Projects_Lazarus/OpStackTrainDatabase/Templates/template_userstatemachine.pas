@@ -103,6 +103,20 @@ const
   STATE_TRAIN_USER_START           = 0;
   STATE_TRAIN_CREATE_UI            = 1;
   STATE_TRAIN_IDLE                 = 2;
+  STATE_PROXY_TRACTION_MESSAGE     = 3;
+
+  STATE_PROXY_TRACTION_MESSAGE_START          = 0;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_RESERVE   = 1;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_ATTACH    = 2;
+  STATE_PROXY_TRACTION_MESSAGE_SEND           = 3;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH    = 4;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_RELEASE   = 5;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_DONE      = 6;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_WAIT      = 7;
+
+  STATE_PROXY_TRACTION_MESSAGE_SEND_SPEED     = 0;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_ESTOP     = 1;
+  STATE_PROXY_TRACTION_MESSAGE_SEND_FUNCTION  = 2;
 
 var
   ProxyNode: TNodeInfo;
@@ -142,6 +156,8 @@ var
   EventTrainInfo: TNodeEventTrainInfo;
   ConfigOffset: DWord;
   Train: TTrainConfig;
+  TaskExternalProxy: TNodeTaskExternalProxy;
+  Task: TNodeTask;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -261,6 +277,12 @@ begin
       STATE_SERVER_PROXY_IDLE :
           begin
             // Waiting for something to do
+            if Assigned(Node^.UserData) then
+            begin
+              Task := TNodeTask( Node^.UserData);
+              Node^.iUserStateMachine := Task.iStateMachine;                    // Start the new task...
+            end;
+            Exit;
           end;
     end;
   end else
@@ -287,6 +309,91 @@ begin
       STATE_TRAIN_IDLE :
           begin
             // Waiting for something to do
+            if Assigned(Node^.UserData) then
+            begin
+              Task := TNodeTask( Node^.UserData);
+              Node^.iUserStateMachine := Task.iStateMachine;                    // Start the new task...
+            end;
+            Exit;
+          end;
+      STATE_PROXY_TRACTION_MESSAGE :
+          begin
+            TaskExternalProxy := TNodeTaskExternalProxy( Node^.UserData);
+            case TaskExternalProxy.iSubStateMachine of
+                STATE_PROXY_TRACTION_MESSAGE_START :
+                    begin
+                      TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_RESERVE;
+                      Exit;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND_RESERVE :
+                    begin
+                      if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
+                      begin
+                        TaskExternalProxy.Watchdog := 0;
+                        TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_WAIT;
+                      end;
+                      Exit;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND_ATTACH :
+                    begin
+                      if TrySendTractionProxyAttach(Node^.Info, ProxyNode, Node^.TrainData.Address, Node^.TrainData.SpeedSteps, 0, True) then
+                      begin
+                        TaskExternalProxy.Watchdog := 0;
+                        TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_WAIT;
+                      end;
+                      Exit;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND :
+                    begin
+                      case TaskExternalProxy.iSendStateMachine of
+                        STATE_PROXY_TRACTION_MESSAGE_SEND_SPEED  :
+                            begin
+                              if TrySendTractionSpeedSet(Node^.Info, ProxyNode, TaskExternalProxy.SpeedDir) then
+                                TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH;
+                              Exit;
+                            end;
+                        STATE_PROXY_TRACTION_MESSAGE_SEND_ESTOP :
+                            begin
+                              if TrySendTractionEmergencyStop(Node^.Info, ProxyNode) then
+                                TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH;
+                              Exit;
+                            end;
+                        STATE_PROXY_TRACTION_MESSAGE_SEND_FUNCTION :
+                            begin
+                              if TrySendTractionFunctionSet(Node^.Info, ProxyNode, TaskExternalProxy.FunctionAddress, TaskExternalProxy.FunctionValue) then
+                                TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH;
+                              Exit;
+                            end
+                      else begin
+                          TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH;
+                          Exit;
+                        end
+                      end;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH :
+                    begin
+                      if TrySendTractionProxyAttach(Node^.Info, ProxyNode, Node^.TrainData.Address, Node^.TrainData.SpeedSteps, 0, False) then
+                        TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_RELEASE;
+                      Exit;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND_RELEASE :
+                    begin
+                      if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
+                        TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DONE;
+                      Exit;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND_DONE :
+                    begin
+                      UnLinkFirstTaskFromNode(Node, True);
+                      Node^.iUserStateMachine := STATE_TRAIN_IDLE;
+                    end;
+                STATE_PROXY_TRACTION_MESSAGE_SEND_WAIT :
+                    begin
+                      if TaskExternalProxy.Watchdog > 30 then
+                        TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DETACH;
+                      Exit;
+                    end;
+            end
           end;
     end
   end
@@ -318,6 +425,7 @@ end;
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
 var
   EventTrainInfo: TNodeEventTrainInfo;
+  TaskExternalProxy: TNodeTaskExternalProxy;
 begin
   {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('AppCallback_TractionProtocol'+LF); {$ENDIF}
 
@@ -328,20 +436,55 @@ begin
   NodeThread.AddEvent(EventTrainInfo);
 
   case AMessage^.Buffer^.DataArray[0] of
+      TRACTION_SPEED_DIR : begin
+                             TaskExternalProxy := TNodeTaskExternalProxy.Create(Node^.Info, ProxyNode, STATE_PROXY_TRACTION_MESSAGE, STATE_PROXY_TRACTION_MESSAGE_SEND_SPEED, nil);
+                             TaskExternalProxy.SpeedDir := (Word( AMessage^.Buffer^.DataArray[1]) shl 8) or Word( AMessage^.Buffer^.DataArray[2]);
+                             NodeThread.AddTask(TaskExternalProxy);
+                             Exit;
+                           end;
+      TRACTION_FUNCTION  : begin
+                             TaskExternalProxy := TNodeTaskExternalProxy.Create(Node^.Info, ProxyNode, STATE_PROXY_TRACTION_MESSAGE, STATE_PROXY_TRACTION_MESSAGE_SEND_FUNCTION, nil);
+                             TaskExternalProxy.FunctionAddress := (DWord( AMessage^.Buffer^.DataArray[1]) shl 16) or (DWord( AMessage^.Buffer^.DataArray[2]) shl 8) or DWord( AMessage^.Buffer^.DataArray[3]);
+                             TaskExternalProxy.FunctionValue := (Word( AMessage^.Buffer^.DataArray[4]) shl 8) or Word( AMessage^.Buffer^.DataArray[5]) ;
+                             NodeThread.AddTask(TaskExternalProxy);
+                             Exit;
+                           end;
+      TRACTION_E_STOP    : begin
+                             TaskExternalProxy := TNodeTaskExternalProxy.Create(Node^.Info, ProxyNode, STATE_PROXY_TRACTION_MESSAGE, STATE_PROXY_TRACTION_MESSAGE_SEND_ESTOP, nil);
+                             NodeThread.AddTask(TaskExternalProxy);
+                             Exit;
+                           end;
+      TRACTION_MANAGE :
+          begin
+            case AMessage^.Buffer^.DataArray[1] of
+                TRACTION_MANAGE_RESERVE : begin Exit; end;
+                TRACTION_MANAGE_RELEASE : begin Exit; end
+            else
+              Exit;
+            end
+          end;
       TRACTION_CONTROLLER_CONFIG :
           begin
             case AMessage^.Buffer^.DataArray[1] of
-                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin end;
-                TRACTION_CONSIST_DETACH           : begin end;
+                TRACTION_CONTROLLER_CONFIG_ASSIGN : begin Exit; end;
+                TRACTION_CONSIST_DETACH           : begin Exit; end
+            else
+              Exit;
             end
           end;
-      TRACTION_SPEED_DIR : begin end;
-      TRACTION_FUNCTION  : begin end;
-      TRACTION_E_STOP    : begin end
-  else begin
-    end;
+      TRACTION_CONSIST :
+          begin
+            case AMessage^.Buffer^.DataArray[1] of
+                TRACTION_CONSIST_ATTACH : begin  Exit; end;
+                TRACTION_CONSIST_DETACH : begin Exit; end;
+                TRACTION_CONSIST_QUERY  : begin Exit; end
+            else
+              Exit;
+            end;
+          end
+  else
+    Exit;
   end;
-
 end;
 
 // *****************************************************************************
@@ -383,8 +526,47 @@ end;
 //     Description : Called in response to a Traction Proxy request
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  TaskExternalProxy: TNodeTaskExternalProxy;
 begin
-
+  TaskExternalProxy := TNodeTaskExternalProxy( Node^.UserData);
+  case AMessage^.Buffer^.DataArray[0] of
+    TRACTION_PROXY_MANAGE :
+        begin
+          case AMessage^.Buffer^.DataArray[1] of
+            TRACTION_PROXY_MANAGE_RESERVE :
+                begin
+                  if Node^.iUserStateMachine = STATE_PROXY_TRACTION_MESSAGE then
+                  begin
+                    if AMessage^.Buffer^.DataArray[2] = TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK then
+                      TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_ATTACH
+                    else
+                      TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_DONE
+                  end;
+                  Exit;
+                end
+          else
+            Exit;
+          end;
+        end;
+    TRACTION_PROXY_ALLOCATE :
+        begin
+           Exit;
+        end;
+    TRACTION_PROXY_ATTACH :
+        begin
+          if Node^.iUserStateMachine = STATE_PROXY_TRACTION_MESSAGE then
+          begin
+            if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK then
+              TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND
+            else
+              TaskExternalProxy.iSubStateMachine := STATE_PROXY_TRACTION_MESSAGE_SEND_RELEASE;
+          end;
+          Exit;
+        end
+  else
+    Exit
+  end;
 end;
 {$ENDIF}
 
@@ -517,13 +699,8 @@ end;
 //                   virtual nodes
 // *****************************************************************************
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
-var
-  Train: TTrainConfig;
-  ConfigOffset: DWord;
 begin
-  ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((Node^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
-  ReadTrainConfiguration(ConfigOffset, Train);
-  LoadNodeWithTrainConfig(Node, Train);
+
 end;
 
 // *****************************************************************************

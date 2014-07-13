@@ -134,6 +134,7 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 var
   EventTrainInfo: TNodeEventTrainInfo;
   ConfigOffset: DWord;
+  Task: TNodeTask;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -149,6 +150,11 @@ begin
       STATE_PROXY_IDLE :
           begin
             // Waiting for something to do
+            if Assigned(Node^.UserData) then
+            begin
+              Task := TNodeTask( Node^.UserData);
+              Node^.iUserStateMachine := Task.iStateMachine;                    // Start the new task...
+            end;
           end;
     end;
   end else
@@ -179,7 +185,14 @@ begin
           begin
             // Waiting for something to do
             if Node^.TrainData.State and TS_SEND_PROXY_ALLOCATE_REPLY <> 0 then
-              Node^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY;
+              Node^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY
+            else begin
+              if Assigned(Node^.UserData) then
+              begin
+                Task := TNodeTask( Node^.UserData);
+                Node^.iUserStateMachine := Task.iStateMachine;                    // Start the new task...
+              end;
+            end
           end;
      end
   end;
@@ -296,8 +309,6 @@ begin
               // This node will now start and log in, then it will reply to the Allocate Message
               TrainNode^.TrainData.Address := TrainID;
               TrainNode^.TrainData.SpeedSteps := SpeedSteps;
-              if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_TECH_ID_DCC then
-                TrainNode^.TrainData.SpeedSteps := AMessage^.Buffer^.DataArray[4];
               TrainNode^.TrainData.LinkedNode.ID[0] := AMessage^.Source.ID[0];      // Store the node that sent the Allocate message
               TrainNode^.TrainData.LinkedNode.ID[1] := AMessage^.Source.ID[1];
               TrainNode^.TrainData.LinkedNode.AliasID := AMessage^.Source.AliasID;

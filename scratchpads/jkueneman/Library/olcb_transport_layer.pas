@@ -185,6 +185,23 @@ type
     constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddressSpace: Byte; AStartAddress: DWord; Stream: TMemoryStream; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
   end;
 
+  { TNodeTaskExternalProxy }
+
+  TNodeTaskExternalProxy = class(TNodeTask)
+  private
+    FEmergencyStop: Boolean;
+    FFunctionAddress: DWord;
+    FFunctionValue: Word;
+    FiSendStateMachine: Word;
+    FSpeedDir: THalfFloat;
+  public
+    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine, ASubStateMachine: Word; ALinkedObj: TObject); reintroduce;
+    property SpeedDir: THalfFloat read FSpeedDir write FSpeedDir;
+    property FunctionAddress: DWord read FFunctionAddress write FFunctionAddress;
+    property FunctionValue: Word read FFunctionValue write FFunctionValue;
+    property iSendStateMachine: Word read FiSendStateMachine write FiSendStateMachine;
+  end;
+
   { TNodeEvent }
 
   TNodeEvent = class  // Objects sent from the Node Thread to the UI to signal the UI of events that occured in the Node Thread (mainly in the user statemachine)
@@ -577,6 +594,17 @@ begin
     if FreeTask then
       FreeAndNil(Task)
   end;
+end;
+
+{ TNodeTaskExternalProxy }
+
+constructor TNodeTaskExternalProxy.Create(ANodeInfo: TNodeInfo;
+  ADestNodeInfo: TNodeInfo; AniStateMachine, ASubStateMachine: Word;
+  ALinkedObj: TObject);
+begin
+  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
+  FiSubStateMachine := 0;
+  FiSendStateMachine := ASubStateMachine;
 end;
 
 { TNodeTaskWriteConfigMemory }
