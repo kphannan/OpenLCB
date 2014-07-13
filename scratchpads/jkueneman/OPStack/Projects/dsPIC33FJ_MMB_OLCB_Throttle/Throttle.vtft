@@ -1804,7 +1804,7 @@ object TatDiagram
   end
 end
 object TatDiagram
-  LastSelControl = 'ButtonRoundF5'
+  LastSelControl = 'RadioButtonReverse'
   NettoExportOffset = 1
   AutomaticNodes = False
   AutoScroll = True
@@ -2818,9 +2818,9 @@ object TatDiagram
   object ButtonRoundDecSpeed: TDgrButtonRound
     Tag = 255
     Left = 145.000000000000000000
-    Top = 126.000000000000000000
+    Top = 146.000000000000000000
     Width = 170.000000000000000000
-    Height = 54.000000000000000000
+    Height = 44.000000000000000000
     Brush.Style = bsClear
     SelBrush.Style = bsClear
     Color = clSilver
@@ -2886,8 +2886,8 @@ object TatDiagram
     Shadow.VOffset = 1
     Shadow.Transparency = 0
     Hint = 
-      'ButtonRoundDecSpeed'#13#10#13#10'Left   : 145'#13#10'Top    : 126'#13#10'Width  : 170'#13 +
-      #10'Height : 54'
+      'ButtonRoundDecSpeed'#13#10#13#10'Left   : 145'#13#10'Top    : 146'#13#10'Width  : 170'#13 +
+      #10'Height : 44'
     ParentShowHint = True
     Gradient.Direction = grTopBottom
     Gradient.StartColor = clWhite
@@ -2924,9 +2924,9 @@ object TatDiagram
   object ButtonRoundIncSpeed: TDgrButtonRound
     Tag = 255
     Left = 145.000000000000000000
-    Top = 70.000000000000000000
+    Top = 95.000000000000000000
     Width = 170.000000000000000000
-    Height = 55.000000000000000000
+    Height = 45.000000000000000000
     Brush.Style = bsClear
     SelBrush.Style = bsClear
     Color = clSilver
@@ -2992,8 +2992,8 @@ object TatDiagram
     Shadow.VOffset = 1
     Shadow.Transparency = 0
     Hint = 
-      'ButtonRoundIncSpeed'#13#10#13#10'Left   : 145'#13#10'Top    : 70'#13#10'Width  : 170'#13#10 +
-      'Height : 55'
+      'ButtonRoundIncSpeed'#13#10#13#10'Left   : 145'#13#10'Top    : 95'#13#10'Width  : 170'#13#10 +
+      'Height : 45'
     ParentShowHint = True
     Gradient.Direction = grTopBottom
     Gradient.StartColor = clWhite
@@ -3030,9 +3030,9 @@ object TatDiagram
   object ButtonRoundReverse: TDgrButtonRound
     Tag = 255
     Left = 145.000000000000000000
-    Top = 35.000000000000000000
+    Top = 40.000000000000000000
     Width = 170.000000000000000000
-    Height = 35.000000000000000000
+    Height = 50.000000000000000000
     Brush.Style = bsClear
     SelBrush.Style = bsClear
     Color = clSilver
@@ -3097,8 +3097,8 @@ object TatDiagram
     Shadow.VOffset = 1
     Shadow.Transparency = 0
     Hint = 
-      'ButtonRoundReverse'#13#10#13#10'Left   : 145'#13#10'Top    : 35'#13#10'Width  : 170'#13#10'H' +
-      'eight : 35'
+      'ButtonRoundReverse'#13#10#13#10'Left   : 145'#13#10'Top    : 40'#13#10'Width  : 170'#13#10'H' +
+      'eight : 50'
     ParentShowHint = True
     Gradient.Direction = grTopBottom
     Gradient.StartColor = clWhite
@@ -3134,7 +3134,7 @@ object TatDiagram
   object ProgressBarSpeed: TDgrProgressBar
     Tag = 255
     Left = 145.000000000000000000
-    Top = 185.000000000000000000
+    Top = 190.000000000000000000
     Width = 170.000000000000000000
     Height = 20.000000000000000000
     Brush.Style = bsClear
@@ -3197,7 +3197,7 @@ object TatDiagram
     Shadow.VOffset = 1
     Shadow.Transparency = 0
     Hint = 
-      'ProgressBarSpeed'#13#10#13#10'Left   : 145'#13#10'Top    : 185'#13#10'Width  : 170'#13#10'He' +
+      'ProgressBarSpeed'#13#10#13#10'Left   : 145'#13#10'Top    : 190'#13#10'Width  : 170'#13#10'He' +
       'ight : 20'
     ParentShowHint = True
     Gradient.Direction = grBottomTop
@@ -3811,10 +3811,10 @@ object TatDiagram
   end
   object RadioButtonForward: TDgrRadioButton
     Tag = 255
-    Left = 160.000000000000000000
-    Top = 45.000000000000000000
-    Width = 61.000000000000000000
-    Height = 16.000000000000000000
+    Left = 155.000000000000000000
+    Top = 50.000000000000000000
+    Width = 76.000000000000000000
+    Height = 31.000000000000000000
     Brush.Style = bsClear
     SelBrush.Style = bsClear
     Color = clSilver
@@ -3848,14 +3848,14 @@ object TatDiagram
     Font.Name = 'Tahoma'
     Font.Style = []
     DiagramFont = False
-    MinWidth = 61
+    MinWidth = 76
     MinHeight = 15
     Shadow.Visible = False
     Shadow.Color = 14869218
     Shadow.HOffset = 0
     Shadow.VOffset = 1
     Shadow.Transparency = 0
-    Hint = 'RadioButtonForward'#13#10#13#10'Left   : 160'#13#10'Top    : 45'#13#10'Height : 16'
+    Hint = 'RadioButtonForward'#13#10#13#10'Left   : 155'#13#10'Top    : 45'#13#10'Height : 31'
     ParentShowHint = True
     Gradient.Direction = grTopBottom
     Gradient.StartColor = clWhite
@@ -3892,10 +3892,10 @@ object TatDiagram
   end
   object RadioButtonReverse: TDgrRadioButton
     Tag = 255
-    Left = 240.000000000000000000
-    Top = 45.000000000000000000
-    Width = 60.000000000000000000
-    Height = 16.000000000000000000
+    Left = 235.000000000000000000
+    Top = 50.000000000000000000
+    Width = 75.000000000000000000
+    Height = 31.000000000000000000
     Brush.Style = bsClear
     SelBrush.Style = bsClear
     Color = clSilver
@@ -3929,14 +3929,14 @@ object TatDiagram
     Font.Name = 'Tahoma'
     Font.Style = []
     DiagramFont = False
-    MinWidth = 60
+    MinWidth = 75
     MinHeight = 15
     Shadow.Visible = False
     Shadow.Color = 14869218
     Shadow.HOffset = 0
     Shadow.VOffset = 1
     Shadow.Transparency = 0
-    Hint = 'RadioButtonReverse'#13#10#13#10'Left   : 240'#13#10'Top    : 45'#13#10'Height : 16'
+    Hint = 'RadioButtonReverse'#13#10#13#10'Left   : 235'#13#10'Top    : 45'#13#10'Height : 31'
     ParentShowHint = True
     Gradient.Direction = grTopBottom
     Gradient.StartColor = clWhite

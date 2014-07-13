@@ -15,6 +15,7 @@ uses
   opstacktypes,
   opstackdefines,
   nmranetdefines,
+  Float16,
   template_buffers;
 
 type
@@ -61,6 +62,30 @@ type
     MaxCount: Word;
   end;
 
+{$IFDEF SUPPORT_TRACTION_PROXY}
+type
+  TTrainProxyBuffer = record
+    TrainID: Word;     // Train To Proxy
+    SpeedSteps: Byte;
+    Action: Byte;             // See TRAIN_PROXY_ACTION_XXXX constants
+    NewSpeed: THalfFloat;
+    NewFunctionAddress: DWord;
+    NewFunctionValue: Word;
+    iStateMachine: Byte;
+    Next: ^TTrainProxyBuffer;
+  end;
+  PTrainProxyBuffer = ^TTrainProxyBuffer;
+
+  TTrainProxyBufferArray = array[0..USER_MAX_TRAIN_PROXY_BUFFERS-1] of TTrainProxyBuffer;
+
+  TTrainProxyPool = record
+    Pool: TTrainProxyBufferArray;
+    Stack: ^TTrainProxyBuffer;
+    Count: Integer;
+    MaxCount: Integer;
+  end;
+{$ENDIF}
+
 
 procedure OPStackBuffers_Initialize;
 procedure OPStackBuffers_Timer;
@@ -68,10 +93,18 @@ procedure OPStackBuffers_Timer;
 // Allocate Message helpers
 function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsCAN: Boolean): Boolean;
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; var Source: TNodeInfo; var Dest: TNodeInfo; DestFlags: Byte): Boolean;
-{$IFDEF SUPPORT_STREAMS}function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsOutgoing: Boolean): Boolean;{$ENDIF}
+{$IFDEF SUPPORT_STREAMS}
+function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsOutgoing: Boolean): Boolean;
+{$ENDIF}
 function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
+
+{$IFDEF SUPPORT_TRACTION_PROXY}
+function OPStackBuffer_TrainProxyAllocate(TrainID: Word; SpeedSteps: Byte; Action: Byte; NewSpeed: THalfFloat; NewFunctionAddress: DWord; NewFunctionValue: Word): PTrainProxyBuffer;
+procedure OPStackBuffer_TrainProxyAddToStack(TrainProxy: PTrainProxyBuffer);
+procedure OPStackBuffer_RemoveAndFreeFirstOnStack;
+{$ENDIF}
 
 // Load Message helpers
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; var Source: TNodeInfo; var Dest: TNodeInfo; FramingBits: Byte);
@@ -81,7 +114,9 @@ procedure OPStackBuffers_LoadOptionalInteractionRejected(AMessage: POPStackMessa
 procedure OPStackBuffers_ZeroMessage(AMessage: POPStackMessage);
 procedure OPStackBuffers_ZeroSimpleBuffer(ABuffer: PSimpleBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray: Boolean);
-{$IFDEF SUPPORT_STREAMS}procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);{$ENDIF}
+{$IFDEF SUPPORT_STREAMS}
+procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
+{$ENDIF}
 procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroMultiFrameBuffer(ABuffer: PMultiFrameBuffer; ZeroArray: Boolean);
 
@@ -110,6 +145,9 @@ var
   AcdiSnipBufferPool: TAcdiSnipBufferPool;
   MultiFramePool: TMultiFramePool;
   OPStackMessagePool: TOPStackMessagePool;
+  {$IFDEF SUPPORT_TRACTION_PROXY}
+  TrainProxyPool: TTrainProxyPool;
+  {$ENDIF}
 
 implementation
 
@@ -196,6 +234,23 @@ begin
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
   OPStackMessagePool.MaxCount := 0;
+
+  {$IFDEF SUPPORT_TRACTION_PROXY}
+  for j := 0 to USER_MAX_TRAIN_PROXY_BUFFERS-1 do
+  begin
+    TrainProxyPool.Pool[j].TrainID := 0;
+    TrainProxyPool.Pool[j].SpeedSteps := 0;
+    TrainProxyPool.Pool[j].Action := TRAIN_PROXY_ACTION_NONE;
+    TrainProxyPool.Pool[j].NewFunctionAddress := 0;
+    TrainProxyPool.Pool[j].NewFunctionValue := 0;
+    TrainProxyPool.Pool[j].NewSpeed := 0;
+    TrainProxyPool.Pool[j].iStateMachine := 0;
+    TrainProxyPool.Pool[j].Next := nil;
+  end;
+  TrainProxyPool.Stack := nil;
+  TrainProxyPool.Count := 0;
+  TrainProxyPool.MaxCount := 0;
+  {$ENDIF}
 end;
 
 procedure OPStackBuffers_Timer;
@@ -532,6 +587,72 @@ begin
   end;
 end;
 
+{$IFDEF SUPPORT_TRACTION_PROXY}
+function OPStackBuffer_TrainProxyAllocate(TrainID: Word; SpeedSteps: Byte;
+  Action: Byte; NewSpeed: THalfFloat; NewFunctionAddress: DWord;
+  NewFunctionValue: Word): PTrainProxyBuffer;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to USER_MAX_TRAIN_PROXY_BUFFERS - 1 do
+  begin
+    if TrainProxyPool.Pool[i].Action = TRAIN_PROXY_ACTION_NONE then
+    begin
+      TrainProxyPool.Pool[i].Action := Action;
+      TrainProxyPool.Pool[i].TrainID := TrainID;
+      TrainProxyPool.Pool[i].SpeedSteps := SpeedSteps;
+      TrainProxyPool.Pool[i].NewSpeed := NewSpeed;
+      TrainProxyPool.Pool[i].NewFunctionAddress := NewFunctionAddress;
+      TrainProxyPool.Pool[i].NewFunctionValue := NewFunctionValue;
+      TrainProxyPool.Pool[i].iStateMachine := 0;
+      TrainProxyPool.Pool[i].Next := nil;
+      Inc(TrainProxyPool.Count);
+      if TrainProxyPool.Count > TrainProxyPool.MaxCount then
+        TrainProxyPool.MaxCount := TrainProxyPool.Count;
+      Result := @TrainProxyPool.Pool[i];
+      Exit;
+    end;
+  end;
+end;
+
+procedure OPStackBuffer_TrainProxyAddToStack(TrainProxy: PTrainProxyBuffer);
+var
+  NextProxy: PTrainProxyBuffer;
+begin
+  if TrainProxy <> nil then
+  begin
+    if TrainProxyPool.Stack = nil then
+      TrainProxyPool.Stack := TrainProxy
+    else begin
+      NextProxy := nil;
+      repeat
+        if NextProxy = nil then
+          NextProxy := TrainProxyPool.Stack
+        else
+          NextProxy := NextProxy^.Next;
+      until NextProxy^.Next = nil;
+      NextProxy^.Next := TrainProxy;
+    end;
+  end;
+end;
+
+procedure OPStackBuffer_RemoveAndFreeFirstOnStack;
+var
+  OldProxy: PTrainProxyBuffer;
+begin
+  if TrainProxyPool.Stack <> nil then
+  begin
+    OldProxy := TrainProxyPool.Stack;
+    TrainProxyPool.Stack := OldProxy^.Next;          // Could another buffer or nil, either is valid
+    OldProxy^.Action := TRAIN_PROXY_ACTION_NONE;     // Released
+    Dec(TrainProxyPool.Count);
+    if TrainProxyPool.Count < 0 then
+      TrainProxyPool.Count := 0;
+  end;
+end;
+{$ENDIF}
+
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 begin
   if AMessage = nil then Exit;
@@ -668,6 +789,7 @@ begin
   ABuffer^.DataBufferSize := 0;
   ABuffer^.CurrentCount := 0;
 end;
+
 
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word;
   var Source: TNodeInfo; var Dest: TNodeInfo; FramingBits: Byte);

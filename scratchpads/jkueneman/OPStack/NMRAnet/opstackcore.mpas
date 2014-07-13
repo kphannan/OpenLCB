@@ -403,6 +403,7 @@ begin
     begin
       Node := NodePool.AllocatedList[i];
       Inc(Node^.Login.TimeCounter);
+      Inc(Node^.Watchdog);
       {$IFDEF SUPPORT_TRACTION}
       TractionProtocolTimerTick(Node);
       {$ENDIF}

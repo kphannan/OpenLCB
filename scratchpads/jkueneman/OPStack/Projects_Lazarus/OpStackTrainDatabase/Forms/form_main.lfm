@@ -914,7 +914,7 @@ object Form1: TForm1
     end
     object TabSheetGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 296
+      ClientHeight = 317
       ClientWidth = 666
       OnHide = TabSheetGeneralHide
       OnShow = TabSheetGeneralShow
@@ -1116,6 +1116,38 @@ object Form1: TForm1
         Left = 440
         Height = 16
         Top = 68
+        Width = 29
+        Caption = 'Peak'
+        ParentColor = False
+      end
+      object Label17: TLabel
+        Left = 423
+        Height = 16
+        Top = 248
+        Width = 151
+        Caption = 'TrainProxy Buffer Count'
+        ParentColor = False
+      end
+      object LabelTractionProxyCount: TLabel
+        Left = 604
+        Height = 16
+        Top = 248
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object LabelTractionProxyCountMax: TLabel
+        Left = 604
+        Height = 16
+        Top = 264
+        Width = 8
+        Caption = '0'
+        ParentColor = False
+      end
+      object Label18: TLabel
+        Left = 440
+        Height = 16
+        Top = 264
         Width = 29
         Caption = 'Peak'
         ParentColor = False

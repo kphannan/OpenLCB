@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\..\..\NMRAnet\opstackdefines.mpas
+Value=Templates\template_buffers.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -80,7 +80,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=11
+Count=13
 File0=Throttle_main.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=Throttle_events_code.mpas
@@ -92,6 +92,8 @@ File7=Throttle_driver.mpas
 File8=Throttle_objects.mpas
 File9=..\..\..\..\Library\CabCommon\NMRAnetCabBridgeDefines.mpas
 File10=..\..\..\..\NMRAnet\opstackdefines.mpas
+File11=..\..\..\..\NMRAnet\opstackbuffers.mpas
+File12=Templates\template_buffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -102,7 +104,7 @@ File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
 Count=11
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\
 Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33FJ_MMB_OLCB_Throttle\Throttle_Code\mikroPascal PRO for dsPIC\Templates\

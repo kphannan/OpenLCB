@@ -194,7 +194,7 @@ var
   Helper: TOpenLCBMessageHelper;
   DoClose: Boolean;
   RcvStr: AnsiString;
-  i: Integer;
+  i, PortOffset: Integer;
   GridConnectStrPtr: PGridConnectString;
 begin
   Helper := nil;
@@ -227,7 +227,12 @@ begin
         end
       end else
       begin
-        Socket.Bind(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ClientPort));
+        PortOffset := 0;
+        repeat
+          Socket.Bind(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ClientPort + PortOffset));
+          Inc(PortOffset)
+        until (Socket.LastError <> WSAEADDRINUSE) or (PortOffset > 100);
+
         if Socket.LastError = 0 then
         begin
           Socket.Connect(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ListenPort));

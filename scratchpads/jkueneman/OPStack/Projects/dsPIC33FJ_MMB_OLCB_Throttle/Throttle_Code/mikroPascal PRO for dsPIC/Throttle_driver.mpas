@@ -378,9 +378,9 @@ var ButtonRoundF5 : TButton_Round;
          0                     , //   ButtonRoundDecSpeed.OwnerScreenID
          9                     , //   ButtonRoundDecSpeed.Order           
          145                   , //   ButtonRoundDecSpeed.Left            
-         126                   , //   ButtonRoundDecSpeed.Top              
+         146                   , //   ButtonRoundDecSpeed.Top              
          170                   , //   ButtonRoundDecSpeed.Width            
-         54                    , //   ButtonRoundDecSpeed.Height        
+         44                    , //   ButtonRoundDecSpeed.Height        
          0                     , //   ButtonRoundDecSpeed.Pen_Width          
          0x0000                , //   ButtonRoundDecSpeed.Pen_Color       
          1                     , //   ButtonRoundDecSpeed.Visible         
@@ -410,9 +410,9 @@ var ButtonRoundF5 : TButton_Round;
          0                     , //   ButtonRoundIncSpeed.OwnerScreenID
          10                    , //   ButtonRoundIncSpeed.Order           
          145                   , //   ButtonRoundIncSpeed.Left            
-         70                    , //   ButtonRoundIncSpeed.Top              
+         95                    , //   ButtonRoundIncSpeed.Top              
          170                   , //   ButtonRoundIncSpeed.Width            
-         55                    , //   ButtonRoundIncSpeed.Height        
+         45                    , //   ButtonRoundIncSpeed.Height        
          0                     , //   ButtonRoundIncSpeed.Pen_Width          
          0x0000                , //   ButtonRoundIncSpeed.Pen_Color       
          1                     , //   ButtonRoundIncSpeed.Visible         
@@ -442,9 +442,9 @@ var ButtonRoundF5 : TButton_Round;
          0                     , //   ButtonRoundReverse.OwnerScreenID
          11                    , //   ButtonRoundReverse.Order           
          145                   , //   ButtonRoundReverse.Left            
-         35                    , //   ButtonRoundReverse.Top              
+         40                    , //   ButtonRoundReverse.Top              
          170                   , //   ButtonRoundReverse.Width            
-         35                    , //   ButtonRoundReverse.Height        
+         50                    , //   ButtonRoundReverse.Height        
          0                     , //   ButtonRoundReverse.Pen_Width          
          0x0000                , //   ButtonRoundReverse.Pen_Color       
          1                     , //   ButtonRoundReverse.Visible         
@@ -1866,7 +1866,7 @@ procedure InitializeObjects();    // static
     ProgressBarSpeed.OwnerScreenID       := 0;
     ProgressBarSpeed.Order               := 12;
     ProgressBarSpeed.Left                := 145;
-    ProgressBarSpeed.Top                 := 185;
+    ProgressBarSpeed.Top                 := 190;
     ProgressBarSpeed.Width               := 170;
     ProgressBarSpeed.Height              := 20;
     ProgressBarSpeed.Pen_Width           := 0;
@@ -2001,10 +2001,10 @@ procedure InitializeObjects();    // static
 
     RadioButtonForward.OwnerScreenID       := 0;
     RadioButtonForward.Order               := 19;
-    RadioButtonForward.Left                := 160;
-    RadioButtonForward.Top                 := 45;
-    RadioButtonForward.Width               := 61;
-    RadioButtonForward.Height              := 16;
+    RadioButtonForward.Left                := 155;
+    RadioButtonForward.Top                 := 50;
+    RadioButtonForward.Width               := 76;
+    RadioButtonForward.Height              := 31;
     RadioButtonForward.Pen_Width           := 1;
     RadioButtonForward.Pen_Color           := 0x0000;
     RadioButtonForward.Visible             := 1;
@@ -2031,10 +2031,10 @@ procedure InitializeObjects();    // static
 
     RadioButtonReverse.OwnerScreenID       := 0;
     RadioButtonReverse.Order               := 20;
-    RadioButtonReverse.Left                := 240;
-    RadioButtonReverse.Top                 := 45;
-    RadioButtonReverse.Width               := 60;
-    RadioButtonReverse.Height              := 16;
+    RadioButtonReverse.Left                := 235;
+    RadioButtonReverse.Top                 := 50;
+    RadioButtonReverse.Width               := 75;
+    RadioButtonReverse.Height              := 31;
     RadioButtonReverse.Pen_Width           := 1;
     RadioButtonReverse.Pen_Color           := 0x0000;
     RadioButtonReverse.Visible             := 1;

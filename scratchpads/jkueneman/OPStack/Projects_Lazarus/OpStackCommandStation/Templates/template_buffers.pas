@@ -35,6 +35,18 @@ const
 const
   USER_MAX_ACDI_SNIP_BYTES = 256;
 
+{$IFDEF SUPPORT_TRACTION}
+// Enter the size of a buffer to hold a complete Simple Train Node Information string
+const
+  USER_MAX_STNIP_BYTES = 256;
+{$ENDIF}
+
+{$IFDEF SUPPORT_TRACTION_PROXY}
+const
+  USER_MAX_TRAIN_PROXY_BUFFERS = 10;
+{$ENDIF}
+
 implementation
 
 end.
+

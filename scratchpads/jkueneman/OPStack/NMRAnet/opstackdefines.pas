@@ -152,7 +152,6 @@ const                                                                           
   NS_INITIALIZED          = $04;                                                // NodeState Message Layer has sent its first Initialize Complete Message
   {$IFDEF SUPPORT_VIRTUAL_NODES}NS_VIRTUAL              = $08; {$ENDIF}                                               // NodeState If is a virtual node
   NS_RELEASING            = $10;                                                // Node is tagged to send and AMD and be removed from the bus (while this is set what happens??)
-  NS_PROXY_ATTACHED       = $20;
 
   // MsgFlags in order of precidence (= 0 highest precidence)
   MF_DUPLICATE_NODE_ID        = $0001;                                          // MsgFlag, a Duplicate Node ID was detected, critical fault
@@ -327,6 +326,8 @@ type
     UserData: ^Byte;                                                            // Pointer to User Data
     {$ENDIF}
     iUserStateMachine: Byte;                                                    // For user (application level) statemachine
+    Watchdog: Word;                                                             // For user
+
     {$IFDEF SUPPORT_TRACTION}TrainData: TTrainData;{$ENDIF}                     // Realtime information about the Train Node
     {$IFDEF SUPPORT_TRACTION_PROXY}TrainProxyData: TTrainProxyData;{$ENDIF}               // Realtime information about the Proxy Node
   end;
@@ -443,6 +444,12 @@ type
     SpeedStep: Byte;
     ShortLong: Byte;
   end;
+
+const
+  TRAIN_PROXY_ACTION_NONE     = 0;
+  TRAIN_PROXY_ACTION_SPEEDDIR = 1;
+  TRAIN_PROXY_ACTION_FUNCTION = 2;
+  TRAIN_PROXY_ACTION_ESTOP    = 3;
 
 procedure OPStackDefines_Initialize;
   

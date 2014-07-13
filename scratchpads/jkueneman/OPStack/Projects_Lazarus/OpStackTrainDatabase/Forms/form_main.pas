@@ -91,6 +91,8 @@ type
     Label14: TLabel;
     Label15: TLabel;
     Label16: TLabel;
+    Label17: TLabel;
+    Label18: TLabel;
     Label2: TLabel;
     Label3: TLabel;
     Label4: TLabel;
@@ -110,7 +112,9 @@ type
     LabelFlowControl: TLabel;
     LabelIcon: TLabel;
     LabelMessageCount: TLabel;
+    LabelTractionProxyCount: TLabel;
     LabelMessageCountMax: TLabel;
+    LabelTractionProxyCountMax: TLabel;
     LabelMultiFrameCount: TLabel;
     LabelMultiFrameCountMax: TLabel;
     LabelMyName: TLabel;
@@ -886,12 +890,14 @@ begin
   LabelDatagramCount.Caption := IntToStr(DatagramBufferPool.Count);
   LabelMultiFrameCount.Caption := IntToStr(MultiFramePool.Count);
   LabelMessageCount.Caption := IntToStr(OPStackMessagePool.Count);
+  LabelTractionProxyCount.Caption := IntToStr(TrainProxyPool.Count);
 
   LabelSimpleCountMax.Caption := IntToSTr(SimpleBufferPool.MaxCount);
   LabelSnipCountMax.Caption := IntToStr(AcdiSnipBufferPool.MaxCount);
   LabelDatagramCountMax.Caption := IntToStr(DatagramBufferPool.MaxCount);
   LabelMultiFrameCountMax.Caption := IntToStr(MultiFramePool.MaxCount);
   LabelMessageCountMax.Caption := IntToStr(OPStackMessagePool.MaxCount);
+  LabelTractionProxyCountMax.Caption := IntToStr(TrainProxyPool.MaxCount);
 end;
 
 end.

@@ -1203,9 +1203,9 @@ begin
       if Assigned(MultiFrame) then
       begin
         case MultiFrame.DataArray[0] of
-            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3)) + ' Speed Steps = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 4));
-            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
-            TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3) and not $C000) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(2, 3), 4) + '] Speed Steps = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(4, 4));
+            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 2) and not $C000) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 2), 4) + ']' ;
+            TRACTION_PROXY_DETACH   : Result := Result + 'Detach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(1, 2) and not $C000) + ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(1, 2), 4) + ']' ;
             TRACTION_PROXY_MANAGE   :
               begin
                 case LocalHelper.Data[3] of
@@ -1229,8 +1229,8 @@ begin
       if Assigned(MultiFrame) then
       begin
          case MultiFrame.DataArray[0] of
-            TRACTION_PROXY_ALLOCATE : Result := Result + 'Flags = ' + IntToStr(MultiFrame.DataArray[1]) + ', Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[2]) + ', Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(3, 4)) + ', Train Node ID ' + MultiFrame.ExtractDataBytesAsHex(5, 10) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(11, 12) + ']';
-            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[1]) + ' Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(2, 3));
+            TRACTION_PROXY_ALLOCATE : Result := Result + 'Flags = ' + IntToStr(MultiFrame.DataArray[1]) + ', Allocate: Technology = ' + TractionProxyTechnologyToStr(MultiFrame.DataArray[2]) + ', Train ID = ' + IntToStr( MultiFrame.ExtractDataBytesAsInt(3, 4)  and not $C000) +  ' [0x' + IntToHex( MultiFrame.ExtractDataBytesAsInt(3, 4), 4) + '], Train NodeID ' + MultiFrame.ExtractDataBytesAsHex(5, 10) + ' [Alias: ' + MultiFrame.ExtractDataBytesAsHex(11, 12) + ']';
+            TRACTION_PROXY_ATTACH   : Result := Result + 'Attach: ReplyCode = ' + IntToHex(MultiFrame.DataArray[1], 2);
             TRACTION_PROXY_MANAGE   :
               begin
                 case LocalHelper.Data[3] of

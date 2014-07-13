@@ -187,16 +187,16 @@ implementation
 
 constructor TEthernetSettings.Create;
 begin
-  LocalIP := '0.0.0.0';
-  RemoteIP := '0.0.0.0';
+  LocalIP := '127.0.0.1';
+  RemoteIP := '127.0.0.1';
   ListenPort := 12021;
   ClientPort := 12022;
 end;
 
 procedure TEthernetSettings.LoadFromFile(IniFile: TIniFile);
 begin
-  LocalIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_IP, '0.0.0.0');
-  RemoteIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_REMOTE_IP, '0.0.0.0');
+  LocalIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LOCAL_IP, '127.0.0.1');
+  RemoteIP := IniFile.ReadString(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_REMOTE_IP, '127.0.0.1');
   ListenPort := IniFile.ReadInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_LISTEN_PORT, 12021);
   ClientPort := IniFile.ReadInteger(STR_INI_ETHERNET_SECTION, STR_INI_ETHERNET_CLIENT_PORT, 12022);
 end;

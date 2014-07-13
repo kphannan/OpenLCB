@@ -185,30 +185,13 @@ type
     constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject; AnAddressSpace: Byte; AStartAddress: DWord; Stream: TMemoryStream; AiPage, AiControl: Integer; AControl: TObject); reintroduce;
   end;
 
-  { TNodeTaskExternalProxy }
-
-  TNodeTaskExternalProxy = class(TNodeTask)
-  private
-    FEmergencyStop: Boolean;
-    FFunctionAddress: DWord;
-    FFunctionValue: Word;
-    FiSendStateMachine: Word;
-    FSpeedDir: THalfFloat;
-  public
-    constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine, ASubStateMachine: Word; ALinkedObj: TObject); reintroduce;
-    property SpeedDir: THalfFloat read FSpeedDir write FSpeedDir;
-    property FunctionAddress: DWord read FFunctionAddress write FFunctionAddress;
-    property FunctionValue: Word read FFunctionValue write FFunctionValue;
-    property iSendStateMachine: Word read FiSendStateMachine write FiSendStateMachine;
-  end;
-
   { TNodeEvent }
 
   TNodeEvent = class  // Objects sent from the Node Thread to the UI to signal the UI of events that occured in the Node Thread (mainly in the user statemachine)
   private
     FLinkedObj: TObject;
-    FNodeInfo: TNodeInfo;
   public
+    FNodeInfo: TNodeInfo;
     constructor Create(ANodeInfo: TNodeInfo; ALinkedObj: TObject); reintroduce;
     property NodeInfo: TNodeInfo read FNodeInfo write FNodeInfo;
     property LinkedObj: TObject read FLinkedObj write FLinkedObj;
@@ -261,13 +244,13 @@ type
   TNodeEventTrainInfo = class(TNodeEvent)
   private
     FAddress: Word;
-    FControllerInfo: TNodeInfo;
     FFunctions: DWord;
     FSpeed: THalfFloat;
     FSpeedSteps: Byte;
     FTrainConfigValid: Boolean;
   public
     FTrainConfig: TTrainConfig;
+    FControllerInfo: TNodeInfo;
     procedure CopyTo(EventTrainInfo: TNodeEventTrainInfo);
     property Speed: THalfFloat read FSpeed write FSpeed;
     property Functions: DWord read FFunctions write FFunctions;
@@ -594,17 +577,6 @@ begin
     if FreeTask then
       FreeAndNil(Task)
   end;
-end;
-
-{ TNodeTaskExternalProxy }
-
-constructor TNodeTaskExternalProxy.Create(ANodeInfo: TNodeInfo;
-  ADestNodeInfo: TNodeInfo; AniStateMachine, ASubStateMachine: Word;
-  ALinkedObj: TObject);
-begin
-  inherited Create(ANodeInfo, ADestNodeInfo, AniStateMachine, ALinkedObj);
-  FiSubStateMachine := 0;
-  FiSendStateMachine := ASubStateMachine;
 end;
 
 { TNodeTaskWriteConfigMemory }

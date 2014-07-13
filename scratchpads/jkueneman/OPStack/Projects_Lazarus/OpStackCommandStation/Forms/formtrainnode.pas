@@ -33,6 +33,7 @@ type
     procedure Clear; override;
     procedure CloseTrain(Train: TFormIsTrainNode);
     function Find(Address: Word; SpeedSteps: Byte): TFormIsTrainNode;
+    function FindProxy: TFormIsTrainNode;
     procedure HideAll;
     procedure CloseAll;
     procedure ShowAll;
@@ -67,6 +68,7 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     FImageList16x16: TImageList;
+    FIsProxy: Boolean;
     FOnTrainClose: TOnTrainEvent;
     FOnTrainHide: TOnTrainEvent;
     FTrainState: TNodeEventTrainInfo;
@@ -80,6 +82,7 @@ type
     property OnTrainHide: TOnTrainEvent read FOnTrainHide write FOnTrainHide;
     property OnTrainClose: TOnTrainEvent read FOnTrainClose write FOnTrainClose;
     property TrainState: TNodeEventTrainInfo read FTrainState write FTrainState;
+    property IsProxy: Boolean read FIsProxy write FIsProxy;
   end;
 
 var
@@ -198,6 +201,21 @@ begin
   end;
 end;
 
+function TTrainNodeList.FindProxy: TFormIsTrainNode;
+var
+  i: Integer;
+begin
+  Result := nil;
+  for i := 0 to Count - 1 do
+  begin
+    if (Trains[i].IsProxy) then
+    begin
+      Result := Trains[i];
+      Break
+    end;
+  end;
+end;
+
 function TTrainNodeList.GetTrains(Index: Integer): TFormIsTrainNode;
 begin
   Result := TFormIsTrainNode( Items[Index]);
@@ -239,6 +257,7 @@ begin
   Temp.ID := NULL_NODE_ID;
   Temp.AliasID := 0;
   TrainState := TNodeEventTrainInfo.Create(Temp, nil);
+  FIsProxy := False;
 end;
 
 procedure TFormIsTrainNode.FormDestroy(Sender: TObject);
@@ -257,6 +276,7 @@ var
   Temp: DWORD;
 begin
   LabelAlias.Caption := '0x' + IntToHex(TrainState.NodeInfo.AliasID, 2);
+
   if TrainState.Speed and $8000 = 0 then
     LabelDirection.Caption := 'Forward'
   else
@@ -292,6 +312,9 @@ begin
   LabelSpeed.Caption := IntToStr( Abs( Float16ToInt(TrainState.Speed)));
   LabelThrottleAlias.Caption := '0x' + IntToHex(TrainState.ControllerInfo.AliasID, 2);
 
+  if IsProxy then
+    Caption := 'Proxy Node'
+  else
   if (TrainState.TrainConfig.RoadName <> '') and (TrainState.TrainConfig.RoadNumber <> '') then
     Caption := TrainState.TrainConfig.RoadName + ' ' + TrainState.TrainConfig.RoadNumber
   else

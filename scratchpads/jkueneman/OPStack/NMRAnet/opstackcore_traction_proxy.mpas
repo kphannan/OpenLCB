@@ -85,16 +85,32 @@ begin
                               Exit;
                             end;
     TRACTION_PROXY_ATTACH : begin
-                              DestNode^.State := DestNode^.State or NS_PROXY_ATTACHED;
-                              DestNode^.TrainData.Address := Word( NextMessage^.Buffer^.DataArray[1] shl 8) or Word( NextMessage^.Buffer^.DataArray[2]);
-                              DestNode^.TrainData.SpeedSteps := NextMessage^.Buffer^.DataArray[3];
-                              if TrySendTractionProxyAttachReply(NextMessage^.Dest, NextMessage^.Source, TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK) then
-                                Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-                              Exit;
+                              if @NodePool.Pool[0] = DestNode then              // Only the root node can attach
+                              begin
+                                if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainData.Controller) then
+                                begin
+                                  if TrySendTractionProxyAttachReply(NextMessage^.Dest, NextMessage^.Source, TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK) then
+                                  begin
+                                    DestNode^.TrainData.Address := Word( NextMessage^.Buffer^.DataArray[1] shl 8) or Word( NextMessage^.Buffer^.DataArray[2]);
+                                    DestNode^.TrainData.SpeedSteps := NextMessage^.Buffer^.DataArray[3];
+                                    DestNode^.TrainData.Controller := NextMessage^.Source;
+                                    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                                  end;
+                                end else
+                                begin
+                                  if TrySendTractionProxyAttachReply(NextMessage^.Dest, NextMessage^.Source, TRACTION_PROXY_MANAGE_RESERVE_REPLY_FAIL) then
+                                    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                                end;
+                                Exit;
+                              end;
                             end;
     TRACTION_PROXY_DETACH : begin
-                              DestNode^.State := DestNode^.State and not NS_PROXY_ATTACHED;
-                              Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                              if @NodePool.Pool[0] = DestNode then              // Only the root node can attach
+                                if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+                                begin
+                                  DestNode^.TrainData.Controller := NULL_NODE_INFO;
+                                  Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                                end;
                               Exit;
                             end
   else begin
@@ -111,4 +127,4 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
-end.
+end.

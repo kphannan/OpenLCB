@@ -16,7 +16,6 @@ uses
   ethernet_hub,
   olcb_transport_layer,
   template_hardware,
-  template_configuration,
   olcb_defines,
  // LCLIntf,
  // LCLType,
@@ -25,9 +24,10 @@ uses
   opstacktypes,
   opstackdefines,
   template_node,
-  opstack_api,
-  nmranetdefines,
   template_vnode,
+  opstack_api,
+  template_configuration,
+  nmranetdefines,
   nmranetutilities;
 
 procedure UserStateMachine_Initialize;
@@ -132,9 +132,11 @@ end;
 // *****************************************************************************
 procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 var
-  EventTrainInfo: TNodeEventTrainInfo;
-  ConfigOffset: DWord;
+  {$IFDEF FPC}
+  EventTrainInfo: TNodeEventTrainInfo; 
   Task: TNodeTask;
+  {$ENDIF}
+  ConfigOffset: DWord;
 begin
   if Node = GetPhysicalNode then
   begin
@@ -150,11 +152,13 @@ begin
       STATE_PROXY_IDLE :
           begin
             // Waiting for something to do
+            {$IFDEF FPC}
             if Assigned(Node^.UserData) then
             begin
               Task := TNodeTask( Node^.UserData);
               Node^.iUserStateMachine := Task.iStateMachine;                    // Start the new task...
             end;
+            {$ENDIF}
           end;
     end;
   end else
@@ -172,11 +176,14 @@ begin
           begin {$IFDEF DEBUG_TRAINOBJECT_STATEMACHINE} UART1_Write_Text('STATE_TRAIN_ALLOCATE_PROXY_REPLY'+LF); {$ENDIF}
             if TrySendTractionProxyAllocateReply(GetPhysicalNode^.Info, Node^.TrainData.LinkedNode, TRACTION_PROXY_TECH_ID_DCC, Node^.Info, Node^.TrainData.Address) then
             begin
+              {$IFDEF FPC}
               ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((Node^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
               EventTrainInfo := TNodeEventTrainInfo.Create(Node^.Info, nil);
+              EventTrainInfo.TrainConfigValid := True;
               ReadTrainConfiguration(ConfigOffset, EventTrainInfo.FTrainConfig);
               LoadTrainInfo(Node, EventTrainInfo);
               NodeThread.AddEvent(EventTrainInfo);
+              {$ENDIF}
               Node^.TrainData.State := Node^.TrainData.State and not TS_SEND_PROXY_ALLOCATE_REPLY;
               Node^.iUserStateMachine := STATE_TRAIN_IDLE;
             end;
@@ -187,11 +194,13 @@ begin
             if Node^.TrainData.State and TS_SEND_PROXY_ALLOCATE_REPLY <> 0 then
               Node^.iUserStateMachine := STATE_TRAIN_ALLOCATE_PROXY_REPLY
             else begin
+              {$IFDEF FPC}
               if Assigned(Node^.UserData) then
               begin
                 Task := TNodeTask( Node^.UserData);
                 Node^.iUserStateMachine := Task.iStateMachine;                    // Start the new task...
               end;
+              {$ENDIF}
             end
           end;
      end
@@ -222,14 +231,19 @@ end;
 //     Description : Called when a Traction Protocol request comes in
 // *****************************************************************************
 procedure AppCallback_TractionProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage);
+{$IFDEF FPC}
 var
   EventTrainInfo: TNodeEventTrainInfo;
+{$ENDIF}
 begin
   {$IFDEF DEBUG_TRACTION_PROTOCOL} UART1_Write_Text('AppCallback_TractionProtocol'+LF); {$ENDIF}
 
+  {$IFDEF FPC}
   EventTrainInfo := TNodeEventTrainInfo.Create(Node^.Info, nil);
+  EventTrainInfo.TrainConfigValid := False;
   LoadTrainInfo(Node, EventTrainInfo);
   NodeThread.AddEvent(EventTrainInfo);
+  {$ENDIF}
 
   case AMessage^.Buffer^.DataArray[0] of
       TRACTION_CONTROLLER_CONFIG :
@@ -264,7 +278,7 @@ end;
 
 {$IFDEF SUPPORT_TRACTION_PROXY}
 // *****************************************************************************
-//  procedure AppCallback_TractionProtocol
+//  procedure AppCallback_TractionProxyProtocol
 //     Parameters: : Node           : Pointer to the node that the traction protocol has been called on
 //                   ReplyMessage   : The Reply Message that needs to be allocated, populated and returned so it can be sent
 //                   RequestingMessage    : Message that was sent to the node containing the requested information
@@ -274,6 +288,9 @@ end;
 // *****************************************************************************
 procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 var
+  {$IFNDEF FPC}
+  TempStr: array[5] of char;
+  {$ENDIF}
   i: Integer;
   TrainID: Word;
   SpeedSteps: Byte;
@@ -316,8 +333,14 @@ begin
               ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((TrainNode^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
 
               ZeroTrainConfiguration(Train);
-              Train.RoadName := 'Address: ';
+              {$IFDEF FPC}
+              Train.RoadName := 'Address: ' + IntToStr(TrainNode^.TrainData.Address and not $C000);
               Train.RoadNumber := IntToStr(TrainNode^.TrainData.Address and not $C000);
+              {$ELSE}
+              WordToStr(TrainNode^.TrainData.Address and not $C000, TempStr);
+              Train.RoadName := 'Address: ' + TempStr;
+              Train.RoadNumber := TempStr;
+              {$ENDIF}
               Train.TrainClass := '';
               Train.Name := 'Transient DCC Node';
               Train.Manufacturer := 'Mustangpeak';
@@ -325,7 +348,6 @@ begin
               Train.TrainID := TrainNode^.TrainData.Address;
               Train.SpeedStep := TrainNode^.TrainData.SpeedSteps;
               if TrainNode^.TrainData.Address and $C000 <> 0 then Train.ShortLong := 1 else Train.ShortLong := 0;
-
               WriteTrainConfiguration(ConfigOffset, Train);
             end;
           end;

@@ -10,7 +10,7 @@ uses
   com_port_hub, ethernet_hub, olcb_app_common_settings, file_utilities,
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds, SynEditMarkupHighAll,
-  formtrainnode, opstackbuffers,
+  formtrainnode, opstackbuffers, nmranetutilities, opstacknode, opstackdefines,
   template_hardware, opstackcore, template_configuration, template_userstatemachine;
 
 const
@@ -658,12 +658,25 @@ begin
       if TObject( EventList[i]) is TNodeEventTrainInfo then
       begin
         EventTrainInfo := TNodeEventTrainInfo( EventList[i]);
-        TrainForm := TrainNodeList.Find(EventTrainInfo.Address, EventTrainInfo.SpeedSteps);
-        if Assigned(TrainForm) then
-          TrainForm.EventTrainInfo(EventTrainInfo)
-        else begin
-          TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
-          TrainForm.EventTrainInfo(EventTrainInfo);
+        if NMRAnetUtilities_EqualNodeIDInfo(EventTrainInfo.FNodeInfo, NodePool.Pool[0].Info) then
+        begin
+          TrainForm := TrainNodeList.FindProxy;
+          if Assigned(TrainForm) then
+            TrainForm.EventTrainInfo(EventTrainInfo)
+          else begin
+            TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
+            TrainForm.IsProxy := True;
+            TrainForm.EventTrainInfo(EventTrainInfo);
+          end;
+        end else
+        begin
+          TrainForm := TrainNodeList.Find(EventTrainInfo.Address, EventTrainInfo.SpeedSteps);
+          if Assigned(TrainForm) then
+            TrainForm.EventTrainInfo(EventTrainInfo)
+          else begin
+            TrainForm := TrainNodeList.CreateTrain(ImageList16x16);
+            TrainForm.EventTrainInfo(EventTrainInfo);
+          end;
         end;
       end;
       Event := TNodeEvent( EventList[i]);

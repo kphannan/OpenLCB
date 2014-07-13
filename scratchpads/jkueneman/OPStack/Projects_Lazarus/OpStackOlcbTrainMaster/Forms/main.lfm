@@ -802,7 +802,7 @@ object FormOlcbTrainMaster: TFormOlcbTrainMaster
     end
     object TabSheetEthernet: TTabSheet
       Caption = 'Ethernet'
-      ClientHeight = 443
+      ClientHeight = 384
       ClientWidth = 814
       OnHide = TabSheetEthernetHide
       OnShow = TabSheetEthernetShow
