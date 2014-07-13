@@ -312,7 +312,7 @@ begin
               Train.Manufacturer := 'Mustangpeak';
               Train.Owner := 'NMRA';
               Train.TrainID := TrainNode^.TrainData.Address;
-              Train.SpeedSteps := TrainNode^.TrainData.SpeedSteps;
+              Train.SpeedStep := TrainNode^.TrainData.SpeedSteps;
               if TrainNode^.TrainData.Address and $C000 <> 0 then Train.ShortLong := 1 else Train.ShortLong := 0;
 
               WriteTrainConfiguration(ConfigOffset, Train);
