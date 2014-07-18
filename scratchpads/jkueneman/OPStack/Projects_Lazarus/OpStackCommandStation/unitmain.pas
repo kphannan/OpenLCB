@@ -890,13 +890,13 @@ end;
 procedure TForm1.UpdateMessageCountUI;
 begin
   LabelSimpleCount.Caption := IntToSTr(SimpleBufferPool.Count);
-  LabelSnipCount.Caption := IntToStr(AcdiSnipBufferPool.Count);
+  LabelSnipCount.Caption := IntToStr(MultiFrameStringBufferPool.Count);
   LabelDatagramCount.Caption := IntToStr(DatagramBufferPool.Count);
   LabelMultiFrameCount.Caption := IntToStr(MultiFramePool.Count);
   LabelMessageCount.Caption := IntToStr(OPStackMessagePool.Count);
 
   LabelSimpleCountMax.Caption := IntToSTr(SimpleBufferPool.MaxCount);
-  LabelSnipCountMax.Caption := IntToStr(AcdiSnipBufferPool.MaxCount);
+  LabelSnipCountMax.Caption := IntToStr(MultiFrameStringBufferPool.MaxCount);
   LabelDatagramCountMax.Caption := IntToStr(DatagramBufferPool.MaxCount);
   LabelMultiFrameCountMax.Caption := IntToStr(MultiFramePool.MaxCount);
   LabelMessageCountMax.Caption := IntToStr(OPStackMessagePool.MaxCount);

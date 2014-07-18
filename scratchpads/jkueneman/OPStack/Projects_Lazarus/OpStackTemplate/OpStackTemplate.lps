@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="9">
+    <Units Count="12">
       <Unit0>
         <Filename Value="OpStackTemplate.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -17,11 +17,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_main"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="763"/>
-        <CursorPos X="1" Y="775"/>
+        <TopLine Value="560"/>
+        <CursorPos X="32" Y="573"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -37,7 +36,7 @@
       <Unit3>
         <Filename Value="../../../Library/com_port_hub.pas"/>
         <UnitName Value="com_port_hub"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="43" Y="10"/>
@@ -47,7 +46,7 @@
       <Unit4>
         <Filename Value="../../NMRAnet/opstackdefines.pas"/>
         <UnitName Value="opstackdefines"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="44" Y="3"/>
@@ -64,7 +63,7 @@
       <Unit6>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="67" Y="10"/>
@@ -74,7 +73,7 @@
       <Unit7>
         <Filename Value="../../Library/CabCommon/NMRAnetCabBridgeDefines.pas"/>
         <UnitName Value="NMRAnetCabBridgeDefines"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
@@ -89,11 +88,40 @@
         <CursorPos X="1" Y="1"/>
         <UsageCount Value="10"/>
       </Unit8>
+      <Unit9>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <UnitName Value="opstackcore"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="405"/>
+        <CursorPos X="27" Y="417"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="Templates/template_userstatemachine.pas"/>
+        <UnitName Value="template_userstatemachine"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="444"/>
+        <CursorPos X="30" Y="451"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="../../AppLayerTemplates/template_userstatemachine.pas"/>
+        <UnitName Value="template_userstatemachine"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="444"/>
+        <CursorPos X="30" Y="451"/>
+        <UsageCount Value="10"/>
+      </Unit11>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="9" HistoryIndex="8">
+    <JumpHistory Count="12" HistoryIndex="11">
       <Position1>
         <Filename Value="../../../Library/com_port_hub.pas"/>
         <Caret Line="1" Column="1" TopLine="1"/>
@@ -130,6 +158,18 @@
         <Filename Value="Forms/form_main.pas"/>
         <Caret Line="618" Column="5" TopLine="604"/>
       </Position9>
+      <Position10>
+        <Filename Value="../../NMRAnet/opstackcore.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position10>
+      <Position11>
+        <Filename Value="Templates/template_userstatemachine.pas"/>
+        <Caret Line="25" Column="31" TopLine="11"/>
+      </Position11>
+      <Position12>
+        <Filename Value="Forms/form_main.pas"/>
+        <Caret Line="775" Column="1" TopLine="763"/>
+      </Position12>
     </JumpHistory>
   </ProjectSession>
   <EditorMacros Count="0"/>

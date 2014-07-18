@@ -18,89 +18,92 @@ uses
   opstackcore_basic,
   opstackcanstatemachinesbuffers;
 
-procedure OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
-function OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(OPStackMessage: POPStackMessage; var AcdiSnipMessage: POPStackMessage): Boolean;
+procedure OPStackCANStatemachineSnip_ProcessOutgoingMultiFrameStringMessage;
+function OPStackCANStatemachineSnip_ProcessIncomingMultiFrameStringMessage(OPStackMessage: POPStackMessage; var AcdiSnipMessage: POPStackMessage): Boolean;
 
 implementation
 
 // *****************************************************************************
-//  procedure OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
+//  procedure OPStackCANStatemachineSnip_ProcessOutgoingMultiFrameStringMessage;
 //    Parameters:
 //    Result:
 //    Description:
 // *****************************************************************************
 
-procedure OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
+procedure OPStackCANStatemachineSnip_ProcessOutgoingMultiFrameStringMessage;
 var
   LocalMessage: TOPStackMessage;
   LocalOutgoingMessagePtr: POPStackMessage;
   LocalBuffer: TSimpleBuffer;
-  AcdiSnipBufferPtr: PAcdiSnipBuffer;
+  MultiFrameStringBufferPtr: PMultiFrameStringBuffer;
 begin            
   if IsOutgoingBufferAvailable then
   begin
-    LocalOutgoingMessagePtr := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingAcdiSnipStack(0);
+    LocalOutgoingMessagePtr := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingMultiFrameStringStack(0);
     if LocalOutgoingMessagePtr <> nil then
     begin
-      AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
+      LocalOutgoingMessagePtr^.WatchDog_1s := 0;
+      MultiFrameStringBufferPtr := PMultiFrameStringBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
       OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source, LocalOutgoingMessagePtr^.Dest, 0);
       OPStackBuffers_ZeroSimpleBuffer(@LocalBuffer, False);
       LocalMessage.MessageType := MT_SIMPLE;
       LocalMessage.Buffer := @LocalBuffer;
       LocalBuffer.DataBufferSize := 0;
-      while AcdiSnipBufferPtr^.CurrentCount < AcdiSnipBufferPtr^.DataBufferSize do
+      while MultiFrameStringBufferPtr^.CurrentCount < MultiFrameStringBufferPtr^.DataBufferSize do
       begin
-        LocalBuffer.DataArray[LocalBuffer.DataBufferSize] := AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.CurrentCount];
+        LocalBuffer.DataArray[LocalBuffer.DataBufferSize] := MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.CurrentCount];
         Inc(LocalBuffer.DataBufferSize );
-        Inc(AcdiSnipBufferPtr^.CurrentCount);
+        Inc(MultiFrameStringBufferPtr^.CurrentCount);
         if LocalBuffer.DataBufferSize = 6 then
           Break;
       end;
       OutgoingMessage(@LocalMessage, True);
 
-      if AcdiSnipBufferPtr^.CurrentCount >= AcdiSnipBufferPtr^.DataBufferSize then
+      if MultiFrameStringBufferPtr^.CurrentCount >= MultiFrameStringBufferPtr^.DataBufferSize then
       begin
-        OPStackCANStatemachineBuffers_RemoveAcdiSnipMessage(LocalOutgoingMessagePtr);
+        OPStackCANStatemachineBuffers_RemoveMultiFrameStringMessage(LocalOutgoingMessagePtr);
         OPStackBuffers_DeAllocateMessage(LocalOutgoingMessagePtr);
       end;
     end;
   end;
 end;
 
-function OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(OPStackMessage: POPStackMessage; var AcdiSnipMessage: POPStackMessage): Boolean;
+function OPStackCANStatemachineSnip_ProcessIncomingMultiFrameStringMessage(OPStackMessage: POPStackMessage; var AcdiSnipMessage: POPStackMessage): Boolean;
 var
   InProcessMessage: POPStackMessage;
   i: Integer;
-  AcdiSnipBuffer: PAcdiSnipBuffer;
+  MultiFrameStringBuffer: PMultiFrameStringBuffer;
 begin
   Result := False;
-  AcdiSnipBuffer := nil;
+  MultiFrameStringBuffer := nil;
 
-  InProcessMessage := OPStackCANStatemachineBuffers_FindMessageOnIncomingAcdiSnipFrameStack(OPStackMessage);
+  InProcessMessage := OPStackCANStatemachineBuffers_FindMessageOnIncomingMultiFrameStringFrameStack(OPStackMessage);
   if InProcessMessage = nil then
   begin
     if OPStackBuffers_Allcoate_ACDI_SNIP_Message(InProcessMessage, OPStackMessage^.MTI, OPStackMessage^.Source, OPStackMessage^.Dest) then
-      OPStackCANStatemachineBuffers_AddIncomingAcdiSnipMessage(InProcessMessage)
+      OPStackCANStatemachineBuffers_AddIncomingMultiFrameStringMessage(InProcessMessage)
     else begin
       OptionalInteractionRejected(OPStackMessage^.Dest, OPStackMessage^.Source, OPStackMessage^.MTI, False);         // HOW DO I WAIT AND FIND THE LAST BIT WITHOUT THE FRAMING BITS????
       Exit;
     end;
   end;
 
-  AcdiSnipBuffer := PAcdiSnipBuffer( PByte( InProcessMessage^.Buffer));
+  InProcessMessage^.WatchDog_1s := 0;
+
+  MultiFrameStringBuffer := PMultiFrameStringBuffer( PByte( InProcessMessage^.Buffer));
 
   for i := 2 to OPStackMessage^.Buffer^.DataBufferSize - 1 do
   begin
-    AcdiSnipBuffer^.DataArray[AcdiSnipBuffer^.DataBufferSize] := OPStackMessage^.Buffer^.DataArray[i];
-    Inc(AcdiSnipBuffer^.DataBufferSize);
+    MultiFrameStringBuffer^.DataArray[MultiFrameStringBuffer^.DataBufferSize] := OPStackMessage^.Buffer^.DataArray[i];
+    Inc(MultiFrameStringBuffer^.DataBufferSize);
     if OPStackMessage^.Buffer^.DataArray[i] = Ord( #0) then
-      Inc(AcdiSnipBuffer^.CurrentCount);
+      Inc(MultiFrameStringBuffer^.CurrentCount);
   end;
 
-  if AcdiSnipBuffer^.CurrentCount >= 6 then            // Found the 6 nulls?
+  if MultiFrameStringBuffer^.CurrentCount >= 6 then            // Found the 6 nulls?
   begin
     // Done
-    OPStackCANStatemachineBuffers_RemoveIncomingAcdiSnipMessage(InProcessMessage);
+    OPStackCANStatemachineBuffers_RemoveIncomingMultiFrameStringMessage(InProcessMessage);
     AcdiSnipMessage := InProcessMessage;
     Result := True
   end;

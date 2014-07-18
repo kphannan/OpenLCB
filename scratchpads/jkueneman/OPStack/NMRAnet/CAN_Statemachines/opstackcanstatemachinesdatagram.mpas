@@ -77,6 +77,7 @@ begin
         begin
           if InProcessMessage <> nil then
           begin
+            InProcessMessage^.WatchDog_1s := 0;
             OPStackBuffers_CopyDataArray(InProcessMessage^.Buffer, @OPStackMessage^.Buffer^.DataArray, OPStackMessage^.Buffer^.DataBufferSize, False);
             PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount + OPStackMessage^.Buffer^.DataBufferSize;
             Exit;
@@ -86,6 +87,7 @@ begin
         begin
           if InProcessMessage <> nil then
           begin
+            InProcessMessage^.WatchDog_1s := 0;
             OPStackBuffers_CopyDataArray(InProcessMessage^.Buffer, @OPStackMessage^.Buffer^.DataArray, OPStackMessage^.Buffer^.DataBufferSize, False);
             PDatagramBuffer( PByte( InProcessMessage^.Buffer))^.CurrentCount := 0;      // Wooh Hoo, we are done
             OPStackCANStatemachineBuffers_RemoveIncomingDatagramMessage(InProcessMessage);   // Pull it out of the working stack
@@ -121,6 +123,7 @@ begin
     LocalOutgoingMessage := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingDatagramStack(0);
     if LocalOutgoingMessage <> nil then                                 // We just work this stack from the top down, for now
     begin
+      LocalOutgoingMessage^.WatchDog_1s := 0;
       DatagramBuffer := PDatagramBuffer( PByte( LocalOutgoingMessage^.Buffer));
       OPStackBuffers_ZeroMessage(@NewMessage);
       OPStackBuffers_ZeroSimpleBuffer(@NewBuffer, False);

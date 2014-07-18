@@ -381,7 +381,7 @@ var
 begin
   Node^.State := NS_EMPTY;
   Node^.Login.iCID := 0;
-  Node^.Login.TimeCounter := 0;
+  Node^.Login.TimeCounter_100ms := 0;
   Node^.Info.AliasID := 0;
   Node^.iStateMachine := 0;
   for j := 0 to USER_MAX_EVENTS_BYTES - 1 do
@@ -408,17 +408,12 @@ begin
   Node^.TrainData.Lock.AliasID := 0;
   Node^.TrainData.Lock.ID[0] := 0;
   Node^.TrainData.Lock.ID[1] := 0;
-  Node^.TrainData.Controller.AliasID := 0;
-  Node^.TrainData.Controller.ID[0] := 0;
-  Node^.TrainData.Controller.ID[1] := 0;
+  Node^.TrainData.ControllerLink.AliasID := 0;
+  Node^.TrainData.ControllerLink.ID[0] := 0;
+  Node^.TrainData.ControllerLink.ID[1] := 0;
   Node^.TrainData.LinkedNode.AliasID := 0;
   Node^.TrainData.LinkedNode.ID[0] := 0;
   Node^.TrainData.LinkedNode.ID[1] := 0;
-  {$ENDIF}
-  {$IFDEF SUPPORT_TRACTION_PROXY}
-  Node^.TrainProxyData.Lock.AliasID := 0;
-  Node^.TrainProxyData.Lock.ID[0] := 0;
-  Node^.TrainProxyData.Lock.ID[1] := 0;
   {$ENDIF}
   AppCallback_NodeInitialize(Node);                                             // Allow the App layer to initialize it
 end;

@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_buffers.mpas
+Value=Templates\template_userstatemachine.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -80,7 +80,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=13
+Count=14
 File0=Throttle_main.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=Throttle_events_code.mpas
@@ -94,6 +94,7 @@ File9=..\..\..\..\Library\CabCommon\NMRAnetCabBridgeDefines.mpas
 File10=..\..\..\..\NMRAnet\opstackdefines.mpas
 File11=..\..\..\..\NMRAnet\opstackbuffers.mpas
 File12=Templates\template_buffers.mpas
+File13=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

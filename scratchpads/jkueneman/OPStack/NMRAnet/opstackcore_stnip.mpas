@@ -25,7 +25,7 @@ procedure SimpleTrainNodeInfoReply(Node: PNMRAnetNode; NextMessage: POPStackMess
 
 implementation
 
-procedure ReadConfigStringOffset(ConfigOffset: DWord; AcdiSnipBufferPtr: PAcdiSnipBuffer);
+procedure ReadConfigStringOffset(ConfigOffset: DWord; MultiFrameStringBufferPtr: PMultiFrameStringBuffer);
 var
   i, BufferLen: Integer;
   Buffer: TStnipBuffer;
@@ -46,13 +46,13 @@ begin
     begin
       for i := 0 to BufferLen do       // Need to add the Null so run all the way to BufferLen
       begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := Ord( Buffer[i]);
-        Inc(AcdiSnipBufferPtr^.DataBufferSize);
+        MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.DataBufferSize] := Ord( Buffer[i]);
+        Inc(MultiFrameStringBufferPtr^.DataBufferSize);
       end
     end else
     begin
-      AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := Ord(#0);
-      Inc(AcdiSnipBufferPtr^.DataBufferSize);
+      MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.DataBufferSize] := Ord(#0);
+      Inc(MultiFrameStringBufferPtr^.DataBufferSize);
     end
   end
 end;
@@ -68,7 +68,7 @@ end;
 
 function SimpleTrainNodeInfoRequestHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 var
-  AcdiSnipBufferPtr: PAcdiSnipBuffer;
+  MultiFrameStringBufferPtr: PMultiFrameStringBuffer;
   ConfigOffset: DWord;
 begin
   Result := False;
@@ -76,21 +76,21 @@ begin
 
   if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_TRAIN_NODE_INFO_REPLY, NextMessage^.Dest, NextMessage^.Source) then
   begin
-    AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
-    AcdiSnipBufferPtr^.DataBufferSize := 0;
+    MultiFrameStringBufferPtr := PMultiFrameStringBuffer( PByte( MessageToSend^.Buffer));
+    MultiFrameStringBufferPtr^.DataBufferSize := 0;
 
     ConfigOffset := 0;
     if Node^.iIndex > 0 then
       ConfigOffset := USER_CONFIGURATION_MEMORY_SIZE + ((Node^.iIndex - 1) * USER_VNODE_CONFIGURATION_MEMORY_SIZE);
 
-    AcdiSnipBufferPtr^.DataArray[0] := 1;   // Version ID
-    AcdiSnipBufferPtr^.DataBufferSize := 1;
-    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_ROADNAME, AcdiSnipBufferPtr);
-    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_CLASS, AcdiSnipBufferPtr);
-    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_ROADNUMBER, AcdiSnipBufferPtr);
-    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_TRAINNAME, AcdiSnipBufferPtr);
-    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_MANUFACTURER, AcdiSnipBufferPtr);
-    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_OWNER, AcdiSnipBufferPtr);
+    MultiFrameStringBufferPtr^.DataArray[0] := 1;   // Version ID
+    MultiFrameStringBufferPtr^.DataBufferSize := 1;
+    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_ROADNAME, MultiFrameStringBufferPtr);
+    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_CLASS, MultiFrameStringBufferPtr);
+    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_ROADNUMBER, MultiFrameStringBufferPtr);
+    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_TRAINNAME, MultiFrameStringBufferPtr);
+    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_MANUFACTURER, MultiFrameStringBufferPtr);
+    ReadConfigStringOffset(ConfigOffset + STNIP_OFFSET_OWNER, MultiFrameStringBufferPtr);
     Result := UnLinkDeAllocateAndTestForMessageToSend(Node, MessageToSend, NextMessage);    // Keep trying until we release the buffer to send the next one
   end;
 end;

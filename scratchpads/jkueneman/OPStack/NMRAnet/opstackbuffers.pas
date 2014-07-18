@@ -42,12 +42,12 @@ type
   PStreamBufferPool = ^TStreamBufferPool;
   {$ENDIF}
 
-  TAcdiSnipBufferPool = record
-    Pool: array[0..USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1] of TAcdiSnipBuffer;
+  TMultiFrameStringBufferPool = record
+    Pool: array[0..USER_MAX_MULTIFRAME_STRING_ARRAY_BUFFERS-1] of TMultiFrameStringBuffer;
     Count: Word;
     MaxCount: Word;
   end;
-  PAcdiSnipBufferPool = ^TAcdiSnipBufferPool;
+  PMultiFrameStringBufferPool = ^TMultiFrameStringBufferPool;
 
   TMultiFramePool = record
     Pool: array[0..USER_MAX_MULTIFRAME_ARRAY_BUFFERS-1] of TMultiFrameBuffer;
@@ -63,8 +63,14 @@ type
   end;
 
 {$IFDEF SUPPORT_TRACTION_PROXY}
+// This buffer allows a train command to come in from another node where it needs be proxied to the command station.  This may not happen immediately so we need to buffer it
 type
+
+  { TTrainProxyBuffer }
+
   TTrainProxyBuffer = record
+    Proxy: TNodeInfo;
+    Train: TNodeInfo;
     TrainID: Word;     // Train To Proxy
     SpeedSteps: Byte;
     Action: Byte;             // See TRAIN_PROXY_ACTION_XXXX constants
@@ -72,6 +78,7 @@ type
     NewFunctionAddress: DWord;
     NewFunctionValue: Word;
     iStateMachine: Byte;
+    Watchdog_1s: Byte;
     Next: ^TTrainProxyBuffer;
   end;
   PTrainProxyBuffer = ^TTrainProxyBuffer;
@@ -80,7 +87,7 @@ type
 
   TTrainProxyPool = record
     Pool: TTrainProxyBufferArray;
-    Stack: ^TTrainProxyBuffer;
+    Stack: PTrainProxyBuffer;
     Count: Integer;
     MaxCount: Integer;
   end;
@@ -88,23 +95,27 @@ type
 
 
 procedure OPStackBuffers_Initialize;
-procedure OPStackBuffers_Timer;
+procedure OPStackBuffers_WatchdogTimer_1s;
 
 // Allocate Message helpers
 function OPStackBuffers_AllocateOPStackMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsCAN: Boolean): Boolean;
 function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; var Source: TNodeInfo; var Dest: TNodeInfo; DestFlags: Byte): Boolean;
+function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
+function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 {$IFDEF SUPPORT_STREAMS}
 function OPStackBuffers_AllcoateStreamMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo; IsOutgoing: Boolean): Boolean;
 {$ENDIF}
-function OPStackBuffers_Allcoate_ACDI_SNIP_Message(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
-function OPStackBuffers_AllocateMultiFrameMessage(var AMessage: POPStackMessage; MTI: Word;  var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
 
+// Traction Proxy Message Stack, allows incoming messages to external nodes to buffer an outgoing message heading for the Proxy Node and the track.
+// These buffers are self protected from being abandon.  The Train Proxy hanlder statemachine will end the effort, clean up and release the buffer
 {$IFDEF SUPPORT_TRACTION_PROXY}
-function OPStackBuffer_TrainProxyAllocate(TrainID: Word; SpeedSteps: Byte; Action: Byte; NewSpeed: THalfFloat; NewFunctionAddress: DWord; NewFunctionValue: Word): PTrainProxyBuffer;
+function OPStackBuffer_TrainProxyAllocate(var ATrain, AProxy: TNodeInfo; TrainID: Word; SpeedSteps: Byte; Action: Byte; NewSpeed: THalfFloat; NewFunctionAddress: DWord; NewFunctionValue: Word): PTrainProxyBuffer;
 procedure OPStackBuffer_TrainProxyAddToStack(TrainProxy: PTrainProxyBuffer);
-procedure OPStackBuffer_RemoveAndFreeFirstOnStack;
+procedure OPStackBuffer_TrainRemoveAndFreeFirstOnStack;
 {$ENDIF}
+
+procedure OPStackBuffers_SearchandDestroyAbandonMessagesInMessageStack(var Root: POPStackMessage);
 
 // Load Message helpers
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word; var Source: TNodeInfo; var Dest: TNodeInfo; FramingBits: Byte);
@@ -117,7 +128,7 @@ procedure OPStackBuffers_ZeroDatagramBuffer(ABuffer: PDatagramBuffer; ZeroArray:
 {$IFDEF SUPPORT_STREAMS}
 procedure OPStackBuffers_ZeroStreamBuffer(ABuffer: PStreamBuffer; ZeroArray: Boolean);
 {$ENDIF}
-procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
+procedure OPStackBuffers_ZeroMultiFrameStringBuffer(ABuffer: PMultiFrameStringBuffer; ZeroArray: Boolean);
 procedure OPStackBuffers_ZeroMultiFrameBuffer(ABuffer: PMultiFrameBuffer; ZeroArray: Boolean);
 
 {$IFDEF SUPPORT_STREAMS}
@@ -142,7 +153,7 @@ var
   StreamSourceID: Byte;
   StreamDestID: Byte;
   {$ENDIF}
-  AcdiSnipBufferPool: TAcdiSnipBufferPool;
+  MultiFrameStringBufferPool: TMultiFrameStringBufferPool;
   MultiFramePool: TMultiFramePool;
   OPStackMessagePool: TOPStackMessagePool;
   {$IFDEF SUPPORT_TRACTION_PROXY}
@@ -211,10 +222,10 @@ begin
   DatagramBufferPool.Count := 0;
   DatagramBufferPool.MaxCount := 0;
 
-  for j := 0 to USER_MAX_ACDI_SNIP_ARRAY_BUFFERS-1  do
-    OPStackBuffers_ZeroAcdiSnipBuffer(@AcdiSnipBufferPool.Pool[j], True);
-  AcdiSnipBufferPool.Count := 0;
-  AcdiSnipBufferPool.MaxCount := 0;
+  for j := 0 to USER_MAX_MULTIFRAME_STRING_ARRAY_BUFFERS-1  do
+    OPStackBuffers_ZeroMultiFrameStringBuffer(@MultiFrameStringBufferPool.Pool[j], True);
+  MultiFrameStringBufferPool.Count := 0;
+  MultiFrameStringBufferPool.MaxCount := 0;
 
   {$IFDEF SUPPORT_STREAMS}
   for j := 0 to USER_MAX_STREAM_ARRAY_BUFFERS-1  do
@@ -253,16 +264,24 @@ begin
   {$ENDIF}
 end;
 
-procedure OPStackBuffers_Timer;
+procedure OPStackBuffers_WatchdogTimer_1s;
 var
   i: Integer;
 begin
   i := 0;
   while i < USER_MAX_MESSAGE_ARRAY_BUFFERS do
   begin
-    Inc(OPStackMessagePool.Pool[i].WatchDog);
+    Inc(OPStackMessagePool.Pool[i].WatchDog_1s);
     Inc(i)
   end;
+  {$IFDEF SUPPORT_TRACTION_PROXY}
+  i := 0;
+  while i < USER_MAX_TRAIN_PROXY_BUFFERS - 1 do
+  begin
+    Inc(TrainProxyPool.Pool[i].Watchdog_1s);
+    Inc(i)
+  end;
+  {$ENDIF}
 end;
 
 function AllocateSimpleBuffer(var Buffer: PSimpleBuffer): Boolean;
@@ -342,23 +361,23 @@ begin
 end;
 {$ENDIF}
 
-function AllocateAcdiSnipBuffer(var Buffer: PAcdiSnipBuffer): Boolean;
+function AllocateMultiFrameStringBuffer(var Buffer: PMultiFrameStringBuffer): Boolean;
 var
   i: Integer;
 begin
   Result := False;
-  if AcdiSnipBufferPool.Count < USER_MAX_ACDI_SNIP_ARRAY_BUFFERS then
+  if MultiFrameStringBufferPool.Count < USER_MAX_MULTIFRAME_STRING_ARRAY_BUFFERS then
   begin
-    for i := 0 to USER_MAX_ACDI_SNIP_ARRAY_BUFFERS - 1 do
+    for i := 0 to USER_MAX_MULTIFRAME_STRING_ARRAY_BUFFERS - 1 do
     begin
-      if AcdiSnipBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
+      if MultiFrameStringBufferPool.Pool[i].State and ABS_ALLOCATED = 0 then
       begin
-        Buffer := @AcdiSnipBufferPool.Pool[i];
-        OPStackBuffers_ZeroAcdiSnipBuffer(Buffer, False);
-        AcdiSnipBufferPool.Pool[i].State := ABS_ALLOCATED;
-        Inc(AcdiSnipBufferPool.Count);
-        if AcdiSnipBufferPool.Count > AcdiSnipBufferPool.MaxCount then
-          AcdiSnipBufferPool.MaxCount := AcdiSnipBufferPool.Count;
+        Buffer := @MultiFrameStringBufferPool.Pool[i];
+        OPStackBuffers_ZeroMultiFrameStringBuffer(Buffer, False);
+        MultiFrameStringBufferPool.Pool[i].State := ABS_ALLOCATED;
+        Inc(MultiFrameStringBufferPool.Count);
+        if MultiFrameStringBufferPool.Count > MultiFrameStringBufferPool.MaxCount then
+          MultiFrameStringBufferPool.MaxCount := MultiFrameStringBufferPool.Count;
         Result := True;
         {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Alloc Snip'+LF);{$ENDIF}
         Exit;
@@ -424,12 +443,12 @@ begin
 end;
 {$ENDIF}
 
-procedure DeAllocateAcdiSnipBuffer(Buffer: PAcdiSnipBuffer);
+procedure DeAllocateAcdiSnipBuffer(Buffer: PMultiFrameStringBuffer);
 begin
   if Buffer^.State and ABS_ALLOCATED <> 0 then                                  // Only effect the pool if the buffer was allocated from the pool
   begin
     {$IFDEF TRACK_BUFFERS}UART1_Write_Text('Dealloc Snip'+LF);{$ENDIF}
-    Dec(AcdiSnipBufferPool.Count);
+    Dec(MultiFrameStringBufferPool.Count);
     Buffer^.State := 0
   end
 end;
@@ -455,11 +474,11 @@ begin
     if OPStackMessagePool.Pool[i].MessageType and MT_ALLOCATED = 0 then
     begin
       OPStackMessage := @OPStackMessagePool.Pool[i];
-      OPStackMessage^.MessageType := MT_ALLOCATED;
       OPStackBuffers_ZeroMessage(OPStackMessage);
       Inc(OPStackMessagePool.Count);
       if OPStackMessagePool.Count > OPStackMessagePool.MaxCount then
         OPStackMessagePool.MaxCount := OPStackMessagePool.Count;
+      OPStackMessage^.MessageType := MT_ALLOCATED;
       Result := True;
       Break
     end;
@@ -545,16 +564,16 @@ function OPStackBuffers_Allcoate_ACDI_SNIP_Message(
   var AMessage: POPStackMessage; MTI: Word; var Source: TNodeInfo;
   var Dest: TNodeInfo): Boolean;
 var
-  AcdiSnipBuffer: PAcdiSnipBuffer;
+  MultiFrameStringBuffer: PMultiFrameStringBuffer;
 begin
   Result := False;
   if NextFreeOPStackMessage(AMessage) then
   begin
     AMessage^.MessageType := MT_ACDISNIP or MT_ALLOCATED;
-    if AllocateAcdiSnipBuffer(AcdiSnipBuffer) then
+    if AllocateMultiFrameStringBuffer(MultiFrameStringBuffer) then
     begin
       OPStackBuffers_LoadMessage(AMessage, MTI, Source, Dest, 0);
-      AMessage^.Buffer := PSimpleBuffer( PByte( AcdiSnipBuffer));
+      AMessage^.Buffer := PSimpleBuffer( PByte( MultiFrameStringBuffer));
       Result := True
     end else
     begin
@@ -588,9 +607,9 @@ begin
 end;
 
 {$IFDEF SUPPORT_TRACTION_PROXY}
-function OPStackBuffer_TrainProxyAllocate(TrainID: Word; SpeedSteps: Byte;
-  Action: Byte; NewSpeed: THalfFloat; NewFunctionAddress: DWord;
-  NewFunctionValue: Word): PTrainProxyBuffer;
+function OPStackBuffer_TrainProxyAllocate(var ATrain, AProxy: TNodeInfo;
+  TrainID: Word; SpeedSteps: Byte; Action: Byte; NewSpeed: THalfFloat;
+  NewFunctionAddress: DWord; NewFunctionValue: Word): PTrainProxyBuffer;
 var
   i: Integer;
 begin
@@ -599,6 +618,8 @@ begin
   begin
     if TrainProxyPool.Pool[i].Action = TRAIN_PROXY_ACTION_NONE then
     begin
+      TrainProxyPool.Pool[i].Train := ATrain;
+      TrainProxyPool.Pool[i].Proxy := AProxy;
       TrainProxyPool.Pool[i].Action := Action;
       TrainProxyPool.Pool[i].TrainID := TrainID;
       TrainProxyPool.Pool[i].SpeedSteps := SpeedSteps;
@@ -606,6 +627,7 @@ begin
       TrainProxyPool.Pool[i].NewFunctionAddress := NewFunctionAddress;
       TrainProxyPool.Pool[i].NewFunctionValue := NewFunctionValue;
       TrainProxyPool.Pool[i].iStateMachine := 0;
+      TrainProxyPool.Pool[i].Watchdog_1s := 0;
       TrainProxyPool.Pool[i].Next := nil;
       Inc(TrainProxyPool.Count);
       if TrainProxyPool.Count > TrainProxyPool.MaxCount then
@@ -637,7 +659,7 @@ begin
   end;
 end;
 
-procedure OPStackBuffer_RemoveAndFreeFirstOnStack;
+procedure OPStackBuffer_TrainRemoveAndFreeFirstOnStack;
 var
   OldProxy: PTrainProxyBuffer;
 begin
@@ -651,6 +673,7 @@ begin
       TrainProxyPool.Count := 0;
   end;
 end;
+
 {$ENDIF}
 
 procedure OPStackBuffers_DeAllocateMessage(AMessage: POPStackMessage);
@@ -666,7 +689,7 @@ begin
         {$IFDEF SUPPORT_STREAMS}
         MT_STREAM    : DeAllocateSteamBuffer(PStreamBuffer( PByte( AMessage^.Buffer)));
         {$ENDIF}
-        MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PAcdiSnipBuffer( PByte( AMessage^.Buffer)));
+        MT_ACDISNIP  : DeAllocateAcdiSnipBuffer(PMultiFrameStringBuffer( PByte( AMessage^.Buffer)));
         MT_MULTIFRAME : DeAllocateMultiFrameBuffer(PMultiFrameBuffer( PByte( AMessage^.Buffer)));
       end;
     end;
@@ -762,13 +785,13 @@ begin
 end;
 {$ENDIF}
 
-procedure OPStackBuffers_ZeroAcdiSnipBuffer(ABuffer: PAcdiSnipBuffer; ZeroArray: Boolean);
+procedure OPStackBuffers_ZeroMultiFrameStringBuffer( ABuffer: PMultiFrameStringBuffer; ZeroArray: Boolean);
 var
   i: Integer;
 begin
   if ZeroArray then
   begin
-    for i := 0 to USER_MAX_ACDI_SNIP_BYTES - 1 do
+    for i := 0 to USER_MAX_MULTIFRAME_STRING_BYTES - 1 do
       ABuffer^.DataArray[i] := 0;
   end;
   ABuffer^.State := 0;
@@ -790,6 +813,36 @@ begin
   ABuffer^.CurrentCount := 0;
 end;
 
+procedure OPStackBuffers_SearchandDestroyAbandonMessagesInMessageStack(var Root: POPStackMessage);
+var
+  Prev, Current: POPStackMessage;
+begin
+  if Root <> nil then
+  begin
+    Prev := nil;
+    Current := Root;
+    repeat
+      if Current^.WatchDog_1s > TIMEOUT_ABANDON_RESOURCE then
+      begin
+        if Prev = nil then       // Still playing with the Node^.IncomingMessage position
+        begin
+          Root := Current^.NextIncoming;
+          OPStackBuffers_DeAllocateMessage(Current);
+          Current := Root;
+        end else
+        begin
+          Prev^.NextIncoming := Current^.NextIncoming;   // Clip the current out of the list, Prev does not change
+          OPStackBuffers_DeAllocateMessage(Current);
+          Current := Current^.NextIncoming;
+        end;
+      end else
+      begin
+        Prev := Current;
+        Current := Current^.NextIncoming;
+      end;
+    until Current = nil;
+  end;
+end;
 
 procedure OPStackBuffers_LoadMessage(AMessage: POPStackMessage; MTI: Word;
   var Source: TNodeInfo; var Dest: TNodeInfo; FramingBits: Byte);
@@ -812,7 +865,7 @@ begin
   AMessage^.Source.ID := NULL_NODE_ID;
   AMessage^.Buffer := nil;
   AMessage^.FramingBits := 0;
-  AMessage^.WatchDog := 0;
+  AMessage^.WatchDog_1s := 0;
 end;
 
 {$IFDEF SUPPORT_STREAMS}

@@ -24,41 +24,25 @@ uses
 procedure TractionProxyProtocolMessage(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
 function TractionProxyProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+procedure TractionProxyProxiedMessageHandler;
 
 implementation
 
-function TractionProxyProtocolManage(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
-begin
-  Result := False;
-  MessageToSend := nil;
-  if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RESERVE then
-  begin
-    if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_PROXY_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
-    begin
-      MessageToSend^.Buffer^.DataBufferSize := 3;
-      MessageToSend^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
-      MessageToSend^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
-      if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainProxyData.Lock) or NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainProxyData.Lock, NextMessage^.Source) then
-      begin
-        MessageToSend^.Buffer^.DataArray[2] := TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK;
-        DestNode^.TrainData.Lock.AliasID := NextMessage^.Source.AliasID;
-        DestNode^.TrainData.Lock.ID[0] := NextMessage^.Source.ID[0];
-        DestNode^.TrainData.Lock.ID[1] := NextMessage^.Source.ID[1];
-      end else
-        MessageToSend^.Buffer^.DataArray[2] := TRACTION_PROXY_MANAGE_RESERVE_REPLY_FAIL;
-      Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-    end
-  end else
-  begin
-    if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainProxyData.Lock, NextMessage^.Source) then
-    begin
-      DestNode^.TrainData.Lock.AliasID := 0;
-      DestNode^.TrainData.Lock.ID[0] := 0;
-      DestNode^.TrainData.Lock.ID[1] := 0;
-    end;
-    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-  end;
-end;
+{$IFDEF FPC}
+uses
+  olcb_transport_layer;
+{$ENDIF}
+
+const
+  STATE_SERVER_TRACTION_MESSAGE_START          = 0;
+  STATE_SERVER_TRACTION_MESSAGE_SEND_RESERVE   = 1;
+  STATE_SERVER_TRACTION_MESSAGE_SEND_ATTACH    = 2;
+  STATE_SERVER_TRACTION_MESSAGE_SEND           = 3;
+  STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH    = 4;
+  STATE_SERVER_TRACTION_MESSAGE_SEND_RELEASE   = 5;
+  STATE_SERVER_TRACTION_MESSAGE_SEND_DONE      = 6;
+  STATE_SERVER_TRACTION_MESSAGE_SEND_WAIT      = 7;
+
 
 //******************************************************************************
 // procedure TractionProxyProtocol
@@ -74,6 +58,15 @@ begin
   OPStackNode_IncomingMessageLink(DestNode, AMessage)
 end;
 
+//******************************************************************************
+// procedure TractionProxyProtocolHandler
+// Parameters:
+//    AMessage: The incoming OPStack Message
+//    DestNode: The node the message is meant for
+// Description:
+//    Takes incoming Traction Protocol and posts it to be disected and handled
+//    later in the Reply
+//******************************************************************************
 function TractionProxyProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
@@ -81,19 +74,48 @@ begin
   {$IFDEF SUPPORT_TRACTION_PROXY}
   case NextMessage^.Buffer^.DataArray[0] of
     TRACTION_PROXY_MANAGE : begin
-                              Result := TractionProxyProtocolManage(DestNode, MessageToSend, NextMessage);
+                              if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RESERVE then
+                              begin
+                                // This works the same for the physical proxy node and the train nodes just the definintion of what is locked is different
+                                if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_PROXY_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
+                                begin
+                                  MessageToSend^.Buffer^.DataBufferSize := 3;
+                                  MessageToSend^.Buffer^.DataArray[0] := TRACTION_PROXY_MANAGE;
+                                  MessageToSend^.Buffer^.DataArray[1] := TRACTION_PROXY_MANAGE_RESERVE;
+                                  if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainData.Lock) or NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
+                                  begin
+                                    DestNode^.TrainData.Lock.AliasID := NextMessage^.Source.AliasID;
+                                    DestNode^.TrainData.Lock.ID[0] := NextMessage^.Source.ID[0];
+                                    DestNode^.TrainData.Lock.ID[1] := NextMessage^.Source.ID[1];
+                                    MessageToSend^.Buffer^.DataArray[2] := TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK;
+                                  end else
+                                    MessageToSend^.Buffer^.DataArray[2] := TRACTION_PROXY_MANAGE_RESERVE_REPLY_FAIL;
+                                  Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                                end
+                              end else
+                              if NextMessage^.Buffer^.DataArray[1] = TRACTION_MANAGE_RELEASE then
+                              begin
+                                if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
+                                begin
+                                  DestNode^.TrainData.Lock.AliasID := 0;
+                                  DestNode^.TrainData.Lock.ID[0] := 0;
+                                  DestNode^.TrainData.Lock.ID[1] := 0;
+                                end;
+                                Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+                              end else
+                                Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
                               Exit;
                             end;
     TRACTION_PROXY_ATTACH : begin
                               if @NodePool.Pool[0] = DestNode then              // Only the root node can attach
                               begin
-                                if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainData.Controller) then
+                                if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
                                 begin
                                   if TrySendTractionProxyAttachReply(NextMessage^.Dest, NextMessage^.Source, TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK) then
                                   begin
                                     DestNode^.TrainData.Address := Word( NextMessage^.Buffer^.DataArray[1] shl 8) or Word( NextMessage^.Buffer^.DataArray[2]);
                                     DestNode^.TrainData.SpeedSteps := NextMessage^.Buffer^.DataArray[3];
-                                    DestNode^.TrainData.Controller := NextMessage^.Source;
+                                    DestNode^.TrainData.ControllerLink := NextMessage^.Source;
                                     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
                                   end;
                                 end else
@@ -106,9 +128,9 @@ begin
                             end;
     TRACTION_PROXY_DETACH : begin
                               if @NodePool.Pool[0] = DestNode then              // Only the root node can attach
-                                if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+                                if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
                                 begin
-                                  DestNode^.TrainData.Controller := NULL_NODE_INFO;
+                                  DestNode^.TrainData.ControllerLInk := NULL_NODE_INFO;
                                   Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
                                 end;
                               Exit;
@@ -121,10 +143,142 @@ begin
   {$ENDIF}
 end;
 
+
+//******************************************************************************
+// procedure TractionProxyProtocolHandler
+// Parameters:
+//    AMessage: The incoming OPStack Message
+//    DestNode: The node the message is meant for
+// Description:
+//    Takes incoming Traction Protocol and posts it to be disected and handled
+//    later in the Reply
+//******************************************************************************
 procedure TractionProxyProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
+var
+  DoRelease: Boolean;
 begin
+  if TrainProxyPool.Stack <> nil then
+  begin
+    case AMessage^.Buffer^.DataArray[0] of
+      TRACTION_PROXY_ATTACH_REPLY :
+          begin
+            // Today we don't interleave so assuming the Stack paramer is what caused this is acceptable since
+            // that is the only reason the node would be sending us a reply
+            if NMRAnetUtilities_EqualNodeIDInfo(TrainProxyPool.Stack^.Proxy, AMessage^.Source) then
+              if NMRAnetUtilities_EqualNodeIDInfo(TrainProxyPool.Stack^.Train, DestNode^.Info) then
+              begin
+                if AMessage^.Buffer^.DataArray[1] = TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK then
+                  TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND
+                else
+                  TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DONE;
+              end;
+          end;
+      TRACTION_PROXY_MANAGE_REPLY :
+          begin
+            if NMRAnetUtilities_EqualNodeIDInfo(TrainProxyPool.Stack^.Proxy, AMessage^.Source) then
+              if NMRAnetUtilities_EqualNodeIDInfo(TrainProxyPool.Stack^.Train, DestNode^.Info) then
+              begin
+                if AMessage^.Buffer^.DataArray[2] = TRACTION_PROXY_MANAGE_RESERVE_REPLY_OK then
+                  TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_ATTACH
+                else
+                  TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DONE;
+              end;
+          end;
+    end;
+  end;
   AppCallback_TractionProxyProtocolReply(DestNode, AMessage);
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
+end;
+
+
+//******************************************************************************
+// procedure TractionProxyProtocolHandler
+// Parameters:
+//    AMessage: The incoming OPStack Message
+//    DestNode: The node the message is meant for
+// Description:
+//    Takes incoming Traction Protocol and posts it to be disected and handled
+//    later in the Reply
+//******************************************************************************
+procedure TractionProxyProxiedMessageHandler;
+begin
+  if TrainProxyPool.Stack <> nil then
+  begin
+    case TrainProxyPool.Stack^.iStateMachine of
+        STATE_SERVER_TRACTION_MESSAGE_START :
+            begin
+              TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_RESERVE;
+              Exit;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND_RESERVE :
+            begin
+              if TrySendTractionProxyManage(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy, True) then
+              begin
+                TrainProxyPool.Stack^.Watchdog_1s := 0;
+                TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_WAIT;
+              end;
+              Exit;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND_ATTACH :
+            begin
+              if TrySendTractionProxyAttach(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy, TrainProxyPool.Stack^.TrainID, TrainProxyPool.Stack^.SpeedSteps, 0, True) then
+              begin
+                TrainProxyPool.Stack^.Watchdog_1s := 0;
+                TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_WAIT;
+              end;
+              Exit;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND :
+            begin
+              case TrainProxyPool.Stack^.Action of
+                TRAIN_PROXY_ACTION_SPEEDDIR  :
+                    begin
+                      if TrySendTractionSpeedSet(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy, TrainProxyPool.Stack^.NewSpeed) then
+                        TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH;
+                      Exit;
+                    end;
+                TRAIN_PROXY_ACTION_ESTOP :
+                    begin
+                      if TrySendTractionEmergencyStop(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy) then
+                        TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH;
+                      Exit;
+                    end;
+                TRAIN_PROXY_ACTION_FUNCTION :
+                    begin
+                      if TrySendTractionFunctionSet(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy, TrainProxyPool.Stack^.NewFunctionAddress, TrainProxyPool.Stack^.NewFunctionValue) then
+                        TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH;
+                      Exit;
+                    end
+              else begin
+                  TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH;
+                  Exit;
+                end;
+              end;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH :
+            begin
+              if TrySendTractionProxyAttach(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy, TrainProxyPool.Stack^.TrainID, TrainProxyPool.Stack^.SpeedSteps, 0, False) then
+                TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_RELEASE;
+              Exit;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND_RELEASE :
+            begin
+              if TrySendTractionProxyManage(TrainProxyPool.Stack^.Train, TrainProxyPool.Stack^.Proxy, False) then
+                TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DONE;
+              Exit;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND_DONE :
+            begin
+              OPStackBuffer_TrainRemoveAndFreeFirstOnStack;
+            end;
+        STATE_SERVER_TRACTION_MESSAGE_SEND_WAIT :
+            begin
+              if TrainProxyPool.Stack^.Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
+                TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH;
+              Exit;
+            end;
+    end
+  end
 end;
 
 end.

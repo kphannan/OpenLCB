@@ -39,7 +39,7 @@ function TrySendPCEventReport(var Source: TNodeInfo; EventID: PEventID): Boolean
 // Button
 function TrySendRemoteButtonRequest(var Source: TNodeInfo; var Dest: TNodeInfo; DataBuffer: PSimpleBuffer): Boolean;
 // Snip/Snii
-function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
+function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; MultiFrameStringBuffer: PMultiFrameStringBuffer): Boolean;
 // Traction
 {$IFDEF SUPPORT_TRACTION}
 function TrySendStnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo): Boolean;
@@ -256,7 +256,7 @@ begin
     end
 end;
 
-function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo; AcdiSnipBuffer: PAcdiSnipBuffer): Boolean;
+function TrySendSnipRequest(var Source: TNodeInfo; var Dest: TNodeInfo;MultiFrameStringBuffer: PMultiFrameStringBuffer): Boolean;
 var
   NewMessage: POPStackMessage;
 begin

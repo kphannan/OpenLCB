@@ -20,7 +20,9 @@ const
   LF = #13+#10;
   
 const
-  MAX_BUS_LOGIN_TIMEOUT = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
+  TIMEOUT_MAX_BUS_LOGIN = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
+  TIMEOUT_ABANDON_RESOURCE = 3;                                                 // Number of seconds before a resource (message/buffer/etc) is delared abandon and needs to be released
+  TIMEOUT_MESSAGE_REPLY_WAIT = 3;                                               // Number of seconds before deciding the other node is not going to reply
 
 const
   STNIP_MAX_STR_LEN = 32;
@@ -77,8 +79,8 @@ type
   PDatagramDataArray = ^TDatagramDataArray;
   TStreamDataArray = array[0..USER_MAX_STREAM_BYTES-1] of Byte;
   PStreamDataArray = ^TStreamDataArray;
-  TAcdiSnipDataArray = array[0..USER_MAX_ACDI_SNIP_BYTES] of Byte;
-  PAcdiSnipDataArray = ^TAcdiSnipDataArray;
+  TMultiFrameStringDataArray = array[0..USER_MAX_MULTIFRAME_STRING_BYTES] of Byte;
+  PAcdiSnipDataArray = ^TMultiFrameStringDataArray;
 
   TMultiFrameArray = array[0..USER_MAX_MULTI_FRAME_BYTES] of Byte;              // This is common mulit-frame buffer for those pesky multi frame messages that are only a few frames long such as the Traction QuerySpeed, this gives us flexibility in lengthing it in the future if needed
   PMultiFrameArray = ^TMultiFrameArray;
@@ -187,7 +189,7 @@ const
 
 type
   TNMRAnetNodeLoginInfo = record
-    TimeCounter: Byte;                                                          // Number of timer ticks into the time waiting for a RID response from another node for our RID broadcasts
+    TimeCounter_100ms: Byte;                                                    // Number of timer ticks into the time waiting for a RID response from another node for our RID broadcasts
     iCID: Byte;                                                                 // Which of the 4 CIDs we are broadcasting
     Seed: TNodeID;                                                              // Seed for Random Number Generator in case we have to reseed because of a duplicate ID
   end;
@@ -247,14 +249,14 @@ type
   PStreamBuffer = ^TStreamBuffer;
   {$ENDIF}
 
-  TAcdiSnipBuffer = record
+  TMultiFrameStringBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
     DataBufferSize: Word;                                                       // Number of bytes in the DataArray
-    DataArray: TAcdiSnipDataArray;
+    DataArray: TMultiFrameStringDataArray;
     // *******
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
   end;
-  PAcdiSnipBuffer = ^TAcdiSnipBuffer;
+  PMultiFrameStringBuffer = ^TMultiFrameStringBuffer;
 
   TMultiFrameBuffer = record
     State: Byte;                                                                // See ABS_xxxx flags
@@ -283,7 +285,7 @@ type
     {$ENDIF}
     MTI: Word;
     Buffer: PSimpleBuffer;                                                      // This can be nil, CANBuffer, Datagram Buffer, or StreamBuffer based on the lower 4 bits of MessageType
-    WatchDog: Word;                                                             // Watches for a abandon message, incremented every 100ms
+    WatchDog_1s: Word;                                                          // Watches for a abandon message, incremented every 1s
   end;
   {$IFNDEF FPC}
   POPStackMessage = ^TOPStackMessage;
@@ -297,16 +299,11 @@ type
     Address: Word;                                                              // DCC Address
     SpeedSteps: Byte;                                                           // 14, 28, 128  Does this go in the configuration space?
     Lock: TNodeInfo;                                                            // For the nodes lock managements
-    Controller,
+    ControllerLink,
     LinkedNode: TNodeInfo;                                                      // Controller (throttle) running the train or other linking needs
     Timer: Byte;
   end;
   PTrainData = ^TTrainData;
-  {$ENDIF}
-  {$IFDEF SUPPORT_TRACTION_PROXY}
-  TTrainProxyData = record
-    Lock: TNodeInfo;                                                            // For the proxies lock managements
-  end;
   {$ENDIF}
 
 type
@@ -326,10 +323,9 @@ type
     UserData: ^Byte;                                                            // Pointer to User Data
     {$ENDIF}
     iUserStateMachine: Byte;                                                    // For user (application level) statemachine
-    Watchdog: Word;                                                             // For user
+    Watchdog_1s: Word;                                                          // For user
 
     {$IFDEF SUPPORT_TRACTION}TrainData: TTrainData;{$ENDIF}                     // Realtime information about the Train Node
-    {$IFDEF SUPPORT_TRACTION_PROXY}TrainProxyData: TTrainProxyData;{$ENDIF}               // Realtime information about the Proxy Node
   end;
   PNMRAnetNode = ^TNMRAnetNode;
 

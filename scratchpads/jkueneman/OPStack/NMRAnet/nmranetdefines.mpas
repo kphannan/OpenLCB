@@ -215,7 +215,6 @@ const
 
 const
   TS_WAITING_FOR_CONTROLLER_NOTIFY   = $01;
-  TS_LOCKED                          = $02;
   TS_SEND_PROXY_ALLOCATE_REPLY       = $04;
 
 
@@ -224,6 +223,7 @@ const
   TRACTION_PROXY_ATTACH_REPLY        = $02;
   TRACTION_PROXY_DETACH              = $03;
   TRACTION_PROXY_MANAGE              = $80;
+  TRACTION_PROXY_MANAGE_REPLY        = $80;
   TRACTION_PROXY_MANAGE_RESERVE      = $01;
   TRACTION_PROXY_MANAGE_RELEASE      = $02;
 

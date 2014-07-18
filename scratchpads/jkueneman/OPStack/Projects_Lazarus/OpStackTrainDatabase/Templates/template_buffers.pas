@@ -22,7 +22,7 @@ const
   USER_MAX_SIMPLE_ARRAY_BUFFERS = 20;
   USER_MAX_DATAGRAM_ARRAY_BUFFERS = 100;
   USER_MAX_STREAM_ARRAY_BUFFERS = 100;
-  USER_MAX_ACDI_SNIP_ARRAY_BUFFERS = 100;
+  USER_MAX_MULTIFRAME_STRING_ARRAY_BUFFERS = 100;
   USER_MAX_MULTIFRAME_ARRAY_BUFFERS = 100;
 
 // Enter the size of the buffer to hold Messages, this should be at LEAST equal to the number
@@ -37,7 +37,7 @@ const
 
 // Enter the size of a buffer to hold a complete ACDI or SNIP string
 const
-  USER_MAX_ACDI_SNIP_BYTES = 256;
+  USER_MAX_MULTIFRAME_STRING_BYTES = 256;
 
 {$IFDEF SUPPORT_TRACTION}
 // Enter the size of a buffer to hold a complete Simple Train Node Information string

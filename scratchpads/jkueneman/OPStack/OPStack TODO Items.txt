@@ -5,3 +5,4 @@
 - ConfigMem Write: July 6, 2014 = The implementation expects a Write to have a Write Reply.  The Reply is optional and my implementation will need to wait for a timeout to occur if another node that does not support Write Reply accesses it.
 - Currently the library relies on a ConfigMem Write Reply.  If I don't get it then we will not work right.  May need to fake a reply if one does not come after some time.
 - Need a callback for configuration read/writes to know when something has changed (or to custom hook them say for CV access or Function access through config memory)
+- What needs a watchdog?  Datagrams, streams, multi frame message...

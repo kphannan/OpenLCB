@@ -40,6 +40,7 @@ begin
     LocalOutgoingMessagePtr := OPStackCANStatemachineBuffers_FirstMessageOnOutgoingMultiFrameStack(0);
     if LocalOutgoingMessagePtr <> nil then
     begin
+      LocalOutgoingMessagePtr^.WatchDog_1s := 0;
       MultiFrameBufferPtr := PMultiFrameBuffer( PByte( LocalOutgoingMessagePtr^.Buffer));
       OPStackBuffers_LoadMessage(@LocalMessage, LocalOutgoingMessagePtr^.MTI, LocalOutgoingMessagePtr^.Source, LocalOutgoingMessagePtr^.Dest, 0);
       OPStackBuffers_ZeroSimpleBuffer(@LocalBuffer, False);
@@ -94,6 +95,7 @@ begin
         Exit;     // Out of buffers, exit and wait until the last frame is sent to send OIR
     end else
     begin
+      InProcessMessage^.WatchDog_1s := 0;
       if OPStackMessage^.FramingBits = $20 then
         OptionalInteractionRejected(OPStackMessage^.Dest, OPStackMessage^.Source, OPStackMessage^.MTI, False);                     // It is the last frame and there is no inprocess message we are dropping the message
       Exit;

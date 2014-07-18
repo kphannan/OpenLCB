@@ -35,7 +35,7 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 
 // Called every 100ms typically from another thread so only use to update flags
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 
 // These message are called from the mainstatemachine loop.  They have been stored in
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
@@ -100,16 +100,13 @@ const
   STATE_TRAIN_ALLOCATE_PROXY_REPLY = 1;
   STATE_TRAIN_IDLE                 = 2;
 
-var
-  GlobalTimer: Word;
-
 procedure LoadTrainInfo(Node: PNMRANetNode; var EventTrainInfo: TNodeEventTrainInfo);
 begin
   EventTrainInfo.Address := Node^.TrainData.Address;
   EventTrainInfo.Functions := Node^.TrainData.Functions;
   EventTrainInfo.SpeedSteps := Node^.TrainData.SpeedSteps;
   EventTrainInfo.Speed := Node^.TrainData.SpeedDir;
-  EventTrainInfo.ControllerInfo := Node^.TrainData.Controller;
+  EventTrainInfo.ControllerInfo := Node^.TrainData.ControllerLink;
 end;
 
 // *****************************************************************************
@@ -540,15 +537,15 @@ end;
 {$ENDIF}
 
 // *****************************************************************************
-//  procedure AppCallback_Timer_100ms
+//  procedure AppCallback_Timer_1s
 //     Parameters: : None
 //     Returns     : None
 //     Description : Typcally called from another thread or interrupt, only use
 //                   to update asyncronous flags
 // *****************************************************************************
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 begin
-  Inc(GlobalTimer);
+
 end;
 
 // *****************************************************************************

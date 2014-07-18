@@ -62,6 +62,7 @@ implementation
 procedure OPStackCore_Initialize;
 begin
   OPStack.State := 0;
+  OPStack._1sCounter := 0;
   OPStackDefines_Initialize;
   UserStateMachine_Initialize;
   TemplateConfiguration_Initialize;
@@ -216,30 +217,12 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure ProcessAbandonMessages
-//     Parameters:
-//     Returns:
-//     Description:
-// *****************************************************************************
-procedure ProcessAbandonMessages(Node: PNMRAnetNode);
-begin
-  if Node^.IncomingMessages <> nil then
-  begin
-
-  end;
-  if Node^.OutgoingMessages <> nil then
-  begin
-
-  end;
-end;
-
-// *****************************************************************************
 //  procedure ProcessMarkedForDelete
 //     Parameters:
 //     Returns:
 //     Description: YOU MUST CHECK IsOutgoingBufferAvailable BEFORE CALLING THIS FUNCTION
 // *****************************************************************************
-procedure ProcessMarkedForDelete(Node: PNMRAnetNode);
+procedure CheckForMarkedToDelete(Node: PNMRAnetNode);
 var
   DoDeallocate: Boolean;
   i, j: Integer;
@@ -399,18 +382,22 @@ var
 begin
   if OPStack.State and OPS_PROCESSING <> 0 then
   begin
+    // Only the Login gets the 100ms update no reason for higher resolution elsewhere
     for i := 0 to NodePool.AllocatedCount - 1 do
     begin
       Node := NodePool.AllocatedList[i];
-      Inc(Node^.Login.TimeCounter);
-      Inc(Node^.Watchdog);
-      {$IFDEF SUPPORT_TRACTION}
-      TractionProtocolTimerTick(Node);
-      {$ENDIF}
+      Inc(Node^.Login.TimeCounter_100ms);
     end;
-    OPStackBuffers_Timer;
+    Inc(OPStack._1sCounter);
+    if OPStack._1sCounter > 10 then      // 1s-1.1s
+    begin
+      OPstack._1sCounter := 0;
+      Inc(Node^.Watchdog_1s);
+      OPStackBuffers_WatchdogTimer_1s;
+      AppCallback_Timer_1s;
+      {$IFDEF SUPPORT_TRACTION} TractionProtocolTimerTick_1s(Node);{$ENDIF}
+    end;
   end;
-  AppCallback_Timer_100ms;
 end;
 
 // *****************************************************************************
@@ -445,6 +432,7 @@ begin
       end;
     STATE_NODE_TRANSMIT_CID :
       begin
+        Hardware_DisableInterrupts;
         if IsOutgoingBufferAvailable then
         begin
           case Node^.Login.iCID of
@@ -459,6 +447,7 @@ begin
             Node^.iStateMachine := STATE_NODE_NEXT_CDI;
           end
         end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_NEXT_CDI :
       begin
@@ -469,16 +458,17 @@ begin
         end else
         begin
           Node^.iStateMachine := STATE_NODE_WAITSTATE;
-          Node^.Login.TimeCounter := 0;
+          Node^.Login.TimeCounter_100ms := 0;
         end;
       end;
     STATE_NODE_WAITSTATE :
       begin
-        if Node^.Login.TimeCounter > MAX_BUS_LOGIN_TIMEOUT then
+        if Node^.Login.TimeCounter_100ms > TIMEOUT_MAX_BUS_LOGIN then
           Node^.iStateMachine := STATE_NODE_SEND_LOGIN_RID;
       end;
     STATE_NODE_SEND_LOGIN_RID :
       begin
+        Hardware_DisableInterrupts;
         if OPStackNode_TestFlags(Node, MF_DUPLICATE_ALIAS, True) then
         begin
           Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
@@ -490,10 +480,12 @@ begin
               OutgoingMessage(OPStackMessage, True);
               Node^.iStateMachine := STATE_NODE_SEND_LOGIN_AMD;
             end
-        end
+        end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_SEND_LOGIN_AMD :
       begin
+        Hardware_DisableInterrupts;
         if OPStackNode_TestFlags(Node, MF_DUPLICATE_ALIAS, True) then
         begin
           Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
@@ -508,10 +500,12 @@ begin
               OPStackNode_SetState(Node, NS_PERMITTED);
               Node^.iStateMachine := STATE_NODE_INITIALIZED;
             end
-        end
+        end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_INITIALIZED :
       begin
+        Hardware_DisableInterrupts;
         if OPStackNode_TestFlags(Node, MF_DUPLICATE_ALIAS, True) then
         begin
           Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
@@ -526,10 +520,12 @@ begin
               OPStackNode_SetState(Node, NS_INITIALIZED);
               Node^.iStateMachine := STATE_NODE_LOGIN_IDENTIFY_EVENTS;
             end
-        end
+        end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
       begin
+        Hardware_DisableInterrupts;
         // Fake an Identify Events to allow the AppCallbacks to be called
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_EVENTS_IDENTIFY_DEST, NULL_NODE_INFO, Node^.Info, False) then  // Fake Source Node
@@ -562,12 +558,14 @@ begin
             end;
             Node^.iStateMachine := STATE_NODE_PERMITTED;
             IncomingMessageDispatch(OPStackMessage, Node, nil);
-          end
+          end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_PERMITTED :
       begin
         if IsOutgoingBufferAvailable then
         begin
+          Hardware_DisableInterrupts;
           if NodeRunPCERFlagsReply(Node, OPStackMessage) then
             OutgoingMessage(OPStackMessage, True)
           else
@@ -579,12 +577,23 @@ begin
           else
           if NodeRunMessageBufferReply(Node, OPStackMessage) then
             OutgoingMessage(OPStackMessage, True);
-          ProcessMarkedForDelete(Node);                                           // Handle vNodes marked to be deleted
-          ProcessAbandonMessages(Node);
+          Hardware_EnableInterrupts;
+          Hardware_DisableInterrupts;
+          CheckForMarkedToDelete(Node);                                           // Handle vNodes marked to be deleted
+          OPStackBuffers_SearchandDestroyAbandonMessagesInMessageStack(Node^.IncomingMessages);
+          OPStackBuffers_SearchandDestroyAbandonMessagesInMessageStack(Node^.OutgoingMessages);
+          Hardware_EnableInterrupts;
+          Hardware_DisableInterrupts;
+          {$IFDEF SUPPORT_TRACTION_PROXY}
+          TractionProxyProxiedMessageHandler;
+          {$ENDIF}
+          Hardware_SearchandDestroyAbandonMessagesInMessageStacks;
+          Hardware_EnableInterrupts;
         end;
       end;
     STATE_NODE_INHIBITED :
       begin
+        Hardware_DisableInterrupts;
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info, NULL_NODE_INFO, True) then  // Fake Source Node
@@ -595,10 +604,12 @@ begin
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
             Node^.iStateMachine := STATE_RANDOM_NUMBER_GENERATOR;
-          end
+          end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_DUPLICATE_FULL_ID :
       begin
+        Hardware_DisableInterrupts;
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_CAN_AMR, Node^.Info, NULL_NODE_INFO, True) then  // Fake Source Node
@@ -609,10 +620,12 @@ begin
             OPStackNode_ClearState(Node, NS_PERMITTED);
             OPStackNode_ClearFlags(Node);
             Node^.iStateMachine := STATE_NODE_TAKE_OFFLINE;
-          end
+          end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_TAKE_OFFLINE :
       begin
+        Hardware_DisableInterrupts;
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info, NULL_NODE_INFO, False) then  // Fake Source Node
           begin
@@ -620,7 +633,8 @@ begin
             PEventID( @OPStackMessage^.Buffer^.DataArray)^ := EVENT_DUPLICATE_ID_DETECTED;
             OutgoingMessage(OPStackMessage, True);
             Node^.iStateMachine := STATE_NODE_OFFLINE;
-          end
+          end;
+        Hardware_EnableInterrupts;
       end;
     STATE_NODE_OFFLINE :
       begin

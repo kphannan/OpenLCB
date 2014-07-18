@@ -67,12 +67,12 @@ begin
     AMessage := OPStackCANStatemachineBuffers_FindAnyDatagramOnIncomingStack(SourceAliasID);
   end;
 
-  AMessage := OPStackCANStatemachineBuffers_FindAnyAcdiSnipOnOutgoingStack(SourceAliasID);
+  AMessage := OPStackCANStatemachineBuffers_FindAnyMultiFrameStringOnOutgoingStack(SourceAliasID);
   while AMessage <> nil do
   begin
-    OPStackCANStatemachineBuffers_RemoveAcdiSnipMessage(AMessage);
+    OPStackCANStatemachineBuffers_RemoveMultiFrameStringMessage(AMessage);
     OPStackBuffers_DeAllocateMessage(AMessage);
-    AMessage := OPStackCANStatemachineBuffers_FindAnyAcdiSnipOnOutgoingStack(SourceAliasID);
+    AMessage := OPStackCANStatemachineBuffers_FindAnyMultiFrameStringOnOutgoingStack(SourceAliasID);
   end;
 
   {$IFDEF SUPPORT_STREAMS}
@@ -174,7 +174,7 @@ begin
                 if (MTI = MTI_SIMPLE_NODE_INFO_REPLY) or (MTI = MTI_SIMPLE_TRAIN_NODE_INFO_REPLY) then   // Does not use framing bits
                 begin
                   NMRAnetCanBufferToOPStackBuffer(NMRAnetCanBuffer, @ScratchMessage, FramingBits, MTI, Dest.AliasID, Source.AliasID); // Need a OpStackMessage Buffer to call the next function
-                  if OPStackCANStatemachineSnip_ProcessIncomingAcdiSnipMessage(@ScratchMessage, InProcessMessagePtr) then
+                  if OPStackCANStatemachineSnip_ProcessIncomingMultiFrameStringMessage(@ScratchMessage, InProcessMessagePtr) then
                   begin
                     OPStackMessage := InProcessMessagePtr;                        // replace the last incoming frame with the full MultiFrame message
                     Result := True;
@@ -297,7 +297,7 @@ end;
 procedure OPStackCANStatemachine_ProcessMessages;
 begin
   StackCANStatemachineDatagram_ProcessOutgoingDatagramMessage;
-  OPStackCANStatemachineSnip_ProcessOutgoingAcdiSnipMessage;
+  OPStackCANStatemachineSnip_ProcessOutgoingMultiFrameStringMessage;
   {$IFDEF SUPPORT_STREAMS}
   OPStackCANStatemachineStream_ProcessOutgoingStreamMessage;
   {$ENDIF}

@@ -37,42 +37,42 @@ end;
 //
 function SimpleNodeInfoRequestHandler(DestNode: PNMRAnetNode; var MessageToSend: POPStackMessage; AMessage: POPStackMessage): Boolean;
 var
-  AcdiSnipBufferPtr: PAcdiSnipBuffer;
+  MultiFrameStringBufferPtr: PMultiFrameStringBuffer;
   j: Integer;
 begin
   Result := False;
   MessageToSend := nil;
   if OPStackBuffers_Allcoate_ACDI_SNIP_Message(MessageToSend, MTI_SIMPLE_NODE_INFO_REPLY, AMessage^.Dest, AMessage^.Source) then
   begin
-    AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( MessageToSend^.Buffer));
-    AcdiSnipBufferPtr^.DataBufferSize := 0;
+    MultiFrameStringBufferPtr := PMultiFrameStringBuffer( PByte( MessageToSend^.Buffer));
+    MultiFrameStringBufferPtr^.DataBufferSize := 0;
     {$IFDEF SUPPORT_VIRTUAL_NODES}
     if DestNode^.State and NS_VIRTUAL <> 0 then
     begin
-      while AcdiSnipBufferPtr^.DataBufferSize < USER_VNODE_MAX_ACDI_MFG_ARRAY do
+      while MultiFrameStringBufferPtr^.DataBufferSize < USER_VNODE_MAX_ACDI_MFG_ARRAY do
       begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_VNODE_ACDI_MFG_STRINGS[AcdiSnipBufferPtr^.DataBufferSize];
-        Inc(AcdiSnipBufferPtr^.DataBufferSize);
+        MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.DataBufferSize] := USER_VNODE_ACDI_MFG_STRINGS[MultiFrameStringBufferPtr^.DataBufferSize];
+        Inc(MultiFrameStringBufferPtr^.DataBufferSize);
       end;
     end else
     {$ENDIF}
     begin
-      while AcdiSnipBufferPtr^.DataBufferSize < USER_MAX_ACDI_MFG_ARRAY do
+      while MultiFrameStringBufferPtr^.DataBufferSize < USER_MAX_ACDI_MFG_ARRAY do
       begin
-        AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := USER_ACDI_MFG_STRINGS[AcdiSnipBufferPtr^.DataBufferSize];
-        Inc(AcdiSnipBufferPtr^.DataBufferSize);
+        MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.DataBufferSize] := USER_ACDI_MFG_STRINGS[MultiFrameStringBufferPtr^.DataBufferSize];
+        Inc(MultiFrameStringBufferPtr^.DataBufferSize);
       end;
     end;
     
     
     // Need to read configuration memory here in a callback
-    AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 1;
-    Inc(AcdiSnipBufferPtr^.DataBufferSize);
+    MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.DataBufferSize] := 1;
+    Inc(MultiFrameStringBufferPtr^.DataBufferSize);
     j := 0;
     while j < 2 do
     begin
-      AcdiSnipBufferPtr^.DataArray[AcdiSnipBufferPtr^.DataBufferSize] := 0;
-      Inc(AcdiSnipBufferPtr^.DataBufferSize);
+      MultiFrameStringBufferPtr^.DataArray[MultiFrameStringBufferPtr^.DataBufferSize] := 0;
+      Inc(MultiFrameStringBufferPtr^.DataBufferSize);
       Inc(j)
     end;
 

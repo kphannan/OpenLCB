@@ -26,12 +26,12 @@ uses
   opstacktypes;
 
 const
-  MAX_CONTROLLER_NOTIFY_TIME = 10;  // 10 * 100ms = 1 second to wait for controller that is being stolen from to reply if it allows the steal
+  MAX_CONTROLLER_NOTIFY_TIME = 1;  // 1 second to wait for controller that is being stolen from to reply if it allows the steal
 
 procedure TractionProtocolMessage(AMessage: POPStackMessage; DestNode: PNMRAnetNode);
 function TractionProtocolHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 procedure TractionProtocolReply(DestNode: PNMRAnetNode; AMessage: POPStackMessage);
-procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
+procedure TractionProtocolTimerTick_1s(Node: PNMRAnetNode);
 
 // Utility Functions
 procedure ZeroTrainConfiguration(var Train: TTrainConfig);
@@ -103,7 +103,7 @@ begin
   Node^.TrainData.SpeedSteps := Train.SpeedStep;
 end;
 
-procedure TractionProtocolSpeedDirReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolSpeedDirHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   IsForward: Boolean;
   AbsoluteSpeed: Real;
@@ -116,7 +116,7 @@ var
   {$ENDIF}
 begin
   MessageToSend := nil;
-  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.ControllerLink, NextMessage^.Source) then   // Only respond to the node that is linked to us
   begin
     {$IFNDEF FPC}
     {$IFDEF SUPPORT_DCC}
@@ -201,7 +201,7 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-procedure TractionProtocolFunctionReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolFunctionHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   FunctionAddress: DWord;
   FunctionValue: Word;
@@ -215,7 +215,7 @@ var
   {$ENDIF}
 begin
   MessageToSend := nil;
-  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.ControllerLink, NextMessage^.Source) then     // Only respond to the node that is liked to us
   begin
 
     {$IFNDEF FPC}
@@ -295,7 +295,7 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-procedure TractionProtocolEmergencyStopReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
+procedure TractionProtocolEmergencyStopHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage);
 var
   IsForward: Boolean;
   SpeedStep: Byte;
@@ -307,7 +307,7 @@ var
   {$ENDIF}
 begin
   MessageToSend := nil;
-  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
+  if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.ControllerLink, NextMessage^.Source) then    // Only respond to the node liked to us
   begin
 
     {$IFNDEF FPC}
@@ -362,7 +362,7 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
 end;
 
-function TractionProtocolQuerySpeedReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolQuerySpeedHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;
@@ -382,7 +382,7 @@ begin
   end;
 end;
 
-function TractionProtocolQueryFunctionReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolQueryFunctionHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 var
   FunctionAddress: DWord;
 begin
@@ -414,7 +414,7 @@ end;
 //    later in the Reply
 //******************************************************************************
 
-function TractionProtocolManageReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolManageHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   Result := False;
   MessageToSend := nil;
@@ -431,7 +431,6 @@ begin
         DestNode^.TrainData.Lock.AliasID := NextMessage^.Source.AliasID;
         DestNode^.TrainData.Lock.ID[0] := NextMessage^.Source.ID[0];
         DestNode^.TrainData.Lock.ID[1] := NextMessage^.Source.ID[1];
-        DestNode^.TrainData.State := DestNode^.TrainData.State or TS_LOCKED;
       end else
         MessageToSend^.Buffer^.DataArray[2] := TRACTION_MANAGE_RESERVE_REPLY_FAIL;
       AppCallback_TractionProtocol(DestNode, NextMessage);
@@ -445,112 +444,102 @@ begin
       DestNode^.TrainData.Lock.AliasID := 0;
       DestNode^.TrainData.Lock.ID[0] := 0;
       DestNode^.TrainData.Lock.ID[1] := 0;
-      DestNode^.TrainData.State := DestNode^.TrainData.State and not TS_LOCKED;
     end;
     AppCallback_TractionProtocol(DestNode, NextMessage);
     Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;
 end;
 
-function TractionProtocolControllerReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolControllerHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 var
   i: Integer;
   MultiFrameBuffer: PMultiFrameBuffer;
 begin
   MessageToSend := nil;
   Result := False;
-  if DestNode^.TrainData.State and TS_LOCKED <> 0 then
-  begin
-    case NextMessage^.Buffer^.DataArray[1] of
-      TRACTION_CONTROLLER_CONFIG_ASSIGN :
+  case NextMessage^.Buffer^.DataArray[1] of
+    TRACTION_CONTROLLER_CONFIG_ASSIGN :
+        begin
+          if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainData.ControllerLink) or NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.ControllerLink, NextMessage^.Source) then
           begin
-            if NMRAnetUtilities_NullNodeIDInfo(DestNode^.TrainData.Controller) or NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
-            begin
-              // The Controller is not set to another node.......
+            // The Controller is not set to another node.......
 
-              // Need to test if the controller is allowed to connect to this Train by this Train
-              if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
-              begin
-                MessageToSend^.Buffer^.DataBufferSize := 3;
-                MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
-                MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
-                MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
+            // Need to test if the controller is allowed to connect to this Train by this Train
 
-                MultiFrameBuffer := PMultiFrameBuffer( PByte( NextMessage^.Buffer));
-                NMRAnetUtilities_Load48BitNodeIDWithSimpleData(DestNode^.TrainData.Controller.ID, PSimpleDataArray( @MultiFrameBuffer^.DataArray[3])^);
-                if MultiFrameBuffer^.DataArray[2] and TRACTION_FLAGS_ALIAS_INCLUDED <> 0 then
-                  DestNode^.TrainData.Controller.AliasID := Word(MultiFrameBuffer^.DataArray[9] shl 8) or Word(MultiFrameBuffer^.DataArray[10]);
-                AppCallback_TractionProtocol(DestNode, NextMessage);
-                Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-              end
-            end else
+            if OPStackBuffers_AllocateOPStackMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source, False) then
             begin
-              // The Controller is set to another node, need to ask that node if it will release the Train
+              MessageToSend^.Buffer^.DataBufferSize := 3;
+              MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
+              MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
+              MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
 
-              // Need to ask the assigned controller if we should allow the assignment
-
-              if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_PROTOCOL, DestNode^.Info, DestNode^.TrainData.Controller) then
-              begin
-                MessageToSend^.Buffer^.DataBufferSize := 11;
-                MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
-                MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_NOTIFY;
-                for i := 2 to 10 do
-                  MessageToSend^.Buffer^.DataArray[i] := NextMessage^.Buffer^.DataArray[i];
-                DestNode^.TrainData.State := DestNode^.TrainData.State or TS_WAITING_FOR_CONTROLLER_NOTIFY;
-                DestNode^.TrainData.Timer := 0;
-                DestNode^.TrainData.LinkedNode := NextMessage^.Source;    // Store the Controller who is asking for control
-                AppCallback_TractionProtocol(DestNode, NextMessage);
-                Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-                // Timer started, either the current controller replies or it times out and the new controller is assigned
-              end
-            end
-          end;
-      TRACTION_CONTROLLER_CONFIG_RELEASE :
-          begin
-            if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Controller, NextMessage^.Source) then
-            begin
-              DestNode^.TrainData.Controller.AliasID := 0;
-              DestNode^.TrainData.Controller.ID[0] := 0;
-              DestNode^.TrainData.Controller.ID[1] := 0;
-            end;
-            AppCallback_TractionProtocol(DestNode, NextMessage);
-            Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-          end;
-      TRACTION_CONTROLLER_CONFIG_QUERY :
-          begin
-            if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source) then
-            begin
-              MultiFrameBuffer := PMultiFrameBuffer( PByte( MessageToSend^.Buffer));
-              MultiFrameBuffer^.DataBufferSize := 11;
-              MultiFrameBuffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
-              MultiFrameBuffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
-              MultiFrameBuffer^.DataArray[2] := $01;  // Alias included
-              NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@DestNode^.TrainData.Controller.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3])));
-              MultiFrameBuffer^.DataArray[9] := Hi( DestNode^.TrainData.Controller.AliasID);
-              MultiFrameBuffer^.DataArray[10] := Lo( DestNode^.TrainData.Controller.AliasID);
+              MultiFrameBuffer := PMultiFrameBuffer( PByte( NextMessage^.Buffer));
+              NMRAnetUtilities_Load48BitNodeIDWithSimpleData(DestNode^.TrainData.ControllerLink.ID, PSimpleDataArray( @MultiFrameBuffer^.DataArray[3])^);
+              if MultiFrameBuffer^.DataArray[2] and TRACTION_FLAGS_ALIAS_INCLUDED <> 0 then
+                DestNode^.TrainData.ControllerLink.AliasID := Word(MultiFrameBuffer^.DataArray[9] shl 8) or Word(MultiFrameBuffer^.DataArray[10]);
               AppCallback_TractionProtocol(DestNode, NextMessage);
               Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-            end;
-          end
-    else
-      Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-    end
-  end else
-  begin
-    // Handle messages that don't need a lock
-    case NextMessage^.Buffer^.DataArray[1] of
-      TRACTION_CONTROLLER_CONFIG_NOTIFY :
+            end
+          end else
           begin
+            // The Controller is set to another node, need to ask that node if it will release the Train
+
+            // Need to ask the assigned controller if we should allow the assignment
+
+            if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_PROTOCOL, DestNode^.Info, DestNode^.TrainData.ControllerLink) then
+            begin
+              MessageToSend^.Buffer^.DataBufferSize := 11;
+              MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
+              MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_NOTIFY;
+              for i := 2 to 10 do
+                MessageToSend^.Buffer^.DataArray[i] := NextMessage^.Buffer^.DataArray[i];
+              DestNode^.TrainData.State := DestNode^.TrainData.State or TS_WAITING_FOR_CONTROLLER_NOTIFY;
+              DestNode^.TrainData.Timer := 0;
+              DestNode^.TrainData.LinkedNode := NextMessage^.Source;    // Store the Controller who is asking for control
+              AppCallback_TractionProtocol(DestNode, NextMessage);
+              Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+              // Timer started, either the current controller replies or it times out and the new controller is assigned
+            end
+          end
+        end;
+    TRACTION_CONTROLLER_CONFIG_RELEASE :
+        begin
+          if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.ControllerLink, NextMessage^.Source) then
+          begin
+            DestNode^.TrainData.ControllerLink.AliasID := 0;
+            DestNode^.TrainData.ControllerLink.ID[0] := 0;
+            DestNode^.TrainData.ControllerLink.ID[1] := 0;
+          end;
+          AppCallback_TractionProtocol(DestNode, NextMessage);
+          Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+        end;
+    TRACTION_CONTROLLER_CONFIG_QUERY :
+        begin
+          if OPStackBuffers_AllocateMultiFrameMessage(MessageToSend, MTI_TRACTION_REPLY, NextMessage^.Dest, NextMessage^.Source) then
+          begin
+            MultiFrameBuffer := PMultiFrameBuffer( PByte( MessageToSend^.Buffer));
+            MultiFrameBuffer^.DataBufferSize := 11;
+            MultiFrameBuffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
+            MultiFrameBuffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_QUERY;
+            MultiFrameBuffer^.DataArray[2] := $01;  // Alias included
+            NMRAnetUtilities_LoadSimpleDataWith48BitNodeID(@DestNode^.TrainData.ControllerLink.ID, PSimpleDataArray( PByte( @MessageToSend^.Buffer^.DataArray[3])));
+            MultiFrameBuffer^.DataArray[9] := Hi( DestNode^.TrainData.ControllerLink.AliasID);
+            MultiFrameBuffer^.DataArray[10] := Lo( DestNode^.TrainData.ControllerLink.AliasID);
             AppCallback_TractionProtocol(DestNode, NextMessage);
             Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-          end
-    else
-      Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
-    end;
+          end;
+        end;
+    TRACTION_CONTROLLER_CONFIG_NOTIFY :
+        begin
+          AppCallback_TractionProtocol(DestNode, NextMessage);
+          Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
+        end
+  else
+    Result := UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end
 end;
 
-function TractionProtocolConsistReplyHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
+function TractionProtocolConsistHandler(DestNode: PNMRAnetNode; var MessageToSend, NextMessage: POPStackMessage): Boolean;
 begin
   MessageToSend := nil;
   if NMRAnetUtilities_EqualNodeIDInfo(DestNode^.TrainData.Lock, NextMessage^.Source) then
@@ -574,14 +563,14 @@ begin
   Result := False;
   MessageToSend := nil;
   case NextMessage^.Buffer^.DataArray[0] of
-    TRACTION_SPEED_DIR         : begin TractionProtocolSpeedDirReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_FUNCTION          : begin TractionProtocolFunctionReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_E_STOP            : begin TractionProtocolEmergencyStopReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_QUERY_SPEED       : begin Result := TractionProtocolQuerySpeedReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_QUERY_FUNCTION    : begin Result := TractionProtocolQueryFunctionReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_CONTROLLER_CONFIG : begin Result := TractionProtocolControllerReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_CONSIST           : begin Result := TractionProtocolConsistReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end;
-    TRACTION_MANAGE            : begin Result := TractionProtocolManageReplyHandler(DestNode, MessageToSend, NextMessage); Exit; end
+    TRACTION_SPEED_DIR         : begin TractionProtocolSpeedDirHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_FUNCTION          : begin TractionProtocolFunctionHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_E_STOP            : begin TractionProtocolEmergencyStopHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_QUERY_SPEED       : begin Result := TractionProtocolQuerySpeedHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_QUERY_FUNCTION    : begin Result := TractionProtocolQueryFunctionHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_CONTROLLER_CONFIG : begin Result := TractionProtocolControllerHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_CONSIST           : begin Result := TractionProtocolConsistHandler(DestNode, MessageToSend, NextMessage); Exit; end;
+    TRACTION_MANAGE            : begin Result := TractionProtocolManageHandler(DestNode, MessageToSend, NextMessage); Exit; end
   else
     UnLinkDeAllocateAndTestForMessageToSend(DestNode, MessageToSend, NextMessage);
   end;
@@ -603,7 +592,7 @@ begin
           MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
           MessageToSend^.Buffer^.DataArray[2] := AMessage^.Buffer^.DataArray[2];
           if MessageToSend^.Buffer^.DataArray[2] = TRACTION_CONTROLLER_ASSIGN_REPLY_OK then
-            DestNode^.TrainData.Controller := DestNode^.TrainData.LinkedNode;
+            DestNode^.TrainData.ControllerLink := DestNode^.TrainData.LinkedNode;
           DestNode^.TrainData.LinkedNode.ID := NULL_NODE_ID;
           DestNode^.TrainData.LinkedNode.AliasID := 0;
           DestNode^.TrainData.State := DestNode^.TrainData.State and not TS_WAITING_FOR_CONTROLLER_NOTIFY;
@@ -616,7 +605,7 @@ begin
   UnLinkDeAllocateAndTestForMessageToSend(DestNode, nil, AMessage);
 end;
 
-procedure TractionProtocolTimerTick(Node: PNMRAnetNode);
+procedure TractionProtocolTimerTick_1s(Node: PNMRAnetNode);
 var
   MessageToSend: POPStackMessage;
 begin
@@ -635,7 +624,7 @@ begin
           MessageToSend^.Buffer^.DataArray[0] := TRACTION_CONTROLLER_CONFIG;
           MessageToSend^.Buffer^.DataArray[1] := TRACTION_CONTROLLER_CONFIG_ASSIGN;
           MessageToSend^.Buffer^.DataArray[2] := TRACTION_CONTROLLER_ASSIGN_REPLY_OK;
-          Node^.TrainData.Controller := Node^.TrainData.LinkedNode;
+          Node^.TrainData.ControllerLink := Node^.TrainData.LinkedNode;
           Node^.TrainData.LinkedNode.AliasID := 0;
           Node^.TrainData.LinkedNode.ID := NULL_NODE_ID;
           AppCallback_TractionProtocol(Node, MessageToSend);

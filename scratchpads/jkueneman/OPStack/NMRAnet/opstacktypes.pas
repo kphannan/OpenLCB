@@ -30,11 +30,12 @@ const
 
 
 const
-  OPS_PROCESSING     = $01;                                                     // Start and stops the main StateMachine for running. Default is Off on startup Allows holding off OLCB processing until the node is read (Ethernet link is up, etc)
-  
+  OPS_PROCESSING      = $01;                                                    // Start and stops the main StateMachine for running. Default is Off on startup Allows holding off OLCB processing until the node is read (Ethernet link is up, etc)
+
 type
   TOPStack = record
     State: Word;                                                                // The State of the OPStack Library, see the OPS_xxx flags
+    _1sCounter: Byte;                                                           // Counts 10 100ms timer ticks to update items at a 1s rate
   end;
 
 implementation

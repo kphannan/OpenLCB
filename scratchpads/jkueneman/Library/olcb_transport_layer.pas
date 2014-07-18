@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, ExtCtrls, dialogs, olcb_utilities, olcb_defines,
   olcb_app_common_settings, math_float16, Forms, blcksock, synsock, contnrs,
-  Controls, opstackdefines, nmranetutilities, threadedstringlist, NMRAnetCabBridgeDefines;
+  Controls, opstackdefines, nmranetutilities, threadedstringlist;
 
 
 var
@@ -49,7 +49,7 @@ type
     FLinkedObj: TObject;
     FNextTask: TNodeTask;
     FNodeInfo: TNodeInfo;
-    FWatchDog: LongWord;
+    FWatchDog_1s: LongWord;
   public
     FDestNodeInfo: TNodeInfo;
     constructor Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo; AniStateMachine: Word; ALinkedObj: TObject); virtual;
@@ -58,7 +58,7 @@ type
     property iSubStateMachine: Word read FiSubStateMachine write FiSubStateMachine;
     property LinkedObj: TObject read FLinkedObj write FLinkedObj;
     property NodeInfo: TNodeInfo read FNodeInfo write FNodeInfo;
-    property Watchdog: LongWord read FWatchDog write FWatchDog;
+    property Watchdog_1s: LongWord read FWatchDog_1s write FWatchDog_1s;
     property DestNodeInfo: TNodeInfo read FDestNodeInfo write FDestNodeInfo;
   end;
 
@@ -705,11 +705,11 @@ end;
 procedure TNodeEventSimpleTrainNodeInfo.Decode(AMessage: POpStackMessage);
 var
   i: Integer;
-  AcdiSnipBufferPtr: PAcdiSnipBuffer;
+  MultiFrameStringBufferPtr: PMultiFrameStringBuffer;
   Head: ^Char;
 begin
-  AcdiSnipBufferPtr := PAcdiSnipBuffer( PByte( AMessage^.Buffer));
-  Head := @AcdiSnipBufferPtr^.DataArray[1];  // Skip past the Version ID
+  MultiFrameStringBufferPtr := PMultiFrameStringBuffer( PByte( AMessage^.Buffer));
+  Head := @MultiFrameStringBufferPtr^.DataArray[1];  // Skip past the Version ID
 
   i := 0;
   while Head^ <> #0 do
@@ -829,7 +829,7 @@ constructor TNodeTask.Create(ANodeInfo: TNodeInfo; ADestNodeInfo: TNodeInfo;
     FLinkedObj := ALinkedObj;
     FNextTask := nil;
     FiSubStateMachine := 0;
-    FWatchDog := 0;
+    FWatchDog_1s := 0;
     FDestNodeInfo := ADestNodeInfo;
   end;
 

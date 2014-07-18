@@ -24,6 +24,7 @@ procedure Hardware_Initialize;
 // The OPStack calles these functions to control and/or send messages through the hardware layer
 procedure Hardware_DisableInterrupts;
 procedure Hardware_EnableInterrupts;
+procedure Hardware_SearchandDestroyAbandonMessagesInMessageStacks;
 
 procedure OutgoingCriticalMessage(AMessage: POPStackMessage; FreeMessage: Boolean);                   // Called _back_ from within the IncomingMessageDispatch if we can't allocate buffers, unknown MTI's etc.  For CAN this is expected to be immediatly replied back to the sender as these are very high priority CAN headers
 procedure OutgoingMessage(AMessage: POPStackMessage; FreeMessage: Boolean);                           // Expects that IsOutgoingBufferAvailable was called and returned True to ensure success in transmitting
@@ -147,6 +148,19 @@ begin
   end;
 end;
 
+procedure Hardware_SearchandDestroyAbandonMessagesInMessageStacks;
+begin
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonOutgoingDatagramMessages;
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonIncomingDatagramMessages;
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonOutgoingMultiFrameMessages;
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonIncomingMultiFrameMessages;
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonOutgoingMultiFrameStringMessages;
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonIncomingMultiFrameStringMessages;
+  {$IFDEF SUPPORT_STREAMS}
+  OPStackCANStatemachineBuffers_SearchAndDestroyAbandonStreamMessages;
+  {$ENDIF}
+end;
+
 procedure OutgoingCriticalMessage(AMessage: POPStackMessage; FreeMessage: Boolean);
 begin
   OutgoingMessage(AMessage, FreeMessage)  // For Ethernet this is no different than a nomral Message
@@ -186,7 +200,7 @@ begin
           {$ENDIF}
         end;
     MT_DATAGRAM : OPStackCANStatemachineBuffers_AddOutgoingDatagramMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
-    MT_ACDISNIP : OPStackCANStatemachineBuffers_AddOutgoingAcdiSnipMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
+    MT_ACDISNIP : OPStackCANStatemachineBuffers_AddOutgoingMultiFrameStringMessage(AMessage);  // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
     {$IFDEF SUPPORT_STREAMS}
     MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage);     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
     {$ENDIF}

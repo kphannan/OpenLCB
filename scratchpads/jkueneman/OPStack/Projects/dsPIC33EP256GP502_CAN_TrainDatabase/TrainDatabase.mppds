@@ -14,7 +14,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [ACTIVE_TAB]
-Value=Templates\template_userstatemachine.mpas
+Value=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
 [FILES]
 Count=47
 File0=TrainDatabase.mpas
@@ -70,7 +70,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=9
 File0=..\..\NMRAnet\opstackdefines.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=TrainDatabase.mpas
@@ -79,6 +79,7 @@ File4=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\template_configurati
 File5=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\_25AAxxxx.mpas
 File6=..\..\NMRAnet\opstackbuffers.mpas
 File7=Templates\template_buffers.mpas
+File8=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

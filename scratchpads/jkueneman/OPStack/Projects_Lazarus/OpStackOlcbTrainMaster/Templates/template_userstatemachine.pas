@@ -34,7 +34,7 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 
 // Called every 100ms typically from another thread so only use to update flags
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 
 // These message are called from the mainstatemachine loop.  They have been stored in
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
@@ -260,7 +260,7 @@ begin
                     begin
                       if TrySendTractionProxyManage(Node^.Info, ProxyNode, True) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT; // Wait for the Manage Reply Callback
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
@@ -270,28 +270,28 @@ begin
                         Address := Address or $C000;
                       if TrySendTractionProxyAllocate(Node^.Info, ProxyNode, TRACTION_PROXY_TECH_ID_DCC, Address, TrainAllocateByAddressTask.SpeedStep, 0) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK :
                     begin
                       if TrySendTractionProxyManage(Node^.Info, ProxyNode, False) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK; // No Reply for Unlock
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK :
                     begin
                       if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
                     begin
                       if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
@@ -299,14 +299,14 @@ begin
                       if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                       TrainAllocateByAddressTask.FunctionIndex := 0;
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
                     begin
                       if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, TrainAllocateByAddressTask.FunctionIndex) then
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
@@ -316,12 +316,12 @@ begin
                         UnLinkFirstTaskFromNode(Node, True);
                         Node^.iUserStateMachine := STATE_THROTTLE_IDLE;                                // We are done....  Look for more tasks
                       end;
-                      TrainAllocateByAddressTask.WatchDog := 0;
+                      TrainAllocateByAddressTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
                     begin
-                      if TrainAllocateByAddressTask.WatchDog > 50 then         // Waiting for the Reply to come into a callback
+                      if TrainAllocateByAddressTask.WatchDog_1s > 3 then         // Waiting for the Reply to come into a callback
                       begin
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
                       end;
@@ -349,14 +349,14 @@ begin
                     begin
                       if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
                         TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      TrainAllocateTask.WatchDog := 0;
+                      TrainAllocateTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
                     begin
                       if TrySendTractionControllerConfig(Node^.Info, Node^.TrainData.LinkedNode, Node^.Info, True) then
                         TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      TrainAllocateTask.WatchDog := 0;
+                      TrainAllocateTask.Watchdog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
@@ -364,14 +364,14 @@ begin
                       if TrySendTractionQuerySpeed(Node^.Info, Node^.TrainData.LinkedNode) then
                         TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
                       TrainAllocateTask.FunctionIndex := 0;
-                      TrainAllocateTask.WatchDog := 0;
+                      TrainAllocateTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
                     begin
                       if TrySendTractionQueryFunction(Node^.Info, Node^.TrainData.LinkedNode, TrainAllocateTask.FunctionIndex) then
                         TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-                      TrainAllocateTask.WatchDog := 0;
+                      TrainAllocateTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
@@ -381,12 +381,12 @@ begin
                         UnLinkFirstTaskFromNode(Node, True);
                         Node^.iUserStateMachine := STATE_THROTTLE_IDLE;                                // We are done....  Look for more tasks
                       end;
-                      TrainAllocateTask.WatchDog := 0;
+                      TrainAllocateTask.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
                     begin
-                      if TrainAllocateTask.WatchDog > 50 then         // Waiting for the Reply to come into a callback
+                      if TrainAllocateTask.WatchDog_1s > 3 then         // Waiting for the Reply to come into a callback
                       begin
                         TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
                       end;
@@ -406,7 +406,7 @@ begin
               case TrainReleaseController.iSubStateMachine of
                 STATE_THROTTLE_RELEASE_CONTROLLER_INITIALIZE :
                     begin
-                      TrainReleaseController.WatchDog := 0;
+                      TrainReleaseController.WatchDog_1s := 0;
                       TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_LOCK;
                       Exit;
                     end;
@@ -414,7 +414,7 @@ begin
                     begin
                       if TrySendTractionManage(Node^.Info, Node^.TrainData.LinkedNode, True) then
                         TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_WAIT;  // Wait for the Lock Reply Callback
-                      TrainReleaseController.WatchDog := 0;
+                      TrainReleaseController.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE :
@@ -426,7 +426,7 @@ begin
                         NodeThread.AddEvent(TNodeEventReleaseController.Create(Node^.Info, TrainReleaseController.LinkedObj));
                         TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK;  // There is no reply to this message
                       end;
-                      TrainReleaseController.WatchDog := 0;
+                      TrainReleaseController.WatchDog_1s := 0;
                       Exit;
                     end;
                 STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK :
@@ -440,7 +440,7 @@ begin
                     end;
                 STATE_THROTTLE_RELEASE_CONTROLLER_WAIT :
                     begin
-                      if TrainReleaseController.WatchDog > 20 then
+                      if TrainReleaseController.WatchDog_1s > 3 then
                         TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK;   // Something is wrong, bail out
                       Exit;
                     end;
@@ -517,7 +517,7 @@ begin
                         end;
                     STATE_CAB_WAIT_QUERY :
                         begin
-                          if TNodeTask( Node^.UserData).WatchDog > 20 then         // Waiting for the Reply to come into a callback
+                          if TNodeTask( Node^.UserData).WatchDog_1s > 3 then         // Waiting for the Reply to come into a callback
                           begin
                              UnLinkFirstTaskFromNode(Node, True);
                              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
@@ -550,7 +550,7 @@ begin
                         end;
                     STATE_CAB_WAIT_QUERY :
                         begin
-                          if TNodeTask( Node^.UserData).WatchDog > 20 then         // Waiting for the Reply to come into a callback
+                          if TNodeTask( Node^.UserData).WatchDog_1s > 2 then         // Waiting for the Reply to come into a callback
                           begin
                              UnLinkFirstTaskFromNode(Node, True);
                              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
@@ -582,13 +582,13 @@ begin
                      begin
                        if TrySendStnipRequest(Node^.Info, TNodeTaskSimpleTrainNodeInfo( Node^.UserData).FDestNodeInfo) then
                        begin
-                         TNodeTask( Node^.UserData).Watchdog := 0;
+                         TNodeTask( Node^.UserData).Watchdog_1s := 0;
                          TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT;
                        end;
                      end;
                    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT :
                      begin
-                       if  TNodeTask( Node^.UserData).Watchdog > 20 then
+                       if  TNodeTask( Node^.UserData).Watchdog_1s > 3 then
                          TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE
                      end;
                   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE :
@@ -613,7 +613,7 @@ begin
                     end;
                  STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT :
                     begin
-                      if  TNodeTask( Node^.UserData).Watchdog > 20 then
+                      if  TNodeTask( Node^.UserData).Watchdog_1s > 3 then
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_PROTOCOL_SUPPORT_END
                     end;
                end
@@ -639,7 +639,7 @@ begin
                         DeltaConfigMem := 64;
                       if TrySendConfigMemoryRead(Node, ReadConfigMemTask.FDestNodeInfo, ReadConfigMemTask.AddressSpace, ReadConfigMemTask.CurrentAddress, DeltaConfigMem) then
                         ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_WAIT;
-                      ReadConfigMemTask.Watchdog := 0;
+                      ReadConfigMemTask.Watchdog_1s := 0;
                     end;
                  STATE_THROTTLE_READ_CONFIG_MEM_END :
                     begin
@@ -649,7 +649,7 @@ begin
                     end;
                  STATE_THROTTLE_READ_CONFIG_MEM_WAIT :
                     begin
-                      if  ReadConfigMemTask.Watchdog > 20 then
+                      if  ReadConfigMemTask.Watchdog_1s > 2 then
                         ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END
                     end;
                end
@@ -679,7 +679,7 @@ begin
                         WriteConfigMemTask.Protocol.Position := WriteConfigMemTask.Protocol.Position + DeltaConfigMem;
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT;  // NOT ALL NODES WILL REPLY HERE>>>>>>>
                       end;
-                      WriteConfigMemTask.Watchdog := 0;
+                      WriteConfigMemTask.Watchdog_1s := 0;
                     end;
                  STATE_THROTTLE_WRITE_CONFIG_MEM_END :
                     begin
@@ -689,7 +689,7 @@ begin
                     end;
                  STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT :
                     begin
-                      if  WriteConfigMemTask.Watchdog > 20 then
+                      if  WriteConfigMemTask.Watchdog_1s > 2 then
                         WriteConfigMemTask.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_END
                     end;
                end
@@ -1054,7 +1054,7 @@ begin
     Offset := 7
   else
     Offset := 6;
-  TaskReadConfigMemory.Watchdog := 0;
+  TaskReadConfigMemory.Watchdog_1s := 0;
 
   if (TaskReadConfigMemory.AddressSpace = MSI_CDI) or (TaskReadConfigMemory.AddressSpace = MSI_FDI) then
   begin
@@ -1085,7 +1085,7 @@ begin
   end else
     TaskReadConfigMemory.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END;
 
-  TaskReadConfigMemory.Watchdog := 0;
+  TaskReadConfigMemory.Watchdog_1s := 0;
 end;
 
 // *****************************************************************************
@@ -1139,7 +1139,7 @@ begin
     EstimatedTime := 0;
   end;
 
-  TaskWriteConfigMemory.Watchdog := 0;
+  TaskWriteConfigMemory.Watchdog_1s := 0;
 end;
 
 // *****************************************************************************
@@ -1197,7 +1197,7 @@ end;
 //     Description : Typcally called from another thread or interrupt, only use
 //                   to update asyncronous flags
 // *****************************************************************************
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 var
   i: Integer;
 begin
@@ -1205,7 +1205,7 @@ begin
   for i := 0 to NodePool.AllocatedCount - 1 do
   begin
     if Assigned(NodePool.Pool[i].UserData) then
-      TNodeTask( NodePool.Pool[i].UserData).Watchdog := TNodeTask( NodePool.Pool[i].UserData).Watchdog + 1;
+      TNodeTask( NodePool.Pool[i].UserData).Watchdog_1s := TNodeTask( NodePool.Pool[i].UserData).Watchdog_1s + 1;
   end;
 end;
 
