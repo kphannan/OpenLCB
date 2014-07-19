@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_userstatemachine.mpas
+Value=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -80,7 +80,7 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=14
+Count=20
 File0=Throttle_main.mpas
 File1=Templates\template_userstatemachine.mpas
 File2=Throttle_events_code.mpas
@@ -95,6 +95,12 @@ File10=..\..\..\..\NMRAnet\opstackdefines.mpas
 File11=..\..\..\..\NMRAnet\opstackbuffers.mpas
 File12=Templates\template_buffers.mpas
 File13=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
+File14=Templates\MCU_Setup_dsPIC33FJ256GP710A.mpas
+File15=..\..\..\..\HardwareLayerImplementations\dsPIC33_CAN\dsPIC33_DMA.mpas
+File16=..\..\..\..\NMRAnet\opstack_api.mpas
+File17=..\..\..\..\NMRAnet\OPStackNode.mpas
+File18=..\..\..\..\NMRAnet\opstackcore_traction.mpas
+File19=..\..\..\..\ConfigurationLayerImplementations\dsPIC33_Flash\template_configuration.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

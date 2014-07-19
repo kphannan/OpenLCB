@@ -25,7 +25,7 @@ procedure UART_RX_StateMachine;
 procedure CabBus_Timeout;
 
 // Called every 100ms typically from another thread so only use to update flags
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 
 // These message are called from the mainstatemachine loop.  They have been stored in
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
@@ -73,8 +73,8 @@ var
   CabBus_RS485_Select_Direction    : sbit; sfr; external;
 
 var
-  GlobalTimer: Word;
-  RS485_Watchdog: Byte;
+  GlobalTimer_1s: Word;
+  RS485_Watchdog_1s: Byte;
   
 implementation
 
@@ -376,7 +376,7 @@ end;
 procedure UserStateMachine_Initialize;
 begin
   NMRAnetCabBridge_Initialize;
-  GlobalTimer := 0;
+  GlobalTimer_1s := 0;
 end;
 
 // *****************************************************************************
@@ -400,7 +400,7 @@ begin
           begin
             if Node^.State and NS_PERMITTED <> 0 then
             begin
-              GlobalTimer := 0;
+              GlobalTimer_1s := 0;
               if TrySendIdentifyProducer(Node^.Info, @EVENT_IS_PROXY) then
                 Node^.iUserStateMachine := STATE_BRIDGE_FIND_PROXY;
             end;
@@ -408,10 +408,10 @@ begin
           end;
       STATE_BRIDGE_FIND_PROXY :   // Find the Proxy node (Command Station) on the network before progressing
           begin
-            if (Node^.TrainData.Controller.AliasID > 0) or (Node^.TrainData.Controller.ID[0] > 0) or (Node^.TrainData.Controller.ID[1] > 0) then
+            if (Node^.TrainData.ControllerLink.AliasID > 0) or (Node^.TrainData.ControllerLink.ID[0] > 0) or (Node^.TrainData.ControllerLink.ID[1] > 0) then
               Node^.iUserStateMachine := STATE_BRIDGE_CREATE_REQUIRED_CABS
             else begin
-              if GlobalTimer > 10 then
+              if GlobalTimer_1s > 1 then
                 Node^.iUserStateMachine := STATE_BRIDGE_USER_START                     // Try again
             end;
             Exit;
@@ -491,7 +491,7 @@ begin
                     if (U2TXIF_bit = 1) then // The last byte was sent setup the wait period (plus or minus)
                     begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_SYNC_WAITFOR_HARDWARE_BUFFER_EMPTY..............'+LF); {$ENDIF}
                       EnableCabBusTimer(2880);      // 31.25ns * 2880 = 90us      Need delay, the cabs are slow microprocessors
-                      RS485_Watchdog := 0;
+                      RS485_Watchdog_1s := 0;
                       CabBridge.iStateMachine := STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE;
                     end;
                     Exit;
@@ -500,7 +500,7 @@ begin
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
                     // Waiting for the Timer to expire or we detect a reply....
                     // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
-                    if RS485_Watchdog > 2 then                                  // Something is corrupted or hung
+                    if RS485_Watchdog_1s > 2 then                                  // Something is corrupted or hung
                     begin
                        CabBridge.iIncomingStateMachine :=  STATE_RS485_READ_HEADER_BYTE;
                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;
@@ -615,7 +615,7 @@ begin
           begin
             if Node^.State and NS_PERMITTED <> 0 then
             begin
-              Node^.TrainData.Controller := NodePool.Pool[0].TrainData.Controller;  // Proxy Node
+              Node^.TrainData.ControllerLink := NodePool.Pool[0].TrainData.ControllerLink;  // Proxy Node
               Node^.iUserStateMachine := STATE_CAB_IDLE;
             end;
             Exit;
@@ -885,7 +885,7 @@ begin
     for i := 0 to USER_MAX_NODE_COUNT - 1 do
     begin
       if NodePool.Pool[i].State and NS_ALLOCATED then
-        NodePool.Pool[i].TrainData.Controller := Source;
+        NodePool.Pool[i].TrainData.ControllerLink := Source;
     end
   end
 end;
@@ -1009,19 +1009,19 @@ end;
 {$ENDIF}
 
 // *****************************************************************************
-//  procedure AppCallback_Timer_100ms
+//  procedure AppCallback_Timer_1s
 //     Parameters: : None
 //     Returns     : None
 //     Description : Typcally called from another thread or interrupt, only use
 //                   to update asyncronous flags
 // *****************************************************************************
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 var
   i: Integer;
   Cab: PCab;
 begin
-  Inc(GlobalTimer);
-  Inc(RS485_Watchdog);
+  Inc(GlobalTimer_1s);
+  Inc(RS485_Watchdog_1s);
 
    // Count up to the time out then freeze.  The Timer Count will be reset after the
   // main loop is done rediscovering
@@ -1031,7 +1031,7 @@ begin
   for i := 0 to CabBridge.iAssignedCabCount - 1 do
   begin
     Cab := PCab( CabBridge.AssignedCabs[i]^.UserData);
-    Inc( Cab^.WatchDog);
+    Inc( Cab^.WatchDog_1s);
   end;
 end;
 

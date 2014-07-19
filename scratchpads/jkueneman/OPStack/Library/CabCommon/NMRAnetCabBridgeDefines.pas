@@ -69,12 +69,10 @@ const
   STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK         = 21;
   STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_TRACTION_UNLOCK      = 22;
 
-  STATE_THROTTLE_RELEASE_CONTROLLER_INITIALIZE               = 0;
-  STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_LOCK        = 1;
-  STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE    = 2;
-  STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK     = 3;
-  STATE_THROTTLE_RELEASE_CONTROLLER_WAIT                     = 4;
-
+  STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_LOCK           = 1;
+  STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_RELEASE_CONTROLLER    = 2;
+  STATE_SUB_RELEASE_CONTROLLER_SEND_TRACTION_MANAGE_UNLOCK         = 3;
+  STATE_SUB_RELEASE_CONTROLLER_WAIT                                = 4;
 
 const
   CAB_MAX_DATA_BYTE = 15;                                                    // Max number of databytes in a Cab message
@@ -98,7 +96,7 @@ const
   ID_MAX_DEVICE_XPRESSNET                    = 31;   // 31 Devices on NceBus bus allowed not including ID = 0
   XPRESSNET_CAB_BUS_PADDING                  = 4;    // How many fixed Cab objects to always have on the bus to Ping, Xpressnet Cabs can be on the bus alone
 
-  REDISCOVERY_TIME                           = 50;     // = Slow timer count (~100ms * REDISCOVERY_TIME = time to rescan for new Devices)
+  REDISCOVERY_TIME                           = 5;     // = Slow timer count (~1s * REDISCOVERY_TIME = time to rescan for new Devices)
 
   CS_ALLOCATED                                  = $01;  // The Cab is allocated from the RAM buffer
   CS_NCE_MACRO_MESSAGE                          = $08;  // NCE specific
@@ -174,7 +172,7 @@ type
     ID: Byte;                                                                   // Cab Address (ID/Index)
     iStateMachine: Byte;                                                        // SubStatemachine index
     iSubStateMachine: Byte;
-    WatchDog: Word;
+    WatchDog_1s: Word;
     iQueryFunction: Integer;                                                    // For rowing through all Functions during mass query
     QueryType: Byte;                                                            // QUERY_xxxx constants
     {$IFDEF SUPPORT_CAB_INPUT_BUFFER}                                           // NCE interleave user input button presses so we need per cab buffer
@@ -216,4 +214,4 @@ var
 implementation
 
 
-end.
+end.

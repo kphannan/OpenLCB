@@ -677,7 +677,7 @@ begin
   Address := ExtractAddressFromXpressNetMessage(CabBridge.IncomingBuffer, 1, 2);
   CabData := PCab(CabNode^.UserData);
   TrainData := @CabNode^.TrainData;
-  ProxyNode := @CabNode^.TrainData.Controller;  // We hold the Proxy in the Controller field since this is a controller
+  ProxyNode := @CabNode^.TrainData.ControllerLink;  // We hold the Proxy in the Controller field since this is a controller
   case CabData^.iStateMachine of
     STATE_SUB_BRIDGE_INITIALIZE :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_INITIALIZE'+LF); {$ENDIF} 
@@ -688,7 +688,7 @@ begin
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_LOCK'+LF); {$ENDIF}
           if TrySendTractionProxyManage(CabNode^.Info, ProxyNode^, True) then
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT; // Wait for the Manage Reply Callback
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_PROXY_ALLOCATE :
@@ -719,21 +719,21 @@ begin
          
           if TrySendTractionProxyAllocate(CabNode^.Info, ProxyNode^, TRACTION_PROXY_TECH_ID_DCC, Address, SpeedStep, 0) then
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Allocate Reply Callback
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_UNLOCK'+LF); {$ENDIF}
           if TrySendTractionProxyManage(CabNode^.Info, ProxyNode^, False) then
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK; // No Reply for Unlock
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_LOCK'+LF); {$ENDIF}
           if TrySendTractionManage(CabNode^.Info, CabNode^.TrainData.LinkedNode, True) then
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_ASSIGN_CONTROLLER :
@@ -743,7 +743,7 @@ begin
             CabData^.QueryType := QUERY_FOR_ALLOCATION;
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Lock Reply Callback
           end;
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_SPEED :
@@ -754,14 +754,14 @@ begin
             CabData^.QueryType := QUERY_FOR_ALLOCATION;
             CabData^.iQueryFunction := 0;
           end;
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS :
         begin {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_TRACTION_QUERY_FUNCTIONS'+LF); {$ENDIF}
           if TrySendTractionQueryFunction(CabNode^.Info, CabNode^.TrainData.LinkedNode, CabData^.iQueryFunction) then
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT;  // Wait for the Query Function Reply Callback
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_SEND_TRACTION_MANAGE_UNLOCK :
@@ -811,13 +811,13 @@ begin
             CabData^.iStateMachine := 0;                                        // We are now done....
             Result := True;
           end;
-          CabData^.WatchDog := 0;
+          CabData^.WatchDog_1s := 0;
           Exit;
         end;
     STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
         begin
           // Waiting for the Reply to come into a callback
-          if CabData^.WatchDog > 200 then
+          if CabData^.WatchDog_1s > 20 then
           begin
             {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_REPLY_WAIT'+LF); {$ENDIF}
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit

@@ -91,7 +91,7 @@ File0=Templates\Options.inc
 File1=Templates\NodeID.inc
 [SEARCH_PATH]
 Count=12
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\defs\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Defs\
 Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\uses\
 Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\dsPIC33EP512MU810_CAN_CommandStation\
 Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for dsPIC\Packages\Network_Ethernet_dsPIC\Uses\

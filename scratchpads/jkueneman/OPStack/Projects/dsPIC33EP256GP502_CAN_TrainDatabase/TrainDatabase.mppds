@@ -14,7 +14,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [ACTIVE_TAB]
-Value=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
+Value=Templates\template_userstatemachine.mpas
 [FILES]
 Count=47
 File0=TrainDatabase.mpas

@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="88">
+    <Units Count="89">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -59,7 +59,6 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="form_train_config_editor"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="845"/>
@@ -296,7 +295,7 @@
       <Unit30>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <EditorIndex Value="7"/>
+        <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="487"/>
         <CursorPos X="45" Y="352"/>
@@ -330,7 +329,7 @@
       <Unit34>
         <Filename Value="../../../Library/olcb_transport_layer.pas"/>
         <UnitName Value="olcb_transport_layer"/>
-        <EditorIndex Value="12"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
         <TopLine Value="71"/>
         <CursorPos X="17" Y="84"/>
@@ -347,7 +346,7 @@
       <Unit36>
         <Filename Value="../../NMRAnet/opstackcore.pas"/>
         <UnitName Value="opstackcore"/>
-        <EditorIndex Value="14"/>
+        <EditorIndex Value="15"/>
         <WindowIndex Value="0"/>
         <TopLine Value="202"/>
         <CursorPos X="1" Y="216"/>
@@ -357,7 +356,7 @@
       <Unit37>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="11"/>
         <WindowIndex Value="0"/>
         <TopLine Value="550"/>
         <CursorPos X="38" Y="559"/>
@@ -367,7 +366,7 @@
       <Unit38>
         <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
         <UnitName Value="template_hardware"/>
-        <EditorIndex Value="13"/>
+        <EditorIndex Value="14"/>
         <WindowIndex Value="0"/>
         <TopLine Value="176"/>
         <CursorPos X="1" Y="185"/>
@@ -377,7 +376,7 @@
       <Unit39>
         <Filename Value="../../../Library/com_port_hub.pas"/>
         <UnitName Value="com_port_hub"/>
-        <EditorIndex Value="11"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
         <TopLine Value="39"/>
         <CursorPos X="19" Y="30"/>
@@ -498,7 +497,7 @@
       <Unit54>
         <Filename Value="Templates/template_buffers.pas"/>
         <UnitName Value="template_buffers"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="10"/>
         <WindowIndex Value="0"/>
         <TopLine Value="14"/>
         <CursorPos X="18" Y="17"/>
@@ -565,7 +564,7 @@
       <Unit62>
         <Filename Value="../../NMRAnet/opstackbuffers.pas"/>
         <UnitName Value="opstackbuffers"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="15" Y="19"/>
@@ -711,7 +710,7 @@
       <Unit80>
         <Filename Value="../../NMRAnet/gridconnect.pas"/>
         <UnitName Value="gridconnect"/>
-        <EditorIndex Value="15"/>
+        <EditorIndex Value="16"/>
         <WindowIndex Value="0"/>
         <TopLine Value="172"/>
         <CursorPos X="3" Y="168"/>
@@ -772,6 +771,16 @@
         <UsageCount Value="10"/>
         <Loaded Value="True"/>
       </Unit87>
+      <Unit88>
+        <Filename Value="../../Projects/dsPIC33EP512MU810_CAN_CommandStation/Templates/Options.inc"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit88>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
