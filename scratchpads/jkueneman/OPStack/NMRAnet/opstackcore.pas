@@ -294,13 +294,14 @@ begin
   Result := False;
   MessageToSend := nil;
 
+  // What is the next Outgoing Message that needs to be handled
   NextMessage := OPStackNode_NextOutgoingMessage(Node);
   if NextMessage <> nil then
   begin
     case NextMessage^.MTI of
       MTI_DATAGRAM :
           begin
-            Result := DatagramHandler(Node, MessageToSend, NextMessage)
+            Result := DatagramHandler(Node, MessageToSend, NextMessage);
           end
     else begin
         OPStackNode_OutgoingMessageUnLink(Node, NextMessage);                   // We don't handle these messages
@@ -309,6 +310,7 @@ begin
     end;
   end;
 
+  // What is the next Incoming Message that needs to be handled
   NextMessage := OPStackNode_NextIncomingMessage(Node);
   if NextMessage <> nil then
   begin
@@ -392,7 +394,7 @@ begin
     if OPStack._1sCounter > 10 then      // 1s-1.1s
     begin
       OPstack._1sCounter := 0;
-      Inc(Node^.Watchdog_1s);
+      Inc(Node^.UserWatchdog_1s);
       OPStackBuffers_WatchdogTimer_1s;
       AppCallback_Timer_1s;
       {$IFDEF SUPPORT_TRACTION} TractionProtocolTimerTick_1s(Node);{$ENDIF}

@@ -124,7 +124,7 @@ begin
           if IsOutgoingBufferAvailable then
           begin
             OutgoingMessage(DatagramMessage, False);
-            DatagramBufferPtr^.Watchdog := 0;
+            DatagramMessage^.WatchDog_1s := 0;
             DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_WAITFOR;         // Wait for the remote node to ACK back
           end;
           Exit;
@@ -142,7 +142,7 @@ begin
         end;
     STATE_DATAGRAM_WAITFOR :
         begin
-          if DatagramBufferPtr^.Watchdog > 20 then
+          if DatagramMessage^.WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
             DatagramBufferPtr^.iStateMachine := STATE_DATAGRAM_DONE;
           Exit;
         end;

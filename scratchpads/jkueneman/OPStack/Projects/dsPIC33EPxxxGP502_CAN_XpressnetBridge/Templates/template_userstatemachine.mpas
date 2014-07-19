@@ -500,7 +500,7 @@ begin
                   begin {$IFDEF DEBUG_DISCOVER_STATEMACHINE} UART1_Write_Text('STATE_SUB_BRIDGE_WAIT_FOR_RESPONSE'+LF); {$ENDIF}
                     // Waiting for the Timer to expire or we detect a reply....
                     // See CabBus_Timeout function for the Timeout or CabBus_UART_RX_StateMachine for a reply and what the next state is
-                    if RS485_Watchdog_1s > 2 then                                  // Something is corrupted or hung
+                    if RS485_Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then                                  // Something is corrupted or hung
                     begin
                        CabBridge.iIncomingStateMachine :=  STATE_RS485_READ_HEADER_BYTE;
                        CabBridge.iStateMachine := STATE_SUB_BRIDGE_TIMEOUT;

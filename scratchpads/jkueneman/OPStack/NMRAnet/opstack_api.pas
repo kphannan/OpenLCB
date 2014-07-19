@@ -644,7 +644,7 @@ begin
     NewMessage^.Buffer^.DataArray[5] := Byte( StartAddress);
     NewMessage^.Buffer^.DataArray[6] := AddressSpace;
     NewMessage^.Buffer^.DataArray[7] := ReadCount;
-    PDatagramBuffer( PByte( NewMessage^.Buffer))^.iStateMachine := STATE_DATAGRAM_SEND;
+    PDatagramBuffer( PByte( NewMessage^.Buffer))^.iStateMachine := STATE_DATAGRAM_SEND;     // This is a send so start the statemachine in the correct place for a send
     OPStackNode_OutgoingMessageLink(Node, NewMessage);
     Result := True;
   end;
@@ -676,7 +676,7 @@ begin
       DatagramBuffer^.DataArray[i + 7] := WriteData^[i];
     DatagramBuffer^.DataBufferSize := WriteCount + 7;
 
-    PDatagramBuffer( PByte( NewMessage^.Buffer))^.iStateMachine := STATE_DATAGRAM_SEND;
+    PDatagramBuffer( PByte( NewMessage^.Buffer))^.iStateMachine := STATE_DATAGRAM_SEND;  // This is a send so start the statemachine in the correct place for a send
     OPStackNode_OutgoingMessageLink(Node, NewMessage);
     Result := True;
   end;

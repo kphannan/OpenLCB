@@ -348,7 +348,7 @@ begin
                     end;
                 STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
                     begin
-                      if UserDataPtr^.WatchDog > 50 then         // Waiting for the Reply to come into a callback
+                      if UserDataPtr^.WatchDog > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                       begin {$IFDEF LOG_TRAIN_BY_ADDRESS_STATEMACHINE}UART2_Write_Text('STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT' + LF);{$ENDIF}
                         UserDataPtr^.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
                       end;
@@ -432,7 +432,7 @@ begin
                       end;
                   STATE_CAB_WAIT_QUERY :
                       begin
-                        if PUserData( Node^.UserData)^.WatchDog > 20 then         // Waiting for the Reply to come into a callback
+                        if PUserData( Node^.UserData)^.WatchDog > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                            Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                         Exit;
                       end;
@@ -462,7 +462,7 @@ begin
                       end;
                   STATE_CAB_WAIT_QUERY :
                       begin
-                        if PUserData( Node^.UserData)^.WatchDog > 20 then         // Waiting for the Reply to come into a callback
+                        if PUserData( Node^.UserData)^.WatchDog > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                            Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
                         Exit;
                       end;

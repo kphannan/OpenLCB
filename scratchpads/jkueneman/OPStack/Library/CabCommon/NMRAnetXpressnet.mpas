@@ -817,7 +817,7 @@ begin
     STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
         begin
           // Waiting for the Reply to come into a callback
-          if CabData^.WatchDog_1s > 20 then
+          if CabData^.WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
           begin
             {$IFDEF DEBUG_STATE_CAB_SELECT_LOCO_STATEMACHINE} UART1_Write_Text('STATE_CAB_SELECT_LOCO_SEND_PROXY_MANAGE_REPLY_WAIT'+LF); {$ENDIF}
             CabData^.iStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit

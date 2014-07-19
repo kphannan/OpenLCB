@@ -321,7 +321,7 @@ begin
                     end;
                 STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
                     begin
-                      if TrainAllocateByAddressTask.WatchDog_1s > 3 then         // Waiting for the Reply to come into a callback
+                      if TrainAllocateByAddressTask.WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                       begin
                         TrainAllocateByAddressTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
                       end;
@@ -386,7 +386,7 @@ begin
                     end;
                 STATE_CAB_SELECT_LOCO_GENERIC_REPLY_WAIT :
                     begin
-                      if TrainAllocateTask.WatchDog_1s > 3 then         // Waiting for the Reply to come into a callback
+                      if TrainAllocateTask.WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                       begin
                         TrainAllocateTask.iSubStateMachine := STATE_CAB_SELECT_LOCO_GENERIC_TIMEOUT_PROXY_UNLOCK;    // Force unlocks and exit
                       end;
@@ -440,7 +440,7 @@ begin
                     end;
                 STATE_THROTTLE_RELEASE_CONTROLLER_WAIT :
                     begin
-                      if TrainReleaseController.WatchDog_1s > 3 then
+                      if TrainReleaseController.WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
                         TrainReleaseController.iSubStateMachine := STATE_THROTTLE_RELEASE_CONTROLLER_SEND_TRACTION_UNLOCK;   // Something is wrong, bail out
                       Exit;
                     end;
@@ -517,7 +517,7 @@ begin
                         end;
                     STATE_CAB_WAIT_QUERY :
                         begin
-                          if TNodeTask( Node^.UserData).WatchDog_1s > 3 then         // Waiting for the Reply to come into a callback
+                          if TNodeTask( Node^.UserData).WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                           begin
                              UnLinkFirstTaskFromNode(Node, True);
                              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
@@ -550,7 +550,7 @@ begin
                         end;
                     STATE_CAB_WAIT_QUERY :
                         begin
-                          if TNodeTask( Node^.UserData).WatchDog_1s > 2 then         // Waiting for the Reply to come into a callback
+                          if TNodeTask( Node^.UserData).WatchDog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then         // Waiting for the Reply to come into a callback
                           begin
                              UnLinkFirstTaskFromNode(Node, True);
                              Node^.iUserStateMachine := STATE_THROTTLE_IDLE;      // We are done
@@ -588,7 +588,7 @@ begin
                      end;
                    STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_WAIT :
                      begin
-                       if  TNodeTask( Node^.UserData).Watchdog_1s > 3 then
+                       if  TNodeTask( Node^.UserData).Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
                          TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE
                      end;
                   STATE_THROTTLE_FIND_SIMPLE_TRAIN_INFO_DONE :
@@ -613,7 +613,7 @@ begin
                     end;
                  STATE_THROTTLE_PROTOCOL_SUPPORT_WAIT :
                     begin
-                      if  TNodeTask( Node^.UserData).Watchdog_1s > 3 then
+                      if  TNodeTask( Node^.UserData).Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
                         TNodeTask( Node^.UserData).iSubStateMachine := STATE_THROTTLE_PROTOCOL_SUPPORT_END
                     end;
                end
@@ -649,7 +649,7 @@ begin
                     end;
                  STATE_THROTTLE_READ_CONFIG_MEM_WAIT :
                     begin
-                      if  ReadConfigMemTask.Watchdog_1s > 2 then
+                      if  ReadConfigMemTask.Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
                         ReadConfigMemTask.iSubStateMachine := STATE_THROTTLE_READ_CONFIG_MEM_END
                     end;
                end
@@ -689,7 +689,7 @@ begin
                     end;
                  STATE_THROTTLE_WRITE_CONFIG_MEM_WAIT :
                     begin
-                      if  WriteConfigMemTask.Watchdog_1s > 2 then
+                      if  WriteConfigMemTask.Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
                         WriteConfigMemTask.iSubStateMachine := STATE_THROTTLE_WRITE_CONFIG_MEM_END
                     end;
                end

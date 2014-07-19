@@ -221,7 +221,6 @@ type
     iStateMachine: Byte;
     CurrentCount: Word;                                                         // Current index of the number of bytes sent/received
     ResendCount: Byte;                                                          // Number of tries to resend the datagram if sending is rejected
-    Watchdog: Word;                                                             //
   end;
   PDatagramBuffer = ^TDatagramBuffer;
 
@@ -323,8 +322,7 @@ type
     UserData: ^Byte;                                                            // Pointer to User Data
     {$ENDIF}
     iUserStateMachine: Byte;                                                    // For user (application level) statemachine
-    Watchdog_1s: Word;                                                          // For user
-
+    UserWatchdog_1s: Word;                                                      // For user
     {$IFDEF SUPPORT_TRACTION}TrainData: TTrainData;{$ENDIF}                     // Realtime information about the Train Node
   end;
   PNMRAnetNode = ^TNMRAnetNode;
