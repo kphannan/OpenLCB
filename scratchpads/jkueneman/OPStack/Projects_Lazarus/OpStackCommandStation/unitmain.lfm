@@ -1,11 +1,11 @@
 object Form1: TForm1
   Left = 385
-  Height = 415
+  Height = 434
   Top = 203
-  Width = 672
+  Width = 676
   Caption = 'Mustangpeak OclbCommandStation Emulator'
-  ClientHeight = 415
-  ClientWidth = 672
+  ClientHeight = 434
+  ClientWidth = 676
   Menu = MainMenu
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
@@ -15,8 +15,8 @@ object Form1: TForm1
   object StatusBar: TStatusBar
     Left = 0
     Height = 15
-    Top = 400
-    Width = 672
+    Top = 419
+    Width = 676
     Panels = <    
       item
         Width = 150
@@ -36,7 +36,7 @@ object Form1: TForm1
     Left = 0
     Height = 44
     Top = 0
-    Width = 672
+    Width = 676
     AutoSize = True
     ButtonHeight = 42
     ButtonWidth = 45
@@ -112,12 +112,12 @@ object Form1: TForm1
   end
   object PageControlMain: TPageControl
     Left = 0
-    Height = 356
+    Height = 375
     Top = 44
-    Width = 672
-    ActivePage = TabSheetCommandStation
+    Width = 676
+    ActivePage = TabSheetGeneral
     Align = alClient
-    TabIndex = 0
+    TabIndex = 3
     TabOrder = 2
     object TabSheetCommandStation: TTabSheet
       Caption = 'Command Station'
@@ -914,8 +914,8 @@ object Form1: TForm1
     end
     object TabSheetGeneral: TTabSheet
       Caption = 'General'
-      ClientHeight = 296
-      ClientWidth = 666
+      ClientHeight = 336
+      ClientWidth = 670
       OnHide = TabSheetGeneralHide
       OnShow = TabSheetGeneralShow
       object CheckBoxJMRILogging: TCheckBox
@@ -954,7 +954,7 @@ object Form1: TForm1
       object LabelMessageCountMax: TLabel
         Left = 604
         Height = 16
-        Top = 224
+        Top = 288
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -962,7 +962,7 @@ object Form1: TForm1
       object LabelMessageCount: TLabel
         Left = 604
         Height = 16
-        Top = 208
+        Top = 272
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -970,7 +970,7 @@ object Form1: TForm1
       object LabelMultiFrameCountMax: TLabel
         Left = 604
         Height = 16
-        Top = 188
+        Top = 232
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -978,7 +978,7 @@ object Form1: TForm1
       object LabelMultiFrameCount: TLabel
         Left = 604
         Height = 16
-        Top = 172
+        Top = 216
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -986,7 +986,7 @@ object Form1: TForm1
       object LabelDatagramCountMax: TLabel
         Left = 604
         Height = 16
-        Top = 148
+        Top = 176
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -994,7 +994,7 @@ object Form1: TForm1
       object LabelDatagramCount: TLabel
         Left = 604
         Height = 16
-        Top = 132
+        Top = 160
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -1002,7 +1002,7 @@ object Form1: TForm1
       object LabelSnipCountMax: TLabel
         Left = 604
         Height = 16
-        Top = 108
+        Top = 120
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -1010,7 +1010,7 @@ object Form1: TForm1
       object LabelSnipCount: TLabel
         Left = 604
         Height = 16
-        Top = 92
+        Top = 104
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -1018,7 +1018,7 @@ object Form1: TForm1
       object LabelSimpleCountMax: TLabel
         Left = 604
         Height = 16
-        Top = 68
+        Top = 64
         Width = 8
         Caption = '0'
         ParentColor = False
@@ -1026,15 +1026,15 @@ object Form1: TForm1
       object LabelSimpleCount: TLabel
         Left = 604
         Height = 16
-        Top = 52
+        Top = 48
         Width = 8
         Caption = '0'
         ParentColor = False
       end
       object ButtonRefreshBufferCount: TButton
-        Left = 423
+        Left = 429
         Height = 22
-        Top = 20
+        Top = 8
         Width = 189
         Caption = 'Refresh'
         OnClick = ButtonRefreshBufferCountClick
@@ -1043,7 +1043,7 @@ object Form1: TForm1
       object Label2: TLabel
         Left = 423
         Height = 16
-        Top = 52
+        Top = 48
         Width = 130
         Caption = 'Simple Buffer Count:'
         ParentColor = False
@@ -1051,15 +1051,15 @@ object Form1: TForm1
       object Label4: TLabel
         Left = 423
         Height = 16
-        Top = 92
+        Top = 104
         Width = 115
         Caption = 'SNIP Buffer Count:'
         ParentColor = False
       end
       object Label9: TLabel
-        Left = 423
+        Left = 429
         Height = 16
-        Top = 132
+        Top = 160
         Width = 145
         Caption = 'Datagram Buffer Count'
         ParentColor = False
@@ -1067,7 +1067,7 @@ object Form1: TForm1
       object Label10: TLabel
         Left = 423
         Height = 16
-        Top = 172
+        Top = 216
         Width = 154
         Caption = 'MultiFrame Buffer Count'
         ParentColor = False
@@ -1075,7 +1075,7 @@ object Form1: TForm1
       object Label11: TLabel
         Left = 423
         Height = 16
-        Top = 208
+        Top = 272
         Width = 138
         Caption = 'Message Buffer Count'
         ParentColor = False
@@ -1083,7 +1083,7 @@ object Form1: TForm1
       object Label16: TLabel
         Left = 440
         Height = 16
-        Top = 224
+        Top = 288
         Width = 29
         Caption = 'Peak'
         ParentColor = False
@@ -1091,7 +1091,7 @@ object Form1: TForm1
       object Label15: TLabel
         Left = 440
         Height = 16
-        Top = 188
+        Top = 232
         Width = 29
         Caption = 'Peak'
         ParentColor = False
@@ -1099,7 +1099,7 @@ object Form1: TForm1
       object Label14: TLabel
         Left = 440
         Height = 16
-        Top = 148
+        Top = 176
         Width = 29
         Caption = 'Peak'
         ParentColor = False
@@ -1107,7 +1107,7 @@ object Form1: TForm1
       object Label13: TLabel
         Left = 440
         Height = 16
-        Top = 108
+        Top = 120
         Width = 29
         Caption = 'Peak'
         ParentColor = False
@@ -1115,9 +1115,25 @@ object Form1: TForm1
       object Label12: TLabel
         Left = 440
         Height = 16
-        Top = 68
+        Top = 64
         Width = 29
         Caption = 'Peak'
+        ParentColor = False
+      end
+      object Label17: TLabel
+        Left = 440
+        Height = 16
+        Top = 80
+        Width = 99
+        Caption = 'Abandon Count'
+        ParentColor = False
+      end
+      object Label18: TLabel
+        Left = 440
+        Height = 16
+        Top = 136
+        Width = 99
+        Caption = 'Abandon Count'
         ParentColor = False
       end
     end
@@ -8419,6 +8435,30 @@ object Form1: TForm1
         }
       end
     end
+  end
+  object Label19: TLabel
+    Left = 440
+    Height = 16
+    Top = 272
+    Width = 99
+    Caption = 'Abandon Count'
+    ParentColor = False
+  end
+  object Label20: TLabel
+    Left = 440
+    Height = 16
+    Top = 328
+    Width = 99
+    Caption = 'Abandon Count'
+    ParentColor = False
+  end
+  object Label21: TLabel
+    Left = 440
+    Height = 16
+    Top = 384
+    Width = 99
+    Caption = 'Abandon Count'
+    ParentColor = False
   end
   object ImageList16x16: TImageList
     left = 192

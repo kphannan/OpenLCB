@@ -274,7 +274,10 @@ begin
         STATE_SERVER_TRACTION_MESSAGE_SEND_WAIT :
             begin
               if TrainProxyPool.Stack^.Watchdog_1s > TIMEOUT_MESSAGE_REPLY_WAIT then
+              begin
                 TrainProxyPool.Stack^.iStateMachine := STATE_SERVER_TRACTION_MESSAGE_SEND_DETACH;
+                Inc(TrainProxyPool.ReleasedByTimeoutCount);
+              end;
               Exit;
             end;
     end

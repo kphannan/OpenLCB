@@ -25,6 +25,7 @@ type
   TProcessStack = record
     Stack: TProcessStackArray;
     Count: Word;
+    ReleasedByAbandonmentCount: Word;
   end;
   PProcessStack = ^TProcessStack;
 
@@ -119,31 +120,39 @@ begin
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     DatagramIncomingProcessStack.Stack[i] := nil;
   DatagramIncomingProcessStack.Count := 0;
+  DatagramIncomingProcessStack.ReleasedByAbandonmentCount := 0;
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     DatagramOutgoingProcessStack.Stack[i] := nil;
   DatagramOutgoingProcessStack.Count := 0;
+  DatagramOutgoingProcessStack.ReleasedByAbandonmentCount := 0;
 
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameStringOutgoingProcessStack.Stack[i] := nil;
   MultiFrameStringOutgoingProcessStack.Count := 0;
+  MultiFrameStringOutgoingProcessStack.ReleasedByAbandonmentCount := 0;
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameIncomingProcessStack.Stack[i] := nil;
   MultiFrameStringIncomingProcessStack.Count := 0;
+  MultiFrameIncomingProcessStack.ReleasedByAbandonmentCount := 0;
   {$IFDEF SUPPORT_STREAMS}
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     StreamInProcessStack.Stack[i] := nil;
   StreamInProcessStack.Count := 0;
+  StreamInProcessStack.ReleasedByAbandonmentCount := 0;
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     StreamOutgoingProcessStack.Stack[i] := nil;
   StreamOutgoingProcessStack.Count := 0;
+  StreamOutgoingProcessStack.ReleasedByAbandonmentCount := 0;
   {$ENDIF}
 
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameOutgoingProcessStack.Stack[i] := nil;
   MultiFrameOutgoingProcessStack.Count := 0;
+  MultiFrameOutgoingProcessStack.ReleasedByAbandonmentCount := 0;
   for i := 0 to MAX_PROCESS_STACK_ARRAY - 1 do
     MultiFrameIncomingProcessStack.Stack[i] := nil;
   MultiFrameIncomingProcessStack.Count := 0;
+  MultiFrameIncomingProcessStack.ReleasedByAbandonmentCount := 0;
 end;
 
 
@@ -181,6 +190,7 @@ begin
   begin
     if MessageStackRoot^.Stack[i]^.WatchDog_1s > TIMEOUT_ABANDON_RESOURCE then
     begin
+      Inc(MessageStackRoot^.ReleasedByAbandonmentCount);
       OPStackBuffers_DeAllocateMessage(MessageStackRoot^.Stack[i]);
       Dec(MessageStackRoot^.Count);
     end;

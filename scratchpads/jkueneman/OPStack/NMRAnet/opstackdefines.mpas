@@ -21,7 +21,7 @@ const
   
 const
   TIMEOUT_MAX_BUS_LOGIN = 5;                                                    // Number of 100ms time tick to wait for a node to send a RID to signal a duplicate Alais
-  TIMEOUT_ABANDON_RESOURCE = 3;                                                 // Number of seconds before a resource (message/buffer/etc) is delared abandon and needs to be released
+  TIMEOUT_ABANDON_RESOURCE = 5;                                                 // Number of seconds before a resource (message/buffer/etc) is delared abandon and needs to be released, must be greater than TIMEOUT_MESSAGE_REPLY_WAIT or you won't get the exptected results
   TIMEOUT_MESSAGE_REPLY_WAIT = 3;                                               // Number of seconds before deciding the other node is not going to reply
 
 const
@@ -333,6 +333,7 @@ type
     AllocatedList: array[0..USER_MAX_NODE_COUNT-1] of PNMRAnetNode;             // Node List sorted by Alias
     AllocatedCount: Integer;                                                    // Number of Nodes Allocated
     iActiveNode: Integer;                                                       // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
+
   end;
   PNodePool = ^TNodePool;
   

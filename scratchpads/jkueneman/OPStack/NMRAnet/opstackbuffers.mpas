@@ -60,6 +60,7 @@ type
     Pool: array[0..USER_MAX_MESSAGE_ARRAY_BUFFERS-1] of TOPStackMessage;
     Count: Word;
     MaxCount: Word;
+    ReleasedByAbandonmentCount: Word;
   end;
 
 {$IFDEF SUPPORT_TRACTION_PROXY}
@@ -90,6 +91,7 @@ type
     Stack: PTrainProxyBuffer;
     Count: Integer;
     MaxCount: Integer;
+    ReleasedByTimeoutCount: Word;
   end;
 {$ENDIF}
 
@@ -188,9 +190,9 @@ begin
   {$ENDIF}
   
   UART1_Write_Text('ADCI/SNIP Buffers: '+LF);
-  WordToStr(MultiFrameStringBufferPool.Count, s1);
+  WordToStr(AcdiSnipBufferPool.Count, s1);
   UART1_Write_Text('  Count: '+s1+LF);
-  WordToStr(MultiFrameStringBufferPool.MaxCount, s1);
+  WordToStr(AcdiSnipBufferPool.MaxCount, s1);
   UART1_Write_Text('  Max  : '+s1+LF);
   
   UART1_Write_Text('MultiFrame Buffers: '+LF);
@@ -245,6 +247,7 @@ begin
     OPStackBuffers_ZeroMessage(@OPStackMessagePool.Pool[j]);
   OPStackMessagePool.Count := 0;
   OPStackMessagePool.MaxCount := 0;
+  OPStackMessagePool.ReleasedByAbandonmentCount := 0;
 
   {$IFDEF SUPPORT_TRACTION_PROXY}
   for j := 0 to USER_MAX_TRAIN_PROXY_BUFFERS-1 do
@@ -261,6 +264,7 @@ begin
   TrainProxyPool.Stack := nil;
   TrainProxyPool.Count := 0;
   TrainProxyPool.MaxCount := 0;
+  TrainProxyPool.ReleasedByTimeoutCount := 0;
   {$ENDIF}
 end;
 
@@ -827,11 +831,13 @@ begin
         if Prev = nil then       // Still playing with the Node^.IncomingMessage position
         begin
           Root := Current^.NextIncoming;
+          Inc(OPStackMessagePool.ReleasedByAbandonmentCount);
           OPStackBuffers_DeAllocateMessage(Current);
           Current := Root;
         end else
         begin
           Prev^.NextIncoming := Current^.NextIncoming;   // Clip the current out of the list, Prev does not change
+          Inc(OPStackMessagePool.ReleasedByAbandonmentCount);
           OPStackBuffers_DeAllocateMessage(Current);
           Current := Current^.NextIncoming;
         end;
