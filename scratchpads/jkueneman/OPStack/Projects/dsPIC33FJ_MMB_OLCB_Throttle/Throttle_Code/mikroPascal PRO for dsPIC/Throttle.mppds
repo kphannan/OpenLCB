@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
+Value=..\..\..\..\NMRAnet\opstackbuffers.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]

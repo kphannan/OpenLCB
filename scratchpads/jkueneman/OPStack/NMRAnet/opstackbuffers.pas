@@ -189,10 +189,10 @@ begin
   UART1_Write_Text('  Max  : '+s1+LF);
   {$ENDIF}
   
-  UART1_Write_Text('ADCI/SNIP Buffers: '+LF);
-  WordToStr(AcdiSnipBufferPool.Count, s1);
+  UART1_Write_Text('MultiFrame String Buffers: '+LF);
+  WordToStr(MultiFrameStringBufferPool.Count, s1);
   UART1_Write_Text('  Count: '+s1+LF);
-  WordToStr(AcdiSnipBufferPool.MaxCount, s1);
+  WordToStr(MultiFrameStringBufferPool.MaxCount, s1);
   UART1_Write_Text('  Max  : '+s1+LF);
   
   UART1_Write_Text('MultiFrame Buffers: '+LF);

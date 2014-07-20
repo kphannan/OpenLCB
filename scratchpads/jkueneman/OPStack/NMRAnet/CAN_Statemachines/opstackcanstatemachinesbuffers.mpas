@@ -92,8 +92,7 @@ procedure OPStackCANStatemachineBuffers_SearchAndDestroyAbandonStreamMessages;
 {$ENDIF}
 
 
-implementation
-
+// This is only for access to debug and track.  Use the above functions to access
 var
   DatagramIncomingProcessStack: TProcessStack;
   DatagramOutgoingProcessStack: TProcessStack;
@@ -105,6 +104,8 @@ var
   StreamInProcessStack: TProcessStack;
   StreamOutgoingProcessStack: TProcessStack;
   {$ENDIF}
+
+implementation
 
 // *****************************************************************************
 //  procedure OPStackCANStatemachines_Initialize;

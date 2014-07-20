@@ -11,7 +11,8 @@ uses
   olcb_utilities, synaser, common_utilities, lcltype, olcb_transport_layer,
   types, olcb_defines, LMessages, Messages, LCLIntf, SynEditKeyCmds, SynEditMarkupHighAll,
   formtrainnode, opstackbuffers, nmranetutilities, opstacknode, opstackdefines,
-  template_hardware, opstackcore, template_configuration, template_userstatemachine;
+  template_hardware, opstackcore, template_configuration, template_userstatemachine,
+  opstackcanstatemachinesbuffers;
 
 const
   BUNDLENAME             = 'OpenLCB CommandStationEmulator';
@@ -92,11 +93,16 @@ type
     Label15: TLabel;
     Label16: TLabel;
     Label17: TLabel;
-    Label18: TLabel;
-    Label19: TLabel;
+    LabelDatagramIncomingAbandon: TLabel;
+    LabelMultiFrameIncomingAbandon: TLabel;
     Label2: TLabel;
-    Label20: TLabel;
+    LabelDatagramOutgoingAbandon: TLabel;
     Label21: TLabel;
+    LabelMultiFrameOutgoingAbandon: TLabel;
+    LabelMultiFrameStringIncomingAbandon: TLabel;
+    LabelMultiFrameStringOutgoingAbandon: TLabel;
+    LabelStreamIncomingAbandon: TLabel;
+    LabelStreamOutgoingAbandon: TLabel;
     Label3: TLabel;
     Label4: TLabel;
     Label5: TLabel;
@@ -111,20 +117,29 @@ type
     LabelCPU: TLabel;
     LabelDataBits: TLabel;
     LabelDatagramCount: TLabel;
+    LabelMultiFrameOutgoingAbandonCount: TLabel;
     LabelDatagramCountMax: TLabel;
+    LabelMultiFrameStringIncomingAbandonCount: TLabel;
+    LabelStreamIncomingAbandonCount: TLabel;
     LabelFlowControl: TLabel;
     LabelIcon: TLabel;
     LabelMessageCount: TLabel;
+    LabelMessageCountAbandon: TLabel;
     LabelMessageCountMax: TLabel;
     LabelMultiFrameCount: TLabel;
+    LabelMultiFrameStringOutgoingAbandonCount: TLabel;
+    LabelStreamOutgoingAbandonCount: TLabel;
     LabelMultiFrameCountMax: TLabel;
     LabelMyName: TLabel;
     LabelNodeExplorer: TLabel;
     LabelParity: TLabel;
     LabelSimpleCount: TLabel;
     LabelSimpleCountMax: TLabel;
+    LabelDatagramIncomingAbandonCount: TLabel;
     LabelSnipCount: TLabel;
+    LabelDatagramOutgoingAbandonCount: TLabel;
     LabelSnipCountMax: TLabel;
+    LabelMultiFrameIncomingAbandonCount: TLabel;
     LabelStopBits: TLabel;
     LabelTargetCPU: TLabel;
     LabelTargetOperatingSystem: TLabel;
@@ -557,6 +572,18 @@ begin
     else
       NodeThread.OnLogMessages := nil;
 
+    {$IFDEF SUPPORT_STREAMS}
+    LabelStreamIncomingAbandon.Enabled := True;
+    LabelStreamIncomingAbandonCount.Enabled := True;
+    LabelStreamOutgoingAbandon.Enabled := True;
+    LabelStreamOutgoingAbandonCount.Enabled := True;
+    {$ELSE}
+    LabelStreamIncomingAbandon.Enabled := False;
+    LabelStreamIncomingAbandonCount.Enabled := False;
+    LabelStreamOutgoingAbandon.Enabled := False;
+    LabelStreamOutgoingAbandonCount.Enabled := False;
+    {$ENDIF}
+
     ShownOnce := True;
   end;
   UpdateUI
@@ -905,6 +932,19 @@ begin
   LabelDatagramCountMax.Caption := IntToStr(DatagramBufferPool.MaxCount);
   LabelMultiFrameCountMax.Caption := IntToStr(MultiFramePool.MaxCount);
   LabelMessageCountMax.Caption := IntToStr(OPStackMessagePool.MaxCount);
+
+  LabelMessageCountAbandon.Caption := IntToStr(OPStackMessagePool.ReleasedByAbandonmentCount);
+  LabelDatagramIncomingAbandonCount.Caption := IntToStr(DatagramIncomingProcessStack.ReleasedByAbandonmentCount);
+  LabelDatagramOutgoingAbandonCount.Caption := IntToStr(DatagramOutgoingProcessStack.ReleasedByAbandonmentCount);
+  LabelMultiFrameIncomingAbandonCount.Caption := IntToStr(MultiFrameStringOutgoingProcessStack.ReleasedByAbandonmentCount);
+  LabelMultiFrameOutgoingAbandonCount.Caption := IntToStr(MultiFrameStringIncomingProcessStack.ReleasedByAbandonmentCount);
+  LabelMultiFrameStringIncomingAbandonCount.Caption := IntToStr(MultiFrameOutgoingProcessStack.ReleasedByAbandonmentCount);
+  LabelMultiFrameStringOutgoingAbandonCount.Caption := IntToStr(MultiFrameIncomingProcessStack.ReleasedByAbandonmentCount);
+  {$IFDEF SUPPORT_STREAMS}
+  LabelStreamIncomingAbandonCount.Caption := IntToStr(StreamInProcessStack.ReleasedByAbandonmentCount);
+  LabelStreamOutgoingAbandonCount.Caption := IntToStr(StreamOutgoingProcessStack.ReleasedByAbandonmentCount);
+  {$ENDIF}
+
 end;
 
 end.

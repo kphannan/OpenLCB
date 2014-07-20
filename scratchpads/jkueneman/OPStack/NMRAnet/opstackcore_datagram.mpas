@@ -58,7 +58,9 @@ end;
 //  procedure DatagramHandler;
 //    Parameters:
 //    Result:
-//    Description:
+//    Description: This handler does both send and receive.  The creater of the message
+//                  must set the DatagramBuffer iStatemachine to the right state to start the
+//                  correct action
 // *****************************************************************************
 function DatagramHandler(Node: PNMRAnetNode; var MessageToSend: POPStackMessage; DatagramMessage: POPStackMessage): Boolean;
 var
