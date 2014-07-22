@@ -59,6 +59,9 @@ const
   STATE_NODE_TAKE_OFFLINE                = 14;
   STATE_NODE_OFFLINE                     = 15;
 
+const
+  MAX_ETHERNET_MESSAGE = 1500;
+
 
 // Nodes
 const
@@ -333,9 +336,11 @@ type
     AllocatedList: array[0..USER_MAX_NODE_COUNT-1] of PNMRAnetNode;             // Node List sorted by Alias
     AllocatedCount: Integer;                                                    // Number of Nodes Allocated
     iActiveNode: Integer;                                                       // The node that is "active" which means it is the one that the main statemachine is giving a time slice to execute
-
   end;
   PNodePool = ^TNodePool;
+
+  TOPStackEthernetMessage = array[0..MAX_ETHERNET_MESSAGE-1] of byte;
+  POPStackEthernetMessage = ^TOPStackEthernetMessage;
   
 const
   DATAGRAM_PROCESS_ERROR_OK                  = $00;

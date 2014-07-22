@@ -35,7 +35,7 @@ procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPSta
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
-function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 
@@ -138,7 +138,7 @@ begin
         STATE_USER_2 :
             begin
 
-            end
+            end;
     end;
   end else
   begin
@@ -186,7 +186,7 @@ begin
         STATE_USER_10  :
             begin
 
-            end
+            end;
     end
   end
 end;
@@ -253,7 +253,7 @@ end;
 //                   False if the request has not been completed due to no available buffers or waiting on other information
 //     Description : Called when a Traction Protocol message is received
 // *****************************************************************************
-function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 begin
 
 end;
@@ -502,5 +502,3 @@ end;
 
 
 end.
-
-

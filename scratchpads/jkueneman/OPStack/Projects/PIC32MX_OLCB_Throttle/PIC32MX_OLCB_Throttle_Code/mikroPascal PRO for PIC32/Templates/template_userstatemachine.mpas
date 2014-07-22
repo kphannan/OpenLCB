@@ -22,7 +22,7 @@ procedure AppCallback_UserStateMachine_Process(Node: PNMRAnetNode);
 procedure AppCallback_NodeInitialize(Node: PNMRAnetNode);
 
 // Called every 100ms typically from another thread so only use to update flags
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 
 // These message are called from the mainstatemachine loop.  They have been stored in
 // internal storage buffers.  See the notes to understand the implications of this and how to use them correctly
@@ -35,7 +35,7 @@ procedure AppCallback_TractionProtocolReply(Node: PNMRAnetNode; AMessage: POPSta
 procedure AppCallback_SimpleTrainNodeInfoReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 {$IFDEF SUPPORT_TRACTION_PROXY}
-function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 procedure AppCallback_TractionProxyProtocolReply(Node: PNMRAnetNode; AMessage: POPStackMessage);
 {$ENDIF}
 
@@ -47,6 +47,12 @@ procedure AppCallback_ConsumerIdentified(var Source: TNodeInfo; MTI: Word; Event
 procedure AppCallback_ProducerIdentified(var Source: TNodeInfo; MTI: Word; EventID: PEventID);
 procedure AppCallback_LearnEvent(var Source: TNodeInfo; EventID: PEventID);
 procedure AppCallBack_PCEventReport(var Source: TNodeInfo; EventID: PEventID);
+
+// Configuration Memory
+procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 
 
 implementation
@@ -247,9 +253,9 @@ end;
 //                   False if the request has not been completed due to no available buffers or waiting on other information
 //     Description : Called when a Traction Protocol message is received
 // *****************************************************************************
-function AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean): Boolean;
+procedure AppCallback_TractionProxyProtocol(Node: PNMRAnetNode; AMessage: POPStackMessage; SourceHasLock: Boolean);
 begin
-  Result := False;
+
 end;
 
 // *****************************************************************************
@@ -352,6 +358,62 @@ begin
 end;
 
 // *****************************************************************************
+//  procedure AppCallBack_ConfigMemReadReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemStreamReadReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemWriteReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure AppCallBack_ConfigMemStreamWriteReply
+//     Parameters: : Node : Pointer to the node that needs to be initilized to its intial value
+//     Returns     : None
+//     Description : Typically called when a node is being intialized to be
+//                   logged into the network.  It is possible the node can be
+//                   discarded then reused so it may be called more than once for
+//                   virtual nodes
+// *****************************************************************************
+procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
 //  procedure AppCallback_RemoteButtonReply
 //     Parameters: : Source : Full Node ID (and Alias if on CAN) of the source node for the message
 //                   Dest   : Full Node ID (and Alias if on CAN) of the dest node for the message
@@ -386,7 +448,7 @@ end;
 //     Description : Typcally called from another thread or interrupt, only use
 //                   to update asyncronous flags
 // *****************************************************************************
-procedure AppCallback_Timer_100ms;
+procedure AppCallback_Timer_1s;
 begin
 
 end;

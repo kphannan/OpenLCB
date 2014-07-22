@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="81">
+    <Units Count="82">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -281,7 +281,6 @@
       <Unit29>
         <Filename Value="Templates/template_userstatemachine.pas"/>
         <UnitName Value="template_userstatemachine"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="16"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1193"/>
@@ -525,6 +524,7 @@
       <Unit57>
         <Filename Value="../../NMRAnet/opstackcore_configmem.pas"/>
         <UnitName Value="opstackcore_configmem"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="17"/>
         <WindowIndex Value="0"/>
         <TopLine Value="248"/>
@@ -719,6 +719,13 @@
         <CursorPos X="40" Y="14"/>
         <UsageCount Value="34"/>
       </Unit80>
+      <Unit81>
+        <Filename Value="../../Projects/PIC32MX_OLCB_Throttle/PIC32MX_OLCB_Throttle_Code/mikroPascal PRO for PIC32/Templates/Options.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="3" Y="10"/>
+        <UsageCount Value="10"/>
+      </Unit81>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>

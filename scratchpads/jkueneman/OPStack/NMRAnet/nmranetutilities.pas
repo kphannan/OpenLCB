@@ -26,6 +26,7 @@ function NMRAnetUtilities_EqualNodeIDInfo(var Info1: TNodeInfo; var Info2: TNode
 function NMRAnetUtilities_NullNodeIDInfo(var Info1: TNodeInfo): Boolean;
 function NMRAnetUtilities_EqualNodeID(var NodeID1: TNodeID; var NodeID2: TNodeID): Boolean;
 function NMRAnetUtilities_NodeSupportsProtcol(Node: PNMRAnetNode; var Protocol: TPIVProtocolValueArray): Boolean;
+procedure NMRAnetUtilities_OPStackMessageToEthernetMessage(AMessage: POPStackMessage; var AEthernetMessage: TOPStackEthernetMessage);
 
 
 implementation
@@ -267,6 +268,36 @@ begin
     end;
   end;
 end;
+
+procedure NMRAnetUtilities_OPStackMessageToEthernetMessage(AMessage: POPStackMessage; var AEthernetMessage: TOPStackEthernetMessage);
+var
+  Count: Word;
+  i: Integer;
+begin
+  AEthernetMessage[0] := Hi( AMessage^.MTI);
+  AEthernetMessage[1] := Lo( AMessage^.MTI);
+  AEthernetMessage[2] := (AMessage^.Source.ID[1] shr 16);
+  AEthernetMessage[3] := (AMessage^.Source.ID[1] shr 8);
+  AEthernetMessage[4] := (AMessage^.Source.ID[1]);
+  AEthernetMessage[5] := (AMessage^.Source.ID[0] shr 16);
+  AEthernetMessage[6] := (AMessage^.Source.ID[0] shr 8);
+  AEthernetMessage[7] := (AMessage^.Source.ID[0]);
+  if AMessage^.MTI and $0080 <> 0 then // Dest present
+  begin
+    AEthernetMessage[2] := (AMessage^.Dest.ID[1] shr 16);
+    AEthernetMessage[3] := (AMessage^.Dest.ID[1] shr 8);
+    AEthernetMessage[4] := (AMessage^.Dest.ID[1]);
+    AEthernetMessage[5] := (AMessage^.Dest.ID[0] shr 16);
+    AEthernetMessage[6] := (AMessage^.Dest.ID[0] shr 8);
+    AEthernetMessage[7] := (AMessage^.Dest.ID[0]);
+    Count := 14;
+  end else
+    Count := 8;
+  for i := 0 to AMessage^.Buffer^.DataBufferSize - 1 do
+    AEthernetMessage[i + Count] := AMessage^.Buffer^.DataArray[i];
+  Count := Count + AMessage^.Buffer^.DataBufferSize;
+end;
+
 
 
 end.

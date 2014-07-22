@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, form_main;
+  Forms, form_main, opstackcore_tcp;
 
 {$R *.res}
 
