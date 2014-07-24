@@ -198,7 +198,7 @@ begin
       MT_SIMPLE :
           begin
             OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
-            PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
+     //       PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
             Hardware.OutgoingTxBufferEmpty := True;
             if FreeMessage then
               OPStackBuffers_DeAllocateMessage(AMessage);

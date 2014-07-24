@@ -29,6 +29,9 @@ var
 
 implementation
 
+type
+  PByte = ^Byte;
+
 procedure MCU_Enable100msTimer;
 begin
   TCS_T2CON_bit := 0;       // internal cycle clock
@@ -45,53 +48,63 @@ end;
 
 procedure MCU_EnableUARTA;
 begin
-  UART1_Init(230400);                       // Initialize UART module a
+  UART2_Init(230400);                       // Initialize UART module a
   Delay_ms(100);                            // Wait for UART module to stabilize
 end;
 
 procedure MCU_EnableCAN;
+var
+  i: Integer;
+  Ptr: ^DWord;
 begin
   LocalCAN_Channel := CAN_CHANNEL;
   Hardware_SetCAN_Channel(CAN_CHANNEL);
   
-  TFT_Write_Text('Entering CAN Configuration ', 10, 10);
-  
   PIC32MX_CAN_EnterConfigMode(CAN_CHANNEL);
   
-  TFT_Write_Text('CAN Configuration ', 10, 20);
+  Ptr := @C1RXF0;
+  for i := 0 to 31 do
+  begin
+    Ptr^ := 0;
+    Ptr := Ptr + 4
+  end;
+  Ptr := @C2RXF0;
+  for i := 0 to 31 do
+  begin
+    Ptr^ := 0;
+    Ptr := Ptr + 4
+  end;
                                                    // Place the module in Configuration Mode
   // Setup the CAN Baud Rate
   PIC32MX_CAN_SetBaud(CAN_CHANNEL, CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz
 
   // Setup the CAN Receive Filters, AN1249 says this should be done in Config Mode
-  PIC32MX_CAN_SetMask(CAN_CHANNEL, 2, $08000000, True);    // Only look at the 28th CAN header bit (bit 27)
-  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 0, $00000000, True);  // Look for a 0 in bit 27  (CAN Layer Messsage)
-  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 1, $08000000, True);  // Look for a 1 in bit 27  (NMRABus Layer Message)
-  PIC32MX_CAN_AssociateFilterWithMask(CAN_CHANNEL, 0, 2);  // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
-  PIC32MX_CAN_AssociateFilterWithMask(CAN_CHANNEL, 1, 2);  // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
-  PIC32MX_CAN_RegisterFIFOWithFilter(CAN_CHANNEL, 0, CAN_RX_0_FIFO);  // Both filters go into (Receive FIFO)
-  PIC32MX_CAN_RegisterFIFOWithFilter(CAN_CHANNEL, 1, CAN_RX_0_FIFO);  // Both filters go into (Receive FIFO)
-  PIC32MX_CAN_EnableDisableRXFilters(CAN_CHANNEL, $0003);        // Enable Filters 0 and 1
+  PIC32MX_CAN_SetMask(CAN_CHANNEL, 2, $08000000, True);                         // Only look at the 28th CAN header bit (bit 27)
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 0, False);                           // Disable Filters 0
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 1, False);                           // Disable Filters 1
+  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 0, $00000000, True);                       // Look for a 0 in bit 27  (CAN Layer Messsage)
+  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 1, $08000000, True);                       // Look for a 1 in bit 27  (NMRABus Layer Message)
+  PIC32MX_CAN_AssociateFilterWithMask(CAN_CHANNEL, 0, 2, CAN_RX_0_FIFO);        // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
+  PIC32MX_CAN_AssociateFilterWithMask(CAN_CHANNEL, 1, 2, CAN_RX_0_FIFO);        // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 0, True);                            // Enable Filters 0
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 1, True);                            // Enable Filters 1
   
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_TX_LO_PRIORITY_FIFO, 1, True, 0);       // FIFO 0: Buffer size of 1, Is_TX, Transmit priority of 0
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_TX_HI_PRIORITY_FIFO, 1, True, 1);       // FIFO 1: size = 1 Buffer size of 1, Is_TX, Transmit priority of 1
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_RX_0_FIFO,           1, False, 0);      // FIFO 2:  size = 1 Buffer size of 1, Is_RX,
-  PIC32MX_CAN_SetFIFOBaseAddress(CAN_CHANNEL, @FIFOBufferArray);
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_TX_LO_PRIORITY_FIFO, 1, True, 0);        // FIFO 0: Buffer size of 1, Is_TX, Transmit priority of 0
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_TX_HI_PRIORITY_FIFO, 1, True, 1);        // FIFO 1: size = 1 Buffer size of 1, Is_TX, Transmit priority of 1
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, CAN_RX_0_FIFO,           1, False, 0);       // FIFO 2:  size = 1 Buffer size of 1, Is_RX,
+  PIC32MX_CAN_SetFIFOBaseAddress(CAN_CHANNEL, PByte(@FIFOBufferArray[0]));
   
   // Set up the FIFO Level interrupts
   PIC32MX_CAN_EnableTxInterrupts(CAN_CHANNEL, CAN_TX_LO_PRIORITY_FIFO, False, False, True);    // Interrupt on Empty
   PIC32MX_CAN_EnableTxInterrupts(CAN_CHANNEL, CAN_TX_HI_PRIORITY_FIFO, False, False, True);    // Interrupt on Empty
-  PIC32MX_CAN_EnableRxInterrupts(CAN_CHANNEL, CAN_RX_0_FIFO, True, True, False, False);          // Interrupt on overflow and Full; // If we don't enable Overflow and an interrupt occurs then it hangs the loop because you can't clear the Rx Interrupt until this is serviced
+  PIC32MX_CAN_EnableRxInterrupts(CAN_CHANNEL, CAN_RX_0_FIFO, True, True, False, False);        // Interrupt on overflow and Full; // If we don't enable Overflow and an interrupt occurs then it hangs the loop because you can't clear the Rx Interrupt until this is serviced
   // Setup the CAN Module Level interrupts
-  PIC32MX_CAN_EnableInterrupts(CAN_CHANNEL, False, False, False, False, True, False, False, True, True);  // Interrupt on Rx Overflow and Tz/Rx events
+  PIC32MX_CAN_EnableInterrupts(CAN_CHANNEL, False, False, False, False, True, False, False, True, True);  // Interrupt on Rx Overflow and Tx/Rx events
   // Setup the MCU Level Interrupts
   PIC32MX_CAN_Enable(CAN_CHANNEL, True);
   
-  TFT_Write_Text('Entering CAN Normal ', 10, 30);
-  
   PIC32MX_CAN_EnterNormalMode(CAN_CHANNEL);
-  
-  TFT_Write_Text('CAN Normal ', 10, 40);
+
 end;
 
 procedure MCU_EnableSerialFlash;

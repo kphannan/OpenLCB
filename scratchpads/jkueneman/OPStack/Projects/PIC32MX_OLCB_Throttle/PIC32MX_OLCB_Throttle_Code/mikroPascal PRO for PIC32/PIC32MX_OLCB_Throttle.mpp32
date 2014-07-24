@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
+Value=Templates\MCU_Setup_PIC32MXxxx.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -73,11 +73,11 @@ ActiveImageIndex=-1
 [OPENED_FILES]
 Count=6
 File0=PIC32MX_OLCB_Throttle_main.mpas
-File1=..\..\..\..\NMRAnet\opstackdefines.mpas
-File2=Templates\template_buffers.mpas
-File3=Templates\MCU_Setup_PIC32MXxxx.mpas
-File4=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
-File5=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
+File1=Templates\MCU_Setup_PIC32MXxxx.mpas
+File2=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
+File3=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
+File4=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
+File5=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\P32MX795F512L.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

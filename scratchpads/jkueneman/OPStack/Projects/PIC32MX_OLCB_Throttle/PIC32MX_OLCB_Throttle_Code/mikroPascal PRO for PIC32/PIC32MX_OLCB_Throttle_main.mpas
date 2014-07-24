@@ -39,32 +39,35 @@ var
 
   MinSamplePeriod: Real = 6.25;
   
-begin
-
+begin 
 
 MCU_EnableCAN;
 
-  OPStackCore_Initialize;
+
   MCU_Setup_Initialize;
+  OPStackCore_Initialize;
+  MCU_EnableUARTA;
   MCU_EnableSerialFlash;
-  MCU_EnableUARTA; 
+
+  UART2_Write_Text('Working I hope'+LF);
   
-  UART1_Write_Text('Working I hope');
-  
-   Start_TP();
-  MCU_Enable100msTimer;          
-  OPStackCore_Enable(True);
-  MCU_EnableCAN;
+  Start_TP();   UART2_Write_Text('Start_TP'+LF);
+  MCU_Enable100msTimer; UART2_Write_Text('MCU_Enable100msTimer'+LF);
+  OPStackCore_Enable(True); UART2_Write_Text('OPStackCore_Enable'+LF);
+  MCU_EnableCAN; UART2_Write_Text('MCU_EnableCAN'+LF);
 
   while (TRUE) do
      begin
-      Check_TP();
-      OPStackCore_Process;
+  //    Check_TP();   UART2_Write_Text('Check_TP'+LF);
+  //    UART2_Write_Text('OPStackCore_Process Before'+LF);
+      OPStackCore_Process; 
+  //    UART2_Write_Text('OPStackCore_Process After'+LF);
       
       if UART2_Data_Ready then
         case UART2_Read of
           '1' : PIC32MX_CAN_PrintRegisters(1);
           '2' : PIC32MX_CAN_PrintRegisters(2);
         end;
+   //     delay_ms(500);
      end;
   end.

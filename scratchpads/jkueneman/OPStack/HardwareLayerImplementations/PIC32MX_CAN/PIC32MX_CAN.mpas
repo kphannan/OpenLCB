@@ -105,23 +105,21 @@ procedure PIC32MX_CAN_RequestTransmit(Channel, FIFONumber: Byte);
 // Receive Filter and Mask Functions
 // *****************************************************************************
 // Filter Creation
-procedure PIC32MX_CAN_EnableDisableRXFilters(Channel: Byte; FilterMask: Word);
+procedure PIC32MX_CAN_EnableRXFilters(Channel: Byte; FilterNumber: Byte; Enable: Boolean);
 procedure PIC32MX_CAN_SetFilter(Channel: Byte; FilterNumber: Byte; Filter: DWord; ExtendedOnly: Boolean);
 // Mask Creation
 procedure PIC32MX_CAN_SetMask(Channel: Byte; MaskNumber: Byte; Mask: DWord; ExtendedOnly: Boolean);
 // Filter to Mask Assignments
-procedure PIC32MX_CAN_AssociateFilterWithMask(Channel: Byte; FilterNumber, MaskNumber: Word);
+procedure PIC32MX_CAN_AssociateFilterWithMask(Channel: Byte; FilterNumber, MaskNumber: Word; FIFO: Byte);
 // *****************************************************************************
 
 // *****************************************************************************
 // FIFO Functions
 // *****************************************************************************
 // FIFO Assignment
-procedure PIC32MX_CAN_RegisterFIFOWithFilter(Channel: Byte; FilterNumber, FIFONumber: Byte);
-// FIFO Assignment
 procedure PIC32MX_CAN_SetFIFO(Channel: Byte; FIFONumber: Byte; Size: Byte; IsTransmitter: Boolean; TxPriority: Byte);
 // Assign a memory area to the FIFO buffers
-procedure PIC32MX_CAN_SetFIFOBaseAddress(Channel: Byte; FIFOBufferAddress: ^Byte);
+procedure PIC32MX_CAN_SetFIFOBaseAddress(Channel: Byte; FIFOBufferAddress: ^DWord);
 //
 function PIC32MX_CAN_FIFO_IsTransmiter(Channel: Byte; FIFONumber: Byte): Boolean;
 // *****************************************************************************
@@ -193,154 +191,179 @@ procedure PIC32MX_CAN_PrintRegisters(Channel: Byte);
 var
   i: Integer;
   Ptr: ^DWord;
+  s2: string[5];
 begin
   case Channel of
     1 : begin
           UART2_Write_Text('Interrupt and Status Registers' + LF);
           LongWordToHex(C1CON, s1);
-          UART1_Write_Text('C1CON: 0x' + s1 + LF);
+          UART2_Write_Text('C1CON: 0x' + s1 + LF);
           LongWordToHex(C1CFG, s1);
-          UART1_Write_Text('C1CFG: 0x' + s1 + LF);
+          UART2_Write_Text('C1CFG: 0x' + s1 + LF);
           LongWordToHex(C1INT, s1);
-          UART1_Write_Text('C1INT: 0x' + s1 + LF);
+          UART2_Write_Text('C1INT: 0x' + s1 + LF);
           LongWordToHex(C1VEC, s1);
-          UART1_Write_Text('C1VEC: 0x' + s1 + LF);
+          UART2_Write_Text('C1VEC: 0x' + s1 + LF);
           LongWordToHex(C1TREC, s1);
-          UART1_Write_Text('C1TREC: 0x' + s1 + LF);
+          UART2_Write_Text('C1TREC: 0x' + s1 + LF);
           LongWordToHex(C1FSTAT, s1);
-          UART1_Write_Text('C1FSTAT: 0x' + s1 + LF);
+          UART2_Write_Text('C1FSTAT: 0x' + s1 + LF);
           LongWordToHex(C1RXOVF, s1);
-          UART1_Write_Text('C1RXOVF: 0x' + s1 + LF);
+          UART2_Write_Text('C1RXOVF: 0x' + s1 + LF);
           LongWordToHex(C1TMR, s1);
-          UART1_Write_Text('C1TMR: 0x' + s1 + LF);
-          UART1_Write_Text('Mask and Filter Configuration Registers' + LF);
+          UART2_Write_Text('C1TMR: 0x' + s1 + LF);
+          UART2_Write_Text('Mask and Filter Configuration Registers' + LF);
           LongWordToHex(C1RXM0, s1);
-          UART1_Write_Text('C1RXM0: 0x' + s1 + LF);
+          UART2_Write_Text('C1RXM0: 0x' + s1 + LF);
           LongWordToHex(C1RXM1, s1);
-          UART1_Write_Text('C1RXM1: 0x' + s1 + LF);
+          UART2_Write_Text('C1RXM1: 0x' + s1 + LF);
           LongWordToHex(C1RXM2, s1);
-          UART1_Write_Text('C1RXM2: 0x' + s1 + LF);
+          UART2_Write_Text('C1RXM2: 0x' + s1 + LF);
           LongWordToHex(C1RXM3, s1);
-          UART1_Write_Text('C1RXM3: 0x' + s1 + LF);
-          LongWordToHex(C1FLTCON0, s1);
-          UART1_Write_Text('C1FLTCON0: 0x' + s1 + LF);
+          UART2_Write_Text('C1RXM3: 0x' + s1 + LF);
           
+          Ptr := @C1FLTCON0;
+          for i := 0 to 7 do
+          begin
+            LongWordToHex(Ptr^, s1);
+            IntToStr(i, s2);
+            UART2_Write_Text(s2 + ' C1FLTCONn: 0x' + s1 + LF);
+            Ptr := Ptr + 4
+          end;
+
           Ptr := @C1RXF0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART1_Write_Text('C1RXFn: 0x' + s1 + LF);
-            Inc(Ptr);
+            IntToStr(i, s2);
+            UART2_Write_Text(s2 + ' C1RXFn: 0x' + s1 + LF);
+            Ptr := Ptr + 4
           end;
 
-          UART1_Write_Text('CAN Module Control Registers' + LF);
+          UART2_Write_Text('CAN Module Control Registers' + LF);
           LongWordToHex(C1FIFOBA, s1);
-          UART1_Write_Text('C1FIFOBA: 0x' + s1 + LF);
+          UART2_Write_Text('C1FIFOBA: 0x' + s1 + LF);
           
           Ptr := @C1FIFOCON0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART1_Write_Text('C1FIFOCONn: 0x' + s1 + LF);
-            Inc(Ptr);
+            IntToStr(i, s2);
+            UART2_Write_Text(s2 + ' C1FIFOCONn: 0x' + s1 + LF);
+            Ptr := Ptr + 16
           end;
           
           Ptr := @C1FIFOINT0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART1_Write_Text('C1FIFOINTn: 0x' + s1 + LF);
-            Inc(Ptr);
+            IntToStr(i, s2);
+            UART2_Write_Text(s2 + ' C1FIFOINTn: 0x' + s1 + LF);
+            Ptr := Ptr + 16
           end;
           
           Ptr := @C1FIFOUA0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART1_Write_Text('C1FIFOUAn: 0x' + s1 + LF);
-            Inc(Ptr);
+            IntToStr(i, s2);
+            UART2_Write_Text(s2 + ' C1FIFOUAn: 0x' + s1 + LF);
+            Ptr := Ptr + 16
           end;
           
           Ptr := @C1FIFOCI0;
           for i := 0 to 31 do
           begin
             LongWordToHex(Ptr^, s1);
-            UART1_Write_Text('C1FIFOCIn: 0x' + s1 + LF);
-            Inc(Ptr);
+            IntToStr(i, s2);
+            UART2_Write_Text(s2 + ' C1FIFOCIn: 0x' + s1 + LF);
+            Ptr := Ptr + 16
           end;
         end;
       2 : begin
-            UART1_Write_Text('Interrupt and Status Registers' + LF);
+            UART2_Write_Text('Interrupt and Status Registers' + LF);
             LongWordToHex(C2CON, s1);
-            UART1_Write_Text('C2CON: 0x' + s1 + LF);
+            UART2_Write_Text('C2CON: 0x' + s1 + LF);
             LongWordToHex(C2CFG, s1);
-            UART1_Write_Text('C2CFG: 0x' + s1 + LF);
+            UART2_Write_Text('C2CFG: 0x' + s1 + LF);
             LongWordToHex(C2INT, s1);
-            UART1_Write_Text('C2INT: 0x' + s1 + LF);
+            UART2_Write_Text('C2INT: 0x' + s1 + LF);
             LongWordToHex(C2VEC, s1);
-            UART1_Write_Text('C2VEC: 0x' + s1 + LF);
+            UART2_Write_Text('C2VEC: 0x' + s1 + LF);
             LongWordToHex(C2TREC, s1);
-            UART1_Write_Text('C2TREC: 0x' + s1 + LF);
+            UART2_Write_Text('C2TREC: 0x' + s1 + LF);
             LongWordToHex(C2FSTAT, s1);
-            UART1_Write_Text('C2FSTAT: 0x' + s1 + LF);
+            UART2_Write_Text('C2FSTAT: 0x' + s1 + LF);
             LongWordToHex(C2RXOVF, s1);
-            UART1_Write_Text('C2RXOVF: 0x' + s1 + LF);
+            UART2_Write_Text('C2RXOVF: 0x' + s1 + LF);
             LongWordToHex(C2TMR, s1);
-            UART1_Write_Text('C2TMR: 0x' + s1 + LF);
-            UART1_Write_Text('Mask and Filter Configuration Registers' + LF);
+            UART2_Write_Text('C2TMR: 0x' + s1 + LF);
+            UART2_Write_Text('Mask and Filter Configuration Registers' + LF);
             LongWordToHex(C2RXM0, s1);
-            UART1_Write_Text('C2RXM0: 0x' + s1 + LF);
+            UART2_Write_Text('C2RXM0: 0x' + s1 + LF);
             LongWordToHex(C2RXM1, s1);
-            UART1_Write_Text('C2RXM1: 0x' + s1 + LF);
+            UART2_Write_Text('C2RXM1: 0x' + s1 + LF);
             LongWordToHex(C2RXM2, s1);
-            UART1_Write_Text('C2RXM2: 0x' + s1 + LF);
+            UART2_Write_Text('C2RXM2: 0x' + s1 + LF);
             LongWordToHex(C2RXM3, s1);
-            UART1_Write_Text('C2RXM3: 0x' + s1 + LF);
-            LongWordToHex(C2FLTCON0, s1);
-            UART1_Write_Text('C2FLTCON0: 0x' + s1 + LF);
+            UART2_Write_Text('C2RXM3: 0x' + s1 + LF);
+            
+            Ptr := @C2FLTCON0;
+            for i := 0 to 7 do
+            begin
+              LongWordToHex(Ptr^, s1);
+              IntToStr(i, s2);
+              UART2_Write_Text(s2 + ' C2FLTCONn: 0x' + s1 + LF);
+              Ptr := Ptr + 4
+            end;
 
             Ptr := @C2RXF0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART1_Write_Text('C2RXFn: 0x' + s1 + LF);
-              Inc(Ptr);
+              IntToStr(i, s2);
+              UART2_Write_Text(s2 + ' C2RXFn: 0x' + s1 + LF);
+              Ptr := Ptr + 4
             end;
 
-            UART1_Write_Text('CAN Module Control Registers' + LF);
+            UART2_Write_Text('CAN Module Control Registers' + LF);
             LongWordToHex(C2FIFOBA, s1);
-            UART1_Write_Text('C2FIFOBA: 0x' + s1 + LF);
+            UART2_Write_Text('C2FIFOBA: 0x' + s1 + LF);
 
             Ptr := @C2FIFOCON0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART1_Write_Text('C2FIFOCONn: 0x' + s1 + LF);
-              Inc(Ptr);
+              IntToStr(i, s2);
+              UART2_Write_Text(s2 + ' C2FIFOCONn: 0x' + s1 + LF);
+              Ptr := Ptr + 16
             end;
 
             Ptr := @C2FIFOINT0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART1_Write_Text('C2FIFOINTn: 0x' + s1 + LF);
-              Inc(Ptr);
+              IntToStr(i, s2);
+              UART2_Write_Text(s2 + ' C2FIFOINTn: 0x' + s1 + LF);
+              Ptr := Ptr + 16
             end;
 
             Ptr := @C2FIFOUA0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART1_Write_Text('C2FIFOUAn: 0x' + s1 + LF);
-              Inc(Ptr);
+              IntToStr(i, s2);
+              UART2_Write_Text(s2 + ' C2FIFOUAn: 0x' + s1 + LF);
+              Ptr := Ptr + 16
             end;
 
             Ptr := @C2FIFOCI0;
             for i := 0 to 31 do
             begin
               LongWordToHex(Ptr^, s1);
-              UART1_Write_Text('C2FIFOCIn: 0x' + s1 + LF);
-              Inc(Ptr);
+              IntToStr(i, s2);
+              UART2_Write_Text(s2 + ' C2FIFOCIn: 0x' + s1 + LF);
+              Ptr := Ptr + 16
             end;
           end;
     end;
@@ -385,7 +408,7 @@ begin
     Next := PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_HI_PRIORITY_TX_FIFO);
     PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);      // Convert it into a version that matches the registers
     PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_HI_PRIORITY_TX_FIFO);
-    PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, 0);                               // Set the Flag to start the transmission
+    PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, FIFO_HI_PRIORITY_TX_FIFO);      // Set the Flag to start the transmission
   end
 end;
 
@@ -403,19 +426,19 @@ begin
     case IntCode of
       ICODE_FIFO0 :                                                              // Tx Rx Buffer 0
       begin
-        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('TX0' +LF);{$ENDIF}
+        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX0' +LF);{$ENDIF}
         PIC32MX_CAN_InterruptTxBufferFlag(LocalCAN_Channel, True);               // TX Interrupt Flag Reset
         PIC32MX_CAN_Transmitting := False;
       end;
       ICODE_FIFO1 :                                                              // Tx Rx Buffer 0
       begin
-        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('TX1' +LF);{$ENDIF}
+        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX1' +LF);{$ENDIF}
         PIC32MX_CAN_InterruptTxBufferFlag(LocalCAN_Channel, True);               // TX Interrupt Flag Reset
         PIC32MX_CAN_HighPriorityTransmitting := False;
       end;
       ICODE_FIFO2 :                                                              // Tx Rx Buffer 0
       begin
-        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('RX2' +LF); {$ENDIF}
+        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('RX2' +LF); {$ENDIF}
         IsExtended := True;
         Next := PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, CAN_RX_0_FIFO);
         PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, CAN_RX_0_FIFO);
@@ -433,7 +456,7 @@ begin
 
         if PIC32MX_CAN_InterruptRxOverflowFIFOAny(LocalCAN_Channel) then
         begin
-          {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('CAN Overflow');{$ENDIF}
+          {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART2_Write_Text('CAN Overflow');{$ENDIF}
           PIC32MX_CAN_InterruptRxBufferOverflowFlag(LocalCAN_Channel, True);
         end;
 
@@ -441,11 +464,11 @@ begin
       end;
       ICODE_RX_OVERFLOW :
       begin
-        {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART1_Write_Text('RxOVR'+LF);{$ENDIF}
+        {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART2_Write_Text('RxOVR'+LF);{$ENDIF}
         PIC32MX_CAN_InterruptRxBufferOverflowFlag(LocalCAN_Channel, True);
       end else
       begin
-        {$IFDEF TRACE_INTERRUPTS}UART1_Write_Text('9' +LF);{$ENDIF}
+        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('9' +LF);{$ENDIF}
       end;
     end;
     IntCode := PIC32MX_CAN_InterruptCode(LocalCAN_Channel);                                       // Get the next code (or no code) flag
@@ -458,7 +481,7 @@ var
 begin
   PIC32MX_CAN_Transmitting := False;
   PIC32MX_CAN_HighPriorityTransmitting := False;
-  for i := 0 to FIFO_LO_PRIORITY_TX_BUFFERS+FIFO_HI_PRIORITY_TX_BUFFERS+FIFO_RX_BUFFERS - 1 do
+  for i := 0 to FIFO_BUFFER_TOTAL - 1 do
   begin
     FIFOBufferArray[i].Byte0 := 0;                                                        // Allow the compiler to account for this ram
     FIFOBufferArray[i].Byte1 := 0;
@@ -637,7 +660,7 @@ begin
   
   if FIFONumber < 32 then
   begin
-    FIFOControlPtr := FIFOControlPtr + FIFONumber;
+    FIFOControlPtr := FIFOControlPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     FIFOControlPtr^ := FIFOControlPtr^ or $00000008;
   end;
 end;
@@ -733,7 +756,7 @@ end;
 //  Description:   Filter Number = 0..15, Filter are the Bits that much match
 //                 Mask Number = 0..2, Filter are the Bits that much match
 // *****************************************************************************
-procedure PIC32MX_CAN_AssociateFilterWithMask(Channel: Byte; FilterNumber, MaskNumber: Word);
+procedure PIC32MX_CAN_AssociateFilterWithMask(Channel: Byte; FilterNumber, MaskNumber: Word; FIFO: Byte);
 var
   FilterPtr: ^Byte;
 begin
@@ -746,14 +769,17 @@ begin
   
   if (FilterNumber < 16) and (MaskNumber < 3) then
   begin
-    FilterPtr := FilterPtr + FilterNumber;    // Increase in Bytes
-    FilterPtr^ := FilterPtr^ and $9F;
-    FilterPtr^ := FilterPtr^ or (MaskNumber shl 5);
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    FilterPtr := FilterPtr + ((FilterNumber div 4) * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    // Get into the right 8 bit offset in the 32 bit boundry
+    FilterPtr := FilterPtr + (FilterNumber mod 4);
+    FilterPtr^ := FilterPtr^ and $8000; // don't disturb the enable bit
+    FilterPtr^ := FilterPtr^ or (MaskNumber shl 5) or FIFO;
   end
 end;
 
 // *****************************************************************************
-//  procedure PIC32MX_CAN_EnableDisableRXFilters;
+//  procedure PIC32MX_CAN_EnableRXFilters;
 //
 //  Parameters: FilterMask: Set bit to "1" to enable Filter (0..15)
 //
@@ -761,10 +787,9 @@ end;
 //
 //  Description:  Bits 0..15 = Filters 0..15, Set to "1" to enable "0" to disable
 // *****************************************************************************
-procedure PIC32MX_CAN_EnableDisableRXFilters(Channel: Byte; FilterMask: Word);
+procedure PIC32MX_CAN_EnableRXFilters(Channel: Byte; FilterNumber: Byte; Enable: Boolean);
 var
   FilterPtr: ^Byte;
-  i: Integer;
 begin
   case Channel of
     1 : FilterPtr := @C1FLTCON0;
@@ -773,13 +798,16 @@ begin
     Exit;
   end;
 
-  for i := 0 to 15 do
+  if (FilterNumber < 16) then
   begin
-    if FilterMask.i = 1 then
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    FilterPtr := FilterPtr + ((FilterNumber div 4) * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    // Get into the right 8 bit offset in the 32 bit boundry
+    FilterPtr := FilterPtr + (FilterNumber mod 4);
+    if Enable then
       FilterPtr^ := FilterPtr^ or $80
     else
-      FilterPtr^ := FilterPtr^ and $7F;
-    FilterPtr := FilterPtr + 1;
+      FilterPtr^ := FilterPtr^ and not $80;
   end
 end;
 
@@ -794,24 +822,23 @@ begin
     Exit;
   end;
   
-  if FIFONumber < 32 then
+  if (FIFONumber < 32) and (TxPriority < 4) then
   begin
-    FIFOControlPtr := FIFOControlPtr + FIFONumber;   // Increase by DWords
+    FIFOControlPtr := FIFOControlPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     FIFOControlPtr^ := FIFOControlPtr^ and $FFFFFFF8;
-    FIFOControlPtr^ := FIFOControlPtr^ or (TxPriority and $00000003);
+    FIFOControlPtr^ := FIFOControlPtr^ or TxPriority;
     FIFOControlPtr^ := FIFOControlPtr^ and $FFE0FFFF;
+    FIFOControlPtr^ := FIFOControlPtr^ or (((Size-1) and $0000001F) shl 16);
     if IsTransmitter then
-    begin
-      FIFOControlPtr^ := FIFOControlPtr^ or ((TxPriority and $0000001F) shl 16);
-      FIFOControlPtr^ := FIFOControlPtr^ or $000000080;
-    end else
+      FIFOControlPtr^ := FIFOControlPtr^ or $000000080
+    else
       FIFOControlPtr^ := FIFOControlPtr^ and $FFFFFF7F;
   end;
 end;
 
-procedure PIC32MX_CAN_SetFIFOBaseAddress(Channel: Byte; FIFOBufferAddress: ^Byte);
+procedure PIC32MX_CAN_SetFIFOBaseAddress(Channel: Byte; FIFOBufferAddress: ^DWord);
 var
-  FIFOAddress: ^Byte;
+  FIFOAddress: ^DWord;
 begin
   case Channel of
     1 : FIFOAddress := @C1FIFOBA;
@@ -836,14 +863,14 @@ begin
 
   if FIFONumber < 32 then
   begin
-    FIFOControlPtr := FIFOControlPtr + FIFONumber;
+    FIFOControlPtr := FIFOControlPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := FIFOControlPtr^ and $00000080 <> 0
   end;
 end;
 
 procedure PIC32MX_CAN_EnableTxInterrupts(Channel: Byte; FIFONumber: Byte; FIFO_NotFull, FIFO_HalfFull, FIFO_Empty: Boolean);
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   case Channel of
     1 : InterruptPtr := @C1FIFOINT0;
@@ -853,27 +880,27 @@ begin
   end;
   if FIFONumber < 32 then
   begin
-    InterruptPtr := InterruptPtr + FIFONumber;
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     if FIFO_NotFull then
-      InterruptPtr^ := InterruptPtr^ and not $04000000
+      InterruptPtr^ := InterruptPtr^ or $04000000
     else
-      InterruptPtr^ := InterruptPtr^ or $04000000;
+      InterruptPtr^ := InterruptPtr^ and not $04000000;
       
     if FIFO_HalfFull then
-      InterruptPtr^ := InterruptPtr^ and not $02000000
+      InterruptPtr^ := InterruptPtr^ or $02000000
     else
-      InterruptPtr^ := InterruptPtr^ or $02000000;
+      InterruptPtr^ := InterruptPtr^ and not $02000000;
       
     if FIFO_Empty then
-      InterruptPtr^ := InterruptPtr^ and not $01000000
+      InterruptPtr^ := InterruptPtr^ or $01000000
     else
-      InterruptPtr^ := InterruptPtr^ or $01000000;
+      InterruptPtr^ := InterruptPtr^ and not $01000000;
   end;
 end;
 
 procedure PIC32MX_CAN_EnableRxInterrupts(Channel: Byte; FIFONumber: Byte; FIFO_Overflow, FIFO_Full, FIFO_HalfFull, FIFO_Empty: Boolean);
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   case Channel of
     1 : InterruptPtr := @C1FIFOINT0;
@@ -883,26 +910,27 @@ begin
   end;
   if FIFONumber < 32 then
   begin
-    InterruptPtr := InterruptPtr + FIFONumber;
+    InterruptPtr := InterruptPtr + (FIFONumber  * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
+    
     if FIFO_Overflow then
-      InterruptPtr^ := InterruptPtr^ and not $00080000
+      InterruptPtr^ := InterruptPtr^ or $00080000
     else
-      InterruptPtr^ := InterruptPtr^ or $00080000;
+      InterruptPtr^ := InterruptPtr^ and not $00080000;
       
     if FIFO_Full then
-      InterruptPtr^ := InterruptPtr^ and not $00040000
+      InterruptPtr^ := InterruptPtr^ or $00040000
     else
-      InterruptPtr^ := InterruptPtr^ or $00040000;
+      InterruptPtr^ := InterruptPtr^ and not $00040000;
       
     if FIFO_HalfFull then
-      InterruptPtr^ := InterruptPtr^ and not $00020000
+      InterruptPtr^ := InterruptPtr^ or $00020000
     else
-      InterruptPtr^ := InterruptPtr^ or $00020000;
+      InterruptPtr^ := InterruptPtr^ and not $00020000;
       
     if FIFO_Empty then
-      InterruptPtr^ := InterruptPtr^ and not $00010000
+      InterruptPtr^ := InterruptPtr^ or $00010000
     else
-      InterruptPtr^ := InterruptPtr^ or $00010000;
+      InterruptPtr^ := InterruptPtr^ and not $00010000;
   end;
 end;
 
@@ -932,16 +960,16 @@ begin
   if RxBufferOverflow then InterruptPtr^.27 := 1
   else InterruptPtr^.27 := 0;
 
-  if ModeChange then InterruptPtr^.19 := 1
+  if ModeChange then InterruptPtr^.3 := 19
   else InterruptPtr^.19 := 0;
   
-  if TimestampTimer then InterruptPtr^.19 := 1
+  if TimestampTimer then InterruptPtr^.18 := 1
   else InterruptPtr^.18 := 0;
   
-  if RxBuffer then InterruptPtr^.19 := 1
+  if RxBuffer then InterruptPtr^.17 := 1
   else InterruptPtr^.17 := 0;
   
-  if TxBuffer then InterruptPtr^.19 := 1
+  if TxBuffer then InterruptPtr^.16 := 1
   else InterruptPtr^.16 := 0;
 end;
 
@@ -1111,7 +1139,7 @@ end;
 
 function PIC32MX_CAN_Tx_Interrupt_NotFull_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1121,12 +1149,15 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000400 <> 0
+  end;
 end;
 
 function PIC32MX_CAN_Tx_Interrupt_HalfFull_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1136,12 +1167,15 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000200 <> 0
+  end
 end;
 
 function PIC32MX_CAN_Tx_Interrupt_Empty_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1151,11 +1185,15 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000100 <> 0
+  end
 end;
 function PIC32MX_CAN_Rx_Interrupt_Overflow_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1165,12 +1203,15 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000008 <> 0
+  end
 end;
 
 function PIC32MX_CAN_Rx_Interrupt_Full_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1180,12 +1221,15 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000004 <> 0
+  end
 end;
 
 function PIC32MX_CAN_Rx_Interrupt_HalfFull_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1195,12 +1239,15 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000002 <> 0
+  end
 end;
 
 function PIC32MX_CAN_Rx_Interrupt_Empty_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
-  InterruptPtr: ^Byte;
+  InterruptPtr: ^DWord;
 begin
   Result := False;
   case Channel of
@@ -1210,7 +1257,10 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
+  begin
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000001 <> 0
+  end
 end;
 
 function PIC32MX_CAN_InterruptRxOverflowFIFOAny(Channel: Byte): Boolean;
@@ -1255,7 +1305,7 @@ begin
 
   if FIFONumber < 32 then
   begin
-    HeadTailPtr := HeadTailPtr + FIFONumber;
+    HeadTailPtr := HeadTailPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := HeadTailPtr^
   end;
 end;
@@ -1274,7 +1324,7 @@ begin
 
   if FIFONumber < 32 then
   begin
-    IndexPtr := IndexPtr + FIFONumber;
+    IndexPtr := IndexPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := Lo(IndexPtr^);
   end
 end;
@@ -1289,30 +1339,12 @@ begin
   else
     Exit;
   end;
+
   if FIFONumber < 32 then
   begin
-    FIFOControl := FIFOControl + FIFONumber;
+    FIFOControl := FIFOControl + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     FIFOControl.UINC := 1;
   end;
-end;
-
-procedure PIC32MX_CAN_RegisterFIFOWithFilter(Channel: Byte; FilterNumber, FIFONumber: Byte);
-var
-  FilterPtr: ^Byte;
-begin
-  case Channel of
-    1 : FilterPtr := @C1FLTCON0;
-    2 : FilterPtr := @C2FLTCON0
-  else
-    Exit;
-  end;
-  
-  if (FilterNumber < 16) and (FIFONumber < 32) then
-  begin
-    FilterPtr := FilterPtr + FilterNumber;
-    FilterPtr^ := FilterPtr^ and $E0;
-    FilterPtr^ := FilterPtr^ or FIFONumber;
-  end
 end;
 
 // *****************************************************************************
@@ -1340,7 +1372,7 @@ begin
   
   if FilterNumber < 16 then
   begin
-    FilterPtr := FilterPtr + (FilterNumber * 4);
+    FilterPtr := FilterPtr + (FilterNumber * 4);  // Account for REG, INV, SET, CLEAR
     FilterPtr^ := Filter shr 11;
     FilterPtr^ := FilterPtr^ or ((LoWord(Filter) and $07FF) shl 21);
     FilterPtr^ := FilterPtr^ and $FFE3FFFF;
@@ -1373,7 +1405,7 @@ begin
   
   if MaskNumber < 3 then
   begin
-    MaskPtr := MaskPtr + (MaskNumber * 4);
+    MaskPtr := MaskPtr + (MaskNumber * 4); // Account for REG, INV, SET, CLEAR
     MaskPtr^ := Mask shr 11;
     MaskPtr^ := MaskPtr^ or ((LoWord(Mask) and $07FF) shl 21);
     MaskPtr^ := MaskPtr^ and $FFE3FFFF;
