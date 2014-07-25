@@ -1,10 +1,18 @@
+
+
+
 Making CDI from JMRI decoder XML:
 
+go over to the prototypes/java directory
+edit test/tools/jmri/DecoderDefnToCdi.java to include your file name at the bottom
+    (has to be in JMRI, so the rest can be found)
 ant tests && ./runtest.csh tools.jmri.DecoderDefnToCdi
 
 Remaining issues
 *) Indexed CV handling (lots of types)
-*) Put out short copyright notice.
+*) Write the section on DCC controls from the supported programming modes in decoder file
+*) Make I/O, running easy
+*) Put out short copyright notice at top for JMRI
 
 
-xmllint -schema ../../specs/schema/cdi.xsd 0nmraCDI.xml
+xmllint -schema ../../specs/schema/cdi.xsd -noout 0nmraCDI.xml
