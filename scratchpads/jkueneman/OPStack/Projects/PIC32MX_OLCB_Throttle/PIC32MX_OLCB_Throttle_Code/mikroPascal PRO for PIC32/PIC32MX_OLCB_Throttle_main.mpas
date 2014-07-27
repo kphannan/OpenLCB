@@ -22,11 +22,14 @@
 program PIC32MX_OLCB_Throttle_main;
 
 uses
+  opstack_api,
   MCU_Setup_PIC32MXxxx;
 
-procedure _100msTimer(); iv IVT_TIMER_1; ilevel 2; ics ICS_AUTO;
+procedure _100msTimer(); iv IVT_TIMER_2; ilevel 2; ics ICS_AUTO;
 begin
+  T2IF_bit := 0;  // Clear the Flag
   OPStackCore_Timer;
+  LATF := not LATF;
 end;
 
 var
@@ -39,35 +42,44 @@ var
 
   MinSamplePeriod: Real = 6.25;
   
-begin 
-
-MCU_EnableCAN;
-
+var
+  x: array[0..8] of Byte;
+  Node: PNMRAnetnode;
+  Buffer: TNMRAnetCanBuffer;
+  SourceID: TNodeInfo;
+begin
+  TRISF := 0;
+  LATF := not LATF;
 
   MCU_Setup_Initialize;
   OPStackCore_Initialize;
   MCU_EnableUARTA;
   MCU_EnableSerialFlash;
-
-  UART2_Write_Text('Working I hope'+LF);
   
-  Start_TP();   UART2_Write_Text('Start_TP'+LF);
-  MCU_Enable100msTimer; UART2_Write_Text('MCU_Enable100msTimer'+LF);
-  OPStackCore_Enable(True); UART2_Write_Text('OPStackCore_Enable'+LF);
-  MCU_EnableCAN; UART2_Write_Text('MCU_EnableCAN'+LF);
+ // Start_TP();
+  MCU_Enable100msTimer;
+//  OPStackCore_Enable(True);
+//  MCU_EnableCAN;
 
+  
+  SourceID.ID[0] := $001111;
+  SourceID.ID[1] := $002222;
+  SourceID.AliasID := $0FFF;
+
+ // UART2_Write_Text('Loopin'+LF);
+  
   while (TRUE) do
      begin
   //    Check_TP();   UART2_Write_Text('Check_TP'+LF);
-  //    UART2_Write_Text('OPStackCore_Process Before'+LF);
-      OPStackCore_Process; 
-  //    UART2_Write_Text('OPStackCore_Process After'+LF);
+
+      Node := OPStackCore_Process;
       
       if UART2_Data_Ready then
         case UART2_Read of
           '1' : PIC32MX_CAN_PrintRegisters(1);
           '2' : PIC32MX_CAN_PrintRegisters(2);
+          '3' : TrySendVerifyNodeIDGlobal(SourceID);
+          '4' : ON__T2CON_bit := not ON__T2CON_bit;
         end;
-   //     delay_ms(500);
      end;
   end.

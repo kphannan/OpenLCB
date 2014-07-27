@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="82">
+    <Units Count="83">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -726,6 +726,13 @@
         <CursorPos X="3" Y="10"/>
         <UsageCount Value="10"/>
       </Unit81>
+      <Unit82>
+        <Filename Value="../../Projects/PIC32MX_Basic/Templates/Options.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="3" Y="10"/>
+        <UsageCount Value="10"/>
+      </Unit82>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>

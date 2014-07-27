@@ -14,6 +14,8 @@ interface
 
 {$I Options.inc}
 
+{.$DEFINE TRACE_MAIN_STATEMACHINE}
+
 uses
   template_hardware,
   template_configuration,
@@ -417,23 +419,24 @@ begin
   OPStackMessage := nil;
   case Node^.iStateMachine of
     STATE_NODE_START :
-      begin
+      begin  {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_START'+LF);{$ENDIF}
+      
         Node^.Login.iCID := 0;
         Node^.iStateMachine := STATE_NODE_TRANSMIT_CID;
       end;
     STATE_NODE_GENERATE_NODE_ALIAS :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_GENERATE_NODE_ALIAS'+LF);{$ENDIF}
         Node^.Info.AliasID := NMRAnetUtilities_CreateAliasID(Node^.Login.Seed, False);
         Node^.Login.iCID := 0;
         Node^.iStateMachine := STATE_NODE_TRANSMIT_CID;
       end;
     STATE_RANDOM_NUMBER_GENERATOR :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_RANDOM_NUMBER_GENERATOR'+LF);{$ENDIF}
         NMRAnetUtilities_PsudoRandomNumberGeneratorOnSeed(Node^.Login.Seed);
         Node^.iStateMachine := STATE_NODE_GENERATE_NODE_ALIAS;
       end;
     STATE_NODE_TRANSMIT_CID :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_TRANSMIT_CID'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         if IsOutgoingBufferAvailable then
         begin
@@ -452,7 +455,7 @@ begin
         Hardware_EnableInterrupts;
       end;
     STATE_NODE_NEXT_CDI :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_NEXT_CDI'+LF);{$ENDIF}
         if Node^.Login.iCID < 3 then
         begin
           Inc(Node^.Login.iCID);
@@ -469,7 +472,7 @@ begin
           Node^.iStateMachine := STATE_NODE_SEND_LOGIN_RID;
       end;
     STATE_NODE_SEND_LOGIN_RID :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_SEND_LOGIN_RID'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         if OPStackNode_TestFlags(Node, MF_DUPLICATE_ALIAS, True) then
         begin
@@ -486,7 +489,7 @@ begin
         Hardware_EnableInterrupts;
       end;
     STATE_NODE_SEND_LOGIN_AMD :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_SEND_LOGIN_AMD'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         if OPStackNode_TestFlags(Node, MF_DUPLICATE_ALIAS, True) then
         begin
@@ -506,7 +509,7 @@ begin
         Hardware_EnableInterrupts;
       end;
     STATE_NODE_INITIALIZED :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_INITIALIZED'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         if OPStackNode_TestFlags(Node, MF_DUPLICATE_ALIAS, True) then
         begin
@@ -526,7 +529,7 @@ begin
         Hardware_EnableInterrupts;
       end;
     STATE_NODE_LOGIN_IDENTIFY_EVENTS :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_LOGIN_IDENTIFY_EVENTS'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         // Fake an Identify Events to allow the AppCallbacks to be called
         if IsOutgoingBufferAvailable then
@@ -594,7 +597,7 @@ begin
         end;
       end;
     STATE_NODE_INHIBITED :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_INHIBITED'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
@@ -610,7 +613,7 @@ begin
         Hardware_EnableInterrupts;
       end;
     STATE_NODE_DUPLICATE_FULL_ID :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_DUPLICATE_FULL_ID'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         // Any buffers will time out and self release
         if IsOutgoingBufferAvailable then
@@ -626,7 +629,7 @@ begin
         Hardware_EnableInterrupts;
       end;
     STATE_NODE_TAKE_OFFLINE :
-      begin
+      begin {$IFDEF TRACE_MAIN_STATEMACHINE}UART2_Write_Text('STATE_NODE_TAKE_OFFLINE'+LF);{$ENDIF}
         Hardware_DisableInterrupts;
         if IsOutgoingBufferAvailable then
           if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI_PC_EVENT_REPORT, Node^.Info, NULL_NODE_INFO, False) then  // Fake Source Node

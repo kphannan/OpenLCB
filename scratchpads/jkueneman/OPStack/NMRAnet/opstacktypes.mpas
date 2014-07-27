@@ -30,7 +30,7 @@ const
 
 
 const
-  OPS_PROCESSING      = $01;                                                    // Start and stops the main StateMachine for running. Default is Off on startup Allows holding off OLCB processing until the node is read (Ethernet link is up, etc)
+  OPS_PROCESSING      = $0001;                                                    // Start and stops the main StateMachine for running. Default is Off on startup Allows holding off OLCB processing until the node is read (Ethernet link is up, etc)
 
 type
   TOPStack = record

@@ -34,6 +34,7 @@ procedure OPStackcoreTcp_TcpMessageToOpStackMessage( TcpMessage: PTcpMessage; AM
 implementation
 
 type
+  PByte = ^Byte;
   PWord = ^Word;
   PDWord = ^DWord;
 
@@ -87,4 +88,3 @@ begin
 end;
 
 end.
-

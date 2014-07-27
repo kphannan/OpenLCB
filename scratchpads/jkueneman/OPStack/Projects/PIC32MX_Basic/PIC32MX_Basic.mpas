@@ -1,0 +1,58 @@
+program PIC32MX_Basic;
+
+uses
+  MCU_Setup_PIC32MXxxx,
+  opstackcore;
+
+{ Declarations section }
+
+var 
+  CS_Serial_Flash_bit: sbit at LATD14_bit;
+  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
+
+procedure OPStack_100ms_Timer(); iv IVT_TIMER_5; iLevel 2; ics ICS_AUTO;
+begin
+  T5IF_bit := 0;
+//  OPStackCore_Timer;
+  LATF12_bit := not LATF12_bit;
+end;
+  
+begin
+  { Main program }
+  TRISF12_bit := 0;
+  LATF12_bit := 0;
+  TRISF13_bit := 0;
+  LATF13_bit := 0;
+
+  OPStackCore_Initialize;
+  MCU_Setup_Initialize;
+  MCU_EnableSerialFlash;
+  MCU_EnableUARTA;
+  MCU_Enable100msTimer;
+  MCU_EnableCAN;
+  
+  EnableInterrupts;
+  
+  UART2_Write_Text('Configured' + LF);
+  while True do
+  begin
+
+    OPStackCore_Process;
+
+    LATF13_bit := not LATF13_bit;
+
+    if UART2_Data_Ready = 1 then
+    begin
+      case UART2_Read of
+        '1' : ON__T5CON_bit := not ON__T5CON_bit;
+        '2' : begin
+                OPStackCore_Initialize;
+                OPStackCore_Enable(True);
+              end;
+        '3' : begin
+                OPStackCore_Enable(False);
+              end;
+      end;
+    end;
+  end;
+end.

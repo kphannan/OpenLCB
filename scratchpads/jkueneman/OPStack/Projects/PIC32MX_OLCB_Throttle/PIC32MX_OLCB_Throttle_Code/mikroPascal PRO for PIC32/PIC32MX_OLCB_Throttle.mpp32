@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\MCU_Setup_PIC32MXxxx.mpas
+Value=PIC32MX_OLCB_Throttle_main.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -71,13 +71,15 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=6
+Count=8
 File0=PIC32MX_OLCB_Throttle_main.mpas
 File1=Templates\MCU_Setup_PIC32MXxxx.mpas
 File2=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
-File3=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
-File4=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
-File5=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\P32MX795F512L.mpas
+File3=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
+File4=..\..\..\..\NMRAnet\opstackcore.mpas
+File5=..\..\..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
+File6=..\..\..\..\Common\helperfunctions.mpas
+File7=..\..\..\..\NMRAnet\opstacktypes.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -114,8 +116,8 @@ File5=String
 File6=Conversions
 File7=C_Type
 File8=C_Stdlib
-File9=UART
-File10=SPI
+File9=SPI
+File10=UART
 [INTERRUPT_DEFS]
 EBASE=9FC01000
 VECTOR_SPACEING=32

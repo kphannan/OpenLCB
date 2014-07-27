@@ -25,15 +25,15 @@ const
   CAN_DIRECTION_READ  = 1;
   
 const
-  FIFO_LO_PRIORITY_TX_FIFO = 0;   // FIFO 0 is the Lo Priorty Tx
-  FIFO_HI_PRIORITY_TX_FIFO = 1;   // FIFO 1 is the Hi Priorty Tx
+  FIFO_TX_LO_PRIORITY      = 0;   // FIFO 0 is the Lo Priorty Tx
+  FIFO_TX_HI_PRIORITY      = 1;   // FIFO 1 is the Hi Priorty Tx
   FIFO_RX_FIFO_CAN         = 2;   // FIFO 2 is the Rx
   FIFO_RX_FIFO_OLCB        = 3;   // FIFO 2 is the Rx
   
-  FIFO_LO_PRIORITY_TX_BUFFERS = 1;   // Number of Buffers in the FIFO
-  FIFO_HI_PRIORITY_TX_BUFFERS = 1;   // Number of Buffers in the FIFO
-  FIFO_RX_BUFFERS             = 1;   // Number of Buffers in the FIFO
-  
+  FIFO_TX_LO_PRIORITY_BUFFER_COUNT = 1;   // Number of Buffers in the FIFO
+  FIFO_TX_HI_PRIORITY_BUFFER_COUNT = 1;   // Number of Buffers in the FIFO
+  FIFO_RX_CAN_BUFFER_COUNT         = 10;   // Number of Buffers in the FIFO
+  FIFO_RX_OLCB_BUFFER_COUNT        = 10;   // Number of Buffers in the FIFO
 type
   // ***************************************************************************
   // CAN Message Buffers in raw form that can be loaded into the CAN controller
@@ -60,13 +60,13 @@ type
   PCANRawBuffer = ^TCANRawBuffer;
 
 const
-  FIFO_BUFFER_TOTAL = FIFO_LO_PRIORITY_TX_BUFFERS + FIFO_HI_PRIORITY_TX_BUFFERS + FIFO_RX_BUFFERS;
+  FIFO_BUFFER_TOTAL = FIFO_TX_LO_PRIORITY_BUFFER_COUNT + FIFO_TX_HI_PRIORITY_BUFFER_COUNT + FIFO_RX_CAN_BUFFER_COUNT + FIFO_RX_OLCB_BUFFER_COUNT;
   
 type
   TFIFOBufferArray = array[0..FIFO_BUFFER_TOTAL-1] of TCANRawBuffer;
 
 var
-  FIFOBufferArray: TFIFOBufferArray;
+  FIFOBufferArray: TFIFOBufferArray; absolute $A0000000;
 
 
 implementation

@@ -29,6 +29,7 @@ type
   PStrArray = ^TStrArray;
   
   PWord = ^Word;
+  PDWord = ^DWord;
   
   TIPAddressStr = string[MAX_IP_ADDRESS_LEN];
 
@@ -44,6 +45,11 @@ function IPAddressToStr(var IP: array[0..3] of byte): TIPAddressStr;
 function StrToIPAddress(var IPStr: string[MAX_COMMANDLINE_LEN]; var IP: array[0..3] of byte; var Port: Word): Boolean;
 procedure TrimValue(ValueStr: PStrArray);
 {$ENDIF}
+// PIC32 Helpers
+function Map_KSEG_To_Physical(KSEG_Address: ^Byte): ^Byte;
+function Map_Physical_To_KSEG1(Physical_Address: ^Byte): ^Byte;
+function Map_Physical_To_KSEG0(Physical_Address: ^Byte): ^Byte;
+function Map_KSEG0_To_KSEG1(KSEG0_Address: ^Byte): ^Byte;
 //procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
 
 implementation
@@ -317,4 +323,23 @@ end;
 
 {$ENDIF}
 
+function Map_KSEG_To_Physical(KSEG_Address: ^Byte): ^Byte;
+begin
+  Result := PDWord( DWord( KSEG_Address) and $1FFFFFFF);
+end;
+
+function Map_Physical_To_KSEG1(Physical_Address: ^Byte): ^Byte;
+begin
+  Result := PDWord( DWord( Physical_Address) or $80000000);
+end;
+
+function Map_Physical_To_KSEG0(Physical_Address: ^Byte): ^Byte;
+begin
+  Result := PDWord( DWord( Physical_Address) or $A0000000);
+end;
+
+function Map_KSEG0_To_KSEG1(KSEG0_Address: ^Byte): ^Byte;
+begin
+  Result := PDWord( DWord( KSEG0_Address) or $20000000);
+end;
 end.

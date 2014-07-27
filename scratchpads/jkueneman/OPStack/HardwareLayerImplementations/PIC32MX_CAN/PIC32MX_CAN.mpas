@@ -23,19 +23,14 @@ unit PIC32MX_CAN;
 
 {$DEFINE PRINT_CAN_REGISTERS}
 {.$DEFINE TRACE_CAN}
-{.$DEFINE TRACE_INTERRUPTS}
-{.$DEFINE TRACE_INTERRUPTS_OVERFLOW}
+{$DEFINE TRACE_INTERRUPTS}
+{$DEFINE TRACE_INTERRUPTS_OVERFLOW}
 
 
 uses
+  helperfunctions,
   opstackdefines,
   PIC32MX_CAN_RawBuffers;
-
-const
-  CAN_TX_LO_PRIORITY_FIFO      = 0;
-  CAN_TX_HI_PRIORITY_FIFO      = 1;
-  CAN_RX_0_FIFO                = 2;
-
 
 const
   ICODE_INVALID_MESSAGE     = $48;   // (IVRIF}
@@ -97,7 +92,7 @@ procedure PIC32MX_CAN_Enable(Channel: Byte; Enable: Boolean);
 procedure PIC32MX_CAN_EnterConfigMode(Channel: Byte);
 procedure PIC32MX_CAN_EnterNormalMode(Channel: Byte);
 procedure PIC32MX_CAN_AbortPendingTransmissions(Channel: Byte);
-procedure PIC32MX_CAN_SetBaud(Channel: Byte; SWJ, BRP, SEG2PH, SEG1PH, PRSEG: Word; Sample3Times: Boolean);
+procedure PIC32MX_CAN_SetBaud(Channel: Byte; SJW, BRP, SEG2PH, SEG1PH, PRSEG: DWord; Sample3Times: Boolean);
 procedure PIC32MX_CAN_RequestTransmit(Channel, FIFONumber: Byte);
 // *****************************************************************************
 
@@ -110,7 +105,7 @@ procedure PIC32MX_CAN_SetFilter(Channel: Byte; FilterNumber: Byte; Filter: DWord
 // Mask Creation
 procedure PIC32MX_CAN_SetMask(Channel: Byte; MaskNumber: Byte; Mask: DWord; ExtendedOnly: Boolean);
 // Filter to Mask Assignments
-procedure PIC32MX_CAN_AssociateFilterWithMask(Channel: Byte; FilterNumber, MaskNumber: Word; FIFO: Byte);
+procedure PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(Channel: Byte; FilterNumber, MaskNumber: Word; FIFO: Byte);
 // *****************************************************************************
 
 // *****************************************************************************
@@ -128,20 +123,25 @@ function PIC32MX_CAN_FIFO_IsTransmiter(Channel: Byte; FIFONumber: Byte): Boolean
 // Interrupt Functions
 // *****************************************************************************
 function PIC32MX_CAN_InterruptCode(Channel: Byte): Byte;
-// Low level FIFO Tx Interrupt options, these flags are not clearable, the next level up (module) is cleared that covers multiple FIFOs
-procedure PIC32MX_CAN_EnableTxInterrupts(Channel: Byte; FIFONumber: Byte; FIFO_NotFull, FIFO_HalfFull, FIFO_Empty: Boolean);
+// Low level FIFO Tx Interrupt options, these flags are not clearable, the condition that caused them must be cleared
+procedure PIC32MX_CAN_Tx_Interrupt_NotFull_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+procedure PIC32MX_CAN_Tx_Interrupt_HalfFull_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+procedure PIC32MX_CAN_Tx_Interrupt_Empty_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
 function PIC32MX_CAN_Tx_Interrupt_NotFull_FlagSet(Channel, FIFONumber: Byte): Boolean;
 function PIC32MX_CAN_Tx_Interrupt_HalfFull_FlagSet(Channel, FIFONumber: Byte): Boolean;
 function PIC32MX_CAN_Tx_Interrupt_Empty_FlagSet(Channel, FIFONumber: Byte): Boolean;
-// Low level FIFO Rx Interrupt options, these flags are not clearable, the next level up (module) is cleared that covers multiple FIFOs
-procedure PIC32MX_CAN_EnableRxInterrupts(Channel: Byte; FIFONumber: Byte; FIFO_Overflow, FIFO_Full, FIFO_HalfFull, FIFO_Empty: Boolean);
+// Low level FIFO Rx Interrupt options, these flags are not clearable, the condition that caused them must be cleared
+procedure PIC32MX_CAN_Rx_Interrupt_Overflow_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+procedure PIC32MX_CAN_Rx_Interrupt_Full_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+procedure PIC32MX_CAN_Rx_Interrupt_HalfFull_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+procedure PIC32MX_CAN_Rx_Interrupt_NotEmpty_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
 function PIC32MX_CAN_Rx_Interrupt_Overflow_FlagSet(Channel, FIFONumber: Byte): Boolean;
 function PIC32MX_CAN_Rx_Interrupt_Full_FlagSet(Channel, FIFONumber: Byte): Boolean;
 function PIC32MX_CAN_Rx_Interrupt_HalfFull_FlagSet(Channel, FIFONumber: Byte): Boolean;
-function PIC32MX_CAN_Rx_Interrupt_Empty_FlagSet(Channel, FIFONumber: Byte): Boolean;
+function PIC32MX_CAN_Rx_Interrupt_NotEmpty_FlagSet(Channel, FIFONumber: Byte): Boolean;
 // Low level Rx Overflow Interrupt Options, these flags are not clearable, the next level up (module) is cleared that covers multiple FIFOs
-function PIC32MX_CAN_InterruptRxOverflowFIFOAny(Channel: Byte): Boolean;        // Test the all at once
-function PIC32MX_CAN_InterruptRxOverflowFIFO(Channel: Byte; FIFONumber: Byte): Boolean;
+function PIC32MX_CAN_InterruptRxOverflowFIFOAny(Channel: Byte; DoClear: Boolean): Boolean;        // Test the all at once
+function PIC32MX_CAN_InterruptRxOverflowFIFO(Channel: Byte; FIFONumber: Byte; DoClear: Boolean): Boolean;
 // CAN Module level Interrupt options, , these flags are clearable, the next level down (FIFO) is is not these are the superset of the FIFOs
 procedure PIC32MX_CAN_EnableInterrupts(Channel: Byte; InvalidMessage, WakeOnBus, CanBusError, SystemError, RxBufferOverflow, ModeChange, TimestampTimer, RxBuffer, TxBuffer: Boolean);
 function PIC32MX_CAN_InterruptValidMessageFlag(Channel: Byte; DoClear: Boolean): Boolean;
@@ -186,12 +186,15 @@ implementation
 
 procedure PIC32MX_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var IsExtended: Boolean; Direction: Byte; CANPtr: ^Byte); forward;
 
+type
+  PByte = ^Byte;
+
 {$IFDEF PRINT_CAN_REGISTERS}
 procedure PIC32MX_CAN_PrintRegisters(Channel: Byte);
 var
   i: Integer;
   Ptr: ^DWord;
-  s2: string[5];
+  s2: string[6];
 begin
   case Channel of
     1 : begin
@@ -279,6 +282,26 @@ begin
             UART2_Write_Text(s2 + ' C1FIFOCIn: 0x' + s1 + LF);
             Ptr := Ptr + 16
           end;
+          if CAN1IE_bit  = 1 then
+            UART2_Write_Text('CAN1IE_bit = 1'+ LF)
+          else
+            UART2_Write_Text('CAN1IE_bit = 0'+ LF);
+
+          if CAN1IF_bit = 1 then
+            UART2_Write_Text('CAN1IF_bit = 1'+ LF)
+          else
+            UART2_Write_Text('CAN1IF_bit = 0'+ LF);
+
+          UART2_Write_Text('CAN1 Priority: ');
+          if CAN1IP2_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+          if CAN1IP1_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+          if CAN1IP0_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+          UART2_Write_Text(LF);
+          
+          UART2_Write_Text('CAN1 SubPriority: ');
+          if CAN1IS1_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+          if CAN1IS0_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+          UART2_Write_Text(LF);
         end;
       2 : begin
             UART2_Write_Text('Interrupt and Status Registers' + LF);
@@ -344,7 +367,7 @@ begin
             begin
               LongWordToHex(Ptr^, s1);
               IntToStr(i, s2);
-              UART2_Write_Text(s2 + ' C2FIFOINTn: 0x' + s1 + LF);
+              UART2_Write_Text(s2 + ' C1FIFOINTn: 0x' + s1 + LF);
               Ptr := Ptr + 16
             end;
 
@@ -365,6 +388,27 @@ begin
               UART2_Write_Text(s2 + ' C2FIFOCIn: 0x' + s1 + LF);
               Ptr := Ptr + 16
             end;
+            
+            if CAN2IE_bit  = 1 then
+              UART2_Write_Text('CAN2IE_bit = 1'+ LF)
+            else
+              UART2_Write_Text('CAN2IE_bit = 0'+ LF);
+
+            if CAN2IF_bit = 1 then
+              UART2_Write_Text('CAN2IF_bit = 1'+ LF)
+            else
+              UART2_Write_Text('CAN2IF_bit = 0'+ LF);
+              
+            UART2_Write_Text('CAN2 Priority: ');
+            if CAN2IP2_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+            if CAN2IP1_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+            if CAN2IP0_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+            UART2_Write_Text(LF);
+
+            UART2_Write_Text('CAN2 SubPriority: ');
+            if CAN2IS1_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+            if CAN2IS0_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+            UART2_Write_Text(LF);
           end;
     end;
 end;
@@ -382,11 +426,18 @@ var
 begin
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
+  
+  UART2_Write_Text('Tx''ing' + LF);
+   {
     PIC32MX_CAN_Transmitting := True;
-    Next := PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_LO_PRIORITY_TX_FIFO);
-    PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);      // Convert it into a version that matches the registers
-    PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_LO_PRIORITY_TX_FIFO);
-    PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, 0);                               // Set the Flag to start the transmission
+    Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_TX_LO_PRIORITY));      // Get where the next buffer to transmit is
+    PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);             // Convert it into a version that matches the registers
+    PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_TX_LO_PRIORITY);                 // Message is loaded move to the next one
+    PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_LO_PRIORITY, True);  // Fire the interrupt when the buffer is empty
+    PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, FIFO_TX_LO_PRIORITY);                  // Set the Flag to start the transmission
+
+   UART2_Write_Text('Tx''ed');
+            }
   end
 end;
 
@@ -404,15 +455,21 @@ var
 begin
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
+  
+  UART2_Write_Text('Tx''ing' + LF);
+  
+  {
     PIC32MX_CAN_Transmitting := True;
-    Next := PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_HI_PRIORITY_TX_FIFO);
-    PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);      // Convert it into a version that matches the registers
-    PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_HI_PRIORITY_TX_FIFO);
-    PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, FIFO_HI_PRIORITY_TX_FIFO);      // Set the Flag to start the transmission
+    Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_TX_HI_PRIORITY));      // Get where the next buffer to transmit is
+    PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);                 // Convert it into a version that matches the registers
+    PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_TX_HI_PRIORITY);                 // Message is loaded move to the next one
+    PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_HI_PRIORITY, True);  // Fire the interrupt when the buffer is empty
+    PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, FIFO_TX_HI_PRIORITY);                  // Set the Flag to start the transmission
+  }
   end
 end;
 
-procedure CAN_2(); iv IVT_CAN_2;
+procedure CAN_2(); iv IVT_CAN_2; ilevel 6; ics ICS_AUTO;
 var
   IntCode: Word;
   Buffer: TNMRAnetCanBuffer;
@@ -425,52 +482,44 @@ begin
   begin
     case IntCode of
       ICODE_FIFO0 :                                                              // Tx Rx Buffer 0
-      begin
-        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX0' +LF);{$ENDIF}
-        PIC32MX_CAN_InterruptTxBufferFlag(LocalCAN_Channel, True);               // TX Interrupt Flag Reset
-        PIC32MX_CAN_Transmitting := False;
-      end;
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX0' +LF);{$ENDIF}
+            PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, 0, False);
+            PIC32MX_CAN_Transmitting := False;
+          end;
       ICODE_FIFO1 :                                                              // Tx Rx Buffer 0
-      begin
-        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX1' +LF);{$ENDIF}
-        PIC32MX_CAN_InterruptTxBufferFlag(LocalCAN_Channel, True);               // TX Interrupt Flag Reset
-        PIC32MX_CAN_HighPriorityTransmitting := False;
-      end;
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX1' +LF);{$ENDIF}
+            PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, 1, False);
+            PIC32MX_CAN_HighPriorityTransmitting := False;
+          end;
       ICODE_FIFO2 :                                                              // Tx Rx Buffer 0
-      begin
-        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('RX2' +LF); {$ENDIF}
-        IsExtended := True;
-        Next := PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, CAN_RX_0_FIFO);
-        PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, CAN_RX_0_FIFO);
-        PIC32MX_DMA_Style_Buffer(Buffer, IsExtended, CAN_DIRECTION_READ, Next);      // Convert it into a version that matches the registers
-        case (Next^.Byte14 shr 3) of
-          0: ReceivedOnFilter0(@Buffer);
-          1: ReceivedOnFilter1(@Buffer);
-          2: ReceivedOnFilter2(@Buffer);
-          3: ReceivedOnFilter3(@Buffer);
-          4: ReceivedOnFilter4(@Buffer);
-          5: ReceivedOnFilter5(@Buffer);
-          6: ReceivedOnFilter6(@Buffer);
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('RX0' +LF); {$ENDIF}
+            IsExtended := True;
+            Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_RX_FIFO_CAN));
+            PIC32MX_DMA_Style_Buffer(Buffer, IsExtended, CAN_DIRECTION_READ, Next);      // Convert it into a version that matches the registers
+            PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_RX_FIFO_CAN);
+            ReceivedOnFilter1(@Buffer);
         end;
-   //     PIC32MX_CAN_RX_Full(CAN_RX_0_BUFFER, True);             }                // Reset the Full Flag
-
-        if PIC32MX_CAN_InterruptRxOverflowFIFOAny(LocalCAN_Channel) then
-        begin
-          {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART2_Write_Text('CAN Overflow');{$ENDIF}
-          PIC32MX_CAN_InterruptRxBufferOverflowFlag(LocalCAN_Channel, True);
+      ICODE_FIFO3 :                                                              // Tx Rx Buffer 0
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('RX1' +LF); {$ENDIF}
+            IsExtended := True;
+            Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_RX_FIFO_OLCB));
+            PIC32MX_DMA_Style_Buffer(Buffer, IsExtended, CAN_DIRECTION_READ, Next);      // Convert it into a version that matches the registers
+            PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_RX_FIFO_OLCB);
+            ReceivedOnFilter0(@Buffer);
         end;
-
-        PIC32MX_CAN_InterruptRxBufferFlag(LocalCAN_Channel, True);              // RX Interrupt Flag Reset
-      end;
       ICODE_RX_OVERFLOW :
-      begin
-        {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART2_Write_Text('RxOVR'+LF);{$ENDIF}
-        PIC32MX_CAN_InterruptRxBufferOverflowFlag(LocalCAN_Channel, True);
-      end else
-      begin
-        {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('9' +LF);{$ENDIF}
-      end;
-    end;
+          begin
+            {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART2_Write_Text('RxOVR'+LF);{$ENDIF}
+             PIC32MX_CAN_InterruptRxOverflowFIFOAny(LocalCAN_Channel, True);    // Clear them all
+          end else
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('9' +LF);{$ENDIF}
+          end;
+    end;  // case
     IntCode := PIC32MX_CAN_InterruptCode(LocalCAN_Channel);                                       // Get the next code (or no code) flag
   end;
 end;
@@ -534,38 +583,39 @@ end;
 procedure PIC32MX_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var IsExtended: Boolean; Direction: Byte; CANPtr: ^Byte);
 var
   Temp: DWord;
+  SID, EID: DWord;
 begin
   if Direction = CAN_DIRECTION_WRITE then
   begin
     // Direction = 0 means Parameters to Buffer (Load TX Buffer)
+    EID := Buffer.MTI and $0003FFFF;
+    SID := (Buffer.MTI shr 18) and $000007FF;
+    
+    CANPtr^ := SID and $000000FF;
+    Inc(CANPtr);
+    
+    CANPtr^ := (SID shr 8) and $00000007;
+    Inc(CANPtr);
+    
     CANPtr^ := 0;
-    Inc(CanPtr);
+    Inc(CANPtr);
+    
     CANPtr^ := 0;
-    Inc(CanPtr);
+    Inc(CANPtr);
     
-    Temp := (Buffer.MTI shr 8) and $00000007;
-    CANPtr^ := Lo(Temp);
-    Inc(CanPtr);
+    CANPtr^ :=  Buffer.PayloadCount and $0F;
+    Inc(CANPtr);
     
-    Temp := Buffer.MTI and $000000FF;
-    CANPtr^ := Lo(Temp);
-    Inc(CanPtr);
+    CANPtr^ := EID shl 2;
+    Inc(CANPtr);
     
-    Temp := (Buffer.MTI shr 26) and $0000000F;                    // 14 + 11
-    CANPtr^ := Lo(Temp);
+    CANPtr^ := EID shr 6;
+    Inc(CANPtr);
+
+    CANPtr^ := (EID shr 14) and $0F;
+    CANPtr^ := CANPtr^ or $20;  // Set SRR
     if IsExtended then
-      CanPtr^ := CanPtr^ or $00000010;
-    Inc(CanPtr);
-    
-    Temp := (Buffer.MTI shr 18) and $000000FF;                    // 6 + 11
-    CANPtr^ := Lo(Temp);
-    Inc(CanPtr);
-    
-    Temp := (Buffer.MTI shr 11) and $0000003F;                   // 11
-    CANPtr^ := Lo(Temp);
-    Inc(CanPtr);
-    
-    CanPtr^ := Buffer.PayloadCount and $0000000F;              // DLC
+      CANPtr^ := CANPtr^ or $10;
 
     Inc(CANPtr);
     CANPtr^ := Buffer.Payload[0];
@@ -585,34 +635,42 @@ begin
     CANPtr^ := Buffer.Payload[7];
   end else
   begin
-    // Direction <> 0 then Buffer to Parameters (Read RX Buffer)
-    Inc(CANPtr);      // CMSGTS       Timestamp
-    Inc(CANPtr);      // CMSGTS
+    Temp := CANPtr^;
+    SID := Temp;
     
+    Inc(CANPtr);
     Temp := CANPtr^ and $07;
-    Buffer.MTI := (Temp shl 8);
-    Inc(CANPtr);
-    
-    Temp := CANPtr^;
-    Buffer.MTI := Buffer.MTI or Temp;
-    Inc(CANPtr);
-    
-    Temp := CANPtr^ and $0F;
-    Buffer.MTI := Buffer.MTI or (Temp shl 26);
-    IsExtended := CANPtr^ and $10 <> 0;
-    Inc(CANPtr);
-    
-    Temp := CANPtr^;
-    Buffer.MTI := Buffer.MTI or (Temp shl 18);
-    Inc(CANPtr);
-    
-    Temp := (CANPtr^ shr 2) and $3F;
-    Buffer.MTI := Buffer.MTI or (Temp shl 11);
-    Inc(CANPtr);
+    SID := SID or (Temp shl 8);
 
+    Inc(CANPtr);  // CMGTS<7:0>
+    Inc(CANPtr);  // CMGTS<15:8>
+    
+    Inc(CANPtr);
     Buffer.PayloadCount := CANPtr^ and $0F;
+    
     Inc(CANPtr);
+    Temp := CANPtr^ shr 2;
+    EID := Temp;
+    
+    Inc(CANPtr);
+    Temp := CANPtr^;
+    EID := EID or (Temp shl 6);
+    
+    Inc(CANPtr);
+    Temp := CANPtr^ and $0F;
+    EID := EID or (Temp shl 14);
+    
+    if CANPtr^ and $10 <> 0 then
+    begin
+      IsExtended := True;
+      Buffer.MTI := EID or (SID shl 18);
+    end else
+    begin
+      IsExtended := False;
+      Buffer.MTI := EID;
+    end;
 
+    Inc(CANPtr);
     Buffer.Payload[0] := CANPtr^;
     Inc(CANPtr);
     Buffer.Payload[1] := CANPtr^;
@@ -620,7 +678,7 @@ begin
     Buffer.Payload[2] := CANPtr^;
     Inc(CANPtr);
     Buffer.Payload[3] := CANPtr^;
-    Inc(CANPtr); 
+    Inc(CANPtr);
     Buffer.Payload[4] := CANPtr^;
     Inc(CANPtr);
     Buffer.Payload[5] := CANPtr^;
@@ -628,7 +686,7 @@ begin
     Buffer.Payload[6] := CANPtr^;
     Inc(CANPtr);
     Buffer.Payload[7] := CANPtr^;
-
+    Inc(CANPtr);
   end
 end;
 
@@ -652,8 +710,8 @@ var
   FIFOControlPtr: ^DWord;
 begin
   case Channel of
-    1 : FIFOControlPtr := @C1FIFOCON0;
-    2 : FIFOControlPtr := @C2FIFOCON0
+    1 : FIFOControlPtr := @C1FIFOCON0SET;
+    2 : FIFOControlPtr := @C2FIFOCON0SET
   else
     Exit;
   end;
@@ -746,7 +804,7 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure PIC32MX_CAN_AssociateFilterWithMask;
+//  procedure PIC32MX_CAN_AssociateFilterAndMaskAndFIFO;
 //
 //  Parameters: FilterNumber:   The number Filter (0..15)
 //              MaskNumer:      The number Mask to associate with the Filter (0..2)
@@ -756,7 +814,7 @@ end;
 //  Description:   Filter Number = 0..15, Filter are the Bits that much match
 //                 Mask Number = 0..2, Filter are the Bits that much match
 // *****************************************************************************
-procedure PIC32MX_CAN_AssociateFilterWithMask(Channel: Byte; FilterNumber, MaskNumber: Word; FIFO: Byte);
+procedure PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(Channel: Byte; FilterNumber, MaskNumber: Word; FIFO: Byte);
 var
   FilterPtr: ^Byte;
 begin
@@ -846,7 +904,7 @@ begin
   else
     Exit;
   end;
-  FIFOAddress^ := FIFOBufferAddress;
+  FIFOAddress^ := Map_KSEG_To_Physical( FIFOBufferAddress);
 end;
 
 function PIC32MX_CAN_FIFO_IsTransmiter(Channel: Byte; FIFONumber: Byte): Boolean;
@@ -868,7 +926,7 @@ begin
   end;
 end;
 
-procedure PIC32MX_CAN_EnableTxInterrupts(Channel: Byte; FIFONumber: Byte; FIFO_NotFull, FIFO_HalfFull, FIFO_Empty: Boolean);
+procedure PIC32MX_CAN_Tx_Interrupt_NotFull_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
 var
   InterruptPtr: ^DWord;
 begin
@@ -878,27 +936,19 @@ begin
   else
     Exit;
   end;
-  if FIFONumber < 32 then
+
+  if (FIFONumber < 32) then
   begin
-    InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
-    if FIFO_NotFull then
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
       InterruptPtr^ := InterruptPtr^ or $04000000
     else
       InterruptPtr^ := InterruptPtr^ and not $04000000;
-      
-    if FIFO_HalfFull then
-      InterruptPtr^ := InterruptPtr^ or $02000000
-    else
-      InterruptPtr^ := InterruptPtr^ and not $02000000;
-      
-    if FIFO_Empty then
-      InterruptPtr^ := InterruptPtr^ or $01000000
-    else
-      InterruptPtr^ := InterruptPtr^ and not $01000000;
-  end;
+  end
 end;
 
-procedure PIC32MX_CAN_EnableRxInterrupts(Channel: Byte; FIFONumber: Byte; FIFO_Overflow, FIFO_Full, FIFO_HalfFull, FIFO_Empty: Boolean);
+procedure PIC32MX_CAN_Tx_Interrupt_HalfFull_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
 var
   InterruptPtr: ^DWord;
 begin
@@ -908,26 +958,122 @@ begin
   else
     Exit;
   end;
-  if FIFONumber < 32 then
+
+  if (FIFONumber < 32) then
   begin
-    InterruptPtr := InterruptPtr + (FIFONumber  * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
-    
-    if FIFO_Overflow then
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
+      InterruptPtr^ := InterruptPtr^ or $02000000
+    else
+      InterruptPtr^ := InterruptPtr^ and not $02000000;
+  end
+end;
+
+procedure PIC32MX_CAN_Tx_Interrupt_Empty_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+var
+  InterruptPtr: ^DWord;
+begin
+  case Channel of
+    1 : InterruptPtr := @C1FIFOINT0;
+    2 : InterruptPtr := @C2FIFOINT0
+  else
+    Exit;
+  end;
+
+  if (FIFONumber < 32) then
+  begin
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
+      InterruptPtr^ := InterruptPtr^ or $01000000
+    else
+      InterruptPtr^ := InterruptPtr^ and not $01000000;
+  end
+end;
+
+procedure PIC32MX_CAN_Rx_Interrupt_Overflow_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+var
+  InterruptPtr: ^DWord;
+begin
+  case Channel of
+    1 : InterruptPtr := @C1FIFOINT0;
+    2 : InterruptPtr := @C2FIFOINT0
+  else
+    Exit;
+  end;
+
+  if (FIFONumber < 32) then
+  begin
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
       InterruptPtr^ := InterruptPtr^ or $00080000
     else
       InterruptPtr^ := InterruptPtr^ and not $00080000;
-      
-    if FIFO_Full then
+  end;
+end;
+
+procedure PIC32MX_CAN_Rx_Interrupt_Full_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+var
+  InterruptPtr: ^DWord;
+begin
+  case Channel of
+    1 : InterruptPtr := @C1FIFOINT0;
+    2 : InterruptPtr := @C2FIFOINT0
+  else
+    Exit;
+  end;
+
+  if (FIFONumber < 32) then
+  begin
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
       InterruptPtr^ := InterruptPtr^ or $00040000
     else
       InterruptPtr^ := InterruptPtr^ and not $00040000;
-      
-    if FIFO_HalfFull then
+  end;
+end;
+
+procedure PIC32MX_CAN_Rx_Interrupt_HalfFull_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+var
+  InterruptPtr: ^DWord;
+begin
+  case Channel of
+    1 : InterruptPtr := @C1FIFOINT0;
+    2 : InterruptPtr := @C2FIFOINT0
+  else
+    Exit;
+  end;
+
+  if (FIFONumber < 32) then
+  begin
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
       InterruptPtr^ := InterruptPtr^ or $00020000
     else
       InterruptPtr^ := InterruptPtr^ and not $00020000;
-      
-    if FIFO_Empty then
+  end;
+end;
+
+procedure PIC32MX_CAN_Rx_Interrupt_NotEmpty_Enable(Channel, FIFONumber: Byte; DoEnable: Boolean);
+var
+  InterruptPtr: ^DWord;
+begin
+  case Channel of
+    1 : InterruptPtr := @C1FIFOINT0;
+    2 : InterruptPtr := @C2FIFOINT0
+  else
+    Exit;
+  end;
+
+  if (FIFONumber < 32) then
+  begin
+    // Get into the right 32 bit boundry including REG, INV, SET, CLEAR
+    InterruptPtr := InterruptPtr + (FIFONumber * 16);    // Increase in Bytes, including REG, INV, SET, CLEAR
+    if DoEnable then
       InterruptPtr^ := InterruptPtr^ or $00010000
     else
       InterruptPtr^ := InterruptPtr^ and not $00010000;
@@ -1053,20 +1199,8 @@ begin
 end;
 
 function PIC32MX_CAN_InterruptRxBufferOverflowFlag(Channel: Byte; DoClear: Boolean): Boolean;
-var
-  InterruptPtr: ^DWord;
 begin
-  Result := False;
-  case Channel of
-    1 : InterruptPtr := @C1INT;
-    2 : InterruptPtr := @C2INT
-  else
-    Exit;
-  end;
-
-  Result := InterruptPtr^.11 = 1;
-  if DoClear then
-    InterruptPtr^.11 := 0;
+  Result := PIC32MX_CAN_InterruptRxOverflowFIFOAny(Channel, DoClear);
 end;
 
 function PIC32MX_CAN_InterruptModeChangeFlag(Channel: Byte; DoClear: Boolean): Boolean;
@@ -1185,7 +1319,6 @@ begin
     Exit;
   end;
   if FIFONumber < 32 then
-  if FIFONumber < 32 then
   begin
     InterruptPtr := InterruptPtr + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
     Result := InterruptPtr^ and $00000100 <> 0
@@ -1245,7 +1378,7 @@ begin
   end
 end;
 
-function PIC32MX_CAN_Rx_Interrupt_Empty_FlagSet(Channel, FIFONumber: Byte): Boolean;
+function PIC32MX_CAN_Rx_Interrupt_NotEmpty_FlagSet(Channel, FIFONumber: Byte): Boolean;
 var
   InterruptPtr: ^DWord;
 begin
@@ -1263,9 +1396,10 @@ begin
   end
 end;
 
-function PIC32MX_CAN_InterruptRxOverflowFIFOAny(Channel: Byte): Boolean;
+function PIC32MX_CAN_InterruptRxOverflowFIFOAny(Channel: Byte; DoClear: Boolean): Boolean;
 var
   InterruptOverFlowPtr: ^DWord;
+  i: Integer;
 begin
   Result := False;
   case Channel of
@@ -1275,20 +1409,36 @@ begin
     Exit;
   end;
   Result := InterruptOverFlowPtr^ <> 0;
+  if DoClear then
+  begin
+    case Channel of
+      1 : InterruptOverFlowPtr := @C1FIFOINT0;
+      2 : InterruptOverFlowPtr := @C2FIFOINT0
+    else
+      Exit;
+    end;
+    for i := 0 to 31 do         // Be careful this is a mass clearing of all FIFOs
+    begin
+      InterruptOverFlowPtr^.3 := 0;
+      InterruptOverFlowPtr := InterruptOverFlowPtr + 16
+    end
+  end;
 end;
 
-function PIC32MX_CAN_InterruptRxOverflowFIFO(Channel: Byte; FIFONumber: Byte): Boolean;
+function PIC32MX_CAN_InterruptRxOverflowFIFO(Channel: Byte; FIFONumber: Byte; DoClear: Boolean): Boolean;
 var
   InterruptOverFlowPtr: ^DWord;
 begin
   Result := False;
   case Channel of
-    1 : InterruptOverFlowPtr := @C1RXOVF;
-    2 : InterruptOverFlowPtr := @C2RXOVF
+    1 : InterruptOverFlowPtr := @C1FIFOINT0;
+    2 : InterruptOverFlowPtr := @C2FIFOINT0
   else
     Exit;
   end;
-  Result := InterruptOverFlowPtr^.FIFONumber = 1;
+  Result := InterruptOverFlowPtr^.3 = 1;
+  if DoClear then
+    InterruptOverFlowPtr^.3 := 0
 end;
 
 function PIC32MX_CAN_Next_Buffer_Address(Channel: Byte; FIFONumber: Byte): PCANRawBuffer;
@@ -1334,8 +1484,8 @@ var
   FIFOControl: ^DWord;
 begin
   case Channel of
-    1 : FIFOControl := @C1FIFOCON0;
-    2 : FIFOControl := @C2FIFOCON0
+    1 : FIFOControl := @C1FIFOCON0SET;
+    2 : FIFOControl := @C2FIFOCON0SET     // Need to use this,  I think for UINC
   else
     Exit;
   end;
@@ -1343,7 +1493,7 @@ begin
   if FIFONumber < 32 then
   begin
     FIFOControl := FIFOControl + (FIFONumber * 16);   // Account for REG, INV, SET, CLEAR for [CmFIFOCONn, CmFIFOINTn, CnFIFOUAm, CmFIFOCIn]
-    FIFOControl.UINC := 1;
+    FIFOControl^.UINC := 1;
   end;
 end;
 
@@ -1428,7 +1578,7 @@ end;
 //
 //  Description:
 // *****************************************************************************
-procedure PIC32MX_CAN_SetBaud(Channel: Byte; SWJ, BRP, SEG2PH, SEG1PH, PRSEG: Word; Sample3Times: Boolean);
+procedure PIC32MX_CAN_SetBaud(Channel: Byte; SJW, BRP, SEG2PH, SEG1PH, PRSEG: DWord; Sample3Times: Boolean);
 var
   Config: ^DWord;
 begin
@@ -1439,14 +1589,28 @@ begin
     Exit;
   end;
   
-  Config^ := BRP;
-  Config^ := Config^ or (SWJ shl 6);
-  Config^ := Config^ or (PRSEG shl 8);
-  Config^ := Config^ or (SEG1PH shl 11);
+  if BRP = 0 then BRP := 1;
+  if SJW = 0 then SJW := 1;
+  if SEG1PH = 0 then SEG1PH := 1;
+  if SEG2PH = 0 then SEG2PH := 1;
+  if PRSEG = 0 then PRSEG := 1;
+  
+  Config^ := BRP-1;
+  Config^ := Config^ or ((SJW-1) shl 6);
+  Config^ := Config^ or ((PRSEG-1) shl 8);
+  Config^ := Config^ or ((SEG1PH-1) shl 11);
   if Sample3Times then
     Config^ := Config^ or $00004000;       // Sample 3 times
-  Config^ := Config^ or (SEG2PH shl 16);
+  Config^ := Config^ or ((SEG2PH-1) shl 16);
   Config^ := Config^ or $00008000;        // Programmable SEG2PH
+  
+  case Channel of
+    1 : Config := @C1CON;
+    2 : Config := @C2CON
+  else
+    Exit;
+  end;
+  Config^ := $00000000;
 end;
 
 procedure PIC32MX_CAN_Enable(Channel: Byte; Enable: Boolean);

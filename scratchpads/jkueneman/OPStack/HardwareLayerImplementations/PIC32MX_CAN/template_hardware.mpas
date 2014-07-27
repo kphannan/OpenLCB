@@ -51,8 +51,6 @@ type
     InterruptDisableCount: Integer;                                             // Allows stacked calls to Disable/Enable Interrupts (if used)
     OutgoingTxBuffer: TNMRAnetCanBuffer;
     OutgoingHighPriortyTxBuffer: TNMRAnetCanBuffer;
-    OutgoingTxBufferEmpty: Boolean;
-    OutgoingHighPriortyTxBufferEmpty: Boolean;
     OutgoingBufferOverrun,
     OutgoingHighPriorityBufferOverrun: Boolean;
   end;
@@ -71,8 +69,6 @@ begin
   PIC32MX_CAN_Initialize;
   OPStackCANStatemachineBuffers_Initialize;
   Hardware.InterruptDisableCount := 0;
-  Hardware.OutgoingTxBufferEmpty := True;
-  Hardware.OutgoingHighPriortyTxBufferEmpty := True;
   Hardware.OutgoingBufferOverrun := False;
   Hardware.OutgoingHighPriorityBufferOverrun := False;
   LocalCAN_Channel := 1;
@@ -111,7 +107,7 @@ begin
   // Disable Any interrupts here
   Inc(Hardware.InterruptDisableCount);
   if Hardware.InterruptDisableCount = 1 then
-  PIC32MX_CAN_GlobalInterrupt(LocalCAN_Channel, False);
+    PIC32MX_CAN_GlobalInterrupt(LocalCAN_Channel, False);
 end;
 
 // *****************************************************************************
@@ -129,7 +125,6 @@ begin
   Dec(Hardware.InterruptDisableCount);
   if Hardware.InterruptDisableCount <= 0 then
   begin
-    // Enable any Interrupts here
     PIC32MX_CAN_GlobalInterrupt(LocalCAN_Channel, True);
     Hardware.InterruptDisableCount := 0;
   end;
@@ -170,7 +165,6 @@ begin
     begin
       OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
       PIC32MX_StartCANHighPriorityMessageEngine(@NMRAnetCanBuffer, True);
-      Hardware.OutgoingHighPriortyTxBufferEmpty := True;
       if FreeMessage then
         OPStackBuffers_DeAllocateMessage(AMessage);
     end;
@@ -198,8 +192,7 @@ begin
       MT_SIMPLE :
           begin
             OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
-     //       PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
-            Hardware.OutgoingTxBufferEmpty := True;
+            PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
             if FreeMessage then
               OPStackBuffers_DeAllocateMessage(AMessage);
           end;

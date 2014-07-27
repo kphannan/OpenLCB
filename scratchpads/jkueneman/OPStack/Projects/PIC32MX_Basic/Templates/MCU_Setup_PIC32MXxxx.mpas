@@ -1,4 +1,4 @@
-unit MCU_Setup_dsPIC33EPxxxGP8xx;
+unit MCU_Setup_PIC32MXxxx;
 
 uses
   M25P80_Driver,
@@ -33,17 +33,15 @@ type
   PByte = ^Byte;
 
 procedure MCU_Enable100msTimer;
-begin
-  TCS_T2CON_bit := 0;       // internal cycle clock
-  T2IP0_bit := 1;          // Timer 2 Interrupt Priority = 5   (1 means off)
-  T2IP1_bit := 0;
-  T2IP2_bit := 1;
-  TCKPS0_T2CON_bit := 1;   // 256 Prescaler
-  TCKPS1_T2CON_bit := 1;
-  PR2 := $FFFF;             // Clock ticks every (1/140MHz * 2 * 256 * 27344 = 100.00091ms interrupts
-  T2IF_bit := 0;            // Clear T2IF
-  T2IE_bit := 1;            // Enable the Interrupt
-  ON__T2CON_bit := 1;       // Turn on 100ms Timer
+begin                      
+  T5CON       := 0x8070;
+  T5IE_bit    := 1;
+  T5IF_bit    := 0;
+  T5IP0_bit   := 0;
+  T5IP1_bit   := 1;
+  T5IP2_bit   := 0;
+  PR5         := 31250;
+  TMR5        := 0
 end;
 
 procedure MCU_EnableUARTA;
@@ -123,11 +121,12 @@ begin
 end;
 
 procedure MCU_Setup_Initialize;
+var
+  Temp: DWord;
 begin 
   AD1PCFG := 0xFFFF;         // Initialize AN pins as digital
   LATG1_bit := 0;
   TRISG1_bit := 0;             // RG1 output
-  EnableInterrupts;
 end;
 
 end.
