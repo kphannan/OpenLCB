@@ -45,7 +45,7 @@ var
   SizeOffset: PDWord;
 begin
   MessageSize := 0;
-  MessageIndex :=  @MessageIndex[0];
+  MessageIndex :=  @MessageIndex;
   FlagPtr := PWord( MessageIndex);
   SizeOffset := PDWord( PByte( @TcpMessage^[2]));
   Size := SizeOffset^ - 12;    // Remove the remaining header bytes in the size

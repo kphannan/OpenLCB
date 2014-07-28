@@ -1,0 +1,132 @@
+{*
+ * Project name:
+     CAN_1st (CAN Network demonstration with mikroE's CAN-1 module)
+ * Copyright:
+     (c) Mikroelektronika, 2012.
+ * Revision History:
+     20120810:
+       - initial release (FJ);
+ * Description:
+      This code demonstrates how to use CAN library functions and procedures.
+      It is used together with the CAN_2nd example (on second MCU), and it can
+      be used to test the connection of MCU to the CAN network.
+      This node initiates the communication with the 2nd node by sending some
+      data to its address. The 2nd node responds by sending back the data incre-
+      mented by 1. This (1st) node then does the same and sends incremented data
+      back to 2nd node, etc.
+      With minor adjustments, it should work with any other MCU that has a CAN module.
+ * Test configuration:
+     MCU:             P32MX795F512L
+                      http://ww1.microchip.com/downloads/en/DeviceDoc/61156F.pdf
+     Dev.Board:       EasyPIC Fusion v7 - ac:CAN
+                      http://www.mikroe.com/easypic-fusion/
+     Oscillator:      XT, 8.000MHz
+     Ext. Modules:    None.
+     SW:              mikroPascal PRO for PIC32
+                      http://www.mikroe.com/mikropascal/pic32/
+                      CANculator : ac:CANculator
+                      http://www.libstock.com/projects/view/360/canculator
+ * NOTES:
+     - Turn on PORTB LEDs at SW15 and turn on CAN RG0 and RG1 switches at SW12. (board specific)
+     - Use CANculator application in order to get proper values for baud rate.
+*}
+program CAN_node1;
+
+var Can_Init_Flags, Can_Send_Flags, Can_Rcv_Flags : word;  // can flags
+    Rx_Data_Len : word;                                    // received data length in bytes
+    RxTx_Data : array[8] of byte;
+    Msg_Rcvd : byte;                                       // reception flag
+const ID_1st : dword = 12111;
+const ID_2nd : dword = 3;                                  // node IDs
+var Rx_ID : dword;
+
+// reserve space for 2 buffers with 8 messages (each message is 16 bytes)
+// beggining of the buffer must be 32bit aligned
+var FIFObuffers : array[2*8*16] of byte; absolute 0xA0000000;
+
+// CAN Initializations constants
+// Baud rate is set according to following formula
+// Fbaud = Fosc/(2*N*BRP),  N = SYNC + PHSEG1 + PHSEG2 + PROPSEG = 16
+// In this case Fbaud = 125000
+// Place/Copy this part in declaration section
+const SJW = 1;
+const BRP = 2;
+const PHSEG1 = 5;
+const PHSEG2 = 2;
+const PROPSEG = 8;
+const CAN_CONFIG_FLAGS = _CAN_CONFIG_SAMPLE_ONCE and
+                                          _CAN_CONFIG_PHSEG2_PRG_ON and
+                                          _CAN_CONFIG_XTD_MSG       and
+                                          _CAN_CONFIG_MATCH_MSG_TYPE and
+                                          _CAN_CONFIG_LINE_FILTER_OFF;
+
+begin
+  AD1PCFG := 0;                                    // Configure AN pins as digital I/O
+  LATB := 0;
+  TRISB := 0;
+
+ {
+  Can_Init_Flags := 0;                             //
+  Can_Send_Flags := 0;                             // clear flags
+  Can_Rcv_Flags  := 0;                             //
+
+  Can_Send_Flags :=            // form value to be used
+                   _CAN_TX_XTD_FRAME and            // with CAN2Write
+                   _CAN_TX_NO_RTR_FRAME;
+
+  // Place/Copy this part in init section*/
+  CAN2Initialize(SJW, BRP, PHSEG1, PHSEG2, PROPSEG, CAN_CONFIG_FLAGS);
+
+  CAN2SetOperationMode(_CAN_MODE_CONFIG,0xFF);    // set CONFIGURATION mode
+
+  CAN2AssignBuffer(@FIFObuffers); //assign the buffers
+  //configure rx fifo
+  CAN2ConfigureFIFO(0, 8,_CAN_FIFO_RX and _CAN_FULL_MESSAGE); //RX buffer 8 messages deep
+  //configure tx fifo
+  CAN2ConfigureFIFO(1, 8,_CAN_FIFO_TX and _CAN_TX_PRIORITY_3 and _CAN_TX_NO_RTR_FRAME);    // TX buffer 8 messages deep
+
+  //set mask 0
+  CAN2SetMask(_CAN_MASK_0, -1, _CAN_CONFIG_MATCH_MSG_TYPE and _CAN_CONFIG_XTD_MSG);        // set all mask1 bits to ones
+  //set filter 1
+  CAN2SetFilter(_CAN_FILTER_31, ID_2nd, _CAN_MASK_0, _CAN_BUFFER_0, _CAN_CONFIG_XTD_MSG);  // set id of filter1 to 2nd node ID
+
+  CAN2SetOperationMode(_CAN_MODE_NORMAL,0xFF);    // set NORMAL mode
+ }
+ 
+  TRISF12_bit := 0;
+  TRISF13_bit := 0;
+  
+  MCU_Setup_Initialize;
+  MCU_EnableCAN;
+  MCU_EnableUARTA;
+  
+  UART2_Write_Text('Booted');
+  
+  while true do
+  begin
+    LATF12_bit := not LATF12_bit;
+    
+    if UART2_Data_Ready = 1 then
+    begin
+      case UART2_Read of
+        '1' : PIC32MX_CAN_PrintRegisters(2);
+        '2' : begin end;
+      end;
+    end;
+  end;
+
+  RxTx_Data[0] := 0xFE;
+  CAN2Write(ID_1st, RxTx_Data, 1, Can_Send_Flags);
+  
+  while(TRUE) do
+  begin
+    Msg_Rcvd := CAN2Read(Rx_ID, RxTx_Data, Rx_Data_Len, Can_Rcv_Flags);        // receive message
+    if ((Rx_ID = ID_2nd) and Msg_Rcvd) then                                    // if message received check id
+    begin
+      LATB := RxTx_Data[0];                                                    // id correct, output data at PORTB
+      RxTx_Data[0] := RxTx_Data[0] + 1;                                        // increment received data
+      delay_ms(10);      
+      CAN2Write(ID_1st, RxTx_Data, 1, Can_Send_Flags);                         // send incremented data back
+    end
+  end
+end.

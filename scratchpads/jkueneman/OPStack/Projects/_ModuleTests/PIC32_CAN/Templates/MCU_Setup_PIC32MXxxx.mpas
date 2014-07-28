@@ -1,0 +1,132 @@
+unit MCU_Setup_PIC32MXxxx;
+
+uses
+  M25P80_Driver,
+  PIC32MX_CAN_RawBuffers,
+  template_hardware,
+  PIC32MX_CAN;
+
+{$I Options.inc}
+
+const
+  CAN_CHANNEL = 2;
+
+const
+  CAN_SWJ        = 1;               // Set up for 125Khz Baud Rate with a 8Mhz Crystal at 140Mhz
+  CAN_BRP        = 20;               // Baud Rate Prescaler = 14 Quanta
+  CAN_PHASESEG_1 = 5;               //
+  CAN_PHASESEG_2 = 2;               //   PHASESEG_2 > SWJ
+  CAN_PROP_SEG   = 8;               //   PROP_SEG + PHASESEG_1 >= PHASESEG_2
+  
+  procedure MCU_Setup_Initialize;
+  procedure MCU_EnableCAN;
+  procedure MCU_EnableSerialFlash;
+  procedure MCU_EnableUARTA;
+  procedure MCU_Enable100msTimer;
+  
+var
+  LocalCAN_Channel: Byte;
+
+implementation
+
+type
+  PByte = ^Byte;
+
+procedure MCU_Enable100msTimer;
+begin                      
+  T5CON       := 0x8070;
+  T5IE_bit    := 1;
+  T5IF_bit    := 0;
+  T5IP0_bit   := 0;
+  T5IP1_bit   := 1;
+  T5IP2_bit   := 0;
+  PR5         := 31250;
+  TMR5        := 0
+end;
+
+procedure MCU_EnableUARTA;
+begin
+  UART2_Init(230400);                       // Initialize UART module a
+  Delay_ms(100);                            // Wait for UART module to stabilize
+end;
+
+procedure MCU_EnableCAN;
+var
+  i: Integer;
+  Ptr: ^DWord;
+begin
+  LocalCAN_Channel := CAN_CHANNEL;
+  Hardware_SetCAN_Channel(CAN_CHANNEL);
+  
+  Ptr := @C1RXF0;
+  for i := 0 to 31 do
+  begin
+    Ptr^ := 0;
+    Ptr := Ptr + 4
+  end;
+  Ptr := @C2RXF0;
+  for i := 0 to 31 do
+  begin
+    Ptr^ := 0;
+    Ptr := Ptr + 4
+  end;
+                                                   // Place the module in Configuration Mode
+  // Setup the CAN Baud Rate
+  PIC32MX_CAN_SetBaud(CAN_CHANNEL, CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz
+
+  PIC32MX_CAN_EnterConfigMode(CAN_CHANNEL);
+  
+  // Setup the CAN Receive Filters, AN1249 says this should be done in Config Mode
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 0, False);                           // Disable Receive Filter 0
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 1, False);                           // Disable Receive Filter 1
+  PIC32MX_CAN_SetMask(CAN_CHANNEL, 2, $08000000, True);                         // Create a mask to only look at Bit 27
+  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 0, $00000000, True);                       // Look for a 0 in bit 27  (CAN Layer Messsage) by using the mask
+  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 1, $08000000, True);                       // Look for a 1 in bit 27  (NMRABus Layer Message) by using the mask
+  PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(CAN_CHANNEL, 0, 2, FIFO_RX_FIFO_CAN);   // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
+  PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(CAN_CHANNEL, 1, 2, FIFO_RX_FIFO_OLCB);  // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 0, True);                            // Enable Filters 0
+  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 1, True);                            // Enable Filters 1
+  
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_TX_LO_PRIORITY, FIFO_TX_LO_PRIORITY_BUFFER_COUNT, True, 0);            // FIFO 0: Buffer size of 1, Is_TX, Transmit priority of 0
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_TX_HI_PRIORITY, FIFO_TX_HI_PRIORITY_BUFFER_COUNT, True, 1);                        // FIFO 1: size = 1 Buffer size of 1, Is_TX, Transmit priority of 1
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_RX_FIFO_CAN, FIFO_RX_CAN_BUFFER_COUNT, False, 0);   // FIFO 2:  size = 1 Buffer size, Is_RX,
+  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_RX_FIFO_OLCB, FIFO_RX_OLCB_BUFFER_COUNT, False, 0); // FIFO 3:  size = 1 Buffer size, Is_RX,
+  PIC32MX_CAN_SetFIFOBaseAddress(CAN_CHANNEL, @FIFOBufferArray[0].Byte0);
+  
+  // Set up the FIFO Level interrupts
+  PIC32MX_CAN_Rx_Interrupt_Overflow_Enable(LocalCAN_Channel, FIFO_RX_FIFO_CAN, True);
+  PIC32MX_CAN_Rx_Interrupt_NotEmpty_Enable(LocalCAN_Channel, FIFO_RX_FIFO_CAN, True);
+  PIC32MX_CAN_Rx_Interrupt_Overflow_Enable(LocalCAN_Channel, FIFO_RX_FIFO_OLCB, True);
+  PIC32MX_CAN_Rx_Interrupt_NotEmpty_Enable(LocalCAN_Channel, FIFO_RX_FIFO_OLCB, True);
+  PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_LO_PRIORITY, False);   // In the PIC32 these will fire forever when empty so need to dynamcially maniuplate them
+  PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_HI_PRIORITY, False);   // In the PIC32 these will fire forever when empty so need to dynamcially maniuplate them
+  // Setup the CAN Module Level interrupts
+  PIC32MX_CAN_EnableInterrupts(CAN_CHANNEL, False, False, False, False, True, False, False, True, True);  // Interrupt on Rx Overflow and Tx/Rx events
+  // Enable the CAN Module  (make it Busy)
+  PIC32MX_CAN_Enable(CAN_CHANNEL, True);
+  
+  PIC32MX_CAN_EnterNormalMode(CAN_CHANNEL);
+  
+  PIC32MX_CAN_GlobalInterrupt_EventPriority(2, 6, 3);
+  PIC32MX_CAN_GlobalInterrupt(2, True);
+end;
+
+procedure MCU_EnableSerialFlash;
+begin
+  SPI3_Init_Advanced(_SPI_MASTER, _SPI_8_BIT, 80, _SPI_SS_DISABLE, _SPI_DATA_SAMPLE_MIDDLE, _SPI_CLK_IDLE_HIGH, _SPI_ACTIVE_2_IDLE);
+  Delay_ms(100);
+  SerialFlash_init();
+  SerialFlash_WriteEnable();
+  Delay_ms(100);
+end;
+
+procedure MCU_Setup_Initialize;
+var
+  Temp: DWord;
+begin 
+  AD1PCFG := 0xFFFF;         // Initialize AN pins as digital
+  LATG1_bit := 0;
+  TRISG1_bit := 0;             // RG1 output
+end;
+
+end.
