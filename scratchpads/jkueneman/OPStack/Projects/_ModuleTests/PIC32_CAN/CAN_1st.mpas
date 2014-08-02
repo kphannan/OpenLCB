@@ -100,23 +100,35 @@ begin
   MCU_EnableCAN;
   MCU_EnableUARTA;
   
+  EnableInterrupts;
+  
   UART2_Write_Text('Booted');
   
+
   while true do
   begin
-    LATF12_bit := not LATF12_bit;
-    
     if UART2_Data_Ready = 1 then
     begin
       case UART2_Read of
-        '1' : PIC32MX_CAN_PrintRegisters(2);
-        '2' : begin end;
+        '1' : begin
+                RxTx_Data[0] := 0xFE;
+                CAN2Write(ID_1st, RxTx_Data, 1, Can_Send_Flags);
+              end;
+        '2' : begin
+                PIC32MX_CAN_Inc_Buffer_Index(2, 0);
+                PIC32MX_CAN_Tx_Interrupt_Empty_Enable(2, 0, True);
+             //   PIC32MX_CAN_PrintRegisters(2);
+                PIC32MX_CAN_RequestTransmit(2, 0);
+              end;
+        '2' : begin
+                PIC32MX_CAN_Tx_Interrupt_Empty_Enable(2, 1, True);
+                PIC32MX_CAN_Inc_Buffer_Index(2, 1);
+                PIC32MX_CAN_PrintRegisters(2);
+                PIC32MX_CAN_RequestTransmit(2, 1);
+              end;
       end;
-    end;
+    end
   end;
-
-  RxTx_Data[0] := 0xFE;
-  CAN2Write(ID_1st, RxTx_Data, 1, Can_Send_Flags);
   
   while(TRUE) do
   begin

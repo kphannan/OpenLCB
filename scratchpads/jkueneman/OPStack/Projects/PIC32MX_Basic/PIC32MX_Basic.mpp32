@@ -65,16 +65,13 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=9
+Count=6
 File0=PIC32MX_Basic.mpas
 File1=Templates\MCU_Setup_PIC32MXxxx.mpas
 File2=..\..\NMRAnet\opstackcore.mpas
 File3=..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
 File4=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
-File5=..\..\Common\helperfunctions.mpas
-File6=..\..\HardwareLayerImplementations\dsPIC33_CAN\template_hardware.mpas
-File7=..\..\NMRAnet\OPStackNode.mpas
-File8=..\..\NMRAnet\opstackcore.asm
+File5=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -85,15 +82,15 @@ File0=Templates\NodeID.inc
 File1=Templates\Options.inc
 [SEARCH_PATH]
 Count=9
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\
-Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\uses\
-Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\Templates\
-Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
+Path0=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\defs\
+Path1=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\uses\
+Path2=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
+Path3=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\Templates\
+Path4=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path5=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path6=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path8=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
 [HEADER_PATH]
 Count=0
 [HEADERS]

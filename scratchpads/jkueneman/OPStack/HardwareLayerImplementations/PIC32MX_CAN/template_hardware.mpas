@@ -11,7 +11,6 @@ uses
 
 
 procedure Hardware_Initialize;
-procedure Hardware_SetCAN_Channel(Channel: Byte);
 
 // The OPStack calls these functions to control and/or send messages through the hardware layer
 procedure Hardware_DisableInterrupts;
@@ -71,12 +70,6 @@ begin
   Hardware.InterruptDisableCount := 0;
   Hardware.OutgoingBufferOverrun := False;
   Hardware.OutgoingHighPriorityBufferOverrun := False;
-  LocalCAN_Channel := 1;
-end;
-
-procedure Hardware_SetCAN_Channel(Channel: Byte);
-begin
-  LocalCAN_Channel := Channel;
 end;
 
 // *****************************************************************************

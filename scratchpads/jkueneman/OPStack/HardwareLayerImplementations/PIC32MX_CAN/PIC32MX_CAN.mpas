@@ -23,7 +23,7 @@ unit PIC32MX_CAN;
 
 {$DEFINE PRINT_CAN_REGISTERS}
 {.$DEFINE TRACE_CAN}
-{$DEFINE TRACE_INTERRUPTS}
+{.$DEFINE TRACE_INTERRUPTS}
 {$DEFINE TRACE_INTERRUPTS_OVERFLOW}
 
 
@@ -426,18 +426,12 @@ var
 begin
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
-  
-  UART2_Write_Text('Tx''ing' + LF);
-   {
     PIC32MX_CAN_Transmitting := True;
     Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_TX_LO_PRIORITY));      // Get where the next buffer to transmit is
     PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);             // Convert it into a version that matches the registers
     PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_TX_LO_PRIORITY);                 // Message is loaded move to the next one
     PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_LO_PRIORITY, True);  // Fire the interrupt when the buffer is empty
     PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, FIFO_TX_LO_PRIORITY);                  // Set the Flag to start the transmission
-
-   UART2_Write_Text('Tx''ed');
-            }
   end
 end;
 
@@ -455,21 +449,16 @@ var
 begin
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
-  
-  UART2_Write_Text('Tx''ing' + LF);
-  
-  {
     PIC32MX_CAN_Transmitting := True;
     Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_TX_HI_PRIORITY));      // Get where the next buffer to transmit is
     PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);                 // Convert it into a version that matches the registers
     PIC32MX_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_TX_HI_PRIORITY);                 // Message is loaded move to the next one
     PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_HI_PRIORITY, True);  // Fire the interrupt when the buffer is empty
     PIC32MX_CAN_RequestTransmit(LocalCAN_Channel, FIFO_TX_HI_PRIORITY);                  // Set the Flag to start the transmission
-  }
   end
 end;
 
-procedure CAN_2(); iv IVT_CAN_2; ilevel 6; ics ICS_AUTO;
+procedure CAN_2(); iv IVT_CAN_2; ics ICS_SOFT;
 var
   IntCode: Word;
   Buffer: TNMRAnetCanBuffer;
@@ -697,21 +686,15 @@ end;
 //
 //  Result:
 //
-//  Description:  WARNING: Up until recently the silicon had a bug that made only
-//                Buffer 0 work correctly as a transmitter.  What would happen is
-//                The SID/EID of Buffer 0 would be used as the CAN ID for Buffers 1-7
-//                Look at the parts errata sheet to see if this bug still exists
-//                in the device being used. This appeared to be only a problem
-//                if using the Peripheral Addressing Mode.  It was claimed to not
-//                be a problem in Register Indirect modes...
+//  Description:
 // *****************************************************************************
 procedure PIC32MX_CAN_RequestTransmit(Channel, FIFONumber: Byte);
 var
   FIFOControlPtr: ^DWord;
 begin
   case Channel of
-    1 : FIFOControlPtr := @C1FIFOCON0SET;
-    2 : FIFOControlPtr := @C2FIFOCON0SET
+    1 : FIFOControlPtr := @C1FIFOCON0;
+    2 : FIFOControlPtr := @C2FIFOCON0
   else
     Exit;
   end;
