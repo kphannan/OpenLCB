@@ -10,6 +10,10 @@ uses
 
 const
   CAN_CHANNEL = 2;
+  
+// Set ADC threshold
+const
+  ADC_Threshold = 900;
 
 const
   CAN_SWJ        = 1;               // Set up for 125Khz Baud Rate with a 8Mhz Crystal at 140Mhz
@@ -23,25 +27,163 @@ const
   procedure MCU_EnableSerialFlash;
   procedure MCU_EnableUARTA;
   procedure MCU_Enable100msTimer;
+  procedure MCU_EnableEthernet;
+  procedure MCU_Enable1sTimer;
+  procedure Start_TP(); // static
   
 var
   LocalCAN_Channel: Byte;
+  
+var
+  myMacAddr   : array[6] of byte; // my MAC address
+  myIpAddr    : array[4] of byte; // my IP address
+  gwIpAddr    : array[4] of byte; // gateway (router) IP address
+  ipMask      : array[4] of byte; // network mask (for example : 255.255.255.0)
+  dnsIpAddr   : array[4] of byte; // DNS server IP address
+
+var
+  presTmr     : word;
 
 implementation
 
 type
   PByte = ^Byte;
+  
+procedure Calibrate();
+begin
+  TFT_Set_Pen(CL_WHITE, 3);
+  TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+  TFT_Write_Text('Touch selected corners for calibration', 50, 100);
+  TFT_Line(315, 1, 319, 1);
+  TFT_Line(310, 10, 319, 1);
+  TFT_Line(319, 5, 319, 1);
+  TFT_Write_Text('first here', 250, 20);
+
+  TP_TFT_Calibrate_Min();                      // Calibration of bottom left corner
+  Delay_ms(500);
+
+  TFT_Set_Pen(CL_BLACK, 3);
+  TFT_Set_Font(@TFT_defaultFont, CL_BLACK, FO_HORIZONTAL);
+  TFT_Line(315, 1, 319, 1);
+  TFT_Line(310, 10, 319, 1);
+  TFT_Line(319, 5, 319, 1);
+  TFT_Write_Text('first here', 250, 20);
+
+  TFT_Set_Pen(CL_WHITE, 3);
+  TFT_Set_Font(@TFT_defaultFont, CL_WHITE, FO_HORIZONTAL);
+  TFT_Line(0, 239, 0, 235);
+  TFT_Line(0, 239, 5, 239);
+  TFT_Line(0, 239, 10, 229);
+  TFT_Write_Text('now here ', 15, 200);
+
+  TP_TFT_Calibrate_Max();                      // Calibration of bottom left corner
+  Delay_ms(500);
+end;
+
+procedure Start_TP(); // static
+begin
+  AD1PCFG := 0x3FF3;
+  ADC1_Init();
+
+  TFT_Set_Default_Mode();
+  TFT_Init_ILI9341_8bit(320, 240);          // Initialize TFT display
+
+  TP_TFT_Init(320, 240, 3, 14);       // Initialize touch panel
+  TP_TFT_Set_Default_Mode();
+  TP_TFT_Set_ADC_Threshold(ADC_THRESHOLD);     // Set touch panel ADC threshold
+
+  Delay_ms(1000);
+  TFT_Fill_Screen(0);
+  Calibrate();
+  TFT_Fill_Screen(0);
+end;
+  
+procedure InitPHYPins();
+begin
+  TRISD11_bit := 0;    // ETH_ALT_MDC_BIT
+  TRISD8_bit := 1;     // ETH_ALT_MDIO_BIT
+
+  TRISA15_bit := 0;    // ETH_ALT_TXEN_BIT
+  TRISD14_bit := 0;    // ETH_ALT_TXD0_BIT
+  TRISD15_bit := 0;    // ETH_ALT_TXD1_BIT
+
+  TRISG9_bit := 1;     // ETH_ALT_RXCLK_BIT
+  TRISG8_bit := 1;     // ETH_ALT_RXDV_BIT
+  TRISE8_bit := 1;     // ETH_ALT_RXD0_BIT
+  TRISE9_bit := 1;     // ETH_ALT_RXD1_BIT
+  TRISG15_bit := 1;    // ETH_ALT_RXERR_BIT
+end;
+  
+procedure MCU_EnableEthernet;
+begin
+    // set mac address
+  myMacAddr[0] := 0x00;
+  myMacAddr[1] := 0x14;
+  myMacAddr[2] := 0xA5;
+  myMacAddr[3] := 0x76;
+  myMacAddr[4] := 0x19;
+  myMacAddr[5] := 0x3F;
+
+  // set IP address
+  myIpAddr[0] := 192;
+  myIpAddr[1] := 168;
+  myIpAddr[2] := 0;
+  myIpAddr[3] := 63;
+
+  // set gateway address
+  gwIpAddr[0]  := 192;
+  gwIpAddr[1]  := 168;
+  gwIpAddr[2]  := 0;
+  gwIpAddr[3]  := 1;
+
+  // set dns address
+  dnsIpAddr[0] := 192;
+  dnsIpAddr[1] := 168;
+  dnsIpAddr[2] := 0;
+  dnsIpAddr[3] := 1;
+
+  // set subnet mask
+  ipMask[0]    := 255;
+  ipMask[1]    := 255;
+  ipMask[2]    := 255;
+  ipMask[3]    := 0;
+
+  Net_Ethernet_Intern_stackInitTCP();
+  InitPHYPins();
+  Net_Ethernet_Intern_Set_Default_PHY();    //set default PHY module SMSC LAN8720A
+  Net_Ethernet_Intern_Init(@myMacAddr, @myIpAddr, Net_Eth_Int_AUTO_NEGOTIATION and Net_Eth_Int_DEFAULT_MAC);              // init ethernet module
+  while Net_Ethernet_Intern_AutoNeg_Complete = 0 do;
+  Net_Ethernet_Intern_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);  // dhcp will not be used here, so use preconfigured addresses
+end;
 
 procedure MCU_Enable100msTimer;
 begin                      
-  T5CON       := 0x8070;
+  T5CON       := 0x0070;
   T5IE_bit    := 1;
   T5IF_bit    := 0;
   T5IP0_bit   := 0;
   T5IP1_bit   := 1;
   T5IP2_bit   := 0;
   PR5         := 31250;
-  TMR5        := 0
+  TMR5        := 0;
+  ON__T5CON_bit := 1;
+end;
+
+procedure MCU_Enable1sTimer;
+begin
+  presTmr := 0;
+
+  TMR1 := 0;                 // reset timer value to zero
+  PR1 := 55000;               // Load period register
+
+  T1IP0_bit := 0;            // set interrupt
+  T1IP1_bit := 1;            // priority
+  T1IP2_bit := 1;            // to 6
+
+  TCKPS0_bit := 1;           // Set Timer Input Clock
+  TCKPS1_bit := 1;           // Prescale value to 1:256
+  T1IE_bit   := 1;           // Enable interrupt
+  ON__T1CON_bit := 1;        // Enable Timer1
 end;
 
 procedure MCU_EnableUARTA;
@@ -71,26 +213,26 @@ begin
   end;
                                                    // Place the module in Configuration Mode
   // Setup the CAN Baud Rate
-  PIC32MX_CAN_SetBaud(CAN_CHANNEL, CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz
+  PIC32MX_CAN_SetBaud(LocalCAN_Channel, CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz
 
-  PIC32MX_CAN_EnterConfigMode(CAN_CHANNEL);
+  PIC32MX_CAN_EnterConfigMode(LocalCAN_Channel);
   
   // Setup the CAN Receive Filters, AN1249 says this should be done in Config Mode
-  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 0, False);                           // Disable Receive Filter 0
-  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 1, False);                           // Disable Receive Filter 1
-  PIC32MX_CAN_SetMask(CAN_CHANNEL, 2, $08000000, True);                         // Create a mask to only look at Bit 27
-  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 0, $00000000, True);                       // Look for a 0 in bit 27  (CAN Layer Messsage) by using the mask
-  PIC32MX_CAN_SetFilter(CAN_CHANNEL, 1, $08000000, True);                       // Look for a 1 in bit 27  (NMRABus Layer Message) by using the mask
-  PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(CAN_CHANNEL, 0, 2, FIFO_RX_FIFO_CAN);   // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
-  PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(CAN_CHANNEL, 1, 2, FIFO_RX_FIFO_OLCB);  // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
-  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 0, True);                            // Enable Filters 0
-  PIC32MX_CAN_EnableRXFilters(CAN_CHANNEL, 1, True);                            // Enable Filters 1
+  PIC32MX_CAN_EnableRXFilters(LocalCAN_Channel, 0, False);                           // Disable Receive Filter 0
+  PIC32MX_CAN_EnableRXFilters(LocalCAN_Channel, 1, False);                           // Disable Receive Filter 1
+  PIC32MX_CAN_SetMask(LocalCAN_Channel, 2, $08000000, True);                         // Create a mask to only look at Bit 27
+  PIC32MX_CAN_SetFilter(LocalCAN_Channel, 0, $00000000, True);                       // Look for a 0 in bit 27  (CAN Layer Messsage) by using the mask
+  PIC32MX_CAN_SetFilter(LocalCAN_Channel, 1, $08000000, True);                       // Look for a 1 in bit 27  (NMRABus Layer Message) by using the mask
+  PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(LocalCAN_Channel, 0, 2, FIFO_RX_FIFO_CAN);   // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
+  PIC32MX_CAN_AssociateFilterAndMaskAndFIFO(LocalCAN_Channel, 1, 2, FIFO_RX_FIFO_OLCB);  // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
+  PIC32MX_CAN_EnableRXFilters(LocalCAN_Channel, 0, True);                            // Enable Filters 0
+  PIC32MX_CAN_EnableRXFilters(LocalCAN_Channel, 1, True);                            // Enable Filters 1
   
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_TX_LO_PRIORITY, FIFO_TX_LO_PRIORITY_BUFFER_COUNT, True, 0);            // FIFO 0: Buffer size of 1, Is_TX, Transmit priority of 0
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_TX_HI_PRIORITY, FIFO_TX_HI_PRIORITY_BUFFER_COUNT, True, 1);                        // FIFO 1: size = 1 Buffer size of 1, Is_TX, Transmit priority of 1
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_RX_FIFO_CAN, FIFO_RX_CAN_BUFFER_COUNT, False, 0);   // FIFO 2:  size = 1 Buffer size, Is_RX,
-  PIC32MX_CAN_SetFIFO(CAN_CHANNEL, FIFO_RX_FIFO_OLCB, FIFO_RX_OLCB_BUFFER_COUNT, False, 0); // FIFO 3:  size = 1 Buffer size, Is_RX,
-  PIC32MX_CAN_SetFIFOBaseAddress(CAN_CHANNEL, @FIFOBufferArray[0].Byte0);
+  PIC32MX_CAN_SetFIFO(LocalCAN_Channel, FIFO_TX_LO_PRIORITY, FIFO_TX_LO_PRIORITY_BUFFER_COUNT, True, 0);            // FIFO 0: Buffer size of 1, Is_TX, Transmit priority of 0
+  PIC32MX_CAN_SetFIFO(LocalCAN_Channel, FIFO_TX_HI_PRIORITY, FIFO_TX_HI_PRIORITY_BUFFER_COUNT, True, 1);                        // FIFO 1: size = 1 Buffer size of 1, Is_TX, Transmit priority of 1
+  PIC32MX_CAN_SetFIFO(LocalCAN_Channel, FIFO_RX_FIFO_CAN, FIFO_RX_CAN_BUFFER_COUNT, False, 0);   // FIFO 2:  size = 1 Buffer size, Is_RX,
+  PIC32MX_CAN_SetFIFO(LocalCAN_Channel, FIFO_RX_FIFO_OLCB, FIFO_RX_OLCB_BUFFER_COUNT, False, 0); // FIFO 3:  size = 1 Buffer size, Is_RX,
+  PIC32MX_CAN_SetFIFOBaseAddress(LocalCAN_Channel, @FIFOBufferArray[0].Byte0);
   
   // Set up the FIFO Level interrupts
   PIC32MX_CAN_Rx_Interrupt_Overflow_Enable(LocalCAN_Channel, FIFO_RX_FIFO_CAN, True);
@@ -100,14 +242,14 @@ begin
   PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_LO_PRIORITY, False);   // In the PIC32 these will fire forever when empty so need to dynamcially maniuplate them
   PIC32MX_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_HI_PRIORITY, False);   // In the PIC32 these will fire forever when empty so need to dynamcially maniuplate them
   // Setup the CAN Module Level interrupts
-  PIC32MX_CAN_EnableInterrupts(CAN_CHANNEL, False, False, False, False, True, False, False, True, True);  // Interrupt on Rx Overflow and Tx/Rx events
+  PIC32MX_CAN_EnableInterrupts(LocalCAN_Channel, False, False, False, False, True, False, False, True, True);  // Interrupt on Rx Overflow and Tx/Rx events
   // Enable the CAN Module  (make it Busy)
-  PIC32MX_CAN_Enable(CAN_CHANNEL, True);
+  PIC32MX_CAN_Enable(LocalCAN_Channel, True);
   
-  PIC32MX_CAN_EnterNormalMode(CAN_CHANNEL);
+  PIC32MX_CAN_EnterNormalMode(LocalCAN_Channel);
   
-  PIC32MX_CAN_GlobalInterrupt_EventPriority(2, 6, 3);
-  PIC32MX_CAN_GlobalInterrupt(2, True);
+  PIC32MX_CAN_GlobalInterrupt_EventPriority(LocalCAN_Channel, 6, 3);
+  PIC32MX_CAN_GlobalInterrupt(LocalCAN_Channel, True);
 end;
 
 procedure MCU_EnableSerialFlash;
@@ -126,6 +268,8 @@ begin
   AD1PCFG := 0xFFFF;         // Initialize AN pins as digital
   LATG1_bit := 0;
   TRISG1_bit := 0;             // RG1 output
+  PREFEN0_bit := 0;
+  PREFEN1_bit := 0;            // Disable Prefetch for errata bug with Interrupts and access constant data in Flash Memory....
 end;
 
 end.

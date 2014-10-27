@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=PIC32MX_OLCB_Throttle_main.mpas
+Value=Templates\MCU_Setup_PIC32MXxxx.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -14,7 +14,7 @@ Value=
 [USE_HEAP]
 Value=0
 [HEAP_SIZE]
-Value=2000
+Value=0
 [FILES]
 Count=48
 File0=PIC32MX_OLCB_Throttle_main.mpas
@@ -89,16 +89,25 @@ Count=2
 File0=Templates\NodeID.inc
 File1=Templates\Options.inc
 [SEARCH_PATH]
-Count=9
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\
-Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\uses\
-Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_OLCB_Throttle\PIC32MX_OLCB_Throttle_Code\mikroPascal PRO for PIC32\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_OLCB_Throttle\PIC32MX_OLCB_Throttle_Code\mikroPascal PRO for PIC32\Templates\
-Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path6=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
-Path7=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path8=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Count=18
+Path0=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\defs\
+Path1=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\uses\
+Path2=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_OLCB_Throttle\PIC32MX_OLCB_Throttle_Code\mikroPascal PRO for PIC32\
+Path3=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\
+Path4=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\uses\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_OLCB_Throttle\PIC32MX_OLCB_Throttle_Code\mikroPascal PRO for PIC32\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_OLCB_Throttle\PIC32MX_OLCB_Throttle_Code\mikroPascal PRO for PIC32\Templates\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path9=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
+Path10=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path11=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path12=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_OLCB_Throttle\PIC32MX_OLCB_Throttle_Code\mikroPascal PRO for PIC32\Templates\
+Path13=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path14=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path15=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
+Path16=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path17=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Common\
 [HEADER_PATH]
 Count=0
 [HEADERS]

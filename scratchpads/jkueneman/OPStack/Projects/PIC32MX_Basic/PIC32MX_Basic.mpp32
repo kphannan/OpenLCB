@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=..\..\NMRAnet\opstackcore.mpas
+Value=PIC32MX_Basic.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -14,7 +14,7 @@ Value=
 [USE_HEAP]
 Value=0
 [HEAP_SIZE]
-Value=2000
+Value=0
 [FILES]
 Count=42
 File0=PIC32MX_Basic.mpas
@@ -65,13 +65,14 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=6
+Count=7
 File0=PIC32MX_Basic.mpas
-File1=Templates\MCU_Setup_PIC32MXxxx.mpas
-File2=..\..\NMRAnet\opstackcore.mpas
-File3=..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
-File4=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
-File5=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
+File1=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
+File2=..\..\NMRAnet\gridconnect.mpas
+File3=..\..\NMRAnet\opstackcore.mpas
+File4=Templates\template_userstatemachine.mpas
+File5=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\__Lib_NetEthInternal_Defs.mpas
+File6=..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -81,7 +82,7 @@ Count=2
 File0=Templates\NodeID.inc
 File1=Templates\Options.inc
 [SEARCH_PATH]
-Count=9
+Count=10
 Path0=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\defs\
 Path1=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\uses\
 Path2=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
@@ -91,6 +92,7 @@ Path5=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPSta
 Path6=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Common\
 Path7=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
 Path8=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
+Path9=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -98,7 +100,7 @@ Count=0
 [PLDS]
 Count=0
 [Useses]
-Count=8
+Count=13
 File0=TFT_Fonts
 File1=ADC
 File2=String
@@ -107,6 +109,11 @@ File4=C_Type
 File5=C_Stdlib
 File6=SPI
 File7=UART
+File8=Net_Ethernet_Internal
+File9=Net_Ethernet_Internal_Defs
+File10=TFT
+File11=TFT_TouchPanel
+File12=TFT_Defs
 [INTERRUPT_DEFS]
 EBASE=9FC01000
 VECTOR_SPACEING=32

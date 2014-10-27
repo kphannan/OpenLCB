@@ -44,12 +44,14 @@ function HexToWord(var Hex: string[4]): Word;
 function IPAddressToStr(var IP: array[0..3] of byte): TIPAddressStr;
 function StrToIPAddress(var IPStr: string[MAX_COMMANDLINE_LEN]; var IP: array[0..3] of byte; var Port: Word): Boolean;
 procedure TrimValue(ValueStr: PStrArray);
-{$ENDIF}
+
 // PIC32 Helpers
 function Map_KSEG_To_Physical(KSEG_Address: ^Byte): ^Byte;
 function Map_Physical_To_KSEG1(Physical_Address: ^Byte): ^Byte;
 function Map_Physical_To_KSEG0(Physical_Address: ^Byte): ^Byte;
 function Map_KSEG0_To_KSEG1(KSEG0_Address: ^Byte): ^Byte;
+{$ENDIF}
+
 //procedure ErrorToStr(Errorcode: Byte; var CodeStr: string[16]);
 
 implementation
@@ -321,7 +323,7 @@ begin
   end;
 end;
 
-{$ENDIF}
+
 
 function Map_KSEG_To_Physical(KSEG_Address: ^Byte): ^Byte;
 begin
@@ -342,4 +344,6 @@ function Map_KSEG0_To_KSEG1(KSEG0_Address: ^Byte): ^Byte;
 begin
   Result := PDWord( DWord( KSEG0_Address) or $20000000);
 end;
-end.
+{$ENDIF}
+
+end.

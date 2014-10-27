@@ -3,7 +3,7 @@
   <ProjectSession>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="83">
+    <Units Count="84">
       <Unit0>
         <Filename Value="OlcbTrainMaster.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -22,8 +22,8 @@
         <UnitName Value="main"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="549"/>
-        <CursorPos X="66" Y="562"/>
+        <TopLine Value="373"/>
+        <CursorPos X="1" Y="387"/>
         <UsageCount Value="431"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -342,10 +342,13 @@
       <Unit36>
         <Filename Value="../../../Library/ethernet_hub.pas"/>
         <UnitName Value="ethernet_hub"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="19"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="550"/>
-        <CursorPos X="38" Y="559"/>
+        <TopLine Value="187"/>
+        <CursorPos X="1" Y="200"/>
         <UsageCount Value="111"/>
+        <Loaded Value="True"/>
       </Unit36>
       <Unit37>
         <Filename Value="../../HardwareLayerImplementations/Lazarus_Ethernet/template_hardware.pas"/>
@@ -524,7 +527,6 @@
       <Unit57>
         <Filename Value="../../NMRAnet/opstackcore_configmem.pas"/>
         <UnitName Value="opstackcore_configmem"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="17"/>
         <WindowIndex Value="0"/>
         <TopLine Value="248"/>
@@ -714,10 +716,12 @@
       <Unit80>
         <Filename Value="../../../Library/olcb_app_common_settings.pas"/>
         <UnitName Value="olcb_app_common_settings"/>
+        <EditorIndex Value="20"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="40" Y="14"/>
+        <TopLine Value="162"/>
+        <CursorPos X="32" Y="175"/>
         <UsageCount Value="34"/>
+        <Loaded Value="True"/>
       </Unit80>
       <Unit81>
         <Filename Value="../../Projects/PIC32MX_OLCB_Throttle/PIC32MX_OLCB_Throttle_Code/mikroPascal PRO for PIC32/Templates/Options.inc"/>
@@ -733,130 +737,140 @@
         <CursorPos X="3" Y="10"/>
         <UsageCount Value="10"/>
       </Unit82>
+      <Unit83>
+        <Filename Value="../../Common/helperfunctions.pas"/>
+        <UnitName Value="HelperFunctions"/>
+        <EditorIndex Value="18"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="326"/>
+        <CursorPos X="1" Y="348"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit83>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="../../NMRAnet/CAN_Statemachines/opstackcanstatemachinessnip.pas"/>
-        <Caret Line="45" Column="32" TopLine="30"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="578" Column="1" TopLine="564"/>
       </Position1>
       <Position2>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="441" Column="59" TopLine="417"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="579" Column="1" TopLine="564"/>
       </Position2>
       <Position3>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="263" Column="50" TopLine="249"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="580" Column="1" TopLine="578"/>
       </Position3>
       <Position4>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="273" Column="50" TopLine="249"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="581" Column="1" TopLine="576"/>
       </Position4>
       <Position5>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="287" Column="50" TopLine="273"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="582" Column="1" TopLine="576"/>
       </Position5>
       <Position6>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="294" Column="50" TopLine="273"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="592" Column="1" TopLine="576"/>
       </Position6>
       <Position7>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="302" Column="50" TopLine="288"/>
+        <Filename Value="Forms/main.pas"/>
+        <Caret Line="387" Column="1" TopLine="373"/>
       </Position7>
       <Position8>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="309" Column="50" TopLine="288"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="200" Column="1" TopLine="186"/>
       </Position8>
       <Position9>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="324" Column="93" TopLine="310"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="201" Column="1" TopLine="186"/>
       </Position9>
       <Position10>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="352" Column="41" TopLine="338"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="204" Column="1" TopLine="186"/>
       </Position10>
       <Position11>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="359" Column="41" TopLine="338"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="205" Column="1" TopLine="186"/>
       </Position11>
       <Position12>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="367" Column="41" TopLine="353"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="207" Column="1" TopLine="186"/>
       </Position12>
       <Position13>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="374" Column="41" TopLine="353"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="208" Column="1" TopLine="186"/>
       </Position13>
       <Position14>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="384" Column="41" TopLine="370"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="209" Column="1" TopLine="187"/>
       </Position14>
       <Position15>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="389" Column="84" TopLine="370"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="210" Column="1" TopLine="188"/>
       </Position15>
       <Position16>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="409" Column="46" TopLine="395"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="211" Column="1" TopLine="189"/>
       </Position16>
       <Position17>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="417" Column="46" TopLine="395"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="212" Column="1" TopLine="190"/>
       </Position17>
       <Position18>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="429" Column="46" TopLine="415"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="213" Column="1" TopLine="191"/>
       </Position18>
       <Position19>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="443" Column="89" TopLine="419"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="214" Column="1" TopLine="192"/>
       </Position19>
       <Position20>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="520" Column="97" TopLine="506"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="216" Column="1" TopLine="195"/>
       </Position20>
       <Position21>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="553" Column="97" TopLine="539"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="219" Column="1" TopLine="198"/>
       </Position21>
       <Position22>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="585" Column="53" TopLine="571"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="230" Column="1" TopLine="217"/>
       </Position22>
       <Position23>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="591" Column="95" TopLine="571"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="232" Column="1" TopLine="217"/>
       </Position23>
       <Position24>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="616" Column="94" TopLine="602"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="233" Column="1" TopLine="217"/>
       </Position24>
       <Position25>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="642" Column="41" TopLine="628"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="234" Column="1" TopLine="217"/>
       </Position25>
       <Position26>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="652" Column="85" TopLine="628"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="236" Column="1" TopLine="217"/>
       </Position26>
       <Position27>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="692" Column="86" TopLine="678"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="238" Column="1" TopLine="217"/>
       </Position27>
       <Position28>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="1057" Column="24" TopLine="1042"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="239" Column="1" TopLine="218"/>
       </Position28>
       <Position29>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="1088" Column="24" TopLine="1074"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="240" Column="1" TopLine="219"/>
       </Position29>
       <Position30>
-        <Filename Value="Templates/template_userstatemachine.pas"/>
-        <Caret Line="1142" Column="25" TopLine="1128"/>
+        <Filename Value="../../../Library/ethernet_hub.pas"/>
+        <Caret Line="554" Column="1" TopLine="540"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

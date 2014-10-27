@@ -14,7 +14,7 @@ Value=2000
 [EEPROM_DEFINITION]
 Value=
 [ACTIVE_TAB]
-Value=..\..\NMRAnet\opstackcore.mpas
+Value=..\..\ConfigurationLayerImplementations\_25AAxxxx_SPI\_25AAxxxx.mpas
 [FILES]
 Count=47
 File0=TrainDatabase.mpas

@@ -1,6 +1,7 @@
 program PIC32MX_Basic;
 
 uses
+  template_userstatemachine,
   MCU_Setup_PIC32MXxxx,
   opstackcore;
 
@@ -10,10 +11,124 @@ var
   CS_Serial_Flash_bit: sbit at LATD14_bit;
   CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
 
-procedure OPStack_100ms_Timer(); iv IVT_TIMER_5; ics ICS_SOFT;
+// TFT module connections
+var TFT_DataPort : char  at LATE;
+    TFT_RST : sbit  at LATD7_bit;
+    TFT_BLED : sbit at LATD2_bit;
+    TFT_RS : sbit  at LATD9_bit;
+    TFT_CS : sbit  at LATD10_bit;
+    TFT_RD : sbit  at LATD5_bit;
+    TFT_WR : sbit  at LATD4_bit;
+    TFT_DataPort_Direction : char  at TRISE;
+    TFT_RST_Direction : sbit  at TRISD7_bit;
+    TFT_BLED_Direction : sbit at TRISD2_bit;
+    TFT_RS_Direction : sbit  at TRISD9_bit;
+    TFT_CS_Direction : sbit  at TRISD10_bit;
+    TFT_RD_Direction : sbit  at TRISD5_bit;
+    TFT_WR_Direction : sbit  at TRISD4_bit;
+// End TFT module connections
+
+// Touch Panel module connections
+var DriveX_Left : sbit at LATB15_bit;
+var DriveX_Right : sbit at LATB3_bit;
+var DriveY_Up : sbit at LATB14_bit;
+var DriveY_Down : sbit at LATB2_bit;
+var DriveX_Left_Direction : sbit at TRISB15_bit;
+var DriveX_Right_Direction : sbit at TRISB3_bit;
+var DriveY_Up_Direction : sbit at TRISB14_bit;
+var DriveY_Down_Direction : sbit at TRISB2_bit;
+// End Touch Panel module connections
+
+function Trim(var str: string[256]): string[256];
+var
+  i, iResult: Integer;
+begin
+  i := 0;
+  iResult := 0;
+  Result[0] := #0;
+  while (str[i] <> #0) and (i < 256) do
+  begin
+    if (str[i] > #32) and (str[i] < #127) then // Greater than " " and less than "~"
+    begin
+      Result[iResult] := str[i];
+      Inc(iResult);
+    end;
+    Inc(i);
+  end;
+  Result[iResult] := #0;  // Add null
+end;
+
+function IP_ToStr(var IP: array[4] of byte): string[15];
+var
+  TempStr: string[3];
+  i: Integer;
+begin
+  ByteToStr(IP[0], TempStr);
+  Result := Trim(TempStr) + '.';
+  ByteToStr(IP[1], TempStr);
+  Result := Result + Trim(TempStr) + '.';
+  ByteToStr(IP[2], TempStr);
+  Result := Result + Trim(TempStr) + '.';
+  ByteToStr(IP[3], TempStr);
+  Result := Result + Trim(TempStr)
+end;
+
+procedure OPStack_100ms_Timer(); iv IVT_TIMER_5;
 begin
   T5IF_bit := 0;
   OPStackCore_Timer;
+end;
+
+procedure Timer1_interrupt(); iv IVT_TIMER_1;
+begin
+  Inc(presTmr);                                   // increment prescaler
+  if(presTmr = 5) then                            // timer1 overflows 5 times per second
+  begin
+    Inc(Net_Ethernet_Intern_UserTimerSec);        // increment ethernet library counter
+    presTmr := 0 ;                                // reset prescaler
+  end;
+  T1IF_bit := 0;                                 // clear timer0 overflow flag
+end;
+
+procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
+var
+  i: Integer;
+begin
+  UART2_Write_Text('UserTCP' + #13+#10);
+
+  UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');
+  WordToStr(socket^.destPort, s1);
+  UART2_Write_Text(s1 + #13+#10);
+
+  UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':');
+  WordToStr(socket^.remotePort, s1);
+  UART2_Write_Text(s1 + #13+#10);
+
+  s1 := '';
+  for i := 0 to socket^.dataLength - 1 do
+    s1 := s1 + Char( Net_Ethernet_Intern_getByte);
+  UART2_Write_Text(s1 + #13+#10);
+  
+  if GlobalGridConnectStr[0] <> #0 then
+  begin
+    UART2_Write_Text('Putting on the Bytes' + LF);
+    for i := 0 to strlen(GlobalGridConnectStr) - 1 do
+     Net_Ethernet_Intern_putByte( ord(GlobalGridConnectStr[i]));
+    GlobalGridConnectStr[0] := #0;
+  end;
+
+  // Echo
+//  for i := 0 to Length(s1) - 1 do
+//    Net_Ethernet_Intern_putByteTCP(s1[i], socket);
+
+  if(socket^.destPort <> 12021) then  // I listen only to web request on port 80
+   Exit;
+end;
+
+function Net_Ethernet_Intern_UserUDP(udpDsc : ^UDP_Intern_Dsc) : word;
+begin
+  //UART2_Write_Text('UserUDP' + #13+#10);
+  result := 0;
 end;
   
 var
@@ -25,32 +140,41 @@ begin
   TRISF13_bit := 0;
   LATF13_bit := 0;
 
+  Start_TP;
   OPStackCore_Initialize;
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
   MCU_EnableUARTA;
   MCU_Enable100msTimer;
+  MCU_Enable1sTimer;
   MCU_EnableCAN;
-
   EnableInterrupts;
+  MCU_EnableEthernet;
+  
+  TFT_Fill_Screen($0000);
+  TFT_Write_Text('Logged in', 4, 10);
   
   UART2_Write_Text('Configured' + LF);
   while True do
   begin
-
     Node := OPStackCore_Process;
+    Net_Ethernet_Intern_doPacket();
 
     LATF13_bit := not LATF13_bit;
 
     if UART2_Data_Ready = 1 then
     begin
       case UART2_Read of
-        '1' : ON__T5CON_bit := not ON__T5CON_bit;
+        '1' : begin
+                ON__T5CON_bit := not ON__T5CON_bit;
+              end;
         '2' : begin
+                ON__T5CON_bit := 1;
                 OPStackCore_Initialize;
                 OPStackCore_Enable(True);
               end;
         '3' : begin
+                ON__T5CON_bit := 0;
                 OPStackCore_Enable(False);
               end;
         '4' : begin

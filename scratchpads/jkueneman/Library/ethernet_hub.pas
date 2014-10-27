@@ -235,7 +235,7 @@ begin
 
         if Socket.LastError = 0 then
         begin
-          Socket.Connect(GlobalSettings.Ethernet.LocalIP, IntToStr(GlobalSettings.Ethernet.ListenPort));
+          Socket.Connect(GlobalSettings.Ethernet.RemoteIP, IntToStr(GlobalSettings.Ethernet.ListenPort));
           if Socket.LastError = 0 then
             ConnectionState := csConnected;
         end

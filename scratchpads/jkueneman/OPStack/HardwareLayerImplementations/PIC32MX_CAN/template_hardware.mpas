@@ -38,6 +38,7 @@ function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var OPStackMessa
 procedure OPStackCANStatemachine_ProcessMessages; external;
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
+procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage); external;
 {$ENDIF}
 
 var
@@ -188,6 +189,7 @@ begin
             PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
             if FreeMessage then
               OPStackBuffers_DeAllocateMessage(AMessage);
+            AppCallBack_OutgoingMessageHook(AMessage);
           end;
       {$IFDEF SUPPORT_STREAMS}
       MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage);     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames

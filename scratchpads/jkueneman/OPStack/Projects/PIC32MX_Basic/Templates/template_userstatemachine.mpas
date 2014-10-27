@@ -9,6 +9,8 @@ interface
 {$I Options.inc}
 
 uses
+  gridconnect,
+  __Lib_NetEthInternal_Defs,
   Float16,
   opstacktypes,
   nmranetdefines,
@@ -53,6 +55,13 @@ procedure AppCallBack_ConfigMemReadReply(Node: PNMRAnetNode; AMessage: POPStackM
 procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
+
+procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage);
+
+procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
+
+var
+  GlobalGridConnectStr: TGridConnectString;
 
 
 implementation
@@ -109,6 +118,7 @@ var
   i: Integer;
 begin
   // Initialize the example data!
+  GlobalGridConnectStr := '';
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
   begin
     UserDataArray[i].UserData1 := 0;
@@ -498,6 +508,23 @@ end;
 procedure AppCallback_InitializationComplete(var Source: TNodeInfo; NodeID: PNodeID);
 begin
 
+end;
+
+procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage);
+var
+  i: Integer;
+  NMRAnetCanBuffer: TNMRAnetCanBuffer;
+begin
+  OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
+  GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GlobalGridConnectStr);
+  for i := 0 to NUM_OF_SOCKET_Intern - 1 do
+  begin
+    if socket_Intern[i].state = 3 then // connection established
+    begin     
+      UART2_Write_Text(GlobalGridConnectStr + LF);
+      Net_Ethernet_Intern_startSendTCP(@socket_Intern[i]);
+    end;
+  end;
 end;
 
 

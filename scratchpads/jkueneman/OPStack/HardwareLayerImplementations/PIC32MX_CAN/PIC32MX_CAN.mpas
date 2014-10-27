@@ -426,6 +426,7 @@ var
 begin
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
+    {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('PIC32MX_StartTransmission' +LF); {$ENDIF}
     PIC32MX_CAN_Transmitting := True;
     Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_TX_LO_PRIORITY));      // Get where the next buffer to transmit is
     PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);             // Convert it into a version that matches the registers
@@ -449,6 +450,7 @@ var
 begin
   if Buffer <> nil then                                                         // If there is something to send then send it
   begin
+    {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('PIC32MX_StartCANHighPriorityMessageEngine' +LF); {$ENDIF}
     PIC32MX_CAN_Transmitting := True;
     Next := Map_Physical_To_KSEG0( PIC32MX_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_TX_HI_PRIORITY));      // Get where the next buffer to transmit is
     PIC32MX_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);                 // Convert it into a version that matches the registers
@@ -458,7 +460,7 @@ begin
   end
 end;
 
-procedure CAN_2(); iv IVT_CAN_2; ics ICS_SOFT;
+procedure CAN_2(); iv IVT_CAN_2; //ics ICS_SOFT;
 var
   IntCode: Word;
   Buffer: TNMRAnetCanBuffer;
