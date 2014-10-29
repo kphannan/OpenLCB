@@ -10,7 +10,9 @@ interface
 
 uses
   gridconnect,
+  opstack_noderesolutionprotocol,
   __Lib_NetEthInternal_Defs,
+  CircularBuffers,
   Float16,
   opstacktypes,
   nmranetdefines,
@@ -61,8 +63,10 @@ procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage);
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
 
 var
-  GlobalGridConnectStr: TGridConnectString;
-
+  CircularBufferOfByte256RecArray: array[NUM_OF_SOCKET_Intern] of TCircularBufferOfByteRec;
+  CircularBuffer256Array: array[NUM_OF_SOCKET_Intern] of TCircularBuffer256;
+  CircularBufferOfByte1024RecArray: array[NUM_OF_SOCKET_Intern] of TCircularBufferOfByteRec;
+  CircularBuffer1024Array: array[NUM_OF_SOCKET_Intern] of TCircularBuffer1024;
 
 implementation
 
@@ -118,12 +122,17 @@ var
   i: Integer;
 begin
   // Initialize the example data!
-  GlobalGridConnectStr := '';
   for i := 0 to USER_MAX_NODE_COUNT - 1 do
   begin
     UserDataArray[i].UserData1 := 0;
     UserDataArray[i].UserData2 := 0;
   end;
+
+  for i := 0 to NUM_OF_SOCKET_Intern - 1 do
+    CircularBuffers_Initialize(@CircularBuffer256Array[i], 256, CircularBufferOfByte256RecArray[i]);
+  for i := 0 to NUM_OF_SOCKET_Intern - 1 do
+    CircularBuffers_Initialize(@CircularBuffer1024Array[i], 1024, CircularBufferOfByte1024RecArray[i]);
+  NRP_Initialize;
 end;
 
 // *****************************************************************************
@@ -490,7 +499,7 @@ end;
 // *****************************************************************************
 procedure AppCallback_VerifiedNodeID(var Source: TNodeInfo; NodeID: PNodeID);
 begin
-
+  NRP_Add(Source);
 end;
 
 // *****************************************************************************
@@ -507,22 +516,34 @@ end;
 // *****************************************************************************
 procedure AppCallback_InitializationComplete(var Source: TNodeInfo; NodeID: PNodeID);
 begin
-
+  NRP_Add(Source);
 end;
 
+// *****************************************************************************
+//  procedure AppCallBack_OutgoingMessageHook
+//     Parameters: : AMessage: The message that has just been sent
+//     Returns     : None
+//     Description : This is called directly from the Hardware receive buffer.  Do
+//                   not do anything here that stalls the call.  This is called
+//                   Asyncronously from the Statemachine loop and the Statemachine loop
+//                   is stalled until this returns.  Set a flag and move on is the
+//                   best stratagy or store info in a buffer and process in the
+//                   main statemachine.
+// *****************************************************************************
 procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage);
 var
   i: Integer;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
+  GlobalGridConnectStr: TGridConnectString;
 begin
-  OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer);
+  OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer); // Eventually this needs to be converted into an OLCB Ethernet message frame
   GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GlobalGridConnectStr);
   for i := 0 to NUM_OF_SOCKET_Intern - 1 do
   begin
     if socket_Intern[i].state = 3 then // connection established
     begin     
       UART2_Write_Text(GlobalGridConnectStr + LF);
-      Net_Ethernet_Intern_startSendTCP(@socket_Intern[i]);
+      CircularBuffers_Add(CircularBufferOfByte256RecArray[i], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
     end;
   end;
 end;

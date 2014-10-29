@@ -1,0 +1,92 @@
+unit CircularBuffers;
+
+type
+  PByte = ^Byte;
+  
+type
+  TCircularBufferOfByteRec = record
+    Head, Tail: ^Byte;       // Pointers to the head and tail of the data in the buffer
+    MaxCount: Word;          // MaxCount that was stored in the buffer
+    Size: Word;              // Size of the Buffer
+    Count: Word;             // Current count in the buffer
+    BufferPtr: ^Byte;        // Pointer to the buffer that contains the data
+  end;
+  
+  TCircularBuffer256 = array[256] of Byte;
+  TCircularBuffer1024 = array[1024] of Byte;
+  
+procedure CircularBuffers_Initialize(BufferPtr: PByte; ASize: Word; var Buffer: TCircularBufferOfByteRec);
+function CircularBuffers_Add(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; Count: Word): Boolean;
+function CircularBuffers_Remove(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; var Count: Word): Boolean;
+function CircularBuffers_RemoveByte(var Buffer: TCircularBufferOfByteRec): Byte;
+
+implementation
+
+procedure CircularBuffers_Initialize(BufferPtr: PByte; ASize: Word; var Buffer: TCircularBufferOfByteRec);
+begin
+  Buffer.BufferPtr := BufferPtr;
+  Buffer.MaxCount := 0;
+  Buffer.Size := ASize;
+  Buffer.Count := 0;
+  Buffer.Head := BufferPtr;
+  Buffer.Tail := BufferPtr;
+end;
+
+function CircularBuffers_Add(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; Count: Word): Boolean;
+var
+  i: Integer;
+  EmptySize: Word;
+  LastBytePtr: ^Byte;
+begin
+  EmptySize := Buffer.Size - Buffer.Count;  
+  LastBytePtr := Buffer.BufferPtr + Buffer.Size;
+  if Count <= EmptySize then
+  begin
+    if Count + Buffer.Count > Buffer.MaxCount then
+      Buffer.MaxCount := Count + Buffer.Count;
+    i := 0;
+    while i < Count do
+    begin
+      Buffer.Head^ := DataBytes^;
+      Inc(Buffer.Head);
+      Inc(DataBytes);
+      if Buffer.Head > LastBytePtr then
+        Buffer.Head := Buffer.BufferPtr;         // Wrap if necessary
+      Inc(i)
+    end;
+    Result := True;
+  end else
+    Result := False;
+end;
+
+function CircularBuffers_Remove(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; var Count: Word): Boolean;
+var
+  i: Integer;
+  LastBytePtr: PByte;
+  ResultCount: Word;
+begin
+  Result := False;
+  LastBytePtr := Buffer.BufferPtr + Buffer.Size;
+  ResultCount := 0;
+  i := 0;
+  while (i < Count) and (Buffer.Tail <> Buffer.Head) do
+  begin
+    DataBytes^ := Buffer.Tail^;
+    Inc(Buffer.Tail); 
+    Inc(ResultCount);
+    if Buffer.Tail > LastBytePtr then
+      Buffer.Tail := Buffer.BufferPtr;                                          // Wrap if Necessary
+    Inc(i);
+  end;
+  Count := ResultCount;
+end;
+
+function CircularBuffers_RemoveByte(var Buffer: TCircularBufferOfByteRec): Byte;
+var
+  ACount: Word;
+begin
+  ACount := 1;
+  CircularBuffers_Remove(Buffer, @Result, ACount);
+end;
+
+end.
