@@ -43,6 +43,7 @@ var DriveY_Down_Direction : sbit at TRISB2_bit;
 
 var
   iNextSocketWithOutgoingData: Integer;
+  OneSecondExpired: Boolean;
 
 function Trim(var str: string[256]): string[256];
 var
@@ -91,6 +92,7 @@ begin
   begin
     Inc(Net_Ethernet_Intern_UserTimerSec);        // increment ethernet library counter
     presTmr := 0 ;                                // reset prescaler
+    OneSecondExpired := True;
   end;
   T1IF_bit := 0;                                 // clear timer0 overflow flag
 end;
@@ -118,8 +120,10 @@ begin
   begin
     {$IFDEF DEBUG_UART}UART2_Write_Text('Outgoing' + LF);{$ENDIF}
     // I am assuming there is room for all bytes here.....
+    Hardware_DisableInterrupts;
     for i := 0 to CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData].Count - 1 do
       Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData]), socket);
+    Hardware_EnableInterrupts;
   end;
 end;
 
@@ -153,6 +157,7 @@ end;
   
 var
   Node: PNMRAnetNode;
+  i: Integer;
   
 begin
   { Main program }
@@ -186,6 +191,20 @@ begin
     begin
       {$IFDEF DEBUG_UART}UART2_Write_Text('Net_Ethernet_Intern_startSendTCP' + LF);{$ENDIF}
       Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);
+    end;
+    
+    if OneSecondExpired then
+    begin
+      TFT_Fill_Screen($0000);
+      TFT_Write_Text('Buffers', 4, 20);
+      for i := 0 to NUM_OF_SOCKET_Intern - 1 do
+      begin
+        WordToStr(CircularBufferOfByte256RecArray[i].Count, s1);
+        TFT_Write_Text('Count: ' + s1, 4, (20 * i) + 40);
+        WordToStr(CircularBufferOfByte256RecArray[i].MaxCount, s1);
+        TFT_Write_Text('MaxCount: ' + s1, 150, (20 * i) + 40);
+      end;
+      OneSecondExpired := False;
     end;
 
 

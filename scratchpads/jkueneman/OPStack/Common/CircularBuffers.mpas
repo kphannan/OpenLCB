@@ -54,6 +54,7 @@ begin
         Buffer.Head := Buffer.BufferPtr;         // Wrap if necessary
       Inc(i)
     end;
+    Buffer.Count := Buffer.Count + Count;
     Result := True;
   end else
     Result := False;
@@ -78,6 +79,7 @@ begin
       Buffer.Tail := Buffer.BufferPtr;                                          // Wrap if Necessary
     Inc(i);
   end;
+  Buffer.Count := Buffer.Count - ResultCount;
   Count := ResultCount;
 end;
 
