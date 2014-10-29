@@ -1,5 +1,7 @@
 program PIC32MX_Basic;
 
+{.$DEFINE DEBUG_UART}
+
 uses
   template_userstatemachine,
   MCU_Setup_PIC32MXxxx,
@@ -97,40 +99,33 @@ procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
 var
   i: Integer;
 begin
-  UART2_Write_Text('UserTCP' + LF);
+  {$IFDEF DEBUG_UART}UART2_Write_Text('UserTCP' + LF);{$ENDIF}
 
-  UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');
-  WordToStr(socket^.destPort, s1);
-  UART2_Write_Text(s1 + LF);
+  {$IFDEF DEBUG_UART}UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');{$ENDIF}
+ {$IFDEF DEBUG_UART} WordToStr(socket^.destPort, s1);{$ENDIF}
+  {$IFDEF DEBUG_UART}UART2_Write_Text(s1 + LF);{$ENDIF}
 
-  UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':');
-  WordToStr(socket^.remotePort, s1);
-  UART2_Write_Text(s1 + LF);
+  {$IFDEF DEBUG_UART}UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':'); {$ENDIF}
+  {$IFDEF DEBUG_UART}WordToStr(socket^.remotePort, s1);{$ENDIF}
+  {$IFDEF DEBUG_UART}UART2_Write_Text(s1 + LF);{$ENDIF}
 
-  s1 := '';
-  for i := 0 to socket^.dataLength - 1 do
-    s1 := s1 + Char( Net_Ethernet_Intern_getByte);
-  UART2_Write_Text(s1 + LF);
+  {$IFDEF DEBUG_UART}s1 := '';{$ENDIF}
+  {$IFDEF DEBUG_UART}for i := 0 to socket^.dataLength - 1 do{$ENDIF}
+    {$IFDEF DEBUG_UART}s1 := s1 + Char( Net_Ethernet_Intern_getByte);{$ENDIF}
+  {$IFDEF DEBUG_UART}UART2_Write_Text(s1 + LF);{$ENDIF}
   
   if iNextSocketWithOutgoingData > -1 then                                       // Handle outgoing messages
   begin
-    UART2_Write_Text('Outgoing' + LF);
+    {$IFDEF DEBUG_UART}UART2_Write_Text('Outgoing' + LF);{$ENDIF}
     // I am assuming there is room for all bytes here.....
     for i := 0 to CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData].Count - 1 do
       Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData]), socket);
   end;
-  
-  // Echo
-//  for i := 0 to Length(s1) - 1 do
-//    Net_Ethernet_Intern_putByteTCP(s1[i], socket);
-
-  if(socket^.destPort <> 12021) then  // I listen only to web request on port 80
-   Exit;
 end;
 
 function Net_Ethernet_Intern_UserUDP(udpDsc : ^UDP_Intern_Dsc) : word;
 begin
-  //UART2_Write_Text('UserUDP' + #13+#10);
+//  UART2_Write_Text('UserUDP' + #13+#10);
   result := 0;
 end;
 
@@ -148,7 +143,7 @@ begin
       
     if CircularBufferOfByte256RecArray[iNextSocketOutgoing].Count > 0 then
     begin
-      Result := False;
+      Result := True;
       Break
     end;
     Inc(iNextSocketOutgoing);
@@ -189,7 +184,7 @@ begin
     
     if NextSocketWithOutgoingData(iNextSocketWithOutgoingData) then
     begin
-      UART2_Write_Text('Net_Ethernet_Intern_startSendTCP' + LF);
+      {$IFDEF DEBUG_UART}UART2_Write_Text('Net_Ethernet_Intern_startSendTCP' + LF);{$ENDIF}
       Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);
     end;
 

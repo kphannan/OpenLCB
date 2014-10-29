@@ -542,7 +542,7 @@ begin
   begin
     if socket_Intern[i].state = 3 then // connection established
     begin     
-      UART2_Write_Text(GlobalGridConnectStr + LF);
+   //   UART2_Write_Text(GlobalGridConnectStr + LF);
       CircularBuffers_Add(CircularBufferOfByte256RecArray[i], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
     end;
   end;
