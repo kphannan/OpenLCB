@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=PIC32MX_Basic.mpas
+Value=Templates\template_buffers.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -67,15 +67,10 @@ Count=0
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=8
+Count=3
 File0=PIC32MX_Basic.mpas
 File1=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
-File2=..\..\NMRAnet\gridconnect.mpas
-File3=..\..\NMRAnet\opstackcore.mpas
-File4=Templates\template_userstatemachine.mpas
-File5=..\..\Common\CircularBuffers.mpas
-File6=..\..\NMRAnet\opstack_noderesolutionprotocol.mpas
-File7=..\..\NMRAnet\opstackdefines.mpas
+File2=Templates\template_buffers.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -86,16 +81,16 @@ File0=Templates\NodeID.inc
 File1=Templates\Options.inc
 [SEARCH_PATH]
 Count=10
-Path0=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Defs\
-Path1=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\uses\
-Path2=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
-Path3=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\Templates\
-Path4=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path5=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path6=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path8=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
-Path9=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\
+Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\
+Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\uses\
+Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
+Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\Templates\
+Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
+Path9=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\
 [HEADER_PATH]
 Count=0
 [HEADERS]

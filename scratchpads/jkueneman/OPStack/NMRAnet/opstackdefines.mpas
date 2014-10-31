@@ -1,7 +1,5 @@
 unit opstackdefines;
 
-
-
 {$IFDEF FPC}
 interface
 {$ENDIF}

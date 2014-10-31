@@ -88,6 +88,7 @@ const
 
 type
   TPIVProtocolValueArray = array[0..LEN_PIV_PROTOCOL-1] of Byte;
+  PPIVProtocolValueArray = ^TPIVProtocolValueArray;
 
 const
   PIV_PROTOCOL_ID_PROTOCOL: TPIVProtocolValueArray           = ($80, $00, $00, $00, $00, $00);

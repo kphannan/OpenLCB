@@ -1,4 +1,4 @@
-unit CircularBuffers;
+unit circularbuffers;
 
 type
   PByte = ^Byte;
@@ -34,7 +34,7 @@ end;
 
 function CircularBuffers_Add(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; Count: Word): Boolean;
 var
-  i: Integer;
+  i: Word;
   EmptySize: Word;
   LastBytePtr: ^Byte;
 begin
@@ -50,7 +50,7 @@ begin
       Buffer.Head^ := DataBytes^;
       Inc(Buffer.Head);
       Inc(DataBytes);
-      if Buffer.Head > LastBytePtr then
+      if Buffer.Head >= LastBytePtr then
         Buffer.Head := Buffer.BufferPtr;         // Wrap if necessary
       Inc(i)
     end;
@@ -62,7 +62,7 @@ end;
 
 function CircularBuffers_Remove(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; var Count: Word): Boolean;
 var
-  i: Integer;
+  i: Word;
   LastBytePtr: PByte;
   ResultCount: Word;
 begin
@@ -70,12 +70,12 @@ begin
   LastBytePtr := Buffer.BufferPtr + Buffer.Size;
   ResultCount := 0;
   i := 0;
-  while (i < Count) and (Buffer.Tail <> Buffer.Head) do
+  while i < Count do
   begin
     DataBytes^ := Buffer.Tail^;
     Inc(Buffer.Tail); 
     Inc(ResultCount);
-    if Buffer.Tail > LastBytePtr then
+    if Buffer.Tail >= LastBytePtr then
       Buffer.Tail := Buffer.BufferPtr;                                          // Wrap if Necessary
     Inc(i);
   end;
@@ -84,11 +84,12 @@ begin
 end;
 
 function CircularBuffers_RemoveByte(var Buffer: TCircularBufferOfByteRec): Byte;
-var
-  ACount: Word;
 begin
-  ACount := 1;
-  CircularBuffers_Remove(Buffer, @Result, ACount);
+  Result := Buffer.Tail^;
+  Inc(Buffer.Tail); 
+  Dec(Buffer.Count);
+  if Buffer.Tail >= (Buffer.BufferPtr + Buffer.Size) then
+    Buffer.Tail := Buffer.BufferPtr;                                          // Wrap if Necessary
 end;
 
 end.

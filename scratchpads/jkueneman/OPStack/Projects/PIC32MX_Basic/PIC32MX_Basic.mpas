@@ -9,41 +9,10 @@ uses
 
 { Declarations section }
 
-var 
-  CS_Serial_Flash_bit: sbit at LATD14_bit;
-  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
-
-// TFT module connections
-var TFT_DataPort : char  at LATE;
-    TFT_RST : sbit  at LATD7_bit;
-    TFT_BLED : sbit at LATD2_bit;
-    TFT_RS : sbit  at LATD9_bit;
-    TFT_CS : sbit  at LATD10_bit;
-    TFT_RD : sbit  at LATD5_bit;
-    TFT_WR : sbit  at LATD4_bit;
-    TFT_DataPort_Direction : char  at TRISE;
-    TFT_RST_Direction : sbit  at TRISD7_bit;
-    TFT_BLED_Direction : sbit at TRISD2_bit;
-    TFT_RS_Direction : sbit  at TRISD9_bit;
-    TFT_CS_Direction : sbit  at TRISD10_bit;
-    TFT_RD_Direction : sbit  at TRISD5_bit;
-    TFT_WR_Direction : sbit  at TRISD4_bit;
-// End TFT module connections
-
-// Touch Panel module connections
-var DriveX_Left : sbit at LATB15_bit;
-var DriveX_Right : sbit at LATB3_bit;
-var DriveY_Up : sbit at LATB14_bit;
-var DriveY_Down : sbit at LATB2_bit;
-var DriveX_Left_Direction : sbit at TRISB15_bit;
-var DriveX_Right_Direction : sbit at TRISB3_bit;
-var DriveY_Up_Direction : sbit at TRISB14_bit;
-var DriveY_Down_Direction : sbit at TRISB2_bit;
-// End Touch Panel module connections
-
 var
   iNextSocketWithOutgoingData: Integer;
-  OneSecondExpired: Boolean;
+  UI_RefreshTimeout: Boolean;
+  presTmr: word;
 
 function Trim(var str: string[256]): string[256];
 var
@@ -81,48 +50,32 @@ end;
 
 procedure OPStack_100ms_Timer(); iv IVT_TIMER_5;
 begin
+  OPStackCore_Timer;  
   T5IF_bit := 0;
-  OPStackCore_Timer;
 end;
 
 procedure Timer1_interrupt(); iv IVT_TIMER_1;
 begin
   Inc(presTmr);                                   // increment prescaler
-  if(presTmr = 5) then                            // timer1 overflows 5 times per second
-  begin
+  if (presTmr mod 5 = 0) then                      // timer1 overflows 5 times per second
     Inc(Net_Ethernet_Intern_UserTimerSec);        // increment ethernet library counter
-    presTmr := 0 ;                                // reset prescaler
-    OneSecondExpired := True;
-  end;
+  if(presTmr mod 25 = 0) then                      // timer1 overflows 25 times per 5 seconds
+    UI_RefreshTimeout := True;
   T1IF_bit := 0;                                 // clear timer0 overflow flag
 end;
 
 procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
-var
-  i: Integer;
 begin
-  {$IFDEF DEBUG_UART}UART2_Write_Text('UserTCP' + LF);{$ENDIF}
-
-  {$IFDEF DEBUG_UART}UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');{$ENDIF}
- {$IFDEF DEBUG_UART} WordToStr(socket^.destPort, s1);{$ENDIF}
-  {$IFDEF DEBUG_UART}UART2_Write_Text(s1 + LF);{$ENDIF}
-
-  {$IFDEF DEBUG_UART}UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':'); {$ENDIF}
-  {$IFDEF DEBUG_UART}WordToStr(socket^.remotePort, s1);{$ENDIF}
-  {$IFDEF DEBUG_UART}UART2_Write_Text(s1 + LF);{$ENDIF}
-
-  {$IFDEF DEBUG_UART}s1 := '';{$ENDIF}
-  {$IFDEF DEBUG_UART}for i := 0 to socket^.dataLength - 1 do{$ENDIF}
-    {$IFDEF DEBUG_UART}s1 := s1 + Char( Net_Ethernet_Intern_getByte);{$ENDIF}
-  {$IFDEF DEBUG_UART}UART2_Write_Text(s1 + LF);{$ENDIF}
+  {$IFDEF DEBUG_UART}UART2_Write_Text('UserTCP' + LF);UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');WordToStr(socket^.destPort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
+  {$IFDEF DEBUG_UART}UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':');WordToStr(socket^.remotePort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
+  {$IFDEF DEBUG_UART}s1 := '';for i := 0 to socket^.dataLength - 1 do s1 := s1 + Char( Net_Ethernet_Intern_getByte);UART2_Write_Text(s1 + LF);{$ENDIF}
   
-  if iNextSocketWithOutgoingData > -1 then                                       // Handle outgoing messages
-  begin
-    {$IFDEF DEBUG_UART}UART2_Write_Text('Outgoing' + LF);{$ENDIF}
-    // I am assuming there is room for all bytes here.....
-    Hardware_DisableInterrupts;
-    for i := 0 to CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData].Count - 1 do
+  if iNextSocketWithOutgoingData > -1 then                                       // Handle outgoing messages, assume Count > 0 if this is not -1
+  begin {$IFDEF DEBUG_UART}UART2_Write_Text('Outgoing' + LF);{$ENDIF}
+    Hardware_DisableInterrupts;                                                  // Don't let the CAN access the buffer while modifing it...
+    repeat                           // I am assuming there is room for all bytes here.....
       Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData]), socket);
+    until CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData].Count = 0;
     Hardware_EnableInterrupts;
   end;
 end;
@@ -159,14 +112,73 @@ var
   Node: PNMRAnetNode;
   i: Integer;
   
+  GlobalGridConnectStr: TGridConnectString;
+  NodeInfo: TNodeInfo;
+  NodeID: TNodeID;
+  
 begin
   { Main program }
+  
+  NRP_Initialize;
+  NodeInfo.ID[0] := $0004;
+  NodeInfo.ID[1] := $0500;
+  NodeInfo.AliasID := 123;
+  NRP_Add(NodeInfo);
+  NodeInfo.ID[0] := $0005;
+  NodeInfo.ID[1] := $0500;
+  NodeInfo.AliasID := 124;
+  NRP_Add(NodeInfo);
+  NodeInfo.ID[0] := $0010;
+  NodeInfo.ID[1] := $0500;
+  NodeInfo.AliasID := 333;
+  NRP_Add(NodeInfo);
+  NodeInfo.ID[0] := $0004;
+  NodeInfo.ID[1] := $0700;
+  NodeInfo.AliasID := 1234;
+  NRP_Add(NodeInfo);
+  
+  NRP_FindByNodeAlias(333);
+  
+  NodeID[0] := $0010;
+  NodeID[1] := $0500;
+  NRP_FindByNodeID(NodeID);
+
+  NRP_RemoveByNodeID(NodeID);
+  NRP_RemoveByAliasID(333);
+  NRP_RemoveByAliasID(123);
+  
+  NodeInfo.ID[0] := $0020;
+  NodeInfo.ID[1] := $0500;
+  NodeInfo.AliasID := 223;
+  NRP_Add(NodeInfo);
+  
+ {
+  CircularBuffers_Initialize(@CircularBuffer256Array[0], 3, CircularBufferOfByte256RecArray[i]);
+
+  GlobalGridConnectStr := ':X';
+
+  CircularBuffers_Add(CircularBufferOfByte256RecArray[0], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
+  
+  repeat
+    GlobalGridConnectStr[0] := CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]);
+  until CircularBufferOfByte256RecArray[0].Count = 0;
+
+  CircularBuffers_Add(CircularBufferOfByte256RecArray[0], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
+
+  repeat
+    GlobalGridConnectStr[0] := CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]);
+  until CircularBufferOfByte256RecArray[0].Count = 0;
+    }
+    
   TRISF12_bit := 0;
   LATF12_bit := 0;
   TRISF13_bit := 0;
   LATF13_bit := 0;
 
+  UI_RefreshTimeout := True;
   iNextSocketWithOutgoingData := -1;
+  presTmr := 0;
+  
   Start_TP;
   OPStackCore_Initialize;
   MCU_Setup_Initialize;
@@ -193,7 +205,7 @@ begin
       Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);
     end;
     
-    if OneSecondExpired then
+    if UI_RefreshTimeout then
     begin
       TFT_Fill_Screen($0000);
       TFT_Write_Text('Buffers', 4, 20);
@@ -204,7 +216,7 @@ begin
         WordToStr(CircularBufferOfByte256RecArray[i].MaxCount, s1);
         TFT_Write_Text('MaxCount: ' + s1, 150, (20 * i) + 40);
       end;
-      OneSecondExpired := False;
+      UI_RefreshTimeout := False;
     end;
 
 

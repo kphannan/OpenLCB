@@ -1,0 +1,82 @@
+unit MCU_Setup_PIC32MXxxx;
+
+uses
+ // PIC32MX_CAN_RawBuffers,
+  template_hardware,
+  PIC18F_CAN;
+
+{$I Options.inc}
+
+// Set ADC threshold
+const
+  ADC_Threshold = 900;
+
+const
+  CAN_SWJ        = 1;               // Set up for 125Khz Baud Rate with a 8Mhz Crystal at 140Mhz
+  CAN_BRP        = 20;               // Baud Rate Prescaler = 14 Quanta
+  CAN_PHASESEG_1 = 5;               //
+  CAN_PHASESEG_2 = 2;               //   PHASESEG_2 > SWJ
+  CAN_PROP_SEG   = 8;               //   PROP_SEG + PHASESEG_1 >= PHASESEG_2
+  
+  procedure MCU_Setup_Initialize;
+  procedure MCU_EnableCAN;
+  procedure MCU_EnableUARTA;
+  procedure MCU_Enable100msTimer;
+  
+implementation
+
+type
+  PByte = ^Byte;
+
+procedure MCU_Enable100msTimer;
+begin
+  T1CON       := 0x0070;
+ { T1IE_bit    := 1;
+  T1IF_bit    := 0;
+  T1IP0_bit   := 0;
+  T5IP1_bit   := 1;
+  T5IP2_bit   := 0;
+  PR1         := 31250;
+  TMR1        := 0;
+  ON__T5CON_bit := 1; }
+end;
+
+procedure MCU_EnableUARTA;
+begin
+  UART2_Init(230400);                       // Initialize UART module a
+  Delay_ms(100);                            // Wait for UART module to stabilize
+end;
+
+procedure MCU_EnableCAN;
+var
+  i: Integer;
+begin
+  // Setup the CAN Baud Rate
+  PIC18F_CAN_SetBaud(CAN_SWJ, CAN_BRP, CAN_PHASESEG_2, CAN_PHASESEG_1, CAN_PROP_SEG, True); // Setup the Baud Rate for 125kHz
+
+  PIC18F_CAN_EnterConfigMode;
+  
+  // Setup the CAN Receive Filters, AN1249 says this should be done in Config Mode
+  PIC18F_CAN_EnableRXFilters(0, False);                           // Disable Receive Filter 0
+  PIC18F_CAN_EnableRXFilters(1, False);                           // Disable Receive Filter 1
+  PIC18F_CAN_SetMask(2, $08000000, True);                         // Create a mask to only look at Bit 27
+  PIC18F_CAN_SetFilter(0, $00000000, True);                       // Look for a 0 in bit 27  (CAN Layer Messsage) by using the mask
+  PIC18F_CAN_SetFilter(1, $08000000, True);                       // Look for a 1 in bit 27  (NMRABus Layer Message) by using the mask
+  PIC18F_CAN_AssociateFilterAndMask(0, 2);   // Link Filter 0 and Mask 2 which looks only at bit 27 = 0
+  PIC18F_CAN_AssociateFilterAndMask(1, 2);  // Link Filter 1 and Mask 2 which looks only at bit 27 = 1
+  PIC18F_CAN_EnableRXFilters(0, True);                            // Enable Filters 0
+  PIC18F_CAN_EnableRXFilters(1, True);                            // Enable Filters 1
+  
+  // Setup the CAN Module Level interrupts
+  PIC18F_CAN_EnterNormalMode;
+  
+  PIC18F_CAN_GlobalInterrupt_EventPriority(6, 3);
+  PIC18F_CAN_GlobalInterrupt(True);
+end;
+
+procedure MCU_Setup_Initialize;
+begin 
+ // AD1PCFG := 0xFFFF;         // Initialize AN pins as digital
+end;
+
+end.

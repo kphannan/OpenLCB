@@ -517,8 +517,7 @@ begin
   end
 end;
 
-function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage;
-  var Source: TNodeInfo; var Dest: TNodeInfo; DestFlags: Byte): Boolean;
+function OPStackBuffers_AllocateDatagramMessage(var AMessage: POPStackMessage; var Source: TNodeInfo; var Dest: TNodeInfo; DestFlags: Byte): Boolean;
 var
   DatagramBuffer: PDatagramBuffer;
 begin

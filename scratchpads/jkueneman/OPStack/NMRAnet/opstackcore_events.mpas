@@ -48,7 +48,7 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_CONSUMED) do
   begin
-    if NMRAnetUtilities_EqualEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], DataBytes) then
+    if NMRAnetUtilities_EqualEventID(dword(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex]), DataBytes) then
     begin
       Result := True;
       Exit
@@ -87,7 +87,7 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_VNODE_SUPPORTED_EVENTS_PRODUCED) do
   begin
-    if NMRAnetUtilities_EqualEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], DataBytes) then
+    if NMRAnetUtilities_EqualEventID(DWord(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex]), DataBytes) then
     begin
       Result := True;
       Exit
@@ -126,7 +126,7 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_SUPPORTED_EVENTS_CONSUMED) do
   begin
-    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], DataBytes) then
+    if NMRAnetUtilities_EqualEventID(DWord(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex]), DataBytes) then
     begin
       Result := True;
       Exit
@@ -165,7 +165,7 @@ begin
   EventIndex := 0;
   while (EventIndex < USER_MAX_SUPPORTED_EVENTS_PRODUCED) do
   begin
-    if NMRAnetUtilities_EqualEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], DataBytes) then
+    if NMRAnetUtilities_EqualEventID(DWord(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex]), DataBytes) then
     begin
       Result := True;
       Exit
@@ -281,13 +281,13 @@ begin
         {$IFDEF SUPPORT_AT_LEAST_ONE_VNODE_PRODUCED_EVENT}
         {$IFDEF SUPPORT_VIRTUAL_NODES}
         if Node^.State and NS_VIRTUAL <> 0 then
-          NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray))
+          NMRAnetUtilities_LoadSimpleDataWithEventID(DWord(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex]), PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray))
         else
         {$ENDIF}
         {$ENDIF}
         begin
           {$IFDEF SUPPORT_AT_LEAST_ONE_PRODUCED_EVENT}
-          NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+          NMRAnetUtilities_LoadSimpleDataWithEventID(DWord(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex]), PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
           {$ENDIF}
         end;
         OPStackMessage^.Buffer^.DataBufferSize := 8;
@@ -410,7 +410,7 @@ begin
             // It is a Static Index
             if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info, NULL_NODE_INFO, False) then
             begin
-              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              NMRAnetUtilities_LoadSimpleDataWithEventID(DWord(@USER_VNODE_SUPPORTED_EVENTS_CONSUMED[EventIndex]), PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
               Result := True;
               Exit;
@@ -449,7 +449,7 @@ begin
             // It is a Static Event
             if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info, NULL_NODE_INFO, False) then
             begin
-              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              NMRAnetUtilities_LoadSimpleDataWithEventID(DWord(@USER_SUPPORTED_EVENTS_CONSUMED[EventIndex]), PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
               Result := True;
               Exit;
@@ -499,7 +499,7 @@ begin
             // It is a Static Event
             if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info, NULL_NODE_INFO, False) then
             begin
-              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              NMRAnetUtilities_LoadSimpleDataWithEventID(DWord(@USER_VNODE_SUPPORTED_EVENTS_PRODUCED[EventIndex]), PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
               Result := True;
               Exit;
@@ -538,7 +538,7 @@ begin
             // It is a Static Event
             if OPStackBuffers_AllocateOPStackMessage(OPStackMessage, MTI, Node^.Info, NULL_NODE_INFO, False) then
             begin
-              NMRAnetUtilities_LoadSimpleDataWithEventID(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex], PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
+              NMRAnetUtilities_LoadSimpleDataWithEventID(DWord(@USER_SUPPORTED_EVENTS_PRODUCED[EventIndex]), PSimpleDataArray(@OPStackMessage^.Buffer^.DataArray));
               OPStackMessage^.Buffer^.DataBufferSize := 8;
               Result := True;
               Exit;

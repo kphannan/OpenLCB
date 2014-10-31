@@ -1,0 +1,696 @@
+unit PIC18F_CAN;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-04-01:   1.0.0.0 Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//                Implements an easy to use interface into the dsPIC33 ECAN Module Registers
+//                It is fast, no.  Is it efficient, no.  Is it easy to experiment with to try to
+//                understand how this module works, YES
+//
+// ******************************************************************************
+{$I Options.inc}
+
+{$DEFINE PRINT_CAN_REGISTERS}
+{.$DEFINE TRACE_CAN}
+{.$DEFINE TRACE_INTERRUPTS}
+{$DEFINE TRACE_INTERRUPTS_OVERFLOW}
+
+
+uses
+  helperfunctions,
+  opstackdefines;
+  
+const
+  CAN_DIRECTION_WRITE = 0;
+  CAN_DIRECTION_READ = 0;
+
+const
+  ICODE_INVALID_MESSAGE     = $48;   // (IVRIF}
+  ICODE_MODULE_MODE_CHANGE  = $47;   // (MODIF}
+  ICODE_TIMESTAMP_TIMER     = $46;   // (CTMRIF)
+  ICODE_BUS_BANDWIDTH_ERROR = $45;   // (SERRIF)
+  ICODE_ADDRESS_ERROR       = $44;   // (SERRIF)
+  ICODE_RX_OVERFLOW         = $43;   // (RBOVIF)
+  ICODE_WAKEUP              = $42;   // (WAKIF)
+  ICODE_ERROR               = $41;   // (CERRIF)
+  ICODE_NO_INTERRUPT        = $40;
+  
+  ICODE_FIFO0               = 0;
+  ICODE_FIFO1               = 1;
+  ICODE_FIFO2               = 2;
+  ICODE_FIFO3               = 3;
+  ICODE_FIFO4               = 4;
+  ICODE_FIFO5               = 5;
+  ICODE_FIFO6               = 6;
+  ICODE_FIFO7               = 7;
+  ICODE_FIFO8                = 8;
+  ICODE_FIFO9                = 9;
+  ICODE_FIFO10               = 10;
+  ICODE_FIFO11               = 11;
+  ICODE_FIFO12               = 12;
+  ICODE_FIFO13               = 13;
+  ICODE_FIFO14               = 14;
+  ICODE_FIFO15               = 15;
+  ICODE_FIFO16               = 16;
+  ICODE_FIFO17               = 17;
+  ICODE_FIFO18               = 18;
+  ICODE_FIFO19               = 19;
+  ICODE_FIFO20               = 20;
+  ICODE_FIFO21               = 21;
+  ICODE_FIFO22               = 22;
+  ICODE_FIFO23               = 23;
+  ICODE_FIFO24               = 24;
+  ICODE_FIFO25               = 25;
+  ICODE_FIFO26               = 26;
+  ICODE_FIFO27               = 27;
+  ICODE_FIFO28               = 28;
+  ICODE_FIFO29               = 29;
+  ICODE_FIFO30               = 30;
+  ICODE_FIFO31               = 31;
+  
+{$IFDEF PRINT_CAN_REGISTERS}
+procedure PIC18F_CAN_PrintRegisters;
+{$ENDIF}
+
+
+procedure PIC18F_CAN_Initialize;
+procedure PIC18F_StartTransmission(Buffer: PNMRAnetCanBuffer; IsExtended: Boolean);
+procedure PIC18F_StartCANHighPriorityMessageEngine(Buffer: PNMRAnetCanBuffer; IsExtended: Boolean);
+
+// *****************************************************************************
+// Initialization Functions
+// *****************************************************************************
+procedure PIC18F_CAN_EnterConfigMode;
+procedure PIC18F_CAN_EnterNormalMode;
+procedure PIC18F_CAN_AbortPendingTransmissions;
+procedure PIC18F_CAN_SetBaud(SJW, BRP, SEG2PH, SEG1PH, PRSEG: DWord; Sample3Times: Boolean);
+procedure PIC18F_CAN_RequestTransmit;
+// *****************************************************************************
+
+// *****************************************************************************
+// Receive Filter and Mask Functions
+// *****************************************************************************
+// Filter Creation
+procedure PIC18F_CAN_EnableRXFilters(FilterNumber: Byte; Enable: Boolean);
+procedure PIC18F_CAN_SetFilter(FilterNumber: Byte; Filter: DWord; ExtendedOnly: Boolean);
+// Mask Creation
+procedure PIC18F_CAN_SetMask(MaskNumber: Byte; Mask: DWord; ExtendedOnly: Boolean);
+// Filter to Mask Assignments
+procedure PIC18F_CAN_AssociateFilterAndMask(FilterNumber, MaskNumber: Word);
+// *****************************************************************************
+
+// *****************************************************************************
+// Interrupt Functions
+// *****************************************************************************
+function PIC18F_CAN_InterruptCode: Byte;
+procedure PIC18F_CAN_GlobalInterrupt(Enable: Boolean);
+procedure PIC18F_CAN_GlobalInterrupt_EventPriority(Priority, SubPriority: Byte);
+// *****************************************************************************
+
+procedure ReceivedOnFilter0(Buffer: PNMRAnetCanBuffer); external;
+procedure ReceivedOnFilter1(Buffer: PNMRAnetCanBuffer); external;
+procedure ReceivedOnFilter2(Buffer: PNMRAnetCanBuffer); external;
+procedure ReceivedOnFilter3(Buffer: PNMRAnetCanBuffer); external;
+procedure ReceivedOnFilter4(Buffer: PNMRAnetCanBuffer); external;
+procedure ReceivedOnFilter5(Buffer: PNMRAnetCanBuffer); external;
+procedure ReceivedOnFilter6(Buffer: PNMRAnetCanBuffer); external;
+
+var
+  PIC18F_CAN_Transmitting, PIC18F_CAN_HighPriorityTransmitting: Boolean;
+  
+var
+  LocalCAN_Channel: Byte; external;
+
+implementation
+
+procedure PIC18F_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var IsExtended: Boolean; Direction: Byte; CANPtr: ^Byte); forward;
+
+type
+  PByte = ^Byte;
+
+{$IFDEF PRINT_CAN_REGISTERS}
+procedure PIC18F_CAN_PrintRegisters;
+var
+  i: Integer;
+  Ptr: ^DWord;
+  s2: string[6];
+begin    (*
+  UART2_Write_Text('Interrupt and Status Registers' + LF);
+  LongWordToHex(C1CON, s1);
+  UART2_Write_Text('C1CON: 0x' + s1 + LF);
+  LongWordToHex(C1CFG, s1);
+  UART2_Write_Text('C1CFG: 0x' + s1 + LF);
+  LongWordToHex(C1INT, s1);
+  UART2_Write_Text('C1INT: 0x' + s1 + LF);
+  LongWordToHex(C1VEC, s1);
+  UART2_Write_Text('C1VEC: 0x' + s1 + LF);
+  LongWordToHex(C1TREC, s1);
+  UART2_Write_Text('C1TREC: 0x' + s1 + LF);
+  LongWordToHex(C1FSTAT, s1);
+  UART2_Write_Text('C1FSTAT: 0x' + s1 + LF);
+  LongWordToHex(C1RXOVF, s1);
+  UART2_Write_Text('C1RXOVF: 0x' + s1 + LF);
+  LongWordToHex(C1TMR, s1);
+  UART2_Write_Text('C1TMR: 0x' + s1 + LF);
+  UART2_Write_Text('Mask and Filter Configuration Registers' + LF);
+  LongWordToHex(C1RXM0, s1);
+  UART2_Write_Text('C1RXM0: 0x' + s1 + LF);
+  LongWordToHex(C1RXM1, s1);
+  UART2_Write_Text('C1RXM1: 0x' + s1 + LF);
+  LongWordToHex(C1RXM2, s1);
+  UART2_Write_Text('C1RXM2: 0x' + s1 + LF);
+  LongWordToHex(C1RXM3, s1);
+  UART2_Write_Text('C1RXM3: 0x' + s1 + LF);
+
+  Ptr := @C1FLTCON0;
+  for i := 0 to 7 do
+  begin
+    LongWordToHex(Ptr^, s1);
+    IntToStr(i, s2);
+    UART2_Write_Text(s2 + ' C1FLTCONn: 0x' + s1 + LF);
+    Ptr := Ptr + 4
+  end;
+
+  Ptr := @C1RXF0;
+  for i := 0 to 31 do
+  begin
+    LongWordToHex(Ptr^, s1);
+    IntToStr(i, s2);
+    UART2_Write_Text(s2 + ' C1RXFn: 0x' + s1 + LF);
+    Ptr := Ptr + 4
+  end;
+
+  UART2_Write_Text('CAN Module Control Registers' + LF);
+  LongWordToHex(C1FIFOBA, s1);
+  UART2_Write_Text('C1FIFOBA: 0x' + s1 + LF);
+
+  Ptr := @C1FIFOCON0;
+  for i := 0 to 31 do
+  begin
+    LongWordToHex(Ptr^, s1);
+    IntToStr(i, s2);
+    UART2_Write_Text(s2 + ' C1FIFOCONn: 0x' + s1 + LF);
+    Ptr := Ptr + 16
+  end;
+
+  Ptr := @C1FIFOINT0;
+  for i := 0 to 31 do
+  begin
+    LongWordToHex(Ptr^, s1);
+    IntToStr(i, s2);
+    UART2_Write_Text(s2 + ' C1FIFOINTn: 0x' + s1 + LF);
+    Ptr := Ptr + 16
+  end;
+
+  Ptr := @C1FIFOUA0;
+  for i := 0 to 31 do
+  begin
+    LongWordToHex(Ptr^, s1);
+    IntToStr(i, s2);
+    UART2_Write_Text(s2 + ' C1FIFOUAn: 0x' + s1 + LF);
+    Ptr := Ptr + 16
+  end;
+
+  Ptr := @C1FIFOCI0;
+  for i := 0 to 31 do
+  begin
+    LongWordToHex(Ptr^, s1);
+    IntToStr(i, s2);
+    UART2_Write_Text(s2 + ' C1FIFOCIn: 0x' + s1 + LF);
+    Ptr := Ptr + 16
+  end;
+  if CAN1IE_bit  = 1 then
+    UART2_Write_Text('CAN1IE_bit = 1'+ LF)
+  else
+    UART2_Write_Text('CAN1IE_bit = 0'+ LF);
+
+  if CAN1IF_bit = 1 then
+    UART2_Write_Text('CAN1IF_bit = 1'+ LF)
+  else
+    UART2_Write_Text('CAN1IF_bit = 0'+ LF);
+
+  UART2_Write_Text('CAN1 Priority: ');
+  if CAN1IP2_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+  if CAN1IP1_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+  if CAN1IP0_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+  UART2_Write_Text(LF);
+
+  UART2_Write_Text('CAN1 SubPriority: ');
+  if CAN1IS1_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+  if CAN1IS0_bit = 1 then UART2_Write_Text('1') else UART2_Write_Text('0');
+  UART2_Write_Text(LF);
+  *)
+end;
+{$ENDIF}
+
+// ****************************************************************************
+// function PIC18F_StartTransmission: Boolean;
+//
+// Starts the transmission if there are no current transmits in procress
+//
+// ****************************************************************************
+procedure PIC18F_StartTransmission(Buffer: PNMRAnetCanBuffer; IsExtended: Boolean);
+begin
+  if Buffer <> nil then                                                         // If there is something to send then send it
+  begin
+    {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('PIC18F_StartTransmission' +LF); {$ENDIF}
+    PIC18F_CAN_Transmitting := True;
+  //  PIC18F_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);             // Convert it into a version that matches the registers
+  //  PIC18F_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_TX_LO_PRIORITY);                 // Message is loaded move to the next one
+  //  PIC18F_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_LO_PRIORITY, True);  // Fire the interrupt when the buffer is empty
+    PIC18F_CAN_RequestTransmit;                  // Set the Flag to start the transmission
+  end
+end;
+
+// ****************************************************************************
+// procedure PIC18F_StartCANHighPriorityMessageEngine;
+//
+// Starts the transmitter engine if there are no current transmits in procress
+//
+// THIS MUST ONLY BE CALLED IN THE CAN RECEIVE INTERRUPT >>>>>>>>>>>>>
+//
+// ****************************************************************************
+procedure PIC18F_StartCANHighPriorityMessageEngine(Buffer: PNMRAnetCanBuffer; IsExtended: Boolean);
+//var
+//  Next: PCANRawBuffer;
+begin
+  if Buffer <> nil then                                                         // If there is something to send then send it
+  begin
+    {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('PIC18F_StartCANHighPriorityMessageEngine' +LF); {$ENDIF}
+    PIC18F_CAN_Transmitting := True;
+  //  PIC18F_DMA_Style_Buffer(Buffer^, IsExtended, CAN_DIRECTION_WRITE, Next);                 // Convert it into a version that matches the registers
+ //   PIC18F_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_TX_HI_PRIORITY);                 // Message is loaded move to the next one
+ //   PIC18F_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, FIFO_TX_HI_PRIORITY, True);  // Fire the interrupt when the buffer is empty
+    PIC18F_CAN_RequestTransmit;                  // Set the Flag to start the transmission
+  end
+end;
+
+(*
+procedure CAN_2(); iv IVT_CAN_2; //ics ICS_SOFT;
+var
+  IntCode: Word;
+  Buffer: TNMRAnetCanBuffer;
+  IsExtended: Boolean;
+  Next: PCANRawBuffer;
+begin
+  PIC18F_CAN_GlobalInterruptFlag(LocalCAN_Channel, True);                      // Reset the Global CAN Event Interrupt Flag
+  IntCode := PIC18F_CAN_InterruptCode(LocalCAN_Channel);
+  while IntCode <> ICODE_NO_INTERRUPT do                                        // Use the Interrupt Code to decode the Events that are both Enabled and Flags are set
+  begin
+    case IntCode of
+      ICODE_FIFO0 :                                                              // Tx Rx Buffer 0
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX0' +LF);{$ENDIF}
+            PIC18F_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, 0, False);
+            PIC18F_CAN_Transmitting := False;
+          end;
+      ICODE_FIFO1 :                                                              // Tx Rx Buffer 0
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('TX1' +LF);{$ENDIF}
+            PIC18F_CAN_Tx_Interrupt_Empty_Enable(LocalCAN_Channel, 1, False);
+            PIC18F_CAN_HighPriorityTransmitting := False;
+          end;
+      ICODE_FIFO2 :                                                              // Tx Rx Buffer 0
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('RX0' +LF); {$ENDIF}
+            IsExtended := True;
+            Next := Map_Physical_To_KSEG0( PIC18F_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_RX_FIFO_CAN));
+            PIC18F_DMA_Style_Buffer(Buffer, IsExtended, CAN_DIRECTION_READ, Next);      // Convert it into a version that matches the registers
+            PIC18F_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_RX_FIFO_CAN);
+            ReceivedOnFilter1(@Buffer);
+        end;
+      ICODE_FIFO3 :                                                              // Tx Rx Buffer 0
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('RX1' +LF); {$ENDIF}
+            IsExtended := True;
+            Next := Map_Physical_To_KSEG0( PIC18F_CAN_Next_Buffer_Address(LocalCAN_Channel, FIFO_RX_FIFO_OLCB));
+            PIC18F_DMA_Style_Buffer(Buffer, IsExtended, CAN_DIRECTION_READ, Next);      // Convert it into a version that matches the registers
+            PIC18F_CAN_Inc_Buffer_Index(LocalCAN_Channel, FIFO_RX_FIFO_OLCB);
+            ReceivedOnFilter0(@Buffer);
+        end;
+      ICODE_RX_OVERFLOW :
+          begin
+            {$IFDEF TRACE_INTERRUPTS_OVERFLOW}UART2_Write_Text('RxOVR'+LF);{$ENDIF}
+             PIC18F_CAN_InterruptRxOverflowFIFOAny(LocalCAN_Channel, True);    // Clear them all
+          end else
+          begin
+            {$IFDEF TRACE_INTERRUPTS}UART2_Write_Text('9' +LF);{$ENDIF}
+          end;
+    end;  // case
+    IntCode := PIC18F_CAN_InterruptCode(LocalCAN_Channel);                                       // Get the next code (or no code) flag
+  end;
+end;
+ *)
+
+procedure PIC18F_CAN_Initialize;
+begin
+  PIC18F_CAN_Transmitting := False;
+  PIC18F_CAN_HighPriorityTransmitting := False;
+end;
+
+procedure PIC18F_CAN_GlobalInterrupt(Enable: Boolean);
+begin
+{*
+  if Enable then
+    CAN1IE_bit := 1
+  else
+    CAN1IE_bit := 0;
+    *}
+end;
+
+
+// *****************************************************************************
+//  procedure PIC18F_DMA_Style_Buffer
+//     Parameters:
+//
+//     Returns: None
+//
+//     Description:
+// *****************************************************************************
+procedure PIC18F_DMA_Style_Buffer(var Buffer: TNMRAnetCanBuffer; var IsExtended: Boolean; Direction: Byte; CANPtr: ^Byte);
+var
+  Temp: DWord;
+  SID, EID: DWord;
+begin
+  if Direction = CAN_DIRECTION_WRITE then
+  begin
+    // Direction = 0 means Parameters to Buffer (Load TX Buffer)
+    EID := Buffer.MTI and $0003FFFF;
+    SID := (Buffer.MTI shr 18) and $000007FF;
+    
+    CANPtr^ := SID and $000000FF;
+    Inc(CANPtr);
+    
+    CANPtr^ := (SID shr 8) and $00000007;
+    Inc(CANPtr);
+    
+    CANPtr^ := 0;
+    Inc(CANPtr);
+    
+    CANPtr^ := 0;
+    Inc(CANPtr);
+    
+    CANPtr^ :=  Buffer.PayloadCount and $0F;
+    Inc(CANPtr);
+    
+    CANPtr^ := EID shl 2;
+    Inc(CANPtr);
+    
+    CANPtr^ := EID shr 6;
+    Inc(CANPtr);
+
+    CANPtr^ := (EID shr 14) and $0F;
+    CANPtr^ := CANPtr^ or $20;  // Set SRR
+    if IsExtended then
+      CANPtr^ := CANPtr^ or $10;
+
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[0];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[1];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[2];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[3];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[4];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[5];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[6];
+    Inc(CANPtr);
+    CANPtr^ := Buffer.Payload[7];
+  end else
+  begin
+    Temp := CANPtr^;
+    SID := Temp;
+    
+    Inc(CANPtr);
+    Temp := CANPtr^ and $07;
+    SID := SID or (Temp shl 8);
+
+    Inc(CANPtr);  // CMGTS<7:0>
+    Inc(CANPtr);  // CMGTS<15:8>
+    
+    Inc(CANPtr);
+    Buffer.PayloadCount := CANPtr^ and $0F;
+    
+    Inc(CANPtr);
+    Temp := CANPtr^ shr 2;
+    EID := Temp;
+    
+    Inc(CANPtr);
+    Temp := CANPtr^;
+    EID := EID or (Temp shl 6);
+    
+    Inc(CANPtr);
+    Temp := CANPtr^ and $0F;
+    EID := EID or (Temp shl 14);
+    
+    if CANPtr^ and $10 <> 0 then
+    begin
+      IsExtended := True;
+      Buffer.MTI := EID or (SID shl 18);
+    end else
+    begin
+      IsExtended := False;
+      Buffer.MTI := EID;
+    end;
+
+    Inc(CANPtr);
+    Buffer.Payload[0] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[1] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[2] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[3] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[4] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[5] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[6] := CANPtr^;
+    Inc(CANPtr);
+    Buffer.Payload[7] := CANPtr^;
+    Inc(CANPtr);
+  end
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_RequestTransmit;
+//
+//  Parameters:   BufferNumber: The Buffer Index that is to be used as a Transmitter (0..7)
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure PIC18F_CAN_RequestTransmit;
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_GlobalInterruptFlag_Event;
+//
+//  Parameters: DoReset:  Resets the flag it true
+//
+//  Result:
+//
+//  Description:  Checks for the Interrupt Flag associated with the
+//                IVT_ADDR_CxINTERRUPT
+// *****************************************************************************
+function PIC18F_CAN_GlobalInterruptFlag(DoReset: Boolean): Boolean;
+begin
+  Result := False;
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_GlobalInterrupt_EventPriority;
+//
+//  Parameters: Priority:  Interrupt Priority (0..7)
+//
+//  Result:
+//
+//  Description:  Set the Interrupt Priority associated with IVT_ADDR_CxINTERRUPT.
+// *****************************************************************************
+procedure PIC18F_CAN_GlobalInterrupt_EventPriority(Priority, SubPriority: Byte);
+begin
+
+end;
+
+
+// *****************************************************************************
+//  function PIC18F_CAN_InterruptCode;
+//
+//  Parameters:
+//
+//  Result: The Interrupt Code
+//
+//  Description:  When using the IVT_ADDR_CxINTERRUPT interrupt this code is a
+// prioritized reading of the set Flags and Enabled Bits.   During the interrupt
+// keep reading this value to get what interrupt occured, clear that flag, do what
+// needs to be done, read this value again and repeat until it returns ICODE_NO_INTERRUPT
+//  See the ICODE_XXXXX flag for return values
+// *****************************************************************************
+function PIC18F_CAN_InterruptCode: Byte;
+begin
+    Result := 0;
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_AssociateFilterAndMask;
+//
+//  Parameters: FilterNumber:   The number Filter (0..15)
+//              MaskNumer:      The number Mask to associate with the Filter (0..2)
+//
+//  Result:
+//
+//  Description:   Filter Number = 0..15, Filter are the Bits that much match
+//                 Mask Number = 0..2, Filter are the Bits that much match
+// *****************************************************************************
+procedure PIC18F_CAN_AssociateFilterAndMask(FilterNumber, MaskNumber: Word);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_EnableRXFilters;
+//
+//  Parameters: FilterMask: Set bit to "1" to enable Filter (0..15)
+//
+//  Result:
+//
+//  Description:  Bits 0..15 = Filters 0..15, Set to "1" to enable "0" to disable
+// *****************************************************************************
+procedure PIC18F_CAN_EnableRXFilters(FilterNumber: Byte; Enable: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_SetFilter;
+//
+//  Parameters: FilterNumber: The Filter to set the bits of (0..15)
+//              Filter      : The Filter filter (all 27 continuous bits)
+//              ExtendedOnly: If to only look at Extended Messages
+//
+//  Result:
+//
+//  Description:  Filter Number = 0..15, Filter are the Bits that much match
+//                (as defined by the mask associated with this filter)
+// *****************************************************************************
+procedure PIC18F_CAN_SetFilter(FilterNumber: Byte; Filter: DWord; ExtendedOnly: Boolean);
+begin
+
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_SetMask;
+//
+//  Parameters: MaskNumber  : The Mask to set the bits of (0..15)
+//              Mask        : The Mask filter (all 27 continuous bits)
+//              ExtendedOnly: If to only look at Extended Messages
+//
+//  Result:
+//
+//  Description:  Mask Number = 0..2, Filter are the Bits that much match
+// *****************************************************************************
+procedure PIC18F_CAN_SetMask(MaskNumber: Byte; Mask: DWord; ExtendedOnly: Boolean);
+begin
+  //case MaskNumber of
+  //  0: RXM0
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_SetBaud;
+//
+//  Parameters: SWJ   : See Data Sheet
+//              BRP   : See Data Sheet
+//              SEG2PH: See Data Sheet
+//              SEG1PH: See Data Sheet
+//              PRSEG : See Data Sheet
+//              Sample3Times: Set module to sample signal 3 time for a majority vote
+//
+//  Result:
+//
+//  Description:
+// *****************************************************************************
+procedure PIC18F_CAN_SetBaud(SJW, BRP, SEG2PH, SEG1PH, PRSEG: DWord; Sample3Times: Boolean);
+begin
+  if BRP = 0 then BRP := 1;
+  if SJW = 0 then SJW := 1;
+  if SEG1PH = 0 then SEG1PH := 1;
+  if SEG2PH = 0 then SEG2PH := 1;
+  if PRSEG = 0 then PRSEG := 1;
+  
+  BRGCON1 := BRP-1;
+  BRGCON1 := BRGCON1 or ((SJW-1) shl 6);
+  BRGCON1 := BRGCON1 or ((PRSEG-1) shl 8);
+  
+  BRGCON2 := BRGCON2 or (SEG1PH-1);
+  if Sample3Times then
+    BRGCON2 := BRGCON2 or $40;                     // Sample 3 times
+  BRGCON2 := BRGCON2 or ((SEG2PH-1) shl 5);
+  BRGCON2 := BRGCON2 or $80;                        // Programmable SEG2PH
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_EnterConfigMode;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:  Places the ECAN module in Configuration Mode and waits for
+//                it to enter the mode
+// *****************************************************************************
+procedure PIC18F_CAN_EnterConfigMode;
+begin
+  CANCON := (CANCON and $1F) or $80;                                            // Set REQOP to Config (100)
+  while (CANSTAT and $1F) <> $80 do;                                            // Poll OPMODE until it equals (100)
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_EnterNormalMode;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description:  Places the ECAN module in Normal Mode and waits for
+//                it to enter the mode
+// *****************************************************************************
+procedure PIC18F_CAN_EnterNormalMode;
+begin
+  CANCON := CANCON and $1F;                                                     // Set REQOP to Normal (000)
+  while (CANSTAT and $1F) <> $00 do;                                            // Poll OPMODE until it equals (000)
+end;
+
+// *****************************************************************************
+//  procedure PIC18F_CAN_AbortPendingTransmissions;
+//
+//  Parameters:
+//
+//  Result:
+//
+//  Description: Terminates all Transmissions
+// *****************************************************************************
+procedure PIC18F_CAN_AbortPendingTransmissions;
+begin
+  ABAT_bit := 1;
+end;
+
+end.

@@ -1,7 +1,5 @@
 unit opstackcore_datagram;
 
-// TODO : FindWaitingForAckResponseMessage - ONLY WORKS WITH ALIAS IDs,  Needs to work with Alias and/or Full IDs
-
 {$IFDEF FPC}
 interface
 {$ENDIF}

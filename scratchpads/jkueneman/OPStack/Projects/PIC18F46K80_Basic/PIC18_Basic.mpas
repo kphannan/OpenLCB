@@ -1,0 +1,37 @@
+program PIC18_Basic;
+
+uses
+  template_userstatemachine,
+  MCU_Setup_PIC18Fxxx,
+  opstackcore;
+
+{ Declarations section }
+
+procedure Interrupt_LowPriority(); iv 0x0018; ics ICS_AUTO;
+begin
+  // If interrupt is Timer N then
+  //  OPStackCore_Timer;
+end;
+
+procedure Interrupt_HiPriority(); iv 0x0008; ics ICS_AUTO;
+begin
+  // If interrupt is CAN Rx or CAN Tx then....
+end;
+
+var
+  Node: PNMRAnetNode;
+
+begin
+  { Main program }
+  OPStackCore_Initialize;
+  MCU_Setup_Initialize;
+  MCU_EnableUARTA;
+  MCU_Enable100msTimer;
+  MCU_EnableCAN;
+
+  while True do
+  begin
+    Node := OPStackCore_Process;
+  end;
+
+end.

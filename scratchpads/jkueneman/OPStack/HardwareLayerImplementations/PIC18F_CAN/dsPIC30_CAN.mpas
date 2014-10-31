@@ -1,0 +1,297 @@
+unit dsPIC30_CAN;
+
+// ******************************************************************************
+//
+// * Copyright:
+//     (c) Mustangpeak Software 2012.
+//
+//     The contents of this file are subject to the GNU GPL v3 licence/ you maynot use
+//     this file except in compliance with the License. You may obtain a copy of the
+//     License at http://www.gnu.org/licenses/gpl.html
+//
+// * Revision History:
+//     2012-04-01:   1.0.0.0 Created
+//     2012-10-07:   Version 1.0
+//
+// * Description:
+//                Implements an easy to use interface into the dsPIC33 ECAN Module Registers
+//                It is fast, no.  Is it efficient, no.  Is it easy to experiment with to try to
+//                understand how this module works, YES
+//
+// ******************************************************************************
+
+uses
+  CANStorage,
+  NMRANetCANReceive;
+  
+{$I Options.inc}
+
+const
+  ICODE_None    = 0;
+  ICODE_ERROR   = 1;
+  ICODE_TX2     = 2;
+  ICODE_TX1     = 3;
+  ICODE_TX0     = 4;
+  ICODE_RX1     = 5;
+  ICODE_RX0     = 6;
+  ICODE_WAKE    = 7;
+  
+// *****************************************************************************
+// These are exported through the "external" modifier
+// *****************************************************************************
+procedure LockCANInterrupt;
+procedure UnLockCANInterrupt;
+procedure StartCANMessageEngine;                                                // Used to start a transmission cycle after a message is placed in a TX Buffer
+procedure StartCANHighPriorityMessageEngine;
+// *****************************************************************************
+
+
+ 
+implementation
+
+procedure dsPIC30_Style_Buffer(Direction: Word; CANPtr: ^Word; var Buffer: TCANBuffer); forward;
+
+// ****************************************************************************
+// function StartTransmission: Boolean;
+//
+// Starts the transmission if there are no current transmits in procress
+//
+// ****************************************************************************
+function StartTransmission: Boolean;
+var
+  RawBuffer: TCANRawBuffer;
+  Buffer: PCANBuffer;
+begin
+  Result := False;
+  Buffer := CANStorage_NextToSend;                                              // Pull the next item to send out of the list
+  if Buffer <> nil then
+  begin
+    dsPIC30_Style_Buffer(CAN_DIRECTION_WRITE, @RawBuffer.Word0,  Buffer^);      // Convert it into a version that matches the registers
+    C1TX0SID := RawBuffer.Word0;                                                // Copy the buffer info into the Transmit Registers
+    C1TX0EID := RawBuffer.Word1;
+    C1TX0DLC := RawBuffer.Word2;
+    C1TX0B1 := RawBuffer.Word3;
+    C1TX0B2 := RawBuffer.Word4;
+    C1TX0B3 := RawBuffer.Word5;
+    C1TX0B4 := RawBuffer.Word6;
+    TXREQ_C1TX0CON_bit := 1;                                                    // Set the Flag to start the transmission
+    Buffer^.State := Buffer^.State and not BS_ALLOCATED;                           // Release the Buffer from the List
+    CAN_Engine.State := CAN_Engine.State or CES_TRANSMITTING;
+    Result := True;
+  end
+end;
+
+// ****************************************************************************
+// procedure StartCANMessageEngine;
+//
+// Starts the transmitter engine if there are no current transmits in procress
+//
+// ****************************************************************************
+procedure StartCANMessageEngine;
+begin
+  // Can't let the interrupt be called "right after" we make the comparison to see if the list is empty.
+  // That would be a race condition that may not start the next message from being sent.  By
+  // shutting off the interrupt we can be guarenteed that the interrupt can't not be called
+  // during our comparison and any newly added messages will get sent
+  LockCANInterrupt;
+
+  // If the CAN_Engine is not transmitting we need to start the transmission of any
+  // messages in the buffer list.  If it is already running then the interrupt that
+  // is called after the current message is finished will auto load any new messages
+  if CAN_Engine.State and CES_TRANSMITTING = 0 then
+    StartTransmission;
+
+  // Re-enable the Transmit interrupt
+  UnLockCANInterrupt;
+end;
+
+// ****************************************************************************
+// procedure StartCANHighPriorityMessageEngine;
+//
+// Starts the transmitter engine if there are no current transmits in procress
+//
+// THIS MUST ONLY BE CALLED IN THE CAN RECEIVE INTERRUPT >>>>>>>>>>>>>
+//
+// ****************************************************************************
+procedure StartCANHighPriorityMessageEngine;
+var
+  RawBuffer: TCANRawBuffer;
+  Buffer: PCANBuffer;
+begin
+  Buffer := CANStorage_NextHighPriorityToSend;                                  // Pull the next item to send out of the list
+  // Just do it as there should not be an overlap here since this is ONLY called AFTER a message we can't handle is received so any transmission here should be long finished
+  if Buffer <> nil then
+  begin
+    dsPIC30_Style_Buffer(CAN_DIRECTION_WRITE, @RawBuffer.Word0,  Buffer^);      // Convert it into a version that matches the registers
+    C1TX1SID := RawBuffer.Word0;                                                // Copy the buffer info into the Transmit Registers
+    C1TX1EID := RawBuffer.Word1;
+    C1TX1DLC := RawBuffer.Word2;
+    C1TX1B1 := RawBuffer.Word3;
+    C1TX1B2 := RawBuffer.Word4;
+    C1TX1B3 := RawBuffer.Word5;
+    C1TX1B4 := RawBuffer.Word6;
+    TXREQ_C1TX1CON_bit := 1;                                                    // Set the Flag to start the transmission
+    Buffer^.State := Buffer^.State and not BS_ALLOCATED;                           // Release the Buffer from the List
+  end
+end;
+
+
+procedure INTERRUPT_CAN_1(); iv IVT_ADDR_C1INTERRUPT;
+var 
+  Buffer: TCANBuffer;
+begin
+  // Silicon Bug in the 4013, if Interrupt is disabled, then Interrupt 2 of higher priority is called (nested) an Address Trap can be thrown
+  {$IFDEF FIX_NESTED_INTERRUPT_SILICON_BUG} asm DISI #2; end; {$ENDIF}
+  C1IF_bit := 0;
+  while (C1CTRL and $000E) shr 1 > ICODE_None do                                // Use the ICODE flags to quickly figure out who is needing attention
+  begin
+    case (C1CTRL and $000E) shr 1 of
+      ICODE_None :
+        begin
+        end;
+      ICODE_ERROR : begin end;                                                  // Not used
+      ICODE_TX2   : begin end;                                                  // Not used
+      ICODE_TX1   : begin end;                                                  // Not used
+      ICODE_TX0   :
+        begin
+          TXB0IF_bit := 0;                                                      // Clear Transmitter Interrupt Flag
+          if not StartTransmission then
+            CAN_Engine.State := CAN_Engine.State and not CES_TRANSMITTING;
+        end;
+      ICODE_RX1 :
+        begin
+          RXB1IF_bit := 0;                                                      // Clear Receive Interrupt Flag
+          dsPIC30_Style_Buffer(CAN_DIRECTION_READ, @C1RX1SID, Buffer);          // Convert to a common Buffer Format
+          ReceivedOnFilter1(@Buffer);                                           // NMRABus Layer
+          RXFUL_C1RX1CON_bit := 0;                                              // Reset the Full Flag
+        end;
+      ICODE_RX0 :
+        begin
+          RXB0IF_bit := 0;                                                      // Clear Receive Interrupt Flag
+          dsPIC30_Style_Buffer(CAN_DIRECTION_READ, @C1RX0SID, Buffer);          // Convert to a common Buffer Format
+          ReceivedOnFilter0(@Buffer);                                           // CAN Layer
+          RXFUL_C1RX0CON_bit := 0;                                              // Reset the Full Flag
+        end;
+      ICODE_WAKE  : begin end;                                                  // Not used
+    end;
+  end;
+end;
+
+// ****************************************************************************
+// procedure dsPIC30_Style_Buffer
+//
+// parameters:
+//
+//  Description:    Approx 220 cycles (11us at 80Mhz)
+//
+// ****************************************************************************
+procedure dsPIC30_Style_Buffer(Direction: Word; CANPtr: ^Word; var Buffer: TCANBuffer);
+var
+  SID, EID: DWORD;
+  IsExtended: Boolean;
+begin
+  if Direction = CAN_DIRECTION_WRITE then
+  begin
+    SID := (Buffer.ID and $1FFC0000) shr 18;
+    EID := Buffer.ID and $0003FFFF;
+
+    CANPtr^ := ((SID shl 2) and $00FC) or ((SID shl 5) and $F800);
+    if Buffer.State and BS_EXTENDED = BS_EXTENDED then
+    begin
+      CANPtr^ := CANPtr^ or $0001;
+      Inc(CANPtr);                                                              // Move to C1TXnEID
+      CANPtr^ := (DWord(EID shr 6) and $00FF) or (DWord(EID shr 2) and $F000);
+      Inc(CANPtr);                                                              // Move to the RXnDLC Register
+      CANPtr^ := (DWord(EID shl 10) and $FC00);
+    end else
+    begin
+      Inc(CANPtr);                                                              // Move to
+    end;
+    CANPtr^ := (CANPtr^ and $FF87) or (WORD( Buffer.DataCount) shl 3);
+    Inc(CANPtr);                                                                // Move to
+    CANPtr^ := Buffer.DataBytes[0] or (Buffer.DataBytes[1] shl 8);
+    Inc(CANPtr);                                                                // Move to
+    CANPtr^ := Buffer.DataBytes[2] or (Buffer.DataBytes[3] shl 8);
+    Inc(CANPtr);                                                                // Move to
+    CANPtr^ := Buffer.DataBytes[4] or (Buffer.DataBytes[5] shl 8);
+    Inc(CANPtr);                                                                // Move to
+    CANPtr^ := Buffer.DataBytes[6] or (Buffer.DataBytes[7] shl 8);
+    Inc(CANPtr);                                                                // Move to
+    CANPtr^ := (CANPtr^ and $FFFC);                                             // Set Priority to 0
+  end else
+  begin
+    SID := ((DWORD( CANPtr^ shr 2)) and $000007FF);                             // Get the Standard ID
+    IsExtended := CANPtr^ and $0001 <> 0;
+    Inc(CANPtr);                                                                // Move to the RXnEID Register
+    if IsExtended then
+    begin
+      Buffer.State := Buffer.State or BS_EXTENDED;
+      EID := ((DWORD( CANPtr^) shl 6) and $0003FFC0);                           // Pull out the info from the RXnEID
+      Inc(CANPtr);                                                              // Move to the RXnDLC Register
+      EID := EID or (DWORD( CANPtr^) shr 10);                                   // Pull out the rest of the Extended ID
+    end else
+    begin
+      Buffer.State := Buffer.State and not BS_EXTENDED;
+      Inc(CANPtr);                                                              // Move to the RXnDLC Register
+    end;
+    Buffer.ID := (SID shl 18) or EID;                                              // Build the EID
+    Buffer.DataCount := CANPtr^ and $000F;
+    Inc(CANPtr);                                                                // Move to C1RXnB1
+    Buffer.DataBytes[0] := CANPtr^;
+    Buffer.DataBytes[1] := CANPtr^ shr 8;
+    Inc(CANPtr);                                                                // Move to C1RXnB2
+    Buffer.DataBytes[2] := CANPtr^;
+    Buffer.DataBytes[3] := CANPtr^ shr 8;
+    Inc(CANPtr);                                                                // Move to C1RXnB3
+    Buffer.DataBytes[4] := CANPtr^;
+    Buffer.DataBytes[5] := CANPtr^ shr 8;
+    Inc(CANPtr);                                                                // Move to C1RXnB4
+    Buffer.DataBytes[6] := CANPtr^;
+    Buffer.DataBytes[7] := CANPtr^ shr 8;
+    Inc(CANPtr);                                                                // Move to C1RXnCON
+  end
+end;
+
+// *****************************************************************************
+//  function LockCANInterrupt
+//     Parameters: Enable:  Enables/Disables the Interrupt for the CAN
+//
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure LockCANInterrupt;
+begin
+  if CAN_Engine.InterruptLockCount = 0 then
+  begin
+    asm DISI #6; end; // make sure no interrupt occurs while doing this
+    C1IE_bit := 0;                                                            // Disable the CAN 1 interrupt
+    T2IE_bit := 0;
+    
+  end;
+  Inc(CAN_Engine.InterruptLockCount);
+end;
+
+// *****************************************************************************
+//  function UnLockCANInterrupt
+//     Parameters: Enable:  Enables/Disables the Interrupt for the CAN
+//
+//     Returns:
+//
+//     Description:
+//
+// *****************************************************************************
+procedure UnLockCANInterrupt;
+begin
+  Dec(CAN_Engine.InterruptLockCount);
+  if CAN_Engine.InterruptLockCount <= 0 then
+  begin
+    asm DISI #6; end;
+    C1IE_bit := 1;
+    T2IE_bit := 1;
+    CAN_Engine.InterruptLockCount := 0;                                       // Enabled the CAN 1 interrupt
+  end;
+end;
+
+end.

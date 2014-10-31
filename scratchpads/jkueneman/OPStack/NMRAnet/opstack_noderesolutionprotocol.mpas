@@ -115,16 +115,6 @@ begin
       ExistingNode^ := NodeInfo;
       Result := True;
     end;
-  
- {   i := SearchForInsertionPointInOrderedList(NodeInfo.AliasID);                // Find were to insert it into the Sorted Array
-    if i > -1 then
-    begin
-      for i := NodeInfoCache.Count - 1 downto i do                              // Shift all items from the insert point to the end up 1 place (note count does not reflect the new added yet)
-        NodeInfoCache.AliasSortedArray[i + 1] := NodeInfoCache.AliasSortedArray[i];
-      NodeInfoCache.AliasSortedArray[i] := NodeInfo;                                 // Insert the added NodeInfo into the empty spot
-      Inc(NodeInfoCache.Count);                                                 // Now correct the count to reflect the new item
-      Result := True;
-    end;  }
   end;
 end;
 

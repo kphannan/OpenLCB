@@ -85,7 +85,7 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure FindWaitingForAckResponseMessage;
+//  procedure FindActiveStreamMessage;
 //    Parameters:
 //    Result:
 //    Description:

@@ -40,9 +40,38 @@ var
   gwIpAddr    : array[4] of byte; // gateway (router) IP address
   ipMask      : array[4] of byte; // network mask (for example : 255.255.255.0)
   dnsIpAddr   : array[4] of byte; // DNS server IP address
-
+  
 var
-  presTmr     : word;
+  CS_Serial_Flash_bit: sbit at LATD14_bit;
+  CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
+
+// TFT module connections
+var TFT_DataPort : char  at LATE;
+    TFT_RST : sbit  at LATD7_bit;
+    TFT_BLED : sbit at LATD2_bit;
+    TFT_RS : sbit  at LATD9_bit;
+    TFT_CS : sbit  at LATD10_bit;
+    TFT_RD : sbit  at LATD5_bit;
+    TFT_WR : sbit  at LATD4_bit;
+    TFT_DataPort_Direction : char  at TRISE;
+    TFT_RST_Direction : sbit  at TRISD7_bit;
+    TFT_BLED_Direction : sbit at TRISD2_bit;
+    TFT_RS_Direction : sbit  at TRISD9_bit;
+    TFT_CS_Direction : sbit  at TRISD10_bit;
+    TFT_RD_Direction : sbit  at TRISD5_bit;
+    TFT_WR_Direction : sbit  at TRISD4_bit;
+// End TFT module connections
+
+// Touch Panel module connections
+var DriveX_Left : sbit at LATB15_bit;
+var DriveX_Right : sbit at LATB3_bit;
+var DriveY_Up : sbit at LATB14_bit;
+var DriveY_Down : sbit at LATB2_bit;
+var DriveX_Left_Direction : sbit at TRISB15_bit;
+var DriveX_Right_Direction : sbit at TRISB3_bit;
+var DriveY_Up_Direction : sbit at TRISB14_bit;
+var DriveY_Down_Direction : sbit at TRISB2_bit;
+// End Touch Panel module connections
 
 implementation
 
@@ -171,8 +200,6 @@ end;
 
 procedure MCU_Enable1sTimer;
 begin
-  presTmr := 0;
-
   TMR1 := 0;                 // reset timer value to zero
   PR1 := 55000;               // Load period register
 
