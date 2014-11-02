@@ -7,6 +7,7 @@ uses
   PIC32MX_CAN;
 
 {$I Options.inc}
+{.$DEFINE USE_TFT}
 
 const
   CAN_CHANNEL = 2;
@@ -26,10 +27,9 @@ const
   procedure MCU_EnableCAN;
   procedure MCU_EnableSerialFlash;
   procedure MCU_EnableUARTA;
-  procedure MCU_Enable100msTimer;
   procedure MCU_EnableEthernet;
   procedure MCU_Enable1sTimer;
-  procedure Start_TP(); // static
+  {$IFDEF USE_TFT}procedure Start_TP(); {$ENDIF}// static
   
 var
   LocalCAN_Channel: Byte;
@@ -45,6 +45,7 @@ var
   CS_Serial_Flash_bit: sbit at LATD14_bit;
   CS_Serial_Flash_Direction_bit: sbit at TRISD14_bit;
 
+{$IFDEF USE_TFT}
 // TFT module connections
 var TFT_DataPort : char  at LATE;
     TFT_RST : sbit  at LATD7_bit;
@@ -72,12 +73,14 @@ var DriveX_Right_Direction : sbit at TRISB3_bit;
 var DriveY_Up_Direction : sbit at TRISB14_bit;
 var DriveY_Down_Direction : sbit at TRISB2_bit;
 // End Touch Panel module connections
+{$ENDIF}
 
 implementation
 
 type
   PByte = ^Byte;
   
+{$IFDEF USE_TFT}
 procedure Calibrate();
 begin
   TFT_Set_Pen(CL_WHITE, 3);
@@ -126,6 +129,7 @@ begin
   Calibrate();
   TFT_Fill_Screen(0);
 end;
+{$ENDIF}
   
 procedure InitPHYPins();
 begin
@@ -183,19 +187,6 @@ begin
   Net_Ethernet_Intern_Init(@myMacAddr, @myIpAddr, Net_Eth_Int_AUTO_NEGOTIATION and Net_Eth_Int_DEFAULT_MAC);              // init ethernet module
   while Net_Ethernet_Intern_AutoNeg_Complete = 0 do;
   Net_Ethernet_Intern_confNetwork(@ipMask, @gwIpAddr, @dnsIpAddr);  // dhcp will not be used here, so use preconfigured addresses
-end;
-
-procedure MCU_Enable100msTimer;
-begin                      
-  T5CON       := 0x0070;
-  T5IE_bit    := 1;
-  T5IF_bit    := 0;
-  T5IP0_bit   := 0;
-  T5IP1_bit   := 1;
-  T5IP2_bit   := 0;
-  PR5         := 31250;
-  TMR5        := 0;
-  ON__T5CON_bit := 1;
 end;
 
 procedure MCU_Enable1sTimer;

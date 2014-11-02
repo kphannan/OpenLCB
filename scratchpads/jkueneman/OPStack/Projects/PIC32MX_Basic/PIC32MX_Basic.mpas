@@ -2,17 +2,17 @@ program PIC32MX_Basic;
 
 {.$DEFINE DEBUG_UART}
 {.$DEFINE TRACK_BRIDGE_MESSAGES}
+{.$DEFINE USE_TFT}
 
 uses
   template_userstatemachine,
-  MCU_Setup_PIC32MXxxx,
-  opstackcore;
+  MCU_Setup_PIC32MXxxx;
 
 { Declarations section }
 
 var
-  iNextSocketWithOutgoingData: Integer;
   NextSocketWithOutgoingProcessing: Boolean;
+  HeartbeatOn: Boolean;
   UI_RefreshTimeout: Boolean;
   presTmr: word;
 
@@ -50,17 +50,33 @@ begin
   Result := Result + Trim(TempStr)
 end;
 
-procedure OPStack_100ms_Timer(); iv IVT_TIMER_5;
+function MAC_ToStr(var IP: array[6] of byte): string[23];
+var
+  TempStr: string[3];
+  i: Integer;
 begin
-//  OPStackCore_Timer;
-  T5IF_bit := 0;
+  ByteToStr(IP[0], TempStr);
+  Result := Trim(TempStr) + '.';
+  ByteToStr(IP[1], TempStr);
+  Result := Result + Trim(TempStr) + '.';
+  ByteToStr(IP[2], TempStr);
+  Result := Result + Trim(TempStr) + '.';
+  ByteToStr(IP[3], TempStr);
+  Result := Result + Trim(TempStr) + '.';
+  ByteToStr(IP[4], TempStr);
+  Result := Result + Trim(TempStr) + '.';
+  ByteToStr(IP[5], TempStr);
+  Result := Result + Trim(TempStr);
 end;
 
 procedure Timer1_interrupt(); iv IVT_TIMER_1;
 begin
   Inc(presTmr);                                   // increment prescaler
   if (presTmr mod 5 = 0) then                      // timer1 overflows 5 times per second
+  begin
     Inc(Net_Ethernet_Intern_UserTimerSec);        // increment ethernet library counter
+    HeartbeatOn := not HeartbeatOn;
+  end;
   if(presTmr mod 25 = 0) then                      // timer1 overflows 25 times per 5 seconds
     UI_RefreshTimeout := True;
   T1IF_bit := 0;                                 // clear timer0 overflow flag
@@ -68,81 +84,70 @@ end;
 
 procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
 var
-  sx: string[1];
-  i, iSocket: Integer;
+  i: Integer;
 begin
   {$IFDEF DEBUG_UART}UART2_Write_Text('UserTCP' + LF);UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');WordToStr(socket^.destPort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
   {$IFDEF DEBUG_UART}UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':');WordToStr(socket^.remotePort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
   {$IFDEF DEBUG_UART}s1 := '';for i := 0 to socket^.dataLength - 1 do s1 := s1 + Char( Net_Ethernet_Intern_getByte);UART2_Write_Text(s1 + LF);{$ENDIF}
   
   // Look for data in the Ethernet Outgoing Circular Buffers
-  if NextSocketWithOutgoingProcessing and (iNextSocketWithOutgoingData > -1) then // Handle outgoing messages, assume Count > 0 if this is not -1
+  if NextSocketWithOutgoingProcessing then                                      // Handle outgoing messages, assume Count > 0 because  NextSocketWithOutgoingProcessing = True
   begin
-    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('TCP Outgoing (removing bytes)' + LF);{$ENDIF}
-    repeat                           // I am assuming there is room for all bytes here.....
-      Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData]), socket);
-    until CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData].Count = 0;
+    repeat                                                                      // I am assuming there is room for all bytes here.....
+      Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]), socket);
+    until CircularBufferOfByte256RecArray[0].Count = 0;
     NextSocketWithOutgoingProcessing := False;
-    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('..' + LF + LF);{$ENDIF}
   end;
 
   // Look for data in the Ethernet Incoming Circular Buffers
   if socket^.dataLength > 0 then
   begin  
-   {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('TCP Incoming to Buffer (adding bytes)' + LF);{$ENDIF}
- {  WordToStr(socket^.dataLength, s1); UART2_Write_Text('Incoming: ' + s1 + LF); WordToStr(socket^.MyWin, s1); UART2_Write_Text('Window: ' + s1 + LF);     }
-    
-    iSocket := 0;
-    while iSocket < NUM_OF_SOCKET_Intern do
-    begin
-      if @socket_Intern[iSocket] = socket then Break else Inc(iSocket)          // Find the socket in the list
-    end;
-
-    IntTostr(iSocket, s1);
-    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('iSocket: ' + s1 + LF);{$ENDIF}
-    
     for i := 0 to socket^.dataLength - 1 do
-      CircularBuffers_AddByte(CircularBufferOfByte1024RecArray[iSocket], Net_Ethernet_Intern_getByte);
-    
-    socket^.myWin := CircularBufferOfByte1024RecArray[iSocket].Size - CircularBufferOfByte1024RecArray[iSocket].Count;
-    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('..' + LF + LF);{$ENDIF}
+      CircularBuffers_AddByte(CircularBufferOfByte1024RecArray[0], Net_Ethernet_Intern_getByte);
+    socket^.myWin := CircularBufferOfByte1024RecArray[0].Size - CircularBufferOfByte1024RecArray[0].Count;
   end;
   
 end;
 
 function Net_Ethernet_Intern_UserUDP(udpDsc : ^UDP_Intern_Dsc) : word;
 begin
-//  UART2_Write_Text('UserUDP' + #13+#10);
   result := 0;
 end;
 
-function NextSocketWithOutgoingData(var iNextSocketOutgoing: Integer): Boolean;
-var
-  i: Integer;
+procedure PrintSocket(var socket: SOCKET_Intern_Dsc);
 begin
-  Result := False;
-  Inc(iNextSocketOutgoing);
-  i := 0;
-  while i < NUM_OF_SOCKET_Intern do
-  begin
-    if iNextSocketOutgoing >= NUM_OF_SOCKET_Intern then
-      iNextSocketOutgoing := 0;
-      
-    if CircularBufferOfByte256RecArray[iNextSocketOutgoing].Count > 0 then
-    begin
-      Result := True;
-      Break
-    end;
-    Inc(iNextSocketOutgoing);
-    Inc(i)
+  UART2_Write_Text('Remote IP: ' + IP_ToStr(socket.remoteIP) + LF);
+  WordToStr(socket.remotePort, s1);
+  UART2_Write_Text('Remote Port: ' + s1 + LF);
+  UART2_Write_Text('Remote MAC: ' + MAC_ToStr(socket.remoteMAC) + LF);
+  WordToStr(socket.destPort, s1);
+  UART2_Write_Text('Dest Port: ' + s1 + LF);
+  WordToStr(socket.dataLength, s1);
+  UART2_Write_Text('Data Length: ' + s1 + LF);
+  WordToStr(socket.remoteMSS, s1);
+  UART2_Write_Text('Remote MSS: ' + s1 + LF);
+  WordToStr(socket.myWin, s1);
+  UART2_Write_Text('My Window: ' + s1 + LF);
+  WordToStr(socket.myMSS, s1);
+  UART2_Write_Text('My MSS: ' + s1 + LF);
+  WordToStr(socket.myACK, s1);
+  UART2_Write_Text('My ACK: ' + s1 + LF);
+  UART2_Write_Text('State: ');
+  case socket.state of
+    0 : UART2_Write_Text('connection closed' + LF);
+    1 : UART2_Write_Text('remote SYN segment received, our SYN segment sent, and We wait for ACK (server mode)' + LF);
+    2 : UART2_Write_Text('undefined' + LF);
+    3 : UART2_Write_Text('connection established' + LF);
+    4 : UART2_Write_Text('our SYN segment sent, and We wait for SYN response (client mode)' + LF);
+    5 : UART2_Write_Text('FIN segment sent, wait for ACK' + LF);
+    6 : UART2_Write_Text('Received ACK on our FIN, wait for remote FIN' + LF);
+    7 : UART2_Write_Text('Expired ACK wait time. We retransmit last sent packet, and again set Wait-Timer. If this happen again connection close' + LF);
   end;
-  if not Result then
-    iNextSocketOutgoing := -1
 end;
   
 var
   Node: PNMRAnetNode;
-  i, iSocket, j: Integer;
+  i, j: Integer;
   
   GlobalGridConnectStr: PGridConnectString;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
@@ -160,50 +165,52 @@ begin
   LATF13_bit := 0;
 
   UI_RefreshTimeout := True;
-  iNextSocketWithOutgoingData := -1;
   NextSocketWithOutgoingProcessing := False;
   presTmr := 0;
   
+  {$IFDEF USE_TFT}
   Start_TP;
+  {$ENDIF}
   OPStackCore_Initialize;
   MCU_Setup_Initialize;
   MCU_EnableSerialFlash;
   MCU_EnableUARTA;
-  MCU_Enable100msTimer;
   MCU_Enable1sTimer;
   MCU_EnableCAN;
   EnableInterrupts;
   MCU_EnableEthernet;
   
+  {$IFDEF USE_TFT}
   TFT_Fill_Screen($0000);
   TFT_Write_Text('Logged in', 4, 10);
+  {$ENDIF}
   
   UART2_Write_Text('Configured' + LF);
   while True do
   begin
-  //  Node := OPStackCore_Process;
     
-    Hardware_DisableInterrupts;                                                // Don't let the CAN access the buffer while modifing it...
+    Hardware_DisableInterrupts;                                                 // Don't let the CAN access the buffer while modifing it...
     Net_Ethernet_Intern_doPacket();                                             // Look for incoming packets
     Hardware_EnableInterrupts;
     
-    if NextSocketWithOutgoingData(iNextSocketWithOutgoingData) and not NextSocketWithOutgoingProcessing then
+    // Only supports 1 socket, supporting more added extra work for GridConnect that we want to move away from
+    if not NextSocketWithOutgoingProcessing then                                // If we have set the flag don't keep looking for a new socket with data until we process this one
     begin
-      {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('Start Sending TCP set flag ..' + LF + LF);{$ENDIF}
-      NextSocketWithOutgoingProcessing := True;
-      Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);
+      if CircularBufferOfByte256RecArray[0].Count > 0 then
+      begin
+        NextSocketWithOutgoingProcessing := True;
+        Net_Ethernet_Intern_startSendTCP(@socket_Intern[0]);                    // This just sets a flag and forces the User_TCP call in the doPacket call later.
+      end;
     end;
     
-    iSocket := 0;
-    
+    // Only supports 1 socket, supporting more added extra work for GridConnect that we want to move away from
     if IsOutgoingBufferAvailable then
     begin
       j := CircularBufferOfByte1024RecArray[0].Count;
       if j > 0 then
-      begin   
-        {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('Incoming TCP Relayed to CAN (removing bytes): ');{$ENDIF}
+      begin {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('Incoming TCP Relayed to CAN (removing bytes): ');{$ENDIF}
         for i := 0 to j - 1 do
-        begin
+        begin   // GridConnect_DecodeMachine will not support multi-leaving different sockets so limit to single socket
           if GridConnect_DecodeMachine( CircularBuffers_RemoveByte( CircularBufferOfByte1024RecArray[0]), GlobalGridConnectStr) then
           begin
             GridConnectStr_ToCanBuffer(GlobalGridConnectStr, @NMRAnetCanBuffer);
@@ -213,9 +220,10 @@ begin
         end;
         {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('..' + LF + LF);{$ENDIF}
         socket_Intern[0].myWin := CircularBufferOfByte1024RecArray[0].Size - CircularBufferOfByte1024RecArray[0].Count;
-      end;
+      end
     end;
 
+    {$IFDEF USE_TFT}
     if UI_RefreshTimeout then
     begin
       TFT_Fill_Screen($0000);
@@ -229,36 +237,35 @@ begin
       end;
       UI_RefreshTimeout := False;
     end;
+    {$ENDIF}
 
 
     LATF13_bit := not LATF13_bit;
+    if HeartbeatOn then
+      LATF12_bit := 1
+    else
+      LATF12_bit := 0;
 
     if UART2_Data_Ready = 1 then
     begin
       case UART2_Read of
         '1' : begin
-                ON__T5CON_bit := not ON__T5CON_bit;
+                PrintSocket(socket_Intern[0]);
               end;
         '2' : begin
-                ON__T5CON_bit := 1;
-                OPStackCore_Initialize;
-                OPStackCore_Enable(True);
+
               end;
         '3' : begin
-                ON__T5CON_bit := 0;
-                OPStackCore_Enable(False);
+
               end;
         '4' : begin
-                PIC32MX_CAN_PrintRegisters(2);
-                PIC32MX_CAN_RequestTransmit(2, 0);
-                PIC32MX_CAN_PrintRegisters(2);
+        
               end;
         '5' : begin
-                if NextSocketWithOutgoingData(iNextSocketWithOutgoingData) then
-                  Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);  // This sets a flag and DoTCP is called from the Net_Ethernet_Intern_doPacket call
+
               end;
         '6' : begin
-                socket_Intern[0].myWin := 30;  // This sets a flag and DoTCP is called from the Net_Ethernet_Intern_doPacket call
+
               end;
       end;
     end;
