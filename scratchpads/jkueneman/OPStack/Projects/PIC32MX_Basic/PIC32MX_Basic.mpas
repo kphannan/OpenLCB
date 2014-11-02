@@ -1,6 +1,7 @@
 program PIC32MX_Basic;
 
 {.$DEFINE DEBUG_UART}
+{.$DEFINE TRACK_BRIDGE_MESSAGES}
 
 uses
   template_userstatemachine,
@@ -11,6 +12,7 @@ uses
 
 var
   iNextSocketWithOutgoingData: Integer;
+  NextSocketWithOutgoingProcessing: Boolean;
   UI_RefreshTimeout: Boolean;
   presTmr: word;
 
@@ -50,7 +52,7 @@ end;
 
 procedure OPStack_100ms_Timer(); iv IVT_TIMER_5;
 begin
-  OPStackCore_Timer;  
+//  OPStackCore_Timer;
   T5IF_bit := 0;
 end;
 
@@ -65,19 +67,47 @@ begin
 end;
 
 procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
+var
+  sx: string[1];
+  i, iSocket: Integer;
 begin
   {$IFDEF DEBUG_UART}UART2_Write_Text('UserTCP' + LF);UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');WordToStr(socket^.destPort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
   {$IFDEF DEBUG_UART}UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':');WordToStr(socket^.remotePort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
   {$IFDEF DEBUG_UART}s1 := '';for i := 0 to socket^.dataLength - 1 do s1 := s1 + Char( Net_Ethernet_Intern_getByte);UART2_Write_Text(s1 + LF);{$ENDIF}
   
-  if iNextSocketWithOutgoingData > -1 then                                       // Handle outgoing messages, assume Count > 0 if this is not -1
-  begin {$IFDEF DEBUG_UART}UART2_Write_Text('Outgoing' + LF);{$ENDIF}
-    Hardware_DisableInterrupts;                                                  // Don't let the CAN access the buffer while modifing it...
+  // Look for data in the Ethernet Outgoing Circular Buffers
+  if NextSocketWithOutgoingProcessing and (iNextSocketWithOutgoingData > -1) then // Handle outgoing messages, assume Count > 0 if this is not -1
+  begin
+    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('TCP Outgoing (removing bytes)' + LF);{$ENDIF}
     repeat                           // I am assuming there is room for all bytes here.....
       Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData]), socket);
     until CircularBufferOfByte256RecArray[iNextSocketWithOutgoingData].Count = 0;
-    Hardware_EnableInterrupts;
+    NextSocketWithOutgoingProcessing := False;
+    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('..' + LF + LF);{$ENDIF}
   end;
+
+  // Look for data in the Ethernet Incoming Circular Buffers
+  if socket^.dataLength > 0 then
+  begin  
+   {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('TCP Incoming to Buffer (adding bytes)' + LF);{$ENDIF}
+ {  WordToStr(socket^.dataLength, s1); UART2_Write_Text('Incoming: ' + s1 + LF); WordToStr(socket^.MyWin, s1); UART2_Write_Text('Window: ' + s1 + LF);     }
+    
+    iSocket := 0;
+    while iSocket < NUM_OF_SOCKET_Intern do
+    begin
+      if @socket_Intern[iSocket] = socket then Break else Inc(iSocket)          // Find the socket in the list
+    end;
+
+    IntTostr(iSocket, s1);
+    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('iSocket: ' + s1 + LF);{$ENDIF}
+    
+    for i := 0 to socket^.dataLength - 1 do
+      CircularBuffers_AddByte(CircularBufferOfByte1024RecArray[iSocket], Net_Ethernet_Intern_getByte);
+    
+    socket^.myWin := CircularBufferOfByte1024RecArray[iSocket].Size - CircularBufferOfByte1024RecArray[iSocket].Count;
+    {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('..' + LF + LF);{$ENDIF}
+  end;
+  
 end;
 
 function Net_Ethernet_Intern_UserUDP(udpDsc : ^UDP_Intern_Dsc) : word;
@@ -106,69 +136,23 @@ begin
     Inc(iNextSocketOutgoing);
     Inc(i)
   end;
+  if not Result then
+    iNextSocketOutgoing := -1
 end;
   
 var
   Node: PNMRAnetNode;
-  i: Integer;
+  i, iSocket, j: Integer;
   
-  GlobalGridConnectStr: TGridConnectString;
+  GlobalGridConnectStr: PGridConnectString;
+  NMRAnetCanBuffer: TNMRAnetCanBuffer;
+  SourceNode, DestNode: PNMRAnetNode;
+  OPStackMessage: POPStackMessage;
   NodeInfo: TNodeInfo;
   NodeID: TNodeID;
   
 begin
   { Main program }
-  
-  NRP_Initialize;
-  NodeInfo.ID[0] := $0004;
-  NodeInfo.ID[1] := $0500;
-  NodeInfo.AliasID := 123;
-  NRP_Add(NodeInfo);
-  NodeInfo.ID[0] := $0005;
-  NodeInfo.ID[1] := $0500;
-  NodeInfo.AliasID := 124;
-  NRP_Add(NodeInfo);
-  NodeInfo.ID[0] := $0010;
-  NodeInfo.ID[1] := $0500;
-  NodeInfo.AliasID := 333;
-  NRP_Add(NodeInfo);
-  NodeInfo.ID[0] := $0004;
-  NodeInfo.ID[1] := $0700;
-  NodeInfo.AliasID := 1234;
-  NRP_Add(NodeInfo);
-  
-  NRP_FindByNodeAlias(333);
-  
-  NodeID[0] := $0010;
-  NodeID[1] := $0500;
-  NRP_FindByNodeID(NodeID);
-
-  NRP_RemoveByNodeID(NodeID);
-  NRP_RemoveByAliasID(333);
-  NRP_RemoveByAliasID(123);
-  
-  NodeInfo.ID[0] := $0020;
-  NodeInfo.ID[1] := $0500;
-  NodeInfo.AliasID := 223;
-  NRP_Add(NodeInfo);
-  
- {
-  CircularBuffers_Initialize(@CircularBuffer256Array[0], 3, CircularBufferOfByte256RecArray[i]);
-
-  GlobalGridConnectStr := ':X';
-
-  CircularBuffers_Add(CircularBufferOfByte256RecArray[0], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
-  
-  repeat
-    GlobalGridConnectStr[0] := CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]);
-  until CircularBufferOfByte256RecArray[0].Count = 0;
-
-  CircularBuffers_Add(CircularBufferOfByte256RecArray[0], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
-
-  repeat
-    GlobalGridConnectStr[0] := CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]);
-  until CircularBufferOfByte256RecArray[0].Count = 0;
-    }
     
   TRISF12_bit := 0;
   LATF12_bit := 0;
@@ -177,6 +161,7 @@ begin
 
   UI_RefreshTimeout := True;
   iNextSocketWithOutgoingData := -1;
+  NextSocketWithOutgoingProcessing := False;
   presTmr := 0;
   
   Start_TP;
@@ -196,15 +181,41 @@ begin
   UART2_Write_Text('Configured' + LF);
   while True do
   begin
-    Node := OPStackCore_Process;
-    Net_Ethernet_Intern_doPacket();                                             // Look for incoming packets
+  //  Node := OPStackCore_Process;
     
-    if NextSocketWithOutgoingData(iNextSocketWithOutgoingData) then
+    Hardware_DisableInterrupts;                                                // Don't let the CAN access the buffer while modifing it...
+    Net_Ethernet_Intern_doPacket();                                             // Look for incoming packets
+    Hardware_EnableInterrupts;
+    
+    if NextSocketWithOutgoingData(iNextSocketWithOutgoingData) and not NextSocketWithOutgoingProcessing then
     begin
-      {$IFDEF DEBUG_UART}UART2_Write_Text('Net_Ethernet_Intern_startSendTCP' + LF);{$ENDIF}
+      {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('Start Sending TCP set flag ..' + LF + LF);{$ENDIF}
+      NextSocketWithOutgoingProcessing := True;
       Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);
     end;
     
+    iSocket := 0;
+    
+    if IsOutgoingBufferAvailable then
+    begin
+      j := CircularBufferOfByte1024RecArray[0].Count;
+      if j > 0 then
+      begin   
+        {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('Incoming TCP Relayed to CAN (removing bytes): ');{$ENDIF}
+        for i := 0 to j - 1 do
+        begin
+          if GridConnect_DecodeMachine( CircularBuffers_RemoveByte( CircularBufferOfByte1024RecArray[0]), GlobalGridConnectStr) then
+          begin
+            GridConnectStr_ToCanBuffer(GlobalGridConnectStr, @NMRAnetCanBuffer);
+            PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
+            Break
+          end;
+        end;
+        {$IFDEF TRACK_BRIDGE_MESSAGES}UART2_Write_Text('..' + LF + LF);{$ENDIF}
+        socket_Intern[0].myWin := CircularBufferOfByte1024RecArray[0].Size - CircularBufferOfByte1024RecArray[0].Count;
+      end;
+    end;
+
     if UI_RefreshTimeout then
     begin
       TFT_Fill_Screen($0000);
@@ -241,6 +252,13 @@ begin
                 PIC32MX_CAN_PrintRegisters(2);
                 PIC32MX_CAN_RequestTransmit(2, 0);
                 PIC32MX_CAN_PrintRegisters(2);
+              end;
+        '5' : begin
+                if NextSocketWithOutgoingData(iNextSocketWithOutgoingData) then
+                  Net_Ethernet_Intern_startSendTCP(@socket_Intern[iNextSocketWithOutgoingData]);  // This sets a flag and DoTCP is called from the Net_Ethernet_Intern_doPacket call
+              end;
+        '6' : begin
+                socket_Intern[0].myWin := 30;  // This sets a flag and DoTCP is called from the Net_Ethernet_Intern_doPacket call
               end;
       end;
     end;

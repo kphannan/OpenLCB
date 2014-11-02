@@ -17,6 +17,7 @@ type
   
 procedure CircularBuffers_Initialize(BufferPtr: PByte; ASize: Word; var Buffer: TCircularBufferOfByteRec);
 function CircularBuffers_Add(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; Count: Word): Boolean;
+function CircularBuffers_AddByte(var Buffer: TCircularBufferOfByteRec; DataByte: Byte): Boolean;
 function CircularBuffers_Remove(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; var Count: Word): Boolean;
 function CircularBuffers_RemoveByte(var Buffer: TCircularBufferOfByteRec): Byte;
 
@@ -60,6 +61,23 @@ begin
     Result := False;
 end;
 
+function CircularBuffers_AddByte(var Buffer: TCircularBufferOfByteRec; DataByte: Byte): Boolean;
+begin
+  Result := False;
+  if Buffer.Count < Buffer.Size then
+  begin
+    Buffer.Head^ := DataByte;
+    Inc(Buffer.Head);
+    Inc(Buffer.Count);
+    if Buffer.Head >= (Buffer.BufferPtr + Buffer.Size) then
+      Buffer.Head := Buffer.BufferPtr;                                          // Wrap if Necessary
+    Result := True;
+    
+  //  UART2_Write( Char(DataByte));
+    
+  end;
+end;
+
 function CircularBuffers_Remove(var Buffer: TCircularBufferOfByteRec; DataBytes: PByte; var Count: Word): Boolean;
 var
   i: Word;
@@ -85,11 +103,17 @@ end;
 
 function CircularBuffers_RemoveByte(var Buffer: TCircularBufferOfByteRec): Byte;
 begin
-  Result := Buffer.Tail^;
-  Inc(Buffer.Tail); 
-  Dec(Buffer.Count);
-  if Buffer.Tail >= (Buffer.BufferPtr + Buffer.Size) then
-    Buffer.Tail := Buffer.BufferPtr;                                          // Wrap if Necessary
+  Result := #0;
+  if Buffer.Count > 0 then
+  begin
+    Result := Buffer.Tail^;
+    Inc(Buffer.Tail);
+    Dec(Buffer.Count);
+    if Buffer.Tail >= (Buffer.BufferPtr + Buffer.Size) then
+      Buffer.Tail := Buffer.BufferPtr;                                          // Wrap if Necessary
+
+  //  UART2_Write( Char(Result));
+  end;
 end;
 
 end.

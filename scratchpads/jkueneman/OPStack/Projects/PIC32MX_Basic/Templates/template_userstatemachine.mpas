@@ -58,15 +58,15 @@ procedure AppCallBack_ConfigMemStreamReadReply(Node: PNMRAnetNode; AMessage: POP
 procedure AppCallBack_ConfigMemWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 procedure AppCallBack_ConfigMemStreamWriteReply(Node: PNMRAnetNode; AMessage: POPStackMessage; Success: Boolean);
 
-procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage);
+procedure AppCallBack_InComingCANHook(NMRAnetCanBuffer: PNMRAnetCanBuffer);
 
 procedure OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage: POPStackMessage; NMRAnetCanBuffer: PNMRAnetCanBuffer); external;
 
 var
   CircularBufferOfByte256RecArray: array[NUM_OF_SOCKET_Intern] of TCircularBufferOfByteRec;
-  CircularBuffer256Array: array[NUM_OF_SOCKET_Intern] of TCircularBuffer256;
+  CircularBuffer256: array[NUM_OF_SOCKET_Intern] of TCircularBuffer256;
   CircularBufferOfByte1024RecArray: array[NUM_OF_SOCKET_Intern] of TCircularBufferOfByteRec;
-  CircularBuffer1024Array: array[NUM_OF_SOCKET_Intern] of TCircularBuffer1024;
+  CircularBuffer1024: array[NUM_OF_SOCKET_Intern] of TCircularBuffer1024;
 
 implementation
 
@@ -129,9 +129,10 @@ begin
   end;
 
   for i := 0 to NUM_OF_SOCKET_Intern - 1 do
-    CircularBuffers_Initialize(@CircularBuffer256Array[i], 256, CircularBufferOfByte256RecArray[i]);
-  for i := 0 to NUM_OF_SOCKET_Intern - 1 do
-    CircularBuffers_Initialize(@CircularBuffer1024Array[i], 1024, CircularBufferOfByte1024RecArray[i]);
+  begin
+    CircularBuffers_Initialize(@CircularBuffer256[i], 256, CircularBufferOfByte256RecArray[i]);
+    CircularBuffers_Initialize(@CircularBuffer1024[i], 1024, CircularBufferOfByte1024RecArray[i]);
+  end;
   NRP_Initialize;
 end;
 
@@ -520,7 +521,7 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure AppCallBack_OutgoingMessageHook
+//  procedure AppCallBack_InComingCANHook
 //     Parameters: : AMessage: The message that has just been sent
 //     Returns     : None
 //     Description : This is called directly from the Hardware receive buffer.  Do
@@ -530,19 +531,17 @@ end;
 //                   best stratagy or store info in a buffer and process in the
 //                   main statemachine.
 // *****************************************************************************
-procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage);
+procedure AppCallBack_InComingCANHook(NMRAnetCanBuffer: PNMRAnetCanBuffer);
 var
   i: Integer;
-  NMRAnetCanBuffer: TNMRAnetCanBuffer;
   GlobalGridConnectStr: TGridConnectString;
 begin
-  OPStackCANStatemachine_OPStackMessageToNMRAnetCanBuffer(AMessage, @NMRAnetCanBuffer); // Eventually this needs to be converted into an OLCB Ethernet message frame
-  GridConnect_BufferToGridConnect(NMRAnetCanBuffer, GlobalGridConnectStr);
+  GridConnect_BufferToGridConnect(NMRAnetCanBuffer^, GlobalGridConnectStr);
   for i := 0 to NUM_OF_SOCKET_Intern - 1 do
   begin
     if socket_Intern[i].state = 3 then // connection established
     begin     
-   //   UART2_Write_Text(GlobalGridConnectStr + LF);
+  //    UART2_Write_Text(GlobalGridConnectStr + LF);
       CircularBuffers_Add(CircularBufferOfByte256RecArray[i], @GlobalGridConnectStr[0], strlen(GlobalGridConnectStr));
     end;
   end;

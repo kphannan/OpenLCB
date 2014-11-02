@@ -6,7 +6,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=Templates\template_buffers.mpas
+Value=PIC32MX_Basic.mpas
 [USE_EEPROM]
 Value=0
 [EEPROM_DEFINITION]
@@ -16,7 +16,7 @@ Value=0
 [HEAP_SIZE]
 Value=2000
 [FILES]
-Count=44
+Count=41
 File0=PIC32MX_Basic.mpas
 File1=Templates\MCU_Setup_PIC32MXxxx.mpas
 File2=Templates\template_buffers.mpas
@@ -39,38 +39,44 @@ File18=..\..\NMRAnet\opstackcore_events.mpas
 File19=..\..\NMRAnet\opstackcore_learn.mpas
 File20=..\..\NMRAnet\opstackcore_pip.mpas
 File21=..\..\NMRAnet\opstackcore_snip.mpas
-File22=..\..\NMRAnet\opstackcore_stnip.mpas
-File23=..\..\NMRAnet\opstackcore_stream.mpas
-File24=..\..\NMRAnet\opstackcore_traction.mpas
-File25=..\..\NMRAnet\opstackcore_traction_proxy.mpas
-File26=..\..\NMRAnet\opstackdefines.mpas
-File27=..\..\NMRAnet\opstacknode.mpas
-File28=..\..\NMRAnet\opstacktypes.mpas
-File29=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
-File30=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
-File31=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.mpas
-File32=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesmultiframe.mpas
-File33=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.mpas
-File34=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.mpas
-File35=..\..\Common\Float16.mpas
-File36=..\..\Common\helperfunctions.mpas
-File37=..\..\ConfigurationLayerImplementations\_M25P80_SPI\M25P80_Driver.mpas
-File38=..\..\ConfigurationLayerImplementations\_M25P80_SPI\template_configuration.mpas
-File39=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
-File40=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
-File41=..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
-File42=..\..\Common\CircularBuffers.mpas
-File43=..\..\NMRAnet\opstack_noderesolutionprotocol.mpas
+File22=..\..\NMRAnet\opstackcore_stream.mpas
+File23=..\..\NMRAnet\opstackdefines.mpas
+File24=..\..\NMRAnet\opstacknode.mpas
+File25=..\..\NMRAnet\opstacktypes.mpas
+File26=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
+File27=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesbuffers.mpas
+File28=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.mpas
+File29=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesmultiframe.mpas
+File30=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinessnip.mpas
+File31=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesstream.mpas
+File32=..\..\Common\Float16.mpas
+File33=..\..\Common\helperfunctions.mpas
+File34=..\..\ConfigurationLayerImplementations\_M25P80_SPI\M25P80_Driver.mpas
+File35=..\..\ConfigurationLayerImplementations\_M25P80_SPI\template_configuration.mpas
+File36=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN.mpas
+File37=..\..\HardwareLayerImplementations\PIC32MX_CAN\PIC32MX_CAN_RawBuffers.mpas
+File38=..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
+File39=..\..\Common\CircularBuffers.mpas
+File40=..\..\NMRAnet\opstack_noderesolutionprotocol.mpas
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
 ActiveImageIndex=-1
 [OPENED_FILES]
-Count=3
+Count=12
 File0=PIC32MX_Basic.mpas
-File1=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
-File2=Templates\template_buffers.mpas
+File1=Templates\template_buffers.mpas
+File2=..\..\Common\CircularBuffers.mpas
+File3=Templates\template_userstatemachine.mpas
+File4=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\__Lib_NetEthInternal_Defs.mpas
+File5=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\__NetEthEncInternalPrivate.mpas
+File6=Templates\MCU_Setup_PIC32MXxxx.mpas
+File7=..\..\HardwareLayerImplementations\PIC32MX_CAN\template_hardware.mpas
+File8=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachines.mpas
+File9=..\..\NMRAnet\CAN_Statemachines\opstackcanstatemachinesdatagram.mpas
+File10=..\..\NMRAnet\gridconnect.mpas
+File11=..\..\NMRAnet\opstackdefines.mpas
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]
@@ -81,16 +87,16 @@ File0=Templates\NodeID.inc
 File1=Templates\Options.inc
 [SEARCH_PATH]
 Count=10
-Path0=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\defs\
-Path1=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\uses\
-Path2=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
-Path3=Z:\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\Templates\
-Path4=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
-Path5=Z:\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
-Path6=Z:\trunk\scratchpads\jkueneman\OPStack\Common\
-Path7=Z:\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
-Path8=Z:\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
-Path9=C:\Program Files\Mikroelektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\
+Path0=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\defs\
+Path1=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\uses\
+Path2=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\
+Path3=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Projects\PIC32MX_Basic\Templates\
+Path4=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\
+Path5=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\NMRAnet\CAN_Statemachines\
+Path6=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\Common\
+Path7=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\ConfigurationLayerImplementations\_M25P80_SPI\
+Path8=\\JIM-IMAC\jimkueneman\Documents\openlcb\trunk\scratchpads\jkueneman\OPStack\HardwareLayerImplementations\PIC32MX_CAN\
+Path9=C:\Users\Public\Documents\mikroElektronika\mikroPascal PRO for PIC32\Packages\Network_Ethernet_PIC32\Uses\
 [HEADER_PATH]
 Count=0
 [HEADERS]

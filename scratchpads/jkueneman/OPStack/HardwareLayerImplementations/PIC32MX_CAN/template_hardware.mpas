@@ -38,7 +38,7 @@ function OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(var OPStackMessa
 procedure OPStackCANStatemachine_ProcessMessages; external;
 procedure IncomingMessageDispatch(AMessage: POPStackMessage; DestNode, SourceNode: PNMRAnetNode); external;
 function OPStackNode_FindByAlias(AliasID: Word): PNMRAnetNode; external;
-procedure AppCallBack_OutgoingMessageHook(AMessage: POPStackMessage); external;
+{$IFDEF INCOMING_CAN_HOOK}procedure AppCallBack_InComingCANHook(NMRAnetCanBuffer: PNMRAnetCanBuffer); external;{$ENDIF}
 {$ENDIF}
 
 var
@@ -125,7 +125,7 @@ begin
 end;
 
 // *****************************************************************************
-//  procedure OutgoingCriticalMessage
+//  procedure Hardware_SearchandDestroyAbandonMessagesInMessageStacks
 //    Parameters:
 //    Result:
 //    Description:
@@ -189,7 +189,6 @@ begin
             PIC32MX_StartTransmission(@NMRAnetCanBuffer, True);
             if FreeMessage then
               OPStackBuffers_DeAllocateMessage(AMessage);
-            AppCallBack_OutgoingMessageHook(AMessage);             // Eventually this will be called directly from the Datagram and Stream after GridConnect is gone
           end;
       {$IFDEF SUPPORT_STREAMS}
       MT_STREAM   : OPStackCANStatemachineBuffers_AddOutgoingStreamMessage(AMessage);     // CAN can't handle a full Datagram Message so we need to parse it up into MT_SIMPLE frames
@@ -239,10 +238,13 @@ var
   OPStackMessagePtr: POPStackMessage;
   SourceNode, DestNode: PNMRAnetNode;
 begin
+  {$IFDEF INCOMING_CAN_HOOK}
+  AppCallBack_InComingCANHook(NMRAnetCanBuffer);             // Eventually this will be called directly from the Datagram and Stream after GridConnect is gone
+  {$ENDIF}
   SourceNode := nil;
   DestNode := nil;
   OpStackMessagePtr := nil;
-  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(OPStackMessagePtr, DestNode, SourceNode, NMRAnetCanBuffer) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statement
+  if OPStackCANStatemachine_NMRAnetCanBufferToOPStackBuffer(OPStackMessagePtr, DestNode, SourceNode, NMRAnetCanBuffer) then // Convert the Grid Connect Data structure into an OPStack Message and dispatch it to the core case statemen
     IncomingMessageDispatch(OPStackMessagePtr, DestNode, SourceNode);
 end;
 
