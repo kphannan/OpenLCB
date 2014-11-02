@@ -69,50 +69,6 @@ begin
   Result := Result + Trim(TempStr);
 end;
 
-procedure Timer1_interrupt(); iv IVT_TIMER_1;
-begin
-  Inc(presTmr);                                   // increment prescaler
-  if (presTmr mod 5 = 0) then                      // timer1 overflows 5 times per second
-  begin
-    Inc(Net_Ethernet_Intern_UserTimerSec);        // increment ethernet library counter
-    HeartbeatOn := not HeartbeatOn;
-  end;
-  if(presTmr mod 25 = 0) then                      // timer1 overflows 25 times per 5 seconds
-    UI_RefreshTimeout := True;
-  T1IF_bit := 0;                                 // clear timer0 overflow flag
-end;
-
-procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
-var
-  i: Integer;
-begin
-  {$IFDEF DEBUG_UART}UART2_Write_Text('UserTCP' + LF);UART2_Write_Text('Dest: ' + IP_ToStr(myIpAddr) + ':');WordToStr(socket^.destPort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
-  {$IFDEF DEBUG_UART}UART2_Write_Text('Remote: ' + IP_ToStr(socket^.remoteIP) + ':');WordToStr(socket^.remotePort, s1);UART2_Write_Text(s1 + LF);{$ENDIF}
-  {$IFDEF DEBUG_UART}s1 := '';for i := 0 to socket^.dataLength - 1 do s1 := s1 + Char( Net_Ethernet_Intern_getByte);UART2_Write_Text(s1 + LF);{$ENDIF}
-  
-  // Look for data in the Ethernet Outgoing Circular Buffers
-  if NextSocketWithOutgoingProcessing then                                      // Handle outgoing messages, assume Count > 0 because  NextSocketWithOutgoingProcessing = True
-  begin
-    repeat                                                                      // I am assuming there is room for all bytes here.....
-      Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]), socket);
-    until CircularBufferOfByte256RecArray[0].Count = 0;
-    NextSocketWithOutgoingProcessing := False;
-  end;
-
-  // Look for data in the Ethernet Incoming Circular Buffers
-  if socket^.dataLength > 0 then
-  begin  
-    for i := 0 to socket^.dataLength - 1 do
-      CircularBuffers_AddByte(CircularBufferOfByte1024RecArray[0], Net_Ethernet_Intern_getByte);
-    socket^.myWin := CircularBufferOfByte1024RecArray[0].Size - CircularBufferOfByte1024RecArray[0].Count;
-  end;
-  
-end;
-
-function Net_Ethernet_Intern_UserUDP(udpDsc : ^UDP_Intern_Dsc) : word;
-begin
-  result := 0;
-end;
 
 procedure PrintSocket(var socket: SOCKET_Intern_Dsc);
 begin
@@ -144,6 +100,47 @@ begin
     7 : UART2_Write_Text('Expired ACK wait time. We retransmit last sent packet, and again set Wait-Timer. If this happen again connection close' + LF);
   end;
 end;
+
+procedure Timer1_interrupt(); iv IVT_TIMER_1;
+begin
+  Inc(presTmr);                                   // increment prescaler
+  if (presTmr mod 5 = 0) then                      // timer1 overflows 5 times per second
+  begin
+    Inc(Net_Ethernet_Intern_UserTimerSec);        // increment ethernet library counter
+    HeartbeatOn := not HeartbeatOn;
+  end;
+  if(presTmr mod 25 = 0) then                      // timer1 overflows 25 times per 5 seconds
+    UI_RefreshTimeout := True;
+  T1IF_bit := 0;                                 // clear timer0 overflow flag
+end;
+
+procedure Net_Ethernet_Intern_UserTCP(socket : ^SOCKET_Intern_Dsc);
+var
+  i: Integer;
+begin
+  // Look for data in the Ethernet Outgoing Circular Buffers
+  if NextSocketWithOutgoingProcessing then                                      // Handle outgoing messages, assume Count > 0 because  NextSocketWithOutgoingProcessing = True
+  begin
+    repeat                                                                      // I am assuming there is room for all bytes here.....
+      Net_Ethernet_Intern_putByteTCP( CircularBuffers_RemoveByte(CircularBufferOfByte256RecArray[0]), socket);
+    until CircularBufferOfByte256RecArray[0].Count = 0;
+    NextSocketWithOutgoingProcessing := False;
+  end;
+
+  // Look for data in the Ethernet Incoming Circular Buffers
+  if socket^.dataLength > 0 then
+  begin  
+    for i := 0 to socket^.dataLength - 1 do
+      CircularBuffers_AddByte(CircularBufferOfByte1024RecArray[0], Net_Ethernet_Intern_getByte);
+    socket^.myWin := CircularBufferOfByte1024RecArray[0].Size - CircularBufferOfByte1024RecArray[0].Count;
+  end;
+  
+end;
+
+function Net_Ethernet_Intern_UserUDP(udpDsc : ^UDP_Intern_Dsc) : word;
+begin
+  result := 0;
+end;
   
 var
   Node: PNMRAnetNode;
@@ -151,14 +148,12 @@ var
   
   GlobalGridConnectStr: PGridConnectString;
   NMRAnetCanBuffer: TNMRAnetCanBuffer;
-  SourceNode, DestNode: PNMRAnetNode;
-  OPStackMessage: POPStackMessage;
-  NodeInfo: TNodeInfo;
-  NodeID: TNodeID;
   
 begin
   { Main program }
     
+  TRISA := 0;
+  LATA := 0;
   TRISF12_bit := 0;
   LATF12_bit := 0;
   TRISF13_bit := 0;
@@ -242,18 +237,27 @@ begin
 
     LATF13_bit := not LATF13_bit;
     if HeartbeatOn then
-      LATF12_bit := 1
+      LATA := $FFFFFFFF
     else
-      LATF12_bit := 0;
+      LATA := 0;
 
     if UART2_Data_Ready = 1 then
     begin
       case UART2_Read of
         '1' : begin
+                UART2_Write_Text(LF + LF);
                 PrintSocket(socket_Intern[0]);
               end;
         '2' : begin
-
+                UART2_Write_Text(LF + LF);
+                WordToStr(CircularBufferOfByte256RecArray[0].Count, s1);
+                UART2_Write_Text('Outgoing Buffer: ' + s1 + LF);
+                WordToStr(CircularBufferOfByte256RecArray[0].MaxCount, s1);
+                UART2_Write_Text('Outgoing Buffer Max: ' + s1 + LF);
+                WordToStr(CircularBufferOfByte1024RecArray[0].Count, s1);
+                UART2_Write_Text('Incoming Buffer: ' + s1 + LF);
+                WordToStr(CircularBufferOfByte1024RecArray[0].MaxCount, s1);
+                UART2_Write_Text('Incoming Buffer Max: ' + s1 + LF);
               end;
         '3' : begin
 

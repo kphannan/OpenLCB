@@ -69,6 +69,8 @@ begin
     Buffer.Head^ := DataByte;
     Inc(Buffer.Head);
     Inc(Buffer.Count);
+    if Buffer.Count > Buffer.MaxCount then
+      Buffer.MaxCount := Buffer.Count;
     if Buffer.Head >= (Buffer.BufferPtr + Buffer.Size) then
       Buffer.Head := Buffer.BufferPtr;                                          // Wrap if Necessary
     Result := True;
