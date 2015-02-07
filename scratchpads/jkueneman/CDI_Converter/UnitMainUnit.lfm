@@ -10,7 +10,7 @@ object Form1: TForm1
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
-  LCLVersion = '1.2.0.3'
+  LCLVersion = '1.2.6.0'
   object PageControl1: TPageControl
     Left = 0
     Height = 617
@@ -185,8 +185,8 @@ object Form1: TForm1
         Width = 214
         Anchors = [akTop, akRight]
         Caption = 'Counts (Including nulls)'
-        ClientHeight = 266
-        ClientWidth = 206
+        ClientHeight = 271
+        ClientWidth = 210
         TabOrder = 11
         object Bevel1: TBevel
           Left = 3
@@ -364,60 +364,60 @@ object Form1: TForm1
     end
     object TabSheet2: TTabSheet
       Caption = 'CDI'
-      ClientHeight = 578
-      ClientWidth = 695
+      ClientHeight = 591
+      ClientWidth = 693
       ImageIndex = 1
       object Label7: TLabel
         Left = 8
-        Height = 15
+        Height = 13
         Top = 40
-        Width = 43
+        Width = 41
         Caption = 'XML File'
         ParentColor = False
       end
       object Label8: TLabel
         Left = 8
-        Height = 15
+        Height = 13
         Top = 72
-        Width = 100
+        Width = 88
         Caption = 'CDI Array Identifier'
         ParentColor = False
       end
       object Label9: TLabel
         Left = 8
-        Height = 15
+        Height = 13
         Top = 96
-        Width = 93
+        Width = 85
         Caption = 'CDI Map Identifier'
         ParentColor = False
       end
       object Label10: TLabel
         Left = 8
-        Height = 15
+        Height = 13
         Top = 120
-        Width = 125
+        Width = 111
         Caption = 'Max CDI Array Identifier'
         ParentColor = False
       end
       object Label11: TLabel
         Left = 13
-        Height = 15
+        Height = 13
         Top = 528
-        Width = 316
+        Width = 280
         Caption = 'Manufacturer Total Strings Length (64 Max Recommended)'
         ParentColor = False
       end
       object LabelMaxMfgStrLen: TLabel
         Left = 357
-        Height = 15
+        Height = 13
         Top = 528
-        Width = 7
+        Width = 6
         Caption = '0'
         ParentColor = False
       end
       object EditXMLFile: TEdit
         Left = 64
-        Height = 22
+        Height = 21
         Top = 32
         Width = 505
         TabOrder = 0
@@ -433,9 +433,9 @@ object Form1: TForm1
       end
       object MemoCDI: TMemo
         Left = 8
-        Height = 317
+        Height = 330
         Top = 184
-        Width = 670
+        Width = 668
         Anchors = [akTop, akLeft, akRight, akBottom]
         ScrollBars = ssBoth
         TabOrder = 2
@@ -451,7 +451,7 @@ object Form1: TForm1
       end
       object EditCDIArray: TEdit
         Left = 128
-        Height = 22
+        Height = 21
         Top = 64
         Width = 121
         TabOrder = 4
@@ -459,7 +459,7 @@ object Form1: TForm1
       end
       object EditCDIMap: TEdit
         Left = 128
-        Height = 22
+        Height = 21
         Top = 88
         Width = 121
         TabOrder = 5
@@ -467,7 +467,7 @@ object Form1: TForm1
       end
       object EditMaxCDIArray: TEdit
         Left = 128
-        Height = 22
+        Height = 21
         Top = 112
         Width = 121
         TabOrder = 6
@@ -475,9 +475,9 @@ object Form1: TForm1
       end
       object CheckBoxVirtualNodeCDI: TCheckBox
         Left = 168
-        Height = 18
+        Height = 17
         Top = 152
-        Width = 123
+        Width = 94
         Caption = 'For Virtual Node'
         TabOrder = 7
       end
@@ -489,4 +489,4 @@ object Form1: TForm1
     left = 612
     top = 32
   end
-end
+end

@@ -378,12 +378,13 @@ end;
 procedure TForm1.Button2Click(Sender: TObject);
 var
   XML: TFileStream;
-  Str: PANSIChar;
+  Str: AnsiString;
   i, j, AsciiArrayCount, Offset, Index, ExtraLines: Integer;
   Strings, ASCII: TStringList;
   ASCII_Line: AnsiString;
   Map: TCDIMap;
   ArrayIdentifier, MaxArrayIdentifier, MapIdentifier: AnsiString;
+  c: ansichar;
 begin
   MemoCDI.Lines.BeginUpdate;
   try
@@ -391,8 +392,12 @@ begin
     XML := TFileStream.Create(EditXMLFile.Text, fmOpenRead or fmShareDenyWrite);
     try
       // Read in the XML file from disk
-      Str := StrAlloc(XML.Size);
-      XML.ReadBuffer(Str^, XML.Size);
+      Str := '';
+      for i := 0 to XML.Size - 1 do
+      begin
+        c := chr( XML.ReadByte);
+        Str := Str + c;
+      end;
 
       Strings := TStringList.Create;
       ASCII := TStringList.Create;
@@ -404,7 +409,8 @@ begin
           ASCII_Line[j] := ' ';
 
         AsciiArrayCount := 0;
-        Strings.Text := ASCII_Line;
+        Strings.Delimiter:=#10;
+        Strings.DelimitedText := ASCII_Line;
         ExtraLines := -1;
 
         // Strip off any white space, (space, tabs, etc), extra lines, garbage after </cdi>, etc
@@ -548,4 +554,4 @@ begin
   end
 end;
 
-end.
+end.

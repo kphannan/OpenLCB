@@ -205,7 +205,7 @@ begin
   Serial.Connect(Port);
   if Serial.LastError = 0 then
   begin
-    Serial.Config(BaudRate, 8, 'N', 0, False, False);                         // FTDI Driver uses no stop bits for non-standard baud rates.
+    Serial.Config(BaudRate, 8, 'N', 0, False, False);                           // FTDI Driver uses no stop bits for non-standard baud rates.
     if Serial.LastError = 0 then
       ConnectionState := csConnected;
   end;
