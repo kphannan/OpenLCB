@@ -8,6 +8,7 @@
 1x20 Header||20
 2x5 Header||10
 2x8 Header||16
+2x13 Header||26
 2x14 Header||14
 2x14 Header Socket||28
 8SOP||8
@@ -26,6 +27,7 @@ Molex 8-8-RJ45-SMT||10
 Molex microSD||10
 Molex RJ12 - 95501-6669||8
 Power Barrel 2.1mmX5.5mm||6
+Raspberry Pi 2 B Shield||40
 RJ45 Amphinol Dual SMT||20
 Series 27L Encoder||7
 SMC||2

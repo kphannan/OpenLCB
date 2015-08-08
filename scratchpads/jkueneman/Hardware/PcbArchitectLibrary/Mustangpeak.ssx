@@ -7,6 +7,7 @@
 1x20 Header||20
 2x5 Header||10
 2x8 Header||16
+2x13 Header||26
 2x14 Header||28
 6N137||8
 23K256||8
@@ -21,6 +22,7 @@ dsPIC33EPxxxGP502||28
 dsPIC33EPxxxMC502||28
 ENC424J600-44||44
 FAN7385||14
+FTDI UART||6
 HIP4082||16
 Inverter||2
 ISO-0-4||16
@@ -42,9 +44,11 @@ mikroE mikroBUS||16
 OC_Opto||6
 OC_Opto_No_Bias||4
 PESD1CAN||3
+PicKit 3 Header||6
 Power Barrel Connector||4
 PowerBlock||2
 PTC Fuse||2
+Raspberry Pi 2 B||40
 RJ12 Connector||6
 RJ45 Connector||8
 RJ45 Connector - Dual||16
