@@ -20,7 +20,7 @@ Molex microSD||#SM=10||@Manufacturer=||@Manufacturer Part Number=||@Distributor=
 PicKit 3 Header 1x6||#DIL=6||@Manufacturer=3M||@Manufacturer Part Number=929400-01-36-RK||@Distributor=Digikey||@Distributor Part Number=929400E-01-36-ND
 Power Jack 2.1mm x 5.5mm||#SM=6||@Manufacturer=CUI Inc||@Manufacturer Part Number=PJ-002AH-SMT||@Distributor=Digikey||@Distributor Part Number=CP-002AHPJCT-ND
 Power Jack 2.5mm x 5.5mm||#SM=6||@Manufacturer=CUI Inc||@Manufacturer Part Number=PJ-002BH-SMT||@Distributor=Digikey||@Distributor Part Number=CP-002BHPJCT-ND
-Raspberry Pi 2 B Header 2x40||#DIL=40||@Manufacturer=TE Connectivity/AMP||@Manufacturer Part Number=2-826925-0||@Distributor=Mouser||@Distributor Part Number=571-2-826925-0
+Raspberry Pi 2 B Header 2x40||#DIL=40||@Manufacturer=3M||@Manufacturer Part Number=929852-01-20-RB||@Distributor=Mouser||@Distributor Part Number=517-929852-01-20-RB
 RJ12 Molex Plastic||#SM=8||@Manufacturer=Molex||@Manufacturer Part Number=95501-6669||@Distributor=Digikey||@Distributor Part Number=WM5575-ND
 RJ12 Molex Plastic Xpressnet||#SM=8||@Manufacturer=Molex||@Manufacturer Part Number=95501-6669||@Distributor=Digikey||@Distributor Part Number=WM5575-ND
 RJ45 Amphenol Plastic||#DIL=10||@Manufacturer=Amphenol||@Manufacturer Part Number=RJHSE-5080||@Distributor=Digikey||@Distributor Part Number=RJHSE-5080-ND
