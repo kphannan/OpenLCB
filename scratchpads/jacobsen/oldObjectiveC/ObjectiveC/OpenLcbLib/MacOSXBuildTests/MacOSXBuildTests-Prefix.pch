@@ -1,7 +1,0 @@
-//
-// Prefix header for all source files of the 'MacOSXBuildTests' target in the 'MacOSXBuildTests' project
-//
-
-#ifdef __OBJC__
-    #import <Cocoa/Cocoa.h>
-#endif
