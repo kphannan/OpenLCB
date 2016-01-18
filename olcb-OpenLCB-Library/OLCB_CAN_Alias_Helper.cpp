@@ -110,10 +110,10 @@ void OLCB_CAN_Alias_Helper::update(void)
 				break;
 			case ALIAS_CID2_STATE:
 				//send CID2!
-				_nodes[index].state = ALIAS_CID3_STATE; 
+				_nodes[index].state = ALIAS_CID3_STATE;
 				if(!_link->sendCID(_nodes[index].node, 2))
 				{
-					_nodes[index].state = ALIAS_CID2_STATE; 
+					_nodes[index].state = ALIAS_CID2_STATE;
 				}
 				break;
 			case ALIAS_CID3_STATE:
@@ -121,16 +121,16 @@ void OLCB_CAN_Alias_Helper::update(void)
 				_nodes[index].state = ALIAS_CID4_STATE;
 				if(!_link->sendCID(_nodes[index].node, 3))
 				{
-					_nodes[index].state = ALIAS_CID3_STATE; 
+					_nodes[index].state = ALIAS_CID3_STATE;
 				}
-				break;			
+				break;
 			case ALIAS_CID4_STATE:
 				//send CID4!
 				_nodes[index].time_stamp = millis();
 				_nodes[index].state = ALIAS_RID_STATE;
 				if(!_link->sendCID(_nodes[index].node, 4))
 				{
-					_nodes[index].state = ALIAS_CID4_STATE; 
+					_nodes[index].state = ALIAS_CID4_STATE;
 				}
 				break;
 			case ALIAS_RID_STATE:
@@ -274,7 +274,7 @@ void OLCB_CAN_Alias_Helper::allocateAlias(OLCB_NodeID* nodeID)
 }
 
 void OLCB_CAN_Alias_Helper::reAllocateAlias(private_nodeID_t* nodeID)
-{		
+{
 	if(nodeID->node)
 	{
 		nodeID->node->initialized = false;
@@ -284,11 +284,11 @@ void OLCB_CAN_Alias_Helper::reAllocateAlias(private_nodeID_t* nodeID)
 	{
 		uint32_t temp1 = ((nodeID->lfsr1<<9) | ((nodeID->lfsr2>>15)&0x1FF)) & 0xFFFFFF;
 		uint32_t temp2 = (nodeID->lfsr2<<9) & 0xFFFFFF;
-   
+
 		// add
 		nodeID->lfsr2 = nodeID->lfsr2 + temp2 + 0x7A4BA9l;
 		nodeID->lfsr1 = nodeID->lfsr1 + temp1 + 0x1B0CA3l;
-   
+
 		// carry
 		nodeID->lfsr1 = (nodeID->lfsr1 & 0xFFFFFF) | ((nodeID->lfsr2&0xFF000000) >> 24);
 		nodeID->lfsr2 = nodeID->lfsr2 & 0xFFFFFF;

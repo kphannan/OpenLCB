@@ -19,7 +19,7 @@ class OLCB_Alias_Cache
   OLCB_Alias_Cache() : _size(0)
   {
   }
-  
+
   void initialize(uint8_t newSize)
   {
     if(_size)
@@ -41,7 +41,7 @@ class OLCB_Alias_Cache
       _hits[i] = 0;
     }
   }
-  
+
   void add(OLCB_NodeID *nid)
   {
     //Serial.println("In AliasCache->add()");
@@ -53,7 +53,7 @@ class OLCB_Alias_Cache
     }
     //else
     //Serial.print("Cacheing alias "); //Serial.println(nid->alias,DEC);
-    
+
     uint8_t leasthits = 255;
     uint8_t index = 0;
     for(uint8_t i=0; i < _size; ++i)
@@ -75,7 +75,7 @@ class OLCB_Alias_Cache
     _hits[index] = 1;
     //Serial.println("Leaving add()");
   }
-  
+
   bool getAliasByNID(OLCB_NodeID *nid)
   {
   	//Serial.println("Looking for alias for:");
@@ -92,7 +92,7 @@ class OLCB_Alias_Cache
     //Serial.println("Not in alias cache");
     return false;
   }
-  
+
   bool getNIDByAlias(OLCB_NodeID *nid)
   {
     for(uint8_t i = 0; i < _size; ++i)
@@ -106,7 +106,7 @@ class OLCB_Alias_Cache
     }
     return false;
   }
-  
+
   bool removeByAlias(uint16_t alias)
   {
     //Serial.print("alias helper: ");
@@ -124,7 +124,7 @@ class OLCB_Alias_Cache
     //Serial.println();
     return false; //not in cache
   }
-  
+
  private:
   uint8_t _size;
   OLCB_NodeID* _nids;
