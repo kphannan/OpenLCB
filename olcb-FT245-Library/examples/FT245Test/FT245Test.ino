@@ -20,7 +20,7 @@ void loop()
 {
   if(FT245.available())
     Serial.write(FT245.read());
-    
+
   if(Serial.available())
     FT245.write(Serial.read());
 };
